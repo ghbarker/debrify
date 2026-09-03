@@ -5511,6 +5511,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (s.homeCollectionCount > 0) {
       lines.add('Collections (${s.homeCollectionCount})');
     }
+    if (s.streamBadgeSourceCount > 0) {
+      lines.add('Stream badge rulesets (${s.streamBadgeSourceCount})');
+    }
     return lines;
   }
 
@@ -5550,6 +5553,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     if (r.homeCollectionsImported > 0) {
       parts.add('${r.homeCollectionsImported} collection(s)');
+    }
+    if (r.streamBadgeSourcesImported > 0) {
+      parts.add('${r.streamBadgeSourcesImported} badge ruleset(s)');
     }
 
     if (parts.isEmpty && !r.hasAnyFailure) {

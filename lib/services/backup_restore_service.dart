@@ -18,6 +18,7 @@ import 'mdblist/mdblist_service.dart';
 import 'mdblist/mdblist_sync_coordinator.dart';
 import 'pikpak_api_service.dart';
 import 'storage_service.dart';
+import 'stream_badges_service.dart';
 import 'stremio_service.dart';
 
 /// Service for creating and applying configuration backups.
@@ -44,6 +45,7 @@ import 'stremio_service.dart';
 ///   - IPTV Favorites (starred channels)
 ///   - IPTV custom lists (each list with its channels)
 ///   - Home collections (imported Nuvio-style folder collections)
+///   - Stream badge rulesets (imported badges.json sources)
 ///
 /// Restore intentionally skips remote validation (network) for credentials —
 /// the user trusts their own backup, so we write the stored values directly.
@@ -177,6 +179,13 @@ class BackupRestoreService {
       throw StateError('Could not read Home collections for backup');
     }
 
+    List<Map<String, dynamic>> streamBadges = const [];
+    try {
+      streamBadges = await StreamBadgesService.instance.exportJson();
+    } catch (_) {
+      throw StateError('Could not read stream badge rulesets for backup');
+    }
+
     return <String, dynamic>{
       'version': payloadVersion,
       'createdAt': DateTime.now().toUtc().toIso8601String(),
@@ -234,6 +243,7 @@ class BackupRestoreService {
       if (iptvFavorites.isNotEmpty) 'iptvFavorites': iptvFavorites,
       if (iptvLists.isNotEmpty) 'iptvLists': iptvLists,
       if (homeCollections.isNotEmpty) 'homeCollections': homeCollections,
+      if (streamBadges.isNotEmpty) 'streamBadges': streamBadges,
     };
   }
 
@@ -278,6 +288,7 @@ class BackupRestoreService {
         (map['iptvLists'] as List?) ?? const [],
       ),
       homeCollectionCount: (map['homeCollections'] as List?)?.length ?? 0,
+      streamBadgeSourceCount: (map['streamBadges'] as List?)?.length ?? 0,
     );
   }
 
@@ -750,6 +761,20 @@ class BackupRestoreService {
       }
     }
 
+    if (selection.streamBadges) {
+      final list = map['streamBadges'];
+      if (list is List && list.isNotEmpty) {
+        try {
+          final counts = await StreamBadgesService.instance.applyBackup(list);
+          report.streamBadgeSourcesImported = counts.imported;
+          report.streamBadgeSourcesAlreadyPresent = counts.alreadyPresent;
+          report.streamBadgeSourcesFailed = counts.failed;
+        } catch (_) {
+          report.errors.add('Stream badges: restore failed');
+        }
+      }
+    }
+
     final trackingPreferences = map['trackingPreferences'];
     if (selection.trackingPreferences && trackingPreferences is Map) {
       try {
@@ -973,6 +998,7 @@ class BackupSummary {
   final int iptvListCount;
   final int iptvListChannelCount;
   final int homeCollectionCount;
+  final int streamBadgeSourceCount;
 
   BackupSummary({
     required this.version,
@@ -994,6 +1020,7 @@ class BackupSummary {
     this.iptvListCount = 0,
     this.iptvListChannelCount = 0,
     this.homeCollectionCount = 0,
+    this.streamBadgeSourceCount = 0,
   });
 
   bool get isEmpty =>
@@ -1012,7 +1039,8 @@ class BackupSummary {
       iptvPlaylistCount == 0 &&
       iptvFavoriteCount == 0 &&
       iptvListCount == 0 &&
-      homeCollectionCount == 0;
+      homeCollectionCount == 0 &&
+      streamBadgeSourceCount == 0;
 }
 
 /// Which categories to include when restoring.
@@ -1033,6 +1061,7 @@ class BackupSelection {
   final bool iptvFavorites;
   final bool iptvLists;
   final bool homeCollections;
+  final bool streamBadges;
   final bool trackingPreferences;
 
   const BackupSelection({
@@ -1052,6 +1081,7 @@ class BackupSelection {
     this.iptvFavorites = true,
     this.iptvLists = true,
     this.homeCollections = true,
+    this.streamBadges = true,
     this.trackingPreferences = false,
   });
 
@@ -1072,6 +1102,7 @@ class BackupSelection {
       iptvFavorites = true,
       iptvLists = true,
       homeCollections = true,
+      streamBadges = true,
       trackingPreferences = true;
 
   BackupSelection copyWith({
@@ -1091,6 +1122,7 @@ class BackupSelection {
     bool? iptvFavorites,
     bool? iptvLists,
     bool? homeCollections,
+    bool? streamBadges,
     bool? trackingPreferences,
   }) {
     return BackupSelection(
@@ -1110,6 +1142,7 @@ class BackupSelection {
       iptvFavorites: iptvFavorites ?? this.iptvFavorites,
       iptvLists: iptvLists ?? this.iptvLists,
       homeCollections: homeCollections ?? this.homeCollections,
+      streamBadges: streamBadges ?? this.streamBadges,
       trackingPreferences: trackingPreferences ?? this.trackingPreferences,
     );
   }
@@ -1155,6 +1188,9 @@ class RestoreReport {
   int homeCollectionsImported = 0;
   int homeCollectionsAlreadyPresent = 0;
   int homeCollectionsFailed = 0;
+  int streamBadgeSourcesImported = 0;
+  int streamBadgeSourcesAlreadyPresent = 0;
+  int streamBadgeSourcesFailed = 0;
   final List<String> errors = [];
 
   int get totalSuccess =>
@@ -1174,7 +1210,8 @@ class RestoreReport {
       iptvFavoritesImported +
       iptvListsCreated +
       iptvListChannelsImported +
-      homeCollectionsImported;
+      homeCollectionsImported +
+      streamBadgeSourcesImported;
 
   int get totalFailed =>
       searchEnginesFailed +
@@ -1185,6 +1222,7 @@ class RestoreReport {
       iptvFavoritesFailed +
       iptvListsFailed +
       homeCollectionsFailed +
+      streamBadgeSourcesFailed +
       errors.length +
       (pikpakLoginFailed ? 1 : 0);
 
