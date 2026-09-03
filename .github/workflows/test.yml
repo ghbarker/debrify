@@ -47,6 +47,7 @@ jobs:
           test/cloud_lazy_entry_url_test.dart
           test/cloud_playback_unlock_test.dart
           test/cloud_player_screen_unlock_test.dart
+          test/cloud_stremio_resolve_test.dart
           test/download_cloud_credential_key_test.dart
 
       - name: Run refactor contract tests
@@ -58,6 +59,7 @@ jobs:
           test/cloud_lazy_entry_url_test.dart
           test/cloud_playback_unlock_test.dart
           test/cloud_player_screen_unlock_test.dart
+          test/cloud_stremio_resolve_test.dart
           test/download_cloud_credential_key_test.dart
           --reporter compact
 

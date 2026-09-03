@@ -3,6 +3,7 @@ import 'package:debrify/screens/video_player/models/playlist_entry.dart';
 import 'package:debrify/services/cloud/cloud_playback_result.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
 import 'package:debrify/services/cloud/cloud_provider_port.dart';
+import 'package:debrify/services/cloud/stremio_torrent_resolve_args.dart';
 import 'package:debrify/services/series_source_service.dart';
 
 /// In-memory cloud provider for matrix tests. Never talks to a network.
@@ -14,6 +15,7 @@ class FakeCloudProvider implements CloudProviderPort {
     this.boundResult,
     this.playlistUrl,
     this.playbackUnlockUrl,
+    this.stremioUrl,
     this.error,
   });
 
@@ -24,15 +26,18 @@ class FakeCloudProvider implements CloudProviderPort {
   CloudPlaybackResult? boundResult;
   String? playlistUrl;
   String? playbackUnlockUrl;
+  String? stremioUrl;
   Object? error;
 
   int addCount = 0;
   int boundCount = 0;
   int playlistCount = 0;
   int unlockCount = 0;
+  int stremioCount = 0;
   String? lastMagnet;
   SeriesSource? lastBoundSource;
   PlaylistEntry? lastPlaylistEntry;
+  Torrent? lastStremioTorrent;
 
   @override
   Future<bool> isConfigured() async => configured;
@@ -76,5 +81,13 @@ class FakeCloudProvider implements CloudProviderPort {
     if (error != null) throw error!;
     if (playbackUnlockUrl != null) return playbackUnlockUrl!;
     throw Exception('No URL metadata available for this entry');
+  }
+
+  @override
+  Future<String?> resolveStremioTorrent(StremioTorrentResolveArgs args) async {
+    stremioCount++;
+    lastStremioTorrent = args.torrent;
+    if (error != null) throw error!;
+    return stremioUrl;
   }
 }

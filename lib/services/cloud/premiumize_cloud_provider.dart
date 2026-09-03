@@ -1,6 +1,10 @@
+import 'package:flutter/foundation.dart';
+
+import '../../models/premiumize_file.dart';
 import '../../models/torrent.dart';
 import '../../screens/video_player/models/playlist_entry.dart';
 import '../../utils/file_utils.dart';
+import '../../utils/stremio_episode_selector.dart';
 import '../main_page_bridge.dart';
 import '../premiumize_service.dart';
 import '../series_source_service.dart';
@@ -10,6 +14,7 @@ import 'cloud_playback_helpers.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
 import 'cloud_provider_port.dart';
+import 'stremio_torrent_resolve_args.dart';
 
 class PremiumizeCloudProvider implements CloudProviderPort {
   const PremiumizeCloudProvider();
@@ -179,5 +184,50 @@ class PremiumizeCloudProvider implements CloudProviderPort {
       throw Exception('Premiumize returned an empty stream URL');
     }
     return match.link;
+  }
+
+  @override
+  Future<String?> resolveStremioTorrent(StremioTorrentResolveArgs args) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) return null;
+    try {
+      final files = await PremiumizeService.directDownload(apiKey, args.magnet);
+
+      if (files.isEmpty) return null;
+
+      final videoFiles = files
+          .where((f) => FileUtils.isVideoFile(f.fileName))
+          .toList();
+      final candidates = videoFiles.isNotEmpty ? videoFiles : files;
+
+      PremiumizeFile? targetFile;
+      if (args.isSeries && args.season != null && args.episode != null) {
+        final candidateNames = candidates.map((f) => f.path).toList();
+        final targetIndex =
+            StremioEpisodeSelector.findEpisodeFileIndexWithSingleFileFallback(
+              candidateNames,
+              sourceName: args.torrent.name,
+              season: args.season!,
+              episode: args.episode!,
+            );
+        if (targetIndex != null && targetIndex < candidates.length) {
+          targetFile = candidates[targetIndex];
+        } else {
+          debugPrint(
+            'StremioTV: Premiumize could not match S${args.season}E${args.episode} in '
+            '${args.torrent.name}, rejecting source',
+          );
+          return null;
+        }
+      }
+      targetFile ??= candidates.length > 1
+          ? candidates.reduce((a, b) => a.size >= b.size ? a : b)
+          : candidates.first;
+
+      return targetFile.streamLink ?? targetFile.link;
+    } catch (e) {
+      debugPrint('StremioTV: Premiumize resolve error: $e');
+      return null;
+    }
   }
 }

@@ -22,7 +22,10 @@ Playback add/resolve no longer lives in a five-way `switch` inside
   (adapter HTTP; launcher/TV registry dispatch throws; TorBox before RD;
   web-download counts). The in-app player calls
   `CloudProviderRegistry.unlockPlayerScreenEntry` (wraps HTTP; incomplete
-  Premiumize does not fall through to RD).
+  Premiumize does not fall through to RD) + `resolveStremioTorrent`
+  (Stremio TV; `realdebrid` via tryParse; auto order is PikPak before
+  Premiumize; returns null on miss — do not reuse addMagnet or playback
+  precedence).
 - **Register** the adapter in `CloudProviderRegistry.production()`.
 - **Ids / credential keys / backup field names / display names / chip codes /
   overlay titles / playlist stored ids** go on `CloudProviderId` (keep Flutter

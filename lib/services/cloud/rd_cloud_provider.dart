@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart';
+
 import '../../models/rd_torrent.dart';
 import '../../models/torrent.dart';
 import '../../screens/video_player/models/playlist_entry.dart';
 import '../../utils/file_utils.dart';
 import '../../utils/rd_folder_tree_builder.dart';
 import '../../utils/series_parser.dart';
+import '../../utils/stremio_episode_selector.dart';
 import '../debrid_service.dart';
 import '../main_page_bridge.dart';
 import '../series_source_service.dart';
@@ -11,6 +14,7 @@ import 'cloud_credentials.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
 import 'cloud_provider_port.dart';
+import 'stremio_torrent_resolve_args.dart';
 
 class RealDebridCloudProvider implements CloudProviderPort {
   const RealDebridCloudProvider();
@@ -238,5 +242,85 @@ class RealDebridCloudProvider implements CloudProviderPort {
       );
     }
     return entries.isEmpty ? null : entries;
+  }
+
+  @override
+  Future<String?> resolveStremioTorrent(StremioTorrentResolveArgs args) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) return null;
+    try {
+      final result = await DebridService.addTorrentToDebridPreferVideos(
+        apiKey,
+        args.magnet,
+      );
+
+      final links = result['links'] as List<dynamic>? ?? [];
+      final updatedInfo = result['updatedInfo'] as Map<String, dynamic>? ?? {};
+      final files = updatedInfo['files'] as List<dynamic>? ?? [];
+
+      if (links.isEmpty) return null;
+
+      String linkToUnrestrict = links.first.toString();
+      final selectedVideoFiles = <Map<String, dynamic>>[];
+      final selectedVideoLinks = <String>[];
+      int linkIndex = 0;
+      for (final file in files) {
+        if (file is! Map<String, dynamic>) continue;
+        final selected = file['selected'] == 1 || file['selected'] == true;
+        if (!selected) continue;
+        final rawName =
+            (file['path'] as String?) ?? (file['name'] as String?) ?? '';
+        if (FileUtils.isVideoFile(FileUtils.getFileName(rawName)) &&
+            linkIndex < links.length) {
+          selectedVideoFiles.add(file);
+          selectedVideoLinks.add(links[linkIndex].toString());
+        }
+        linkIndex++;
+      }
+
+      if (args.isSeries && args.season != null && args.episode != null) {
+        final candidateNames = selectedVideoFiles.map((file) {
+          return (file['path'] as String?) ?? (file['name'] as String?) ?? '';
+        }).toList();
+        final targetIndex =
+            StremioEpisodeSelector.findEpisodeFileIndexWithSingleFileFallback(
+              candidateNames,
+              sourceName: args.torrent.name,
+              season: args.season!,
+              episode: args.episode!,
+            );
+        if (targetIndex == null || targetIndex >= selectedVideoLinks.length) {
+          debugPrint(
+            'StremioTV: RD could not match S${args.season}E${args.episode} in ${args.torrent.name}, '
+            'rejecting source',
+          );
+          final torrentId = result['torrentId']?.toString();
+          if (torrentId != null && torrentId.isNotEmpty) {
+            try {
+              await DebridService.deleteTorrent(apiKey, torrentId);
+            } catch (_) {}
+          }
+          return null;
+        } else {
+          linkToUnrestrict = selectedVideoLinks[targetIndex];
+        }
+      } else if (args.isMovie && selectedVideoLinks.length > 1) {
+        final targetIndex = StremioEpisodeSelector.findLargestFileIndex(
+          selectedVideoFiles.map((file) => file['bytes'] as int?).toList(),
+        );
+        if (targetIndex < selectedVideoLinks.length) {
+          linkToUnrestrict = selectedVideoLinks[targetIndex];
+        }
+      }
+
+      final unrestrictResult = await DebridService.unrestrictLink(
+        apiKey,
+        linkToUnrestrict,
+      );
+      return unrestrictResult['download'] as String?;
+    } catch (e) {
+      debugPrint('StremioTV: RD resolve error: $e');
+      return null;
+    }
   }
 }
