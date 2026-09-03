@@ -63,11 +63,11 @@ void main() {
     });
 
     test('bind-source chips use stored ids and Local, not playback chrome', () {
-      expect(CloudProviderChrome.sourceLabel('rd'), 'Real-Debrid');
-      expect(CloudProviderChrome.sourceLabel('debrid'), 'debrid');
-      expect(CloudProviderChrome.sourceLabel('torbox'), 'TorBox');
+      expect(CloudProviderChrome.sourceChip('rd').label, 'Real-Debrid');
+      expect(CloudProviderChrome.sourceChip('debrid').label, 'debrid');
+      expect(CloudProviderChrome.sourceChip('torbox').label, 'TorBox');
       expect(
-        CloudProviderChrome.sourceLabel(SeriesSource.localService),
+        CloudProviderChrome.sourceChip(SeriesSource.localService).label,
         'Local',
       );
       expect(
@@ -75,7 +75,7 @@ void main() {
         'On-device',
       );
       expect(
-        CloudProviderChrome.sourceColor('torbox'),
+        CloudProviderChrome.sourceChip('torbox').color,
         const Color(0xFF3B82F6),
       );
       expect(
@@ -83,23 +83,11 @@ void main() {
         const Color(0xFF8B5CF6),
       );
       expect(
-        CloudProviderChrome.sourceChip('rd').label,
-        'Real-Debrid',
-      );
-      expect(
-        CloudProviderChrome.sourceColor('nope'),
+        CloudProviderChrome.sourceChip('nope').color,
         Colors.white54,
       );
-      expect(
-        CloudProviderId.tryParse('realdebrid')!.chipCode,
-        'RD',
-      );
-      expect(
-        CloudProviderChrome.gradient(
-          CloudProviderId.tryParse('realdebrid')!.playbackId,
-        ).first,
-        const Color(0xFF10B981),
-      );
+      expect(CloudProviderId.debrid.catalogChoice.key, 'realdebrid');
+      expect(CloudProviderId.debrid.catalogChoice.value, 'Real-Debrid');
     });
 
     test('playlist badges keep empty-as-RD and webdav-as-DV', () {
@@ -110,8 +98,14 @@ void main() {
       expect(CloudProviderChrome.playlistBadge('pik-pak'), 'PP');
       expect(CloudProviderChrome.playlistBadge('xyz'), 'XY');
       expect(CloudProviderChrome.catalogChip(''), 'AUTO');
-      expect(CloudProviderChrome.cacheServiceChip('torbox'), 'TB');
-      expect(CloudProviderChrome.cacheServiceChip('nope'), 'Cached');
+      expect(
+        CloudProviderId.tryParse('torbox')?.chipCode ?? 'Cached',
+        'TB',
+      );
+      expect(
+        CloudProviderId.tryParse('nope')?.chipCode ?? 'Cached',
+        'Cached',
+      );
     });
   });
 

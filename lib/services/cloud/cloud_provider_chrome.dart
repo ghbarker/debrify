@@ -106,15 +106,13 @@ class CloudProviderChrome {
     }
   }
 
-  static String cacheServiceChip(String service) =>
-      CloudProviderId.tryParse(service)?.chipCode ?? 'Cached';
-
+  /// Bind-source chip. TorBox is blue here; playback [gradient] is purple.
   static ({String label, Color color}) sourceChip(String stored) => (
-        label: sourceLabel(stored),
-        color: sourceColor(stored),
+        label: _sourceLabel(stored),
+        color: _sourceColor(stored),
       );
 
-  static String sourceLabel(String stored) {
+  static String _sourceLabel(String stored) {
     switch (stored) {
       case SeriesSource.localService:
         return 'Local';
@@ -125,8 +123,7 @@ class CloudProviderChrome {
     }
   }
 
-  /// Bind-source TorBox is blue; playback [gradient] is purple.
-  static Color sourceColor(String stored) {
+  static Color _sourceColor(String stored) {
     switch (stored) {
       case SeriesSource.localService:
         return const Color(0xFF60A5FA);

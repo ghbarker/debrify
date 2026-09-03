@@ -69,6 +69,10 @@ enum CloudProviderId {
   /// Playlist JSON `provider` field. Real-Debrid is `realdebrid`, not `debrid`.
   String get playlistStoredProvider => this == debrid ? 'realdebrid' : name;
 
+  /// Stremio / catalog picker row (`realdebrid` → Real-Debrid).
+  MapEntry<String, String> get catalogChoice =>
+      MapEntry(playlistStoredProvider, displayName);
+
   /// [playbackId] only (`debrid`, not `rd` / `realdebrid`).
   static CloudProviderId? fromPlaybackId(String provider) {
     for (final id in values) {

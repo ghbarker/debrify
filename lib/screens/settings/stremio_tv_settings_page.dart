@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/analytics_service.dart';
 import '../../services/storage_service.dart';
+import '../../services/cloud/cloud_provider_id.dart';
 import 'widgets/settings_widgets.dart';
 import '../../theme/app_theme_scope.dart';
 
@@ -51,14 +52,14 @@ class _StremioTvSettingsPageState extends State<StremioTvSettingsPage> {
       // Detect which providers are configured
       final providers = <MapEntry<String, String>>[];
       if (await StorageService.hasRealDebridCredential()) {
-        providers.add(const MapEntry('realdebrid', 'Real-Debrid'));
+        providers.add(CloudProviderId.debrid.catalogChoice);
       }
       if (await StorageService.hasTorboxCredential()) {
-        providers.add(const MapEntry('torbox', 'TorBox'));
+        providers.add(CloudProviderId.torbox.catalogChoice);
       }
       final pikpakEnabled = await StorageService.getPikPakEnabled();
       if (pikpakEnabled) {
-        providers.add(const MapEntry('pikpak', 'PikPak'));
+        providers.add(CloudProviderId.pikpak.catalogChoice);
       }
 
       setState(() {

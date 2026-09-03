@@ -235,25 +235,25 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
     final providers = <MapEntry<String, String>>[];
     final rdKey = await StorageService.getApiKey();
     if (rdKey != null && rdKey.isNotEmpty) {
-      providers.add(const MapEntry('realdebrid', 'Real-Debrid'));
+      providers.add(CloudProviderId.debrid.catalogChoice);
     }
     final tbKey = await StorageService.getTorboxApiKey();
     if (tbKey != null && tbKey.isNotEmpty) {
-      providers.add(const MapEntry('torbox', 'TorBox'));
+      providers.add(CloudProviderId.torbox.catalogChoice);
     }
     final pikpakEnabled = await StorageService.getPikPakEnabled();
     if (pikpakEnabled) {
-      providers.add(const MapEntry('pikpak', 'PikPak'));
+      providers.add(CloudProviderId.pikpak.catalogChoice);
     }
     final pmEnabled = await StorageService.getPremiumizeIntegrationEnabled();
     final pmKey = await StorageService.getPremiumizeApiKey();
     if (pmEnabled && pmKey != null && pmKey.isNotEmpty) {
-      providers.add(const MapEntry('premiumize', 'Premiumize'));
+      providers.add(CloudProviderId.premiumize.catalogChoice);
     }
     final adEnabled = await StorageService.getAllDebridIntegrationEnabled();
     final adKey = await StorageService.getAllDebridApiKey();
     if (adEnabled && adKey != null && adKey.isNotEmpty) {
-      providers.add(const MapEntry('alldebrid', 'AllDebrid'));
+      providers.add(CloudProviderId.alldebrid.catalogChoice);
     }
     return providers;
   }
