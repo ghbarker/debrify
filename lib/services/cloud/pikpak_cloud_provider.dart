@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 
 import '../../models/torrent.dart';
@@ -16,6 +18,7 @@ import 'cloud_playback_helpers.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
 import 'cloud_provider_port.dart';
+import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
 class PikPakCloudProvider implements CloudProviderPort {
@@ -352,6 +355,109 @@ class PikPakCloudProvider implements CloudProviderPort {
     } catch (e) {
       debugPrint('StremioTV: Failed to trash rejected PikPak item $rootId: $e');
     }
+  }
+
+  @override
+  Future<MagicTvPrepared?> prepareMagicTv(MagicTvPrepareRequest request) async {
+    if (request.infohash.isEmpty) return null;
+
+    request.log('⏳ PikPak: preparing ${request.torrent.name}');
+
+    final prepared = await PikPakTvService.instance.prepareTorrent(
+      infohash: request.infohash,
+      torrentName: request.torrent.name,
+      onLog: request.log,
+    );
+
+    if (prepared == null) {
+      request.log('⚠️ PikPak torrent not ready ${request.torrent.name}');
+      return null;
+    }
+
+    final allVideoFiles = prepared['allVideoFiles'] as List<dynamic>?;
+
+    if (allVideoFiles == null || allVideoFiles.isEmpty) {
+      request.log('🎬 PikPak: streaming ${prepared['title']}');
+      return MagicTvPrepared(
+        streamUrl: prepared['url'] as String,
+        title: prepared['title'] as String,
+        hasMore: false,
+      );
+    }
+
+    final pikpakFolderId = prepared['pikpakFolderId'] as String?;
+    if (pikpakFolderId == null) {
+      request.log('⚠️ PikPak multi-file torrent missing folder ID');
+      return null;
+    }
+
+    List<dynamic> filterUnseen({required bool applySizeFilter}) {
+      return allVideoFiles.where((file) {
+        final fileId = file['id'] as String?;
+        if (fileId == null || fileId.isEmpty) return false;
+        final trackingKey = '${request.infohash}|$fileId';
+        if (request.seenKeys.contains(trackingKey)) return false;
+        final size = (file['size'] as num?)?.toInt() ?? 0;
+        if (size > 0 && size < request.minVideoSizeBytes) return false;
+        if (applySizeFilter && !request.sizeMatchesBytes(size)) return false;
+        return true;
+      }).toList();
+    }
+
+    var unseenFiles = filterUnseen(applySizeFilter: true);
+    if (unseenFiles.isEmpty && request.hasSizeFilter) {
+      request.log(
+        '⚠️ PikPak: no file matched the size filter — using unfiltered',
+      );
+      unseenFiles = filterUnseen(applySizeFilter: false);
+    }
+
+    if (unseenFiles.isEmpty) {
+      request.log(
+        '⚠️ PikPak torrent has no unseen files ${request.torrent.name}',
+      );
+      return null;
+    }
+
+    unseenFiles.shuffle(Random());
+    final selectedFile = unseenFiles.removeAt(0);
+    final selectedFileId = selectedFile['id'] as String?;
+    final selectedFileName = selectedFile['name'] as String?;
+
+    if (selectedFileId == null ||
+        selectedFileId.isEmpty ||
+        selectedFileName == null ||
+        selectedFileName.isEmpty) {
+      request.log('⚠️ Selected file has invalid ID or name');
+      return null;
+    }
+
+    request.log(
+      '🎬 PikPak: selected $selectedFileName (${unseenFiles.length} unseen files)',
+    );
+
+    String streamUrl;
+    try {
+      final api = PikPakApiService.instance;
+      final fullFileData = await api.getFileDetails(selectedFileId);
+      final url = api.getStreamingUrl(fullFileData);
+      if (url == null || url.isEmpty) {
+        request.log('⚠️ No streaming URL for selected file');
+        return null;
+      }
+      streamUrl = url;
+    } catch (e) {
+      request.log('❌ Failed to get streaming URL: $e');
+      return null;
+    }
+
+    request.seenKeys.add('${request.infohash}|$selectedFileId');
+
+    return MagicTvPrepared(
+      streamUrl: streamUrl,
+      title: selectedFileName,
+      hasMore: unseenFiles.isNotEmpty,
+    );
   }
 
   static Future<List<Map<String, dynamic>>> extractPikPakVideos(

@@ -1,6 +1,9 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 
 import '../../models/torbox_file.dart';
+import '../../models/torbox_torrent.dart';
 import '../../models/torbox_web_download.dart';
 import '../../models/torrent.dart';
 import '../../screens/video_player/models/playlist_entry.dart';
@@ -16,6 +19,8 @@ import 'cloud_playback_helpers.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
 import 'cloud_provider_port.dart';
+import 'magic_tv_playable.dart';
+import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
 class TorboxCloudProvider implements CloudProviderPort {
@@ -363,5 +368,120 @@ class TorboxCloudProvider implements CloudProviderPort {
         }
       }
     }
+  }
+
+  @override
+  Future<MagicTvPrepared?> prepareMagicTv(MagicTvPrepareRequest request) async {
+    if (request.infohash.isEmpty) return null;
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) return null;
+
+    request.log('⏳ Torbox: preparing ${request.torrent.name}');
+
+    Map<String, dynamic> response;
+    try {
+      response = await TorboxService.createTorrent(
+        apiKey: apiKey,
+        magnet: request.magnet,
+        seed: true,
+        allowZip: false,
+        addOnlyIfCached: true,
+      );
+    } catch (e) {
+      request.log('❌ Torbox createtorrent failed: $e');
+      return null;
+    }
+
+    final success = response['success'] as bool? ?? false;
+    if (!success) {
+      final error = (response['error'] ?? '').toString();
+      request.log('⚠️ Torbox createtorrent error: $error');
+      return null;
+    }
+
+    final data = response['data'];
+    final torrentId = _asIntMapValue(data, 'torrent_id');
+    if (torrentId == null) {
+      request.log('⚠️ Torbox createtorrent missing torrent_id');
+      return null;
+    }
+
+    TorboxTorrent? torboxTorrent;
+    for (int attempt = 0; attempt < 6; attempt++) {
+      torboxTorrent = await TorboxService.getTorrentById(
+        apiKey,
+        torrentId,
+        attempts: 1,
+      );
+      if (torboxTorrent != null && torboxTorrent.files.isNotEmpty) {
+        break;
+      }
+      await Future.delayed(const Duration(milliseconds: 400));
+    }
+
+    if (torboxTorrent == null || torboxTorrent.files.isEmpty) {
+      request.log(
+        '⚠️ Torbox torrent details not ready for ${request.torrent.name}',
+      );
+      return null;
+    }
+
+    final currentTorrent = torboxTorrent;
+
+    final playableEntries = MagicTvPlayable.buildTorboxEntries(
+      currentTorrent,
+      request.torrent.name,
+      request,
+    );
+    if (playableEntries.isEmpty) {
+      request.log(
+        '⚠️ Torbox torrent has no playable files ${request.torrent.name}',
+      );
+      return null;
+    }
+
+    final filteredEntries = playableEntries
+        .where(
+          (entry) => !request.seenKeys.contains(
+            '${currentTorrent.id}|${entry.file.id}',
+          ),
+        )
+        .toList();
+    if (filteredEntries.isEmpty) {
+      request.log(
+        '⚠️ Torbox torrent has no unseen playable files ${request.torrent.name}',
+      );
+      return null;
+    }
+
+    filteredEntries.shuffle(Random());
+    final next = filteredEntries.removeAt(0);
+    try {
+      final streamUrl = await TorboxService.requestFileDownloadLink(
+        apiKey: apiKey,
+        torrentId: currentTorrent.id,
+        fileId: next.file.id,
+      );
+      request.log('🎬 Torbox: streaming ${next.title}');
+      request.seenKeys.add('${currentTorrent.id}|${next.file.id}');
+      return MagicTvPrepared(
+        streamUrl: streamUrl,
+        title: next.title,
+        hasMore: filteredEntries.isNotEmpty,
+      );
+    } catch (e) {
+      request.log('❌ Torbox requestdl failed: $e');
+      return null;
+    }
+  }
+
+  static int? _asIntMapValue(dynamic data, String key) {
+    if (data is Map<String, dynamic>) {
+      final value = data[key];
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value);
+      if (value is num) return value.toInt();
+    }
+    return null;
   }
 }

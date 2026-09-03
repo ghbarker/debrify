@@ -15,7 +15,6 @@ import '../models/torrent_filter_state.dart';
 import '../widgets/torrent_result_row.dart' show qualityTierForName;
 import '../models/debrify_tv_cache.dart';
 import '../models/torbox_file.dart';
-import '../models/torbox_torrent.dart';
 import '../models/debrify_tv_channel_record.dart';
 import '../models/debrify_tv/channel.dart';
 import '../models/debrify_tv/channel_stats.dart';
@@ -25,15 +24,16 @@ import '../models/debrify_tv/import_results.dart';
 import '../services/analytics_service.dart';
 import '../services/android_native_downloader.dart';
 import '../services/android_tv_player_bridge.dart';
+import '../services/cloud/cloud_provider_registry.dart';
+import '../services/cloud/magic_tv_playable.dart';
+import '../services/cloud/magic_tv_prepare_args.dart';
 import '../services/debrid_service.dart';
-import '../services/pikpak_api_service.dart';
 import '../services/pikpak_tv_service.dart';
 import '../services/storage_service.dart';
 import '../services/video_player_launcher.dart';
 import '../services/debrify_tv_channel_archive_service.dart';
 import '../services/debrify_tv_cache_service.dart';
 import '../services/debrify_tv_repository.dart';
-import '../models/premiumize_file.dart';
 import '../services/premiumize_service.dart';
 import '../services/alldebrid_service.dart';
 import '../services/torbox_service.dart';
@@ -57,7 +57,6 @@ import '../utils/nsfw_filter.dart';
 import '../utils/platform_util.dart';
 import '../utils/rd_blocked_filter.dart';
 import '../utils/debrify_tv_filters.dart';
-import '../utils/series_parser.dart';
 import '../utils/tv_keys.dart';
 import '../widgets/tv_text_field.dart';
 import 'video_player_screen.dart';
@@ -9517,7 +9516,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
         torrentId: torrentId,
         fileId: file.id,
       );
-      final resolvedTitle = title ?? _torboxDisplayName(file);
+      final resolvedTitle = title ?? MagicTvPlayable.torboxDisplayName(file);
       log('➡️ Torbox: streaming $resolvedTitle');
       return {'url': streamUrl, 'title': resolvedTitle};
     } catch (e) {
@@ -9531,218 +9530,31 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     required String apiKey,
     required void Function(String message) log,
   }) async {
-    final infohash = _normalizeInfohash(candidate.infohash);
-    if (infohash.isEmpty) {
-      return null;
-    }
-
-    log('⏳ Torbox: preparing ${candidate.name}');
-
-    final magnetLink = 'magnet:?xt=urn:btih:${candidate.infohash}';
-    Map<String, dynamic> response;
-    try {
-      response = await TorboxService.createTorrent(
-        apiKey: apiKey,
-        magnet: magnetLink,
-        seed: true,
-        allowZip: false,
-        addOnlyIfCached: true,
-      );
-    } catch (e) {
-      log('❌ Torbox createtorrent failed: $e');
-      return null;
-    }
-
-    final success = response['success'] as bool? ?? false;
-    if (!success) {
-      final error = (response['error'] ?? '').toString();
-      log('⚠️ Torbox createtorrent error: $error');
-      return null;
-    }
-
-    final data = response['data'];
-    final torrentId = _asIntMapValue(data, 'torrent_id');
-    if (torrentId == null) {
-      log('⚠️ Torbox createtorrent missing torrent_id');
-      return null;
-    }
-
-    TorboxTorrent? torboxTorrent;
-    for (int attempt = 0; attempt < 6; attempt++) {
-      torboxTorrent = await TorboxService.getTorrentById(
-        apiKey,
-        torrentId,
-        attempts: 1,
-      );
-      if (torboxTorrent != null && torboxTorrent.files.isNotEmpty) {
-        break;
-      }
-      await Future.delayed(const Duration(milliseconds: 400));
-    }
-
-    if (torboxTorrent == null || torboxTorrent.files.isEmpty) {
-      log('⚠️ Torbox torrent details not ready for ${candidate.name}');
-      return null;
-    }
-
-    final currentTorrent = torboxTorrent;
-
-    final playableEntries = _buildTorboxPlayableEntries(
-      currentTorrent,
-      candidate.name,
+    final prepared = await CloudProviderRegistry.instance.prepareMagicTv(
+      provider: _providerTorbox,
+      request: _magicTvPrepareRequest(candidate, log),
     );
-    if (playableEntries.isEmpty) {
-      log('⚠️ Torbox torrent has no playable files ${candidate.name}');
-      return null;
-    }
-
-    final random = Random();
-    final filteredEntries = playableEntries
-        .where(
-          (entry) => !_seenLinkWithTorrentId.contains(
-            '${currentTorrent.id}|${entry.file.id}',
-          ),
-        )
-        .toList();
-    if (filteredEntries.isEmpty) {
-      log('⚠️ Torbox torrent has no unseen playable files ${candidate.name}');
-      return null;
-    }
-
-    filteredEntries.shuffle(random);
-    final next = filteredEntries.removeAt(0);
-    try {
-      final streamUrl = await TorboxService.requestFileDownloadLink(
-        apiKey: apiKey,
-        torrentId: currentTorrent.id,
-        fileId: next.file.id,
-      );
-      log('🎬 Torbox: streaming ${next.title}');
-      _seenLinkWithTorrentId.add('${currentTorrent.id}|${next.file.id}');
-      return TorboxPreparedTorrent(
-        streamUrl: streamUrl,
-        title: next.title,
-        hasMore: filteredEntries.isNotEmpty,
-      );
-    } catch (e) {
-      log('❌ Torbox requestdl failed: $e');
-      return null;
-    }
+    if (prepared == null) return null;
+    return TorboxPreparedTorrent(
+      streamUrl: prepared.streamUrl,
+      title: prepared.title,
+      hasMore: prepared.hasMore,
+    );
   }
 
   Future<PikPakPreparedTorrent?> _preparePikPakTorrent({
     required Torrent candidate,
     required void Function(String message) log,
   }) async {
-    final infohash = _normalizeInfohash(candidate.infohash);
-    if (infohash.isEmpty) {
-      return null;
-    }
-
-    log('⏳ PikPak: preparing ${candidate.name}');
-
-    final prepared = await PikPakTvService.instance.prepareTorrent(
-      infohash: infohash,
-      torrentName: candidate.name,
-      onLog: log,
+    final prepared = await CloudProviderRegistry.instance.prepareMagicTv(
+      provider: _providerPikPak,
+      request: _magicTvPrepareRequest(candidate, log),
     );
-
-    if (prepared == null) {
-      log('⚠️ PikPak torrent not ready ${candidate.name}');
-      return null;
-    }
-
-    // Check if this is a multi-file torrent
-    final allVideoFiles = prepared['allVideoFiles'] as List<dynamic>?;
-
-    if (allVideoFiles == null || allVideoFiles.isEmpty) {
-      // Single file torrent - return directly
-      log('🎬 PikPak: streaming ${prepared['title']}');
-      return PikPakPreparedTorrent(
-        streamUrl: prepared['url'] as String,
-        title: prepared['title'] as String,
-        hasMore: false,
-      );
-    }
-
-    // Multi-file torrent - filter out seen files
-    final pikpakFolderId = prepared['pikpakFolderId'] as String?;
-    if (pikpakFolderId == null) {
-      log('⚠️ PikPak multi-file torrent missing folder ID');
-      return null;
-    }
-
-    // Filter unseen files. PikPak reports a per-file `size`, so the same
-    // per-FILE size rules the other providers use apply here — including the
-    // 50MB floor that keeps trailers and samples out of the rotation.
-    List<dynamic> filterUnseen({required bool applySizeFilter}) {
-      return allVideoFiles.where((file) {
-        final fileId = file['id'] as String?;
-        if (fileId == null || fileId.isEmpty) return false;
-        final trackingKey = '$infohash|$fileId';
-        if (_seenLinkWithTorrentId.contains(trackingKey)) return false;
-        final size = (file['size'] as num?)?.toInt() ?? 0;
-        if (size > 0 && size < _torboxMinVideoSizeBytes) return false;
-        if (applySizeFilter && !_tvFilters.sizeMatchesBytes(size)) return false;
-        return true;
-      }).toList();
-    }
-
-    var unseenFiles = filterUnseen(applySizeFilter: true);
-    if (unseenFiles.isEmpty && _tvFilters.hasSize) {
-      // Nothing in this torrent matched — take it unfiltered rather than
-      // discarding the torrent (see the Torbox builder).
-      log('⚠️ PikPak: no file matched the size filter — using unfiltered');
-      unseenFiles = filterUnseen(applySizeFilter: false);
-    }
-
-    if (unseenFiles.isEmpty) {
-      log('⚠️ PikPak torrent has no unseen files ${candidate.name}');
-      return null;
-    }
-
-    // Shuffle and select next file
-    final random = Random();
-    unseenFiles.shuffle(random);
-    final selectedFile = unseenFiles.removeAt(0);
-    final selectedFileId = selectedFile['id'] as String?;
-    final selectedFileName = selectedFile['name'] as String?;
-
-    if (selectedFileId == null ||
-        selectedFileId.isEmpty ||
-        selectedFileName == null ||
-        selectedFileName.isEmpty) {
-      log('⚠️ Selected file has invalid ID or name');
-      return null;
-    }
-
-    log(
-      '🎬 PikPak: selected $selectedFileName (${unseenFiles.length} unseen files)',
-    );
-
-    // Get streaming URL for selected file
-    String streamUrl;
-    try {
-      final api = PikPakApiService.instance;
-      final fullFileData = await api.getFileDetails(selectedFileId);
-      final url = api.getStreamingUrl(fullFileData);
-      if (url == null || url.isEmpty) {
-        log('⚠️ No streaming URL for selected file');
-        return null;
-      }
-      streamUrl = url;
-    } catch (e) {
-      log('❌ Failed to get streaming URL: $e');
-      return null;
-    }
-
-    // Mark as seen
-    _seenLinkWithTorrentId.add('$infohash|$selectedFileId');
-
+    if (prepared == null) return null;
     return PikPakPreparedTorrent(
-      streamUrl: streamUrl,
-      title: selectedFileName,
-      hasMore: unseenFiles.isNotEmpty,
+      streamUrl: prepared.streamUrl,
+      title: prepared.title,
+      hasMore: prepared.hasMore,
     );
   }
 
@@ -9799,124 +9611,29 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     required String apiKey,
     required void Function(String message) log,
   }) async {
-    final infohash = _normalizeInfohash(candidate.infohash);
-    if (infohash.isEmpty) return null;
-
-    log('⏳ Premiumize: preparing ${candidate.name}');
-
-    final magnet = 'magnet:?xt=urn:btih:${candidate.infohash}';
-    List<PremiumizeFile> files;
-    try {
-      files = await PremiumizeService.directDownload(apiKey, magnet);
-    } catch (e) {
-      log('❌ Premiumize directdl failed: $e');
-      return null;
-    }
-
-    if (files.isEmpty) {
-      log('⚠️ Premiumize: no files for ${candidate.name}');
-      return null;
-    }
-
-    final playableEntries = _buildPremiumizePlayableEntries(
-      files,
-      candidate.name,
+    final prepared = await CloudProviderRegistry.instance.prepareMagicTv(
+      provider: _providerPremiumize,
+      request: _magicTvPrepareRequest(candidate, log),
     );
-    if (playableEntries.isEmpty) {
-      log('⚠️ Premiumize: no playable files for ${candidate.name}');
-      return null;
-    }
-
-    final filteredEntries = playableEntries
-        .where(
-          (e) => !_seenLinkWithTorrentId.contains('$infohash|${e.file.path}'),
-        )
-        .toList();
-    if (filteredEntries.isEmpty) {
-      log('⚠️ Premiumize: no unseen playable files for ${candidate.name}');
-      return null;
-    }
-
-    filteredEntries.shuffle(Random());
-    final next = filteredEntries.removeAt(0);
-    final streamUrl = next.file.streamLink ?? next.file.link;
-    _seenLinkWithTorrentId.add('$infohash|${next.file.path}');
-    log('🎬 Premiumize: streaming ${next.title}');
+    if (prepared == null) return null;
     return PremiumizePreparedTorrent(
-      streamUrl: streamUrl,
-      title: next.title,
-      hasMore: filteredEntries.isNotEmpty,
+      streamUrl: prepared.streamUrl,
+      title: prepared.title,
+      hasMore: prepared.hasMore,
     );
   }
 
-  List<PremiumizePlayableEntry> _buildPremiumizePlayableEntries(
-    List<PremiumizeFile> files,
-    String fallbackTitle, {
-    bool applySizeFilter = true,
-  }) {
-    final seriesCandidates = <PremiumizePlayableEntry>[];
-    final otherCandidates = <PremiumizePlayableEntry>[];
-
-    for (final file in files) {
-      if (!_premiumizeFileLooksLikeVideo(file)) continue;
-      if (file.size < _torboxMinVideoSizeBytes) continue;
-      // Per-FILE size filter (see the Torbox builder for the rationale).
-      if (applySizeFilter && !_tvFilters.sizeMatchesBytes(file.size)) continue;
-
-      final displayName = file.fileName.isNotEmpty
-          ? file.fileName
-          : fallbackTitle;
-      final info = SeriesParser.parseFilenameConservative(displayName);
-      final title = info.isSeries
-          ? _formatTorboxSeriesTitle(info, fallbackTitle)
-          : (displayName.isNotEmpty ? displayName : fallbackTitle);
-      final entry = PremiumizePlayableEntry(
-        file: file,
-        title: title,
-        info: info,
-      );
-
-      if (info.isSeries && info.season != null && info.episode != null) {
-        seriesCandidates.add(entry);
-      } else {
-        otherCandidates.add(entry);
-      }
-    }
-
-    seriesCandidates.sort((a, b) {
-      final seasonCompare = (a.info.season ?? 0).compareTo(b.info.season ?? 0);
-      if (seasonCompare != 0) return seasonCompare;
-      return (a.info.episode ?? 0).compareTo(b.info.episode ?? 0);
-    });
-
-    otherCandidates.sort(
-      (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
-    );
-
-    final entries = <PremiumizePlayableEntry>[
-      ...seriesCandidates,
-      ...otherCandidates,
-    ];
-    entries.shuffle(Random());
-    if (entries.isEmpty && applySizeFilter && _tvFilters.hasSize) {
-      debugPrint(
-        'DebrifyTV/Premiumize: no file matched the size filter in '
-        '"$fallbackTitle" — using it unfiltered.',
-      );
-      return _buildPremiumizePlayableEntries(
-        files,
-        fallbackTitle,
-        applySizeFilter: false,
-      );
-    }
-    return entries;
-  }
-
-  bool _premiumizeFileLooksLikeVideo(PremiumizeFile file) {
-    final name = file.fileName;
-    if (name.isEmpty) return false;
-    return FileUtils.isVideoFile(name);
-  }
+  MagicTvPrepareRequest _magicTvPrepareRequest(
+    Torrent candidate,
+    void Function(String message) log,
+  ) => MagicTvPrepareRequest(
+    torrent: candidate,
+    log: log,
+    seenKeys: _seenLinkWithTorrentId,
+    sizeMatchesBytes: _tvFilters.sizeMatchesBytes,
+    hasSizeFilter: _tvFilters.hasSize,
+    minVideoSizeBytes: _torboxMinVideoSizeBytes,
+  );
 
   Future<void> _watchPremiumizeWithCachedTorrents(
     List<Torrent> cachedTorrents, {
@@ -10707,103 +10424,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     }
   }
 
-  List<TorboxPlayableEntry> _buildTorboxPlayableEntries(
-    TorboxTorrent torrent,
-    String fallbackTitle, {
-    bool applySizeFilter = true,
-  }) {
-    final entries = <TorboxPlayableEntry>[];
-    final seriesCandidates = <TorboxPlayableEntry>[];
-    final otherCandidates = <TorboxPlayableEntry>[];
-
-    for (final file in torrent.files) {
-      if (!_torboxFileLooksLikeVideo(file)) continue;
-      if (file.size < _torboxMinVideoSizeBytes) continue;
-      // Per-FILE size filter: a pack's files are individual episodes, so this
-      // compares against the number the user actually meant.
-      if (applySizeFilter && !_tvFilters.sizeMatchesBytes(file.size)) continue;
-
-      final displayName = _torboxDisplayName(file);
-      final info = SeriesParser.parseFilenameConservative(displayName);
-      final title = info.isSeries
-          ? _formatTorboxSeriesTitle(info, fallbackTitle)
-          : (displayName.isNotEmpty ? displayName : fallbackTitle);
-      final entry = TorboxPlayableEntry(file: file, title: title, info: info);
-
-      if (info.isSeries && info.season != null && info.episode != null) {
-        seriesCandidates.add(entry);
-      } else {
-        otherCandidates.add(entry);
-      }
-    }
-
-    // Sort series candidates by season and episode
-    seriesCandidates.sort((a, b) {
-      final seasonCompare = (a.info.season ?? 0).compareTo(b.info.season ?? 0);
-      if (seasonCompare != 0) return seasonCompare;
-      return (a.info.episode ?? 0).compareTo(b.info.episode ?? 0);
-    });
-
-    // Sort other candidates alphabetically
-    otherCandidates.sort(
-      (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
-    );
-
-    entries
-      ..addAll(seriesCandidates)
-      ..addAll(otherCandidates);
-    entries.shuffle(Random());
-    // Nothing in THIS torrent matched the size filter — take it unfiltered
-    // rather than discarding the torrent, so a strict filter narrows what
-    // plays instead of walking the whole queue and playing nothing.
-    if (entries.isEmpty && applySizeFilter && _tvFilters.hasSize) {
-      debugPrint(
-        'DebrifyTV/Torbox: no file matched the size filter in '
-        '"$fallbackTitle" — using it unfiltered.',
-      );
-      return _buildTorboxPlayableEntries(
-        torrent,
-        fallbackTitle,
-        applySizeFilter: false,
-      );
-    }
-    return entries;
-  }
-
-  String _formatTorboxSeriesTitle(SeriesInfo info, String fallback) {
-    final season = info.season?.toString().padLeft(2, '0');
-    final episode = info.episode?.toString().padLeft(2, '0');
-    final descriptor = info.episodeTitle?.trim().isNotEmpty == true
-        ? info.episodeTitle!.trim()
-        : (info.title?.trim().isNotEmpty == true
-              ? info.title!.trim()
-              : fallback);
-    if (season != null && episode != null) {
-      return 'S${season}E$episode · $descriptor';
-    }
-    return fallback;
-  }
-
-  bool _torboxFileLooksLikeVideo(TorboxFile file) {
-    if (file.zipped) return false;
-    final name = file.shortName.isNotEmpty
-        ? file.shortName
-        : FileUtils.getFileName(file.name);
-    if (FileUtils.isVideoFile(name)) return true;
-    final mime = file.mimetype?.toLowerCase();
-    return mime != null && mime.startsWith('video/');
-  }
-
-  String _torboxDisplayName(TorboxFile file) {
-    if (file.shortName.isNotEmpty) {
-      return file.shortName;
-    }
-    if (file.name.isNotEmpty) {
-      return FileUtils.getFileName(file.name);
-    }
-    return 'File ${file.id}';
-  }
-
   String _normalizeInfohash(String hash) {
     return hash.trim().toLowerCase();
   }
@@ -10817,16 +10437,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
         duration: const Duration(seconds: 3),
       ),
     );
-  }
-
-  int? _asIntMapValue(dynamic data, String key) {
-    if (data is Map<String, dynamic>) {
-      final value = data[key];
-      if (value is int) return value;
-      if (value is String) return int.tryParse(value);
-      if (value is num) return value.toInt();
-    }
-    return null;
   }
 
   String _formatTorboxError(Object error) {

@@ -7,6 +7,7 @@ import 'alldebrid_cloud_provider.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
 import 'stremio_torrent_resolve_args.dart';
+import 'magic_tv_prepare_args.dart';
 import 'cloud_provider_port.dart';
 import 'pikpak_cloud_provider.dart';
 import 'premiumize_cloud_provider.dart';
@@ -248,6 +249,19 @@ class CloudProviderRegistry {
         return port.resolveStremioTorrent(args);
       },
     );
+  }
+
+  /// Debrify TV prepare. Lookup is [CloudProviderId.tryParse] so
+  /// `real_debrid` hits RD; [fromPlaybackId] would miss. Not Stremio auto
+  /// order and not [CloudProviderId.playbackPrecedence].
+  Future<MagicTvPrepared?> prepareMagicTv({
+    required String provider,
+    required MagicTvPrepareRequest request,
+  }) async {
+    final id = CloudProviderId.tryParse(provider);
+    final port = id == null ? null : _byId[id];
+    if (port == null) return null;
+    return port.prepareMagicTv(request);
   }
 
   static String? credentialKeyFor(String provider) =>
