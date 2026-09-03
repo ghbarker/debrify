@@ -79,4 +79,21 @@ class CloudCredentials {
     }
     return out;
   }
+
+  /// Post-add action (`choose` / `play` / …). Real-Debrid uses the unprefixed
+  /// `post_torrent_action` key — that is load-bearing.
+  static Future<String> postTorrentAction(CloudProviderId id) {
+    switch (id) {
+      case CloudProviderId.torbox:
+        return StorageService.getTorboxPostTorrentAction();
+      case CloudProviderId.premiumize:
+        return StorageService.getPremiumizePostTorrentAction();
+      case CloudProviderId.alldebrid:
+        return StorageService.getAllDebridPostTorrentAction();
+      case CloudProviderId.pikpak:
+        return StorageService.getPikPakPostTorrentAction();
+      case CloudProviderId.debrid:
+        return StorageService.getPostTorrentAction();
+    }
+  }
 }

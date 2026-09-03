@@ -19,7 +19,11 @@ Playback add/resolve no longer lives in a five-way `switch` inside
 - **Ids / credential keys / backup field names** go on `CloudProviderId`.
 - **Credential reads** go through `CloudCredentials` (playback vs magnet
   configured flags differ: magnets also require the integration-enabled toggle).
-- **Downloads** bind with `DownloadService.credentialKeyForCloudProvider`.
+- **Downloads** bind with `DownloadService.enqueueCloudFile` /
+  `credentialKeyForCloudProvider`.
+- **Playlist items** go through `CloudPlaylistPayload` (`realdebrid` id, empty
+  URL on RD singles).
+- **Labels / pipeline chips** go through `CloudProviderChrome`.
 - **Backups** pick up API keys from `CloudCredentials.backupSecrets()`.
 - **Tests:** add a `FakeCloudProvider` case in `test/adversarial/provider_matrix_test.dart`.
 

@@ -89,6 +89,27 @@ class DownloadService {
   static String? credentialKeyForCloudProvider(String provider) =>
       CloudProviderRegistry.credentialKeyFor(provider);
 
+  /// Queue one HTTP file using the historical cloud credential key for
+  /// [provider]. Returns false if enqueue throws.
+  Future<bool> enqueueCloudFile({
+    required String provider,
+    required String url,
+    required String fileName,
+    required String torrentName,
+  }) async {
+    try {
+      await enqueueDownload(
+        credentialKey: credentialKeyForCloudProvider(provider),
+        url: url,
+        fileName: fileName,
+        torrentName: torrentName,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   final StreamController<TaskProgressUpdate> _progressController =
       StreamController.broadcast();
   final StreamController<TaskStatusUpdate> _statusController =

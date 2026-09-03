@@ -36,15 +36,18 @@ jobs:
       - name: Analyze refactor surface
         run: flutter analyze
           lib/services/cloud
+          lib/services/storage
           test/adversarial
           test/support
           test/cloud_playback_characterization_test.dart
+          test/cloud_playlist_and_chrome_test.dart
           test/download_cloud_credential_key_test.dart
 
       - name: Run refactor contract tests
         run: flutter test
           test/adversarial
           test/cloud_playback_characterization_test.dart
+          test/cloud_playlist_and_chrome_test.dart
           test/download_cloud_credential_key_test.dart
           --reporter compact
 

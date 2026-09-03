@@ -30,6 +30,8 @@ import '../models/tracking_source.dart';
 import '../utils/json_isolate.dart';
 import '../utils/platform_util.dart';
 import 'tracking_scrobble_preferences.dart';
+import 'storage/cloud_secret_prefs.dart';
+import 'storage/resume_prefs.dart';
 
 /// Which ambient-trailer surface a sound/volume preference belongs to.
 ///
@@ -204,10 +206,9 @@ class StorageService {
     await prefs.setInt(_defaultsGenerationKey, _currentDefaultsGeneration);
   }
 
-  static const String _apiKeyKey = 'real_debrid_api_key';
   static const String _rdEndpointKey = 'real_debrid_endpoint';
   static const String _fileSelectionKey = 'real_debrid_file_selection';
-  static const String _torboxApiKey = 'torbox_api_key';
+  static const String _torboxApiKey = CloudSecretPrefs.torboxApiKey;
   static const String _torboxCacheCheckPref =
       'torbox_check_cache_before_search';
   static const String _realDebridIntegrationEnabledKey =
@@ -218,7 +219,7 @@ class StorageService {
   static const String _torboxIntegrationEnabledKey =
       'torbox_integration_enabled';
   static const String _torboxHiddenFromNavKey = 'torbox_hidden_from_nav';
-  static const String _premiumizeApiKey = 'premiumize_api_key';
+  static const String _premiumizeApiKey = CloudSecretPrefs.premiumizeApiKey;
   static const String _premiumizeIntegrationEnabledKey =
       'premiumize_integration_enabled';
   static const String _premiumizePostTorrentActionKey =
@@ -227,7 +228,7 @@ class StorageService {
       'premiumize_check_cache_before_search';
   static const String _premiumizeHiddenFromNavKey =
       'premiumize_hidden_from_nav';
-  static const String _allDebridApiKey = 'alldebrid_api_key';
+  static const String _allDebridApiKey = CloudSecretPrefs.allDebridApiKey;
   static const String _allDebridIntegrationEnabledKey =
       'alldebrid_integration_enabled';
   static const String _allDebridPostTorrentActionKey =
@@ -241,9 +242,9 @@ class StorageService {
       'pikpak_post_torrent_action';
   static const String _batteryOptStatusKey =
       'battery_opt_status_v1'; // granted|denied|never|unknown
-  static const String _videoResumeKey = 'video_resume_v1';
-  static const String _playbackStateKey = 'playback_state_v1';
-  static const String _continueWatchingKey = 'continue_watching_v1';
+  static const String _videoResumeKey = ResumePrefs.videoResumeKey;
+  static const String _playbackStateKey = ResumePrefs.playbackStateKey;
+  static const String _continueWatchingKey = ResumePrefs.continueWatchingKey;
   static const String localSeriesCompletionStateKey =
       'local_series_completion_v1';
   static const String localSeriesCalendarCheckedAtKey =
@@ -449,8 +450,8 @@ class StorageService {
 
   // PikPak API settings
   static const String _pikpakEnabledKey = 'pikpak_enabled';
-  static const String _pikpakEmailKey = 'pikpak_email';
-  static const String _pikpakPasswordKey = 'pikpak_password';
+  static const String _pikpakEmailKey = CloudSecretPrefs.pikpakEmail;
+  static const String _pikpakPasswordKey = CloudSecretPrefs.pikpakPassword;
   static const String _pikpakAccessTokenKey = 'pikpak_access_token';
   static const String _pikpakRefreshTokenKey = 'pikpak_refresh_token';
   static const String _pikpakDeviceIdKey = 'pikpak_device_id';
@@ -605,31 +606,14 @@ class StorageService {
   static const int _debrifyTvRandomStartPercentMin = 10;
   static const int _debrifyTvRandomStartPercentMax = 90;
 
-  static Future<String?> getApiKey({bool forRemoteTransfer = false}) async {
-    if (forRemoteTransfer) {
-      final credential = await ProfileCredentialFacade.readForRemoteTransfer(
-        _apiKeyKey,
-      );
-      if (credential.handled) return credential.value;
-    }
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _apiKeyKey);
-  }
+  static Future<String?> getApiKey({bool forRemoteTransfer = false}) =>
+      RdPrefs.getApiKey(forRemoteTransfer: forRemoteTransfer);
 
-  static Future<bool> hasRealDebridCredential() =>
-      _credentialConfigured(_apiKeyKey, () => getApiKey());
+  static Future<bool> hasRealDebridCredential() => RdPrefs.hasCredential();
 
-  static Future<void> saveApiKey(String apiKey) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _apiKeyKey, apiKey);
-  }
+  static Future<void> saveApiKey(String apiKey) => RdPrefs.saveApiKey(apiKey);
 
-  static Future<void> deleteApiKey() async {
-    final prefs = await ProfilePreferences.instance();
-    if (!await ProfileCredentialFacade.disconnect(_apiKeyKey)) {
-      await prefs.remove(_apiKeyKey);
-    }
-  }
+  static Future<void> deleteApiKey() => RdPrefs.deleteApiKey();
 
   // Real-Debrid endpoint preference (for fallback to backup endpoint)
   static Future<String> getRdEndpoint() async {
@@ -652,31 +636,20 @@ class StorageService {
   // Torbox API key helpers
   static Future<String?> getTorboxApiKey({
     bool forRemoteTransfer = false,
-  }) async {
-    if (forRemoteTransfer) {
-      final credential = await ProfileCredentialFacade.readForRemoteTransfer(
+  }) =>
+      CloudSecretPrefs.read(
         _torboxApiKey,
+        forRemoteTransfer: forRemoteTransfer,
       );
-      if (credential.handled) return credential.value;
-    }
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _torboxApiKey);
-  }
 
   static Future<bool> hasTorboxCredential() =>
-      _credentialConfigured(_torboxApiKey, () => getTorboxApiKey());
+      CloudSecretPrefs.isConfigured(_torboxApiKey);
 
-  static Future<void> saveTorboxApiKey(String apiKey) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _torboxApiKey, apiKey);
-  }
+  static Future<void> saveTorboxApiKey(String apiKey) =>
+      CloudSecretPrefs.write(_torboxApiKey, apiKey);
 
-  static Future<void> deleteTorboxApiKey() async {
-    final prefs = await ProfilePreferences.instance();
-    if (!await ProfileCredentialFacade.disconnect(_torboxApiKey)) {
-      await prefs.remove(_torboxApiKey);
-    }
-  }
+  static Future<void> deleteTorboxApiKey() =>
+      CloudSecretPrefs.delete(_torboxApiKey);
 
   static Future<bool> getSeriesBrowserDenseView() async {
     final prefs = await ProfilePreferences.instance();
@@ -2002,31 +1975,20 @@ class StorageService {
   // Premiumize API key helpers
   static Future<String?> getPremiumizeApiKey({
     bool forRemoteTransfer = false,
-  }) async {
-    if (forRemoteTransfer) {
-      final credential = await ProfileCredentialFacade.readForRemoteTransfer(
+  }) =>
+      CloudSecretPrefs.read(
         _premiumizeApiKey,
+        forRemoteTransfer: forRemoteTransfer,
       );
-      if (credential.handled) return credential.value;
-    }
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _premiumizeApiKey);
-  }
 
   static Future<bool> hasPremiumizeCredential() =>
-      _credentialConfigured(_premiumizeApiKey, () => getPremiumizeApiKey());
+      CloudSecretPrefs.isConfigured(_premiumizeApiKey);
 
-  static Future<void> savePremiumizeApiKey(String apiKey) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _premiumizeApiKey, apiKey);
-  }
+  static Future<void> savePremiumizeApiKey(String apiKey) =>
+      CloudSecretPrefs.write(_premiumizeApiKey, apiKey);
 
-  static Future<void> deletePremiumizeApiKey() async {
-    final prefs = await ProfilePreferences.instance();
-    if (!await ProfileCredentialFacade.disconnect(_premiumizeApiKey)) {
-      await prefs.remove(_premiumizeApiKey);
-    }
-  }
+  static Future<void> deletePremiumizeApiKey() =>
+      CloudSecretPrefs.delete(_premiumizeApiKey);
 
   static Future<bool> getPremiumizeIntegrationEnabled() async {
     final prefs = await ProfilePreferences.instance();
@@ -2056,31 +2018,20 @@ class StorageService {
   // AllDebrid API key helpers
   static Future<String?> getAllDebridApiKey({
     bool forRemoteTransfer = false,
-  }) async {
-    if (forRemoteTransfer) {
-      final credential = await ProfileCredentialFacade.readForRemoteTransfer(
+  }) =>
+      CloudSecretPrefs.read(
         _allDebridApiKey,
+        forRemoteTransfer: forRemoteTransfer,
       );
-      if (credential.handled) return credential.value;
-    }
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _allDebridApiKey);
-  }
 
   static Future<bool> hasAllDebridCredential() =>
-      _credentialConfigured(_allDebridApiKey, () => getAllDebridApiKey());
+      CloudSecretPrefs.isConfigured(_allDebridApiKey);
 
-  static Future<void> saveAllDebridApiKey(String apiKey) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _allDebridApiKey, apiKey);
-  }
+  static Future<void> saveAllDebridApiKey(String apiKey) =>
+      CloudSecretPrefs.write(_allDebridApiKey, apiKey);
 
-  static Future<void> deleteAllDebridApiKey() async {
-    final prefs = await ProfilePreferences.instance();
-    if (!await ProfileCredentialFacade.disconnect(_allDebridApiKey)) {
-      await prefs.remove(_allDebridApiKey);
-    }
-  }
+  static Future<void> deleteAllDebridApiKey() =>
+      CloudSecretPrefs.delete(_allDebridApiKey);
 
   // MDBList API key + cached username helpers
   static Future<String?> getMdblistApiKey({
@@ -6931,31 +6882,20 @@ class StorageService {
 
   static Future<String?> getPikPakEmail({
     bool forRemoteTransfer = false,
-  }) async {
-    if (forRemoteTransfer) {
-      final credential = await ProfileCredentialFacade.readForRemoteTransfer(
+  }) =>
+      CloudSecretPrefs.read(
         _pikpakEmailKey,
+        forRemoteTransfer: forRemoteTransfer,
       );
-      if (credential.handled) return credential.value;
-    }
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _pikpakEmailKey);
-  }
 
-  static Future<void> setPikPakEmail(String email) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _pikpakEmailKey, email);
-  }
+  static Future<void> setPikPakEmail(String email) =>
+      CloudSecretPrefs.write(_pikpakEmailKey, email);
 
-  static Future<String?> getPikPakPassword() async {
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _pikpakPasswordKey);
-  }
+  static Future<String?> getPikPakPassword() =>
+      CloudSecretPrefs.read(_pikpakPasswordKey);
 
-  static Future<void> setPikPakPassword(String password) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _pikpakPasswordKey, password);
-  }
+  static Future<void> setPikPakPassword(String password) =>
+      CloudSecretPrefs.write(_pikpakPasswordKey, password);
 
   static Future<String?> getPikPakAccessToken() async {
     final prefs = await ProfilePreferences.instance();

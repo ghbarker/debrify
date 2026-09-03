@@ -15,6 +15,10 @@ void main() {
     );
   });
 
+  test('unknown provider strings pass through storedProviderKey', () {
+    expect(TorrentPlaybackService.storedProviderKey('webdav'), 'webdav');
+  });
+
   test('unconfigured unknown provider is not configured', () async {
     expect(await CloudProviderRegistry.instance.isConfigured(''), isFalse);
     expect(
