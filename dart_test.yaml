@@ -1,0 +1,3 @@
+tags:
+  golden:
+    description: Pixel-diff screenshots. Skipped on GitHub Actions via --exclude-tags.

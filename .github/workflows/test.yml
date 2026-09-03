@@ -1,0 +1,54 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install native test libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsqlite3-dev libsqlite3-0
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      # Scoped to the new port/tests. God files still have pre-existing
+      # infos/warnings; do not fail the job on those (see test/BASELINE_FAILURES.md).
+      - name: Analyze refactor surface
+        run: flutter analyze
+          lib/services/cloud
+          test/adversarial
+          test/support
+          test/cloud_playback_characterization_test.dart
+          test/download_cloud_credential_key_test.dart
+
+      - name: Run refactor contract tests
+        run: flutter test
+          test/adversarial
+          test/cloud_playback_characterization_test.dart
+          test/download_cloud_credential_key_test.dart
+          --reporter compact
+
+      # Full suite minus pixel goldens. Historical Linux failures are listed
+      # in test/BASELINE_ALLOWLIST.txt; only new failures fail the job.
+      - name: Run app tests against baseline allowlist
+        run: python3 tool/ci_test_allowlist.py

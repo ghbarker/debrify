@@ -1,11 +1,34 @@
 # Adding a New Debrid/Cloud Provider
 
-Step-by-step checklist for wiring a new provider into Debrify. Use **Premiumize**
-(added in branch `0.5.1`) as the reference implementation — search the codebase
-for `premiumize` / `Premiumize` to see each piece in context.
+Step-by-step checklist for wiring a new provider into Debrify. Use **AllDebrid**
+(newest) and **Premiumize** as the reference implementations.
 
-Convention: providers are identified by lowercase string ids
-(`debrid`, `torbox`, `pikpak`, `premiumize`).
+Convention: providers are identified by lowercase playback ids
+(`debrid`, `torbox`, `pikpak`, `premiumize`, `alldebrid`). Real-Debrid is stored
+as `rd` on bound sources — map through `CloudProviderId` in
+`lib/services/cloud/cloud_provider_id.dart`.
+
+## 0. Cloud playback port (required)
+
+Playback add/resolve no longer lives in a five-way `switch` inside
+`TorrentPlaybackService._add`. Implement `CloudProviderPort` and register it.
+
+- **New adapter:** `lib/services/cloud/<id>_cloud_provider.dart`
+  implementing `isConfigured` + `addMagnet` → `CloudPlaybackResult`.
+- **Register** the adapter in `CloudProviderRegistry.production()`.
+- **Ids / credential keys / backup field names** go on `CloudProviderId`.
+- **Credential reads** go through `CloudCredentials` (playback vs magnet
+  configured flags differ: magnets also require the integration-enabled toggle).
+- **Downloads** bind with `DownloadService.credentialKeyForCloudProvider`.
+- **Backups** pick up API keys from `CloudCredentials.backupSecrets()`.
+- **Tests:** add a `FakeCloudProvider` case in `test/adversarial/provider_matrix_test.dart`.
+
+HTTP clients still live in `lib/services/<provider>_service.dart`. Do not
+rewrite those to add a provider.
+
+Settings UI, account widgets, and cloud-browse screens are still listed below.
+
+---
 
 ---
 

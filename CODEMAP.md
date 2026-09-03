@@ -18,8 +18,9 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   favourites rows, the D-pad `_BoardCell` focus grid, poster sizing (`_railPosterW`), bind-sources entry.
 - **`services/storage_service.dart`** 🔴 — all SharedPreferences/persisted state (settings, continue
   watching (cap 50), playback state, favourites, provider toggles, home disabled-sections).
-- **`services/torrent_playback_service.dart`** 🔴 — provider-agnostic play/add/bind pipeline;
-  string-keyed switches per provider (`_add`, `_isConfigured`, `_pickProvider`, `bindSource`).
+- **`services/torrent_playback_service.dart`** 🔴 — provider-agnostic play/add/bind pipeline.
+  Magnet add/resolve now goes through `services/cloud/` (`CloudProviderPort` +
+  `CloudProviderRegistry`). String ids still persist (`debrid`/`rd`, `torbox`, …).
 - **`main.dart`** — app shell + nav branch (TV rail / desktop rail / `MobileFloatingNav`), tab indices.
 
 ## Search, sources & addons
