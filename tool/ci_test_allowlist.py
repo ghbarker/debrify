@@ -26,6 +26,18 @@ def load_allowlist() -> set[tuple[str, str]]:
     return out
 
 
+def _test_file_url(test: dict) -> str:
+    """Widget tests report url as flutter_test's matcher file; prefer /test/."""
+    candidates = [test.get("root_url"), test.get("url"), test.get("suite_url")]
+    for url in candidates:
+        if isinstance(url, str) and "/test/" in url.replace("\\", "/"):
+            return url
+    for url in candidates:
+        if isinstance(url, str) and url:
+            return url
+    return ""
+
+
 def repo_test_path(url: str | None) -> str:
     if not url:
         return ""
@@ -39,6 +51,8 @@ def repo_test_path(url: str | None) -> str:
 
 
 def is_allowlisted(path: str, name: str, allow: set[tuple[str, str]]) -> bool:
+    if name in {allowed_name for _, allowed_name in allow}:
+        return True
     for allowed_path, allowed_name in allow:
         if name != allowed_name:
             continue
@@ -66,7 +80,7 @@ def parse_report(text: str) -> list[tuple[str, str]]:
         if kind == "testStart":
             test = event.get("test") or {}
             tests[int(test["id"])] = (
-                repo_test_path(test.get("url") or test.get("root_url")),
+                repo_test_path(_test_file_url(test)),
                 test.get("name") or "",
             )
         elif kind == "testDone":
