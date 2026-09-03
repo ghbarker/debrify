@@ -1,3 +1,6 @@
+@Tags(['golden'])
+library;
+
 import 'package:debrify/screens/video_player/models/gesture_state.dart';
 import 'package:debrify/screens/video_player/services/playback_ui_clock.dart';
 import 'package:debrify/screens/video_player/widgets/dock_style.dart';

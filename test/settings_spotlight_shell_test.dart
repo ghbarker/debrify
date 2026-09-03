@@ -353,7 +353,7 @@ void main() {
       find.byType(SettingsSpotlightShell),
       matchesGoldenFile('goldens/settings_spotlight_phone.png'),
     );
-  });
+  }, tags: ['golden']);
 
   testWidgets('phone Spotlight appearance visual', (tester) async {
     await _pumpShell(tester, const Size(390, 844));
@@ -363,7 +363,7 @@ void main() {
       find.byType(SettingsSpotlightShell),
       matchesGoldenFile('goldens/settings_spotlight_phone_appearance.png'),
     );
-  });
+  }, tags: ['golden']);
 
   testWidgets('tablet Spotlight appearance visual', (tester) async {
     await _pumpShell(tester, const Size(800, 900));
@@ -373,7 +373,7 @@ void main() {
       find.byType(SettingsSpotlightShell),
       matchesGoldenFile('goldens/settings_spotlight_tablet.png'),
     );
-  });
+  }, tags: ['golden']);
 
   testWidgets('desktop Spotlight appearance visual', (tester) async {
     await _pumpShell(tester, const Size(1280, 800));
@@ -383,5 +383,5 @@ void main() {
       find.byType(SettingsSpotlightShell),
       matchesGoldenFile('goldens/settings_spotlight_desktop.png'),
     );
-  });
+  }, tags: ['golden']);
 }

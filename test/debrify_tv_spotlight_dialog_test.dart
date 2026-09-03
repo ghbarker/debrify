@@ -126,7 +126,7 @@ void main() {
       find.byType(MaterialApp),
       matchesGoldenFile('goldens/debrify_tv_dialog_tv.png'),
     );
-  });
+  }, tags: ['golden']);
 
   testWidgets('phone import dialog matches the responsive visual contract', (
     tester,
@@ -136,7 +136,7 @@ void main() {
       find.byType(MaterialApp),
       matchesGoldenFile('goldens/debrify_tv_dialog_phone.png'),
     );
-  });
+  }, tags: ['golden']);
 
   testWidgets('tuning dialog exposes a focused, DPAD-activatable cancel', (
     tester,

@@ -258,7 +258,7 @@ void main() {
       find.byType(SettingsTvLayout),
       matchesGoldenFile('goldens/settings_spotlight_tv.png'),
     );
-  });
+  }, tags: ['golden']);
 
   testWidgets('TV layout tolerates enlarged system text', (tester) async {
     final entry = FocusNode(debugLabel: 'settings-test-entry-large-text');
