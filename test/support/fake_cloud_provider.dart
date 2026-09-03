@@ -4,6 +4,7 @@ import 'package:debrify/services/cloud/cloud_playback_result.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
 import 'package:debrify/services/cloud/cloud_provider_port.dart';
 import 'package:debrify/services/cloud/stremio_torrent_resolve_args.dart';
+import 'package:debrify/services/cloud/magic_tv_prepare_args.dart';
 import 'package:debrify/services/series_source_service.dart';
 
 /// In-memory cloud provider for matrix tests. Never talks to a network.
@@ -16,6 +17,7 @@ class FakeCloudProvider implements CloudProviderPort {
     this.playlistUrl,
     this.playbackUnlockUrl,
     this.stremioUrl,
+    this.magicTvResult,
     this.error,
   });
 
@@ -27,6 +29,7 @@ class FakeCloudProvider implements CloudProviderPort {
   String? playlistUrl;
   String? playbackUnlockUrl;
   String? stremioUrl;
+  MagicTvPrepared? magicTvResult;
   Object? error;
 
   int addCount = 0;
@@ -34,10 +37,12 @@ class FakeCloudProvider implements CloudProviderPort {
   int playlistCount = 0;
   int unlockCount = 0;
   int stremioCount = 0;
+  int magicTvCount = 0;
   String? lastMagnet;
   SeriesSource? lastBoundSource;
   PlaylistEntry? lastPlaylistEntry;
   Torrent? lastStremioTorrent;
+  MagicTvPrepareRequest? lastMagicTvRequest;
 
   @override
   Future<bool> isConfigured() async => configured;
@@ -89,5 +94,13 @@ class FakeCloudProvider implements CloudProviderPort {
     lastStremioTorrent = args.torrent;
     if (error != null) throw error!;
     return stremioUrl;
+  }
+
+  @override
+  Future<MagicTvPrepared?> prepareMagicTv(MagicTvPrepareRequest request) async {
+    magicTvCount++;
+    lastMagicTvRequest = request;
+    if (error != null) throw error!;
+    return magicTvResult;
   }
 }

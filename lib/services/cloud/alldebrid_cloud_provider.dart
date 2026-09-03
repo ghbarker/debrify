@@ -12,6 +12,7 @@ import 'cloud_playback_helpers.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
 import 'cloud_provider_port.dart';
+import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
 class AllDebridCloudProvider implements CloudProviderPort {
@@ -199,4 +200,9 @@ class AllDebridCloudProvider implements CloudProviderPort {
       return null;
     }
   }
+
+  @override
+  Future<MagicTvPrepared?> prepareMagicTv(
+    MagicTvPrepareRequest request,
+  ) async => null;
 }

@@ -25,7 +25,8 @@ Playback add/resolve no longer lives in a five-way `switch` inside
   Premiumize does not fall through to RD) + `resolveStremioTorrent`
   (Stremio TV; `realdebrid` via tryParse; auto order is PikPak before
   Premiumize; returns null on miss — do not reuse addMagnet or playback
-  precedence).
+  precedence) + `prepareMagicTv` (Debrify TV; `real_debrid` via tryParse;
+  magnet has no `dn=`; random unseen file; RD/AllDebrid still screen-side).
 - **Register** the adapter in `CloudProviderRegistry.production()`.
 - **Ids / credential keys / backup field names / display names / chip codes /
   overlay titles / playlist stored ids** go on `CloudProviderId` (keep Flutter

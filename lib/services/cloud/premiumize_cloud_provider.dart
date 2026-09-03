@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 
 import '../../models/premiumize_file.dart';
@@ -14,6 +16,8 @@ import 'cloud_playback_helpers.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
 import 'cloud_provider_port.dart';
+import 'magic_tv_playable.dart';
+import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
 class PremiumizeCloudProvider implements CloudProviderPort {
@@ -229,5 +233,63 @@ class PremiumizeCloudProvider implements CloudProviderPort {
       debugPrint('StremioTV: Premiumize resolve error: $e');
       return null;
     }
+  }
+
+  @override
+  Future<MagicTvPrepared?> prepareMagicTv(MagicTvPrepareRequest request) async {
+    if (request.infohash.isEmpty) return null;
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) return null;
+
+    request.log('⏳ Premiumize: preparing ${request.torrent.name}');
+
+    List<PremiumizeFile> files;
+    try {
+      files = await PremiumizeService.directDownload(apiKey, request.magnet);
+    } catch (e) {
+      request.log('❌ Premiumize directdl failed: $e');
+      return null;
+    }
+
+    if (files.isEmpty) {
+      request.log('⚠️ Premiumize: no files for ${request.torrent.name}');
+      return null;
+    }
+
+    final playableEntries = MagicTvPlayable.buildPremiumizeEntries(
+      files,
+      request.torrent.name,
+      request,
+    );
+    if (playableEntries.isEmpty) {
+      request.log(
+        '⚠️ Premiumize: no playable files for ${request.torrent.name}',
+      );
+      return null;
+    }
+
+    final filteredEntries = playableEntries
+        .where(
+          (e) =>
+              !request.seenKeys.contains('${request.infohash}|${e.file.path}'),
+        )
+        .toList();
+    if (filteredEntries.isEmpty) {
+      request.log(
+        '⚠️ Premiumize: no unseen playable files for ${request.torrent.name}',
+      );
+      return null;
+    }
+
+    filteredEntries.shuffle(Random());
+    final next = filteredEntries.removeAt(0);
+    final streamUrl = next.file.streamLink ?? next.file.link;
+    request.seenKeys.add('${request.infohash}|${next.file.path}');
+    request.log('🎬 Premiumize: streaming ${next.title}');
+    return MagicTvPrepared(
+      streamUrl: streamUrl,
+      title: next.title,
+      hasMore: filteredEntries.isNotEmpty,
+    );
   }
 }

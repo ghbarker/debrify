@@ -4,6 +4,7 @@ import '../series_source_service.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
 import 'stremio_torrent_resolve_args.dart';
+import 'magic_tv_prepare_args.dart';
 
 /// Narrow playback port: add a magnet and resolve a playable result.
 ///
@@ -42,4 +43,8 @@ abstract class CloudProviderPort {
   /// Stremio TV torrent resolve. Returns null on miss / error (no throw).
   /// Distinct from [addMagnet] (playback pipeline) and playlist unlock.
   Future<String?> resolveStremioTorrent(StremioTorrentResolveArgs args);
+
+  /// Debrify TV file prepare. Random unseen file; infohash-only magnet.
+  /// RD / AllDebrid stay on the screen (locked-link queues). Null on miss.
+  Future<MagicTvPrepared?> prepareMagicTv(MagicTvPrepareRequest request);
 }
