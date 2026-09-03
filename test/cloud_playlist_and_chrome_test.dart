@@ -101,6 +101,18 @@ void main() {
         const Color(0xFF10B981),
       );
     });
+
+    test('playlist badges keep empty-as-RD and webdav-as-DV', () {
+      expect(CloudProviderChrome.playlistBadge(null), 'RD');
+      expect(CloudProviderChrome.playlistBadge(''), 'RD');
+      expect(CloudProviderChrome.playlistBadge('realdebrid'), 'RD');
+      expect(CloudProviderChrome.playlistBadge('webdav'), 'DV');
+      expect(CloudProviderChrome.playlistBadge('pik-pak'), 'PP');
+      expect(CloudProviderChrome.playlistBadge('xyz'), 'XY');
+      expect(CloudProviderChrome.catalogChip(''), 'AUTO');
+      expect(CloudProviderChrome.cacheServiceChip('torbox'), 'TB');
+      expect(CloudProviderChrome.cacheServiceChip('nope'), 'Cached');
+    });
   });
 
   group('CloudPlaylistPayload', () {

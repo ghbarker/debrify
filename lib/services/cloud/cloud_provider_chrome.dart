@@ -5,9 +5,10 @@ import 'cloud_provider_id.dart';
 
 /// Flutter colors/icons. String identity lives on [CloudProviderId].
 ///
-/// Three lookup rules, on purpose:
+/// Lookup rules, on purpose:
 /// - [label]/[code]/[gradient]/[icon]: exact playback id (`debrid`, not `rd`)
-/// - [catalogChip]/[catalogTitle]: [CloudProviderId.tryParse] (aliases + `auto`)
+/// - [catalogChip]/[catalogTitle]: [CloudProviderId.tryParse]; `auto` → AUTO
+/// - [playlistBadge]: playlist JSON; empty → RD, `webdav` → DV, else two letters
 /// - [sourceChip]: stored id (`rd`); local is `Local`, not [label]'s `On-device`
 class CloudProviderChrome {
   CloudProviderChrome._();
@@ -88,6 +89,25 @@ class CloudProviderChrome {
   static String? catalogTitle(String provider) {
     return CloudProviderId.tryParse(provider)?.displayName;
   }
+
+  /// Playlist card glyph. Not [catalogChip]: empty is RD, unknown is two
+  /// letters, WebDAV is DV.
+  static String playlistBadge(String? raw) {
+    if (raw == null || raw.isEmpty) return CloudProviderId.debrid.chipCode;
+    switch (raw.toLowerCase()) {
+      case 'webdav':
+        return 'DV';
+      case 'pik-pak':
+      case 'pik_pak':
+        return CloudProviderId.pikpak.chipCode;
+      default:
+        return CloudProviderId.tryParse(raw)?.chipCode ??
+            raw.substring(0, 2).toUpperCase();
+    }
+  }
+
+  static String cacheServiceChip(String service) =>
+      CloudProviderId.tryParse(service)?.chipCode ?? 'Cached';
 
   static ({String label, Color color}) sourceChip(String stored) => (
         label: sourceLabel(stored),
