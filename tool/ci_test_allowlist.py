@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ALLOWLIST = ROOT / "test" / "BASELINE_ALLOWLIST.txt"
+REPORT = ROOT / "build" / "ci_test_report.json"
 
 
 def load_allowlist() -> set[tuple[str, str]]:
@@ -37,28 +38,23 @@ def repo_test_path(url: str | None) -> str:
     return url
 
 
-def main() -> int:
-    allow = load_allowlist()
-    cmd = [
-        "flutter",
-        "test",
-        "test",
-        "--exclude-tags",
-        "golden",
-        "--reporter",
-        "json",
-    ]
-    proc = subprocess.run(
-        cmd,
-        cwd=ROOT,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    sys.stderr.write(proc.stderr)
+def is_allowlisted(path: str, name: str, allow: set[tuple[str, str]]) -> bool:
+    for allowed_path, allowed_name in allow:
+        if name != allowed_name:
+            continue
+        if path == allowed_path:
+            return True
+        if path.endswith(allowed_path) or allowed_path.endswith(path):
+            return True
+        if path.endswith(allowed_path.split("/")[-1]):
+            return True
+    return False
+
+
+def parse_report(text: str) -> list[tuple[str, str]]:
     tests: dict[int, tuple[str, str]] = {}
     failed: list[tuple[str, str]] = []
-    for line in proc.stdout.splitlines():
+    for line in text.splitlines():
         line = line.strip()
         if not line.startswith("{"):
             continue
@@ -76,27 +72,40 @@ def main() -> int:
         elif kind == "testDone":
             if event.get("hidden") or event.get("skipped"):
                 continue
-            result = event.get("result")
-            if result not in ("failure", "error"):
+            if event.get("result") not in ("failure", "error"):
                 continue
             failed.append(tests.get(int(event["testID"]), ("?", "?")))
-
-def is_allowlisted(path: str, name: str, allow: set[tuple[str, str]]) -> bool:
-    for allowed_path, allowed_name in allow:
-        if name != allowed_name:
-            continue
-        if path == allowed_path:
-            return True
-        if path.endswith(allowed_path) or allowed_path.endswith(path):
-            return True
-        if path.endswith(allowed_path.split("/")[-1]):
-            return True
-    return False
+    return failed
 
 
 def main() -> int:
+    allow = load_allowlist()
+    REPORT.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        "flutter",
+        "test",
+        "test",
+        "--exclude-tags",
+        "golden",
+        "--reporter",
+        "compact",
+        "--file-reporter",
+        f"json:{REPORT}",
+    ]
+    proc = subprocess.run(cmd, cwd=ROOT, check=False)
+    if not REPORT.is_file():
+        print(f"missing JSON report at {REPORT}", file=sys.stderr)
+        return proc.returncode or 1
 
-    print(f"Allowlisted failures: {len(failed) - len(unexpected)}/{len(allow)}")
+    failed = parse_report(REPORT.read_text(encoding="utf-8"))
+    unexpected = [item for item in failed if not is_allowlisted(*item, allow)]
+    matched = [item for item in failed if is_allowlisted(*item, allow)]
+    unused = sorted(
+        allow
+        - {(path, name) for path, name in failed if is_allowlisted(path, name, allow)}
+    )
+
+    print(f"Allowlisted failures: {len(matched)}/{len(allow)}")
     if unused:
         print("Allowlist entries that did not fail (safe to delete later):")
         for path, name in unused:
@@ -107,7 +116,7 @@ def main() -> int:
             print(f"  {path} :: {name}")
         return 1
     if proc.returncode not in (0, 1):
-        print(f"flutter test exited {proc.returncode} without parseable failures")
+        print(f"flutter test exited {proc.returncode}")
         return proc.returncode
     print("No new test failures beyond the baseline allowlist.")
     return 0
