@@ -14,9 +14,7 @@ import '../services/local_bound_source_service.dart';
 import '../services/series_source_service.dart';
 import '../services/cloud/cloud_provider_chrome.dart';
 import '../services/storage_service.dart';
-import '../screens/debrid_downloads_screen.dart';
 import '../screens/stremio_tv/widgets/stremio_tv_catalog_picker_dialog.dart';
-import '../screens/torbox/torbox_downloads_screen.dart';
 import 'add_source_picker_dialog.dart';
 import 'catalog_item_tile.dart';
 import 'cloud_browse_select_source.dart';
@@ -678,13 +676,12 @@ class AggregatedSearchResultsState extends State<AggregatedSearchResults> {
       if (mounted) setState(() => _boundSources[imdbId] = updated);
     }
 
-    final Widget? screen = CloudBrowseSelectSource.page(
+    CloudBrowseSelectSource.push(
+      context,
       provider: provider,
       query: show.name,
       onSourceSelected: saveSource,
     );
-    if (screen == null) return;
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
   Future<void> _pickAndSaveLocalSource(StremioMeta item, String imdbId) async {
@@ -1045,87 +1042,12 @@ class AggregatedSearchResultsState extends State<AggregatedSearchResults> {
       }
     }
 
-    void pushRd() {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => DebridDownloadsScreen(
-            isPushedRoute: true,
-            initialSearchQuery: show.name,
-            selectSourceMode: true,
-            onSourceSelected: saveSource,
-          ),
-        ),
-      );
-    }
-
-    void pushTorbox() {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => TorboxDownloadsScreen(
-            isPushedRoute: true,
-            initialSearchQuery: show.name,
-            selectSourceMode: true,
-            onSourceSelected: saveSource,
-          ),
-        ),
-      );
-    }
-
-    // If only one provider, push directly
-    if (rdEnabled && !torboxEnabled) {
-      pushRd();
-      return;
-    }
-    if (torboxEnabled && !rdEnabled) {
-      pushTorbox();
-      return;
-    }
-
-    // Both enabled — show picker
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: const Color(0xFF1E293B),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'Select Provider',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.cloud, color: Color(0xFF22C55E)),
-              title: const Text(
-                'Real-Debrid',
-              ),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                pushRd();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.cloud, color: Color(0xFF7C3AED)),
-              title: const Text(
-                'TorBox',
-              ),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                pushTorbox();
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+    CloudBrowseSelectSource.pushRdOrTorbox(
+      context,
+      query: show.name,
+      rdEnabled: rdEnabled,
+      torboxEnabled: torboxEnabled,
+      onSourceSelected: saveSource,
     );
   }
 

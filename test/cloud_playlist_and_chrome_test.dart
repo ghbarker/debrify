@@ -1,6 +1,8 @@
 import 'package:debrify/screens/alldebrid/alldebrid_files_screen.dart';
+import 'package:debrify/screens/debrid_downloads_screen.dart';
 import 'package:debrify/screens/pikpak/pikpak_files_screen.dart';
 import 'package:debrify/screens/premiumize/premiumize_files_screen.dart';
+import 'package:debrify/screens/torbox/torbox_downloads_screen.dart';
 import 'package:debrify/screens/video_player/models/playlist_entry.dart';
 import 'package:debrify/services/cloud/cloud_playback_result.dart';
 import 'package:debrify/services/cloud/cloud_playlist_payload.dart';
@@ -191,7 +193,23 @@ void main() {
   group('CloudBrowseSelectSource', () {
     Future<void> noop(SeriesSource _) async {}
 
-    test('only premiumize, alldebrid, and pikpak open a browser', () {
+    test('playback ids open browsers; rd does not', () {
+      expect(
+        CloudBrowseSelectSource.page(
+          provider: 'debrid',
+          query: 'q',
+          onSourceSelected: noop,
+        ),
+        isA<DebridDownloadsScreen>(),
+      );
+      expect(
+        CloudBrowseSelectSource.page(
+          provider: 'torbox',
+          query: 'q',
+          onSourceSelected: noop,
+        ),
+        isA<TorboxDownloadsScreen>(),
+      );
       expect(
         CloudBrowseSelectSource.page(
           provider: 'premiumize',
@@ -218,14 +236,6 @@ void main() {
       );
       expect(
         CloudBrowseSelectSource.page(
-          provider: 'debrid',
-          query: 'q',
-          onSourceSelected: noop,
-        ),
-        isNull,
-      );
-      expect(
-        CloudBrowseSelectSource.page(
           provider: 'rd',
           query: 'q',
           onSourceSelected: noop,
@@ -234,11 +244,23 @@ void main() {
       );
       expect(
         CloudBrowseSelectSource.page(
-          provider: 'torbox',
+          provider: 'realdebrid',
           query: 'q',
           onSourceSelected: noop,
         ),
         isNull,
+      );
+      expect(
+        CloudBrowseSelectSource.rdSheetAccent,
+        isNot(CloudProviderChrome.sourceChip('rd').color),
+      );
+      expect(
+        CloudBrowseSelectSource.torboxSheetAccent,
+        isNot(CloudProviderChrome.sourceChip('torbox').color),
+      );
+      expect(
+        CloudBrowseSelectSource.torboxSheetAccent,
+        isNot(CloudProviderChrome.gradient('torbox').first),
       );
     });
   });
