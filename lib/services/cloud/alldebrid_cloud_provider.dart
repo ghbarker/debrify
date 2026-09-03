@@ -3,6 +3,7 @@ import '../../screens/video_player/models/playlist_entry.dart';
 import '../../utils/file_utils.dart';
 import '../alldebrid_service.dart';
 import '../main_page_bridge.dart';
+import '../series_source_service.dart';
 import 'cloud_credentials.dart';
 import 'cloud_playback_helpers.dart';
 import 'cloud_playback_result.dart';
@@ -46,7 +47,9 @@ class AllDebridCloudProvider implements CloudProviderPort {
         playUrl: playUrl,
         downloadUrls: playUrl != null ? [playUrl] : const [],
         openInTab: open,
-        fileName: file == null ? null : CloudPlaybackHelpers.fileName(file.path),
+        fileName: file == null
+            ? null
+            : CloudPlaybackHelpers.fileName(file.path),
         allDebridLink: file?.link,
       );
     }
@@ -76,6 +79,33 @@ class AllDebridCloudProvider implements CloudProviderPort {
       openInTab: open,
       playlist: entries,
       startIndex: startIndex,
+    );
+  }
+
+  @override
+  Future<CloudPlaybackResult?> resolveNativeBound(
+    SeriesSource source, {
+    required String? contentType,
+  }) async {
+    if (source.cloudSourceKind != SeriesSource.cloudKindWebDownload) {
+      return null;
+    }
+    final sourceId = source.debridTorrentId.trim();
+    final apiKey = (await CloudCredentials.apiKey(id)) ?? '';
+    if (apiKey.isEmpty) return null;
+    final links = await AllDebridService.listSavedLinks(apiKey);
+    final matching = links.where(
+      (link) => SeriesSource.opaqueCloudReference(link.link) == sourceId,
+    );
+    if (matching.isEmpty) return null;
+    final link = matching.first;
+    final url = await AllDebridService.unlockLink(apiKey, link.link);
+    if (url.isEmpty) return null;
+    return CloudPlaybackResult(
+      title: source.torrentName,
+      playUrl: url,
+      downloadUrls: [url],
+      fileName: link.fileName,
     );
   }
 }

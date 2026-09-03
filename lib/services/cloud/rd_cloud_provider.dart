@@ -6,6 +6,7 @@ import '../../utils/rd_folder_tree_builder.dart';
 import '../../utils/series_parser.dart';
 import '../debrid_service.dart';
 import '../main_page_bridge.dart';
+import '../series_source_service.dart';
 import 'cloud_credentials.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
@@ -77,6 +78,44 @@ class RealDebridCloudProvider implements CloudProviderPort {
       isRarArchive: isRar,
       rdTorrentId: rd.id.isNotEmpty ? rd.id : null,
       restrictedLink: links.isNotEmpty ? links.first : null,
+    );
+  }
+
+  @override
+  Future<CloudPlaybackResult?> resolveNativeBound(
+    SeriesSource source, {
+    required String? contentType,
+  }) async {
+    if (source.cloudSourceKind != SeriesSource.cloudKindWebDownload) {
+      return null;
+    }
+    final sourceId = source.debridTorrentId.trim();
+    final apiKey = (await CloudCredentials.apiKey(id)) ?? '';
+    if (apiKey.isEmpty) return null;
+    final download = await DebridService.getDownloadById(apiKey, sourceId);
+    if (download == null) return null;
+    var url = download.download;
+    if (download.link.isNotEmpty) {
+      try {
+        final refreshed = await DebridService.unrestrictLink(
+          apiKey,
+          download.link,
+        );
+        final refreshedUrl = refreshed['download']?.toString() ?? '';
+        if (refreshedUrl.isNotEmpty) url = refreshedUrl;
+      } catch (_) {
+        // The freshly listed download URL is still a useful fallback when
+        // a host temporarily refuses to unrestrict the original link.
+      }
+    }
+    if (url.isEmpty) return null;
+    return CloudPlaybackResult(
+      title: source.torrentName,
+      playUrl: url,
+      downloadUrls: [url],
+      fileName: download.filename.isNotEmpty
+          ? download.filename
+          : source.torrentName,
     );
   }
 
