@@ -22,8 +22,11 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   Magnet add/resolve now goes through `services/cloud/` (`CloudProviderPort` +
   `CloudProviderRegistry`). Playlist JSON, labels, and download credential
   keys live there too. Bind-source PM/AD/PP browsers: `widgets/cloud_browse_select_source.dart`.
-  Cloud secrets/resume key names sit in `services/storage/` (`RdPrefs`,
-  `ResumePrefs`); `StorageService` remains the public static API.
+  Cloud credential keys live in `CloudSecretPrefs` (must match
+  `CloudProviderId.credentialKey`); `StorageService` remains the public
+  static API. Display names / chips / overlay titles live on
+  `CloudProviderId`; `CloudProviderChrome` is Flutter colors/icons plus
+  non-cloud loader ids.
 - **`main.dart`** — app shell + nav branch (TV rail / desktop rail / `MobileFloatingNav`), tab indices.
 
 ## Search, sources & addons

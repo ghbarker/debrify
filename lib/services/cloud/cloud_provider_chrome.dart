@@ -3,11 +3,16 @@ import 'package:flutter/material.dart';
 import '../series_source_service.dart';
 import 'cloud_provider_id.dart';
 
-/// Labels, chips, and action-sheet chrome for cloud providers.
+/// Flutter chrome for playback ids and a few non-cloud loader ids.
 ///
-/// Playback ids (`debrid`) and a few non-cloud loader ids (`preparing`,
-/// `stream`, local/addon binds) live here so [TorrentPlaybackService] is not
-/// the only copy of the mapping.
+/// Cloud string identity ([CloudProviderId.displayName], [CloudProviderId.chipCode],
+/// [CloudProviderId.overlayTitle]) lives on the enum so this file only maps
+/// colors/icons and ids Flutter owns (`preparing`, `stream`, local/addon).
+///
+/// [label] / [code] / [gradient] / [icon] match **playback** ids only — do not
+/// parse `rd` / `realdebrid` here; [TorrentPlaybackService._label] historically
+/// passed those strings through unchanged. Catalog surfaces use [catalogChip]
+/// / [catalogTitle], which do parse aliases.
 class CloudProviderChrome {
   CloudProviderChrome._();
 
@@ -15,16 +20,6 @@ class CloudProviderChrome {
     switch (provider) {
       case 'preparing':
         return 'Preparing';
-      case 'debrid':
-        return 'Real-Debrid';
-      case 'torbox':
-        return 'TorBox';
-      case 'premiumize':
-        return 'Premiumize';
-      case 'alldebrid':
-        return 'AllDebrid';
-      case 'pikpak':
-        return 'PikPak';
       case SeriesSource.localService:
         return 'On-device';
       case SeriesSource.addonDirectService:
@@ -32,7 +27,8 @@ class CloudProviderChrome {
       case 'stream':
         return 'Stream';
       default:
-        return provider;
+        return CloudProviderId.fromPlaybackId(provider)?.displayName ??
+            provider;
     }
   }
 
@@ -41,57 +37,51 @@ class CloudProviderChrome {
     switch (provider) {
       case 'preparing':
         return '···';
-      case 'debrid':
-        return 'RD';
-      case 'torbox':
-        return 'TB';
-      case 'premiumize':
-        return 'PM';
-      case 'alldebrid':
-        return 'AD';
-      case 'pikpak':
-        return 'PP';
       case 'stream':
         return 'TV';
       case SeriesSource.addonDirectService:
         return 'DL';
       default:
+        final cloud = CloudProviderId.fromPlaybackId(provider);
+        if (cloud != null) return cloud.chipCode;
         return provider.isEmpty ? '·' : provider.substring(0, 1).toUpperCase();
     }
   }
 
   static List<Color> gradient(String provider) {
-    switch (provider) {
-      case 'debrid':
-        return const [Color(0xFF10B981), Color(0xFF059669)];
-      case 'torbox':
-        return const [Color(0xFF8B5CF6), Color(0xFF7C3AED)];
-      case 'premiumize':
-        return const [Color(0xFFF59E0B), Color(0xFFD97706)];
-      case 'alldebrid':
-        return const [Color(0xFF26A69A), Color(0xFF00796B)];
-      case 'pikpak':
-        return const [Color(0xFF6366F1), Color(0xFF4338CA)];
-      default:
-        return const [Color(0xFF6366F1), Color(0xFF4338CA)];
-    }
+    return switch (CloudProviderId.fromPlaybackId(provider)) {
+      CloudProviderId.debrid => const [
+        Color(0xFF10B981),
+        Color(0xFF059669),
+      ],
+      CloudProviderId.torbox => const [
+        Color(0xFF8B5CF6),
+        Color(0xFF7C3AED),
+      ],
+      CloudProviderId.premiumize => const [
+        Color(0xFFF59E0B),
+        Color(0xFFD97706),
+      ],
+      CloudProviderId.alldebrid => const [
+        Color(0xFF26A69A),
+        Color(0xFF00796B),
+      ],
+      CloudProviderId.pikpak || null => const [
+        Color(0xFF6366F1),
+        Color(0xFF4338CA),
+      ],
+    };
   }
 
   static IconData icon(String provider) {
-    switch (provider) {
-      case 'debrid':
-        return Icons.cloud_download_rounded;
-      case 'torbox':
-        return Icons.flash_on_rounded;
-      case 'premiumize':
-        return Icons.workspace_premium_rounded;
-      case 'alldebrid':
-        return Icons.all_inclusive_rounded;
-      case 'pikpak':
-        return Icons.cloud_circle_rounded;
-      default:
-        return Icons.cloud_download_rounded;
-    }
+    return switch (CloudProviderId.fromPlaybackId(provider)) {
+      CloudProviderId.debrid => Icons.cloud_download_rounded,
+      CloudProviderId.torbox => Icons.flash_on_rounded,
+      CloudProviderId.premiumize => Icons.workspace_premium_rounded,
+      CloudProviderId.alldebrid => Icons.all_inclusive_rounded,
+      CloudProviderId.pikpak => Icons.cloud_circle_rounded,
+      null => Icons.cloud_download_rounded,
+    };
   }
 
   /// Catalog / Stremio TV ids use `realdebrid` instead of playback `debrid`.
@@ -99,13 +89,11 @@ class CloudProviderChrome {
   static String catalogChip(String provider) {
     final id = CloudProviderId.tryParse(provider);
     if (id == null) return 'AUTO';
-    return code(id.playbackId);
+    return id.chipCode;
   }
 
   /// Null when [provider] is not a known cloud id so the caller can render Auto.
   static String? catalogTitle(String provider) {
-    final id = CloudProviderId.tryParse(provider);
-    if (id == null) return null;
-    return label(id.playbackId);
+    return CloudProviderId.tryParse(provider)?.displayName;
   }
 }

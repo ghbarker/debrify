@@ -1,4 +1,5 @@
 import 'cloud_playback_result.dart';
+import 'cloud_provider_id.dart';
 
 /// Playlist JSON written by [TorrentPlaybackService._addToPlaylist].
 ///
@@ -19,7 +20,9 @@ class CloudPlaylistPayload {
   }) {
     final isPack = result.hasPlaylist;
     final item = <String, dynamic>{
-      'provider': provider == 'debrid' ? 'realdebrid' : provider,
+      'provider': provider == CloudProviderId.debrid.playbackId
+          ? CloudProviderId.debrid.playlistStoredProvider
+          : provider,
       'title': title,
       'kind': isPack ? 'collection' : 'single',
       'torrent_hash': torrentHash,

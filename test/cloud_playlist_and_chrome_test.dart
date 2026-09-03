@@ -8,7 +8,6 @@ import 'package:debrify/services/cloud/cloud_provider_chrome.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
 import 'package:debrify/services/series_source_service.dart';
 import 'package:debrify/services/storage/cloud_secret_prefs.dart';
-import 'package:debrify/services/storage/resume_prefs.dart';
 import 'package:debrify/widgets/cloud_browse_select_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,9 +23,21 @@ void main() {
         'Direct addon',
       );
       expect(CloudProviderChrome.label('mystery'), 'mystery');
+      expect(CloudProviderChrome.label('rd'), 'rd');
+      expect(CloudProviderChrome.label('realdebrid'), 'realdebrid');
       expect(CloudProviderChrome.code('debrid'), 'RD');
       expect(CloudProviderChrome.code(''), '·');
       expect(CloudProviderChrome.code('xyz'), 'X');
+    });
+
+    test('TorBox display name is not the overlay title', () {
+      expect(CloudProviderId.torbox.displayName, 'TorBox');
+      expect(CloudProviderId.torbox.overlayTitle, 'Torbox');
+      expect(CloudProviderId.debrid.displayName, 'Real-Debrid');
+      expect(CloudProviderId.debrid.overlayTitle, 'Real-Debrid');
+      expect(CloudProviderId.debrid.playlistStoredProvider, 'realdebrid');
+      expect(CloudProviderId.fromPlaybackId('rd'), isNull);
+      expect(CloudProviderId.tryParse('rd'), CloudProviderId.debrid);
     });
 
     test('unknown providers share the indigo fallback gradient', () {
@@ -112,7 +123,7 @@ void main() {
     });
   });
 
-  group('CloudSecretPrefs / ResumePrefs', () {
+  group('CloudSecretPrefs', () {
     test('keys match CloudProviderId.credentialKey', () {
       expect(
         CloudSecretPrefs.realDebridApiKey,
@@ -128,8 +139,6 @@ void main() {
         CloudProviderId.alldebrid.credentialKey,
       );
       expect(CloudSecretPrefs.pikpakEmail, CloudProviderId.pikpak.credentialKey);
-      expect(RdPrefs.apiKeyKey, 'real_debrid_api_key');
-      expect(ResumePrefs.videoResumeKey, 'video_resume_v1');
     });
   });
 
