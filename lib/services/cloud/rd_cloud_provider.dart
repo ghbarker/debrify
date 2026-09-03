@@ -6,6 +6,7 @@ import '../../utils/rd_folder_tree_builder.dart';
 import '../../utils/series_parser.dart';
 import '../debrid_service.dart';
 import '../main_page_bridge.dart';
+import '../series_source_service.dart';
 import 'cloud_credentials.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
@@ -78,6 +79,70 @@ class RealDebridCloudProvider implements CloudProviderPort {
       rdTorrentId: rd.id.isNotEmpty ? rd.id : null,
       restrictedLink: links.isNotEmpty ? links.first : null,
     );
+  }
+
+  @override
+  Future<CloudPlaybackResult?> resolveNativeBound(
+    SeriesSource source, {
+    required String? contentType,
+  }) async {
+    if (source.cloudSourceKind != SeriesSource.cloudKindWebDownload) {
+      return null;
+    }
+    final sourceId = source.debridTorrentId.trim();
+    final apiKey = (await CloudCredentials.apiKey(id)) ?? '';
+    if (apiKey.isEmpty) return null;
+    final download = await DebridService.getDownloadById(apiKey, sourceId);
+    if (download == null) return null;
+    var url = download.download;
+    if (download.link.isNotEmpty) {
+      try {
+        final refreshed = await DebridService.unrestrictLink(
+          apiKey,
+          download.link,
+        );
+        final refreshedUrl = refreshed['download']?.toString() ?? '';
+        if (refreshedUrl.isNotEmpty) url = refreshedUrl;
+      } catch (_) {
+        // The freshly listed download URL is still a useful fallback when
+        // a host temporarily refuses to unrestrict the original link.
+      }
+    }
+    if (url.isEmpty) return null;
+    return CloudPlaybackResult(
+      title: source.torrentName,
+      playUrl: url,
+      downloadUrls: [url],
+      fileName: download.filename.isNotEmpty
+          ? download.filename
+          : source.torrentName,
+    );
+  }
+
+  @override
+  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async {
+    final link = entry.restrictedLink;
+    if (link == null || link.isEmpty) return null;
+    final apiKey = (await CloudCredentials.apiKey(id)) ?? '';
+    final r = await DebridService.unrestrictLink(apiKey, link);
+    return r['download']?.toString();
+  }
+
+  @override
+  Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('Missing Real Debrid API key');
+    }
+    final unrestrictResult = await DebridService.unrestrictLink(
+      apiKey,
+      entry.restrictedLink!,
+    );
+    final url = unrestrictResult['download']?.toString() ?? '';
+    if (url.isEmpty) {
+      throw Exception('Real Debrid returned an empty stream URL');
+    }
+    return url;
   }
 
   /// Video-file filtering aligned to the `links` array, archive guard,

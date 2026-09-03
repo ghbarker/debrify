@@ -81,7 +81,8 @@ enum CloudProviderId {
     return null;
   }
 
-  /// [storedId] only (`rd`, not `debrid` / `realdebrid`).
+  /// [storedId] only (`rd`, not `debrid` / `realdebrid`). Bound replay uses
+  /// this; [tryParse] would wrongly treat a stored `debrid` as Real-Debrid.
   static CloudProviderId? fromStoredId(String stored) {
     for (final id in values) {
       if (id.storedId == stored) return id;

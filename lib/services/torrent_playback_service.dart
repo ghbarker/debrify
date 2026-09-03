@@ -12,8 +12,6 @@ import '../models/play_loader_art.dart';
 import '../models/playlist_view_mode.dart';
 import '../models/profiles/profile_policy.dart';
 import '../models/quick_play_rules.dart';
-import '../models/torbox_file.dart';
-import '../models/torbox_web_download.dart';
 import '../models/torrent.dart';
 import '../models/indexer_manager_config.dart';
 import '../screens/video_player/models/playlist_entry.dart';
@@ -43,7 +41,6 @@ import 'cloud/cloud_provider_chrome.dart';
 import 'cloud/cloud_provider_id.dart';
 import 'cloud/cloud_provider_registry.dart';
 import 'cloud/pack_negative_cache.dart';
-import 'cloud/pikpak_cloud_provider.dart';
 import 'debrid_service.dart';
 import 'debrify_tv_channel_add_service.dart';
 import 'download_service.dart';
@@ -1223,6 +1220,7 @@ class TorrentPlaybackService {
       if (context.mounted && !cancelled) opener();
       return true;
     }
+
     var activeRules = rules;
     if (!context.mounted || cancelled) {
       resolving.dismiss();
@@ -3106,302 +3104,10 @@ class TorrentPlaybackService {
   static Future<_Resolved?> _resolveProviderNativeBound(
     SeriesSource source,
     PlaybackMeta meta,
-  ) async {
-    final sourceId = source.debridTorrentId.trim();
-    if (!source.isProviderNativeCloud || sourceId.isEmpty) return null;
-
-    switch (source.debridService) {
-      case 'rd':
-        if (source.cloudSourceKind != SeriesSource.cloudKindWebDownload) {
-          return null;
-        }
-        final apiKey = (await StorageService.getApiKey()) ?? '';
-        if (apiKey.isEmpty) return null;
-        final download = await DebridService.getDownloadById(apiKey, sourceId);
-        if (download == null) return null;
-        var url = download.download;
-        if (download.link.isNotEmpty) {
-          try {
-            final refreshed = await DebridService.unrestrictLink(
-              apiKey,
-              download.link,
-            );
-            final refreshedUrl = refreshed['download']?.toString() ?? '';
-            if (refreshedUrl.isNotEmpty) url = refreshedUrl;
-          } catch (_) {
-            // The freshly listed download URL is still a useful fallback when
-            // a host temporarily refuses to unrestrict the original link.
-          }
-        }
-        if (url.isEmpty) return null;
-        return _Resolved(
-          title: source.torrentName,
-          playUrl: url,
-          downloadUrls: [url],
-          fileName: download.filename.isNotEmpty
-              ? download.filename
-              : source.torrentName,
-        );
-
-      case 'torbox':
-        if (source.cloudSourceKind != SeriesSource.cloudKindWebDownload) {
-          return null;
-        }
-        final apiKey = (await StorageService.getTorboxApiKey()) ?? '';
-        final webId = int.tryParse(sourceId);
-        if (apiKey.isEmpty || webId == null) return null;
-        final result = await TorboxService.getWebDownloads(
-          apiKey,
-          webId: webId,
-        );
-        final downloads = (result['webDownloads'] as List)
-            .cast<TorboxWebDownload>();
-        if (downloads.isEmpty) return null;
-        final download = downloads.firstWhere(
-          (candidate) => candidate.id == webId,
-          orElse: () => downloads.first,
-        );
-        final videos = download.files.where((file) {
-          if (file.zipped) return false;
-          final name = file.shortName.isNotEmpty
-              ? file.shortName
-              : FileUtils.getFileName(file.name);
-          return (file.mimetype?.startsWith('video/') ?? false) ||
-              FileUtils.isVideoFile(name);
-        }).toList();
-        if (videos.isEmpty) return null;
-
-        String displayName(TorboxFile file) => file.shortName.isNotEmpty
-            ? file.shortName
-            : FileUtils.getFileName(file.name);
-        String relativePath(TorboxFile file) =>
-            (file.absolutePath?.isNotEmpty ?? false)
-            ? file.absolutePath!
-            : file.name;
-
-        if (meta.contentType != 'series') {
-          final video = videos.reduce((a, b) => a.size >= b.size ? a : b);
-          final url = await TorboxService.requestWebDownloadFileLink(
-            apiKey: apiKey,
-            webId: webId,
-            fileId: video.id,
-          );
-          if (url.isEmpty) return null;
-          return _Resolved(
-            title: source.torrentName,
-            playUrl: url,
-            downloadUrls: [url],
-            fileName: displayName(video),
-          );
-        }
-
-        final (sorted, startIndex) = _orderBySeries(videos, relativePath);
-        final entries = <PlaylistEntry>[
-          for (var i = 0; i < sorted.length; i++)
-            PlaylistEntry(
-              url: '',
-              title: relativePath(sorted[i]),
-              relativePath: relativePath(sorted[i]),
-              provider: 'torbox',
-              torboxWebDownloadId: webId,
-              torboxFileId: sorted[i].id,
-              sizeBytes: sorted[i].size > 0 ? sorted[i].size : null,
-            ),
-        ];
-        final playUrl = await TorboxService.requestWebDownloadFileLink(
-          apiKey: apiKey,
-          webId: webId,
-          fileId: sorted[startIndex].id,
-        );
-        if (playUrl.isEmpty) return null;
-        entries[startIndex] = PlaylistEntry(
-          url: playUrl,
-          title: entries[startIndex].title,
-          relativePath: entries[startIndex].relativePath,
-          provider: entries[startIndex].provider,
-          torboxWebDownloadId: webId,
-          torboxFileId: sorted[startIndex].id,
-          sizeBytes: entries[startIndex].sizeBytes,
-        );
-        return _Resolved(
-          title: source.torrentName,
-          playUrl: playUrl,
-          downloadUrls: [playUrl],
-          playlist: entries.length > 1 ? entries : null,
-          startIndex: startIndex,
-          fileName: entries.length == 1 ? entries.first.title : null,
-        );
-
-      case 'alldebrid':
-        if (source.cloudSourceKind != SeriesSource.cloudKindWebDownload) {
-          return null;
-        }
-        final apiKey = (await StorageService.getAllDebridApiKey()) ?? '';
-        if (apiKey.isEmpty) return null;
-        final links = await AllDebridService.listSavedLinks(apiKey);
-        final matching = links.where(
-          (link) => SeriesSource.opaqueCloudReference(link.link) == sourceId,
-        );
-        if (matching.isEmpty) return null;
-        final link = matching.first;
-        final url = await AllDebridService.unlockLink(apiKey, link.link);
-        if (url.isEmpty) return null;
-        return _Resolved(
-          title: source.torrentName,
-          playUrl: url,
-          downloadUrls: [url],
-          fileName: link.fileName,
-        );
-
-      case 'premiumize':
-        final apiKey = (await StorageService.getPremiumizeApiKey()) ?? '';
-        if (apiKey.isEmpty) return null;
-        if (source.cloudSourceKind == SeriesSource.cloudKindFile) {
-          final file = await PremiumizeService.resolveItemById(
-            apiKey,
-            sourceId,
-          );
-          if (file == null || file.link.isEmpty) return null;
-          return _Resolved(
-            title: source.torrentName,
-            playUrl: file.link,
-            downloadUrls: [file.link],
-            fileName: file.path.isNotEmpty ? file.path : source.torrentName,
-          );
-        }
-
-        final all = await PremiumizeService.listFolderRecursive(
-          apiKey,
-          sourceId,
-        );
-        final videos = all.where((f) => f.isVideo).toList();
-        if (videos.isEmpty) return null;
-        if (meta.contentType != 'series') {
-          final video = videos.reduce((a, b) => a.size >= b.size ? a : b);
-          var url = video.playableUrl ?? '';
-          if (url.isEmpty) {
-            final resolved = await PremiumizeService.resolveItemById(
-              apiKey,
-              video.id,
-            );
-            url = resolved?.link ?? '';
-          }
-          if (url.isEmpty) return null;
-          return _Resolved(
-            title: source.torrentName,
-            playUrl: url,
-            downloadUrls: [url],
-            fileName: video.relativePath ?? video.name,
-          );
-        }
-        final (sorted, startIndex) = _orderBySeries(
-          videos,
-          (f) => f.relativePath ?? f.name,
-        );
-        final entries = <PlaylistEntry>[
-          for (var i = 0; i < sorted.length; i++)
-            PlaylistEntry(
-              url: i == startIndex ? (sorted[i].playableUrl ?? '') : '',
-              title: sorted[i].relativePath ?? sorted[i].name,
-              relativePath: sorted[i].relativePath ?? sorted[i].name,
-              provider: 'premiumize',
-              premiumizeItemId: sorted[i].id,
-              sizeBytes: sorted[i].size > 0 ? sorted[i].size : null,
-            ),
-        ];
-        var playUrl = entries[startIndex].url;
-        if (playUrl.isEmpty) {
-          final resolved = await PremiumizeService.resolveItemById(
-            apiKey,
-            entries[startIndex].premiumizeItemId!,
-          );
-          playUrl = resolved?.link ?? '';
-        }
-        if (playUrl.isEmpty) return null;
-        return _Resolved(
-          title: source.torrentName,
-          playUrl: playUrl,
-          downloadUrls: [playUrl],
-          playlist: entries.length > 1 ? entries : null,
-          startIndex: startIndex,
-          fileName: entries.length == 1 ? entries.first.title : null,
-        );
-
-      case 'pikpak':
-        final pikpak = PikPakApiService.instance;
-        if (source.cloudSourceKind == SeriesSource.cloudKindFile) {
-          final data = await pikpak.getFileDetails(sourceId);
-          if (data['phase'] != 'PHASE_TYPE_COMPLETE') return null;
-          final url = pikpak.getStreamingUrl(data);
-          if (url == null || url.isEmpty) return null;
-          final name = (data['name'] ?? source.torrentName).toString();
-          return _Resolved(
-            title: source.torrentName,
-            playUrl: url,
-            downloadUrls: [url],
-            fileName: name,
-            pikpakFileId: sourceId,
-            pikpakVideoFileId: sourceId,
-          );
-        }
-
-        final all = await pikpak.listFilesRecursive(
-          folderId: sourceId,
-          includePaths: true,
-        );
-        final videos = all.where((file) {
-          final name = file['name']?.toString() ?? '';
-          final mime = file['mime_type']?.toString() ?? '';
-          return mime.startsWith('video/') || FileUtils.isVideoFile(name);
-        }).toList();
-        if (videos.isEmpty) return null;
-        if (meta.contentType != 'series') {
-          int sizeOf(Map<String, dynamic> file) =>
-              int.tryParse(file['size']?.toString() ?? '') ?? 0;
-          final video = videos.reduce((a, b) => sizeOf(a) >= sizeOf(b) ? a : b);
-          final videoId = video['id']?.toString() ?? '';
-          if (videoId.isEmpty) return null;
-          final data = await pikpak.getFileDetails(videoId);
-          if (data['phase'] != 'PHASE_TYPE_COMPLETE') return null;
-          final url = pikpak.getStreamingUrl(data);
-          if (url == null || url.isEmpty) return null;
-          return _Resolved(
-            title: source.torrentName,
-            playUrl: url,
-            downloadUrls: [url],
-            fileName:
-                video['_fullPath']?.toString() ??
-                video['name']?.toString() ??
-                source.torrentName,
-            pikpakFileId: sourceId,
-            pikpakVideoFileId: videoId,
-          );
-        }
-        final playlist = await PikPakCloudProvider.buildPikPakPlaylist(
-          source.torrentName,
-          videos,
-          pikpak,
-        );
-        if (playlist == null || playlist.isEmpty) return null;
-        var startIndex = playlist.indexWhere((e) => e.url.isNotEmpty);
-        if (startIndex < 0) startIndex = 0;
-        final playUrl = playlist[startIndex].url;
-        if (playUrl.isEmpty) return null;
-        return _Resolved(
-          title: source.torrentName,
-          playUrl: playUrl,
-          downloadUrls: [playUrl],
-          playlist: playlist.length > 1 ? playlist : null,
-          startIndex: startIndex,
-          fileName: playlist.length == 1 ? playlist.first.title : null,
-          pikpakFileId: sourceId,
-          pikpakVideoFileId: playlist.length == 1
-              ? playlist.first.pikpakFileId
-              : null,
-        );
-    }
-    return null;
-  }
+  ) => CloudProviderRegistry.instance.resolveNativeBound(
+    source,
+    contentType: meta.contentType,
+  );
 
   /// Play a pinned source directly (no search). Tries each bound source in
   /// priority order; returns true once one plays. Self-heals a source that is
@@ -4842,8 +4548,7 @@ class TorrentPlaybackService {
       // A switch after an unpersistable initial row can be the first bind. The
       // existing series auto-pin preference still owns that opt-in boundary;
       // once a list exists, a successful switch keeps it in sync regardless.
-      if (existing.isEmpty &&
-          !await StorageService.getSeriesAutoPinOnPlay()) {
+      if (existing.isEmpty && !await StorageService.getSeriesAutoPinOnPlay()) {
         return;
       }
       // Series: promote the winner but retain the previous primary and every
@@ -4927,29 +4632,8 @@ class TorrentPlaybackService {
   /// debrid entry on demand: RD `restrictedLink` → unrestrict, TorBox
   /// torrent+file id → download link, AllDebrid locked link → unlock. Premiumize
   /// entries already carry a URL. Returns null if it can't be resolved.
-  static Future<String?> _resolveEntryUrl(PlaylistEntry e) async {
-    if (e.url.isNotEmpty) return e.url;
-    try {
-      if (e.restrictedLink != null && e.restrictedLink!.isNotEmpty) {
-        final key = (await StorageService.getApiKey()) ?? '';
-        final r = await DebridService.unrestrictLink(key, e.restrictedLink!);
-        return r['download']?.toString();
-      }
-      if (e.torboxTorrentId != null && e.torboxFileId != null) {
-        final key = (await StorageService.getTorboxApiKey()) ?? '';
-        return await TorboxService.requestFileDownloadLink(
-          apiKey: key,
-          torrentId: e.torboxTorrentId!,
-          fileId: e.torboxFileId!,
-        );
-      }
-      if (e.allDebridLink != null && e.allDebridLink!.isNotEmpty) {
-        final key = (await StorageService.getAllDebridApiKey()) ?? '';
-        return await AllDebridService.unlockLink(key, e.allDebridLink!);
-      }
-    } catch (_) {}
-    return null;
-  }
+  static Future<String?> _resolveEntryUrl(PlaylistEntry e) =>
+      CloudProviderRegistry.instance.resolveEntryUrl(e);
 
   /// Multi-select download picker (parity with the old per-file download
   /// dialog): lists the pack's files with sizes, defaults all selected, shows a
@@ -5648,7 +5332,8 @@ class TorrentPlaybackService {
       // a play cannot await a preference, and the mirror's default IS the
       // stored default, so an unwarmed read only ever mis-serves someone who
       // explicitly chose Classic.
-      style: PlayLoaderStyleController.cached == PlayLoaderStyleController.classic
+      style:
+          PlayLoaderStyleController.cached == PlayLoaderStyleController.classic
           ? PlayLoaderStyle.classic
           : PlayLoaderStyle.marquee,
       art: meta?.art,

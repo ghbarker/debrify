@@ -4,6 +4,7 @@ import '../../utils/file_utils.dart';
 import '../../utils/series_parser.dart';
 import '../main_page_bridge.dart';
 import '../pikpak_api_service.dart';
+import '../series_source_service.dart';
 import 'cloud_credentials.dart';
 import 'cloud_exceptions.dart';
 import 'cloud_playback_helpers.dart';
@@ -93,7 +94,11 @@ class PikPakCloudProvider implements CloudProviderPort {
       throw const PikPakStillProcessing();
     }
 
-    final playlist = await buildPikPakPlaylist(torrent.name, videoFiles, pikpak);
+    final playlist = await buildPikPakPlaylist(
+      torrent.name,
+      videoFiles,
+      pikpak,
+    );
     if (playlist == null || playlist.isEmpty) {
       throw Exception('PikPak: could not resolve a playable stream.');
     }
@@ -116,6 +121,103 @@ class PikPakCloudProvider implements CloudProviderPort {
           ? playlist.first.pikpakFileId
           : null,
     );
+  }
+
+  @override
+  Future<CloudPlaybackResult?> resolveNativeBound(
+    SeriesSource source, {
+    required String? contentType,
+  }) async {
+    final sourceId = source.debridTorrentId.trim();
+    final pikpak = PikPakApiService.instance;
+    if (source.cloudSourceKind == SeriesSource.cloudKindFile) {
+      final data = await pikpak.getFileDetails(sourceId);
+      if (data['phase'] != 'PHASE_TYPE_COMPLETE') return null;
+      final url = pikpak.getStreamingUrl(data);
+      if (url == null || url.isEmpty) return null;
+      final name = (data['name'] ?? source.torrentName).toString();
+      return CloudPlaybackResult(
+        title: source.torrentName,
+        playUrl: url,
+        downloadUrls: [url],
+        fileName: name,
+        pikpakFileId: sourceId,
+        pikpakVideoFileId: sourceId,
+      );
+    }
+
+    final all = await pikpak.listFilesRecursive(
+      folderId: sourceId,
+      includePaths: true,
+    );
+    final videos = all.where((file) {
+      final name = file['name']?.toString() ?? '';
+      final mime = file['mime_type']?.toString() ?? '';
+      return mime.startsWith('video/') || FileUtils.isVideoFile(name);
+    }).toList();
+    if (videos.isEmpty) return null;
+    if (contentType != 'series') {
+      int sizeOf(Map<String, dynamic> file) =>
+          int.tryParse(file['size']?.toString() ?? '') ?? 0;
+      final video = videos.reduce((a, b) => sizeOf(a) >= sizeOf(b) ? a : b);
+      final videoId = video['id']?.toString() ?? '';
+      if (videoId.isEmpty) return null;
+      final data = await pikpak.getFileDetails(videoId);
+      if (data['phase'] != 'PHASE_TYPE_COMPLETE') return null;
+      final url = pikpak.getStreamingUrl(data);
+      if (url == null || url.isEmpty) return null;
+      return CloudPlaybackResult(
+        title: source.torrentName,
+        playUrl: url,
+        downloadUrls: [url],
+        fileName:
+            video['_fullPath']?.toString() ??
+            video['name']?.toString() ??
+            source.torrentName,
+        pikpakFileId: sourceId,
+        pikpakVideoFileId: videoId,
+      );
+    }
+    final playlist = await PikPakCloudProvider.buildPikPakPlaylist(
+      source.torrentName,
+      videos,
+      pikpak,
+    );
+    if (playlist == null || playlist.isEmpty) return null;
+    var startIndex = playlist.indexWhere((e) => e.url.isNotEmpty);
+    if (startIndex < 0) startIndex = 0;
+    final playUrl = playlist[startIndex].url;
+    if (playUrl.isEmpty) return null;
+    return CloudPlaybackResult(
+      title: source.torrentName,
+      playUrl: playUrl,
+      downloadUrls: [playUrl],
+      playlist: playlist.length > 1 ? playlist : null,
+      startIndex: startIndex,
+      fileName: playlist.length == 1 ? playlist.first.title : null,
+      pikpakFileId: sourceId,
+      pikpakVideoFileId: playlist.length == 1
+          ? playlist.first.pikpakFileId
+          : null,
+    );
+  }
+
+  @override
+  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async => null;
+
+  @override
+  Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
+    final fileId = entry.pikpakFileId;
+    if (fileId == null) {
+      throw Exception('PikPak file metadata missing');
+    }
+    final pikpak = PikPakApiService.instance;
+    final fileData = await pikpak.getFileDetails(fileId);
+    final url = pikpak.getStreamingUrl(fileData);
+    if (url == null || url.isEmpty) {
+      throw Exception('PikPak returned an empty stream URL');
+    }
+    return url;
   }
 
   static Future<List<Map<String, dynamic>>> extractPikPakVideos(
@@ -205,19 +307,22 @@ class PikPakCloudProvider implements CloudProviderPort {
     final sorted = [...items];
     if (isSeriesCollection) {
       sorted.sort((a, b) {
-        final sc = (a.seriesInfo.season ?? 0).compareTo(b.seriesInfo.season ?? 0);
+        final sc = (a.seriesInfo.season ?? 0).compareTo(
+          b.seriesInfo.season ?? 0,
+        );
         if (sc != 0) return sc;
         final ec = (a.seriesInfo.episode ?? 0).compareTo(
           b.seriesInfo.episode ?? 0,
         );
         if (ec != 0) return ec;
-        return a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase());
+        return a.displayName.toLowerCase().compareTo(
+          b.displayName.toLowerCase(),
+        );
       });
     } else {
       sorted.sort(
-        (a, b) => a.displayName.toLowerCase().compareTo(
-          b.displayName.toLowerCase(),
-        ),
+        (a, b) =>
+            a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
       );
     }
 

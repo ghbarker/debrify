@@ -21,7 +21,6 @@ import '../models/stremio_subtitle.dart';
 import '../screens/video_player_screen.dart';
 import '../services/android_native_downloader.dart';
 import '../services/android_tv_player_bridge.dart';
-import '../services/debrid_service.dart';
 import '../services/main_page_bridge.dart';
 import '../services/next_episode_service.dart';
 import '../services/analytics_service.dart';
@@ -29,10 +28,7 @@ import '../services/episode_tracker_snapshot_service.dart';
 import '../services/local_playback_resume_resolver.dart';
 import '../services/series_source_fetcher.dart';
 import '../services/storage_service.dart';
-import '../services/torbox_service.dart';
-import '../services/pikpak_api_service.dart';
-import '../services/premiumize_service.dart';
-import '../services/alldebrid_service.dart';
+import 'cloud/cloud_provider_registry.dart';
 import '../utils/episode_progress_merge.dart';
 import '../utils/series_parser.dart';
 import '../utils/movie_parser.dart';
@@ -4419,143 +4415,10 @@ class VideoPlayerLauncher {
       return await _resolveRedirectUrl(entry.url);
     }
 
-    final provider = entry.provider?.toLowerCase();
-    final hasTorboxMetadata =
-        entry.torboxTorrentId != null && entry.torboxFileId != null;
-    final hasTorboxWebDownloadMetadata =
-        entry.torboxWebDownloadId != null && entry.torboxFileId != null;
-
-    if (provider == 'torbox' ||
-        hasTorboxMetadata ||
-        hasTorboxWebDownloadMetadata) {
-      final torrentId = entry.torboxTorrentId;
-      final webDownloadId = entry.torboxWebDownloadId;
-      final fileId = entry.torboxFileId;
-      if (fileId == null || (torrentId == null && webDownloadId == null)) {
-        throw Exception('Torbox file metadata missing');
-      }
-      final apiKey = await StorageService.getTorboxApiKey();
-      if (apiKey == null || apiKey.isEmpty) {
-        throw Exception('Missing Torbox API key');
-      }
-      String url;
-      if (webDownloadId != null) {
-        // Web download - use web download API
-        url = await TorboxService.requestWebDownloadFileLink(
-          apiKey: apiKey,
-          webId: webDownloadId,
-          fileId: fileId,
-        );
-      } else {
-        // Torrent - use torrent API
-        url = await TorboxService.requestFileDownloadLink(
-          apiKey: apiKey,
-          torrentId: torrentId!,
-          fileId: fileId,
-        );
-      }
-      if (url.isEmpty) {
-        throw Exception('Torbox returned an empty stream URL');
-      }
-      return url;
-    }
-
-    // PikPak lazy resolution
-    final hasPikPakMetadata = entry.pikpakFileId != null;
-    if (provider == 'pikpak' || hasPikPakMetadata) {
-      final fileId = entry.pikpakFileId;
-      if (fileId == null) {
-        throw Exception('PikPak file metadata missing');
-      }
-      final pikpak = PikPakApiService.instance;
-      final fileData = await pikpak.getFileDetails(fileId);
-      final url = pikpak.getStreamingUrl(fileData);
-      if (url == null || url.isEmpty) {
-        throw Exception('PikPak returned an empty stream URL');
-      }
-      return url;
-    }
-
-    // Premiumize cloud-browser lazy resolution: re-fetch a fresh direct link by
-    // cloud item id (items saved from the cloud browser have no infohash).
-    if (entry.premiumizeItemId != null && entry.premiumizeItemId!.isNotEmpty) {
-      final apiKey = await StorageService.getPremiumizeApiKey();
-      if (apiKey == null || apiKey.isEmpty) {
-        throw Exception('Missing Premiumize API key');
-      }
-      final file = await PremiumizeService.resolveItemById(
-        apiKey,
-        entry.premiumizeItemId!,
-      );
-      if (file == null || file.link.isEmpty) {
-        throw Exception('File not found in Premiumize cloud');
-      }
-      return file.link;
-    }
-
-    // Premiumize lazy resolution: re-fetch direct links by infohash and match
-    // the file by its stored path (Premiumize direct links eventually expire).
-    final hasPremiumizeMetadata =
-        entry.premiumizeHash != null && entry.premiumizePath != null;
-    if (provider == 'premiumize' || hasPremiumizeMetadata) {
-      final hash = entry.premiumizeHash;
-      final path = entry.premiumizePath;
-      if (hash != null && hash.isNotEmpty && path != null && path.isNotEmpty) {
-        final apiKey = await StorageService.getPremiumizeApiKey();
-        if (apiKey == null || apiKey.isEmpty) {
-          throw Exception('Missing Premiumize API key');
-        }
-        final files = await PremiumizeService.resolveFilesByHash(apiKey, hash);
-        final match = files.firstWhere(
-          (f) => f.path == path,
-          orElse: () => throw Exception('File not found in Premiumize cloud'),
-        );
-        if (match.link.isEmpty) {
-          throw Exception('Premiumize returned an empty stream URL');
-        }
-        return match.link;
-      }
-    }
-
-    if (entry.restrictedLink != null && entry.restrictedLink!.isNotEmpty) {
-      final apiKey = await StorageService.getApiKey();
-      if (apiKey == null || apiKey.isEmpty) {
-        throw Exception('Missing Real Debrid API key');
-      }
-      final unrestrictResult = await DebridService.unrestrictLink(
-        apiKey,
-        entry.restrictedLink!,
-      );
-      final url = unrestrictResult['download']?.toString() ?? '';
-      if (url.isEmpty) {
-        throw Exception('Real Debrid returned an empty stream URL');
-      }
-      return url;
-    }
-
-    // AllDebrid lazy resolution: unlock the stored locked link on demand.
-    if (provider == 'alldebrid' ||
-        (entry.allDebridLink != null && entry.allDebridLink!.isNotEmpty)) {
-      final lockedLink = entry.allDebridLink;
-      if (lockedLink == null || lockedLink.isEmpty) {
-        throw Exception('AllDebrid link metadata missing');
-      }
-      final apiKey = await StorageService.getAllDebridApiKey();
-      if (apiKey == null || apiKey.isEmpty) {
-        throw Exception('Missing AllDebrid API key');
-      }
-      final url = await AllDebridService.unlockLink(apiKey, lockedLink);
-      if (url.isEmpty) {
-        throw Exception('AllDebrid returned an empty stream URL');
-      }
-      return url;
-    }
-
-    if (args.videoUrl.isNotEmpty) {
-      return args.videoUrl;
-    }
-
-    throw Exception('No URL metadata available for this entry');
+    return CloudProviderRegistry.instance.unlockPlaybackEntry(
+      entry,
+      fallbackUrl: args.videoUrl,
+    );
   }
 }
 
