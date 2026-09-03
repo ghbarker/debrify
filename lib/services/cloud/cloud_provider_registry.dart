@@ -146,6 +146,75 @@ class CloudProviderRegistry {
     throw Exception('No URL metadata available for this entry');
   }
 
+  /// In-app player (`video_player_screen._resolvePlaylistEntryUrl`). Same
+  /// adapter HTTP as [unlockPlaybackEntry], but: incomplete Premiumize hash
+  /// throws (no RD fallthrough); empty `restrictedLink` still hits RD;
+  /// HTTP/empty-URL errors wrap as `$brand link failed`; no [fallbackUrl].
+  Future<String> unlockPlayerScreenEntry(PlaylistEntry entry) async {
+    final provider = entry.provider?.toLowerCase();
+    final hasTorboxMetadata =
+        entry.torboxTorrentId != null && entry.torboxFileId != null;
+    final hasTorboxWebDownloadMetadata =
+        entry.torboxWebDownloadId != null && entry.torboxFileId != null;
+
+    if (provider == 'torbox' ||
+        hasTorboxMetadata ||
+        hasTorboxWebDownloadMetadata) {
+      return _playerWrappedUnlock('Torbox', 'torbox', entry);
+    }
+
+    final hasPikPakMetadata = entry.pikpakFileId != null;
+    if (provider == 'pikpak' || hasPikPakMetadata) {
+      return _playerWrappedUnlock('PikPak', 'pikpak', entry);
+    }
+
+    if (entry.premiumizeItemId != null && entry.premiumizeItemId!.isNotEmpty) {
+      return _playerWrappedUnlock('Premiumize', 'premiumize', entry);
+    }
+
+    final hasPremiumizeMetadata =
+        entry.premiumizeHash != null && entry.premiumizePath != null;
+    if (provider == 'premiumize' || hasPremiumizeMetadata) {
+      final hash = entry.premiumizeHash;
+      final path = entry.premiumizePath;
+      if (hash == null || hash.isEmpty || path == null || path.isEmpty) {
+        throw Exception('Premiumize file metadata missing');
+      }
+      return _playerWrappedUnlock('Premiumize', 'premiumize', entry);
+    }
+
+    if (entry.restrictedLink != null) {
+      return _playerWrappedUnlock('Real Debrid', 'debrid', entry);
+    }
+
+    if (provider == 'alldebrid' ||
+        (entry.allDebridLink != null && entry.allDebridLink!.isNotEmpty)) {
+      return _playerWrappedUnlock('AllDebrid', 'alldebrid', entry);
+    }
+
+    throw Exception('No URL metadata available for this entry');
+  }
+
+  Future<String> _playerWrappedUnlock(
+    String brand,
+    String provider,
+    PlaylistEntry entry,
+  ) async {
+    try {
+      return await require(provider).unlockPlaybackEntry(entry);
+    } catch (e) {
+      final text = e.toString();
+      if (text.contains('metadata missing') ||
+          text.contains('Missing Torbox API key') ||
+          text.contains('Missing Premiumize API key') ||
+          text.contains('Missing Real Debrid API key') ||
+          text.contains('Missing AllDebrid API key')) {
+        rethrow;
+      }
+      throw Exception('$brand link failed: $e');
+    }
+  }
+
   static String? credentialKeyFor(String provider) =>
       CloudProviderId.tryParse(provider)?.credentialKey;
 }

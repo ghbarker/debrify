@@ -19,7 +19,10 @@ Playback add/resolve no longer lives in a five-way `switch` inside
   stored id `rd`, not playback `debrid`) + `resolvePlaylistEntry` (download-
   picker lazy URL; field presence, not `entry.provider`; TorBox web-download /
   PikPak / Premiumize stay on `unlockPlaybackEntry`) + `unlockPlaybackEntry`
-  (in-app/TV; throws; TorBox before RD; web-download counts).
+  (adapter HTTP; launcher/TV registry dispatch throws; TorBox before RD;
+  web-download counts). The in-app player calls
+  `CloudProviderRegistry.unlockPlayerScreenEntry` (wraps HTTP; incomplete
+  Premiumize does not fall through to RD).
 - **Register** the adapter in `CloudProviderRegistry.production()`.
 - **Ids / credential keys / backup field names / display names / chip codes /
   overlay titles / playlist stored ids** go on `CloudProviderId` (keep Flutter
