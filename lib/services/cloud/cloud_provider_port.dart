@@ -27,11 +27,14 @@ abstract class CloudProviderPort {
     required String? contentType,
   });
 
-  /// Download-picker lazy URL. Playback/TV lazy resolve is
-  /// [unlockPlaybackEntry] (throws; TorBox web-download, PikPak, Premiumize).
+  /// Download-picker lazy URL. Launcher/TV lazy resolve is
+  /// [CloudProviderRegistry.unlockPlaybackEntry]. The in-app player uses
+  /// [CloudProviderRegistry.unlockPlayerScreenEntry] (same adapters, different
+  /// wrap / Premiumize / empty-restrictedLink dialect).
   Future<String?> resolvePlaylistEntry(PlaylistEntry entry);
 
-  /// In-app / TV playlist unlock. Throws on missing metadata or empty URL.
-  /// Distinct from [resolvePlaylistEntry] (null on error, no web-download).
+  /// HTTP unlock after the registry has chosen this adapter. Throws on missing
+  /// metadata or empty URL. Do not wrap errors here — the player-screen path
+  /// wraps HTTP failures as `$brand link failed`.
   Future<String> unlockPlaybackEntry(PlaylistEntry entry);
 }

@@ -29,6 +29,7 @@ class FakeCloudProvider implements CloudProviderPort {
   int addCount = 0;
   int boundCount = 0;
   int playlistCount = 0;
+  int unlockCount = 0;
   String? lastMagnet;
   SeriesSource? lastBoundSource;
   PlaylistEntry? lastPlaylistEntry;
@@ -71,6 +72,7 @@ class FakeCloudProvider implements CloudProviderPort {
 
   @override
   Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
+    unlockCount++;
     if (error != null) throw error!;
     if (playbackUnlockUrl != null) return playbackUnlockUrl!;
     throw Exception('No URL metadata available for this entry');
