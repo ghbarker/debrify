@@ -18,6 +18,7 @@ class FakeCloudProvider implements CloudProviderPort {
     this.playbackUnlockUrl,
     this.stremioUrl,
     this.magicTvResult,
+    this.lockedLinksResult,
     this.error,
   });
 
@@ -30,6 +31,7 @@ class FakeCloudProvider implements CloudProviderPort {
   String? playbackUnlockUrl;
   String? stremioUrl;
   MagicTvPrepared? magicTvResult;
+  MagicTvLockedBatch? lockedLinksResult;
   Object? error;
 
   int addCount = 0;
@@ -38,6 +40,7 @@ class FakeCloudProvider implements CloudProviderPort {
   int unlockCount = 0;
   int stremioCount = 0;
   int magicTvCount = 0;
+  int lockedLinksCount = 0;
   String? lastMagnet;
   SeriesSource? lastBoundSource;
   PlaylistEntry? lastPlaylistEntry;
@@ -102,5 +105,15 @@ class FakeCloudProvider implements CloudProviderPort {
     lastMagicTvRequest = request;
     if (error != null) throw error!;
     return magicTvResult;
+  }
+
+  @override
+  Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
+    MagicTvPrepareRequest request,
+  ) async {
+    lockedLinksCount++;
+    lastMagicTvRequest = request;
+    if (error != null) throw error!;
+    return lockedLinksResult;
   }
 }

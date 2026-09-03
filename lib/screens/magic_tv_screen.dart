@@ -6270,7 +6270,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
           debugPrint(
             'DebrifyTV/AD: Cached trying torrent name="${item.name}" hash=${item.infohash}',
           );
-          final prepared = await _resolveAllDebridLinks(item, apiKey);
+          final prepared = await _resolveAllDebridLinks(item);
           if (prepared == null || prepared.lockedLinks.isEmpty) {
             continue;
           }
@@ -6836,7 +6836,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
         for (var index = 0; index < filteredTorrents.length; index++) {
           final candidate = filteredTorrents[index];
 
-          final prepared = await _resolveAllDebridLinks(candidate, apiKey);
+          final prepared = await _resolveAllDebridLinks(candidate);
           if (prepared == null || prepared.lockedLinks.isEmpty) {
             // Not cached/ready or no usable video; try the next candidate.
             continue;
@@ -9635,6 +9635,16 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     minVideoSizeBytes: _torboxMinVideoSizeBytes,
   );
 
+  MagicTvPrepareRequest _magicTvLockedRequest(Torrent candidate) =>
+      MagicTvPrepareRequest(
+        torrent: candidate,
+        log: (message) => debugPrint(message),
+        seenKeys: _seenRestrictedLinks,
+        sizeMatchesBytes: _tvFilters.sizeMatchesBytes,
+        hasSizeFilter: _tvFilters.hasSize,
+        minVideoSizeBytes: _torboxMinVideoSizeBytes,
+      );
+
   Future<void> _watchPremiumizeWithCachedTorrents(
     List<Torrent> cachedTorrents, {
     String? channelName,
@@ -10298,7 +10308,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
           }
 
           if (item is Torrent) {
-            final prepared = await _resolveAllDebridLinks(item, apiKey);
+            final prepared = await _resolveAllDebridLinks(item);
             if (_watchCancelled) return null;
             if (prepared == null || prepared.lockedLinks.isEmpty) {
               continue;
@@ -10616,17 +10626,12 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     _inflightInfohashes.add(infohash);
     debugPrint('MagicTV: Prefetching torrent at idx=$idx name="${item.name}"');
     try {
-      final magnetLink = 'magnet:?xt=urn:btih:$infohash';
-      final result = await DebridService.addTorrentToDebridPreferVideos(
-        _activeApiKey!,
-        magnetLink,
-      );
-      final String torrentId = result['torrentId'] as String? ?? '';
-      final List<dynamic> rdLinks =
-          (result['links'] as List<dynamic>? ?? const []);
-
-      if (rdLinks.isEmpty) {
-        // Nothing ready; move to tail to retry later
+      final batch = await CloudProviderRegistry.instance
+          .prepareMagicTvLockedLinks(
+            provider: _providerRealDebrid,
+            request: _magicTvLockedRequest(item),
+          );
+      if (batch == null || batch.lockedLinks.isEmpty) {
         if (idx < _queue.length && identical(_queue[idx], item)) {
           _queue.removeAt(idx);
           _queue.add(item);
@@ -10637,31 +10642,17 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
         return;
       }
 
-      // Convert this queue slot to rd_restricted using first link
-      final headLinkCandidates = rdLinks
-          .map((link) => link?.toString() ?? '')
-          .where(
-            (link) => link.isNotEmpty && !_seenRestrictedLinks.contains(link),
-          )
-          .toList();
-      if (headLinkCandidates.isEmpty) {
-        if (idx < _queue.length && identical(_queue[idx], item)) {
-          _queue.removeAt(idx);
-          _queue.add(item);
-        }
-        return;
-      }
-
+      final headLinkCandidates = List<String>.from(batch.lockedLinks);
       headLinkCandidates.shuffle(Random());
       final headLink = headLinkCandidates.removeAt(0);
       _seenRestrictedLinks.add(headLink);
-      _seenLinkWithTorrentId.add('$torrentId|$headLink');
+      _seenLinkWithTorrentId.add('${batch.remoteId}|$headLink');
 
       if (idx < _queue.length && identical(_queue[idx], item)) {
         _queue[idx] = {
           'type': 'rd_restricted',
           'restrictedLink': headLink,
-          'torrentId': torrentId,
+          'torrentId': batch.remoteId,
           'displayName': item.name,
         };
       }
@@ -10687,61 +10678,20 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
   /// is deleted in that case) or has no usable video files. Each returned link
   /// is still locked and must be unlocked via [AllDebridService.unlockLink]
   /// before playback — the lazy model mirrors Real-Debrid's restricted links.
-  Future<_AllDebridPrepared?> _resolveAllDebridLinks(
-    Torrent candidate,
-    String apiKey,
-  ) async {
-    final magnetLink = 'magnet:?xt=urn:btih:${candidate.infohash}';
-    AllDebridAddResult result;
-    try {
-      result = await AllDebridService.addMagnetAndResolveFiles(
-        apiKey,
-        magnetLink,
-      );
-    } on AllDebridTorrentNotReadyException catch (e) {
-      // Not cached/ready — don't leave it downloading on the account.
-      await AllDebridService.deleteMagnet(e.apiKey, e.magnetId);
-      return null;
-    }
-    // AllDebrid returns a real per-file byte count, so the per-FILE size rules
-    // apply before the files are reduced to bare links (after that reduction
-    // the size is gone). The 50MB floor keeps trailers/samples out, matching
-    // Torbox and Premiumize.
-    List<String> collectLinks({required bool applySizeFilter}) {
-      return result.files
-          .where((f) {
-            if (!FileUtils.isVideoFile(f.fileName)) return false;
-            if (f.size > 0 && f.size < _torboxMinVideoSizeBytes) return false;
-            if (applySizeFilter && !_tvFilters.sizeMatchesBytes(f.size)) {
-              return false;
-            }
-            return true;
-          })
-          .map((f) => f.link)
-          .where(
-            (link) => link.isNotEmpty && !_seenRestrictedLinks.contains(link),
-          )
-          .toList();
-    }
-
-    var freshLinks = collectLinks(applySizeFilter: true);
-    if (freshLinks.isEmpty && _tvFilters.hasSize) {
-      // Nothing matched in this torrent — take it unfiltered rather than
-      // discarding the torrent (see the Torbox builder).
-      debugPrint(
-        'DebrifyTV/AD: no file matched the size filter in "${result.name}" — '
-        'using it unfiltered.',
-      );
-      freshLinks = collectLinks(applySizeFilter: false);
-    }
-    if (freshLinks.isEmpty) return null;
-    for (final link in freshLinks) {
+  Future<_AllDebridPrepared?> _resolveAllDebridLinks(Torrent candidate) async {
+    final batch = await CloudProviderRegistry.instance
+        .prepareMagicTvLockedLinks(
+          provider: _providerAllDebrid,
+          request: _magicTvLockedRequest(candidate),
+        );
+    if (batch == null || batch.lockedLinks.isEmpty) return null;
+    for (final link in batch.lockedLinks) {
       _seenRestrictedLinks.add(link);
     }
     return _AllDebridPrepared(
-      magnetId: result.magnetId,
-      name: result.name,
-      lockedLinks: freshLinks,
+      magnetId: batch.remoteId,
+      name: batch.name,
+      lockedLinks: batch.lockedLinks,
     );
   }
 
@@ -10756,7 +10706,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
       'MagicTV: Prefetching AllDebrid torrent at idx=$idx name="${item.name}"',
     );
     try {
-      final prepared = await _resolveAllDebridLinks(item, _activeApiKey!);
+      final prepared = await _resolveAllDebridLinks(item);
       if (prepared == null || prepared.lockedLinks.isEmpty) {
         // Not ready / no usable video; move to tail to retry later.
         if (idx < _queue.length && identical(_queue[idx], item)) {

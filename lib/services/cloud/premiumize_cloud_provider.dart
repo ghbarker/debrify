@@ -292,4 +292,9 @@ class PremiumizeCloudProvider implements CloudProviderPort {
       hasMore: filteredEntries.isNotEmpty,
     );
   }
+
+  @override
+  Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
+    MagicTvPrepareRequest request,
+  ) async => null;
 }

@@ -25,7 +25,9 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   Stremio TV uses `resolveStremioTorrent` (`realdebrid` + auto order with
   PikPak before Premiumize; null on miss). Debrify TV file prepare is
   `prepareMagicTv` (`real_debrid`; infohash-only magnet; random unseen file;
-  RD/AllDebrid stay on the screen). Player-screen unlock is
+  RD/AllDebrid return null). Locked-link queues are
+  `prepareMagicTvLockedLinks` (still-locked URLs; RD re-queues the torrent,
+  AllDebrid expands leftover files). Player-screen unlock is
   `unlockPlayerScreenEntry` (wraps HTTP as `Torbox link failed`; incomplete
   Premiumize throws). Playlist JSON, labels,
   and download credential keys live there too. Bind-source PM/AD/PP browsers:

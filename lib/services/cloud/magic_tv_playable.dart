@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import '../../models/alldebrid_file.dart';
 import '../../models/debrify_tv/cache_results.dart';
 import '../../models/premiumize_file.dart';
 import '../../models/torbox_file.dart';
@@ -11,7 +12,8 @@ import '../../utils/series_parser.dart';
 import 'magic_tv_prepare_args.dart';
 
 /// File listing used by Debrify TV prepare. Size-filter fallback and
-/// series-title format stay here so TorBox / Premiumize do not drift.
+/// series-title format stay here so TorBox / Premiumize / AllDebrid collect
+/// do not drift.
 class MagicTvPlayable {
   MagicTvPlayable._();
 
@@ -175,5 +177,38 @@ class MagicTvPlayable {
       );
     }
     return entries;
+  }
+
+  static List<String> collectAllDebridLockedLinks(
+    List<AllDebridFile> files,
+    MagicTvPrepareRequest request, {
+    String torrentName = '',
+    bool applySizeFilter = true,
+  }) {
+    List<String> collect({required bool sizeFilter}) {
+      return files
+          .where((f) {
+            if (!FileUtils.isVideoFile(f.fileName)) return false;
+            if (f.size > 0 && f.size < request.minVideoSizeBytes) {
+              return false;
+            }
+            if (sizeFilter && !request.sizeMatchesBytes(f.size)) return false;
+            return true;
+          })
+          .map((f) => f.link)
+          .where((link) => link.isNotEmpty && !request.seenKeys.contains(link))
+          .toList();
+    }
+
+    final filtered = collect(sizeFilter: applySizeFilter);
+    if (filtered.isEmpty && applySizeFilter && request.hasSizeFilter) {
+      debugPrint(
+        'DebrifyTV/AD: no file matched the size filter in '
+        '"${torrentName.isEmpty ? request.torrent.name : torrentName}" — '
+        'using it unfiltered.',
+      );
+      return collect(sizeFilter: false);
+    }
+    return filtered;
   }
 }

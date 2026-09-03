@@ -12,6 +12,7 @@ import 'cloud_playback_helpers.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
 import 'cloud_provider_port.dart';
+import 'magic_tv_playable.dart';
 import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
@@ -205,4 +206,33 @@ class AllDebridCloudProvider implements CloudProviderPort {
   Future<MagicTvPrepared?> prepareMagicTv(
     MagicTvPrepareRequest request,
   ) async => null;
+
+  @override
+  Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
+    MagicTvPrepareRequest request,
+  ) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) return null;
+    AllDebridAddResult result;
+    try {
+      result = await AllDebridService.addMagnetAndResolveFiles(
+        apiKey,
+        request.magnet,
+      );
+    } on AllDebridTorrentNotReadyException catch (e) {
+      await AllDebridService.deleteMagnet(e.apiKey, e.magnetId);
+      return null;
+    }
+    final links = MagicTvPlayable.collectAllDebridLockedLinks(
+      result.files,
+      request,
+      torrentName: result.name,
+    );
+    if (links.isEmpty) return null;
+    return MagicTvLockedBatch(
+      remoteId: result.magnetId,
+      name: result.name,
+      lockedLinks: links,
+    );
+  }
 }

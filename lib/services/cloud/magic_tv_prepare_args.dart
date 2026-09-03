@@ -38,3 +38,20 @@ class MagicTvPrepared {
   final String title;
   final bool hasMore;
 }
+
+/// Restricted / locked file links for Debrify TV queues.
+///
+/// Not a stream URL. RD re-queues the torrent for leftovers; AllDebrid
+/// expands leftover links into `ad_locked` slots. Size filter belongs
+/// to AllDebrid collect, not RD add.
+class MagicTvLockedBatch {
+  const MagicTvLockedBatch({
+    required this.remoteId,
+    required this.name,
+    required this.lockedLinks,
+  });
+
+  final String remoteId;
+  final String name;
+  final List<String> lockedLinks;
+}

@@ -45,6 +45,12 @@ abstract class CloudProviderPort {
   Future<String?> resolveStremioTorrent(StremioTorrentResolveArgs args);
 
   /// Debrify TV file prepare. Random unseen file; infohash-only magnet.
-  /// RD / AllDebrid stay on the screen (locked-link queues). Null on miss.
+  /// RD / AllDebrid return null — they use [prepareMagicTvLockedLinks].
   Future<MagicTvPrepared?> prepareMagicTv(MagicTvPrepareRequest request);
+
+  /// Debrify TV locked-link queue fill. Still-locked URLs, not a stream.
+  /// TorBox / PikPak / Premiumize return null (they use [prepareMagicTv]).
+  Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
+    MagicTvPrepareRequest request,
+  );
 }
