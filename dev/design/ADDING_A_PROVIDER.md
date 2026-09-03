@@ -18,7 +18,8 @@ Playback add/resolve no longer lives in a five-way `switch` inside
   (hashless bound replay; RD/TorBox/AllDebrid web-downloads only; lookup is
   stored id `rd`, not playback `debrid`) + `resolvePlaylistEntry` (download-
   picker lazy URL; field presence, not `entry.provider`; TorBox web-download /
-  PikPak / Premiumize stay on `VideoPlayerLauncher`).
+  PikPak / Premiumize stay on `unlockPlaybackEntry`) + `unlockPlaybackEntry`
+  (in-app/TV; throws; TorBox before RD; web-download counts).
 - **Register** the adapter in `CloudProviderRegistry.production()`.
 - **Ids / credential keys / backup field names / display names / chip codes /
   overlay titles / playlist stored ids** go on `CloudProviderId` (keep Flutter

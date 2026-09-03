@@ -205,6 +205,21 @@ class PikPakCloudProvider implements CloudProviderPort {
   @override
   Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async => null;
 
+  @override
+  Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
+    final fileId = entry.pikpakFileId;
+    if (fileId == null) {
+      throw Exception('PikPak file metadata missing');
+    }
+    final pikpak = PikPakApiService.instance;
+    final fileData = await pikpak.getFileDetails(fileId);
+    final url = pikpak.getStreamingUrl(fileData);
+    if (url == null || url.isEmpty) {
+      throw Exception('PikPak returned an empty stream URL');
+    }
+    return url;
+  }
+
   static Future<List<Map<String, dynamic>>> extractPikPakVideos(
     PikPakApiService pikpak,
     String folderId, {
