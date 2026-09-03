@@ -5671,35 +5671,12 @@ class TorrentPlaybackService {
 
   /// The app's shared cinematic add-loading overlay (not a plain spinner box).
   static void _showLoading(BuildContext context, String provider, String name) {
-    switch (provider) {
-      case 'debrid':
-        DebridLoadingOverlay.showRealDebrid(context, name);
-        break;
-      case 'torbox':
-        DebridLoadingOverlay.showTorbox(context, name);
-        break;
-      case 'premiumize':
-        DebridLoadingOverlay.showPremiumize(context, name);
-        break;
-      case 'alldebrid':
-        DebridLoadingOverlay.showAllDebrid(context, name);
-        break;
-      case 'pikpak':
-        DebridLoadingOverlay.show(
-          context,
-          provider: 'PikPak',
-          torrentName: name,
-          accentColor: const Color(0xFF6366F1),
-          icon: Icons.cloud_circle_rounded,
-        );
-        break;
-      default:
-        DebridLoadingOverlay.show(
-          context,
-          provider: _label(provider),
-          torrentName: name,
-        );
-    }
+    DebridLoadingOverlay.showForPlaybackId(
+      context,
+      provider,
+      name,
+      unknownLabel: _label,
+    );
   }
 
   static void _snack(BuildContext context, String message) {

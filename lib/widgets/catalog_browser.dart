@@ -13,13 +13,11 @@ import '../services/local_bound_source_service.dart';
 import '../services/series_source_service.dart';
 import '../services/storage_service.dart';
 import '../screens/debrid_downloads_screen.dart';
-import '../screens/alldebrid/alldebrid_files_screen.dart';
-import '../screens/pikpak/pikpak_files_screen.dart';
-import '../screens/premiumize/premiumize_files_screen.dart';
 import '../screens/torbox/torbox_downloads_screen.dart';
 import '../screens/stremio_tv/widgets/stremio_tv_catalog_picker_dialog.dart';
 import 'add_source_picker_dialog.dart';
 import 'catalog_item_tile.dart';
+import 'cloud_browse_select_source.dart';
 import 'trakt/trakt_menu_helpers.dart';
 import '../services/simkl/simkl_menu_helpers.dart';
 import '../screens/catalog_item_detail_screen.dart';
@@ -1319,34 +1317,12 @@ class CatalogBrowserState extends State<CatalogBrowser> {
       });
     }
 
-    final Widget screen;
-    switch (provider) {
-      case 'premiumize':
-        screen = PremiumizeFilesScreen(
-          isPushedRoute: true,
-          initialSearchQuery: show.name,
-          selectSourceMode: true,
-          onSourceSelected: saveSource,
-        );
-        break;
-      case 'alldebrid':
-        screen = AllDebridFilesScreen(
-          isPushedRoute: true,
-          initialSearchQuery: show.name,
-          selectSourceMode: true,
-          onSourceSelected: saveSource,
-        );
-        break;
-      case 'pikpak':
-        screen = PikPakFilesScreen(
-          isPushedRoute: true,
-          selectSourceMode: true,
-          onSourceSelected: saveSource,
-        );
-        break;
-      default:
-        return;
-    }
+    final Widget? screen = CloudBrowseSelectSource.page(
+      provider: provider,
+      query: show.name,
+      onSourceSelected: saveSource,
+    );
+    if (screen == null) return;
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 

@@ -162,6 +162,45 @@ class DebridLoadingOverlay {
       suppressVisual: suppressVisual,
     );
   }
+
+  /// Playback-id overlay used by [TorrentPlaybackService._showLoading].
+  /// TorBox's overlay title stays `Torbox` (not `TorBox`).
+  static void showForPlaybackId(
+    BuildContext context,
+    String provider,
+    String torrentName, {
+    String Function(String provider)? unknownLabel,
+  }) {
+    switch (provider) {
+      case 'debrid':
+        showRealDebrid(context, torrentName);
+        break;
+      case 'torbox':
+        showTorbox(context, torrentName);
+        break;
+      case 'premiumize':
+        showPremiumize(context, torrentName);
+        break;
+      case 'alldebrid':
+        showAllDebrid(context, torrentName);
+        break;
+      case 'pikpak':
+        show(
+          context,
+          provider: 'PikPak',
+          torrentName: torrentName,
+          accentColor: const Color(0xFF6366F1),
+          icon: Icons.cloud_circle_rounded,
+        );
+        break;
+      default:
+        show(
+          context,
+          provider: unknownLabel?.call(provider) ?? provider,
+          torrentName: torrentName,
+        );
+    }
+  }
 }
 
 class _DebridLoadingContent extends StatefulWidget {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../series_source_service.dart';
+import 'cloud_provider_id.dart';
 
 /// Labels, chips, and action-sheet chrome for cloud providers.
 ///
@@ -91,5 +92,20 @@ class CloudProviderChrome {
       default:
         return Icons.cloud_download_rounded;
     }
+  }
+
+  /// Catalog / Stremio TV ids use `realdebrid` instead of playback `debrid`.
+  /// `auto` and unknown strings are `AUTO` (not a guess at the first letter).
+  static String catalogChip(String provider) {
+    final id = CloudProviderId.tryParse(provider);
+    if (id == null) return 'AUTO';
+    return code(id.playbackId);
+  }
+
+  /// Null when [provider] is not a known cloud id so the caller can render Auto.
+  static String? catalogTitle(String provider) {
+    final id = CloudProviderId.tryParse(provider);
+    if (id == null) return null;
+    return label(id.playbackId);
   }
 }

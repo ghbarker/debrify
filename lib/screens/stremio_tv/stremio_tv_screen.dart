@@ -18,6 +18,7 @@ import '../../services/debrid_service.dart';
 import '../../services/stream_url_validator.dart';
 import '../../services/main_page_bridge.dart';
 import '../../services/storage_service.dart';
+import '../../services/cloud/cloud_provider_chrome.dart';
 import '../../services/video_player_launcher.dart';
 import '../../services/torbox_service.dart';
 import '../../services/torbox_torrent_control_service.dart';
@@ -489,39 +490,14 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
     setState(() => _debridProvider = value);
   }
 
-  String _providerShortLabel(String provider) {
-    switch (provider) {
-      case 'realdebrid':
-        return 'RD';
-      case 'torbox':
-        return 'TB';
-      case 'pikpak':
-        return 'PP';
-      case 'premiumize':
-        return 'PM';
-      case 'alldebrid':
-        return 'AD';
-      default:
-        return 'AUTO';
-    }
-  }
+  String _providerShortLabel(String provider) =>
+      CloudProviderChrome.catalogChip(provider);
 
   String _providerFullLabel(String provider) {
-    switch (provider) {
-      case 'realdebrid':
-        return 'Real-Debrid';
-      case 'torbox':
-        return 'TorBox';
-      case 'pikpak':
-        return 'PikPak';
-      case 'premiumize':
-        return 'Premiumize';
-      case 'alldebrid':
-        return 'AllDebrid';
-      default:
-        if (_availableProviders.isEmpty) return 'Auto';
-        return 'Auto (${_availableProviders.first.value})';
-    }
+    final name = CloudProviderChrome.catalogTitle(provider);
+    if (name != null) return name;
+    if (_availableProviders.isEmpty) return 'Auto';
+    return 'Auto (${_availableProviders.first.value})';
   }
 
   // ============================================================================

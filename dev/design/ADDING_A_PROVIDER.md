@@ -23,7 +23,10 @@ Playback add/resolve no longer lives in a five-way `switch` inside
   `credentialKeyForCloudProvider`.
 - **Playlist items** go through `CloudPlaylistPayload` (`realdebrid` id, empty
   URL on RD singles).
-- **Labels / pipeline chips** go through `CloudProviderChrome`.
+- **Labels / pipeline chips** go through `CloudProviderChrome` (playback ids
+  plus `catalogChip` / `catalogTitle` for Stremio's `realdebrid` / `auto`).
+- **Bind-source cloud browsers** (Premiumize / AllDebrid / PikPak) go through
+  `CloudBrowseSelectSource`.
 - **Backups** pick up API keys from `CloudCredentials.backupSecrets()`.
 - **Tests:** add a `FakeCloudProvider` case in `test/adversarial/provider_matrix_test.dart`.
 
