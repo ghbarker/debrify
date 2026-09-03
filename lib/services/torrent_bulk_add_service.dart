@@ -10,6 +10,7 @@ import 'debrify_tv_channel_add_service.dart';
 import 'pikpak_api_service.dart';
 import 'premiumize_service.dart';
 import 'storage_service.dart';
+import 'cloud/cloud_provider_id.dart';
 import 'torbox_service.dart';
 import 'torrent_file_service.dart';
 
@@ -149,7 +150,7 @@ class TorrentBulkAddService {
               _optionTile(
                 icon: Icons.flash_on_rounded,
                 color: const Color(0xFF7C3AED),
-                title: 'TorBox',
+                title: CloudProviderId.torbox.displayName,
                 subtitle: torboxEnabled
                     ? 'Limit: 60 adds per hour'
                     : 'Not configured',
@@ -161,7 +162,7 @@ class TorrentBulkAddService {
               _optionTile(
                 icon: Icons.cloud_rounded,
                 color: const Color(0xFFE50914),
-                title: 'Real-Debrid',
+                title: CloudProviderId.debrid.displayName,
                 subtitle: rdEnabled
                     ? 'Uncached torrents auto-removed'
                     : 'Not configured',
@@ -173,7 +174,7 @@ class TorrentBulkAddService {
               _optionTile(
                 icon: Icons.folder_rounded,
                 color: const Color(0xFF0088CC),
-                title: 'PikPak',
+                title: CloudProviderId.pikpak.displayName,
                 subtitle: pikpakEnabled ? null : 'Not configured',
                 enabled: pikpakEnabled,
                 autofocus: autoFocused == 'pikpak',
@@ -183,7 +184,7 @@ class TorrentBulkAddService {
               _optionTile(
                 icon: Icons.workspace_premium_rounded,
                 color: const Color(0xFFFB923C),
-                title: 'Premiumize',
+                title: CloudProviderId.premiumize.displayName,
                 subtitle: premiumizeEnabled
                     ? 'Only cached torrents are added'
                     : 'Not configured',
@@ -195,7 +196,7 @@ class TorrentBulkAddService {
               _optionTile(
                 icon: Icons.all_inclusive_rounded,
                 color: const Color(0xFF26A69A),
-                title: 'AllDebrid',
+                title: CloudProviderId.alldebrid.displayName,
                 subtitle: allDebridEnabled
                     ? 'Only cached torrents are added'
                     : 'Not configured',

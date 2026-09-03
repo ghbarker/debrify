@@ -10,6 +10,7 @@ import '../models/torrent.dart';
 import '../models/torrent_filter_state.dart';
 import '../utils/source_quality.dart';
 import '../utils/tv_keys.dart';
+import '../services/cloud/cloud_provider_id.dart';
 
 /// Compact torrent result row with quality color accent
 ///
@@ -455,18 +456,8 @@ class _TorrentResultRowState extends State<TorrentResultRow> {
       return widget.cacheLabels.join(' | ');
     }
     if (widget.isCached && widget.cacheService != null) {
-      switch (widget.cacheService) {
-        case 'torbox':
-          return 'TB';
-        case 'realdebrid':
-          return 'RD';
-        case 'premiumize':
-          return 'PM';
-        case 'alldebrid':
-          return 'AD';
-        default:
-          return 'Cached';
-      }
+      return CloudProviderId.tryParse(widget.cacheService!)?.chipCode ??
+          'Cached';
     }
     return null;
   }

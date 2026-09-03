@@ -1,6 +1,8 @@
 import 'package:debrify/screens/alldebrid/alldebrid_files_screen.dart';
+import 'package:debrify/screens/debrid_downloads_screen.dart';
 import 'package:debrify/screens/pikpak/pikpak_files_screen.dart';
 import 'package:debrify/screens/premiumize/premiumize_files_screen.dart';
+import 'package:debrify/screens/torbox/torbox_downloads_screen.dart';
 import 'package:debrify/screens/video_player/models/playlist_entry.dart';
 import 'package:debrify/services/cloud/cloud_playback_result.dart';
 import 'package:debrify/services/cloud/cloud_playlist_payload.dart';
@@ -60,6 +62,52 @@ void main() {
       expect(CloudProviderChrome.catalogChip('webdav'), 'AUTO');
       expect(CloudProviderChrome.catalogTitle('realdebrid'), 'Real-Debrid');
       expect(CloudProviderChrome.catalogTitle('auto'), isNull);
+    });
+
+    test('bind-source chips use stored ids and Local, not playback chrome', () {
+      expect(CloudProviderChrome.sourceChip('rd').label, 'Real-Debrid');
+      expect(CloudProviderChrome.sourceChip('debrid').label, 'debrid');
+      expect(CloudProviderChrome.sourceChip('torbox').label, 'TorBox');
+      expect(
+        CloudProviderChrome.sourceChip(SeriesSource.localService).label,
+        'Local',
+      );
+      expect(
+        CloudProviderChrome.label(SeriesSource.localService),
+        'On-device',
+      );
+      expect(
+        CloudProviderChrome.sourceChip('torbox').color,
+        const Color(0xFF3B82F6),
+      );
+      expect(
+        CloudProviderChrome.gradient('torbox').first,
+        const Color(0xFF8B5CF6),
+      );
+      expect(
+        CloudProviderChrome.sourceChip('nope').color,
+        Colors.white54,
+      );
+      expect(CloudProviderId.debrid.catalogChoice.key, 'realdebrid');
+      expect(CloudProviderId.debrid.catalogChoice.value, 'Real-Debrid');
+    });
+
+    test('playlist badges keep empty-as-RD and webdav-as-DV', () {
+      expect(CloudProviderChrome.playlistBadge(null), 'RD');
+      expect(CloudProviderChrome.playlistBadge(''), 'RD');
+      expect(CloudProviderChrome.playlistBadge('realdebrid'), 'RD');
+      expect(CloudProviderChrome.playlistBadge('webdav'), 'DV');
+      expect(CloudProviderChrome.playlistBadge('pik-pak'), 'PP');
+      expect(CloudProviderChrome.playlistBadge('xyz'), 'XY');
+      expect(CloudProviderChrome.catalogChip(''), 'AUTO');
+      expect(
+        CloudProviderId.tryParse('torbox')?.chipCode ?? 'Cached',
+        'TB',
+      );
+      expect(
+        CloudProviderId.tryParse('nope')?.chipCode ?? 'Cached',
+        'Cached',
+      );
     });
   });
 
@@ -145,7 +193,23 @@ void main() {
   group('CloudBrowseSelectSource', () {
     Future<void> noop(SeriesSource _) async {}
 
-    test('only premiumize, alldebrid, and pikpak open a browser', () {
+    test('playback ids open browsers; rd does not', () {
+      expect(
+        CloudBrowseSelectSource.page(
+          provider: 'debrid',
+          query: 'q',
+          onSourceSelected: noop,
+        ),
+        isA<DebridDownloadsScreen>(),
+      );
+      expect(
+        CloudBrowseSelectSource.page(
+          provider: 'torbox',
+          query: 'q',
+          onSourceSelected: noop,
+        ),
+        isA<TorboxDownloadsScreen>(),
+      );
       expect(
         CloudBrowseSelectSource.page(
           provider: 'premiumize',
@@ -172,14 +236,6 @@ void main() {
       );
       expect(
         CloudBrowseSelectSource.page(
-          provider: 'debrid',
-          query: 'q',
-          onSourceSelected: noop,
-        ),
-        isNull,
-      );
-      expect(
-        CloudBrowseSelectSource.page(
           provider: 'rd',
           query: 'q',
           onSourceSelected: noop,
@@ -188,11 +244,23 @@ void main() {
       );
       expect(
         CloudBrowseSelectSource.page(
-          provider: 'torbox',
+          provider: 'realdebrid',
           query: 'q',
           onSourceSelected: noop,
         ),
         isNull,
+      );
+      expect(
+        CloudBrowseSelectSource.rdSheetAccent,
+        isNot(CloudProviderChrome.sourceChip('rd').color),
+      );
+      expect(
+        CloudBrowseSelectSource.torboxSheetAccent,
+        isNot(CloudProviderChrome.sourceChip('torbox').color),
+      );
+      expect(
+        CloudBrowseSelectSource.torboxSheetAccent,
+        isNot(CloudProviderChrome.gradient('torbox').first),
       );
     });
   });
