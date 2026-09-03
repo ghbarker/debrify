@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:debrify/models/profiles/profile_policy.dart';
+import 'package:debrify/models/profiles/user_profile.dart';
 import 'package:debrify/screens/profiles/profile_setup_flow.dart';
 import 'package:debrify/services/profiles/profile_authorization.dart';
 import 'package:debrify/services/profiles/profile_bootstrap.dart';
@@ -90,6 +91,30 @@ void main() {
     await pumpFrames(tester);
   }
 
+  /// Create/save is a staged sqflite chain (insert → defaults copy →
+  /// engine probe → publish). A fixed pump window loses under a busy
+  /// CI shard; poll the registry instead. Cursor blink still forbids
+  /// pumpAndSettle.
+  Future<UserProfile> waitForNamedProfile(
+    WidgetTester tester,
+    String name,
+  ) async {
+    Object? last;
+    for (var i = 0; i < 40; i++) {
+      final profiles = await io(tester, registry.listProfiles);
+      try {
+        return profiles.singleWhere((p) => p.name == name);
+      } catch (error) {
+        last = error;
+      }
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    fail('profile write did not land for $name: $last');
+  }
+
   testWidgets('the Kid walk-through writes the preset policy', (tester) async {
     await tester.binding.setSurfaceSize(const Size(420, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -111,8 +136,7 @@ void main() {
 
     await nextByLabel(tester, 'Create Maya');
 
-    final profiles = await io(tester, registry.listProfiles);
-    final maya = profiles.singleWhere((p) => p.name == 'Maya');
+    final maya = await waitForNamedProfile(tester, 'Maya');
     expect(maya.role, UserProfileRole.child);
     expect(
       maya.policy.enabled,
@@ -146,8 +170,7 @@ void main() {
     await nextByLabel(tester, 'Review');
     await nextByLabel(tester, 'Create Sam');
 
-    final profiles = await io(tester, registry.listProfiles);
-    final sam = profiles.singleWhere((p) => p.name == 'Sam');
+    final sam = await waitForNamedProfile(tester, 'Sam');
     expect(sam.allows(ProfileFeature.youtube), isTrue);
     expect(sam.allows(ProfileFeature.iptv), isFalse, reason: 'others stay');
   });

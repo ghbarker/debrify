@@ -1,45 +1,67 @@
 import 'package:flutter/material.dart';
 
 import '../screens/alldebrid/alldebrid_files_screen.dart';
+import '../screens/debrid_downloads_screen.dart';
 import '../screens/pikpak/pikpak_files_screen.dart';
 import '../screens/premiumize/premiumize_files_screen.dart';
+import '../screens/torbox/torbox_downloads_screen.dart';
+import '../services/cloud/cloud_provider_id.dart';
 import '../services/series_source_service.dart';
 
-/// Bind-source cloud browsers shared by catalog, Trakt, and aggregated search.
-///
-/// Real-Debrid and TorBox use their own download screens (not this helper).
-/// Unknown providers return null so the caller does nothing — same as the
-/// old `default: return`.
+/// Bind-source cloud browsers for catalog, Trakt, and aggregated search.
+/// [fromPlaybackId] only — `rd` does not open Real-Debrid.
 class CloudBrowseSelectSource {
   CloudBrowseSelectSource._();
+
+  /// Sheet accents. Not [CloudProviderChrome.sourceChip] (TorBox chip is blue).
+  static const rdSheetAccent = Color(0xFF22C55E);
+  static const torboxSheetAccent = Color(0xFF7C3AED);
 
   static Widget? page({
     required String provider,
     required String query,
     required Future<void> Function(SeriesSource) onSourceSelected,
   }) {
-    switch (provider) {
-      case 'premiumize':
+    switch (CloudProviderId.fromPlaybackId(provider)) {
+      case CloudProviderId.debrid:
+        return DebridDownloadsScreen(
+          isPushedRoute: true,
+          initialSearchQuery: query,
+          selectSourceMode: true,
+          onSourceSelected: (source) {
+            onSourceSelected(source);
+          },
+        );
+      case CloudProviderId.torbox:
+        return TorboxDownloadsScreen(
+          isPushedRoute: true,
+          initialSearchQuery: query,
+          selectSourceMode: true,
+          onSourceSelected: (source) {
+            onSourceSelected(source);
+          },
+        );
+      case CloudProviderId.premiumize:
         return PremiumizeFilesScreen(
           isPushedRoute: true,
           initialSearchQuery: query,
           selectSourceMode: true,
           onSourceSelected: onSourceSelected,
         );
-      case 'alldebrid':
+      case CloudProviderId.alldebrid:
         return AllDebridFilesScreen(
           isPushedRoute: true,
           initialSearchQuery: query,
           selectSourceMode: true,
           onSourceSelected: onSourceSelected,
         );
-      case 'pikpak':
+      case CloudProviderId.pikpak:
         return PikPakFilesScreen(
           isPushedRoute: true,
           selectSourceMode: true,
           onSourceSelected: onSourceSelected,
         );
-      default:
+      case null:
         return null;
     }
   }
@@ -57,5 +79,70 @@ class CloudBrowseSelectSource {
     );
     if (screen == null) return;
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+  }
+
+  /// Catalog / Trakt / aggregated: one provider opens immediately; both show
+  /// a sheet. Neither still shows the sheet (same as the old copies).
+  static void pushRdOrTorbox(
+    BuildContext context, {
+    required String query,
+    required bool rdEnabled,
+    required bool torboxEnabled,
+    required Future<void> Function(SeriesSource) onSourceSelected,
+  }) {
+    void open(CloudProviderId id) => push(
+          context,
+          provider: id.playbackId,
+          query: query,
+          onSourceSelected: onSourceSelected,
+        );
+
+    if (rdEnabled && !torboxEnabled) {
+      open(CloudProviderId.debrid);
+      return;
+    }
+    if (torboxEnabled && !rdEnabled) {
+      open(CloudProviderId.torbox);
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1E293B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Select Provider',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.cloud, color: rdSheetAccent),
+              title: Text(CloudProviderId.debrid.displayName),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                open(CloudProviderId.debrid);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.cloud, color: torboxSheetAccent),
+              title: Text(CloudProviderId.torbox.displayName),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                open(CloudProviderId.torbox);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 }

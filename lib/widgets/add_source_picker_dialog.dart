@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../utils/tv_keys.dart';
+import '../services/cloud/cloud_provider_id.dart';
 
 /// Shows a picker dialog for adding a new bound source.
 ///
@@ -148,7 +149,7 @@ Future<void> showAddSourcePickerDialog(
                             _SourceOption(
                               icon: Icons.cloud,
                               iconColor: const Color(0xFF22C55E),
-                              label: 'Real-Debrid',
+                              label: CloudProviderId.debrid.displayName,
                               onTap: () {
                                 Navigator.of(dialogContext).pop();
                                 onRealDebrid();
@@ -159,7 +160,7 @@ Future<void> showAddSourcePickerDialog(
                             _SourceOption(
                               icon: Icons.cloud,
                               iconColor: const Color(0xFF7C3AED),
-                              label: 'TorBox',
+                              label: CloudProviderId.torbox.displayName,
                               onTap: () {
                                 Navigator.of(dialogContext).pop();
                                 onTorbox();
@@ -171,7 +172,7 @@ Future<void> showAddSourcePickerDialog(
                             _SourceOption(
                               icon: Icons.cloud,
                               iconColor: const Color(0xFFFB923C),
-                              label: 'Premiumize',
+                              label: CloudProviderId.premiumize.displayName,
                               onTap: () {
                                 Navigator.of(dialogContext).pop();
                                 onPremiumize();
@@ -183,7 +184,7 @@ Future<void> showAddSourcePickerDialog(
                             _SourceOption(
                               icon: Icons.cloud,
                               iconColor: const Color(0xFF26A69A),
-                              label: 'AllDebrid',
+                              label: CloudProviderId.alldebrid.displayName,
                               onTap: () {
                                 Navigator.of(dialogContext).pop();
                                 onAllDebrid();
@@ -195,7 +196,7 @@ Future<void> showAddSourcePickerDialog(
                             _SourceOption(
                               icon: Icons.cloud,
                               iconColor: const Color(0xFFF59E0B),
-                              label: 'PikPak',
+                              label: CloudProviderId.pikpak.displayName,
                               onTap: () {
                                 Navigator.of(dialogContext).pop();
                                 onPikPak();
