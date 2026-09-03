@@ -20,8 +20,10 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   watching (cap 50), playback state, favourites, provider toggles, home disabled-sections).
 - **`services/torrent_playback_service.dart`** 🔴 — provider-agnostic play/add/bind pipeline.
   Magnet add, hashless bound replay, download-picker lazy URLs, launcher/TV
-  unlock, and in-app player unlock go through `services/cloud/`
-  (`CloudProviderPort` + `CloudProviderRegistry`). Player-screen unlock is
+  unlock, in-app player unlock, and Stremio TV torrent resolve go through
+  `services/cloud/` (`CloudProviderPort` + `CloudProviderRegistry`).
+  Stremio TV uses `resolveStremioTorrent` (`realdebrid` + auto order with
+  PikPak before Premiumize; null on miss). Player-screen unlock is
   `unlockPlayerScreenEntry` (wraps HTTP as `Torbox link failed`; incomplete
   Premiumize throws). Playlist JSON, labels,
   and download credential keys live there too. Bind-source PM/AD/PP browsers:

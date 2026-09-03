@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
+
 import '../../models/torrent.dart';
 import '../../screens/video_player/models/playlist_entry.dart';
 import '../../utils/file_utils.dart';
+import '../../utils/stremio_episode_selector.dart';
 import '../alldebrid_service.dart';
 import '../main_page_bridge.dart';
 import '../series_source_service.dart';
@@ -9,6 +12,7 @@ import 'cloud_playback_helpers.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
 import 'cloud_provider_port.dart';
+import 'stremio_torrent_resolve_args.dart';
 
 class AllDebridCloudProvider implements CloudProviderPort {
   const AllDebridCloudProvider();
@@ -132,5 +136,67 @@ class AllDebridCloudProvider implements CloudProviderPort {
       throw Exception('AllDebrid returned an empty stream URL');
     }
     return url;
+  }
+
+  @override
+  Future<String?> resolveStremioTorrent(StremioTorrentResolveArgs args) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) return null;
+    try {
+      AllDebridAddResult result;
+      try {
+        result = await AllDebridService.addMagnetAndResolveFiles(
+          apiKey,
+          args.magnet,
+        );
+      } on AllDebridTorrentNotReadyException catch (e) {
+        await AllDebridService.deleteMagnet(e.apiKey, e.magnetId);
+        return null;
+      }
+
+      final videoFiles = result.files
+          .where((f) => FileUtils.isVideoFile(f.fileName))
+          .toList();
+      if (videoFiles.isEmpty) return null;
+
+      String targetLink = videoFiles.first.link;
+
+      if (args.isSeries && args.season != null && args.episode != null) {
+        final candidateNames = videoFiles.map((f) => f.path).toList();
+        final targetIndex =
+            StremioEpisodeSelector.findEpisodeFileIndexWithSingleFileFallback(
+              candidateNames,
+              sourceName: args.torrent.name,
+              season: args.season!,
+              episode: args.episode!,
+            );
+        if (targetIndex == null || targetIndex >= videoFiles.length) {
+          debugPrint(
+            'StremioTV: AllDebrid could not match S${args.season}E${args.episode} in '
+            '${args.torrent.name}, rejecting source',
+          );
+          try {
+            await AllDebridService.deleteMagnet(apiKey, result.magnetId);
+          } catch (_) {}
+          return null;
+        } else {
+          targetLink = videoFiles[targetIndex].link;
+        }
+      } else if (args.isMovie && videoFiles.length > 1) {
+        final targetIndex = StremioEpisodeSelector.findLargestFileIndex(
+          videoFiles.map<int?>((f) => f.size).toList(),
+        );
+        if (targetIndex < videoFiles.length) {
+          targetLink = videoFiles[targetIndex].link;
+        }
+      }
+
+      if (targetLink.isEmpty) return null;
+      final url = await AllDebridService.unlockLink(apiKey, targetLink);
+      return url.isEmpty ? null : url;
+    } catch (e) {
+      debugPrint('StremioTV: AllDebrid resolve error: $e');
+      return null;
+    }
   }
 }

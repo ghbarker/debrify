@@ -6,11 +6,13 @@ import '../series_source_service.dart';
 import 'alldebrid_cloud_provider.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
+import 'stremio_torrent_resolve_args.dart';
 import 'cloud_provider_port.dart';
 import 'pikpak_cloud_provider.dart';
 import 'premiumize_cloud_provider.dart';
 import 'rd_cloud_provider.dart';
 import 'torbox_cloud_provider.dart';
+import '../../utils/stremio_tv_debrid_fallback.dart';
 
 /// Lookup table for cloud playback adapters.
 ///
@@ -213,6 +215,39 @@ class CloudProviderRegistry {
       }
       throw Exception('$brand link failed: $e');
     }
+  }
+
+  /// Stremio TV torrent → URL. Uses [StremioTvDebridFallback.autoOrder]
+  /// (`realdebrid` before TorBox before PikPak before Premiumize) — not
+  /// [CloudProviderId.playbackPrecedence]. Lookup is [CloudProviderId.tryParse]
+  /// so `realdebrid` hits the RD adapter; [fromPlaybackId] would miss.
+  Future<String?> resolveStremioTorrent({
+    required Torrent torrent,
+    required String contentType,
+    required String selected,
+    int? season,
+    int? episode,
+    bool Function()? isCancelled,
+    Future<bool> Function(String provider)? canAttempt,
+  }) {
+    final args = StremioTorrentResolveArgs(
+      torrent: torrent,
+      contentType: contentType,
+      season: season,
+      episode: episode,
+      isCancelled: isCancelled,
+    );
+    return StremioTvDebridFallback.resolve<String>(
+      selected: selected,
+      isCancelled: isCancelled,
+      canAttempt: canAttempt,
+      attempt: (provider) async {
+        final id = CloudProviderId.tryParse(provider);
+        final port = id == null ? null : _byId[id];
+        if (port == null) return null;
+        return port.resolveStremioTorrent(args);
+      },
+    );
   }
 
   static String? credentialKeyFor(String provider) =>

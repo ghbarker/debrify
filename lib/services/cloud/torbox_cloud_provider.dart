@@ -1,17 +1,22 @@
+import 'package:flutter/foundation.dart';
+
 import '../../models/torbox_file.dart';
 import '../../models/torbox_web_download.dart';
 import '../../models/torrent.dart';
 import '../../screens/video_player/models/playlist_entry.dart';
 import '../../utils/file_utils.dart';
+import '../../utils/stremio_episode_selector.dart';
 import '../main_page_bridge.dart';
 import '../series_source_service.dart';
 import '../torbox_service.dart';
+import '../torbox_torrent_control_service.dart';
 import 'cloud_credentials.dart';
 import 'cloud_exceptions.dart';
 import 'cloud_playback_helpers.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
 import 'cloud_provider_port.dart';
+import 'stremio_torrent_resolve_args.dart';
 
 class TorboxCloudProvider implements CloudProviderPort {
   const TorboxCloudProvider();
@@ -249,5 +254,114 @@ class TorboxCloudProvider implements CloudProviderPort {
       throw Exception('Torbox returned an empty stream URL');
     }
     return url;
+  }
+
+  @override
+  Future<String?> resolveStremioTorrent(StremioTorrentResolveArgs args) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) return null;
+    int? createdTorrentId;
+    var keepTorrent = false;
+    try {
+      final result = await TorboxService.createTorrent(
+        apiKey: apiKey,
+        magnet: args.magnet,
+      );
+      final data = result['data'];
+      final rawTorrentId = data is Map
+          ? (data['torrent_id'] ?? data['id'])
+          : (result['torrent_id'] ?? result['id']);
+
+      createdTorrentId = rawTorrentId is int
+          ? rawTorrentId
+          : int.tryParse(rawTorrentId?.toString() ?? '');
+      if (createdTorrentId == null) return null;
+
+      await Future.delayed(const Duration(seconds: 3));
+      if (args.isCancelled?.call() ?? false) return null;
+
+      final torrentInfo = await TorboxService.getTorrentById(
+        apiKey,
+        createdTorrentId,
+      );
+
+      if (torrentInfo == null || (args.isCancelled?.call() ?? false)) {
+        return null;
+      }
+
+      final allFiles = torrentInfo.files;
+      final videoFiles = allFiles
+          .where((f) => FileUtils.isVideoFile(f.name))
+          .toList();
+      final files = videoFiles.isNotEmpty ? videoFiles : allFiles;
+      if (files.isEmpty) return null;
+
+      var targetFile = files.first;
+      if (args.isSeries && args.season != null && args.episode != null) {
+        if (files.length > 1) {
+          final fallbackIndex = StremioEpisodeSelector.findLargestFileIndex(
+            files.map((f) => f.size).toList(),
+          );
+          targetFile = files[fallbackIndex];
+        }
+        final candidateNames = files
+            .map((f) => f.absolutePath ?? f.name)
+            .toList();
+        final targetIndex =
+            StremioEpisodeSelector.findEpisodeFileIndexWithSingleFileFallback(
+              candidateNames,
+              sourceName: args.torrent.name,
+              season: args.season!,
+              episode: args.episode!,
+            );
+        if (targetIndex == null || targetIndex >= files.length) {
+          debugPrint(
+            'StremioTV: Torbox could not match S${args.season}E${args.episode} in ${args.torrent.name}, '
+            'rejecting source',
+          );
+          return null;
+        } else {
+          targetFile = files[targetIndex];
+        }
+      } else if (args.isMovie && files.length > 1) {
+        final targetIndex = StremioEpisodeSelector.findLargestFileIndex(
+          files.map((f) => f.size).toList(),
+        );
+        targetFile = files[targetIndex];
+      } else if (files.length > 1) {
+        for (final f in files) {
+          if (f.size > targetFile.size) {
+            targetFile = f;
+          }
+        }
+      }
+
+      final streamUrl = await TorboxService.requestFileDownloadLink(
+        apiKey: apiKey,
+        torrentId: createdTorrentId,
+        fileId: targetFile.id,
+      );
+      if (streamUrl.isEmpty || (args.isCancelled?.call() ?? false)) return null;
+
+      keepTorrent = true;
+      return streamUrl;
+    } catch (e) {
+      debugPrint('StremioTV: Torbox resolve error: $e');
+      return null;
+    } finally {
+      if (createdTorrentId != null && !keepTorrent) {
+        try {
+          await TorboxTorrentControlService.deleteTorrent(
+            apiKey: apiKey,
+            torrentId: createdTorrentId,
+          ).timeout(const Duration(seconds: 10));
+        } catch (e) {
+          debugPrint(
+            'StremioTV: Failed to delete rejected TorBox torrent '
+            '$createdTorrentId: $e',
+          );
+        }
+      }
+    }
   }
 }
