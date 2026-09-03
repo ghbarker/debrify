@@ -3,7 +3,8 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sharing_intent/flutter_sharing_intent.dart';
 import 'package:flutter_sharing_intent/model/sharing_file.dart';
-import 'storage_service.dart';
+import 'cloud/cloud_credentials.dart';
+import 'cloud/cloud_provider_id.dart';
 import 'profiles/desktop_single_instance.dart';
 import 'profiles/profile_lock_controller.dart';
 import 'profiles/profile_runtime.dart';
@@ -539,32 +540,22 @@ class DeepLinkService {
 
   /// Check which debrid services are configured
   static Future<ConfiguredServices> getConfiguredServices() async {
-    final rdKey = await StorageService.getApiKey();
-    final torboxKey = await StorageService.getTorboxApiKey();
-    final premiumizeKey = await StorageService.getPremiumizeApiKey();
-    final rdEnabled = await StorageService.getRealDebridIntegrationEnabled();
-    final torboxEnabled = await StorageService.getTorboxIntegrationEnabled();
-    final pikpakEnabled = await StorageService.getPikPakEnabled();
-    final premiumizeEnabled =
-        await StorageService.getPremiumizeIntegrationEnabled();
-    final allDebridKey = await StorageService.getAllDebridApiKey();
-    final allDebridEnabled =
-        await StorageService.getAllDebridIntegrationEnabled();
-
-    final hasRealDebrid = rdKey != null && rdKey.isNotEmpty && rdEnabled;
-    final hasTorbox =
-        torboxKey != null && torboxKey.isNotEmpty && torboxEnabled;
-    final hasPremiumize =
-        premiumizeKey != null && premiumizeKey.isNotEmpty && premiumizeEnabled;
-    final hasAllDebrid =
-        allDebridKey != null && allDebridKey.isNotEmpty && allDebridEnabled;
-
     return ConfiguredServices(
-      hasRealDebrid: hasRealDebrid,
-      hasTorbox: hasTorbox,
-      hasPikPak: pikpakEnabled,
-      hasPremiumize: hasPremiumize,
-      hasAllDebrid: hasAllDebrid,
+      hasRealDebrid: await CloudCredentials.isMagnetConfigured(
+        CloudProviderId.debrid,
+      ),
+      hasTorbox: await CloudCredentials.isMagnetConfigured(
+        CloudProviderId.torbox,
+      ),
+      hasPikPak: await CloudCredentials.isMagnetConfigured(
+        CloudProviderId.pikpak,
+      ),
+      hasPremiumize: await CloudCredentials.isMagnetConfigured(
+        CloudProviderId.premiumize,
+      ),
+      hasAllDebrid: await CloudCredentials.isMagnetConfigured(
+        CloudProviderId.alldebrid,
+      ),
     );
   }
 

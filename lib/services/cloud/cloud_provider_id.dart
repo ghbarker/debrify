@@ -1,0 +1,86 @@
+/// Canonical cloud/debrid provider ids used across playback, downloads, magnets,
+/// and backups.
+///
+/// Playback uses [playbackId] (`debrid`, `torbox`, …). Bound sources and Home
+/// persist Real-Debrid as [storedId] `rd`. Both map through [parse].
+enum CloudProviderId {
+  debrid,
+  torbox,
+  premiumize,
+  alldebrid,
+  pikpak;
+
+  /// Order shared by [TorrentPlaybackService] silent resolution / picker.
+  /// Premiumize is before PikPak on purpose: a silent PikPak fallback would
+  /// queue real downloads on the account.
+  static const List<CloudProviderId> playbackPrecedence = [
+    debrid,
+    torbox,
+    premiumize,
+    alldebrid,
+    pikpak,
+  ];
+
+  /// Id used by [TorrentPlaybackService] switches and the default-provider pref.
+  String get playbackId => name;
+
+  /// Id stored on [SeriesSource] / Home (`rd` instead of `debrid`).
+  String get storedId => this == debrid ? 'rd' : name;
+
+  /// SharedPreferences / SecretVault credential key for download binding.
+  String get credentialKey => switch (this) {
+    debrid => 'real_debrid_api_key',
+    torbox => 'torbox_api_key',
+    premiumize => 'premiumize_api_key',
+    alldebrid => 'alldebrid_api_key',
+    pikpak => 'pikpak_email',
+  };
+
+  /// Backup JSON field for API-key providers. PikPak uses a nested `pikpak` map.
+  String? get backupApiKeyField => switch (this) {
+    debrid => 'realDebridApiKey',
+    torbox => 'torboxApiKey',
+    premiumize => 'premiumizeApiKey',
+    alldebrid => 'allDebridApiKey',
+    pikpak => null,
+  };
+
+  static CloudProviderId? tryParse(String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'debrid':
+      case 'rd':
+      case 'realdebrid':
+      case 'real-debrid':
+      case 'real_debrid':
+        return debrid;
+      case 'torbox':
+        return torbox;
+      case 'premiumize':
+        return premiumize;
+      case 'alldebrid':
+      case 'all-debrid':
+      case 'all_debrid':
+        return alldebrid;
+      case 'pikpak':
+        return pikpak;
+      default:
+        return null;
+    }
+  }
+
+  static CloudProviderId parse(String raw) {
+    final id = tryParse(raw);
+    if (id == null) {
+      throw ArgumentError.value(raw, 'raw', 'Unknown cloud provider');
+    }
+    return id;
+  }
+
+  /// Real-Debrid is `'rd'` in SeriesSource storage but `'debrid'` as a playback
+  /// provider key. Unknown strings pass through unchanged.
+  static String playbackIdFromStored(String stored) =>
+      tryParse(stored)?.playbackId ?? stored;
+
+  static String storedIdFromPlayback(String provider) =>
+      tryParse(provider)?.storedId ?? provider;
+}

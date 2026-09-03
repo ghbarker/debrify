@@ -8,13 +8,10 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
-import '../models/alldebrid_file.dart';
 import '../models/play_loader_art.dart';
 import '../models/playlist_view_mode.dart';
-import '../models/premiumize_file.dart';
 import '../models/profiles/profile_policy.dart';
 import '../models/quick_play_rules.dart';
-import '../models/rd_torrent.dart';
 import '../models/torbox_file.dart';
 import '../models/torbox_web_download.dart';
 import '../models/torrent.dart';
@@ -28,7 +25,6 @@ import '../utils/filter_ladder.dart';
 import '../utils/file_utils.dart';
 import '../utils/formatters.dart';
 import '../utils/rd_blocked_filter.dart';
-import '../utils/rd_folder_tree_builder.dart';
 import '../utils/series_parser.dart';
 import '../utils/torrent_coverage_detector.dart';
 import '../utils/torrent_curation.dart';
@@ -38,12 +34,18 @@ import '../widgets/not_cached_dialog.dart';
 import '../widgets/pipeline_loading_overlay.dart';
 import '../widgets/provider_picker_dialog.dart';
 import 'alldebrid_service.dart';
+import 'cloud/cloud_exceptions.dart';
+import 'cloud/cloud_playback_helpers.dart';
+import 'cloud/cloud_playback_result.dart';
+import 'cloud/cloud_provider_id.dart';
+import 'cloud/cloud_provider_registry.dart';
+import 'cloud/pack_negative_cache.dart';
+import 'cloud/pikpak_cloud_provider.dart';
 import 'debrid_service.dart';
 import 'debrify_tv_channel_add_service.dart';
 import 'download_service.dart';
 import 'local_bound_source_service.dart';
 import 'local_playback_resume_resolver.dart';
-import 'main_page_bridge.dart';
 import 'pikpak_api_service.dart';
 import 'play_loader_style.dart';
 import 'premiumize_service.dart';
@@ -147,42 +149,17 @@ class TorrentPlaybackService {
   /// "no provider configured" (null → prompt to add one in Settings).
   static const String _cancelled = '__cancelled__';
 
-  /// Series-auto-pin negative cache: "imdbId:season" → when to allow
-  /// re-searching packs. A pack-first attempt that finds no instantly-playable
-  /// pack records an entry so subsequent episodes of the SAME season (a binge,
-  /// or an ongoing show with no pack yet) skip the expensive whole-series pack
-  /// search instead of repeating it every play. Season remains part of the key
-  /// because "no pack for S1" must not suppress an S7 pack; provider and the
-  /// complete rules profile are also included so a settings/provider change
-  /// takes effect immediately. In-memory + TTL means a newly-released pack is
-  /// still picked up after the window (or an app restart).
-  static final Map<String, DateTime> _noPackUntil = {};
-
-  static String _noPackKey(
-    String imdbId,
-    int season,
-    String provider,
-    QuickPlayRules rules,
-  ) => '$imdbId:$season:$provider:${rules.hashCode}';
-
   static bool _recentlyNoPack(
     String imdbId,
     int season,
     String provider,
     QuickPlayRules rules,
-  ) {
-    // "Do not remember" must take effect immediately, including for entries
-    // recorded before the user changed this setting.
-    if (rules.failedPackCacheHours <= 0) return false;
-    final key = _noPackKey(imdbId, season, provider, rules);
-    final until = _noPackUntil[key];
-    if (until == null) return false;
-    if (!DateTime.now().isBefore(until)) {
-      _noPackUntil.remove(key);
-      return false;
-    }
-    return true;
-  }
+  ) => PackNegativeCache.instance.recentlyNoPack(
+    imdbId,
+    season,
+    provider,
+    rules,
+  );
 
   static void _markNoPack(
     String imdbId,
@@ -190,21 +167,13 @@ class TorrentPlaybackService {
     String provider,
     QuickPlayRules rules,
     Duration ttl,
-  ) {
-    if (ttl <= Duration.zero) return;
-    // Bound the map so a long session browsing many shows can't grow it
-    // without limit; drop expired entries first, then the oldest.
-    final now = DateTime.now();
-    _noPackUntil.removeWhere((_, until) => !now.isBefore(until));
-    const cap = 200;
-    if (_noPackUntil.length >= cap) {
-      final oldest = _noPackUntil.entries
-          .reduce((a, b) => a.value.isBefore(b.value) ? a : b)
-          .key;
-      _noPackUntil.remove(oldest);
-    }
-    _noPackUntil[_noPackKey(imdbId, season, provider, rules)] = now.add(ttl);
-  }
+  ) => PackNegativeCache.instance.markNoPack(
+    imdbId,
+    season,
+    provider,
+    rules,
+    ttl,
+  );
 
   /// Add [torrent] to the resolved provider and run the user's post-torrent
   /// action (choose / play / download / playlist / open / none / copy).
@@ -320,11 +289,11 @@ class TorrentPlaybackService {
       notCached = e;
     } on AllDebridTorrentNotReadyException catch (e) {
       notCached = e;
-    } on _TorboxNotCached catch (e) {
+    } on TorboxNotCached catch (e) {
       notCached = e;
-    } on _PremiumizeNotCached catch (e) {
+    } on PremiumizeNotCached catch (e) {
       notCached = e;
-    } on _PikPakStillProcessing {
+    } on PikPakStillProcessing {
       if (rootNav.canPop()) rootNav.pop();
       if (context.mounted) {
         _snack(
@@ -333,7 +302,7 @@ class TorrentPlaybackService {
         );
       }
       return;
-    } on _PikPakFailed {
+    } on PikPakFailed {
       if (rootNav.canPop()) rootNav.pop();
       if (context.mounted) _snack(context, 'Download failed on PikPak.');
       return;
@@ -1171,7 +1140,7 @@ class TorrentPlaybackService {
           await AllDebridService.deleteMagnet(e.apiKey, e.magnetId);
         } catch (_) {}
       } catch (_) {
-        // _TorboxNotCached / _PremiumizeNotCached / transient — try next.
+        // TorboxNotCached / PremiumizeNotCached / transient — try next.
       }
     }
     return (null, null);
@@ -2890,9 +2859,9 @@ class TorrentPlaybackService {
   /// storage) but `'debrid'` as this service's provider key. Map between them so
   /// bindings created in Home replay here and vice-versa.
   static String _providerFromStored(String stored) =>
-      stored == 'rd' ? 'debrid' : stored;
+      CloudProviderId.playbackIdFromStored(stored);
   static String storedProviderKey(String provider) =>
-      provider == 'debrid' ? 'rd' : provider;
+      CloudProviderId.storedIdFromPlayback(provider);
 
   /// Providers whose bound sources this isolated engine can replay — the five
   /// debrid providers plus 'local' (on-device file/folder).
@@ -3405,7 +3374,7 @@ class TorrentPlaybackService {
             pikpakVideoFileId: videoId,
           );
         }
-        final playlist = await _buildPikPakPlaylist(
+        final playlist = await PikPakCloudProvider.buildPikPakPlaylist(
           source.torrentName,
           videos,
           pikpak,
@@ -3821,11 +3790,11 @@ class TorrentPlaybackService {
       try {
         await AllDebridService.deleteMagnet(e.apiKey, e.magnetId);
       } catch (_) {}
-    } on _PikPakStillProcessing {
+    } on PikPakStillProcessing {
       // PikPak queued a download that isn't instantly playable — can't pin.
       failMessage =
           'Added to PikPak — it\'s still downloading. Pin it again once ready.';
-    } on _PikPakFailed {
+    } on PikPakFailed {
       failMessage = 'Download failed on PikPak.';
     } catch (_) {}
     // Pop the loader FIRST (using the captured navigator, no context), then
@@ -3937,259 +3906,7 @@ class TorrentPlaybackService {
     String provider,
     String magnet,
     Torrent torrent,
-  ) async {
-    final title = torrent.displayTitle;
-    switch (provider) {
-      case 'debrid':
-        {
-          final apiKey = (await StorageService.getApiKey()) ?? '';
-          final result = await DebridService.addTorrentToDebrid(apiKey, magnet);
-          final playUrl = result['downloadLink'] as String?;
-          final linksRaw = (result['links'] as List?) ?? const [];
-          final filesRaw = (result['files'] as List?) ?? const [];
-          final links = linksRaw.map((e) => e.toString()).toList();
-          // RD returns multiple selected files but a single link for an
-          // unextracted RAR archive — the provider "open" view isn't useful then.
-          final isRar = filesRaw.isNotEmpty
-              ? RDFolderTreeBuilder.isRarArchive(
-                  filesRaw.map((f) => f as Map<String, dynamic>).toList(),
-                  linksRaw,
-                )
-              : false;
-          final rd = RDTorrent(
-            id: result['torrentId']?.toString() ?? '',
-            filename: title,
-            hash: torrent.infohash,
-            bytes: torrent.sizeBytes,
-            host: '',
-            split: 0,
-            progress: 100,
-            status: 'downloaded',
-            added: DateTime.now().toIso8601String(),
-            links: links,
-          );
-          void open() => MainPageBridge.openDebridOptions?.call(rd);
-          final playlist = await _buildRdPlaylist(linksRaw, filesRaw, apiKey);
-          if (playlist != null && playlist.length > 1) {
-            var startIndex = playlist.indexWhere((e) => e.url.isNotEmpty);
-            if (startIndex < 0) startIndex = 0;
-            final start = playlist[startIndex].url.isNotEmpty
-                ? playlist[startIndex].url
-                : playUrl;
-            return _Resolved(
-              title: title,
-              playUrl: start,
-              downloadUrls: playUrl != null ? [playUrl] : const [],
-              openInTab: open,
-              playlist: playlist,
-              startIndex: startIndex,
-              isRarArchive: isRar,
-              rdTorrentId: rd.id.isNotEmpty ? rd.id : null,
-            );
-          }
-          return _Resolved(
-            title: title,
-            playUrl: playUrl,
-            downloadUrls: playUrl != null ? [playUrl] : const [],
-            openInTab: open,
-            // Single video file: expose its real name so the bound-source
-            // episode check can judge it (RAR resolves keep playlist null AND
-            // fileName null, staying deliberately lenient).
-            fileName: (playlist != null && playlist.length == 1)
-                ? playlist.first.title
-                : null,
-            isRarArchive: isRar,
-            rdTorrentId: rd.id.isNotEmpty ? rd.id : null,
-            // Raw restricted link so a saved playlist item re-unrestricts later.
-            restrictedLink: links.isNotEmpty ? links.first : null,
-          );
-        }
-      case 'torbox':
-        {
-          final apiKey = (await StorageService.getTorboxApiKey()) ?? '';
-          final resp = await TorboxService.createTorrent(
-            apiKey: apiKey,
-            magnet: magnet,
-            addOnlyIfCached: true,
-          );
-          final ok =
-              resp['success'] == true ||
-              resp['error'].toString().contains('ALREADY_ADDED');
-          if (!ok) {
-            if (resp['error'].toString().contains('NOT_CACHED')) {
-              throw const _TorboxNotCached();
-            }
-            throw Exception(resp['error']?.toString() ?? 'TorBox add failed');
-          }
-          final data = resp['data'];
-          final torrentId = data is Map
-              ? (data['torrent_id'] as num?)?.toInt()
-              : null;
-          if (torrentId == null) throw Exception('TorBox: no torrent id');
-          final tt = await TorboxService.getTorrentById(apiKey, torrentId);
-          final open = tt == null
-              ? null
-              : () => MainPageBridge.openTorboxFolder?.call(tt);
-          final videos = (tt?.files ?? const <TorboxFile>[])
-              .where((f) => FileUtils.isVideoFile(f.name))
-              .toList();
-          if (videos.length <= 1) {
-            final file = videos.isNotEmpty
-                ? videos.first
-                : _pickTorbox(tt?.files ?? const []);
-            final playUrl = file == null
-                ? null
-                : await TorboxService.requestFileDownloadLink(
-                    apiKey: apiKey,
-                    torrentId: torrentId,
-                    fileId: file.id,
-                  );
-            return _Resolved(
-              title: title,
-              playUrl: playUrl,
-              downloadUrls: playUrl != null ? [playUrl] : const [],
-              openInTab: open,
-              fileName: file == null ? null : _fileName(file.name),
-              torboxTorrentId: torrentId,
-              // File id so a saved playlist item re-requests a fresh link later.
-              torboxFileId: file?.id,
-            );
-          }
-          final (sorted, startIndex) = _orderBySeries(videos, (f) => f.name);
-          final startUrl = await TorboxService.requestFileDownloadLink(
-            apiKey: apiKey,
-            torrentId: torrentId,
-            fileId: sorted[startIndex].id,
-          );
-          final entries = [
-            for (var i = 0; i < sorted.length; i++)
-              PlaylistEntry(
-                url: i == startIndex ? startUrl : '',
-                title: _fileName(sorted[i].name),
-                provider: 'torbox',
-                torboxTorrentId: torrentId,
-                torboxFileId: sorted[i].id,
-                sizeBytes: sorted[i].size,
-                torrentHash: torrent.infohash,
-              ),
-          ];
-          return _Resolved(
-            title: title,
-            playUrl: startUrl,
-            downloadUrls: [startUrl],
-            openInTab: open,
-            playlist: entries,
-            startIndex: startIndex,
-            torboxTorrentId: torrentId,
-          );
-        }
-      case 'premiumize':
-        {
-          final apiKey = (await StorageService.getPremiumizeApiKey()) ?? '';
-          if (!await PremiumizeService.isCached(apiKey, magnet)) {
-            throw const _PremiumizeNotCached();
-          }
-          final files = await PremiumizeService.directDownload(apiKey, magnet);
-          void open() => MainPageBridge.openPremiumizeFolder?.call();
-          final videos = files
-              .where((f) => FileUtils.isVideoFile(f.path))
-              .toList();
-          if (videos.length <= 1) {
-            final file = videos.isNotEmpty
-                ? videos.first
-                : _pickPremiumize(files);
-            return _Resolved(
-              title: title,
-              playUrl: file?.link,
-              downloadUrls: file?.link != null ? [file!.link] : const [],
-              openInTab: open,
-              fileName: file == null ? null : _fileName(file.path),
-              // File path so a saved playlist item re-resolves from the cloud.
-              premiumizePath: file?.path,
-            );
-          }
-          // Premiumize direct links are all ready — no lazy resolution needed.
-          final (sorted, startIndex) = _orderBySeries(videos, (f) => f.path);
-          final entries = [
-            for (final f in sorted)
-              PlaylistEntry(
-                url: f.link,
-                title: _fileName(f.path),
-                provider: 'premiumize',
-                premiumizeHash: torrent.infohash,
-                premiumizePath: f.path,
-                sizeBytes: f.size,
-                torrentHash: torrent.infohash,
-              ),
-          ];
-          return _Resolved(
-            title: title,
-            playUrl: sorted[startIndex].link,
-            downloadUrls: [sorted[startIndex].link],
-            openInTab: open,
-            playlist: entries,
-            startIndex: startIndex,
-          );
-        }
-      case 'alldebrid':
-        {
-          final apiKey = (await StorageService.getAllDebridApiKey()) ?? '';
-          final result = await AllDebridService.addMagnetAndResolveFiles(
-            apiKey,
-            magnet,
-          );
-          void open() => MainPageBridge.openAllDebridFolder?.call();
-          final videos = result.files
-              .where((f) => FileUtils.isVideoFile(f.path))
-              .toList();
-          if (videos.length <= 1) {
-            final file = videos.isNotEmpty
-                ? videos.first
-                : _pickAllDebrid(result.files);
-            final playUrl = file == null
-                ? null
-                : await AllDebridService.unlockLink(apiKey, file.link);
-            return _Resolved(
-              title: title,
-              playUrl: playUrl,
-              downloadUrls: playUrl != null ? [playUrl] : const [],
-              openInTab: open,
-              fileName: file == null ? null : _fileName(file.path),
-              // Locked link so a saved playlist item re-unlocks a fresh URL.
-              allDebridLink: file?.link,
-            );
-          }
-          final (sorted, startIndex) = _orderBySeries(videos, (f) => f.path);
-          final startUrl = await AllDebridService.unlockLink(
-            apiKey,
-            sorted[startIndex].link,
-          );
-          final entries = [
-            for (var i = 0; i < sorted.length; i++)
-              PlaylistEntry(
-                url: i == startIndex ? startUrl : '',
-                title: _fileName(sorted[i].path),
-                provider: 'alldebrid',
-                allDebridLink: sorted[i].link,
-                sizeBytes: sorted[i].size,
-                torrentHash: torrent.infohash,
-              ),
-          ];
-          return _Resolved(
-            title: title,
-            playUrl: startUrl,
-            downloadUrls: [startUrl],
-            openInTab: open,
-            playlist: entries,
-            startIndex: startIndex,
-          );
-        }
-      case 'pikpak':
-        return _addPikPak(magnet, torrent);
-      default:
-        throw Exception('Unknown provider: $provider');
-    }
-  }
+  ) => CloudProviderRegistry.instance.addMagnet(provider, magnet, torrent);
 
   // ── Post-action branch handlers ────────────────────────────────────────────
 
@@ -4435,8 +4152,8 @@ class TorrentPlaybackService {
   /// [_defaultConfiguredProvider], so adding a provider is a one-list edit.
   static Future<(List<String>, String?)> _configuredProviders() async {
     final configured = <String>[];
-    for (final p in ['debrid', 'torbox', 'premiumize', 'alldebrid', 'pikpak']) {
-      if (await _isConfigured(p)) configured.add(p);
+    for (final p in CloudProviderId.playbackPrecedence) {
+      if (await _isConfigured(p.playbackId)) configured.add(p.playbackId);
     }
     if (configured.isEmpty) return (configured, null);
     final def = await StorageService.getDefaultTorrentProvider();
@@ -5345,7 +5062,9 @@ class TorrentPlaybackService {
     Torrent torrent,
     String provider,
   ) async {
-    final credentialKey = _credentialKeyForProvider(provider);
+    final credentialKey = DownloadService.credentialKeyForCloudProvider(
+      provider,
+    );
     // Multi-file pack: let the user choose which files (parity with the old
     // per-file download dialog), then queue each — unlocking lazy debrid entries
     // on demand (RD/TorBox/AllDebrid resolve only the start file up front;
@@ -5770,17 +5489,6 @@ class TorrentPlaybackService {
     }
   }
 
-  static String? _credentialKeyForProvider(String provider) {
-    return switch (provider) {
-      'debrid' || 'realdebrid' => 'real_debrid_api_key',
-      'torbox' => 'torbox_api_key',
-      'premiumize' => 'premiumize_api_key',
-      'alldebrid' => 'alldebrid_api_key',
-      'pikpak' => 'pikpak_email',
-      _ => null,
-    };
-  }
-
   static List<Color> _providerGradient(String provider) {
     switch (provider) {
       case 'debrid':
@@ -5889,23 +5597,8 @@ class TorrentPlaybackService {
     return result.provider;
   }
 
-  static Future<bool> _isConfigured(String provider) async {
-    switch (provider) {
-      case 'debrid':
-        return (await StorageService.getApiKey())?.isNotEmpty ?? false;
-      case 'torbox':
-        return (await StorageService.getTorboxApiKey())?.isNotEmpty ?? false;
-      case 'premiumize':
-        return (await StorageService.getPremiumizeApiKey())?.isNotEmpty ??
-            false;
-      case 'alldebrid':
-        return (await StorageService.getAllDebridApiKey())?.isNotEmpty ?? false;
-      case 'pikpak':
-        return StorageService.getPikPakEnabled();
-      default:
-        return false;
-    }
-  }
+  static Future<bool> _isConfigured(String provider) =>
+      CloudProviderRegistry.instance.isConfigured(provider);
 
   static Future<String> _postAction(String provider) async {
     switch (provider) {
@@ -5958,38 +5651,7 @@ class TorrentPlaybackService {
     return [...hit, ...miss];
   }
 
-  // ── File pickers: largest file that looks like video ───────────────────────
-
-  static TorboxFile? _pickTorbox(List<TorboxFile> files) {
-    final pool = _videoPool(files, (f) => f.name);
-    pool.sort((a, b) => b.size.compareTo(a.size));
-    return pool.isEmpty ? null : pool.first;
-  }
-
-  static PremiumizeFile? _pickPremiumize(List<PremiumizeFile> files) {
-    final pool = _videoPool(files, (f) => f.path);
-    pool.sort((a, b) => b.size.compareTo(a.size));
-    return pool.isEmpty ? null : pool.first;
-  }
-
-  static AllDebridFile? _pickAllDebrid(List<AllDebridFile> files) {
-    final pool = _videoPool(files, (f) => f.path);
-    pool.sort((a, b) => b.size.compareTo(a.size));
-    return pool.isEmpty ? null : pool.first;
-  }
-
-  static List<T> _videoPool<T>(List<T> files, String Function(T) nameOf) {
-    final videos = files
-        .where((f) => FileUtils.isVideoFile(nameOf(f)))
-        .toList();
-    return videos.isNotEmpty ? videos : List<T>.from(files);
-  }
-
-  static String _fileName(String path) {
-    final norm = path.replaceAll('\\', '/');
-    final idx = norm.lastIndexOf('/');
-    return idx >= 0 ? norm.substring(idx + 1) : norm;
-  }
+  static String _fileName(String path) => CloudPlaybackHelpers.fileName(path);
 
   /// True when a resolved playlist's file names look like a TV series (multiple
   /// files parseable as season/episode), so it should play in series view mode.
@@ -5999,457 +5661,10 @@ class TorrentPlaybackService {
     return SeriesParser.isSeriesPlaylist(names);
   }
 
-  /// Order video items by season/episode (falling back to filename) and return
-  /// the sorted list plus the first-episode start index — matching Home's
-  /// episode-aware playlist builders (so E2 plays before E10, starting at E1).
   static (List<T>, int) _orderBySeries<T>(
     List<T> items,
     String Function(T) nameOf,
-  ) {
-    final names = [for (final e in items) _fileName(nameOf(e))];
-    final infos = [for (final n in names) SeriesParser.parseFilename(n)];
-    final isSeries = items.length > 1 && SeriesParser.isSeriesPlaylist(names);
-    final order = List<int>.generate(items.length, (i) => i);
-    if (isSeries) {
-      order.sort((a, b) {
-        final sc = (infos[a].season ?? 0).compareTo(infos[b].season ?? 0);
-        if (sc != 0) return sc;
-        final ec = (infos[a].episode ?? 0).compareTo(infos[b].episode ?? 0);
-        if (ec != 0) return ec;
-        return names[a].toLowerCase().compareTo(names[b].toLowerCase());
-      });
-    } else {
-      order.sort(
-        (a, b) => names[a].toLowerCase().compareTo(names[b].toLowerCase()),
-      );
-    }
-    final sorted = [for (final i in order) items[i]];
-    final sortedInfos = [for (final i in order) infos[i]];
-    var start = isSeries ? _firstEpisodeIndex(sortedInfos) : 0;
-    if (start < 0 || start >= sorted.length) start = 0;
-    return (sorted, start);
-  }
-
-  /// Real-Debrid multi-file playlist — a verbatim port of Home's
-  /// `_buildRdPlaylistEntries` (pure logic): video-file filtering aligned to the
-  /// `links` array, archive guard, [SeriesParser] first-episode detection, start
-  /// entry unrestricted, the rest carry `restrictedLink` for lazy resolution.
-  static Future<List<PlaylistEntry>?> _buildRdPlaylist(
-    List<dynamic> links,
-    List<dynamic> files,
-    String apiKey,
-  ) async {
-    final selectedFiles = files.where((file) => file['selected'] == 1).toList();
-    final allFilesToUse = selectedFiles.isNotEmpty ? selectedFiles : files;
-
-    final filesToUse = allFilesToUse.where((file) {
-      String? filename =
-          file['name']?.toString() ??
-          file['filename']?.toString() ??
-          file['path']?.toString();
-      if (filename != null && filename.startsWith('/')) {
-        filename = filename.split('/').last;
-      }
-      return filename != null && FileUtils.isVideoFile(filename);
-    }).toList();
-
-    // Archive check (multiple files but a single link) / no video.
-    if (filesToUse.length > 1 && links.length == 1) return null;
-    if (filesToUse.isEmpty) return null;
-
-    final filenames = filesToUse.map((file) {
-      String? name =
-          file['name']?.toString() ??
-          file['filename']?.toString() ??
-          file['path']?.toString();
-      if (name != null && name.startsWith('/')) name = name.split('/').last;
-      return name ?? 'Unknown File';
-    }).toList();
-
-    final isSeries = SeriesParser.isSeriesPlaylist(filenames);
-    final seriesInfos = isSeries ? SeriesParser.parsePlaylist(filenames) : null;
-
-    int firstIndex = 0;
-    if (isSeries && seriesInfos != null) {
-      int lowestSeason = 999, lowestEpisode = 999;
-      for (int i = 0; i < seriesInfos.length; i++) {
-        final info = seriesInfos[i];
-        if (info.isSeries && info.season != null && info.episode != null) {
-          if (info.season! < lowestSeason ||
-              (info.season! == lowestSeason && info.episode! < lowestEpisode)) {
-            lowestSeason = info.season!;
-            lowestEpisode = info.episode!;
-            firstIndex = i;
-          }
-        }
-      }
-    }
-
-    final entries = <PlaylistEntry>[];
-    for (int i = 0; i < filesToUse.length; i++) {
-      final file = filesToUse[i];
-      String? filename =
-          file['name']?.toString() ??
-          file['filename']?.toString() ??
-          file['path']?.toString();
-      String? relativePath = filename;
-      if (relativePath != null && relativePath.startsWith('/')) {
-        relativePath = relativePath.substring(1);
-      }
-      if (filename != null && filename.startsWith('/')) {
-        filename = filename.split('/').last;
-      }
-      final finalFilename = filename ?? 'Unknown File';
-      final int? sizeBytes = (file is Map) ? (file['bytes'] as int?) : null;
-      if (i >= links.length) continue;
-
-      String url = '';
-      if (i == firstIndex) {
-        try {
-          final unrestrictResult = await DebridService.unrestrictLink(
-            apiKey,
-            links[i],
-          );
-          url = unrestrictResult['download']?.toString() ?? '';
-        } catch (_) {
-          url = '';
-        }
-      }
-      entries.add(
-        PlaylistEntry(
-          url: url,
-          title: finalFilename,
-          relativePath: relativePath,
-          restrictedLink: url.isEmpty ? links[i].toString() : null,
-          sizeBytes: sizeBytes,
-        ),
-      );
-    }
-    return entries.isEmpty ? null : entries;
-  }
-
-  // ── PikPak resolution + playlist (ported from Home's PikPak flow) ───────────
-
-  /// Adds the magnet to PikPak, polls task + file until complete, lists the
-  /// folder (season packs) and builds a playlist. A port of Home's
-  /// `_resolveSourceViaPikPak` + `_buildPikPakPlaylistEntries` (downloads to the
-  /// PikPak root rather than a dedicated subfolder, for simplicity).
-  static Future<_Resolved> _addPikPak(String magnet, Torrent torrent) async {
-    final title = torrent.displayTitle;
-    final pikpak = PikPakApiService.instance;
-    final add = await pikpak.addOfflineDownload(magnet);
-    String? fileId;
-    String? taskId;
-    if (add['file'] != null) {
-      fileId = add['file']['id']?.toString();
-    } else if (add['task'] != null) {
-      fileId = add['task']['file_id']?.toString();
-      taskId = add['task']['id']?.toString();
-    } else if (add['id'] != null) {
-      fileId = add['id']?.toString();
-    }
-    if (fileId == null) throw Exception('PikPak: no file id returned');
-
-    const pollInterval = Duration(seconds: 2);
-    var phase1 = false;
-    if (taskId != null) {
-      for (var a = 0; a < 7; a++) {
-        if (a > 0) await Future.delayed(pollInterval);
-        try {
-          final t = await pikpak.getTaskStatus(taskId);
-          final phase = t['phase'];
-          if (phase == 'PHASE_TYPE_COMPLETE') {
-            phase1 = true;
-            break;
-          }
-          if (phase == 'PHASE_TYPE_ERROR') {
-            throw const _PikPakFailed();
-          }
-          final rp = t['progress'];
-          if (rp != null) {
-            final p = rp is int ? rp : int.tryParse(rp.toString()) ?? 0;
-            if (p >= 90) {
-              phase1 = true;
-              break;
-            }
-          }
-        } on _PikPakFailed {
-          rethrow; // surface "Download failed on PikPak"
-        } catch (_) {
-          break;
-        }
-      }
-    }
-
-    List<Map<String, dynamic>> videoFiles = const [];
-    for (var a = 0; a < 5; a++) {
-      if (a > 0 || !phase1) await Future.delayed(pollInterval);
-      try {
-        final fd = await pikpak.getFileDetails(fileId);
-        if (fd['phase'] == 'PHASE_TYPE_COMPLETE') {
-          if (fd['kind'] == 'drive#folder') {
-            videoFiles = await _extractPikPakVideos(pikpak, fileId);
-          } else {
-            final mt = (fd['mime_type'] ?? '').toString();
-            if (mt.startsWith('video/')) videoFiles = [fd];
-          }
-          break;
-        }
-        if (fd['phase'] == 'PHASE_TYPE_ERROR') {
-          throw const _PikPakFailed();
-        }
-      } on _PikPakFailed {
-        rethrow; // surface "Download failed on PikPak"
-      } catch (_) {}
-    }
-    if (videoFiles.isEmpty) {
-      throw const _PikPakStillProcessing();
-    }
-
-    final playlist = await _buildPikPakPlaylist(
-      torrent.name,
-      videoFiles,
-      pikpak,
-    );
-    if (playlist == null || playlist.isEmpty) {
-      throw Exception('PikPak: could not resolve a playable stream.');
-    }
-    var startIndex = playlist.indexWhere((e) => e.url.isNotEmpty);
-    if (startIndex < 0) startIndex = 0;
-    final capturedFileId = fileId;
-    return _Resolved(
-      title: title,
-      playUrl: playlist[startIndex].url,
-      downloadUrls: playlist[startIndex].url.isNotEmpty
-          ? [playlist[startIndex].url]
-          : const [],
-      openInTab: () =>
-          MainPageBridge.openPikPakFolder?.call(capturedFileId, title),
-      playlist: playlist.length > 1 ? playlist : null,
-      startIndex: startIndex,
-      // Single video file: expose its real name so the bound-source episode
-      // check can judge it instead of passing vacuously.
-      fileName: playlist.length == 1 ? playlist.first.title : null,
-      pikpakFileId: capturedFileId,
-      // The playable video-file id (folder id is capturedFileId) so a single
-      // saved to a playlist re-resolves its stream instead of failing on the
-      // folder.
-      pikpakVideoFileId: playlist.length == 1
-          ? playlist.first.pikpakFileId
-          : null,
-    );
-  }
-
-  static Future<List<Map<String, dynamic>>> _extractPikPakVideos(
-    PikPakApiService pikpak,
-    String folderId, {
-    int maxDepth = 5,
-    int currentDepth = 0,
-    String currentPath = '',
-  }) async {
-    if (currentDepth >= maxDepth) return [];
-    final videos = <Map<String, dynamic>>[];
-    try {
-      final result = await pikpak.listFiles(parentId: folderId);
-      for (final file in result.files) {
-        final kind = file['kind'] ?? '';
-        final mimeType = (file['mime_type'] ?? '').toString();
-        final itemName = (file['name'] ?? 'unknown').toString();
-        if (kind == 'drive#folder') {
-          final subPath = currentPath.isEmpty
-              ? itemName
-              : '$currentPath/$itemName';
-          videos.addAll(
-            await _extractPikPakVideos(
-              pikpak,
-              file['id'].toString(),
-              maxDepth: maxDepth,
-              currentDepth: currentDepth + 1,
-              currentPath: subPath,
-            ),
-          );
-        } else if (mimeType.startsWith('video/')) {
-          final videoWithPath = Map<String, dynamic>.from(file);
-          if (currentPath.isNotEmpty) {
-            videoWithPath['name'] = '$currentPath/$itemName';
-          }
-          videos.add(videoWithPath);
-        }
-      }
-    } catch (_) {}
-    videos.sort(
-      (a, b) => (a['name'] ?? '').toString().toLowerCase().compareTo(
-        (b['name'] ?? '').toString().toLowerCase(),
-      ),
-    );
-    return videos;
-  }
-
-  static Future<List<PlaylistEntry>?> _buildPikPakPlaylist(
-    String torrentName,
-    List<Map<String, dynamic>> videoFiles,
-    PikPakApiService pikpak,
-  ) async {
-    if (videoFiles.isEmpty) return null;
-    if (videoFiles.length == 1) {
-      final file = videoFiles.first;
-      try {
-        final fullData = await pikpak.getFileDetails(file['id'].toString());
-        final url = pikpak.getStreamingUrl(fullData);
-        if (url == null) return null;
-        return [
-          PlaylistEntry(
-            url: url,
-            title: (file['name'] ?? torrentName).toString(),
-            relativePath: file['_fullPath'] as String?,
-            provider: 'pikpak',
-            pikpakFileId: file['id']?.toString(),
-            sizeBytes: int.tryParse(file['size']?.toString() ?? '0') ?? 0,
-          ),
-        ];
-      } catch (_) {
-        return null;
-      }
-    }
-
-    final items = <_PikPakItem>[
-      for (final file in videoFiles)
-        _PikPakItem(
-          file: file,
-          seriesInfo: SeriesParser.parseFilename(_pikpakDisplayName(file)),
-          displayName: _pikpakDisplayName(file),
-        ),
-    ];
-    final fnames = items.map((e) => e.displayName).toList();
-    final isSeriesCollection =
-        items.length > 1 && SeriesParser.isSeriesPlaylist(fnames);
-
-    final sorted = [...items];
-    if (isSeriesCollection) {
-      sorted.sort((a, b) {
-        final sc = (a.seriesInfo.season ?? 0).compareTo(
-          b.seriesInfo.season ?? 0,
-        );
-        if (sc != 0) return sc;
-        final ec = (a.seriesInfo.episode ?? 0).compareTo(
-          b.seriesInfo.episode ?? 0,
-        );
-        if (ec != 0) return ec;
-        return a.displayName.toLowerCase().compareTo(
-          b.displayName.toLowerCase(),
-        );
-      });
-    } else {
-      sorted.sort(
-        (a, b) =>
-            a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
-      );
-    }
-
-    final seriesInfos = sorted.map((e) => e.seriesInfo).toList();
-    var startIndex = isSeriesCollection ? _firstEpisodeIndex(seriesInfos) : 0;
-    if (startIndex < 0 || startIndex >= sorted.length) startIndex = 0;
-
-    String initialUrl = '';
-    try {
-      final fullData = await pikpak.getFileDetails(
-        sorted[startIndex].file['id'].toString(),
-      );
-      initialUrl = pikpak.getStreamingUrl(fullData) ?? '';
-    } catch (_) {
-      return null;
-    }
-    if (initialUrl.isEmpty) return null;
-
-    final entries = <PlaylistEntry>[];
-    for (var i = 0; i < sorted.length; i++) {
-      final entry = sorted[i];
-      final episodeLabel = _formatPikPakTitle(
-        info: entry.seriesInfo,
-        fallback: entry.displayName,
-        isSeriesCollection: isSeriesCollection,
-      );
-      final combinedTitle = _combineTitle(
-        seriesTitle: entry.seriesInfo.title,
-        episodeLabel: episodeLabel,
-        isSeriesCollection: isSeriesCollection,
-        fallback: entry.displayName,
-      );
-      entries.add(
-        PlaylistEntry(
-          url: i == startIndex ? initialUrl : '',
-          title: combinedTitle,
-          relativePath: entry.file['_fullPath'] as String?,
-          provider: 'pikpak',
-          pikpakFileId: entry.file['id']?.toString(),
-          sizeBytes: int.tryParse(entry.file['size']?.toString() ?? '0'),
-        ),
-      );
-    }
-    return entries.isEmpty ? null : entries;
-  }
-
-  static String _pikpakDisplayName(Map<String, dynamic> file) {
-    final name = file['name']?.toString() ?? '';
-    if (name.isNotEmpty) return FileUtils.getFileName(name);
-    return 'File ${file['id']}';
-  }
-
-  static String _formatPikPakTitle({
-    required SeriesInfo info,
-    required String fallback,
-    required bool isSeriesCollection,
-  }) {
-    if (!isSeriesCollection) return fallback;
-    final season = info.season;
-    final episode = info.episode;
-    if (info.isSeries && season != null && episode != null) {
-      final s = season.toString().padLeft(2, '0');
-      final e = episode.toString().padLeft(2, '0');
-      final desc = info.episodeTitle?.trim().isNotEmpty == true
-          ? info.episodeTitle!.trim()
-          : (info.title?.trim().isNotEmpty == true
-                ? info.title!.trim()
-                : fallback);
-      return 'S${s}E$e · $desc';
-    }
-    return fallback;
-  }
-
-  static String _combineTitle({
-    required String? seriesTitle,
-    required String episodeLabel,
-    required bool isSeriesCollection,
-    required String fallback,
-  }) {
-    if (!isSeriesCollection) return fallback;
-    final clean = seriesTitle?.replaceAll(RegExp(r'[._\-]+$'), '').trim();
-    if (clean != null && clean.isNotEmpty) return '$clean $episodeLabel';
-    return fallback;
-  }
-
-  static int _firstEpisodeIndex(List<SeriesInfo> infos) {
-    var startIndex = 0;
-    int? bestSeason;
-    int? bestEpisode;
-    for (var i = 0; i < infos.length; i++) {
-      final info = infos[i];
-      final season = info.season;
-      final episode = info.episode;
-      if (!info.isSeries || season == null || episode == null) continue;
-      final betterSeason = bestSeason == null || season < bestSeason;
-      final betterEpisode =
-          bestSeason != null &&
-          season == bestSeason &&
-          (bestEpisode == null || episode < bestEpisode);
-      if (betterSeason || betterEpisode) {
-        bestSeason = season;
-        bestEpisode = episode;
-        startIndex = i;
-      }
-    }
-    return startIndex;
-  }
+  ) => CloudPlaybackHelpers.orderBySeries(items, nameOf);
 
   // ── Acquisition URL ────────────────────────────────────────────────────────
 
@@ -6635,108 +5850,10 @@ class TorrentPlaybackService {
   }
 }
 
-/// Resolved add result carrying what each post-action branch needs.
-class _Resolved {
-  final String title;
-  final String? playUrl;
-  final List<String> downloadUrls;
-  final VoidCallback? openInTab;
-
-  /// Multi-file playlist (season packs); the launcher lazily resolves each
-  /// entry's URL from its provider metadata (torboxFileId / allDebridLink /
-  /// restrictedLink / premiumizePath / pikpakFileId). [startIndex] is the
-  /// first-episode entry to begin playback at.
-  final List<PlaylistEntry>? playlist;
-  final int startIndex;
-
-  /// The single resolved file's name (with extension) for download naming.
-  final String? fileName;
-
-  /// RD only: an unextracted RAR archive (multiple files, one link). The
-  /// provider "open" view isn't useful for these, so it's disabled.
-  final bool isRarArchive;
-
-  /// TorBox only: the torrent id, for the "Copy Download Link (Zip)" action.
-  final int? torboxTorrentId;
-
-  /// RD only: the account entry this add created (RD's addMagnet always makes
-  /// a fresh entry), so a rejected bound-source attempt can delete it again.
-  final String? rdTorrentId;
-
-  /// PikPak only: the drive entry (file/folder) this add created (PikPak's
-  /// addOfflineDownload always makes a fresh entry), so a rejected
-  /// bound-source attempt can delete it again.
-  final String? pikpakFileId;
-
-  // Single-file provider-native identifiers, captured so an "Add to playlist"
-  // item can be RE-RESOLVED after the direct URL expires (the playlist player
-  // re-derives a fresh link from these) — parity with the old per-provider
-  // playlist schema. Only the field for the resolved provider is set.
-  final String? restrictedLink; // RD: raw restricted link to re-unrestrict
-  final int? torboxFileId; // TorBox: file id to re-request a download link
-  final String? premiumizePath; // Premiumize: file path (matched on re-resolve)
-  final String? allDebridLink; // AllDebrid: locked link to re-unlock
-  // PikPak: the playable VIDEO-file id for a single (distinct from
-  // [pikpakFileId], which is the offline-download FOLDER id used for
-  // bound-source deletes). A playlist item must store the video-file id or the
-  // player can't get a streaming URL from a folder.
-  final String? pikpakVideoFileId;
-
-  const _Resolved({
-    required this.title,
-    this.playUrl,
-    this.downloadUrls = const [],
-    this.openInTab,
-    this.playlist,
-    this.startIndex = 0,
-    this.fileName,
-    this.isRarArchive = false,
-    this.torboxTorrentId,
-    this.rdTorrentId,
-    this.pikpakFileId,
-    this.restrictedLink,
-    this.torboxFileId,
-    this.premiumizePath,
-    this.allDebridLink,
-    this.pikpakVideoFileId,
-  });
-
-  bool get hasPlaylist => playlist != null && playlist!.length > 1;
-}
+typedef _Resolved = CloudPlaybackResult;
 
 /// Mutable flag the catalog-play flow polls to abort when the user taps Cancel
 /// on the poster loading mask (the mask dismisses itself; the flow just stops).
 class _PlaybackCancelToken {
   bool cancelled = false;
-}
-
-/// PikPak is still downloading — surfaced as a friendly, actionable message
-/// (not a raw "Could not resolve source: Exception" error), matching Home.
-class _PikPakStillProcessing implements Exception {
-  const _PikPakStillProcessing();
-}
-
-/// PikPak reported a hard failure (PHASE_TYPE_ERROR) — "Download failed".
-class _PikPakFailed implements Exception {
-  const _PikPakFailed();
-}
-
-/// One PikPak video file + its parsed series metadata, for playlist ordering.
-class _PikPakItem {
-  final Map<String, dynamic> file;
-  final SeriesInfo seriesInfo;
-  final String displayName;
-  const _PikPakItem({
-    required this.file,
-    required this.seriesInfo,
-    required this.displayName,
-  });
-}
-
-class _TorboxNotCached implements Exception {
-  const _TorboxNotCached();
-}
-
-class _PremiumizeNotCached implements Exception {
-  const _PremiumizeNotCached();
 }

@@ -1,0 +1,46 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install native test libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsqlite3-dev libsqlite3-0
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Analyze refactor surface
+        run: flutter analyze
+          lib/services/cloud
+          lib/services/torrent_playback_service.dart
+          lib/services/deep_link_service.dart
+          lib/services/backup_restore_service.dart
+          lib/services/download_service.dart
+          test/adversarial
+          test/support
+          test/cloud_playback_characterization_test.dart
+
+      - name: Run app tests
+        run: flutter test test --reporter compact

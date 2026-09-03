@@ -15,6 +15,7 @@ import 'mdblist/mdblist_calendar_service.dart';
 import 'mdblist/mdblist_continue_watching_service.dart';
 import 'mdblist/mdblist_service.dart';
 import 'mdblist/mdblist_sync_coordinator.dart';
+import 'cloud/cloud_credentials.dart';
 import 'pikpak_api_service.dart';
 import 'storage_service.dart';
 import 'stremio_service.dart';
@@ -67,12 +68,7 @@ class BackupRestoreService {
   static Future<Map<String, dynamic>> buildBackup({
     bool includeCredentials = true,
   }) async {
-    final realDebridKey = await StorageService.getApiKey();
-    final torboxKey = await StorageService.getTorboxApiKey();
-    final premiumizeKey = await StorageService.getPremiumizeApiKey();
-    final allDebridKey = await StorageService.getAllDebridApiKey();
-    final pikpakEmail = await StorageService.getPikPakEmail();
-    final pikpakPassword = await StorageService.getPikPakPassword();
+    final cloudSecrets = await CloudCredentials.backupSecrets();
     final traktAccess = await StorageService.getTraktAccessToken();
     final traktRefresh = await StorageService.getTraktRefreshToken();
     final traktExpiry = await StorageService.getTraktTokenExpiry();
@@ -173,20 +169,7 @@ class BackupRestoreService {
       'createdAt': DateTime.now().toUtc().toIso8601String(),
       'trackingPreferences': trackingPreferences,
       if (includeCredentials) ...{
-        if (realDebridKey != null && realDebridKey.isNotEmpty)
-          'realDebridApiKey': realDebridKey,
-        if (torboxKey != null && torboxKey.isNotEmpty)
-          'torboxApiKey': torboxKey,
-        if (premiumizeKey != null && premiumizeKey.isNotEmpty)
-          'premiumizeApiKey': premiumizeKey,
-        if (allDebridKey != null && allDebridKey.isNotEmpty)
-          'allDebridApiKey': allDebridKey,
-        if (pikpakEmail != null && pikpakEmail.isNotEmpty)
-          'pikpak': <String, dynamic>{
-            'email': pikpakEmail,
-            if (pikpakPassword != null && pikpakPassword.isNotEmpty)
-              'password': pikpakPassword,
-          },
+        ...cloudSecrets,
         if (traktAccess != null &&
             traktAccess.isNotEmpty &&
             traktRefresh != null &&

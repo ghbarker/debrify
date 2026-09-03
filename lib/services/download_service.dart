@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:path/path.dart' as path;
 import 'debrid_service.dart';
+import 'cloud/cloud_provider_registry.dart';
 import 'torbox_service.dart';
 import 'pikpak_api_service.dart';
 import 'package:background_downloader/background_downloader.dart';
@@ -83,6 +84,10 @@ class DownloadService {
   DownloadService._internal();
   static final DownloadService _instance = DownloadService._internal();
   static DownloadService get instance => _instance;
+
+  /// Credential key used to bind a download to a cloud account resource.
+  static String? credentialKeyForCloudProvider(String provider) =>
+      CloudProviderRegistry.credentialKeyFor(provider);
 
   final StreamController<TaskProgressUpdate> _progressController =
       StreamController.broadcast();
