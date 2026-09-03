@@ -43,8 +43,9 @@ Playback add/resolve no longer lives in a five-way `switch` inside
   `label`/`code`/`gradient`/`icon` (no `rd`/`realdebrid` parse), plus
   `catalogChip` / `catalogTitle` which *do* parse Stremio's `realdebrid` /
   `auto`.
-- **Bind-source cloud browsers** (Premiumize / AllDebrid / PikPak) go through
-  `CloudBrowseSelectSource`.
+- **Bind-source cloud browsers** go through `CloudBrowseSelectSource` (playback
+  id only — `rd` does not open Real-Debrid). Catalog / Trakt / aggregated RD vs
+  TorBox pickers use `pushRdOrTorbox`.
 - **Backups** pick up API keys from `CloudCredentials.backupSecrets()`.
 - **Tests:** add a `FakeCloudProvider` case in `test/adversarial/provider_matrix_test.dart`.
 
@@ -135,7 +136,7 @@ real URLs and downloads enqueue those URLs directly.
   per-result-card button (`buildPremiumizeButton`), Quick Play next-retry,
   post-torrent-action helpers, `_enabledServicesCount`, in-player source
   switching (`_resolveSourceViaPremiumize`), not-cached "add anyway".
-- Loading overlay: `DebridLoadingOverlay.showPremiumize`.
+- Loading overlay: `DebridLoadingOverlay.showForPlaybackId`.
 
 ## 10. Cache check during search (DONE for Premiumize)
 Show a provider "cached" badge on search results (mirrors Torbox).
@@ -188,9 +189,11 @@ on replay — no persistent transfer id needed.
   directdl → find episode via `_findEpisodeInFilenames` / largest for movie →
   playlist of direct links → `_launchBoundSourcePlayer`). Removes the bound
   source if it no longer resolves.
-- **Edit Source UI label:** add a `case 'premiumize'` (color + 'Premiumize') to
-  the `serviceLabel` switch in `catalog_browser.dart`,
-  `trakt/trakt_results_view.dart`, and `aggregated_search_results.dart`.
+- **Edit Source UI label:** add `displayName` and a bind-source color on
+  `CloudProviderChrome.sourceChip`. Home, catalog, Trakt, and aggregated search
+  all read that. Do not reuse playback `gradient` (bind-source TorBox is blue).
+  The RD/TorBox select-source sheet uses different accents (`rdSheetAccent` /
+  `torboxSheetAccent`) on purpose.
 
 ## 13. Bulk add (DONE for Premiumize)
 Multi-select torrents → add all to the provider at once.

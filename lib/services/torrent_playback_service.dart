@@ -5062,7 +5062,11 @@ class TorrentPlaybackService {
     if (apiKey.isEmpty) return;
     if (!context.mounted) return;
     final rootNav = Navigator.of(context, rootNavigator: true);
-    DebridLoadingOverlay.showPremiumize(context, torrentName);
+    DebridLoadingOverlay.showForPlaybackId(
+      context,
+      CloudProviderId.premiumize.playbackId,
+      torrentName,
+    );
     // Only the (slow) ZIP generation is covered by the overlay. Popping happens
     // exactly once — the post-success clipboard/download step runs in its own
     // guard so a failure there can NEVER pop a second (underlying) route.

@@ -6,6 +6,7 @@ import '../theme/app_surface.dart';
 import '../theme/widgets/glass_surface.dart';
 import '../theme/widgets/themed_artwork.dart';
 import '../utils/tv_keys.dart';
+import '../services/cloud/cloud_provider_chrome.dart';
 
 /// Landscape playlist card optimized for Android TV horizontal scrolling.
 ///
@@ -118,32 +119,6 @@ class _PlaylistLandscapeCardState extends State<PlaylistLandscapeCard> {
     });
   }
 
-  String _prettifyProvider(String? raw) {
-    if (raw == null || raw.isEmpty) return 'RD';
-    switch (raw.toLowerCase()) {
-      case 'realdebrid':
-      case 'real-debrid':
-      case 'real_debrid':
-        return 'RD';
-      case 'torbox':
-        return 'TB';
-      case 'pikpak':
-      case 'pik-pak':
-      case 'pik_pak':
-        return 'PP';
-      case 'premiumize':
-        return 'PM';
-      case 'webdav':
-        return 'DV';
-      case 'alldebrid':
-      case 'all-debrid':
-      case 'all_debrid':
-        return 'AD';
-      default:
-        return raw.substring(0, 2).toUpperCase();
-    }
-  }
-
   void _showActionMenu(BuildContext context) {
     final title = widget.item['title'] as String? ?? 'Untitled';
     final posterUrl = widget.item['posterUrl'] as String?;
@@ -156,7 +131,9 @@ class _PlaylistLandscapeCardState extends State<PlaylistLandscapeCard> {
       builder: (context) => _LandscapeActionSheet(
         title: title,
         posterUrl: posterUrl,
-        provider: provider != null ? _prettifyProvider(provider) : null,
+        provider: provider != null
+            ? CloudProviderChrome.playlistBadge(provider)
+            : null,
         hasProgress: widget.onClearProgress != null,
         onPlay: () {
           Navigator.pop(context);

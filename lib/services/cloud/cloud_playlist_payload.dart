@@ -42,8 +42,8 @@ class CloudPlaylistPayload {
     CloudPlaybackResult r,
     bool isPack,
   ) {
-    switch (provider) {
-      case 'debrid':
+    switch (CloudProviderId.fromPlaybackId(provider)) {
+      case CloudProviderId.debrid:
         if (r.rdTorrentId != null) item['rdTorrentId'] = r.rdTorrentId;
         if (!isPack) {
           item['url'] = '';
@@ -51,8 +51,7 @@ class CloudPlaylistPayload {
             item['restrictedLink'] = r.restrictedLink;
           }
         }
-        break;
-      case 'torbox':
+      case CloudProviderId.torbox:
         item['torboxTorrentId'] = r.torboxTorrentId;
         if (isPack) {
           item['torboxFileIds'] = [
@@ -62,18 +61,15 @@ class CloudPlaylistPayload {
         } else if (r.torboxFileId != null) {
           item['torboxFileId'] = r.torboxFileId;
         }
-        break;
-      case 'premiumize':
+      case CloudProviderId.premiumize:
         if (!isPack && r.premiumizePath != null) {
           item['premiumizePath'] = r.premiumizePath;
         }
-        break;
-      case 'alldebrid':
+      case CloudProviderId.alldebrid:
         if (!isPack && r.allDebridLink != null) {
           item['allDebridLink'] = r.allDebridLink;
         }
-        break;
-      case 'pikpak':
+      case CloudProviderId.pikpak:
         if (isPack) {
           item['pikpakFileId'] = r.pikpakFileId;
           item['pikpakFileIds'] = [
@@ -83,6 +79,7 @@ class CloudPlaylistPayload {
         } else {
           item['pikpakFileId'] = r.pikpakVideoFileId ?? r.pikpakFileId;
         }
+      case null:
         break;
     }
   }

@@ -3,18 +3,17 @@ import 'package:flutter/material.dart';
 import '../series_source_service.dart';
 import 'cloud_provider_id.dart';
 
-/// Flutter chrome for playback ids and a few non-cloud loader ids.
+/// Flutter colors/icons. String identity lives on [CloudProviderId].
 ///
-/// Cloud string identity ([CloudProviderId.displayName], [CloudProviderId.chipCode],
-/// [CloudProviderId.overlayTitle]) lives on the enum so this file only maps
-/// colors/icons and ids Flutter owns (`preparing`, `stream`, local/addon).
-///
-/// [label] / [code] / [gradient] / [icon] match **playback** ids only — do not
-/// parse `rd` / `realdebrid` here; [TorrentPlaybackService._label] historically
-/// passed those strings through unchanged. Catalog surfaces use [catalogChip]
-/// / [catalogTitle], which do parse aliases.
+/// Lookup rules, on purpose:
+/// - [label]/[code]/[gradient]/[icon]: exact playback id (`debrid`, not `rd`)
+/// - [catalogChip]/[catalogTitle]: [CloudProviderId.tryParse]; `auto` → AUTO
+/// - [playlistBadge]: playlist JSON; empty → RD, `webdav` → DV, else two letters
+/// - [sourceChip]: stored id (`rd`); local is `Local`, not [label]'s `On-device`
 class CloudProviderChrome {
   CloudProviderChrome._();
+
+  static const _indigo = [Color(0xFF6366F1), Color(0xFF4338CA)];
 
   static String label(String provider) {
     switch (provider) {
@@ -32,7 +31,6 @@ class CloudProviderChrome {
     }
   }
 
-  /// Two-letter glyph for the Pipeline loader chip.
   static String code(String provider) {
     switch (provider) {
       case 'preparing':
@@ -66,10 +64,7 @@ class CloudProviderChrome {
         Color(0xFF26A69A),
         Color(0xFF00796B),
       ],
-      CloudProviderId.pikpak || null => const [
-        Color(0xFF6366F1),
-        Color(0xFF4338CA),
-      ],
+      CloudProviderId.pikpak || null => _indigo,
     };
   }
 
@@ -84,16 +79,65 @@ class CloudProviderChrome {
     };
   }
 
-  /// Catalog / Stremio TV ids use `realdebrid` instead of playback `debrid`.
-  /// `auto` and unknown strings are `AUTO` (not a guess at the first letter).
+  /// `auto` / unknown → `AUTO`, not the first letter of the string.
   static String catalogChip(String provider) {
     final id = CloudProviderId.tryParse(provider);
     if (id == null) return 'AUTO';
     return id.chipCode;
   }
 
-  /// Null when [provider] is not a known cloud id so the caller can render Auto.
   static String? catalogTitle(String provider) {
     return CloudProviderId.tryParse(provider)?.displayName;
+  }
+
+  /// Playlist card glyph. Not [catalogChip]: empty is RD, unknown is two
+  /// letters, WebDAV is DV.
+  static String playlistBadge(String? raw) {
+    if (raw == null || raw.isEmpty) return CloudProviderId.debrid.chipCode;
+    switch (raw.toLowerCase()) {
+      case 'webdav':
+        return 'DV';
+      case 'pik-pak':
+      case 'pik_pak':
+        return CloudProviderId.pikpak.chipCode;
+      default:
+        return CloudProviderId.tryParse(raw)?.chipCode ??
+            raw.substring(0, 2).toUpperCase();
+    }
+  }
+
+  /// Bind-source chip. TorBox is blue here; playback [gradient] is purple.
+  static ({String label, Color color}) sourceChip(String stored) => (
+        label: _sourceLabel(stored),
+        color: _sourceColor(stored),
+      );
+
+  static String _sourceLabel(String stored) {
+    switch (stored) {
+      case SeriesSource.localService:
+        return 'Local';
+      case SeriesSource.addonDirectService:
+        return 'Direct addon';
+      default:
+        return CloudProviderId.fromStoredId(stored)?.displayName ?? stored;
+    }
+  }
+
+  static Color _sourceColor(String stored) {
+    switch (stored) {
+      case SeriesSource.localService:
+        return const Color(0xFF60A5FA);
+      case SeriesSource.addonDirectService:
+        return const Color(0xFFA78BFA);
+      default:
+        return switch (CloudProviderId.fromStoredId(stored)) {
+          CloudProviderId.debrid => const Color(0xFF10B981),
+          CloudProviderId.torbox => const Color(0xFF3B82F6),
+          CloudProviderId.pikpak => const Color(0xFFF59E0B),
+          CloudProviderId.premiumize => const Color(0xFFFB923C),
+          CloudProviderId.alldebrid => const Color(0xFF26A69A),
+          null => Colors.white54,
+        };
+    }
   }
 }

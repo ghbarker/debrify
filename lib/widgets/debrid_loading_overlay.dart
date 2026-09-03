@@ -4,19 +4,12 @@ import 'package:flutter/material.dart';
 import '../services/cloud/cloud_provider_chrome.dart';
 import '../services/cloud/cloud_provider_id.dart';
 
-/// Premium loading overlay shown when adding a torrent to a debrid service.
-/// Replaces the old Dialog-based loader with a cinematic full-screen overlay.
+/// Full-screen add-to-debrid overlay (replaces the old dialog spinner).
 class DebridLoadingOverlay {
   DebridLoadingOverlay._();
 
-  /// Show the loading overlay.
-  ///
-  /// When [suppressVisual] is true the route is still pushed and dismissed
-  /// exactly as normal (so every existing dismiss/pop call site keeps
-  /// working unchanged), but it renders fully transparent with no content.
-  /// Used during movie Quick Play, where the caller already shows its own
-  /// continuous loading mask underneath and a second visible overlay would
-  /// be jarring.
+  /// When [suppressVisual] is true the route is still pushed so paired
+  /// [dismiss] calls keep working, but it paints nothing (Quick Play mask).
   static void show(
     BuildContext context, {
     required String provider,
@@ -59,17 +52,12 @@ class DebridLoadingOverlay {
     );
   }
 
-  /// Dismiss the overlay.
   static void dismiss(BuildContext context) {
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     }
   }
 
-  /// Show PikPak loading overlay with progress tracking.
-  /// Returns a [PikPakOverlayHandle] to update progress and show timeout options.
-  /// The [onDismissed] callback fires with the pop result when the user taps
-  /// 'background', 'view_later', or 'cancel' — or null if dismissed by polling.
   static PikPakOverlayHandle showPikPak(
     BuildContext context,
     String torrentName, {
@@ -105,62 +93,7 @@ class DebridLoadingOverlay {
     );
   }
 
-  /// Provider-specific helpers
-  static void showRealDebrid(
-    BuildContext context,
-    String torrentName, {
-    bool suppressVisual = false,
-  }) {
-    _showCloud(
-      context,
-      CloudProviderId.debrid,
-      torrentName: torrentName,
-      suppressVisual: suppressVisual,
-    );
-  }
-
-  static void showTorbox(
-    BuildContext context,
-    String torrentName, {
-    bool suppressVisual = false,
-  }) {
-    _showCloud(
-      context,
-      CloudProviderId.torbox,
-      torrentName: torrentName,
-      suppressVisual: suppressVisual,
-    );
-  }
-
-  static void showPremiumize(
-    BuildContext context,
-    String torrentName, {
-    bool suppressVisual = false,
-  }) {
-    _showCloud(
-      context,
-      CloudProviderId.premiumize,
-      torrentName: torrentName,
-      suppressVisual: suppressVisual,
-    );
-  }
-
-  static void showAllDebrid(
-    BuildContext context,
-    String torrentName, {
-    bool suppressVisual = false,
-  }) {
-    _showCloud(
-      context,
-      CloudProviderId.alldebrid,
-      torrentName: torrentName,
-      suppressVisual: suppressVisual,
-    );
-  }
-
-  /// Playback-id overlay used by [TorrentPlaybackService._showLoading].
-  /// Matches [CloudProviderId.playbackId] only (`debrid`, not `rd`).
-  /// TorBox's overlay title stays `Torbox` (not `TorBox`).
+  /// Playback id only (`debrid`, not `rd`). Title is [CloudProviderId.overlayTitle].
   static void showForPlaybackId(
     BuildContext context,
     String provider,

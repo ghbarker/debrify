@@ -7,6 +7,7 @@ import '../theme/app_theme_scope.dart';
 import '../theme/widgets/glass_surface.dart';
 import '../theme/widgets/themed_artwork.dart';
 import '../utils/tv_keys.dart';
+import '../services/cloud/cloud_provider_chrome.dart';
 
 /// Portrait playlist card optimized for grid layouts on desktop/tablet/mobile.
 ///
@@ -84,7 +85,9 @@ class _PlaylistGridCardState extends State<PlaylistGridCard> {
       builder: (context) => _PlaylistActionSheet(
         title: title,
         posterUrl: posterUrl,
-        provider: provider != null ? _prettifyProvider(provider) : null,
+        provider: provider != null
+            ? CloudProviderChrome.playlistBadge(provider)
+            : null,
         isFavorited: widget.isFavorited,
         hasProgress: widget.onClearProgress != null,
         hasFavoriteToggle: widget.onToggleFavorite != null,
@@ -114,32 +117,6 @@ class _PlaylistGridCardState extends State<PlaylistGridCard> {
         },
       ),
     );
-  }
-
-  String _prettifyProvider(String? raw) {
-    if (raw == null || raw.isEmpty) return 'RD';
-    switch (raw.toLowerCase()) {
-      case 'realdebrid':
-      case 'real-debrid':
-      case 'real_debrid':
-        return 'RD';
-      case 'torbox':
-        return 'TB';
-      case 'pikpak':
-      case 'pik-pak':
-      case 'pik_pak':
-        return 'PP';
-      case 'premiumize':
-        return 'PM';
-      case 'webdav':
-        return 'DV';
-      case 'alldebrid':
-      case 'all-debrid':
-      case 'all_debrid':
-        return 'AD';
-      default:
-        return raw.substring(0, 2).toUpperCase();
-    }
   }
 
   @override
@@ -303,7 +280,7 @@ class _PlaylistGridCardState extends State<PlaylistGridCard> {
                             borderRadius: app.shape.br(6),
                           ),
                           child: Text(
-                            _prettifyProvider(provider),
+                            CloudProviderChrome.playlistBadge(provider),
                             style: TextStyle(
                               // Ink chosen against the brand swatch, not the
                               // page: the badge stays Netflix red everywhere.
