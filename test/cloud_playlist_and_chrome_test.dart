@@ -1,3 +1,6 @@
+import 'package:debrify/screens/alldebrid/alldebrid_files_screen.dart';
+import 'package:debrify/screens/pikpak/pikpak_files_screen.dart';
+import 'package:debrify/screens/premiumize/premiumize_files_screen.dart';
 import 'package:debrify/screens/video_player/models/playlist_entry.dart';
 import 'package:debrify/services/cloud/cloud_playback_result.dart';
 import 'package:debrify/services/cloud/cloud_playlist_payload.dart';
@@ -5,7 +8,7 @@ import 'package:debrify/services/cloud/cloud_provider_chrome.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
 import 'package:debrify/services/series_source_service.dart';
 import 'package:debrify/services/storage/cloud_secret_prefs.dart';
-import 'package:debrify/services/storage/resume_prefs.dart';
+import 'package:debrify/widgets/cloud_browse_select_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,9 +23,21 @@ void main() {
         'Direct addon',
       );
       expect(CloudProviderChrome.label('mystery'), 'mystery');
+      expect(CloudProviderChrome.label('rd'), 'rd');
+      expect(CloudProviderChrome.label('realdebrid'), 'realdebrid');
       expect(CloudProviderChrome.code('debrid'), 'RD');
       expect(CloudProviderChrome.code(''), '·');
       expect(CloudProviderChrome.code('xyz'), 'X');
+    });
+
+    test('TorBox display name is not the overlay title', () {
+      expect(CloudProviderId.torbox.displayName, 'TorBox');
+      expect(CloudProviderId.torbox.overlayTitle, 'Torbox');
+      expect(CloudProviderId.debrid.displayName, 'Real-Debrid');
+      expect(CloudProviderId.debrid.overlayTitle, 'Real-Debrid');
+      expect(CloudProviderId.debrid.playlistStoredProvider, 'realdebrid');
+      expect(CloudProviderId.fromPlaybackId('rd'), isNull);
+      expect(CloudProviderId.tryParse('rd'), CloudProviderId.debrid);
     });
 
     test('unknown providers share the indigo fallback gradient', () {
@@ -34,6 +49,17 @@ void main() {
         CloudProviderChrome.icon('nope'),
         Icons.cloud_download_rounded,
       );
+    });
+
+    test('catalog chips treat realdebrid as RD and auto as AUTO', () {
+      expect(CloudProviderChrome.catalogChip('realdebrid'), 'RD');
+      expect(CloudProviderChrome.catalogChip('debrid'), 'RD');
+      expect(CloudProviderChrome.catalogChip('rd'), 'RD');
+      expect(CloudProviderChrome.catalogChip('torbox'), 'TB');
+      expect(CloudProviderChrome.catalogChip('auto'), 'AUTO');
+      expect(CloudProviderChrome.catalogChip('webdav'), 'AUTO');
+      expect(CloudProviderChrome.catalogTitle('realdebrid'), 'Real-Debrid');
+      expect(CloudProviderChrome.catalogTitle('auto'), isNull);
     });
   });
 
@@ -97,7 +123,7 @@ void main() {
     });
   });
 
-  group('CloudSecretPrefs / ResumePrefs', () {
+  group('CloudSecretPrefs', () {
     test('keys match CloudProviderId.credentialKey', () {
       expect(
         CloudSecretPrefs.realDebridApiKey,
@@ -113,8 +139,61 @@ void main() {
         CloudProviderId.alldebrid.credentialKey,
       );
       expect(CloudSecretPrefs.pikpakEmail, CloudProviderId.pikpak.credentialKey);
-      expect(RdPrefs.apiKeyKey, 'real_debrid_api_key');
-      expect(ResumePrefs.videoResumeKey, 'video_resume_v1');
+    });
+  });
+
+  group('CloudBrowseSelectSource', () {
+    Future<void> noop(SeriesSource _) async {}
+
+    test('only premiumize, alldebrid, and pikpak open a browser', () {
+      expect(
+        CloudBrowseSelectSource.page(
+          provider: 'premiumize',
+          query: 'q',
+          onSourceSelected: noop,
+        ),
+        isA<PremiumizeFilesScreen>(),
+      );
+      expect(
+        CloudBrowseSelectSource.page(
+          provider: 'alldebrid',
+          query: 'q',
+          onSourceSelected: noop,
+        ),
+        isA<AllDebridFilesScreen>(),
+      );
+      expect(
+        CloudBrowseSelectSource.page(
+          provider: 'pikpak',
+          query: 'q',
+          onSourceSelected: noop,
+        ),
+        isA<PikPakFilesScreen>(),
+      );
+      expect(
+        CloudBrowseSelectSource.page(
+          provider: 'debrid',
+          query: 'q',
+          onSourceSelected: noop,
+        ),
+        isNull,
+      );
+      expect(
+        CloudBrowseSelectSource.page(
+          provider: 'rd',
+          query: 'q',
+          onSourceSelected: noop,
+        ),
+        isNull,
+      );
+      expect(
+        CloudBrowseSelectSource.page(
+          provider: 'torbox',
+          query: 'q',
+          onSourceSelected: noop,
+        ),
+        isNull,
+      );
     });
   });
 }

@@ -21,9 +21,12 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 - **`services/torrent_playback_service.dart`** 🔴 — provider-agnostic play/add/bind pipeline.
   Magnet add/resolve now goes through `services/cloud/` (`CloudProviderPort` +
   `CloudProviderRegistry`). Playlist JSON, labels, and download credential
-  keys live there too. String ids still persist (`debrid`/`rd`, `torbox`, …).
-  Cloud secrets/resume key names sit in `services/storage/` (`RdPrefs`,
-  `ResumePrefs`); `StorageService` remains the public static API.
+  keys live there too. Bind-source PM/AD/PP browsers: `widgets/cloud_browse_select_source.dart`.
+  Cloud credential keys live in `CloudSecretPrefs` (must match
+  `CloudProviderId.credentialKey`); `StorageService` remains the public
+  static API. Display names / chips / overlay titles live on
+  `CloudProviderId`; `CloudProviderChrome` is Flutter colors/icons plus
+  non-cloud loader ids.
 - **`main.dart`** — app shell + nav branch (TV rail / desktop rail / `MobileFloatingNav`), tab indices.
 
 ## Search, sources & addons

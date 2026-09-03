@@ -31,7 +31,6 @@ import '../utils/json_isolate.dart';
 import '../utils/platform_util.dart';
 import 'tracking_scrobble_preferences.dart';
 import 'storage/cloud_secret_prefs.dart';
-import 'storage/resume_prefs.dart';
 
 /// Which ambient-trailer surface a sound/volume preference belongs to.
 ///
@@ -242,9 +241,9 @@ class StorageService {
       'pikpak_post_torrent_action';
   static const String _batteryOptStatusKey =
       'battery_opt_status_v1'; // granted|denied|never|unknown
-  static const String _videoResumeKey = ResumePrefs.videoResumeKey;
-  static const String _playbackStateKey = ResumePrefs.playbackStateKey;
-  static const String _continueWatchingKey = ResumePrefs.continueWatchingKey;
+  static const String _videoResumeKey = 'video_resume_v1';
+  static const String _playbackStateKey = 'playback_state_v1';
+  static const String _continueWatchingKey = 'continue_watching_v1';
   static const String localSeriesCompletionStateKey =
       'local_series_completion_v1';
   static const String localSeriesCalendarCheckedAtKey =
@@ -607,13 +606,19 @@ class StorageService {
   static const int _debrifyTvRandomStartPercentMax = 90;
 
   static Future<String?> getApiKey({bool forRemoteTransfer = false}) =>
-      RdPrefs.getApiKey(forRemoteTransfer: forRemoteTransfer);
+      CloudSecretPrefs.read(
+        CloudSecretPrefs.realDebridApiKey,
+        forRemoteTransfer: forRemoteTransfer,
+      );
 
-  static Future<bool> hasRealDebridCredential() => RdPrefs.hasCredential();
+  static Future<bool> hasRealDebridCredential() =>
+      CloudSecretPrefs.isConfigured(CloudSecretPrefs.realDebridApiKey);
 
-  static Future<void> saveApiKey(String apiKey) => RdPrefs.saveApiKey(apiKey);
+  static Future<void> saveApiKey(String apiKey) =>
+      CloudSecretPrefs.write(CloudSecretPrefs.realDebridApiKey, apiKey);
 
-  static Future<void> deleteApiKey() => RdPrefs.deleteApiKey();
+  static Future<void> deleteApiKey() =>
+      CloudSecretPrefs.delete(CloudSecretPrefs.realDebridApiKey);
 
   // Real-Debrid endpoint preference (for fallback to backup endpoint)
   static Future<String> getRdEndpoint() async {

@@ -16,14 +16,21 @@ Playback add/resolve no longer lives in a five-way `switch` inside
 - **New adapter:** `lib/services/cloud/<id>_cloud_provider.dart`
   implementing `isConfigured` + `addMagnet` → `CloudPlaybackResult`.
 - **Register** the adapter in `CloudProviderRegistry.production()`.
-- **Ids / credential keys / backup field names** go on `CloudProviderId`.
+- **Ids / credential keys / backup field names / display names / chip codes /
+  overlay titles / playlist stored ids** go on `CloudProviderId` (keep Flutter
+  out of the enum). `displayName` is `TorBox`; `overlayTitle` is `Torbox`.
 - **Credential reads** go through `CloudCredentials` (playback vs magnet
   configured flags differ: magnets also require the integration-enabled toggle).
 - **Downloads** bind with `DownloadService.enqueueCloudFile` /
   `credentialKeyForCloudProvider`.
 - **Playlist items** go through `CloudPlaylistPayload` (`realdebrid` id, empty
   URL on RD singles).
-- **Labels / pipeline chips** go through `CloudProviderChrome`.
+- **Pipeline chrome** goes through `CloudProviderChrome`: playback-id
+  `label`/`code`/`gradient`/`icon` (no `rd`/`realdebrid` parse), plus
+  `catalogChip` / `catalogTitle` which *do* parse Stremio's `realdebrid` /
+  `auto`.
+- **Bind-source cloud browsers** (Premiumize / AllDebrid / PikPak) go through
+  `CloudBrowseSelectSource`.
 - **Backups** pick up API keys from `CloudCredentials.backupSecrets()`.
 - **Tests:** add a `FakeCloudProvider` case in `test/adversarial/provider_matrix_test.dart`.
 

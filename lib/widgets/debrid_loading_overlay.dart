@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
+import '../services/cloud/cloud_provider_chrome.dart';
+import '../services/cloud/cloud_provider_id.dart';
+
 /// Premium loading overlay shown when adding a torrent to a debrid service.
 /// Replaces the old Dialog-based loader with a cinematic full-screen overlay.
 class DebridLoadingOverlay {
@@ -108,12 +111,10 @@ class DebridLoadingOverlay {
     String torrentName, {
     bool suppressVisual = false,
   }) {
-    show(
+    _showCloud(
       context,
-      provider: 'Real-Debrid',
+      CloudProviderId.debrid,
       torrentName: torrentName,
-      accentColor: const Color(0xFF10B981),
-      icon: Icons.cloud_download_rounded,
       suppressVisual: suppressVisual,
     );
   }
@@ -123,12 +124,10 @@ class DebridLoadingOverlay {
     String torrentName, {
     bool suppressVisual = false,
   }) {
-    show(
+    _showCloud(
       context,
-      provider: 'Torbox',
+      CloudProviderId.torbox,
       torrentName: torrentName,
-      accentColor: const Color(0xFF8B5CF6),
-      icon: Icons.flash_on_rounded,
       suppressVisual: suppressVisual,
     );
   }
@@ -138,12 +137,10 @@ class DebridLoadingOverlay {
     String torrentName, {
     bool suppressVisual = false,
   }) {
-    show(
+    _showCloud(
       context,
-      provider: 'Premiumize',
+      CloudProviderId.premiumize,
       torrentName: torrentName,
-      accentColor: const Color(0xFFF59E0B),
-      icon: Icons.workspace_premium_rounded,
       suppressVisual: suppressVisual,
     );
   }
@@ -153,12 +150,47 @@ class DebridLoadingOverlay {
     String torrentName, {
     bool suppressVisual = false,
   }) {
+    _showCloud(
+      context,
+      CloudProviderId.alldebrid,
+      torrentName: torrentName,
+      suppressVisual: suppressVisual,
+    );
+  }
+
+  /// Playback-id overlay used by [TorrentPlaybackService._showLoading].
+  /// Matches [CloudProviderId.playbackId] only (`debrid`, not `rd`).
+  /// TorBox's overlay title stays `Torbox` (not `TorBox`).
+  static void showForPlaybackId(
+    BuildContext context,
+    String provider,
+    String torrentName, {
+    String Function(String provider)? unknownLabel,
+  }) {
+    final id = CloudProviderId.fromPlaybackId(provider);
+    if (id == null) {
+      show(
+        context,
+        provider: unknownLabel?.call(provider) ?? provider,
+        torrentName: torrentName,
+      );
+      return;
+    }
+    _showCloud(context, id, torrentName: torrentName);
+  }
+
+  static void _showCloud(
+    BuildContext context,
+    CloudProviderId id, {
+    required String torrentName,
+    bool suppressVisual = false,
+  }) {
     show(
       context,
-      provider: 'AllDebrid',
+      provider: id.overlayTitle,
       torrentName: torrentName,
-      accentColor: const Color(0xFF26A69A),
-      icon: Icons.all_inclusive_rounded,
+      accentColor: CloudProviderChrome.gradient(id.playbackId).first,
+      icon: CloudProviderChrome.icon(id.playbackId),
       suppressVisual: suppressVisual,
     );
   }

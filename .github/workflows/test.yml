@@ -37,6 +37,8 @@ jobs:
         run: flutter analyze
           lib/services/cloud
           lib/services/storage
+          lib/widgets/cloud_browse_select_source.dart
+          lib/widgets/debrid_loading_overlay.dart
           test/adversarial
           test/support
           test/cloud_playback_characterization_test.dart

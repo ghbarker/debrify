@@ -49,21 +49,3 @@ class CloudSecretPrefs {
     return value != null && value.isNotEmpty;
   }
 }
-
-/// Real-Debrid credential slice. [StorageService.getApiKey] delegates here.
-class RdPrefs {
-  RdPrefs._();
-
-  static const apiKeyKey = CloudSecretPrefs.realDebridApiKey;
-
-  static Future<String?> getApiKey({bool forRemoteTransfer = false}) =>
-      CloudSecretPrefs.read(apiKeyKey, forRemoteTransfer: forRemoteTransfer);
-
-  static Future<void> saveApiKey(String apiKey) =>
-      CloudSecretPrefs.write(apiKeyKey, apiKey);
-
-  static Future<void> deleteApiKey() => CloudSecretPrefs.delete(apiKeyKey);
-
-  static Future<bool> hasCredential() =>
-      CloudSecretPrefs.isConfigured(apiKeyKey);
-}

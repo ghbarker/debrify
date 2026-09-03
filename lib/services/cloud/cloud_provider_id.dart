@@ -45,6 +45,39 @@ enum CloudProviderId {
     pikpak => null,
   };
 
+  /// Action-sheet / catalog title. TorBox uses this spelling; the loading
+  /// overlay uses [overlayTitle] (`Torbox`) so existing copy stays put.
+  String get displayName => switch (this) {
+    debrid => 'Real-Debrid',
+    torbox => 'TorBox',
+    premiumize => 'Premiumize',
+    alldebrid => 'AllDebrid',
+    pikpak => 'PikPak',
+  };
+
+  /// Playback loader title. Distinct from [displayName] only for TorBox.
+  String get overlayTitle => this == torbox ? 'Torbox' : displayName;
+
+  /// Two-letter pipeline / catalog chip.
+  String get chipCode => switch (this) {
+    debrid => 'RD',
+    torbox => 'TB',
+    premiumize => 'PM',
+    alldebrid => 'AD',
+    pikpak => 'PP',
+  };
+
+  /// Playlist JSON `provider` field. Real-Debrid is `realdebrid`, not `debrid`.
+  String get playlistStoredProvider => this == debrid ? 'realdebrid' : name;
+
+  /// [playbackId] only (`debrid`, not `rd` / `realdebrid`).
+  static CloudProviderId? fromPlaybackId(String provider) {
+    for (final id in values) {
+      if (id.playbackId == provider) return id;
+    }
+    return null;
+  }
+
   static CloudProviderId? tryParse(String raw) {
     switch (raw.trim().toLowerCase()) {
       case 'debrid':
