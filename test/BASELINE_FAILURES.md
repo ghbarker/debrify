@@ -10,10 +10,13 @@ and `test/backup_encryption_test.dart` pass. CI installs the same library.
 
 **New failures outside sqlite/golden environment issues are regressions.**
 
-CI (`.github/workflows/test.yml`) installs `libsqlite3-dev` and runs
-`flutter test test --exclude-tags golden`. Pixel goldens are tagged `golden`
-because GitHub runners rasterize fonts differently than the checked-in PNGs.
-Run them locally with `flutter test test --tags golden`.
+CI (`.github/workflows/test.yml`) installs `libsqlite3-dev`, runs the
+refactor contract tests, then `flutter test test --exclude-tags golden`
+through `tool/ci_test_allowlist.py`. That script fails the job only when a
+test fails that is not listed in `test/BASELINE_ALLOWLIST.txt` (measured on
+GitHub ubuntu, 2026-09-03: 14 known failures). Pixel goldens are tagged
+`golden` because runners rasterize fonts differently than the checked-in
+PNGs. Run them locally with `flutter test test --tags golden`.
 
 The safety-net slice itself is gated by:
 

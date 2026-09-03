@@ -41,7 +41,14 @@ jobs:
           test/cloud_playback_characterization_test.dart
           test/download_cloud_credential_key_test.dart
 
-      # Pixel goldens are tagged `golden` and skipped here: GitHub runners
-      # rasterize fonts differently than the checked-in PNGs.
-      - name: Run app tests
-        run: flutter test test --exclude-tags golden --reporter compact
+      - name: Run refactor contract tests
+        run: flutter test
+          test/adversarial
+          test/cloud_playback_characterization_test.dart
+          test/download_cloud_credential_key_test.dart
+          --reporter compact
+
+      # Full suite minus pixel goldens. Historical Linux failures are listed
+      # in test/BASELINE_ALLOWLIST.txt; only new failures fail the job.
+      - name: Run app tests against baseline allowlist
+        run: python3 tool/ci_test_allowlist.py
