@@ -3,16 +3,9 @@ import 'package:flutter/material.dart';
 import '../series_source_service.dart';
 import 'cloud_provider_id.dart';
 
-/// Flutter chrome for playback ids and a few non-cloud loader ids.
-///
-/// Cloud string identity ([CloudProviderId.displayName], [CloudProviderId.chipCode],
-/// [CloudProviderId.overlayTitle]) lives on the enum so this file only maps
-/// colors/icons and ids Flutter owns (`preparing`, `stream`, local/addon).
-///
-/// [label] / [code] / [gradient] / [icon] match **playback** ids only — do not
-/// parse `rd` / `realdebrid` here; [TorrentPlaybackService._label] historically
-/// passed those strings through unchanged. Catalog surfaces use [catalogChip]
-/// / [catalogTitle], which do parse aliases.
+/// Playback chrome uses exact playback ids. Catalog/bind-source helpers parse
+/// stored ids. [label] does not map `rd`; [sourceLabel] maps `rd` → Real-Debrid
+/// and local → `Local` (not [label]'s `On-device`).
 class CloudProviderChrome {
   CloudProviderChrome._();
 
@@ -95,5 +88,37 @@ class CloudProviderChrome {
   /// Null when [provider] is not a known cloud id so the caller can render Auto.
   static String? catalogTitle(String provider) {
     return CloudProviderId.tryParse(provider)?.displayName;
+  }
+
+  /// Edit-Sources chip. Stored ids (`rd`), not playback (`debrid`).
+  static String sourceLabel(String stored) {
+    switch (stored) {
+      case SeriesSource.localService:
+        return 'Local';
+      case SeriesSource.addonDirectService:
+        return 'Direct addon';
+      default:
+        return CloudProviderId.fromStoredId(stored)?.displayName ?? stored;
+    }
+  }
+
+  /// Edit-Sources chip color. Not [gradient] — TorBox is blue here, purple
+  /// on the playback loader.
+  static Color sourceColor(String stored) {
+    switch (stored) {
+      case SeriesSource.localService:
+        return const Color(0xFF60A5FA);
+      case SeriesSource.addonDirectService:
+        return const Color(0xFFA78BFA);
+      default:
+        return switch (CloudProviderId.fromStoredId(stored)) {
+          CloudProviderId.debrid => const Color(0xFF10B981),
+          CloudProviderId.torbox => const Color(0xFF3B82F6),
+          CloudProviderId.pikpak => const Color(0xFFF59E0B),
+          CloudProviderId.premiumize => const Color(0xFFFB923C),
+          CloudProviderId.alldebrid => const Color(0xFF26A69A),
+          null => Colors.white54,
+        };
+    }
   }
 }

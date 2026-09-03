@@ -174,9 +174,10 @@ on replay — no persistent transfer id needed.
   directdl → find episode via `_findEpisodeInFilenames` / largest for movie →
   playlist of direct links → `_launchBoundSourcePlayer`). Removes the bound
   source if it no longer resolves.
-- **Edit Source UI label:** add a `case 'premiumize'` (color + 'Premiumize') to
-  the `serviceLabel` switch in `catalog_browser.dart`,
-  `trakt/trakt_results_view.dart`, and `aggregated_search_results.dart`.
+- **Edit Source UI label:** add `displayName` and a bind-source color on
+  `CloudProviderChrome.sourceLabel` / `sourceColor`. Home, catalog, Trakt, and
+  aggregated search all read those. Do not reuse playback `gradient` (bind-source
+  TorBox is blue).
 
 ## 13. Bulk add (DONE for Premiumize)
 Multi-select torrents → add all to the provider at once.

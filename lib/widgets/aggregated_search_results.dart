@@ -12,6 +12,7 @@ import '../services/trakt/trakt_service.dart';
 import '../services/simkl/simkl_service.dart';
 import '../services/local_bound_source_service.dart';
 import '../services/series_source_service.dart';
+import '../services/cloud/cloud_provider_chrome.dart';
 import '../services/storage_service.dart';
 import '../screens/debrid_downloads_screen.dart';
 import '../screens/stremio_tv/widgets/stremio_tv_catalog_picker_dialog.dart';
@@ -1136,34 +1137,8 @@ class AggregatedSearchResultsState extends State<AggregatedSearchResults> {
     required VoidCallback onDelete,
     bool showDragHandle = true,
   }) {
-    Color serviceColor;
-    String serviceLabel;
-    switch (source.debridService) {
-      case 'rd':
-        serviceColor = const Color(0xFF10B981);
-        serviceLabel = 'Real-Debrid';
-      case 'torbox':
-        serviceColor = const Color(0xFF3B82F6);
-        serviceLabel = 'TorBox';
-      case 'pikpak':
-        serviceColor = const Color(0xFFF59E0B);
-        serviceLabel = 'PikPak';
-      case 'premiumize':
-        serviceColor = const Color(0xFFFB923C);
-        serviceLabel = 'Premiumize';
-      case 'alldebrid':
-        serviceColor = const Color(0xFF26A69A);
-        serviceLabel = 'AllDebrid';
-      case SeriesSource.localService:
-        serviceColor = const Color(0xFF60A5FA);
-        serviceLabel = 'Local';
-      case SeriesSource.addonDirectService:
-        serviceColor = const Color(0xFFA78BFA);
-        serviceLabel = 'Direct addon';
-      default:
-        serviceColor = Colors.white54;
-        serviceLabel = source.debridService;
-    }
+    final serviceColor = CloudProviderChrome.sourceColor(source.debridService);
+    final serviceLabel = CloudProviderChrome.sourceLabel(source.debridService);
 
     return Container(
       key: key,

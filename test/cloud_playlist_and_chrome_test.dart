@@ -61,6 +61,32 @@ void main() {
       expect(CloudProviderChrome.catalogTitle('realdebrid'), 'Real-Debrid');
       expect(CloudProviderChrome.catalogTitle('auto'), isNull);
     });
+
+    test('bind-source chips use stored ids and Local, not playback chrome', () {
+      expect(CloudProviderChrome.sourceLabel('rd'), 'Real-Debrid');
+      expect(CloudProviderChrome.sourceLabel('debrid'), 'debrid');
+      expect(CloudProviderChrome.sourceLabel('torbox'), 'TorBox');
+      expect(
+        CloudProviderChrome.sourceLabel(SeriesSource.localService),
+        'Local',
+      );
+      expect(
+        CloudProviderChrome.label(SeriesSource.localService),
+        'On-device',
+      );
+      expect(
+        CloudProviderChrome.sourceColor('torbox'),
+        const Color(0xFF3B82F6),
+      );
+      expect(
+        CloudProviderChrome.gradient('torbox').first,
+        const Color(0xFF8B5CF6),
+      );
+      expect(
+        CloudProviderChrome.sourceColor('nope'),
+        Colors.white54,
+      );
+    });
   });
 
   group('CloudPlaylistPayload', () {

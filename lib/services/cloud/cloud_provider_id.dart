@@ -78,6 +78,14 @@ enum CloudProviderId {
     return null;
   }
 
+  /// [storedId] only (`rd`, not `debrid` / `realdebrid`).
+  static CloudProviderId? fromStoredId(String stored) {
+    for (final id in values) {
+      if (id.storedId == stored) return id;
+    }
+    return null;
+  }
+
   static CloudProviderId? tryParse(String raw) {
     switch (raw.trim().toLowerCase()) {
       case 'debrid':
