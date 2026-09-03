@@ -34,9 +34,12 @@ import '../widgets/not_cached_dialog.dart';
 import '../widgets/pipeline_loading_overlay.dart';
 import '../widgets/provider_picker_dialog.dart';
 import 'alldebrid_service.dart';
+import 'cloud/cloud_credentials.dart';
 import 'cloud/cloud_exceptions.dart';
 import 'cloud/cloud_playback_helpers.dart';
 import 'cloud/cloud_playback_result.dart';
+import 'cloud/cloud_playlist_payload.dart';
+import 'cloud/cloud_provider_chrome.dart';
 import 'cloud/cloud_provider_id.dart';
 import 'cloud/cloud_provider_registry.dart';
 import 'cloud/pack_negative_cache.dart';
@@ -5062,9 +5065,6 @@ class TorrentPlaybackService {
     Torrent torrent,
     String provider,
   ) async {
-    final credentialKey = DownloadService.credentialKeyForCloudProvider(
-      provider,
-    );
     // Multi-file pack: let the user choose which files (parity with the old
     // per-file download dialog), then queue each — unlocking lazy debrid entries
     // on demand (RD/TorBox/AllDebrid resolve only the start file up front;
@@ -5076,15 +5076,14 @@ class TorrentPlaybackService {
       for (final e in chosen) {
         final url = await _resolveEntryUrl(e);
         if (url == null || url.isEmpty) continue;
-        try {
-          await DownloadService.instance.enqueueDownload(
-            credentialKey: credentialKey,
-            url: url,
-            fileName: e.title,
-            torrentName: torrent.displayTitle,
-          );
+        if (await DownloadService.instance.enqueueCloudFile(
+          provider: provider,
+          url: url,
+          fileName: e.title,
+          torrentName: torrent.displayTitle,
+        )) {
           n++;
-        } catch (_) {}
+        }
       }
       if (context.mounted) {
         _snack(
@@ -5101,15 +5100,12 @@ class TorrentPlaybackService {
       final url = await _resolveEntryUrl(r.playlist!.first);
       var queued = false;
       if (url != null && url.isNotEmpty) {
-        try {
-          await DownloadService.instance.enqueueDownload(
-            credentialKey: credentialKey,
-            url: url,
-            fileName: r.playlist!.first.title,
-            torrentName: torrent.displayTitle,
-          );
-          queued = true;
-        } catch (_) {}
+        queued = await DownloadService.instance.enqueueCloudFile(
+          provider: provider,
+          url: url,
+          fileName: r.playlist!.first.title,
+          torrentName: torrent.displayTitle,
+        );
       }
       if (context.mounted) {
         _snack(
@@ -5124,14 +5120,12 @@ class TorrentPlaybackService {
       _snack(context, 'Nothing to download for this source.');
       return;
     }
-    try {
-      await DownloadService.instance.enqueueDownload(
-        credentialKey: credentialKey,
-        url: url,
-        fileName: r.fileName ?? torrent.displayTitle,
-        torrentName: torrent.displayTitle,
-      );
-    } catch (_) {}
+    await DownloadService.instance.enqueueCloudFile(
+      provider: provider,
+      url: url,
+      fileName: r.fileName ?? torrent.displayTitle,
+      torrentName: torrent.displayTitle,
+    );
     if (context.mounted) _snack(context, 'Download queued.');
   }
 
@@ -5146,75 +5140,18 @@ class TorrentPlaybackService {
     final rawTitle = (!isPack && r.fileName != null)
         ? r.fileName!
         : torrent.displayTitle;
-    // Base fields shared by every provider. NOTE: no 'url' is stored — the
-    // playlist player RE-RESOLVES a fresh link from the provider-native ids
-    // below, so saved items keep working after the debrid direct link expires
-    // (parity with the old per-provider playlist schema).
-    final item = <String, dynamic>{
-      'provider': provider == 'debrid' ? 'realdebrid' : provider,
-      'title': FileUtils.cleanPlaylistTitle(rawTitle),
-      'kind': isPack ? 'collection' : 'single',
-      'torrent_hash': torrent.infohash,
-      if (isPack) 'count': r.playlist!.length,
-      if (torrent.sizeBytes > 0) 'sizeBytes': torrent.sizeBytes,
-      // Catalog identity so the playlist shows poster art + links back (Home).
-      if (meta?.imdbId != null && meta!.imdbId!.isNotEmpty)
-        'imdbId': meta.imdbId,
-      if (meta?.contentType != null) 'contentType': meta!.contentType,
-      if (meta?.posterUrl != null && meta!.posterUrl!.isNotEmpty)
-        'posterUrl': meta.posterUrl,
-    };
-    // Provider-native identifiers for re-resolution. For packs, per-file ids are
-    // pulled from the resolved playlist entries; for single files they ride on
-    // [_Resolved].
-    switch (provider) {
-      case 'debrid': // Real-Debrid
-        if (r.rdTorrentId != null) item['rdTorrentId'] = r.rdTorrentId;
-        if (!isPack) {
-          item['url'] = ''; // force re-resolution from restrictedLink
-          if (r.restrictedLink != null) {
-            item['restrictedLink'] = r.restrictedLink;
-          }
-        }
-        break;
-      case 'torbox':
-        item['torboxTorrentId'] = r.torboxTorrentId;
-        if (isPack) {
-          item['torboxFileIds'] = [
-            for (final e in r.playlist!)
-              if (e.torboxFileId != null) e.torboxFileId,
-          ];
-        } else if (r.torboxFileId != null) {
-          item['torboxFileId'] = r.torboxFileId;
-        }
-        break;
-      case 'premiumize':
-        // Collections re-resolve from torrent_hash; singles from the file path.
-        if (!isPack && r.premiumizePath != null) {
-          item['premiumizePath'] = r.premiumizePath;
-        }
-        break;
-      case 'alldebrid':
-        // Collections re-resolve from torrent_hash; singles from the locked link.
-        if (!isPack && r.allDebridLink != null) {
-          item['allDebridLink'] = r.allDebridLink;
-        }
-        break;
-      case 'pikpak':
-        if (isPack) {
-          // Pack: folder id + per-file video ids (player collection path).
-          item['pikpakFileId'] = r.pikpakFileId;
-          item['pikpakFileIds'] = [
-            for (final e in r.playlist!)
-              if (e.pikpakFileId != null) e.pikpakFileId,
-          ];
-        } else {
-          // Single: the playable VIDEO-file id, NOT the folder id — else the
-          // player can't get a streaming URL and the item won't play.
-          item['pikpakFileId'] = r.pikpakVideoFileId ?? r.pikpakFileId;
-        }
-        break;
-    }
+    // No 'url' is stored — the playlist player re-resolves from provider-native
+    // ids after the debrid direct link expires.
+    final item = CloudPlaylistPayload.build(
+      provider: provider,
+      result: r,
+      torrentHash: torrent.infohash,
+      title: FileUtils.cleanPlaylistTitle(rawTitle),
+      sizeBytes: torrent.sizeBytes,
+      imdbId: meta?.imdbId,
+      contentType: meta?.contentType,
+      posterUrl: meta?.posterUrl,
+    );
     final ok = await StorageService.addPlaylistItemRaw(item);
     if (context.mounted) {
       _snack(context, ok ? 'Added to playlist.' : 'Already in playlist.');
@@ -5470,7 +5407,9 @@ class TorrentPlaybackService {
         }
       } else {
         await DownloadService.instance.enqueueDownload(
-          credentialKey: 'premiumize_api_key',
+          credentialKey: DownloadService.credentialKeyForCloudProvider(
+            'premiumize',
+          ),
           url: zipUrl,
           fileName: '$torrentName.zip',
           torrentName: torrentName,
@@ -5489,39 +5428,11 @@ class TorrentPlaybackService {
     }
   }
 
-  static List<Color> _providerGradient(String provider) {
-    switch (provider) {
-      case 'debrid':
-        return const [Color(0xFF10B981), Color(0xFF059669)];
-      case 'torbox':
-        return const [Color(0xFF8B5CF6), Color(0xFF7C3AED)];
-      case 'premiumize':
-        return const [Color(0xFFF59E0B), Color(0xFFD97706)];
-      case 'alldebrid':
-        return const [Color(0xFF26A69A), Color(0xFF00796B)];
-      case 'pikpak':
-        return const [Color(0xFF6366F1), Color(0xFF4338CA)];
-      default:
-        return const [Color(0xFF6366F1), Color(0xFF4338CA)];
-    }
-  }
+  static List<Color> _providerGradient(String provider) =>
+      CloudProviderChrome.gradient(provider);
 
-  static IconData _providerIcon(String provider) {
-    switch (provider) {
-      case 'debrid':
-        return Icons.cloud_download_rounded;
-      case 'torbox':
-        return Icons.flash_on_rounded;
-      case 'premiumize':
-        return Icons.workspace_premium_rounded;
-      case 'alldebrid':
-        return Icons.all_inclusive_rounded;
-      case 'pikpak':
-        return Icons.cloud_circle_rounded;
-      default:
-        return Icons.cloud_download_rounded;
-    }
-  }
+  static IconData _providerIcon(String provider) =>
+      CloudProviderChrome.icon(provider);
 
   // ── Not-cached handling (mirrors Home UX: warn, then keep-downloading) ──────
 
@@ -5601,18 +5512,9 @@ class TorrentPlaybackService {
       CloudProviderRegistry.instance.isConfigured(provider);
 
   static Future<String> _postAction(String provider) async {
-    switch (provider) {
-      case 'torbox':
-        return StorageService.getTorboxPostTorrentAction();
-      case 'premiumize':
-        return StorageService.getPremiumizePostTorrentAction();
-      case 'alldebrid':
-        return StorageService.getAllDebridPostTorrentAction();
-      case 'pikpak':
-        return StorageService.getPikPakPostTorrentAction();
-      default:
-        return StorageService.getPostTorrentAction();
-    }
+    final id = CloudProviderId.tryParse(provider);
+    if (id == null) return StorageService.getPostTorrentAction();
+    return CloudCredentials.postTorrentAction(id);
   }
 
   static Future<List<Torrent>> _cacheFirst(
@@ -5699,54 +5601,11 @@ class TorrentPlaybackService {
     return null;
   }
 
-  static String _label(String provider) {
-    switch (provider) {
-      case 'preparing':
-        return 'Preparing';
-      case 'debrid':
-        return 'Real-Debrid';
-      case 'torbox':
-        return 'TorBox';
-      case 'premiumize':
-        return 'Premiumize';
-      case 'alldebrid':
-        return 'AllDebrid';
-      case 'pikpak':
-        return 'PikPak';
-      case SeriesSource.localService:
-        return 'On-device';
-      case SeriesSource.addonDirectService:
-        return 'Direct addon';
-      case 'stream':
-        return 'Stream';
-      default:
-        return provider;
-    }
-  }
+  static String _label(String provider) => CloudProviderChrome.label(provider);
 
   /// Two-letter provider glyph for the Pipeline loader's provider chip.
-  static String _providerCode(String provider) {
-    switch (provider) {
-      case 'preparing':
-        return '···';
-      case 'debrid':
-        return 'RD';
-      case 'torbox':
-        return 'TB';
-      case 'premiumize':
-        return 'PM';
-      case 'alldebrid':
-        return 'AD';
-      case 'pikpak':
-        return 'PP';
-      case 'stream':
-        return 'TV';
-      case SeriesSource.addonDirectService:
-        return 'DL';
-      default:
-        return provider.isEmpty ? '·' : provider.substring(0, 1).toUpperCase();
-    }
-  }
+  static String _providerCode(String provider) =>
+      CloudProviderChrome.code(provider);
 
   /// Show the Pipeline play loader, wired to this provider. [bound] uses the
   /// short (prepare → start) checklist; otherwise it's the full search flow.
