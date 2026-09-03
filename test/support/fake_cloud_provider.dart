@@ -13,6 +13,7 @@ class FakeCloudProvider implements CloudProviderPort {
     this.result,
     this.boundResult,
     this.playlistUrl,
+    this.playbackUnlockUrl,
     this.error,
   });
 
@@ -22,6 +23,7 @@ class FakeCloudProvider implements CloudProviderPort {
   CloudPlaybackResult? result;
   CloudPlaybackResult? boundResult;
   String? playlistUrl;
+  String? playbackUnlockUrl;
   Object? error;
 
   int addCount = 0;
@@ -65,5 +67,12 @@ class FakeCloudProvider implements CloudProviderPort {
     lastPlaylistEntry = entry;
     if (error != null) throw error!;
     return playlistUrl;
+  }
+
+  @override
+  Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
+    if (error != null) throw error!;
+    if (playbackUnlockUrl != null) return playbackUnlockUrl!;
+    throw Exception('No URL metadata available for this entry');
   }
 }

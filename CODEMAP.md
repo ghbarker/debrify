@@ -19,10 +19,11 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 - **`services/storage_service.dart`** 🔴 — all SharedPreferences/persisted state (settings, continue
   watching (cap 50), playback state, favourites, provider toggles, home disabled-sections).
 - **`services/torrent_playback_service.dart`** 🔴 — provider-agnostic play/add/bind pipeline.
-  Magnet add/resolve, hashless bound replay, and download-picker lazy URLs
-  now go through `services/cloud/` (`CloudProviderPort` +
-  `CloudProviderRegistry`). Playlist JSON, labels, and download credential
-  download credential keys live there too. Bind-source PM/AD/PP browsers:
+  Magnet add, hashless bound replay, download-picker lazy URLs, and in-app/TV
+  playlist unlock go through `services/cloud/` (`CloudProviderPort` +
+  `CloudProviderRegistry`). The in-app player screen still has its own
+  lazy-unlock (wraps errors as `Torbox link failed`). Playlist JSON, labels,
+  and download credential keys live there too. Bind-source PM/AD/PP browsers:
   `widgets/cloud_browse_select_source.dart`.
   Cloud credential keys live in `CloudSecretPrefs` (must match
   `CloudProviderId.credentialKey`); `StorageService` remains the public

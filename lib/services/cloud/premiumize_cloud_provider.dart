@@ -151,4 +151,33 @@ class PremiumizeCloudProvider implements CloudProviderPort {
 
   @override
   Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async => null;
+
+  @override
+  Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('Missing Premiumize API key');
+    }
+    if (entry.premiumizeItemId != null && entry.premiumizeItemId!.isNotEmpty) {
+      final file = await PremiumizeService.resolveItemById(
+        apiKey,
+        entry.premiumizeItemId!,
+      );
+      if (file == null || file.link.isEmpty) {
+        throw Exception('File not found in Premiumize cloud');
+      }
+      return file.link;
+    }
+    final hash = entry.premiumizeHash;
+    final path = entry.premiumizePath;
+    final files = await PremiumizeService.resolveFilesByHash(apiKey, hash!);
+    final match = files.firstWhere(
+      (f) => f.path == path,
+      orElse: () => throw Exception('File not found in Premiumize cloud'),
+    );
+    if (match.link.isEmpty) {
+      throw Exception('Premiumize returned an empty stream URL');
+    }
+    return match.link;
+  }
 }

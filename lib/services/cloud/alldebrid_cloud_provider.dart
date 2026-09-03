@@ -116,4 +116,21 @@ class AllDebridCloudProvider implements CloudProviderPort {
     final apiKey = (await CloudCredentials.apiKey(id)) ?? '';
     return AllDebridService.unlockLink(apiKey, link);
   }
+
+  @override
+  Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
+    final lockedLink = entry.allDebridLink;
+    if (lockedLink == null || lockedLink.isEmpty) {
+      throw Exception('AllDebrid link metadata missing');
+    }
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('Missing AllDebrid API key');
+    }
+    final url = await AllDebridService.unlockLink(apiKey, lockedLink);
+    if (url.isEmpty) {
+      throw Exception('AllDebrid returned an empty stream URL');
+    }
+    return url;
+  }
 }

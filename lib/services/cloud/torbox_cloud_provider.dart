@@ -218,4 +218,36 @@ class TorboxCloudProvider implements CloudProviderPort {
       fileId: fileId,
     );
   }
+
+  @override
+  Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
+    final torrentId = entry.torboxTorrentId;
+    final webDownloadId = entry.torboxWebDownloadId;
+    final fileId = entry.torboxFileId;
+    if (fileId == null || (torrentId == null && webDownloadId == null)) {
+      throw Exception('Torbox file metadata missing');
+    }
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('Missing Torbox API key');
+    }
+    final String url;
+    if (webDownloadId != null) {
+      url = await TorboxService.requestWebDownloadFileLink(
+        apiKey: apiKey,
+        webId: webDownloadId,
+        fileId: fileId,
+      );
+    } else {
+      url = await TorboxService.requestFileDownloadLink(
+        apiKey: apiKey,
+        torrentId: torrentId!,
+        fileId: fileId,
+      );
+    }
+    if (url.isEmpty) {
+      throw Exception('Torbox returned an empty stream URL');
+    }
+    return url;
+  }
 }

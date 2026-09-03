@@ -95,6 +95,57 @@ class CloudProviderRegistry {
     return null;
   }
 
+  /// Launcher / TV order: TorBox (incl. web-download) before PikPak before
+  /// Premiumize before RD. Throws. [fallbackUrl] is [VideoPlayerLaunchArgs.videoUrl].
+  Future<String> unlockPlaybackEntry(
+    PlaylistEntry entry, {
+    String fallbackUrl = '',
+  }) async {
+    final provider = entry.provider?.toLowerCase();
+    final hasTorboxMetadata =
+        entry.torboxTorrentId != null && entry.torboxFileId != null;
+    final hasTorboxWebDownloadMetadata =
+        entry.torboxWebDownloadId != null && entry.torboxFileId != null;
+
+    if (provider == 'torbox' ||
+        hasTorboxMetadata ||
+        hasTorboxWebDownloadMetadata) {
+      return require('torbox').unlockPlaybackEntry(entry);
+    }
+
+    final hasPikPakMetadata = entry.pikpakFileId != null;
+    if (provider == 'pikpak' || hasPikPakMetadata) {
+      return require('pikpak').unlockPlaybackEntry(entry);
+    }
+
+    if (entry.premiumizeItemId != null && entry.premiumizeItemId!.isNotEmpty) {
+      return require('premiumize').unlockPlaybackEntry(entry);
+    }
+
+    final hasPremiumizeMetadata =
+        entry.premiumizeHash != null && entry.premiumizePath != null;
+    if (provider == 'premiumize' || hasPremiumizeMetadata) {
+      final hash = entry.premiumizeHash;
+      final path = entry.premiumizePath;
+      if (hash != null && hash.isNotEmpty && path != null && path.isNotEmpty) {
+        return require('premiumize').unlockPlaybackEntry(entry);
+      }
+    }
+
+    if (entry.restrictedLink != null && entry.restrictedLink!.isNotEmpty) {
+      return require('debrid').unlockPlaybackEntry(entry);
+    }
+
+    if (provider == 'alldebrid' ||
+        (entry.allDebridLink != null && entry.allDebridLink!.isNotEmpty)) {
+      return require('alldebrid').unlockPlaybackEntry(entry);
+    }
+
+    if (fallbackUrl.isNotEmpty) return fallbackUrl;
+
+    throw Exception('No URL metadata available for this entry');
+  }
+
   static String? credentialKeyFor(String provider) =>
       CloudProviderId.tryParse(provider)?.credentialKey;
 }
