@@ -3,6 +3,7 @@ import '../../screens/video_player/models/playlist_entry.dart';
 import '../series_source_service.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
+import 'stremio_torrent_resolve_args.dart';
 
 /// Narrow playback port: add a magnet and resolve a playable result.
 ///
@@ -37,4 +38,8 @@ abstract class CloudProviderPort {
   /// metadata or empty URL. Do not wrap errors here — the player-screen path
   /// wraps HTTP failures as `$brand link failed`.
   Future<String> unlockPlaybackEntry(PlaylistEntry entry);
+
+  /// Stremio TV torrent resolve. Returns null on miss / error (no throw).
+  /// Distinct from [addMagnet] (playback pipeline) and playlist unlock.
+  Future<String?> resolveStremioTorrent(StremioTorrentResolveArgs args);
 }

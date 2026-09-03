@@ -1,9 +1,14 @@
+import 'package:flutter/foundation.dart';
+
 import '../../models/torrent.dart';
 import '../../screens/video_player/models/playlist_entry.dart';
 import '../../utils/file_utils.dart';
 import '../../utils/series_parser.dart';
+import '../../utils/stremio_episode_selector.dart';
+import '../../utils/stremio_tv_debrid_fallback.dart';
 import '../main_page_bridge.dart';
 import '../pikpak_api_service.dart';
+import '../pikpak_tv_service.dart';
 import '../series_source_service.dart';
 import 'cloud_credentials.dart';
 import 'cloud_exceptions.dart';
@@ -11,6 +16,7 @@ import 'cloud_playback_helpers.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
 import 'cloud_provider_port.dart';
+import 'stremio_torrent_resolve_args.dart';
 
 class PikPakCloudProvider implements CloudProviderPort {
   const PikPakCloudProvider();
@@ -218,6 +224,134 @@ class PikPakCloudProvider implements CloudProviderPort {
       throw Exception('PikPak returned an empty stream URL');
     }
     return url;
+  }
+
+  @override
+  Future<String?> resolveStremioTorrent(StremioTorrentResolveArgs args) async {
+    if (!await CloudCredentials.isPlaybackConfigured(id)) return null;
+    Map<String, dynamic>? preparedForCleanup;
+    var keepPreparedItem = false;
+    try {
+      final prepared = await PikPakTvService.instance.prepareTorrent(
+        infohash: args.torrent.infohash.trim().toLowerCase(),
+        torrentName: args.torrent.name,
+      );
+
+      if (prepared == null) return null;
+      preparedForCleanup = prepared;
+      if (args.isCancelled?.call() ?? false) return null;
+
+      String? streamUrl = prepared['url'] as String?;
+
+      final allVideoFiles = prepared['allVideoFiles'] as List<dynamic>?;
+      if (args.isSeries &&
+          args.season != null &&
+          args.episode != null &&
+          (allVideoFiles == null || allVideoFiles.isEmpty)) {
+        final directNames = <String>[
+          if ((prepared['title'] as String?)?.trim().isNotEmpty == true)
+            (prepared['title'] as String).trim(),
+          args.torrent.name,
+        ];
+        final directMatch = StremioEpisodeSelector.namesContainEpisode(
+          directNames,
+          season: args.season!,
+          episode: args.episode!,
+        );
+        if (!directMatch) {
+          debugPrint(
+            'StremioTV: PikPak single file could not verify '
+            'S${args.season}E${args.episode} in ${args.torrent.name}, rejecting source',
+          );
+          return null;
+        }
+      }
+      if (allVideoFiles != null && allVideoFiles.isNotEmpty) {
+        Map<String, dynamic>? targetFile;
+        if (args.isSeries && args.season != null && args.episode != null) {
+          final candidateNames = allVideoFiles.map((file) {
+            if (file is! Map<String, dynamic>) return '';
+            return (file['_fullPath'] as String?) ??
+                (file['name'] as String?) ??
+                '';
+          }).toList();
+          final targetIndex =
+              StremioEpisodeSelector.findEpisodeFileIndexWithSingleFileFallback(
+                candidateNames,
+                sourceName: args.torrent.name,
+                season: args.season!,
+                episode: args.episode!,
+              );
+          if (targetIndex == null || targetIndex >= allVideoFiles.length) {
+            debugPrint(
+              'StremioTV: PikPak could not match S${args.season}E${args.episode} in ${args.torrent.name}, '
+              'rejecting source',
+            );
+            return null;
+          } else {
+            final file = allVideoFiles[targetIndex];
+            if (file is Map<String, dynamic>) {
+              targetFile = file;
+            }
+          }
+        } else if (args.isMovie) {
+          final targetIndex = StremioEpisodeSelector.findLargestFileIndex(
+            allVideoFiles.map((file) {
+              if (file is! Map<String, dynamic>) return null;
+              return file['size'] as int?;
+            }).toList(),
+          );
+          final file = allVideoFiles[targetIndex];
+          if (file is Map<String, dynamic>) {
+            targetFile = file;
+          }
+        }
+
+        if (targetFile != null) {
+          final targetFileId = targetFile['id'] as String?;
+          if (targetFileId == null || targetFileId.isEmpty) return null;
+
+          final api = PikPakApiService.instance;
+          final fileData = await api.getFileDetails(targetFileId);
+          final url = api.getStreamingUrl(fileData);
+          if (url == null || url.isEmpty) return null;
+          streamUrl = url;
+        } else if (args.isSeries &&
+            args.season != null &&
+            args.episode != null) {
+          return null;
+        }
+      }
+
+      if (streamUrl == null ||
+          streamUrl.isEmpty ||
+          (args.isCancelled?.call() ?? false)) {
+        return null;
+      }
+
+      keepPreparedItem = true;
+      return streamUrl;
+    } catch (e) {
+      debugPrint('StremioTV: PikPak resolve error: $e');
+      return null;
+    } finally {
+      if (preparedForCleanup != null && !keepPreparedItem) {
+        await _trashRejectedPikPakItem(preparedForCleanup);
+      }
+    }
+  }
+
+  Future<void> _trashRejectedPikPakItem(Map<String, dynamic> prepared) async {
+    final rootId = StremioTvDebridFallback.pikPakCleanupRootId(prepared);
+    if (rootId == null) return;
+
+    try {
+      await PikPakApiService.instance
+          .batchTrashFiles(<String>[rootId])
+          .timeout(const Duration(seconds: 10));
+    } catch (e) {
+      debugPrint('StremioTV: Failed to trash rejected PikPak item $rootId: $e');
+    }
   }
 
   static Future<List<Map<String, dynamic>>> extractPikPakVideos(
