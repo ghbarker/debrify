@@ -34,6 +34,10 @@ import '../services/home_collection_rows.dart';
 import '../services/home_collections_store.dart';
 import '../services/home_list_rows.dart';
 import '../services/home_row_order.dart';
+import '../services/filtered_catalog_pager.dart';
+import '../services/hide_watched_prefs.dart';
+import '../services/watched_filter.dart';
+import '../services/watched_status_service.dart';
 import '../services/iptv_cw_router.dart';
 import '../services/iptv_media_store.dart';
 import '../services/local_bound_source_service.dart';
@@ -714,6 +718,9 @@ class _SearchScreenState extends State<SearchScreen>
   /// settings-changed listener diffs against.
   List<HomeCollection> _homeCollections = const [];
   String _homeCollectionsSig = '';
+  /// The hide-watched switch as of the last board load. Flipping it changes
+  /// row membership, so [_reloadForHomeSettings] diffs it like a row toggle.
+  bool _hideWatched = HideWatchedPrefs.enabled;
 
   /// Stable ids in the user's global Home-row order. Rows not present append
   /// canonically; ids whose backing row is temporarily unavailable stay saved.
@@ -2462,6 +2469,8 @@ class _SearchScreenState extends State<SearchScreen>
     if (!mounted) return;
     final collectionsSig = HomeCollectionsStore.signatureOf(collections);
     final collectionsUnchanged = collectionsSig == _homeCollectionsSig;
+    final hideWatched = HideWatchedPrefs.enabled;
+    final hideWatchedUnchanged = hideWatched == _hideWatched;
     final disabledUnchanged =
         disabled.length == _homeDisabled.length &&
         disabled.containsAll(_homeDisabled);
@@ -2497,7 +2506,8 @@ class _SearchScreenState extends State<SearchScreen>
         iptvExtrasUnchanged &&
         rowOrderUnchanged &&
         heroSourceUnchanged &&
-        collectionsUnchanged) {
+        collectionsUnchanged &&
+        hideWatchedUnchanged) {
       return;
     }
     setState(() {
@@ -2507,10 +2517,13 @@ class _SearchScreenState extends State<SearchScreen>
       _heroSource = heroSource;
       _homeCollections = collections;
       _homeCollectionsSig = collectionsSig;
+      _hideWatched = hideWatched;
     });
+    // Hide-watched changes row MEMBERSHIP, so it takes the full reload path.
     if (!disabledUnchanged ||
         !boardExtrasUnchanged ||
         !collectionsUnchanged ||
+        !hideWatchedUnchanged ||
         (!rowOrderUnchanged && !widget.searchMode && !widget.discoverMode)) {
       _requestBoardReload();
     } else if (!heroSourceUnchanged &&
@@ -2580,6 +2593,7 @@ class _SearchScreenState extends State<SearchScreen>
       _heroSource = heroSource;
       _homeCollections = collections;
       _homeCollectionsSig = HomeCollectionsStore.signatureOf(collections);
+      _hideWatched = HideWatchedPrefs.enabled;
       // Opt-in Trakt/Simkl list rows, resolved IN PARALLEL with the first
       // catalog batch below. Home board only — the Search tab runs _load just
       // to warm the catalog refs for its search, and Discover never comes
@@ -2596,6 +2610,18 @@ class _SearchScreenState extends State<SearchScreen>
           : HomeListRowsService.instance
                 .resolve(_homeExtras, deadline: const Duration(seconds: 5))
                 .catchError((_) => const <HomeListSection>[]);
+      // With hide-watched on, wait briefly for the local watched snapshot so
+      // the first rows paint already filtered instead of losing titles a beat
+      // later. Tracker histories fold in asynchronously and apply from the
+      // next load; the timeout keeps a slow disk from stalling first paint.
+      if (HideWatchedPrefs.enabled) {
+        WatchedStatusService.instance.ensureStarted();
+        await WatchedStatusService.instance.firstSnapshot.timeout(
+          const Duration(milliseconds: 1500),
+          onTimeout: () {},
+        );
+        if (!mounted || gen != _boardLoadGen) return;
+      }
       final addons = await _stremio.getCatalogAddons();
       if (!mounted || gen != _boardLoadGen) return;
       // Enumerate every BROWSABLE catalog across all addons — no global row cap.
@@ -2717,22 +2743,29 @@ class _SearchScreenState extends State<SearchScreen>
       slice.map((ref) async {
         final (addon, catalog) = ref;
         try {
-          var rawCount = 0;
-          final items = await _stremio.fetchCatalog(
-            addon,
-            catalog,
-            onRawCount: (c) => rawCount = c,
+          // With hide-watched on, the pager tops the row up across windows so
+          // an all-watched first page doesn't read as an empty catalog.
+          final page = await fetchFilteredPage(
+            (skip, onRaw) => _stremio.fetchCatalog(
+              addon,
+              catalog,
+              skip: skip,
+              onRawCount: onRaw,
+            ),
+            skip: 0,
+            hides: WatchedFilter.predicate,
           );
-          if (items.isEmpty) return null;
+          if (page.items.isEmpty) return null;
           return CatalogSection(
             title: CatalogSection.rowTitle(catalog),
             addon: addon,
             catalog: catalog,
             // Keep the whole first page; more pages stream in on horizontal scroll.
-            items: items.toList(),
-            // Next page starts past the addon's raw first window (not the smaller
-            // post-filter count), keeping paging aligned from the very first fetch.
-            nextSkip: rawCount > 0 ? rawCount : items.length,
+            items: page.items.toList(),
+            // Past the addon's raw window(s), not the post-filter count, so
+            // paging is aligned from the very first fetch.
+            nextSkip: page.nextSkip,
+            exhausted: page.exhausted,
           );
         } catch (_) {
           return null;
@@ -2841,15 +2874,22 @@ class _SearchScreenState extends State<SearchScreen>
       setState(() => section.loadingMore = true);
     }
     try {
-      // Advance `skip` by the addon's RAW returned count (via onRawCount), not
-      // the post-filter `page.length`, so we stay aligned with the addon's own
-      // paging window and don't slowly under-advance into a false "exhausted".
-      var rawCount = 0;
-      final page = await _stremio.fetchCatalog(
-        section.addon,
-        section.catalog,
+      // Dedup against what we already have: some addons return valid ids but
+      // repeat entries, and some ignore `skip` entirely. The pager advances
+      // `skip` by the addon's RAW counts so paging never under-advances into a
+      // false "exhausted", and with hide-watched on it tops the window up so a
+      // page of watched titles doesn't end the row early.
+      final seen = section.items.map((m) => m.id).toSet();
+      final page = await fetchFilteredPage(
+        (skip, onRaw) => _stremio.fetchCatalog(
+          section.addon,
+          section.catalog,
+          skip: skip,
+          onRawCount: onRaw,
+        ),
         skip: section.nextSkip,
-        onRawCount: (c) => rawCount = c,
+        hides: WatchedFilter.predicate,
+        seenIds: seen,
       );
       if (!mounted) return;
       // The row may have been swapped out (a search started) while in flight.
@@ -2857,20 +2897,11 @@ class _SearchScreenState extends State<SearchScreen>
           !identical(_sections[rowIndex], section)) {
         return;
       }
-      if (page.isEmpty) {
-        section.exhausted = true;
-        return;
-      }
-      // Dedup against what we already have; some addons return valid ids but
-      // repeat entries, and some ignore `skip` entirely.
-      final seen = section.items.map((m) => m.id).toSet();
-      final fresh = page.where((m) => seen.add(m.id)).toList();
-      // Advance by the raw window size (falls back to the filtered count only
-      // if the addon somehow didn't report), so the next skip lands past what
-      // this window already covered.
-      section.nextSkip += rawCount > 0 ? rawCount : page.length;
+      section.nextSkip = page.nextSkip;
+      if (page.exhausted) section.exhausted = true;
+      final fresh = page.items;
       if (fresh.isEmpty) {
-        // Addon returned only duplicates (or ignores skip) — nothing new to add.
+        // Only duplicates, or the addon ignores skip — end of the row.
         section.exhausted = true;
         return;
       }
@@ -5560,6 +5591,9 @@ class _SearchScreenState extends State<SearchScreen>
           return null;
         }
         if (!mounted || token != _catalogSearchToken) return null;
+        // Search rows are single-shot (no top-up): a match that's been
+        // watched simply doesn't show.
+        items = WatchedFilter.apply(items);
         if (items.isEmpty) return null;
         final section = CatalogSection(
           title: CatalogSection.rowTitle(entry.catalog),
@@ -6811,21 +6845,26 @@ class _SearchScreenState extends State<SearchScreen>
         if (attempts++ >= maxAttempts) break;
         if (!mounted || gen != _heroSourceResolveGen) return;
         try {
-          var rawCount = 0;
-          final items = await _stremio.fetchCatalog(
-            addon,
-            catalog,
-            onRawCount: (c) => rawCount = c,
+          final page = await fetchFilteredPage(
+            (skip, onRaw) => _stremio.fetchCatalog(
+              addon,
+              catalog,
+              skip: skip,
+              onRawCount: onRaw,
+            ),
+            skip: 0,
+            hides: WatchedFilter.predicate,
+            minItems: 8,
           );
           if (!mounted || gen != _heroSourceResolveGen) return;
-          if (items.isEmpty) continue;
+          if (page.items.isEmpty) continue;
           setState(() {
             _spotlightHeroOverride = CatalogSection(
               title: CatalogSection.rowTitle(catalog),
               addon: addon,
               catalog: catalog,
-              items: items.toList(),
-              nextSkip: rawCount > 0 ? rawCount : items.length,
+              items: page.items.toList(),
+              nextSkip: page.nextSkip,
             );
           });
           _publishTopShelfSpotlight();

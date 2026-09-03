@@ -107,6 +107,11 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   settings `screens/settings/collections_settings_page.dart` (+ `widgets/text_prompt_dialog.dart`).
   Board wiring lives in `search_screen.dart` (`_buildCollectionSections`, `_openCollectionFolder`,
   `_openCollectionScreen`). Docs: `docs/collections.md`.
+- Hide watched (Settings › Tracking): `services/hide_watched_prefs.dart` (sync flag),
+  `services/watched_filter.dart` (predicate over `WatchedStatusService`),
+  `services/filtered_catalog_pager.dart` (`fetchFilteredPage` top-up paging). Wired in
+  `search_screen.dart` (`_fetchBoardBatch`, `_loadMoreRow`, catalog search, hero source),
+  `see_all/catalog_see_all_screen.dart`, `services/home_list_rows.dart`, Trakt/MDBList See-All.
 - Backup/transfer/sync: `services/backup_restore_service.dart` (full config snapshot),
   `widgets/remote/*` + `services/remote_control/*` (device-to-device over LAN, no server).
 - Onboarding: `widgets/initial_setup_flow.dart` 🔴. Migration: `services/app_migration_service.dart`.
