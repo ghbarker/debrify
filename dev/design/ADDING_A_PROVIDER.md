@@ -14,7 +14,9 @@ Playback add/resolve no longer lives in a five-way `switch` inside
 `TorrentPlaybackService._add`. Implement `CloudProviderPort` and register it.
 
 - **New adapter:** `lib/services/cloud/<id>_cloud_provider.dart`
-  implementing `isConfigured` + `addMagnet` → `CloudPlaybackResult`.
+  implementing `isConfigured` + `addMagnet` + `resolveNativeBound`
+  (hashless bound replay; RD/TorBox/AllDebrid web-downloads only; lookup is
+  stored id `rd`, not playback `debrid`) → `CloudPlaybackResult`.
 - **Register** the adapter in `CloudProviderRegistry.production()`.
 - **Ids / credential keys / backup field names / display names / chip codes /
   overlay titles / playlist stored ids** go on `CloudProviderId` (keep Flutter

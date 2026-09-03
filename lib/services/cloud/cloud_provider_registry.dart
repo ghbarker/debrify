@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../models/torrent.dart';
+import '../series_source_service.dart';
 import 'alldebrid_cloud_provider.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
@@ -58,6 +59,20 @@ class CloudProviderRegistry {
     String magnet,
     Torrent torrent,
   ) => require(provider).addMagnet(magnet, torrent);
+
+  /// Bound replay looks up [SeriesSource.debridService] as a stored id
+  /// (`rd`, not `debrid`). Unknown ids return null; they do not throw.
+  Future<CloudPlaybackResult?> resolveNativeBound(
+    SeriesSource source, {
+    required String? contentType,
+  }) async {
+    if (!source.isProviderNativeCloud) return null;
+    if (source.debridTorrentId.trim().isEmpty) return null;
+    final id = CloudProviderId.fromStoredId(source.debridService);
+    final port = id == null ? null : _byId[id];
+    if (port == null) return null;
+    return port.resolveNativeBound(source, contentType: contentType);
+  }
 
   static String? credentialKeyFor(String provider) =>
       CloudProviderId.tryParse(provider)?.credentialKey;
