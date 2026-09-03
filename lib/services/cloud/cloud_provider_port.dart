@@ -1,4 +1,5 @@
 import '../../models/torrent.dart';
+import '../../screens/video_player/models/playlist_entry.dart';
 import '../series_source_service.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
@@ -6,8 +7,8 @@ import 'cloud_provider_id.dart';
 /// Narrow playback port: add a magnet and resolve a playable result.
 ///
 /// HTTP clients stay in the existing `*_service.dart` files. This port is the
-/// switch that [TorrentPlaybackService._add] and hashless bound replay used
-/// to inline.
+/// switch that [TorrentPlaybackService._add], hashless bound replay, and the
+/// download-picker lazy URL used to inline.
 abstract class CloudProviderPort {
   CloudProviderId get id;
 
@@ -25,4 +26,9 @@ abstract class CloudProviderPort {
     SeriesSource source, {
     required String? contentType,
   });
+
+  /// Download-picker lazy URL. Playback/TV lazy resolve stays on
+  /// [VideoPlayerLauncher] (throws; also handles TorBox web-download, PikPak,
+  /// Premiumize).
+  Future<String?> resolvePlaylistEntry(PlaylistEntry entry);
 }

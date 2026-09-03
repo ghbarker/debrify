@@ -1,4 +1,5 @@
 import 'package:debrify/models/torrent.dart';
+import 'package:debrify/screens/video_player/models/playlist_entry.dart';
 import 'package:debrify/services/cloud/cloud_playback_result.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
 import 'package:debrify/services/cloud/cloud_provider_port.dart';
@@ -11,6 +12,7 @@ class FakeCloudProvider implements CloudProviderPort {
     this.configured = true,
     this.result,
     this.boundResult,
+    this.playlistUrl,
     this.error,
   });
 
@@ -19,12 +21,15 @@ class FakeCloudProvider implements CloudProviderPort {
   bool configured;
   CloudPlaybackResult? result;
   CloudPlaybackResult? boundResult;
+  String? playlistUrl;
   Object? error;
 
   int addCount = 0;
   int boundCount = 0;
+  int playlistCount = 0;
   String? lastMagnet;
   SeriesSource? lastBoundSource;
+  PlaylistEntry? lastPlaylistEntry;
 
   @override
   Future<bool> isConfigured() async => configured;
@@ -52,5 +57,13 @@ class FakeCloudProvider implements CloudProviderPort {
     lastBoundSource = source;
     if (error != null) throw error!;
     return boundResult;
+  }
+
+  @override
+  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async {
+    playlistCount++;
+    lastPlaylistEntry = entry;
+    if (error != null) throw error!;
+    return playlistUrl;
   }
 }

@@ -119,6 +119,15 @@ class RealDebridCloudProvider implements CloudProviderPort {
     );
   }
 
+  @override
+  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async {
+    final link = entry.restrictedLink;
+    if (link == null || link.isEmpty) return null;
+    final apiKey = (await CloudCredentials.apiKey(id)) ?? '';
+    final r = await DebridService.unrestrictLink(apiKey, link);
+    return r['download']?.toString();
+  }
+
   /// Video-file filtering aligned to the `links` array, archive guard,
   /// [SeriesParser] first-episode detection, start entry unrestricted.
   static Future<List<PlaylistEntry>?> buildRdPlaylist(

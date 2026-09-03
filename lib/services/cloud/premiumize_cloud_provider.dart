@@ -148,4 +148,7 @@ class PremiumizeCloudProvider implements CloudProviderPort {
       fileName: entries.length == 1 ? entries.first.title : null,
     );
   }
+
+  @override
+  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async => null;
 }
