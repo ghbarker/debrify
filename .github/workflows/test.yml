@@ -44,6 +44,7 @@ jobs:
           test/cloud_playback_characterization_test.dart
           test/cloud_playlist_and_chrome_test.dart
           test/cloud_native_bound_test.dart
+          test/cloud_lazy_entry_url_test.dart
           test/download_cloud_credential_key_test.dart
 
       - name: Run refactor contract tests
@@ -52,6 +53,7 @@ jobs:
           test/cloud_playback_characterization_test.dart
           test/cloud_playlist_and_chrome_test.dart
           test/cloud_native_bound_test.dart
+          test/cloud_lazy_entry_url_test.dart
           test/download_cloud_credential_key_test.dart
           --reporter compact
 

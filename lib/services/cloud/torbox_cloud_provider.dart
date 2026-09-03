@@ -205,4 +205,17 @@ class TorboxCloudProvider implements CloudProviderPort {
       fileName: entries.length == 1 ? entries.first.title : null,
     );
   }
+
+  @override
+  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async {
+    final torrentId = entry.torboxTorrentId;
+    final fileId = entry.torboxFileId;
+    if (torrentId == null || fileId == null) return null;
+    final apiKey = (await CloudCredentials.apiKey(id)) ?? '';
+    return TorboxService.requestFileDownloadLink(
+      apiKey: apiKey,
+      torrentId: torrentId,
+      fileId: fileId,
+    );
+  }
 }

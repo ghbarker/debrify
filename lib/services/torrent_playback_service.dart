@@ -4632,29 +4632,8 @@ class TorrentPlaybackService {
   /// debrid entry on demand: RD `restrictedLink` → unrestrict, TorBox
   /// torrent+file id → download link, AllDebrid locked link → unlock. Premiumize
   /// entries already carry a URL. Returns null if it can't be resolved.
-  static Future<String?> _resolveEntryUrl(PlaylistEntry e) async {
-    if (e.url.isNotEmpty) return e.url;
-    try {
-      if (e.restrictedLink != null && e.restrictedLink!.isNotEmpty) {
-        final key = (await StorageService.getApiKey()) ?? '';
-        final r = await DebridService.unrestrictLink(key, e.restrictedLink!);
-        return r['download']?.toString();
-      }
-      if (e.torboxTorrentId != null && e.torboxFileId != null) {
-        final key = (await StorageService.getTorboxApiKey()) ?? '';
-        return await TorboxService.requestFileDownloadLink(
-          apiKey: key,
-          torrentId: e.torboxTorrentId!,
-          fileId: e.torboxFileId!,
-        );
-      }
-      if (e.allDebridLink != null && e.allDebridLink!.isNotEmpty) {
-        final key = (await StorageService.getAllDebridApiKey()) ?? '';
-        return await AllDebridService.unlockLink(key, e.allDebridLink!);
-      }
-    } catch (_) {}
-    return null;
-  }
+  static Future<String?> _resolveEntryUrl(PlaylistEntry e) =>
+      CloudProviderRegistry.instance.resolveEntryUrl(e);
 
   /// Multi-select download picker (parity with the old per-file download
   /// dialog): lists the pack's files with sizes, defaults all selected, shows a

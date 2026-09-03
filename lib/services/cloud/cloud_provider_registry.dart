@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../models/torrent.dart';
+import '../../screens/video_player/models/playlist_entry.dart';
 import '../series_source_service.dart';
 import 'alldebrid_cloud_provider.dart';
 import 'cloud_playback_result.dart';
@@ -72,6 +73,26 @@ class CloudProviderRegistry {
     final port = id == null ? null : _byId[id];
     if (port == null) return null;
     return port.resolveNativeBound(source, contentType: contentType);
+  }
+
+  /// Field presence, not [PlaylistEntry.provider]. Restricted-link wins over
+  /// TorBox; TorBox web-download ids are ignored here. Errors become null.
+  Future<String?> resolveEntryUrl(PlaylistEntry entry) async {
+    if (entry.url.isNotEmpty) return entry.url;
+    try {
+      if (entry.restrictedLink != null && entry.restrictedLink!.isNotEmpty) {
+        return await _byId[CloudProviderId.debrid]?.resolvePlaylistEntry(entry);
+      }
+      if (entry.torboxTorrentId != null && entry.torboxFileId != null) {
+        return await _byId[CloudProviderId.torbox]?.resolvePlaylistEntry(entry);
+      }
+      if (entry.allDebridLink != null && entry.allDebridLink!.isNotEmpty) {
+        return await _byId[CloudProviderId.alldebrid]?.resolvePlaylistEntry(
+          entry,
+        );
+      }
+    } catch (_) {}
+    return null;
   }
 
   static String? credentialKeyFor(String provider) =>

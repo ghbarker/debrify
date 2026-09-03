@@ -202,6 +202,9 @@ class PikPakCloudProvider implements CloudProviderPort {
     );
   }
 
+  @override
+  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async => null;
+
   static Future<List<Map<String, dynamic>>> extractPikPakVideos(
     PikPakApiService pikpak,
     String folderId, {

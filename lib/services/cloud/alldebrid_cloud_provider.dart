@@ -108,4 +108,12 @@ class AllDebridCloudProvider implements CloudProviderPort {
       fileName: link.fileName,
     );
   }
+
+  @override
+  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async {
+    final link = entry.allDebridLink;
+    if (link == null || link.isEmpty) return null;
+    final apiKey = (await CloudCredentials.apiKey(id)) ?? '';
+    return AllDebridService.unlockLink(apiKey, link);
+  }
 }
