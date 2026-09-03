@@ -2,6 +2,12 @@
 cmake_minimum_required(VERSION 3.14)
 project(debrify LANGUAGES CXX)
 
+# MSVC 14.5x (Visual Studio 2026) turns the <experimental/coroutine> deprecation
+# into a hard error; permission_handler_windows still includes it. Silence it
+# for every target (plugins are added as subdirectories below) until the
+# plugin moves to C++20 <coroutine>.
+add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
 set(BINARY_NAME "debrify")
