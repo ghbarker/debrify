@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:debrify/models/alldebrid_file.dart';
 import 'package:debrify/models/torrent.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
@@ -138,6 +140,16 @@ void main() {
 
   test('locked-link magnet has no dn=', () {
     expect(_req().magnet.contains('dn='), isFalse);
+  });
+
+  test('two downloadLink PreferVideos callers remain on Magic TV', () {
+    final src = File('lib/screens/magic_tv_screen.dart').readAsStringSync();
+    expect(
+      'addTorrentToDebridPreferVideos'.allMatches(src).length,
+      2,
+      reason: 'MagicTV requestMagicNext and _playNextFromQueue use downloadLink '
+          'from add — not locked-link walk-unrestrict',
+    );
   });
 
   test('AllDebrid collect applies the 50MB floor and size-filter fallback', () {

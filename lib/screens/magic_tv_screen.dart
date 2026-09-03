@@ -4541,33 +4541,19 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
             debugPrint(
               'DebrifyTV: Trying torrent: name="${item.name}", hash=${item.infohash}, size=${item.sizeBytes}, seeders=${item.seeders}',
             );
-            final magnetLink = 'magnet:?xt=urn:btih:${item.infohash}';
             try {
               final started = DateTime.now();
-              final result = await DebridService.addTorrentToDebridPreferVideos(
-                apiKeyEarly,
-                magnetLink,
-              );
+              final batch = await _resolveRdLockedLinks(item);
               if (_watchCancelled) {
                 return null;
               }
               final elapsed = DateTime.now().difference(started).inSeconds;
-              final String torrentId = result['torrentId'] as String? ?? '';
-              final List<String> rdLinks =
-                  (result['links'] as List<dynamic>? ?? const [])
-                      .map((link) => link?.toString() ?? '')
-                      .where((link) => link.isNotEmpty)
-                      .toList();
-              if (rdLinks.isEmpty) {
+              if (batch == null || batch.lockedLinks.isEmpty) {
                 continue;
               }
 
-              final newLinks = rdLinks
-                  .where((link) => !_seenRestrictedLinks.contains(link))
-                  .toList();
-              if (newLinks.isEmpty) {
-                continue;
-              }
+              final torrentId = batch.remoteId;
+              final newLinks = List<String>.from(batch.lockedLinks);
 
               newLinks.shuffle(Random());
               // Walk THIS torrent's own links until one is playable, rather
@@ -5990,30 +5976,16 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
           debugPrint(
             'DebrifyTV: Cached trying torrent name="${item.name}" hash=${item.infohash}',
           );
-          final magnetLink = 'magnet:?xt=urn:btih:${item.infohash}';
           try {
             final started = DateTime.now();
-            final result = await DebridService.addTorrentToDebridPreferVideos(
-              apiKey,
-              magnetLink,
-            );
+            final batch = await _resolveRdLockedLinks(item);
             final elapsed = DateTime.now().difference(started).inSeconds;
-            final String torrentId = result['torrentId'] as String? ?? '';
-            final List<String> rdLinks =
-                (result['links'] as List<dynamic>? ?? const [])
-                    .map((link) => link?.toString() ?? '')
-                    .where((link) => link.isNotEmpty)
-                    .toList();
-            if (rdLinks.isEmpty) {
+            if (batch == null || batch.lockedLinks.isEmpty) {
               continue;
             }
 
-            final newLinks = rdLinks
-                .where((link) => !_seenRestrictedLinks.contains(link))
-                .toList();
-            if (newLinks.isEmpty) {
-              continue;
-            }
+            final torrentId = batch.remoteId;
+            final newLinks = List<String>.from(batch.lockedLinks);
 
             newLinks.shuffle(Random());
             // Walk THIS torrent's own links until one is playable. Bailing
@@ -6710,13 +6682,12 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
 
         for (var index = 0; index < filteredTorrents.length; index++) {
           final candidate = filteredTorrents[index];
-          final magnetLink = 'magnet:?xt=urn:btih:${candidate.infohash}';
 
-          Map<String, dynamic> selection;
+          MagicTvLockedBatch? batch;
           try {
-            selection = await DebridService.addTorrentToDebridPreferVideos(
-              apiKey,
-              magnetLink,
+            batch = await _resolveRdLockedLinks(
+              candidate,
+              seenKeys: <String>{},
             );
           } catch (error) {
             debugPrint(
@@ -6725,10 +6696,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
             continue;
           }
 
-          final rdLinks = (selection['links'] as List<dynamic>? ?? const [])
-              .map((link) => link?.toString() ?? '')
-              .where((link) => link.isNotEmpty)
-              .toList();
+          final rdLinks = batch?.lockedLinks ?? const <String>[];
 
           if (rdLinks.isEmpty) {
             debugPrint(
@@ -6737,7 +6705,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
             continue;
           }
 
-          final torrentId = selection['torrentId']?.toString() ?? '';
+          final torrentId = batch?.remoteId ?? '';
           List<String> newLinks = rdLinks
               .where((link) => !_seenRestrictedLinks.contains(link))
               .toList();
@@ -9635,15 +9603,25 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     minVideoSizeBytes: _torboxMinVideoSizeBytes,
   );
 
-  MagicTvPrepareRequest _magicTvLockedRequest(Torrent candidate) =>
-      MagicTvPrepareRequest(
-        torrent: candidate,
-        log: (message) => debugPrint(message),
-        seenKeys: _seenRestrictedLinks,
-        sizeMatchesBytes: _tvFilters.sizeMatchesBytes,
-        hasSizeFilter: _tvFilters.hasSize,
-        minVideoSizeBytes: _torboxMinVideoSizeBytes,
-      );
+  MagicTvPrepareRequest _magicTvLockedRequest(
+    Torrent candidate, {
+    Set<String>? seenKeys,
+  }) => MagicTvPrepareRequest(
+    torrent: candidate,
+    log: (message) => debugPrint(message),
+    seenKeys: seenKeys ?? _seenRestrictedLinks,
+    sizeMatchesBytes: _tvFilters.sizeMatchesBytes,
+    hasSizeFilter: _tvFilters.hasSize,
+    minVideoSizeBytes: _torboxMinVideoSizeBytes,
+  );
+
+  Future<MagicTvLockedBatch?> _resolveRdLockedLinks(
+    Torrent candidate, {
+    Set<String>? seenKeys,
+  }) => CloudProviderRegistry.instance.prepareMagicTvLockedLinks(
+    provider: _providerRealDebrid,
+    request: _magicTvLockedRequest(candidate, seenKeys: seenKeys),
+  );
 
   Future<void> _watchPremiumizeWithCachedTorrents(
     List<Torrent> cachedTorrents, {
