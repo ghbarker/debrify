@@ -56,6 +56,9 @@ void main() {
     );
     expect(viaPlayback, isNull);
     expect(debrid.boundCount, 1);
+    expect(CloudProviderId.fromStoredId('rd'), CloudProviderId.debrid);
+    expect(CloudProviderId.fromStoredId('debrid'), isNull);
+    expect(CloudProviderId.tryParse('debrid'), CloudProviderId.debrid);
   });
 
   test('unknown stored id returns null instead of throwing', () async {
