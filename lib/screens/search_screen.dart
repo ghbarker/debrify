@@ -12959,8 +12959,9 @@ class _SearchScreenState extends State<SearchScreen>
     bool showDragHandle = true,
   }) {
     final app = AppThemeScope.of(context);
-    final serviceColor = CloudProviderChrome.sourceColor(source.debridService);
-    final serviceLabel = CloudProviderChrome.sourceLabel(source.debridService);
+    final chip = CloudProviderChrome.sourceChip(source.debridService);
+    final serviceColor = chip.color;
+    final serviceLabel = chip.label;
 
     return Container(
       key: key,

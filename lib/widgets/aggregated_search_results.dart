@@ -1137,8 +1137,9 @@ class AggregatedSearchResultsState extends State<AggregatedSearchResults> {
     required VoidCallback onDelete,
     bool showDragHandle = true,
   }) {
-    final serviceColor = CloudProviderChrome.sourceColor(source.debridService);
-    final serviceLabel = CloudProviderChrome.sourceLabel(source.debridService);
+    final chip = CloudProviderChrome.sourceChip(source.debridService);
+    final serviceColor = chip.color;
+    final serviceLabel = chip.label;
 
     return Container(
       key: key,

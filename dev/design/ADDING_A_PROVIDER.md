@@ -121,7 +121,7 @@ real URLs and downloads enqueue those URLs directly.
   per-result-card button (`buildPremiumizeButton`), Quick Play next-retry,
   post-torrent-action helpers, `_enabledServicesCount`, in-player source
   switching (`_resolveSourceViaPremiumize`), not-cached "add anyway".
-- Loading overlay: `DebridLoadingOverlay.showPremiumize`.
+- Loading overlay: `DebridLoadingOverlay.showForPlaybackId`.
 
 ## 10. Cache check during search (DONE for Premiumize)
 Show a provider "cached" badge on search results (mirrors Torbox).

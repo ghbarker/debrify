@@ -45,8 +45,7 @@ enum CloudProviderId {
     pikpak => null,
   };
 
-  /// Action-sheet / catalog title. TorBox uses this spelling; the loading
-  /// overlay uses [overlayTitle] (`Torbox`) so existing copy stays put.
+  /// Action-sheet title (`TorBox`). Loader copy is [overlayTitle] (`Torbox`).
   String get displayName => switch (this) {
     debrid => 'Real-Debrid',
     torbox => 'TorBox',

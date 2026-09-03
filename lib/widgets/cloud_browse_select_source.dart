@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 import '../screens/alldebrid/alldebrid_files_screen.dart';
 import '../screens/pikpak/pikpak_files_screen.dart';
 import '../screens/premiumize/premiumize_files_screen.dart';
+import '../services/cloud/cloud_provider_id.dart';
 import '../services/series_source_service.dart';
 
-/// Bind-source cloud browsers shared by catalog, Trakt, and aggregated search.
-///
-/// Real-Debrid and TorBox use their own download screens (not this helper).
-/// Unknown providers return null so the caller does nothing — same as the
-/// old `default: return`.
+/// Bind-source cloud browsers for catalog, Trakt, and aggregated search.
+/// RD/TorBox keep their download screens. Unknown → null (old `default`).
 class CloudBrowseSelectSource {
   CloudBrowseSelectSource._();
 
@@ -18,28 +16,30 @@ class CloudBrowseSelectSource {
     required String query,
     required Future<void> Function(SeriesSource) onSourceSelected,
   }) {
-    switch (provider) {
-      case 'premiumize':
+    switch (CloudProviderId.fromPlaybackId(provider)) {
+      case CloudProviderId.premiumize:
         return PremiumizeFilesScreen(
           isPushedRoute: true,
           initialSearchQuery: query,
           selectSourceMode: true,
           onSourceSelected: onSourceSelected,
         );
-      case 'alldebrid':
+      case CloudProviderId.alldebrid:
         return AllDebridFilesScreen(
           isPushedRoute: true,
           initialSearchQuery: query,
           selectSourceMode: true,
           onSourceSelected: onSourceSelected,
         );
-      case 'pikpak':
+      case CloudProviderId.pikpak:
         return PikPakFilesScreen(
           isPushedRoute: true,
           selectSourceMode: true,
           onSourceSelected: onSourceSelected,
         );
-      default:
+      case CloudProviderId.debrid ||
+          CloudProviderId.torbox ||
+          null:
         return null;
     }
   }

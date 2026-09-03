@@ -19,6 +19,7 @@ import '../../services/stream_url_validator.dart';
 import '../../services/main_page_bridge.dart';
 import '../../services/storage_service.dart';
 import '../../services/cloud/cloud_provider_chrome.dart';
+import '../../services/cloud/cloud_provider_id.dart';
 import '../../services/video_player_launcher.dart';
 import '../../services/torbox_service.dart';
 import '../../services/torbox_torrent_control_service.dart';
@@ -765,54 +766,23 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
   Future<bool> _isValidStreamUrl(String url) =>
       StreamUrlValidator.isPlayableVideoUrl(url);
 
-  /// Maps the active debrid provider to the Pipeline loader's chip label,
-  /// two-letter code, accent colour, and whether it runs a cache-check stage.
-  /// Colours mirror the Home/Search play loader (torrent_playback_service).
   ({String label, String code, Color color, bool cacheCheck}) _tvProviderInfo() {
-    switch (_debridProvider) {
-      case 'realdebrid':
-        return (
-          label: 'Real-Debrid',
-          code: 'RD',
-          color: const Color(0xFF10B981),
-          cacheCheck: false,
-        );
-      case 'torbox':
-        return (
-          label: 'TorBox',
-          code: 'TB',
-          color: const Color(0xFF8B5CF6),
-          cacheCheck: true,
-        );
-      case 'premiumize':
-        return (
-          label: 'Premiumize',
-          code: 'PM',
-          color: const Color(0xFFF59E0B),
-          cacheCheck: true,
-        );
-      case 'alldebrid':
-        return (
-          label: 'AllDebrid',
-          code: 'AD',
-          color: const Color(0xFF26A69A),
-          cacheCheck: false,
-        );
-      case 'pikpak':
-        return (
-          label: 'PikPak',
-          code: 'PP',
-          color: const Color(0xFF6366F1),
-          cacheCheck: false,
-        );
-      default:
-        return (
-          label: 'Debrid',
-          code: 'DB',
-          color: PipelineLoadingOverlay.accent,
-          cacheCheck: false,
-        );
+    final id = CloudProviderId.tryParse(_debridProvider);
+    if (id == null) {
+      return (
+        label: 'Debrid',
+        code: 'DB',
+        color: PipelineLoadingOverlay.accent,
+        cacheCheck: false,
+      );
     }
+    return (
+      label: id.displayName,
+      code: id.chipCode,
+      color: CloudProviderChrome.gradient(id.playbackId).first,
+      cacheCheck:
+          id == CloudProviderId.torbox || id == CloudProviderId.premiumize,
+    );
   }
 
   Future<void> _playChannel(StremioTvChannel channel) async {

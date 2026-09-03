@@ -3,11 +3,16 @@ import 'package:flutter/material.dart';
 import '../series_source_service.dart';
 import 'cloud_provider_id.dart';
 
-/// Playback chrome uses exact playback ids. Catalog/bind-source helpers parse
-/// stored ids. [label] does not map `rd`; [sourceLabel] maps `rd` → Real-Debrid
-/// and local → `Local` (not [label]'s `On-device`).
+/// Flutter colors/icons. String identity lives on [CloudProviderId].
+///
+/// Three lookup rules, on purpose:
+/// - [label]/[code]/[gradient]/[icon]: exact playback id (`debrid`, not `rd`)
+/// - [catalogChip]/[catalogTitle]: [CloudProviderId.tryParse] (aliases + `auto`)
+/// - [sourceChip]: stored id (`rd`); local is `Local`, not [label]'s `On-device`
 class CloudProviderChrome {
   CloudProviderChrome._();
+
+  static const _indigo = [Color(0xFF6366F1), Color(0xFF4338CA)];
 
   static String label(String provider) {
     switch (provider) {
@@ -25,7 +30,6 @@ class CloudProviderChrome {
     }
   }
 
-  /// Two-letter glyph for the Pipeline loader chip.
   static String code(String provider) {
     switch (provider) {
       case 'preparing':
@@ -59,10 +63,7 @@ class CloudProviderChrome {
         Color(0xFF26A69A),
         Color(0xFF00796B),
       ],
-      CloudProviderId.pikpak || null => const [
-        Color(0xFF6366F1),
-        Color(0xFF4338CA),
-      ],
+      CloudProviderId.pikpak || null => _indigo,
     };
   }
 
@@ -77,20 +78,22 @@ class CloudProviderChrome {
     };
   }
 
-  /// Catalog / Stremio TV ids use `realdebrid` instead of playback `debrid`.
-  /// `auto` and unknown strings are `AUTO` (not a guess at the first letter).
+  /// `auto` / unknown → `AUTO`, not the first letter of the string.
   static String catalogChip(String provider) {
     final id = CloudProviderId.tryParse(provider);
     if (id == null) return 'AUTO';
     return id.chipCode;
   }
 
-  /// Null when [provider] is not a known cloud id so the caller can render Auto.
   static String? catalogTitle(String provider) {
     return CloudProviderId.tryParse(provider)?.displayName;
   }
 
-  /// Edit-Sources chip. Stored ids (`rd`), not playback (`debrid`).
+  static ({String label, Color color}) sourceChip(String stored) => (
+        label: sourceLabel(stored),
+        color: sourceColor(stored),
+      );
+
   static String sourceLabel(String stored) {
     switch (stored) {
       case SeriesSource.localService:
@@ -102,8 +105,7 @@ class CloudProviderChrome {
     }
   }
 
-  /// Edit-Sources chip color. Not [gradient] — TorBox is blue here, purple
-  /// on the playback loader.
+  /// Bind-source TorBox is blue; playback [gradient] is purple.
   static Color sourceColor(String stored) {
     switch (stored) {
       case SeriesSource.localService:

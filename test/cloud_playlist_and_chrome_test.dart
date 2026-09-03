@@ -83,8 +83,22 @@ void main() {
         const Color(0xFF8B5CF6),
       );
       expect(
+        CloudProviderChrome.sourceChip('rd').label,
+        'Real-Debrid',
+      );
+      expect(
         CloudProviderChrome.sourceColor('nope'),
         Colors.white54,
+      );
+      expect(
+        CloudProviderId.tryParse('realdebrid')!.chipCode,
+        'RD',
+      );
+      expect(
+        CloudProviderChrome.gradient(
+          CloudProviderId.tryParse('realdebrid')!.playbackId,
+        ).first,
+        const Color(0xFF10B981),
       );
     });
   });
