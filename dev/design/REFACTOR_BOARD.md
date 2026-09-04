@@ -15,7 +15,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | M0 · CODEMAP refresh | merged | `refactor/m0-codemap-refresh` | — | `CODEMAP.md`, `dev/design/ADDING_A_PROVIDER.md` | — | D0 merged; dropped `lib/screens/deprecated/` and `catalog_browser.dart`. |
 | P1 · capability interfaces | merged | `refactor/p1-capabilities` | — | `lib/services/cloud/**`, `test/cloud_*` | — | Fat-port CloudUnsupported defaults kept until FakeCloudProvider moves. |
 | P2a · Magic TV strings | merged | `refactor/p2a-magic-tv-strings` | — | `lib/screens/magic_tv_screen.dart` | — | Dispatch via MagicTvDispatch; no `lib/services/cloud/**` edits; pin test subclasses FakeCloudProvider. |
-| P2b · Stremio TV strings | assigned | `refactor/p2b-stremio-tv-strings` | worker-p2b | `lib/screens/stremio_tv/**` | — | Forbidden: `lib/services/cloud/**`. |
+| P2b · Stremio TV strings | merged | `refactor/p2b-stremio-tv-strings` | — | `lib/screens/stremio_tv/**` | — | `StremioTvDispatch` (`is` + FakeCloudProvider `supports` fallback). `StremioTvCacheFilter` strings in `lib/services/cloud/` stay (out of scope). Frozen: picker ids, `auto` sentinel. |
 | P2c · launcher + bulk-add | assigned | `refactor/p2c-launcher-bulk-add` | worker-p2c | `lib/services/video_player_launcher.dart`, `lib/services/torrent_bulk_add_service.dart` | — | Forbidden: `lib/services/cloud/**`. No dart format on launcher. |
 | P2d · playlist/cloud/settings strings | assigned | `refactor/p2d-playlist-cloud-settings` | worker-p2d | `lib/screens/playlist_content_view_screen.dart`, `lib/services/playlist_player_service.dart`, `lib/screens/cloud_screen.dart`, `lib/screens/settings/provider_settings_page.dart` | — | Forbidden: `lib/services/cloud/**`. |
 | H1 · Home row registry | merged | `refactor/h1-home-row-registry` | — | new `lib/services/home/**`, `search_screen.dart` [row-id hunks only], `lib/screens/settings/home_sections_filter_page.dart`, `lib/services/home_list_rows.dart`, `lib/services/home_row_order.dart` | — | Frozen row-id grammar; fake family appears in manager + board. |
@@ -59,4 +59,4 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
-Phase 1 assigned (human proceed on partial gate 0): P1, H1, T1, S1. P2x still blocked on P1.
+Phase 1 merged: P1, H1, T1, S1. Phase 2: P2a/P2b merged; P2c/P2d in review (CI). Do not assign G1–G5/T2 until gate 1.
