@@ -2,7 +2,7 @@
 
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 
-Baseline: `main` @ H1/T1/S1-fix merged · Phase: **2 hold** · Last gate: 1 (Linux only; Windows build blocked — Flutter not on host PATH)
+Baseline: `main` @ H1/T1/S1-fix merged · Phase: **2 hold** · Last gate: 1 (Linux only; Windows blocked — no Flutter SDK on `C:\Users\hunth`)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -40,7 +40,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | Gate | Date | Analyzer (all lib+test) | Full test suite | Windows build | Android build | Manual smoke | Result |
 |---|---|---|---|---|---|---|---|
 | 0 | 2026-09-04 | 466 (0 error · 83 warning · 383 info); analyze_baseline.py exit 0 (4 unused from deleted catalog_browser) | 4320 passed · 33 failed (same 33 as Phase 0 baseline; +4 vs 4316 from D0 pin + C0 layering) | not run (Linux host) | not run (no Android SDK) | Linux desktop: Home, Search, Keyword/Sources UI, play attempt → no sources (no debrid), Settings → Data & Backup export wrote `~/Documents/downloads/debrify-profile-2026-09-04.json` | **partial** — smoke + analyzer/tests ok; Windows/Android builds still outstanding. Phase 1 not assigned. |
-| 1 | 2026-09-04 | 466 issues (`flutter analyze lib test` exit 1; same count as gate 0) | 4405 passed · 33 failed (same 33 allowlisted failures; +85 vs gate 0 from Phase 1/2 pins) | not run — no Windows self-hosted worker connected | not run (no Android SDK) | not re-run this pass (Linux smoke still from gate 0) | **partial** — G1–G5/T2/P2e stay queued until Windows build + smoke. H1/T1/S1 follow-ups proceed. |
+| 1 | 2026-09-04 | 466 issues (`flutter analyze lib test` exit 1; same count as gate 0) | 4405 passed · 33 failed (same 33 allowlisted failures; +85 vs gate 0 from Phase 1/2 pins) | **blocked** — `win-build` connected at `C:\Users\hunth\debrify`; no `flutter.bat` on the host (searched `C:\Users\hunth`, `C:\src`, `C:\dev`, `C:\flutter`) | not run (no Android SDK) | not re-run this pass (Linux smoke still from gate 0) | **partial** — G1–G5/T2/P2e stay queued until Windows Flutter install + `flutter build windows` + smoke. |
 
 ## Notes
 
