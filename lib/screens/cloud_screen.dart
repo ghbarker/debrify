@@ -2,10 +2,91 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/analytics_service.dart';
+import '../services/cloud/cloud_credentials.dart';
+import '../services/cloud/cloud_provider_id.dart';
+import '../services/cloud/cloud_provider_registry.dart';
 import '../services/main_page_bridge.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_theme_scope.dart';
+
+/// Cloud hub tiles. Keys passed to [MainPageBridge.openCloudProvider] are
+/// [CloudProviderId.playlistStoredProvider] (`realdebrid`, not playback
+/// `debrid`). WebDAV is a frozen sentinel, not a [CloudProviderId].
+///
+/// Visibility is registry membership plus magnet-surface credentials
+/// ([CloudCredentials.configured] / [CloudSurface.magnet]) plus the
+/// hidden-from-nav flags. PikPak magnet is enabled-only, matching the
+/// old hub `getPikPakEnabled` check — not settings `isAuthenticated`.
+class CloudHubDispatch {
+  CloudHubDispatch._();
+
+  /// Frozen hub / [MainPageBridge.openCloudProvider] key for WebDAV.
+  static const webDavKey = 'webdav';
+
+  /// Old per-provider nav order: RD, TorBox, PikPak, Premiumize, AllDebrid.
+  /// PikPak before Premiumize — not [CloudProviderId.playbackPrecedence].
+  static const List<CloudProviderId> cloudOrder = [
+    CloudProviderId.debrid,
+    CloudProviderId.torbox,
+    CloudProviderId.pikpak,
+    CloudProviderId.premiumize,
+    CloudProviderId.alldebrid,
+  ];
+
+  static String hubKey(CloudProviderId id) => id.playlistStoredProvider;
+
+  /// Hub title. Not [CloudProviderId.displayName]: RD is `Real Debrid`
+  /// (space), TorBox is [CloudProviderId.overlayTitle] `Torbox`.
+  static String hubName(CloudProviderId id) {
+    return switch (id) {
+      CloudProviderId.debrid => 'Real Debrid',
+      CloudProviderId.torbox => id.overlayTitle,
+      CloudProviderId.pikpak ||
+      CloudProviderId.premiumize ||
+      CloudProviderId.alldebrid => id.displayName,
+    };
+  }
+
+  static String hubSubtitle(CloudProviderId id) {
+    return switch (id) {
+      CloudProviderId.pikpak => 'Cloud storage',
+      CloudProviderId.debrid ||
+      CloudProviderId.torbox ||
+      CloudProviderId.premiumize ||
+      CloudProviderId.alldebrid => 'Debrid service',
+    };
+  }
+
+  static IconData hubIcon(CloudProviderId id) {
+    return switch (id) {
+      CloudProviderId.debrid => Icons.cloud_download_rounded,
+      CloudProviderId.torbox => Icons.flash_on_rounded,
+      CloudProviderId.pikpak => Icons.cloud_circle_rounded,
+      CloudProviderId.premiumize => Icons.workspace_premium_rounded,
+      CloudProviderId.alldebrid => Icons.all_inclusive_rounded,
+    };
+  }
+
+  /// Hub brand colours. Not [CloudProviderChrome.gradient] (those are
+  /// playback purple/green).
+  static Color hubColor(CloudProviderId id) {
+    return switch (id) {
+      CloudProviderId.debrid => const Color(0xFF60A5FA),
+      CloudProviderId.torbox => const Color(0xFFFBBF24),
+      CloudProviderId.pikpak => const Color(0xFF34D399),
+      CloudProviderId.premiumize => const Color(0xFFFB923C),
+      CloudProviderId.alldebrid => const Color(0xFFEF4444),
+    };
+  }
+
+  static bool inRegistry(CloudProviderId id) =>
+      CloudProviderRegistry.instance[id] != null;
+
+  /// Magnet-surface credentials. Hidden-from-nav is applied by the caller.
+  static Future<bool> magnetConfigured(CloudProviderId id) =>
+      CloudCredentials.configured(id, CloudSurface.magnet);
+}
 
 /// Consolidated "Cloud" hub. Replaces the six separate provider nav tabs
 /// (Real Debrid / Torbox / PikPak / Premiumize / AllDebrid / WebDAV) with a
@@ -40,44 +121,17 @@ class _CloudProviderInfo {
 
 class _CloudScreenState extends State<CloudScreen> {
   /// Canonical provider order (mirrors the old per-provider nav order).
-  static const List<_CloudProviderInfo> _allProviders = [
-    _CloudProviderInfo(
-      'realdebrid',
-      'Real Debrid',
-      'Debrid service',
-      Icons.cloud_download_rounded,
-      Color(0xFF60A5FA),
-    ),
-    _CloudProviderInfo(
-      'torbox',
-      'Torbox',
-      'Debrid service',
-      Icons.flash_on_rounded,
-      Color(0xFFFBBF24),
-    ),
-    _CloudProviderInfo(
-      'pikpak',
-      'PikPak',
-      'Cloud storage',
-      Icons.cloud_circle_rounded,
-      Color(0xFF34D399),
-    ),
-    _CloudProviderInfo(
-      'premiumize',
-      'Premiumize',
-      'Debrid service',
-      Icons.workspace_premium_rounded,
-      Color(0xFFFB923C),
-    ),
-    _CloudProviderInfo(
-      'alldebrid',
-      'AllDebrid',
-      'Debrid service',
-      Icons.all_inclusive_rounded,
-      Color(0xFFEF4444),
-    ),
-    _CloudProviderInfo(
-      'webdav',
+  static final List<_CloudProviderInfo> _allProviders = [
+    for (final id in CloudHubDispatch.cloudOrder)
+      _CloudProviderInfo(
+        CloudHubDispatch.hubKey(id),
+        CloudHubDispatch.hubName(id),
+        CloudHubDispatch.hubSubtitle(id),
+        CloudHubDispatch.hubIcon(id),
+        CloudHubDispatch.hubColor(id),
+      ),
+    const _CloudProviderInfo(
+      CloudHubDispatch.webDavKey,
       'WebDAV',
       'File server',
       Icons.cloud_sync_rounded,
@@ -158,38 +212,22 @@ class _CloudScreenState extends State<CloudScreen> {
   /// Which providers are enabled & not hidden — mirrors main.dart's
   /// `_computeVisibleNavIndices` per-provider conditions exactly.
   Future<List<_CloudProviderInfo>> _computeAvailableProviders() async {
+    final hidden = <CloudProviderId, bool>{
+      CloudProviderId.debrid: await StorageService.getRealDebridHiddenFromNav(),
+      CloudProviderId.torbox: await StorageService.getTorboxHiddenFromNav(),
+      CloudProviderId.pikpak: await StorageService.getPikPakHiddenFromNav(),
+      CloudProviderId.premiumize:
+          await StorageService.getPremiumizeHiddenFromNav(),
+      CloudProviderId.alldebrid:
+          await StorageService.getAllDebridHiddenFromNav(),
+    };
+
     final keys = <String>{};
-
-    final rdEnabled = await StorageService.getRealDebridIntegrationEnabled();
-    final rdKey = await StorageService.getApiKey();
-    final rdHidden = await StorageService.getRealDebridHiddenFromNav();
-    if (rdEnabled && (rdKey?.isNotEmpty ?? false) && !rdHidden) {
-      keys.add('realdebrid');
-    }
-
-    final tbEnabled = await StorageService.getTorboxIntegrationEnabled();
-    final tbKey = await StorageService.getTorboxApiKey();
-    final tbHidden = await StorageService.getTorboxHiddenFromNav();
-    if (tbEnabled && (tbKey?.isNotEmpty ?? false) && !tbHidden) {
-      keys.add('torbox');
-    }
-
-    final ppEnabled = await StorageService.getPikPakEnabled();
-    final ppHidden = await StorageService.getPikPakHiddenFromNav();
-    if (ppEnabled && !ppHidden) keys.add('pikpak');
-
-    final pmEnabled = await StorageService.getPremiumizeIntegrationEnabled();
-    final pmKey = await StorageService.getPremiumizeApiKey();
-    final pmHidden = await StorageService.getPremiumizeHiddenFromNav();
-    if (pmEnabled && (pmKey?.isNotEmpty ?? false) && !pmHidden) {
-      keys.add('premiumize');
-    }
-
-    final adEnabled = await StorageService.getAllDebridIntegrationEnabled();
-    final adKey = await StorageService.getAllDebridApiKey();
-    final adHidden = await StorageService.getAllDebridHiddenFromNav();
-    if (adEnabled && (adKey?.isNotEmpty ?? false) && !adHidden) {
-      keys.add('alldebrid');
+    for (final id in CloudHubDispatch.cloudOrder) {
+      if (!CloudHubDispatch.inRegistry(id)) continue;
+      if (hidden[id] == true) continue;
+      if (!await CloudHubDispatch.magnetConfigured(id)) continue;
+      keys.add(CloudHubDispatch.hubKey(id));
     }
 
     final webDavEnabled = await StorageService.getWebDavEnabled();
@@ -198,7 +236,7 @@ class _CloudScreenState extends State<CloudScreen> {
     );
     final wdHidden = await StorageService.getWebDavHiddenFromNav();
     if (webDavEnabled && webDavServers.isNotEmpty && !wdHidden) {
-      keys.add('webdav');
+      keys.add(CloudHubDispatch.webDavKey);
     }
 
     return [
