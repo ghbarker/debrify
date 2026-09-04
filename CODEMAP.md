@@ -272,6 +272,9 @@ is an editor mirror, not the source of truth. How to add a provider:
   `VideoPlayerScreen` public constructor stays). Resume:
   `lib/services/playback/resume_controller.dart` (`ResumeController` +
   `ResumeContext` / `ResumeSession`; host keeps `_ResumeSession` adapter).
+  Identify-title sheet: `lib/widgets/player/identify_title_sheet.dart`
+  (`showIdentifyTitleSearchSheet` → `StremioMeta?`; host keeps
+  `_identifyTitleAndFetchSubtitles`).
   Controls overlay:
   `lib/screens/video_player/widgets/controls.dart`. Track/source sheets: `lib/screens/video_player/widgets/`.
 - Launch + native TV: `lib/services/video_player_launcher.dart` 🔴 (`_launchOnAndroidTv`, `_push`),
