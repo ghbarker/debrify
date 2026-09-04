@@ -4,11 +4,12 @@ import 'cloud_files_source.dart';
 
 /// Shared cloud-files entry, parameterised by a [CloudFilesSource].
 ///
-/// This PR routes **Real-Debrid** and **TorBox** onto this screen.
-/// Premiumize, AllDebrid and PikPak stay on their own screens.
+/// Real-Debrid, TorBox, Premiumize, AllDebrid and PikPak route through
+/// this screen. Selection bars stay on the hosts (shape-manifest floor).
 ///
 /// [host] is the provider-specific State (folder tree, web downloads,
-/// playback). The source supplies destination id, titles, and sections.
+/// transfers, playback). The source supplies destination id, titles, and
+/// sections.
 class CloudFilesScreen extends StatelessWidget {
   const CloudFilesScreen({super.key, required this.source, required this.host});
 

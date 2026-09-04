@@ -24,12 +24,17 @@ import '../debrify_tv/widgets/tv_focus_scroll_wrapper.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/tv_keys.dart';
+import '../cloud_files/cloud_files_screen.dart';
+import '../cloud_files/premiumize_files_source.dart';
 
 /// Cloud-library browser for Premiumize, mirroring the Torbox/PikPak navigation
 /// pages. Premiumize's cloud is a real server-side folder hierarchy, so this
 /// browses folders by id (like PikPak) and additionally exposes a Transfers
 /// view (Premiumize's queued/running magnet transfers).
-class PremiumizeFilesScreen extends StatefulWidget {
+///
+/// Public type is unchanged so sidebar, bind, and [CloudBrowseSelectSource]
+/// keep working. Body is [CloudFilesScreen] with a [PremiumizeFilesSource] (G4).
+class PremiumizeFilesScreen extends StatelessWidget {
   final String? initialFolderId;
   final String? initialFolderName;
   final String? initialSearchQuery;
@@ -51,14 +56,61 @@ class PremiumizeFilesScreen extends StatefulWidget {
   });
 
   @override
-  State<PremiumizeFilesScreen> createState() => _PremiumizeFilesScreenState();
+  Widget build(BuildContext context) {
+    return CloudFilesScreen(
+      source: PremiumizeFilesSource(
+        initialFolderId: initialFolderId,
+        initialFolderName: initialFolderName,
+        initialSearchQuery: initialSearchQuery,
+        isPushedRoute: isPushedRoute,
+        selectSourceMode: selectSourceMode,
+        onSourceSelectedAsync: onSourceSelected,
+      ),
+      host: PremiumizeCloudFilesHost(
+        initialFolderId: initialFolderId,
+        initialFolderName: initialFolderName,
+        initialSearchQuery: initialSearchQuery,
+        isPushedRoute: isPushedRoute,
+        selectSourceMode: selectSourceMode,
+        onSourceSelected: onSourceSelected,
+      ),
+    );
+  }
+}
+
+/// Former [PremiumizeFilesScreen] State host. Constructor and fields are the
+/// origin widget moved verbatim.
+class PremiumizeCloudFilesHost extends StatefulWidget {
+  final String? initialFolderId;
+  final String? initialFolderName;
+  final String? initialSearchQuery;
+  final bool selectSourceMode;
+  final Future<void> Function(SeriesSource)? onSourceSelected;
+
+  /// When true, this screen was pushed as a route (not displayed in a tab).
+  /// Back navigation pops the route instead of switching tabs.
+  final bool isPushedRoute;
+
+  const PremiumizeCloudFilesHost({
+    super.key,
+    this.initialFolderId,
+    this.initialFolderName,
+    this.initialSearchQuery,
+    this.isPushedRoute = false,
+    this.selectSourceMode = false,
+    this.onSourceSelected,
+  });
+
+  @override
+  State<PremiumizeCloudFilesHost> createState() =>
+      _PremiumizeFilesScreenState();
 }
 
 enum _FolderViewMode { raw, sortedAZ }
 
 enum _PremiumizeView { files, transfers }
 
-class _PremiumizeFilesScreenState extends State<PremiumizeFilesScreen> {
+class _PremiumizeFilesScreenState extends State<PremiumizeCloudFilesHost> {
   final ScrollController _scrollController = ScrollController();
 
   // Premiumize tab index in main.dart's page list (for TV focus + back handler).
