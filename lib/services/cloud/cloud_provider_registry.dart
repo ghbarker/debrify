@@ -392,6 +392,46 @@ class CloudProviderRegistry {
     );
   }
 
+  /// Magic TV live RD unrestrict. Same Map as DebridService.unrestrictLink.
+  /// Looks up the API key; Magic TV currently passes it. Not
+  /// [unlockPlaybackEntry] (String URL). Missing adapter throws
+  /// [CloudUnsupported] — no fat-port stub.
+  Future<Map<String, dynamic>> unrestrictLink(String link) async {
+    final port = _byId[CloudProviderId.debrid];
+    final unlock = _as<CloudMagicTvRdUnlock>(port);
+    if (unlock != null) return unlock.unrestrictLink(link);
+    throw const CloudUnsupported(
+      CloudProviderId.debrid,
+      CloudPortFeature.magicTvRdUnlock,
+    );
+  }
+
+  /// Magic TV live RD PreferVideos add. Same Map as
+  /// DebridService.addTorrentToDebridPreferVideos. Looks up the API key;
+  /// Magic TV currently passes it. Not [addMagnet] (playback result).
+  Future<Map<String, dynamic>> addTorrentPreferVideos(String magnet) async {
+    final port = _byId[CloudProviderId.debrid];
+    final unlock = _as<CloudMagicTvRdUnlock>(port);
+    if (unlock != null) return unlock.addTorrentPreferVideos(magnet);
+    throw const CloudUnsupported(
+      CloudProviderId.debrid,
+      CloudPortFeature.magicTvRdUnlock,
+    );
+  }
+
+  /// Magic TV live AllDebrid unlock. Same String as
+  /// AllDebridService.unlockLink. Looks up the API key; Magic TV currently
+  /// passes it. Not [unlockPlaybackEntry] (PlaylistEntry).
+  Future<String> unlockLink(String lockedLink) async {
+    final port = _byId[CloudProviderId.alldebrid];
+    final unlock = _as<CloudMagicTvAdUnlock>(port);
+    if (unlock != null) return unlock.unlockLink(lockedLink);
+    throw const CloudUnsupported(
+      CloudProviderId.alldebrid,
+      CloudPortFeature.magicTvAdUnlock,
+    );
+  }
+
   static T? _as<T>(CloudProviderPort? port) => port is T ? port as T : null;
 
   static String? credentialKeyFor(String provider) =>

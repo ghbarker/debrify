@@ -22,7 +22,8 @@ class AllDebridCloudProvider extends CloudProviderAdapter
         CloudUnlock,
         CloudMagnetAdd,
         CloudPlaylist,
-        CloudMagicTvLockedLinks {
+        CloudMagicTvLockedLinks,
+        CloudMagicTvAdUnlock {
   const AllDebridCloudProvider();
 
   @override
@@ -242,5 +243,16 @@ class AllDebridCloudProvider extends CloudProviderAdapter
       name: result.name,
       lockedLinks: links,
     );
+  }
+
+  /// Same String as [AllDebridService.unlockLink]. Looks up the API key;
+  /// Magic TV currently passes it.
+  @override
+  Future<String> unlockLink(String lockedLink) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const CloudMissingApiKey('Missing AllDebrid API key');
+    }
+    return AllDebridService.unlockLink(apiKey, lockedLink);
   }
 }
