@@ -52,7 +52,8 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | M1-0 … M1-6 | queued | — | — | `magic_tv_screen.dart` | **P1b** then M1-0 | Sequential. Target ≤ 4 500. WatchSession first. |
 | S2-0 · key registry + façade | merged | `refactor/s2-0-key-registry` | worker | `storage_key_ownership.dart` | — | **#73.** `byKey` completed (274). Façade rule documented. Leaves 0. **Did not extract PlayerPrefs.** |
 | S2-1 · stremio/social/TV prefs | review | `refactor/s2-1-stremio-social-tv-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-0 | **#77.** `StremioTvPrefs` / `SocialPrefs` / `DebrifyTvPrefs`. Leaves −531 (named stores only). Prefixes `engine_tv_` in `byKey`. `debrify_tv_style` left for S2-4. |
-| S2-2 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-1 | Sequential. Target ≤ 2 800. S2-3 = `player_prefs` + `iptv_prefs`. |
+| S2-2 · provider credential prefs | review | `refactor/s2-2-provider-credential-prefs` | worker | `storage_service.dart` [settings hunks], `lib/services/storage/**`, key-sweep / snapshot tests | S2-1 | `ProviderCredentialPrefs`. Named store ~900. CloudSecretPrefs hunks skipped. Pin predates move. |
+| S2-3 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-2 | Sequential. Target ≤ 2 800. S2-3 = `player_prefs` + `iptv_prefs`. |
 | G2 · under 3 000 | queued | — | — | `settings_screen.dart` | when free | #63 left the file at 3 107; PHASE2 target ≤ 3 000. |
 | Q1 · layering enforcement | queued | — | — | `tool/check_layering.dart`, `test.yml` | gate 2 | — |
 | Q2 · shim + comment sweep | queued | — | — | per area, assigned at gate 2 | gate 2 | — |

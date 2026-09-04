@@ -67,24 +67,28 @@ void main() {
     expect((secrets['pikpak'] as Map)['email'], 'user@example.com');
   });
 
-  test('playback configured vs magnet configured disagree on disabled RD', () async {
-    ProfileRuntime.initializeLegacy();
-    await StorageService.saveApiKey('rd-key');
-    await StorageService.setRealDebridIntegrationEnabled(false);
-    expect(
-      await CloudCredentials.isPlaybackConfigured(CloudProviderId.debrid),
-      isTrue,
-    );
-    expect(
-      await CloudCredentials.isMagnetConfigured(CloudProviderId.debrid),
-      isFalse,
-    );
-  });
+  test(
+    'playback configured vs magnet configured disagree on disabled RD',
+    () async {
+      ProfileRuntime.initializeLegacy();
+      await StorageService.saveApiKey('rd-key');
+      await StorageService.setRealDebridIntegrationEnabled(false);
+      expect(
+        await CloudCredentials.isPlaybackConfigured(CloudProviderId.debrid),
+        isTrue,
+      );
+      expect(
+        await CloudCredentials.isMagnetConfigured(CloudProviderId.debrid),
+        isFalse,
+      );
+    },
+  );
 
   test('every CloudProviderId credential key is the historical prefs name', () {
     expect(
       {
-        for (final id in CloudProviderId.values) id.playbackId: id.credentialKey,
+        for (final id in CloudProviderId.values)
+          id.playbackId: id.credentialKey,
       },
       {
         'debrid': 'real_debrid_api_key',
@@ -115,6 +119,10 @@ void main() {
     expect(
       StorageKeyOwnership.byKey['home_tick_sources'],
       StorageKeyStore.homePrefs,
+    );
+    expect(
+      StorageKeyOwnership.byKey['real_debrid_integration_enabled'],
+      StorageKeyStore.providerCredentialPrefs,
     );
   });
 }
