@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'storage_service.dart';
 import 'debrid_service.dart';
+import 'cloud/cloud_provider_registry.dart';
 import 'torbox_service.dart';
 import 'video_player_launcher.dart';
 import 'main_page_bridge.dart';
@@ -702,10 +703,9 @@ class PlaylistPlayerService {
       }
 
       try {
-        final streamUrl = await TorboxService.requestFileDownloadLink(
-          apiKey: apiKey,
-          torrentId: torrentId,
-          fileId: fileId,
+        final streamUrl = await CloudProviderRegistry.instance.fileDownloadLink(
+          torrentId,
+          fileId,
         );
 
         final int? sizeBytes = _asInt(item['sizeBytes']);
@@ -849,10 +849,9 @@ class PlaylistPlayerService {
 
       String initialUrl = '';
       try {
-        initialUrl = await TorboxService.requestFileDownloadLink(
-          apiKey: apiKey,
-          torrentId: torrent.id,
-          fileId: playlistEntries[startIndex].torboxFileId!,
+        initialUrl = await CloudProviderRegistry.instance.fileDownloadLink(
+          torrent.id,
+          playlistEntries[startIndex].torboxFileId!,
         );
       } catch (e) {
         debugPrint('PlaylistPlayerService: Torbox initial link failed: $e');
