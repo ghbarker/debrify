@@ -4,6 +4,7 @@
 import unittest
 
 from ci_test_allowlist import (
+    format_allowlist_verdict,
     is_allowlisted,
     parse_report,
     repo_test_path,
@@ -31,6 +32,16 @@ class AllowlistMatchingTest(unittest.TestCase):
             unused_allowlist(allow, failed),
             [("test/b_test.dart", "y")],
         )
+
+    def test_unused_and_new_failures_are_both_reported(self):
+        unused = [("test/a_test.dart", "gone")]
+        unexpected = [("test/b_test.dart", "new")]
+        lines = format_allowlist_verdict(unused, unexpected)
+        joined = "\n".join(lines)
+        self.assertIn("UNUSED allowlist entries", joined)
+        self.assertIn("test/a_test.dart :: gone", joined)
+        self.assertIn("NEW failures", joined)
+        self.assertIn("test/b_test.dart :: new", joined)
 
     def test_load_allowlist_rejects_name_only_lines(self):
         from pathlib import Path

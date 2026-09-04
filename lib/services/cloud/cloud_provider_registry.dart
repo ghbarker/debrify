@@ -43,6 +43,16 @@ class CloudProviderRegistry {
 
   CloudProviderPort? operator [](CloudProviderId id) => _byId[id];
 
+  CloudProviderPort requireId(CloudProviderId id) {
+    final port = _byId[id];
+    if (port == null) {
+      throw Exception('Unknown provider: ${id.playbackId}');
+    }
+    return port;
+  }
+
+  /// Magnets / TPS picker strings. [tryParse] so `realdebrid` still hits RD.
+  /// Playlist unlock must use [requireId] with [CloudUnlockPlan.provider].
   CloudProviderPort require(String provider) {
     final id = CloudProviderId.tryParse(provider);
     final port = id == null ? null : _byId[id];
@@ -107,11 +117,12 @@ class CloudProviderRegistry {
     String fallbackUrl = '',
   }) async {
     final plan = CloudUnlockPlan.choose(entry, playerScreen: false);
-    if (plan.lane == null) {
+    final provider = plan.provider;
+    if (provider == null) {
       if (fallbackUrl.isNotEmpty) return fallbackUrl;
       throw Exception('No URL metadata available for this entry');
     }
-    return require(plan.playbackId).unlockPlaybackEntry(entry);
+    return requireId(provider).unlockPlaybackEntry(entry);
   }
 
   /// In-app player (`video_player_screen._resolvePlaylistEntryUrl`). Same
@@ -123,25 +134,25 @@ class CloudProviderRegistry {
     if (plan.incompletePremiumize) {
       throw const CloudMetadataMissing('Premiumize file metadata missing');
     }
-    if (plan.lane == null) {
+    final provider = plan.provider;
+    if (provider == null) {
       throw Exception('No URL metadata available for this entry');
     }
-    return _playerWrappedUnlock(plan.playerBrand, plan.playbackId, entry);
+    return _playerWrappedUnlock(provider, entry);
   }
 
   Future<String> _playerWrappedUnlock(
-    String brand,
-    String provider,
+    CloudProviderId provider,
     PlaylistEntry entry,
   ) async {
     try {
-      return await require(provider).unlockPlaybackEntry(entry);
+      return await requireId(provider).unlockPlaybackEntry(entry);
     } on CloudMetadataMissing {
       rethrow;
     } on CloudMissingApiKey {
       rethrow;
     } catch (e) {
-      throw Exception('$brand link failed: $e');
+      throw Exception('${provider.playerWrapBrand} link failed: $e');
     }
   }
 

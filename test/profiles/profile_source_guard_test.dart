@@ -279,14 +279,32 @@ void main() {
           isTrue,
           reason: '$path writes must go through runScoped',
         );
-        continue;
       }
+      // Writes inside `_runScoped` / `runScoped` callbacks are in-scope.
+      // A future unscoped `await db.delete` in the same file must still fail.
       expect(
-        directWrite.hasMatch(source),
+        directWrite.hasMatch(sourceWithoutRunScopedBodies(source)),
         isFalse,
-        reason: '$path can race DebrifyTvDatabase.closeScope()',
+        reason: '$path has a db write outside runScoped',
       );
     }
+  });
+
+  test('unscoped deletes still fail after a runScoped body is present', () {
+    const synthetic = '''
+Future<void> leak(Database db) async {
+  DebrifyTvDatabase.instance.runScoped((db) async {
+    await db.delete('scoped');
+  });
+  await db.delete('leaked');
+}
+''';
+    expect(
+      RegExp(
+        r'await\s+db\.(?:insert|update|delete|execute|rawInsert|rawUpdate|rawDelete)\s*\(',
+      ).hasMatch(sourceWithoutRunScopedBodies(synthetic)),
+      isTrue,
+    );
   });
 
   test('profile, download, deep-link, and remote logs stay redacted', () {
@@ -399,4 +417,33 @@ void main() {
     expect(redacted, isNot(contains('10.20.30.40')));
     expect(redacted, isNot(contains('https://')));
   });
+}
+
+/// Drop `_runScoped(...)` / `.runScoped(...)` argument lists, including the
+/// callback body, so remaining `await db.delete` is an unscoped write.
+/// Paren-depth only: strings/comments with `(` / `)` are not skipped.
+String sourceWithoutRunScopedBodies(String source) {
+  final pattern = RegExp(r'(?:_runScoped|\.runScoped)\s*\(');
+  var out = source;
+  while (true) {
+    final match = pattern.firstMatch(out);
+    if (match == null) return out;
+    final open = match.end - 1;
+    var depth = 0;
+    var closed = -1;
+    for (var i = open; i < out.length; i++) {
+      final c = out[i];
+      if (c == '(') {
+        depth++;
+      } else if (c == ')') {
+        depth--;
+        if (depth == 0) {
+          closed = i;
+          break;
+        }
+      }
+    }
+    if (closed < 0) return out;
+    out = '${out.substring(0, match.start)} ${out.substring(closed + 1)}';
+  }
 }
