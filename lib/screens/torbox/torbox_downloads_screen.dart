@@ -1786,10 +1786,9 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
     if (webDownload.files.length == 1) {
       // Single file - get direct link
       try {
-        final link = await TorboxService.requestWebDownloadFileLink(
-          apiKey: key,
-          webId: webDownload.id,
-          fileId: webDownload.files.first.id,
+        final link = await CloudProviderRegistry.instance.webFileDownloadLink(
+          webDownload.id,
+          webDownload.files.first.id,
         );
         if (!mounted) return;
         await Clipboard.setData(ClipboardData(text: link));
@@ -4680,10 +4679,9 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
     }
 
     try {
-      final link = await TorboxService.requestWebDownloadFileLink(
-        apiKey: key,
-        webId: webDownload.id,
-        fileId: file.id,
+      final link = await CloudProviderRegistry.instance.webFileDownloadLink(
+        webDownload.id,
+        file.id,
       );
       await Clipboard.setData(ClipboardData(text: link));
       if (!mounted) return;
