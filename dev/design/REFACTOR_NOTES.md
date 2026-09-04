@@ -116,8 +116,13 @@ Phase 2 extractions also follow `dev/design/REFACTOR_PLAN_PHASE2.md` (binding as
   failed `test/theme/shape_manifest_test.dart` (out of lane). Keep the bar on
   `RealDebridCloudFilesHost` / `TorboxCloudFilesHost` until that test lists
   the new file (and possibly lowers the 490 floor).
-- **Premiumize / AllDebrid / PikPak not routed** onto `CloudFilesScreen`.
-  Follow-up lane; public types and sidebar ids stay frozen.
+- **Premiumize / AllDebrid / PikPak routed** onto `CloudFilesScreen` (G4
+  step 2). Selection bars stay on those hosts (PM/AD still use
+  `BorderRadius.circular(12)`; PikPak already uses `app.shape.br(12)`).
+  Public types and sidebar ids stay frozen. PikPak has no
+  `initialSearchQuery` (bind drops the query). PM/AD/PikPak bind stays
+  async (`Future<void> Function`); `CloudFilesSource.onSourceSelected`
+  remains the RD/TorBox sync type.
 
 ### G1'-2 · source edit/add dialogs
 

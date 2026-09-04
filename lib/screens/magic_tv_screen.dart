@@ -61,6 +61,7 @@ import '../utils/debrify_tv_filters.dart';
 import '../utils/tv_keys.dart';
 import '../widgets/tv_text_field.dart';
 import 'video_player_screen.dart';
+import 'debrify_tv/watch_session.dart';
 import 'debrify_tv/layouts/debrify_tv_view.dart';
 import 'debrify_tv/layouts/spotlight_layout.dart';
 import 'debrify_tv/widgets/random_start_slider.dart';
@@ -431,17 +432,20 @@ class DebrifyTVScreen extends StatefulWidget {
   State<DebrifyTVScreen> createState() => _DebrifyTVScreenState();
 }
 
-class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
+class _DebrifyTVScreenState extends State<DebrifyTVScreen>
+    implements ProgressSink {
   static const String _torboxFileEntryType = 'torbox_file';
   static const int _torboxMinVideoSizeBytes =
       50 * 1024 * 1024; // 50 MB filter threshold
 
   final SettingsManager _settingsManager = SettingsManager();
   final TextEditingController _keywordsController = TextEditingController();
+  final WatchSession _watchSession = WatchSession();
   // Mixed queue: can contain Torrent items or RD-restricted link maps
-  final List<dynamic> _queue = [];
-  bool _isBusy = false;
-  String _status = '';
+  List<dynamic> get _queue => _watchSession.queue;
+  bool get _isBusy => _watchSession.isBusy;
+  set _isBusy(bool value) => _watchSession.isBusy = value;
+  set _status(String value) => _watchSession.status = value;
   List<DebrifyTvChannel> _channels = <DebrifyTvChannel>[];
 
   /// `debrify_tv_style`, read once per mount from the mirror warmed in
@@ -455,7 +459,9 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
   Timer? _spotlightStatsDebounce;
   String? _spotlightFocusedId;
   final Map<String, DebrifyTvChannelCacheEntry> _channelCache = {};
-  List<Torrent>? _pikpakCandidatePool;
+  List<Torrent>? get _pikpakCandidatePool => _watchSession.pikpakCandidatePool;
+  set _pikpakCandidatePool(List<Torrent>? value) =>
+      _watchSession.pikpakCandidatePool = value;
   final Map<String, bool> _tvEngineStates = <String, bool>{};
   final Map<String, int> _tvSmallChannelMaxByEngine = <String, int>{};
   final Map<String, int> _tvLargeChannelMaxByEngine = <String, int>{};
@@ -475,8 +481,10 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
   final TextEditingController _channelSearchController =
       TextEditingController();
   String _channelSearchTerm = '';
-  String?
-  _currentWatchingChannelId; // Track currently playing channel for switching
+  String? get _currentWatchingChannelId =>
+      _watchSession.currentWatchingChannelId;
+  set _currentWatchingChannelId(String? value) =>
+      _watchSession.currentWatchingChannelId = value;
 
   // Advanced options
   bool _startRandom = true;
@@ -566,9 +574,12 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
   VoidCallback? _tvContentFocusHandler;
 
   // Progress UI state
-  final ValueNotifier<List<String>> _progress = ValueNotifier<List<String>>([]);
-  BuildContext? _progressSheetContext;
-  bool _progressOpen = false;
+  ValueNotifier<List<String>> get _progress => _watchSession.progress;
+  BuildContext? get _progressSheetContext => _watchSession.progressSheetContext;
+  set _progressSheetContext(BuildContext? value) =>
+      _watchSession.progressSheetContext = value;
+  bool get _progressOpen => _watchSession.progressOpen;
+  set _progressOpen(bool value) => _watchSession.progressOpen = value;
   int _lastQueueSize = 0;
   DateTime? _lastSearchAt;
   bool _launchedPlayer = false;
@@ -688,22 +699,18 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     });
   }
 
+  @override
+  void closeProgressDialog() {
+    _closeProgressDialog();
+  }
+
+  @override
+  void updateProgress(Iterable<String> messages, {bool replace = false}) {
+    _watchSession.updateProgress(messages, replace: replace);
+  }
+
   void _updateProgress(Iterable<String> messages, {bool replace = false}) {
-    final sanitized = messages
-        .map((message) => message.trim())
-        .where((message) => message.isNotEmpty)
-        .toList();
-    if (sanitized.isEmpty) {
-      return;
-    }
-
-    if (replace || _progress.value.isEmpty) {
-      _progress.value = sanitized;
-      return;
-    }
-
-    final copy = List<String>.from(_progress.value)..addAll(sanitized);
-    _progress.value = copy;
+    updateProgress(messages, replace: replace);
   }
 
   void _cancelActiveWatch({
@@ -10434,6 +10441,11 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
         duration: const Duration(seconds: 3),
       ),
     );
+  }
+
+  @override
+  void showSnack(String message, {Color color = Colors.blueGrey}) {
+    _showSnack(message, color: color);
   }
 
   String _formatTorboxError(Object error) {
