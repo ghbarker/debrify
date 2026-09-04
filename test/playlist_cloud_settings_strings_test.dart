@@ -431,23 +431,29 @@ void main() {
     test(
       'FakeCloudProvider isConfigured is not the settings availability dialect',
       () {
-        _installFakes(
-          pikpak: FakeCloudProvider(
-            id: CloudProviderId.pikpak,
-            configured: true,
-          ),
-          torbox: FakeCloudProvider(
-            id: CloudProviderId.torbox,
-            configured: false,
-          ),
+        final pikpak = FakeCloudProvider(
+          id: CloudProviderId.pikpak,
+          configured: true,
         );
+        final torbox = FakeCloudProvider(
+          id: CloudProviderId.torbox,
+          configured: false,
+        );
+        _installFakes(pikpak: pikpak, torbox: torbox);
         expect(
           CloudProviderRegistry.instance[CloudProviderId.pikpak],
           isNotNull,
         );
+        expect(pikpak.configured, isTrue);
+        expect(torbox.configured, isFalse);
+        // Only Real-Debrid's playbackId differs from playlist JSON.
+        expect(
+          DefaultProviderDispatch.prefValue(CloudProviderId.debrid),
+          isNot(CloudProviderId.debrid.playlistStoredProvider),
+        );
         expect(
           DefaultProviderDispatch.prefValue(CloudProviderId.pikpak),
-          isNot(CloudProviderId.pikpak.playlistStoredProvider),
+          CloudProviderId.pikpak.playlistStoredProvider,
         );
         expect(
           DefaultProviderDispatch.parsePref(
