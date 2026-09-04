@@ -2,7 +2,8 @@ import '../../models/torrent.dart';
 import '../../utils/rd_blocked_filter.dart';
 import '../storage_service.dart';
 
-/// Per-torrent Stremio TV resolve skip. Fourth configured dialect.
+/// Per-torrent Stremio TV resolve skip. Not a CloudCredentials check
+/// and not a fourth CloudConfiguredCheck.
 ///
 /// Not [CloudCredentials.isStremioAvailable] (picker: RD/TB key, PikPak
 /// enabled, PM/AD toggle+key). Not playback [isConfigured].

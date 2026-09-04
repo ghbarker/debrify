@@ -485,6 +485,22 @@ class TorboxCloudProvider extends CloudProviderAdapter {
     );
   }
 
+  @override
+  Future<Set<String>> checkCachedHashes(List<String> infoHashes) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const CloudMissingApiKey('Missing TorBox API key');
+    }
+    final cached = await TorboxService.checkCachedTorrents(
+      apiKey: apiKey,
+      infoHashes: infoHashes,
+    );
+    return cached
+        .map((hash) => hash.trim().toLowerCase())
+        .where((hash) => hash.isNotEmpty)
+        .toSet();
+  }
+
   static int? _asIntMapValue(dynamic data, String key) {
     if (data is Map<String, dynamic>) {
       final value = data[key];

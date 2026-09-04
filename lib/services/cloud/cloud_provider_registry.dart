@@ -224,6 +224,17 @@ class CloudProviderRegistry {
     }
   }
 
+  /// TorBox cache-check only. Missing adapter / unsupported → empty set.
+  /// Missing key throws [CloudMissingApiKey]. Chunk HTTP does not throw
+  /// ([TorboxService.checkCachedTorrents] swallows per-chunk failures).
+  Future<Set<String>> checkCachedHashes(List<String> infoHashes) async {
+    final port = _byId[CloudProviderId.torbox];
+    if (port == null || !port.supports(CloudPortFeature.cachedHashes)) {
+      return const <String>{};
+    }
+    return port.checkCachedHashes(infoHashes);
+  }
+
   static String? credentialKeyFor(String provider) =>
       CloudProviderId.tryParse(provider)?.credentialKey;
 }
