@@ -2,7 +2,7 @@
 
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 
-Baseline: `main` @ `9326eb70` (2026-09-04, after merge of #44) · Phase: **0** · Last gate: none yet
+Baseline: `main` @ `d5111bb6` (Phase 0 merged; gate 0 partial) · Phase: **1** · Last gate: 0 (partial; human said proceed)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -13,14 +13,14 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | C0 · CI truth | merged | `refactor/c0-ci-truth` | — | `.github/workflows/test.yml`, `tool/ci_test_allowlist.py`, `tool/ci_test_allowlist_test.py`, `test/BASELINE_ALLOWLIST.txt`, `test/BASELINE_FAILURES.md`, `dart_test.yaml`, new `tool/check_layering.dart`, new `tool/analyze_baseline.json`, plus a new layering test file if needed | — | Analyze-all vs 470-issue baseline; goldens Linux tolerance; layering warn-only until Q1. |
 | D0 · delete dead code | merged | `refactor/d0-delete-dead-code` | — | `lib/screens/deprecated/**`, `lib/widgets/catalog_browser.dart`, `lib/screens/search/search_sources.dart` (`_redesign == false` branch only) | — | Unused `search_screen.dart` import dropped. CODEMAP left to M0. |
 | M0 · CODEMAP refresh | merged | `refactor/m0-codemap-refresh` | — | `CODEMAP.md`, `dev/design/ADDING_A_PROVIDER.md` | — | D0 merged; dropped `lib/screens/deprecated/` and `catalog_browser.dart`. |
-| P1 · capability interfaces | queued | — | — | `lib/services/cloud/**`, `test/cloud_*` | gate 0 | — |
+| P1 · capability interfaces | assigned | `refactor/p1-capabilities` | worker-p1 | `lib/services/cloud/**`, `test/cloud_*` | — | Keep old CloudCredentials wrappers `@Deprecated`. Do not edit CODEMAP (list moved symbols in PR). |
 | P2a · Magic TV strings | queued | — | — | `lib/screens/magic_tv_screen.dart` | P1 | — |
 | P2b · Stremio TV strings | queued | — | — | `lib/screens/stremio_tv/**` | P1 | — |
 | P2c · launcher + bulk-add | queued | — | — | `lib/services/video_player_launcher.dart`, `lib/services/torrent_bulk_add_service.dart` | P1 | — |
 | P2d · playlist/cloud/settings strings | queued | — | — | `lib/screens/playlist_content_view_screen.dart`, `lib/services/playlist_player_service.dart`, `lib/screens/cloud_screen.dart`, `lib/screens/settings/provider_settings_page.dart` | P1 | — |
-| H1 · Home row registry | queued | — | — | `lib/services/home/**`, `search_screen.dart` [row-id hunks], `home_sections_filter_page.dart`, `home_list_rows.dart`, `home_row_order.dart` | gate 0 | — |
-| T1 · transfer category registry | queued | — | — | `lib/services/transfer/**`, `backup_restore_service.dart`, `remote_command_router.dart` [config hunks], `remote_config_export.dart`, `remote_transfer_all.dart`, `onboarding_flow.dart` [`_configLabel`], `profile_restore_coordinator.dart` [selection literals] | gate 0 | — |
-| S1 · settings registry | queued | — | — | `settings_screen.dart` [nav tables, summary formatters], `settings_tv_layout.dart`, `settings/widgets/settings_widgets.dart` | gate 0 | — |
+| H1 · Home row registry | assigned | `refactor/h1-home-row-registry` | worker-h1 | new `lib/services/home/**`, `search_screen.dart` [row-id hunks only], `lib/screens/settings/home_sections_filter_page.dart`, `lib/services/home_list_rows.dart`, `lib/services/home_row_order.dart` | — | No dart format on search_screen. Do not edit CODEMAP. |
+| T1 · transfer category registry | assigned | `refactor/t1-transfer-category-registry` | worker-t1 | new `lib/services/transfer/**`, `lib/services/backup_restore_service.dart`, `remote_command_router.dart` [config hunks], `lib/widgets/remote/remote_config_export.dart`, `lib/widgets/remote/remote_transfer_all.dart`, `lib/widgets/onboarding/onboarding_flow.dart` [`_configLabel`], `lib/services/profiles/profile_restore_coordinator.dart` [selection literals] | — | Frozen: ConfigCommand strings, backup payload keys. Do not edit CODEMAP. |
+| S1 · settings registry | assigned | `refactor/s1-settings-registry` | worker-s1 | `settings_screen.dart` [nav tables, `_formatBackupSummary`/`_formatRestoreReport`], `lib/screens/settings/settings_tv_layout.dart`, `lib/screens/settings/widgets/settings_widgets.dart` | — | No dart format on settings_screen. Do not edit CODEMAP. |
 | G1 · search_screen split | queued | — | — | `lib/screens/search_screen.dart`, `lib/screens/search/**` | H1, gate 1 | — |
 | G2 · settings_screen split | queued | — | — | `settings_screen.dart` | S1, gate 1 | — |
 | G3 · storage split | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | P2d, gate 1 | — |
@@ -59,4 +59,4 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
-Phase 1 is blocked on gate 0. Do not assign P1/H1/T1/S1 until C0, D0, and M0 merge and the gate 0 row is filled.
+Phase 1 assigned (human proceed on partial gate 0): P1, H1, T1, S1. P2x still blocked on P1.
