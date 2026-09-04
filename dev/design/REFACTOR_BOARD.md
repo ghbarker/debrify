@@ -35,7 +35,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 
 | Gate | Date | Analyzer (all lib+test) | Full test suite | Windows build | Android build | Manual smoke | Result |
 |---|---|---|---|---|---|---|---|
-| 0 | — | — | — | — | — | — | — |
+| 0 | 2026-09-04 | 466 (0 error · 83 warning · 383 info); analyze_baseline.py exit 0 (4 unused from deleted catalog_browser) | 4320 passed · 33 failed (same 33 as Phase 0 baseline; +4 vs 4316 from D0 pin + C0 layering) | not run (Linux host) | not run (no Android SDK) | **needed:** Home, Search, Sources, playback start, Settings > Backup export | **partial** — tests/analyzer ok; builds+smoke outstanding. Phase 1 not assigned. |
 
 ## Notes
 
@@ -45,7 +45,7 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 |---|---:|
 | `lib/screens/deprecated/torrent_search_screen.dart` | deleted (D0) |
 | `lib/screens/search_screen.dart` | 19 070 |
-| `lib/screens/search/` parts (4 files) | 8 364 |
+| `lib/screens/search/` parts (4 files) | 8 321 |
 | `lib/screens/video_player_screen.dart` | 16 278 |
 | `lib/screens/magic_tv_screen.dart` | 10 716 |
 | `lib/services/storage_service.dart` | 9 963 |
