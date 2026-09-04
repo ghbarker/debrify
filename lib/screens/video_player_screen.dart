@@ -1842,6 +1842,21 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     return (season: info.season, episode: info.episode);
   }
 
+  /// Periodic analytics ping so a long, interaction-free watch keeps the
+  /// analytics session alive. Independent of Trakt (fires regardless of Trakt
+  /// auth); only emits while actually playing. No content details are sent.
+  void _startAnalyticsHeartbeat() {
+    _analyticsHeartbeatTimer?.cancel();
+    _analyticsHeartbeatTimer = Timer.periodic(
+      AnalyticsService.heartbeatInterval,
+      (_) {
+        if (_isPlaying) {
+          AnalyticsService.playbackHeartbeat('dart');
+        }
+      },
+    );
+  }
+
   /// Shared funnel every user-initiated seek passes through (scrubber,
   /// tap/DPAD seek, pan, skip-segment). The resume write guard learns the
   /// user has taken over the position before any tracker-specific early
