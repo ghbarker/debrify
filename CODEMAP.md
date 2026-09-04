@@ -72,7 +72,8 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   only. Stremio auto-play (`StremioTvTorboxCache.load`) maps missing key to
   empty; explicit `torbox` / `premiumize` filtering is
   `StremioTvCacheFilter.apply` (skip the call when there is no key; keep
-  directs). Chunk HTTP is swallowed by `TorboxService.checkCachedTorrents`
+  directs). Playback cache-first is `PlaybackCacheFirst.reorder` (hits first,
+  catch-all, empty key still reaches the adapter). Chunk HTTP is swallowed by `TorboxService.checkCachedTorrents`
   (partial or empty set) and by `PremiumizeService.checkCache` (slots stay
   `false`); those calls do not throw.
   HTTP clients remain in
