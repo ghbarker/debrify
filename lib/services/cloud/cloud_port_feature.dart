@@ -8,14 +8,19 @@ import 'cloud_provider_id.dart';
 enum CloudPortFeature {
   playlistEntry,
   magicTvPrepare,
-  magicTvLockedLinks;
+  magicTvLockedLinks,
+  cachedHashes;
 
   static Set<CloudPortFeature> forProvider(CloudProviderId id) => switch (id) {
     CloudProviderId.debrid => {
       playlistEntry,
       magicTvLockedLinks,
     },
-    CloudProviderId.torbox => {playlistEntry, magicTvPrepare},
+    CloudProviderId.torbox => {
+      playlistEntry,
+      magicTvPrepare,
+      cachedHashes,
+    },
     CloudProviderId.premiumize => {magicTvPrepare},
     CloudProviderId.alldebrid => {playlistEntry, magicTvLockedLinks},
     CloudProviderId.pikpak => {magicTvPrepare},

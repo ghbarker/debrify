@@ -67,6 +67,10 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   Lookup dialects stay split: `tryParse` vs `fromStoredId` vs `fromPlaybackId`.
   `CloudPortFeature.forProvider` / `CloudProviderPort.supports` is "this adapter
   implements that method"; a null return from a supported method is a miss.
+  `CloudPortFeature.cachedHashes` is TorBox `checkcached` only — not Premiumize
+  `checkCache` (positional bools). Stremio auto-play (`StremioTvTorboxCache.load`)
+  maps missing key / HTTP to empty; explicit `torbox` provider filtering
+  skips the filter when there is no key and lets HTTP throw.
   HTTP clients remain in
   `services/debrid_service.dart` (Real-Debrid), `services/torbox_service.dart`,
   `services/premiumize_service.dart`, `services/alldebrid_service.dart`,

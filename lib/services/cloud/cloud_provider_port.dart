@@ -1,6 +1,7 @@
 import '../../models/torrent.dart';
 import '../../screens/video_player/models/playlist_entry.dart';
 import '../series_source_service.dart';
+import 'cloud_exceptions.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_port_feature.dart';
 import 'cloud_provider_id.dart';
@@ -65,6 +66,12 @@ abstract class CloudProviderPort {
   Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
     MagicTvPrepareRequest request,
   );
+
+  /// TorBox `checkcached` hashes. Throws on missing key / HTTP.
+  /// Stremio auto-play catches and treats that as empty; explicit-provider
+  /// filtering lets it throw. Not Premiumize `checkCache` (positional bools).
+  /// Unsupported adapters throw [CloudUnsupported].
+  Future<Set<String>> checkCachedHashes(List<String> infoHashes);
 }
 
 /// Shared [supports] for production adapters (`implements` would re-require it).
@@ -74,4 +81,9 @@ abstract class CloudProviderAdapter implements CloudProviderPort {
   @override
   bool supports(CloudPortFeature feature) =>
       CloudPortFeature.forProvider(id).contains(feature);
+
+  @override
+  Future<Set<String>> checkCachedHashes(List<String> infoHashes) {
+    throw CloudUnsupported(id, CloudPortFeature.cachedHashes);
+  }
 }

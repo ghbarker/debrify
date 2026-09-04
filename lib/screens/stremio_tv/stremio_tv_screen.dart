@@ -21,8 +21,8 @@ import '../../widgets/cloud_provider_chrome.dart';
 import '../../services/cloud/cloud_credentials.dart';
 import '../../services/cloud/cloud_provider_id.dart';
 import '../../services/cloud/cloud_provider_registry.dart';
+import '../../services/cloud/stremio_tv_torbox_cache.dart';
 import '../../services/video_player_launcher.dart';
-import '../../services/torbox_service.dart';
 import '../../services/premiumize_service.dart';
 import '../../utils/rd_blocked_filter.dart';
 import '../../utils/formatters.dart';
@@ -611,7 +611,7 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
         .toList();
     final loadAutoTorboxCachedHashes =
         StremioTvDebridFallback.memoizeAsync<Set<String>>(
-      () => _loadTorboxCachedHashes(
+      () => StremioTvTorboxCache.load(
         attemptedTorrents,
         isCancelled: () =>
             !mounted || _playGeneration != myGeneration,
@@ -940,8 +940,9 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
 
       // For TorBox, filter torrent sources to only cached ones
       if (_debridProvider == 'torbox') {
-        final tbKey = await StorageService.getTorboxApiKey();
-        if (tbKey != null && tbKey.isNotEmpty) {
+        if (await CloudCredentials.isPlaybackConfigured(
+          CloudProviderId.torbox,
+        )) {
           final torrentHashes = playableSources
               .where((t) => t.streamType == StreamType.torrent)
               .map((t) => t.infohash.trim().toLowerCase())
@@ -953,13 +954,8 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
               return;
             }
             overlay.setStage(PlayLoadStage.cacheCheck);
-            final cachedHashes = await TorboxService.checkCachedTorrents(
-              apiKey: tbKey,
-              infoHashes: torrentHashes,
-            );
-            final cachedSet = cachedHashes
-                .map((h) => h.trim().toLowerCase())
-                .toSet();
+            final cachedSet = await CloudProviderRegistry.instance
+                .checkCachedHashes(torrentHashes);
             overlay.setStage(
               PlayLoadStage.cacheCheck,
               cachedCount: cachedSet.length,
@@ -1268,21 +1264,15 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
 
     // TorBox cache filter
     if (_debridProvider == 'torbox') {
-      final tbKey = await StorageService.getTorboxApiKey();
-      if (tbKey != null && tbKey.isNotEmpty) {
+      if (await CloudCredentials.isPlaybackConfigured(CloudProviderId.torbox)) {
         final torrentHashes = playableSources
             .where((t) => t.streamType == StreamType.torrent)
             .map((t) => t.infohash.trim().toLowerCase())
             .where((h) => h.isNotEmpty)
             .toList();
         if (torrentHashes.isNotEmpty) {
-          final cachedHashes = await TorboxService.checkCachedTorrents(
-            apiKey: tbKey,
-            infoHashes: torrentHashes,
-          );
-          final cachedSet = cachedHashes
-              .map((h) => h.trim().toLowerCase())
-              .toSet();
+          final cachedSet = await CloudProviderRegistry.instance
+              .checkCachedHashes(torrentHashes);
           playableSources = playableSources
               .where(
                 (t) =>
@@ -1684,7 +1674,7 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
           if (debridProvider != 'auto') return true;
           final cachedHashes = loadAutoTorboxCachedHashes != null
               ? await loadAutoTorboxCachedHashes()
-              : await _loadTorboxCachedHashes(
+              : await StremioTvTorboxCache.load(
                   <Torrent>[torrent],
                   isCancelled: isCancelled,
                 );
@@ -1700,48 +1690,6 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
       }
     },
   );
-
-  Future<Set<String>> _loadTorboxCachedHashes(
-    Iterable<Torrent> torrents, {
-    bool Function()? isCancelled,
-  }) async {
-    if (isCancelled?.call() ?? false) return const <String>{};
-
-    final apiKey = await StorageService.getTorboxApiKey();
-    if (apiKey == null ||
-        apiKey.isEmpty ||
-        (isCancelled?.call() ?? false)) {
-      return const <String>{};
-    }
-
-    final infoHashes = torrents
-        .map((torrent) => torrent.infohash.trim().toLowerCase())
-        .where((hash) => hash.isNotEmpty)
-        .toSet()
-        .toList();
-    if (infoHashes.isEmpty) return const <String>{};
-
-    try {
-      final cachedHashes = await TorboxService.checkCachedTorrents(
-        apiKey: apiKey,
-        infoHashes: infoHashes,
-      );
-      if (isCancelled?.call() ?? false) return const <String>{};
-
-      final normalized = cachedHashes
-          .map((hash) => hash.trim().toLowerCase())
-          .where((hash) => hash.isNotEmpty)
-          .toSet();
-      debugPrint(
-        'StremioTV: Auto TorBox cache check found ${normalized.length} '
-        'of ${infoHashes.length} candidate(s)',
-      );
-      return normalized;
-    } catch (e) {
-      debugPrint('StremioTV: TorBox cache check failed: $e');
-      return const <String>{};
-    }
-  }
 
   void _playChannelById(String channelId) {
     if (_channels.isEmpty) {

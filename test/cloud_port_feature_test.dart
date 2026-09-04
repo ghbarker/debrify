@@ -36,8 +36,20 @@ void main() {
       isFalse,
     );
     expect(
+      const TorboxCloudProvider().supports(CloudPortFeature.cachedHashes),
+      isTrue,
+    );
+    expect(
+      const RealDebridCloudProvider().supports(CloudPortFeature.cachedHashes),
+      isFalse,
+    );
+    expect(
       CloudPortFeature.forProvider(CloudProviderId.torbox),
-      {CloudPortFeature.playlistEntry, CloudPortFeature.magicTvPrepare},
+      {
+        CloudPortFeature.playlistEntry,
+        CloudPortFeature.magicTvPrepare,
+        CloudPortFeature.cachedHashes,
+      },
     );
   });
 }

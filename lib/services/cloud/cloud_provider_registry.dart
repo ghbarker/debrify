@@ -213,6 +213,16 @@ class CloudProviderRegistry {
     }
   }
 
+  /// TorBox cache-check only. Missing adapter / unsupported → empty set.
+  /// HTTP and missing-key errors propagate (Stremio auto-play catches).
+  Future<Set<String>> checkCachedHashes(List<String> infoHashes) async {
+    final port = _byId[CloudProviderId.torbox];
+    if (port == null || !port.supports(CloudPortFeature.cachedHashes)) {
+      return const <String>{};
+    }
+    return port.checkCachedHashes(infoHashes);
+  }
+
   static String? credentialKeyFor(String provider) =>
       CloudProviderId.tryParse(provider)?.credentialKey;
 }

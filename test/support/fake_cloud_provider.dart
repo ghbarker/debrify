@@ -19,6 +19,7 @@ class FakeCloudProvider implements CloudProviderPort {
     this.stremioUrl,
     this.magicTvResult,
     this.lockedLinksResult,
+    this.cachedHashes = const <String>{},
     this.error,
   });
 
@@ -36,6 +37,7 @@ class FakeCloudProvider implements CloudProviderPort {
   String? stremioUrl;
   MagicTvPrepared? magicTvResult;
   MagicTvLockedBatch? lockedLinksResult;
+  Set<String> cachedHashes;
   Object? error;
 
   int addCount = 0;
@@ -45,11 +47,13 @@ class FakeCloudProvider implements CloudProviderPort {
   int stremioCount = 0;
   int magicTvCount = 0;
   int lockedLinksCount = 0;
+  int cachedHashesCount = 0;
   String? lastMagnet;
   SeriesSource? lastBoundSource;
   PlaylistEntry? lastPlaylistEntry;
   Torrent? lastStremioTorrent;
   MagicTvPrepareRequest? lastMagicTvRequest;
+  List<String>? lastCachedHashQuery;
 
   @override
   Future<bool> isConfigured() async => configured;
@@ -119,5 +123,13 @@ class FakeCloudProvider implements CloudProviderPort {
     lastMagicTvRequest = request;
     if (error != null) throw error!;
     return lockedLinksResult;
+  }
+
+  @override
+  Future<Set<String>> checkCachedHashes(List<String> infoHashes) async {
+    cachedHashesCount++;
+    lastCachedHashQuery = infoHashes;
+    if (error != null) throw error!;
+    return cachedHashes;
   }
 }
