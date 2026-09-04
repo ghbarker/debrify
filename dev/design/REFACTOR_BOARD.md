@@ -49,7 +49,8 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | V1-1 … V1-10 | queued | — | — | `video_player_screen.dart` | V1-0 | Sequential. Target ≤ 9 500. V1-9 folds episode-progress into ScrobbleCoordinator. |
 | M1-0 … M1-6 | queued | — | — | `magic_tv_screen.dart` | **P1b** then M1-0 | Sequential. Target ≤ 4 500. WatchSession first. |
 | S2-0 · key registry + façade | review | `refactor/s2-0-key-registry` | worker | `storage_key_ownership.dart`, maybe `storage_service.dart` (no domain extract) | — | `byKey` completed (259 consts + 15 inline/interpolated). Façade rule documented. Leaves 0. `storage_service.dart` untouched. **Did not extract PlayerPrefs.** |
-| S2-1 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-0 | Sequential. Replaces remaining G3. Target ≤ 2 800. S2-3 = `player_prefs` + `iptv_prefs`. |
+| S2-1 · stremio/social/Debrify TV prefs | review | `refactor/s2-1-stremio-social-tv-prefs` | worker | `storage_service.dart` [those hunks], `lib/services/storage/**`, key-sweep tests | S2-0 | Pin + origin-diff. `StremioTvPrefs` / `SocialPrefs` / `DebrifyTvPrefs`. No revision notifiers. Prefix families `engine_tv_` etc. declared in `byKey`. `debrify_tv_style` left for S2-4. Leaves: see PR wc -l. |
+| S2-2 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-1 | Sequential. Replaces remaining G3. Target ≤ 2 800. S2-3 = `player_prefs` + `iptv_prefs`. |
 | G2 · under 3 000 | queued | — | — | `settings_screen.dart` | when free | #63 left the file at 3 107; PHASE2 target ≤ 3 000. |
 | Q1 · layering enforcement | queued | — | — | `tool/check_layering.dart`, `test.yml` | gate 2 | — |
 | Q2 · shim + comment sweep | queued | — | — | per area, assigned at gate 2 | gate 2 | — |
