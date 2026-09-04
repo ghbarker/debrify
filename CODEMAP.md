@@ -283,7 +283,7 @@ is an editor mirror, not the source of truth. How to add a provider:
   `lib/services/watched_filter.dart` (predicate over `WatchedStatusService`),
   `lib/services/filtered_catalog_pager.dart` (`fetchFilteredPage` top-up paging). Wired in
   `lib/screens/search/home_board_controller.dart` (`fetchBoardBatch`, `loadMoreRow`, hero source)
-  plus catalog search still in `lib/screens/search_screen.dart`,
+  plus catalog search in `lib/screens/search/catalog_search_controller.dart`,
   `lib/screens/see_all/catalog_see_all_screen.dart`, `lib/services/home_list_rows.dart`, Trakt/MDBList See-All.
 - Stream badges (Nuvio `badges.json` rulesets → chips on source rows): `lib/models/stream_badge_rules.dart`,
   `lib/services/stream_badge_matcher.dart`, `lib/services/stream_badges_service.dart`, `lib/widgets/stream_badge_strip.dart`,
