@@ -1,4 +1,5 @@
 import 'package:debrify/models/android_video_renderer_mode.dart';
+import 'package:debrify/services/storage/player_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -517,4 +518,119 @@ void main() {
       expect(prefs.getString('windows_custom_command'), 'vlc {url}');
     },
   );
+
+  test('StorageService writes are readable through PlayerPrefs', () async {
+    await StorageService.setDefaultPlayerMode('external');
+    await StorageService.setPreferredExternalPlayer('vlc');
+    await StorageService.setCustomExternalPlayerPath('/usr/bin/mpv');
+    await StorageService.setPreferredIOSExternalPlayer('infuse');
+    await StorageService.setLinuxCustomCommand('mpv {url}');
+    await StorageService.setPlayerDefaultAspectIndex(4);
+    await StorageService.setPlayerStartPortrait(true);
+    await StorageService.setAudioPassthroughEnabled(true);
+    await StorageService.setSkipSegmentsEnabled(false);
+    await StorageService.setSkipSegmentProvider(
+      StorageService.skipSegmentProviderTheIntroDb,
+    );
+    await StorageService.setPlayerDockStyle('two_tier');
+    await StorageService.setPlayerDockPalette('crimson');
+    await StorageService.setPlayLoaderStyle('classic');
+    await StorageService.setTvPlayerControlsStyle('pulse');
+    await StorageService.setDebrifyTvPlayerStyle('network');
+    await StorageService.setAndroidVideoRendererMode(
+      AndroidVideoRendererMode.directSurface,
+    );
+    await StorageService.setDefaultSubtitleLanguage('es');
+    await StorageService.setDefaultAudioLanguage('en');
+
+    expect(await PlayerPrefs.getDefaultPlayerMode(), 'external');
+    expect(await PlayerPrefs.getPreferredExternalPlayer(), 'vlc');
+    expect(await PlayerPrefs.getCustomExternalPlayerPath(), '/usr/bin/mpv');
+    expect(await PlayerPrefs.getPreferredIOSExternalPlayer(), 'infuse');
+    expect(await PlayerPrefs.getLinuxCustomCommand(), 'mpv {url}');
+    expect(await PlayerPrefs.getPlayerDefaultAspectIndex(), 4);
+    expect(await PlayerPrefs.getPlayerStartPortrait(), isTrue);
+    expect(PlayerPrefs.playerStartPortraitCached, isTrue);
+    expect(await PlayerPrefs.getAudioPassthroughEnabled(), isTrue);
+    expect(await PlayerPrefs.getSkipSegmentsEnabled(), isFalse);
+    expect(
+      await PlayerPrefs.getSkipSegmentProvider(),
+      PlayerPrefs.skipSegmentProviderTheIntroDb,
+    );
+    expect(await PlayerPrefs.getPlayerDockStyle(), 'two_tier');
+    expect(await PlayerPrefs.getPlayerDockPalette(), 'crimson');
+    expect(await PlayerPrefs.getPlayLoaderStyle(), 'classic');
+    expect(await PlayerPrefs.getTvPlayerControlsStyle(), 'pulse');
+    expect(await PlayerPrefs.getDebrifyTvPlayerStyle(), 'network');
+    expect(
+      await PlayerPrefs.getAndroidVideoRendererMode(),
+      AndroidVideoRendererMode.directSurface,
+    );
+    expect(await PlayerPrefs.getDefaultSubtitleLanguage(), 'es');
+    expect(await PlayerPrefs.getDefaultAudioLanguage(), 'en');
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('default_player_mode'), 'external');
+    expect(prefs.getString('player_dock_style'), 'two_tier');
+    expect(prefs.getString('skip_segment_provider'), 'theintrodb');
+    expect(prefs.getString('android_video_renderer_mode'), 'direct_surface');
+    expect(prefs.getBool('android_video_renderer_gpu_migration_v1'), isTrue);
+  });
+
+  test('PlayerPrefs writes are readable through StorageService', () async {
+    await PlayerPrefs.setDefaultPlayerMode('deovr');
+    await PlayerPrefs.setPreferredWindowsExternalPlayer('mpc');
+    await PlayerPrefs.setWindowsCustomCommand('mpc {url}');
+    await PlayerPrefs.setIOSCustomSchemeTemplate('vlcx://{url}');
+    await PlayerPrefs.setPlayerDefaultAspectIndexTv(3);
+    await PlayerPrefs.setPlayerNightModeIndex(5);
+    await PlayerPrefs.setPlayerSystemAudioEffects(true);
+    await PlayerPrefs.setTvosForceSoftwareDecode(true);
+    await PlayerPrefs.setAppleMultichannelAudio(true);
+    await PlayerPrefs.setTvosForceStereoAudio(true);
+    await PlayerPrefs.setTvosLegacyAudioOutput(true);
+    await PlayerPrefs.setSubtitleAutoSyncEnabled(true);
+    await PlayerPrefs.setPlayerDockSize('medium');
+    await PlayerPrefs.setPlayLoaderStyle('marquee');
+    await PlayerPrefs.setTvPlayerControlsStyle('ott');
+    await PlayerPrefs.setDebrifyTvPlayerStyle('spotlight');
+    await PlayerPrefs.setSkipSegmentProvider(
+      PlayerPrefs.skipSegmentProviderIntroDb,
+    );
+    await PlayerPrefs.setAndroidVideoRendererMode(
+      AndroidVideoRendererMode.automatic,
+    );
+
+    expect(await StorageService.getDefaultPlayerMode(), 'deovr');
+    expect(await StorageService.getPreferredWindowsExternalPlayer(), 'mpc');
+    expect(await StorageService.getWindowsCustomCommand(), 'mpc {url}');
+    expect(await StorageService.getIOSCustomSchemeTemplate(), 'vlcx://{url}');
+    expect(await StorageService.getPlayerDefaultAspectIndexTv(), 3);
+    expect(await StorageService.getPlayerNightModeIndex(), 5);
+    expect(await StorageService.getPlayerSystemAudioEffects(), isTrue);
+    expect(await StorageService.getTvosForceSoftwareDecode(), isTrue);
+    expect(await StorageService.getAppleMultichannelAudio(), isTrue);
+    expect(await StorageService.getTvosForceStereoAudio(), isTrue);
+    expect(await StorageService.getTvosLegacyAudioOutput(), isTrue);
+    expect(await StorageService.getSubtitleAutoSyncEnabled(), isTrue);
+    expect(await StorageService.getPlayerDockSize(), 'medium');
+    expect(await StorageService.getPlayLoaderStyle(), 'marquee');
+    expect(await StorageService.getTvPlayerControlsStyle(), 'ott');
+    expect(await StorageService.getDebrifyTvPlayerStyle(), 'spotlight');
+    expect(
+      await StorageService.getSkipSegmentProvider(),
+      StorageService.skipSegmentProviderIntroDb,
+    );
+    expect(
+      await StorageService.getAndroidVideoRendererMode(),
+      AndroidVideoRendererMode.automatic,
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('default_player_mode'), 'deovr');
+    expect(prefs.getString('player_dock_size'), 'medium');
+    expect(prefs.getString('skip_segment_provider'), 'introdb');
+    expect(prefs.getString('android_video_renderer_mode'), 'automatic');
+    expect(prefs.getBool('android_video_renderer_gpu_migration_v1'), isTrue);
+  });
 }

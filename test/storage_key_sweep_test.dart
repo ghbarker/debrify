@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:debrify/services/storage/cloud_secret_prefs.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
+import 'package:debrify/services/storage/player_prefs.dart';
 import 'package:debrify/services/storage/storage_key_ownership.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -70,6 +71,7 @@ void main() {
     final fromGodFile = _declaredOnStorageService();
     final fromCloud = _declaredOnCloudSecretPrefs();
     final fromHome = HomePrefs.ownedKeys;
+    final fromPlayer = PlayerPrefs.ownedKeys;
     expect(fromCloud, {
       CloudSecretPrefs.realDebridApiKey,
       CloudSecretPrefs.torboxApiKey,
@@ -79,7 +81,7 @@ void main() {
       CloudSecretPrefs.pikpakPassword,
     });
 
-    final declared = {...fromGodFile, ...fromCloud, ...fromHome};
+    final declared = {...fromGodFile, ...fromCloud, ...fromHome, ...fromPlayer};
     expect(
       StorageKeyOwnership.byKey.keys.toSet(),
       declared,
@@ -120,7 +122,27 @@ void main() {
       );
     }
 
-    final residual = declared.difference(fromCloud).difference(fromHome);
+    expect(
+      fromPlayer,
+      StorageKeyOwnership.keysFor(StorageKeyStore.playerPrefs),
+    );
+    for (final key in fromPlayer) {
+      expect(
+        claimed[key],
+        StorageKeyStore.playerPrefs,
+        reason: '$key must be owned by PlayerPrefs',
+      );
+      expect(
+        fromGodFile.contains(key),
+        isFalse,
+        reason: '$key must not remain declared on StorageService',
+      );
+    }
+
+    final residual = declared
+        .difference(fromCloud)
+        .difference(fromHome)
+        .difference(fromPlayer);
     for (final key in residual) {
       expect(
         claimed[key],

@@ -16,7 +16,7 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 | `lib/screens/search/` parts (4 files) | 8 321 |
 | `lib/screens/video_player_screen.dart` | 16 278 |
 | `lib/screens/magic_tv_screen.dart` | 10 716 |
-| `lib/services/storage_service.dart` | 9 634 |
+| `lib/services/storage_service.dart` | 9 149 |
 | `lib/screens/settings_screen.dart` | 3 107 |
 | `lib/screens/torbox/torbox_downloads_screen.dart` | 7 069 |
 | `lib/screens/debrid_downloads_screen.dart` | 6 444 |
@@ -41,7 +41,7 @@ fall through to classic. `_buildDiscoverStage` stays on the host (Discover chrom
 
 🔴 huge: `lib/screens/search_screen.dart` (17 039) · `lib/screens/video_player_screen.dart`
 (16 278) · `lib/screens/magic_tv_screen.dart` (10 716) · `lib/services/storage_service.dart`
-(9 634) · `lib/screens/settings_screen.dart` (3 107) ·
+(9 149) · `lib/screens/settings_screen.dart` (3 107) ·
 `lib/screens/torbox/torbox_downloads_screen.dart` (7 069) ·
 `lib/screens/debrid_downloads_screen.dart` (6 444) ·
 `lib/services/video_player_launcher.dart` (5 769) ·
@@ -102,12 +102,13 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
-  home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
-  extra rows, order, hero source, tick sources, Home hero-trailer, `tv_home_style`) also
-  live in `lib/services/storage/home_prefs.dart` (`HomePrefs`); StorageService forwards
-  and re-exports `HomeCardOrientation`, `HomeHeroSourceMode`, `HomeHeroSource`,
-  `HomeExtraRow`. Key ownership pin: `lib/services/storage/storage_key_ownership.dart`.
-  Remaining domains stay on StorageService until a later G3 slice.
+  home disabled-sections). **G3 slice 3:** in-app / external-player keys
+  (`default_player_mode`, dock/loader/TV chrome, A/V, skip-segments, renderer) live in
+  `lib/services/storage/player_prefs.dart` (`PlayerPrefs`); StorageService forwards
+  (`playerStartPortraitCached`, skip-segment provider ids). Home keys stay in
+  `lib/services/storage/home_prefs.dart` (`HomePrefs`). Key ownership pin:
+  `lib/services/storage/storage_key_ownership.dart`. Remaining domains stay on
+  StorageService until a later G3 slice.
 - **`lib/services/torrent_playback_service.dart`** 🔴 — provider-agnostic play/add/bind pipeline.
   Magnet add, hashless bound replay, download-picker lazy URLs, launcher/TV
   unlock, in-app player unlock, and Stremio TV torrent resolve go through
@@ -310,13 +311,14 @@ is an editor mirror, not the source of truth. How to add a provider:
   `lib/screens/settings/backup_restore_page.dart` = Data & Backup create/restore UI,
   `lib/screens/settings/profiles_settings_page.dart` `ProfileSettingsRailActions` = Profiles card switch/add/edit). Metrics/format helpers: `lib/utils/`.
   Adding a settings page still touches ~6 sites until **S1**.
-- Storage split (**G3**, slice 2): `lib/services/storage/home_prefs.dart` (`HomePrefs`,
+- Storage split (**G3**, slice 3): `lib/services/storage/home_prefs.dart` (`HomePrefs`,
   `HomeCardOrientation`, `HomeHeroSourceMode`, `HomeHeroSource`, `HomeExtraRow`) owns
-  Home page-default keys plus remaining Home keys (`home_disabled_sections_v1`, extra
-  rows, order, hero source, tick sources, Home hero-trailer, `tv_home_style`);
-  `lib/services/storage/cloud_secret_prefs.dart` owns credential keys;
-  `lib/services/storage/storage_key_ownership.dart` asserts each declared prefs name
-  has exactly one owner. Callers still import `StorageService`. PlayerPrefs is next.
+  Home page-default keys plus remaining Home keys; `lib/services/storage/player_prefs.dart`
+  (`PlayerPrefs`) owns in-app / external-player / dock / A/V / skip-segment keys
+  (`player_dock_style` keeps `'two_tier'`); `lib/services/storage/cloud_secret_prefs.dart`
+  owns credential keys; `lib/services/storage/storage_key_ownership.dart` asserts each
+  declared prefs name has exactly one owner. Callers still import `StorageService`.
+  IptvStore / TrackingPrefs next. `@Deprecated` waits for Q2.
 - Collections (imported Nuvio/Xperience-style folder groups → Home rows of folder tiles):
   `lib/models/home_collection.dart` (schema + parser + `collection:<id>` row ids),
   `lib/services/home_collections_store.dart` (`home_collections_v1`, file/URL/paste import, addon

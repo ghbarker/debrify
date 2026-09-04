@@ -33,6 +33,7 @@ import '../utils/platform_util.dart';
 import 'tracking_scrobble_preferences.dart';
 import 'storage/cloud_secret_prefs.dart';
 import 'storage/home_prefs.dart';
+import 'storage/player_prefs.dart';
 
 export 'storage/home_prefs.dart'
     show
@@ -330,39 +331,7 @@ class StorageService {
   static const String _updateAutoCheckEnabledKey = 'update_auto_check_enabled';
   static const String _updateIgnoredVersionKey = 'update_ignored_version';
 
-  // External Player settings
-  // Default player mode: 'debrify' (app player), 'external' (external player), 'deovr' (DeoVR on Android)
-  static const String _defaultPlayerModeKey = 'default_player_mode';
-  static const String _externalPlayerPreferredKey = 'external_player_preferred';
-  static const String _externalPlayerCustomPathKey =
-      'external_player_custom_path';
-  static const String _externalPlayerCustomNameKey =
-      'external_player_custom_name';
-  static const String _externalPlayerCustomCommandKey =
-      'external_player_custom_command';
-  // iOS External Player settings
-  static const String _iosExternalPlayerPreferredKey =
-      'ios_external_player_preferred';
-  static const String _iosCustomSchemeTemplateKey =
-      'ios_custom_scheme_template';
-  // Linux External Player settings
-  static const String _linuxExternalPlayerPreferredKey =
-      'linux_external_player_preferred';
-  static const String _linuxCustomCommandKey = 'linux_custom_command';
-  // Windows External Player settings
-  static const String _windowsExternalPlayerPreferredKey =
-      'windows_external_player_preferred';
-  static const String _windowsCustomCommandKey = 'windows_custom_command';
-
-  // Debrify Player default settings
-  static const String _playerDefaultAspectIndexKey =
-      'player_default_aspect_index';
-  static const String _playerDefaultAspectIndexTvKey =
-      'player_default_aspect_index_tv';
-  static const String _playerNightModeIndexKey = 'player_night_mode_index';
-  static const String _playerSystemAudioEffectsKey =
-      'player_system_audio_effects';
-  static const String _playerStartPortraitKey = 'player_start_portrait';
+  // Debrify Player default settings — player chrome/A/V keys live on PlayerPrefs.
   static const String _movieCompletionThresholdKey =
       'movie_completion_threshold';
   static const String _episodeCompletionThresholdKey =
@@ -373,26 +342,8 @@ class StorageService {
   static const String _resumeGhostPurgeGenerationKey =
       'resume_ghost_purge_generation';
   static const int _currentResumeGhostPurgeGeneration = 1;
-  static const String _androidVideoRendererModeKey =
-      'android_video_renderer_mode';
-  static const String _androidVideoRendererGpuMigrationKey =
-      'android_video_renderer_gpu_migration_v1';
-  static const String _tvosForceSoftwareDecodeKey =
-      'tvos_force_software_decode';
-  static const String _audioPassthroughKey = 'player_audio_passthrough';
-  static const String _appleMultichannelAudioKey =
-      'player_apple_multichannel_audio';
-  static const String _tvosForceStereoAudioKey = 'tvos_force_stereo_audio_v1';
-  static const String _tvosLegacyAudioOutputKey = 'tvos_legacy_audio_output_v1';
   static const String _uiSoundsKey = 'ui_sounds';
   static const String _uiHapticsKey = 'ui_haptics';
-  static const String _subtitleAutoSyncKey = 'subtitle_auto_sync_enabled';
-  static const String _playerDefaultSubtitleLanguageKey =
-      'player_default_subtitle_language';
-  static const String _playerDefaultAudioLanguageKey =
-      'player_default_audio_language';
-  static const String _skipSegmentsEnabledKey = 'skip_segments_enabled';
-  static const String _skipSegmentProviderKey = 'skip_segment_provider';
 
   /// Completion thresholds selectable in Settings → Playback. A lower bound
   /// avoids treating a brief accidental play as watched; 95% still lets users
@@ -409,19 +360,14 @@ class StorageService {
   ];
   static const int defaultLocalCompletionThreshold = 80;
 
-  /// Stable provider identifier persisted by the Playback settings page.
-  /// Kept here rather than using a display label so future provider names can
-  /// change without migrating preferences.
-  static const String skipSegmentProviderAuto = 'auto';
-  static const String skipSegmentProviderSkipDb = 'skipdb';
-  static const String skipSegmentProviderIntroDb = 'introdb';
-  static const String skipSegmentProviderTheIntroDb = 'theintrodb';
-  static const Set<String> _supportedSkipSegmentProviders = <String>{
-    skipSegmentProviderAuto,
-    skipSegmentProviderSkipDb,
-    skipSegmentProviderIntroDb,
-    skipSegmentProviderTheIntroDb,
-  };
+  static const String skipSegmentProviderAuto =
+      PlayerPrefs.skipSegmentProviderAuto;
+  static const String skipSegmentProviderSkipDb =
+      PlayerPrefs.skipSegmentProviderSkipDb;
+  static const String skipSegmentProviderIntroDb =
+      PlayerPrefs.skipSegmentProviderIntroDb;
+  static const String skipSegmentProviderTheIntroDb =
+      PlayerPrefs.skipSegmentProviderTheIntroDb;
 
   // IPTV settings
   static const String _iptvPlaylistsKey = 'iptv_playlists';
@@ -1338,81 +1284,22 @@ class StorageService {
     await prefs.setString(_iptvStyleKey, normalized);
   }
 
-  // ── Player dock (touch/desktop transport controls) ──────────────────────
-  //
-  // Three independent prefs so any style works in any palette at any size;
-  // bundling them into one "look" would only remove combinations. Palette and
-  // size are inert under `classic`, whose values are still preserved so
-  // switching to a styled dock restores the user's choices.
-  //
-  // Read once at player launch. Televisions never consult these — they build
-  // `TvControls`, not `Controls`.
-  static const String _playerDockStyleKey = 'player_dock_style';
-  static const Set<String> _playerDockStyles = {
-    'classic',
-    'auto',
-    'compact',
-    'tiers',
-    'cinema',
-    // The value shipped before the arrangements became selectable. Still
-    // accepted on read so existing installs keep the dock they chose; it
-    // means the same thing 'auto' does.
-    'two_tier',
-  };
+  // Player dock / loader / native TV chrome — forwarding façade; bodies live on PlayerPrefs.
+  static Future<String> getPlayerDockStyle() => PlayerPrefs.getPlayerDockStyle();
 
-  static Future<String> getPlayerDockStyle() async {
-    final prefs = await ProfilePreferences.instance();
-    final raw = prefs.getString(_playerDockStyleKey);
-    return _playerDockStyles.contains(raw) ? raw! : 'classic';
-  }
+  static Future<void> setPlayerDockStyle(String style) =>
+      PlayerPrefs.setPlayerDockStyle(style);
 
-  static Future<void> setPlayerDockStyle(String style) async {
-    final normalized = _playerDockStyles.contains(style) ? style : 'classic';
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_playerDockStyleKey, normalized);
-  }
+  static Future<String> getPlayerDockPalette() =>
+      PlayerPrefs.getPlayerDockPalette();
 
-  static const String _playerDockPaletteKey = 'player_dock_palette';
-  static const Set<String> _playerDockPalettes = {
-    'ultraviolet',
-    'crimson',
-    'aurum',
-    'ice',
-  };
+  static Future<void> setPlayerDockPalette(String palette) =>
+      PlayerPrefs.setPlayerDockPalette(palette);
 
-  static Future<String> getPlayerDockPalette() async {
-    final prefs = await ProfilePreferences.instance();
-    final raw = prefs.getString(_playerDockPaletteKey);
-    return _playerDockPalettes.contains(raw) ? raw! : 'ultraviolet';
-  }
+  static Future<String> getPlayerDockSize() => PlayerPrefs.getPlayerDockSize();
 
-  static Future<void> setPlayerDockPalette(String palette) async {
-    final normalized = _playerDockPalettes.contains(palette)
-        ? palette
-        : 'ultraviolet';
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_playerDockPaletteKey, normalized);
-  }
-
-  static const String _playerDockSizeKey = 'player_dock_size';
-  static const Set<String> _playerDockSizes = {
-    'auto',
-    'small',
-    'medium',
-    'large',
-  };
-
-  static Future<String> getPlayerDockSize() async {
-    final prefs = await ProfilePreferences.instance();
-    final raw = prefs.getString(_playerDockSizeKey);
-    return _playerDockSizes.contains(raw) ? raw! : 'auto';
-  }
-
-  static Future<void> setPlayerDockSize(String size) async {
-    final normalized = _playerDockSizes.contains(size) ? size : 'auto';
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_playerDockSizeKey, normalized);
-  }
+  static Future<void> setPlayerDockSize(String size) =>
+      PlayerPrefs.setPlayerDockSize(size);
 
   static const String _iptvPlayerGuideStyleKey = 'iptv_player_guide_style';
   static const Set<String> _iptvPlayerGuideStyles = {
@@ -1448,101 +1335,23 @@ class StorageService {
     );
   }
 
-  static const String _playLoaderStyleKey = 'play_loader_style';
-  static const Set<String> _playLoaderStyles = {'marquee', 'classic'};
+  static Future<String> getPlayLoaderStyle() =>
+      PlayerPrefs.getPlayLoaderStyle();
 
-  /// The look of the play → resolve loader: 'marquee' (the default — backdrop,
-  /// logo art and a segmented stage rail) or 'classic' (the poster-and-
-  /// checklist card this overlay shipped with). Unknown or unset coerces to
-  /// 'marquee' on BOTH read and write, so a value written by a newer build can
-  /// never pin a look this one cannot render.
-  ///
-  /// The play path reads it synchronously through
-  /// [PlayLoaderStyleController.cached]; this getter is the warm source.
-  static Future<String> getPlayLoaderStyle() async {
-    final prefs = await ProfilePreferences.instance();
-    final raw = prefs.getString(_playLoaderStyleKey);
-    return _playLoaderStyles.contains(raw) ? raw! : 'marquee';
-  }
+  static Future<void> setPlayLoaderStyle(String style) =>
+      PlayerPrefs.setPlayLoaderStyle(style);
 
-  static Future<void> setPlayLoaderStyle(String style) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(
-      _playLoaderStyleKey,
-      _playLoaderStyles.contains(style) ? style : 'marquee',
-    );
-  }
+  static Future<String> getTvPlayerControlsStyle() =>
+      PlayerPrefs.getTvPlayerControlsStyle();
 
-  static const String _tvPlayerControlsStyleKey = 'tv_player_controls_style';
-  static const Set<String> _tvPlayerControlsStyles = {
-    'classic',
-    'ott',
-    'frost',
-    'marquee',
-    'broadcast',
-    'pulse',
-    'ticket',
-  };
+  static Future<void> setTvPlayerControlsStyle(String style) =>
+      PlayerPrefs.setTvPlayerControlsStyle(style);
 
-  /// Control skin for the NATIVE Android TV player: 'marquee' (editorial
-  /// serif — the default), 'ott' (the Apple TV dock ported to Kotlin),
-  /// 'classic' (the legacy Cinema Mode controls), or one of the other
-  /// premium dock skins ('frost', 'broadcast', 'pulse', 'ticket'). Android TV only; tvOS runs the
-  /// Flutter player and has nothing to choose. Read once per player launch — the native side via
-  /// `ProfilePreferenceProjection.getString("tv_player_controls_style")`
-  /// (falling back to `flutter.tv_player_controls_style` in
-  /// FlutterSharedPreferences). Unknown or unset coerces to 'marquee' on
-  /// BOTH read and write so the two readers can never disagree about the
-  /// default.
-  static Future<String> getTvPlayerControlsStyle() async {
-    final prefs = await ProfilePreferences.instance();
-    final raw = prefs.getString(_tvPlayerControlsStyleKey);
-    return _tvPlayerControlsStyles.contains(raw) ? raw! : 'marquee';
-  }
+  static Future<String> getDebrifyTvPlayerStyle() =>
+      PlayerPrefs.getDebrifyTvPlayerStyle();
 
-  static Future<void> setTvPlayerControlsStyle(String style) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(
-      _tvPlayerControlsStyleKey,
-      _tvPlayerControlsStyles.contains(style) ? style : 'marquee',
-    );
-  }
-
-  static const String _debrifyTvPlayerStyleKey = 'debrify_tv_player_style';
-  static const Set<String> _debrifyTvPlayerStyles = {
-    'classic',
-    'network',
-    'cinema',
-    'guide',
-    'spotlight',
-    'prestige',
-  };
-
-  /// Playback-screen style for the NATIVE Debrify TV player
-  /// (TorboxTvPlayerActivity): 'cinema' (poster + gilded spec line — the
-  /// default), 'network' (broadcast lower-third), 'guide' (opaque
-  /// broadcast band), 'spotlight' (frosted glass panel), 'prestige'
-  /// (quiet serif identity), or 'classic' (the legacy ESPN-style bar +
-  /// top marquee). Android TV only. Read once per player launch — the
-  /// native side via
-  /// `ProfilePreferenceProjection.getString("debrify_tv_player_style")`
-  /// (falling back to `flutter.debrify_tv_player_style` in
-  /// FlutterSharedPreferences). Unknown or unset coerces to 'cinema' on
-  /// BOTH read and write so the two readers can never disagree about the
-  /// default.
-  static Future<String> getDebrifyTvPlayerStyle() async {
-    final prefs = await ProfilePreferences.instance();
-    final raw = prefs.getString(_debrifyTvPlayerStyleKey);
-    return _debrifyTvPlayerStyles.contains(raw) ? raw! : 'cinema';
-  }
-
-  static Future<void> setDebrifyTvPlayerStyle(String style) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(
-      _debrifyTvPlayerStyleKey,
-      _debrifyTvPlayerStyles.contains(style) ? style : 'cinema',
-    );
-  }
+  static Future<void> setDebrifyTvPlayerStyle(String style) =>
+      PlayerPrefs.setDebrifyTvPlayerStyle(style);
 
   static const String _discoverLayoutKey = 'discover_layout';
   static const String _discoverDefaultSourceKey = 'discover_default_source';
@@ -8129,419 +7938,160 @@ class StorageService {
     await prefs.remove(_quickPlaySeriesRulesKey);
   }
 
-  // External Player Settings methods
+  // External player / in-app player — forwarding façade; bodies live on PlayerPrefs.
+  static Future<String> getDefaultPlayerMode() =>
+      PlayerPrefs.getDefaultPlayerMode();
 
-  /// Get default player mode
-  /// Returns 'debrify' (built-in player) by default
-  /// Valid values: 'debrify', 'external', 'deovr'
-  static Future<String> getDefaultPlayerMode() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_defaultPlayerModeKey) ?? 'debrify';
-  }
+  static Future<void> setDefaultPlayerMode(String mode) =>
+      PlayerPrefs.setDefaultPlayerMode(mode);
 
-  /// Set default player mode
-  /// Valid values: 'debrify', 'external', 'deovr'
-  static Future<void> setDefaultPlayerMode(String mode) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_defaultPlayerModeKey, mode);
-  }
+  static Future<String> getPreferredExternalPlayer() =>
+      PlayerPrefs.getPreferredExternalPlayer();
 
-  /// Get preferred external player key
-  /// Returns 'system_default' if not set
-  static Future<String> getPreferredExternalPlayer() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_externalPlayerPreferredKey) ?? 'system_default';
-  }
+  static Future<void> setPreferredExternalPlayer(String playerKey) =>
+      PlayerPrefs.setPreferredExternalPlayer(playerKey);
 
-  /// Set preferred external player key
-  static Future<void> setPreferredExternalPlayer(String playerKey) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_externalPlayerPreferredKey, playerKey);
-  }
+  static Future<String?> getCustomExternalPlayerPath() =>
+      PlayerPrefs.getCustomExternalPlayerPath();
 
-  /// Get custom external player path (for custom player option)
-  static Future<String?> getCustomExternalPlayerPath() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_externalPlayerCustomPathKey);
-  }
+  static Future<void> setCustomExternalPlayerPath(String? path) =>
+      PlayerPrefs.setCustomExternalPlayerPath(path);
 
-  /// Set custom external player path
-  static Future<void> setCustomExternalPlayerPath(String? path) async {
-    final prefs = await ProfilePreferences.instance();
-    if (path == null || path.isEmpty) {
-      await prefs.remove(_externalPlayerCustomPathKey);
-    } else {
-      await prefs.setString(_externalPlayerCustomPathKey, path);
-    }
-  }
+  static Future<String?> getCustomExternalPlayerName() =>
+      PlayerPrefs.getCustomExternalPlayerName();
 
-  /// Get custom external player display name
-  static Future<String?> getCustomExternalPlayerName() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_externalPlayerCustomNameKey);
-  }
+  static Future<void> setCustomExternalPlayerName(String? name) =>
+      PlayerPrefs.setCustomExternalPlayerName(name);
 
-  /// Set custom external player display name
-  static Future<void> setCustomExternalPlayerName(String? name) async {
-    final prefs = await ProfilePreferences.instance();
-    if (name == null || name.isEmpty) {
-      await prefs.remove(_externalPlayerCustomNameKey);
-    } else {
-      await prefs.setString(_externalPlayerCustomNameKey, name);
-    }
-  }
+  static Future<String?> getCustomExternalPlayerCommand() =>
+      PlayerPrefs.getCustomExternalPlayerCommand();
 
-  /// Get custom external player command template
-  /// Should contain {url} placeholder, optionally {title}
-  static Future<String?> getCustomExternalPlayerCommand() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_externalPlayerCustomCommandKey);
-  }
+  static Future<void> setCustomExternalPlayerCommand(String? command) =>
+      PlayerPrefs.setCustomExternalPlayerCommand(command);
 
-  /// Set custom external player command template
-  static Future<void> setCustomExternalPlayerCommand(String? command) async {
-    final prefs = await ProfilePreferences.instance();
-    if (command == null || command.isEmpty) {
-      await prefs.remove(_externalPlayerCustomCommandKey);
-    } else {
-      await prefs.setString(_externalPlayerCustomCommandKey, command);
-    }
-  }
+  static Future<String> getPreferredIOSExternalPlayer() =>
+      PlayerPrefs.getPreferredIOSExternalPlayer();
 
-  // ============================================================
-  // iOS External Player Settings
-  // ============================================================
+  static Future<void> setPreferredIOSExternalPlayer(String playerKey) =>
+      PlayerPrefs.setPreferredIOSExternalPlayer(playerKey);
 
-  /// Get preferred iOS external player key
-  static Future<String> getPreferredIOSExternalPlayer() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_iosExternalPlayerPreferredKey) ?? 'vlc';
-  }
+  static Future<String?> getIOSCustomSchemeTemplate() =>
+      PlayerPrefs.getIOSCustomSchemeTemplate();
 
-  /// Set preferred iOS external player key
-  static Future<void> setPreferredIOSExternalPlayer(String playerKey) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_iosExternalPlayerPreferredKey, playerKey);
-  }
+  static Future<void> setIOSCustomSchemeTemplate(String? template) =>
+      PlayerPrefs.setIOSCustomSchemeTemplate(template);
 
-  /// Get iOS custom URL scheme template
-  /// Should contain {url} placeholder, e.g., "myplayer://play?url={url}"
-  static Future<String?> getIOSCustomSchemeTemplate() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_iosCustomSchemeTemplateKey);
-  }
+  static Future<String> getPreferredLinuxExternalPlayer() =>
+      PlayerPrefs.getPreferredLinuxExternalPlayer();
 
-  /// Set iOS custom URL scheme template
-  static Future<void> setIOSCustomSchemeTemplate(String? template) async {
-    final prefs = await ProfilePreferences.instance();
-    if (template == null || template.isEmpty) {
-      await prefs.remove(_iosCustomSchemeTemplateKey);
-    } else {
-      await prefs.setString(_iosCustomSchemeTemplateKey, template);
-    }
-  }
+  static Future<void> setPreferredLinuxExternalPlayer(String playerKey) =>
+      PlayerPrefs.setPreferredLinuxExternalPlayer(playerKey);
 
-  // ============================================================
-  // Linux External Player Settings
-  // ============================================================
+  static Future<String?> getLinuxCustomCommand() =>
+      PlayerPrefs.getLinuxCustomCommand();
 
-  /// Get preferred Linux external player key
-  static Future<String> getPreferredLinuxExternalPlayer() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_linuxExternalPlayerPreferredKey) ??
-        'system_default';
-  }
+  static Future<void> setLinuxCustomCommand(String? command) =>
+      PlayerPrefs.setLinuxCustomCommand(command);
 
-  /// Set preferred Linux external player key
-  static Future<void> setPreferredLinuxExternalPlayer(String playerKey) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_linuxExternalPlayerPreferredKey, playerKey);
-  }
+  static Future<String> getPreferredWindowsExternalPlayer() =>
+      PlayerPrefs.getPreferredWindowsExternalPlayer();
 
-  /// Get Linux custom command template
-  /// Should contain {url} placeholder, e.g., "vlc --fullscreen {url}"
-  static Future<String?> getLinuxCustomCommand() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_linuxCustomCommandKey);
-  }
-
-  /// Set Linux custom command template
-  static Future<void> setLinuxCustomCommand(String? command) async {
-    final prefs = await ProfilePreferences.instance();
-    if (command == null || command.isEmpty) {
-      await prefs.remove(_linuxCustomCommandKey);
-    } else {
-      await prefs.setString(_linuxCustomCommandKey, command);
-    }
-  }
-
-  // ============================================================
-  // Windows External Player Settings
-  // ============================================================
-
-  /// Get preferred Windows external player key
-  static Future<String> getPreferredWindowsExternalPlayer() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_windowsExternalPlayerPreferredKey) ??
-        'system_default';
-  }
-
-  /// Set preferred Windows external player key
   static Future<void> setPreferredWindowsExternalPlayer(
     String playerKey,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_windowsExternalPlayerPreferredKey, playerKey);
-  }
+  ) => PlayerPrefs.setPreferredWindowsExternalPlayer(playerKey);
 
-  /// Get Windows custom command template
-  /// Should contain {url} placeholder, e.g., "vlc --fullscreen {url}"
-  static Future<String?> getWindowsCustomCommand() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_windowsCustomCommandKey);
-  }
+  static Future<String?> getWindowsCustomCommand() =>
+      PlayerPrefs.getWindowsCustomCommand();
 
-  /// Set Windows custom command template
-  static Future<void> setWindowsCustomCommand(String? command) async {
-    final prefs = await ProfilePreferences.instance();
-    if (command == null || command.isEmpty) {
-      await prefs.remove(_windowsCustomCommandKey);
-    } else {
-      await prefs.setString(_windowsCustomCommandKey, command);
-    }
-  }
+  static Future<void> setWindowsCustomCommand(String? command) =>
+      PlayerPrefs.setWindowsCustomCommand(command);
 
-  /// Clear all external player settings
-  static Future<void> clearExternalPlayerSettings() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_defaultPlayerModeKey);
-    await prefs.remove(_externalPlayerPreferredKey);
-    await prefs.remove(_externalPlayerCustomPathKey);
-    await prefs.remove(_externalPlayerCustomNameKey);
-    await prefs.remove(_externalPlayerCustomCommandKey);
-  }
+  static Future<void> clearExternalPlayerSettings() =>
+      PlayerPrefs.clearExternalPlayerSettings();
 
-  // Debrify Player Default Settings
+  static Future<int> getPlayerDefaultAspectIndex() =>
+      PlayerPrefs.getPlayerDefaultAspectIndex();
 
-  /// Get default aspect ratio index for Flutter/mobile player
-  /// 0=Contain, 1=Cover, 2=FitWidth, 3=FitHeight, 4=16:9, 5=4:3, 6=21:9, 7=1:1, 8=3:2, 9=5:4, 10=CinemaZoom
-  /// Default: 2 (Fit Width)
-  static Future<int> getPlayerDefaultAspectIndex() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getInt(_playerDefaultAspectIndexKey) ?? 2;
-  }
+  static Future<void> setPlayerDefaultAspectIndex(int index) =>
+      PlayerPrefs.setPlayerDefaultAspectIndex(index);
 
-  /// Set default aspect ratio index for Flutter/mobile player
-  static Future<void> setPlayerDefaultAspectIndex(int index) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setInt(_playerDefaultAspectIndexKey, index);
-  }
+  static Future<int> getPlayerDefaultAspectIndexTv() =>
+      PlayerPrefs.getPlayerDefaultAspectIndexTv();
 
-  /// Get default aspect ratio index for Android TV player
-  /// 0=Fit, 1=Fill, 2=Zoom, 3=CinemaZoom
-  /// Default: 0 (Fit)
-  static Future<int> getPlayerDefaultAspectIndexTv() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getInt(_playerDefaultAspectIndexTvKey) ?? 0;
-  }
+  static Future<void> setPlayerDefaultAspectIndexTv(int index) =>
+      PlayerPrefs.setPlayerDefaultAspectIndexTv(index);
 
-  /// Set default aspect ratio index for Android TV player
-  static Future<void> setPlayerDefaultAspectIndexTv(int index) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setInt(_playerDefaultAspectIndexTvKey, index);
-  }
+  static Future<int> getPlayerNightModeIndex() =>
+      PlayerPrefs.getPlayerNightModeIndex();
 
-  /// Get night mode index (Android TV only)
-  /// 0=Off, 1=Low, 2=Medium, 3=High, 4=Higher, 5=Extreme, 6=Max, 7=Sleeping Baby
-  /// Default: 0 (Off)
-  static Future<int> getPlayerNightModeIndex() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getInt(_playerNightModeIndexKey) ?? 0;
-  }
+  static Future<void> setPlayerNightModeIndex(int index) =>
+      PlayerPrefs.setPlayerNightModeIndex(index);
 
-  /// Set night mode index (Android TV only)
-  static Future<void> setPlayerNightModeIndex(int index) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setInt(_playerNightModeIndexKey, index);
-  }
+  static Future<bool> getPlayerSystemAudioEffects() =>
+      PlayerPrefs.getPlayerSystemAudioEffects();
 
-  /// Whether to route playback through Android's effects-capable audio output
-  /// and announce the session to system equalizer apps (Wavelet, OEM effects).
-  /// Android only. Default: false — off changes nothing about how audio is
-  /// output today, since enabling it switches the phone player's audio backend.
-  static Future<bool> getPlayerSystemAudioEffects() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_playerSystemAudioEffectsKey) ?? false;
-  }
+  static Future<void> setPlayerSystemAudioEffects(bool enabled) =>
+      PlayerPrefs.setPlayerSystemAudioEffects(enabled);
 
-  /// Set whether system audio effect apps may process our playback.
-  static Future<void> setPlayerSystemAudioEffects(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_playerSystemAudioEffectsKey, enabled);
-  }
+  static Future<bool> getAudioPassthroughEnabled() =>
+      PlayerPrefs.getAudioPassthroughEnabled();
 
-  /// Android Dart player only: bitstream AC3/EAC3/DTS-core to the audio
-  /// device instead of decoding to PCM (AUDIO_FIDELITY_PLAN.md). Default
-  /// false — passthrough is fail-loud on routes that misreport support,
-  /// so only the user can turn it on.
-  static Future<bool> getAudioPassthroughEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_audioPassthroughKey) ?? false;
-  }
+  static Future<void> setAudioPassthroughEnabled(bool enabled) =>
+      PlayerPrefs.setAudioPassthroughEnabled(enabled);
 
-  static Future<void> setAudioPassthroughEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_audioPassthroughKey, enabled);
-  }
+  static Future<bool> getAppleMultichannelAudio() =>
+      PlayerPrefs.getAppleMultichannelAudio();
 
-  /// Apple (tvOS/iOS) Dart player: request the track's real channel layout
-  /// (`audio-channels=auto`) so an HDMI/eARC AVR route gets full
-  /// multichannel LPCM. Default false until route-safety is field-proven
-  /// (AUDIO_FIDELITY_PLAN.md rev 2).
-  static Future<bool> getAppleMultichannelAudio() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_appleMultichannelAudioKey) ?? false;
-  }
+  static Future<void> setAppleMultichannelAudio(bool enabled) =>
+      PlayerPrefs.setAppleMultichannelAudio(enabled);
 
-  static Future<void> setAppleMultichannelAudio(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_appleMultichannelAudioKey, enabled);
-  }
+  static Future<bool> getTvosForceStereoAudio() =>
+      PlayerPrefs.getTvosForceStereoAudio();
 
-  /// Apple TV diagnostics. The player picks `ao=avfoundation,audiounit` and
-  /// caps `audio-channels` to stereo on a route that reports two channels;
-  /// these two override that automatic choice from either direction, so a
-  /// reporter can narrow an audio problem without a custom build.
-  ///
-  /// Force stereo: cap regardless of what the route claims. Use when a
-  /// multichannel route folds badly.
-  static Future<bool> getTvosForceStereoAudio() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_tvosForceStereoAudioKey) ?? false;
-  }
+  static Future<void> setTvosForceStereoAudio(bool enabled) =>
+      PlayerPrefs.setTvosForceStereoAudio(enabled);
 
-  static Future<void> setTvosForceStereoAudio(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_tvosForceStereoAudioKey, enabled);
-  }
+  static Future<bool> getTvosLegacyAudioOutput() =>
+      PlayerPrefs.getTvosLegacyAudioOutput();
 
-  /// Legacy output: go back to `ao=audiounit`, the pre-2026-08 behaviour.
-  /// It is silent on Dolby Atmos routes — which is why avfoundation is now
-  /// the default — but it is the escape hatch if the new output misbehaves.
-  static Future<bool> getTvosLegacyAudioOutput() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_tvosLegacyAudioOutputKey) ?? false;
-  }
+  static Future<void> setTvosLegacyAudioOutput(bool enabled) =>
+      PlayerPrefs.setTvosLegacyAudioOutput(enabled);
 
-  static Future<void> setTvosLegacyAudioOutput(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_tvosLegacyAudioOutputKey, enabled);
-  }
+  static Future<bool> getTvosForceSoftwareDecode() =>
+      PlayerPrefs.getTvosForceSoftwareDecode();
 
-  /// Apple TV only: force the media-kit player to software video decoding.
-  /// The escape hatch behind the automatic 10-bit remedy ladder (see
-  /// PLAYER_TVOS_10BIT_PLAN.md) — for files whose formats read clean but
-  /// render wrong. Default false: hardware decoding, today's behavior.
-  static Future<bool> getTvosForceSoftwareDecode() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_tvosForceSoftwareDecodeKey) ?? false;
-  }
+  static Future<void> setTvosForceSoftwareDecode(bool enabled) =>
+      PlayerPrefs.setTvosForceSoftwareDecode(enabled);
 
-  static Future<void> setTvosForceSoftwareDecode(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_tvosForceSoftwareDecodeKey, enabled);
-  }
-
-  /// Renderer used by the Flutter media-kit player on Android phones/tablets.
-  /// Android TV ignores this and keeps its native Media3 SurfaceView backend.
-  static Future<AndroidVideoRendererMode> getAndroidVideoRendererMode() async {
-    final prefs = await ProfilePreferences.instance();
-    final migrated =
-        prefs.getBool(_androidVideoRendererGpuMigrationKey) ?? false;
-    final stored = prefs.getString(_androidVideoRendererModeKey);
-    if (!migrated) {
-      // Direct Surface used to be the default, but mediacodec_embed cannot
-      // composite bitmap subtitles. Migrate existing installs once; users may
-      // still explicitly choose the performance renderer afterwards.
-      if (stored == null ||
-          stored == AndroidVideoRendererMode.directSurface.storageKey) {
-        await prefs.setString(
-          _androidVideoRendererModeKey,
-          AndroidVideoRendererMode.directMediaCodec.storageKey,
-        );
-      }
-      await prefs.setBool(_androidVideoRendererGpuMigrationKey, true);
-    }
-    return AndroidVideoRendererMode.fromStorage(
-      prefs.getString(_androidVideoRendererModeKey),
-    );
-  }
+  static Future<AndroidVideoRendererMode> getAndroidVideoRendererMode() =>
+      PlayerPrefs.getAndroidVideoRendererMode();
 
   static Future<void> setAndroidVideoRendererMode(
     AndroidVideoRendererMode mode,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_androidVideoRendererModeKey, mode.storageKey);
-    await prefs.setBool(_androidVideoRendererGpuMigrationKey, true);
-  }
+  ) => PlayerPrefs.setAndroidVideoRendererMode(mode);
 
-  /// Whether the Debrify Player should request community timestamps and show
-  /// manual skip buttons. Manual buttons are enabled by default; this setting
-  /// never authorizes automatic seeking.
-  static Future<bool> getSkipSegmentsEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_skipSegmentsEnabledKey) ?? true;
-  }
+  static Future<bool> getSkipSegmentsEnabled() =>
+      PlayerPrefs.getSkipSegmentsEnabled();
 
-  static Future<void> setSkipSegmentsEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_skipSegmentsEnabledKey, enabled);
-  }
+  static Future<void> setSkipSegmentsEnabled(bool enabled) =>
+      PlayerPrefs.setSkipSegmentsEnabled(enabled);
 
-  /// Timestamp source used by the Debrify Player. Unknown stored values fall
-  /// back safely so removing a provider cannot strand the feature.
-  static Future<String> getSkipSegmentProvider() async {
-    final prefs = await ProfilePreferences.instance();
-    final provider = prefs.getString(_skipSegmentProviderKey);
-    return _supportedSkipSegmentProviders.contains(provider)
-        ? provider!
-        : skipSegmentProviderAuto;
-  }
+  static Future<String> getSkipSegmentProvider() =>
+      PlayerPrefs.getSkipSegmentProvider();
 
-  static Future<void> setSkipSegmentProvider(String provider) async {
-    final prefs = await ProfilePreferences.instance();
-    final supported = _supportedSkipSegmentProviders.contains(provider)
-        ? provider
-        : skipSegmentProviderAuto;
-    await prefs.setString(_skipSegmentProviderKey, supported);
-  }
+  static Future<void> setSkipSegmentProvider(String provider) =>
+      PlayerPrefs.setSkipSegmentProvider(provider);
 
-  /// Whether the phone player OPENS upright instead of turning the handset
-  /// landscape for you. Off by default — a video wants the long edge, and that
-  /// is what the player has always done. On, it opens portrait and the
-  /// player's own Portrait/Landscape button is how the user turns it.
-  /// Phone-only: a TV has no portrait and a desktop window ignores this
-  /// entirely.
-  ///
-  /// [playerStartPortraitCached] mirrors it for SYNCHRONOUS reads. The player
-  /// commits its orientation while building, so an async read there would set
-  /// landscape and correct it a frame later — performing the exact flip this
-  /// setting exists to prevent. Warmed in main() before runApp (the IPTV
-  /// startup channel can open a player on the first frame) and kept in sync by
-  /// the setter.
-  static bool playerStartPortraitCached = false;
+  static bool get playerStartPortraitCached =>
+      PlayerPrefs.playerStartPortraitCached;
+  static set playerStartPortraitCached(bool value) =>
+      PlayerPrefs.playerStartPortraitCached = value;
 
-  static Future<bool> getPlayerStartPortrait() async {
-    final prefs = await ProfilePreferences.instance();
-    playerStartPortraitCached = prefs.getBool(_playerStartPortraitKey) ?? false;
-    return playerStartPortraitCached;
-  }
+  static Future<bool> getPlayerStartPortrait() =>
+      PlayerPrefs.getPlayerStartPortrait();
 
-  static Future<void> setPlayerStartPortrait(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_playerStartPortraitKey, enabled);
-    playerStartPortraitCached = enabled;
-  }
+  static Future<void> setPlayerStartPortrait(bool enabled) =>
+      PlayerPrefs.setPlayerStartPortrait(enabled);
 
   /// Whether interface sound and haptics are allowed at all.
   ///
@@ -8584,58 +8134,23 @@ class StorageService {
     await prefs.setBool(_uiHapticsKey, enabled);
   }
 
-  /// Whether native players silently align addon subtitles to the audio as
-  /// playback runs. Android TV reads the same profile preference natively;
-  /// MediaKit reads it in Dart (Android, macOS, Linux, tvOS — platforms whose
-  /// bundled libmpv carries the analysis filters) and attaches its passive
-  /// filter only while an addon subtitle is active. OFF by default on both
-  /// engines — experimental opt-in. The default must stay in lock-step with
-  /// the native read in AndroidTvTorrentPlayerActivity.isAutoSyncPrefEnabled.
-  static Future<bool> getSubtitleAutoSyncEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_subtitleAutoSyncKey) ?? false;
-  }
+  static Future<bool> getSubtitleAutoSyncEnabled() =>
+      PlayerPrefs.getSubtitleAutoSyncEnabled();
 
-  static Future<void> setSubtitleAutoSyncEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_subtitleAutoSyncKey, enabled);
-  }
+  static Future<void> setSubtitleAutoSyncEnabled(bool enabled) =>
+      PlayerPrefs.setSubtitleAutoSyncEnabled(enabled);
 
-  /// Get default subtitle language code
-  /// Returns language code (e.g., 'en', 'es') or 'off' for disabled, null for no preference
-  static Future<String?> getDefaultSubtitleLanguage() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_playerDefaultSubtitleLanguageKey);
-  }
+  static Future<String?> getDefaultSubtitleLanguage() =>
+      PlayerPrefs.getDefaultSubtitleLanguage();
 
-  /// Set default subtitle language code
-  /// Pass language code (e.g., 'en', 'es'), 'off' for disabled, or null to clear preference
-  static Future<void> setDefaultSubtitleLanguage(String? languageCode) async {
-    final prefs = await ProfilePreferences.instance();
-    if (languageCode == null) {
-      await prefs.remove(_playerDefaultSubtitleLanguageKey);
-    } else {
-      await prefs.setString(_playerDefaultSubtitleLanguageKey, languageCode);
-    }
-  }
+  static Future<void> setDefaultSubtitleLanguage(String? languageCode) =>
+      PlayerPrefs.setDefaultSubtitleLanguage(languageCode);
 
-  /// Get default audio language code
-  /// Returns language code (e.g., 'en', 'es') or null for no preference
-  static Future<String?> getDefaultAudioLanguage() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_playerDefaultAudioLanguageKey);
-  }
+  static Future<String?> getDefaultAudioLanguage() =>
+      PlayerPrefs.getDefaultAudioLanguage();
 
-  /// Set default audio language code
-  /// Pass language code (e.g., 'en', 'es') or null to clear preference
-  static Future<void> setDefaultAudioLanguage(String? languageCode) async {
-    final prefs = await ProfilePreferences.instance();
-    if (languageCode == null) {
-      await prefs.remove(_playerDefaultAudioLanguageKey);
-    } else {
-      await prefs.setString(_playerDefaultAudioLanguageKey, languageCode);
-    }
-  }
+  static Future<void> setDefaultAudioLanguage(String? languageCode) =>
+      PlayerPrefs.setDefaultAudioLanguage(languageCode);
 
   static const String _iptvSeriesAudioLangKey = 'iptv_series_audio_lang';
 
