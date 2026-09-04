@@ -1,8 +1,12 @@
 # Refactor board
 
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
+**Phase 2 binding plan:** `dev/design/REFACTOR_PLAN_PHASE2.md` (#72). It supersedes
+§4 lanes G1–G5 / T2 and the §10 line targets. Ground rules and gates (a)–(e) still
+apply; this phase also requires (f) Leaves, (g) no host-private members / no new
+`part of` / `extension on` the host State, (h) pin commit predates the move.
 
-Baseline: `main` @ G1 step 5 merged · Phase: **2** (G3 PlayerPrefs assigned) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
+Baseline: `main` @ #72 · Phase: **2 correction** (P1b + G1'-0 + V1-0 + S2-0 assigned) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -33,11 +37,20 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | G2 · settings_screen split | merged | `refactor/g2-backup-restore-page` | worker | `settings_screen.dart` [backup/restore + profile-switch hunks], new `lib/screens/settings/backup_restore_page.dart`, `profiles_settings_page.dart` `ProfileSettingsRailActions`, tests | — | **#63.** Pin + origin-diff. `settings_screen.dart` 3 923 → 3 107. `extraPlayerKeywords` still bound. Restore-report omits `homeCollectionsFailed` / `streamBadgeSourcesFailed` from the snackbar list (NOTES). |
 | G3 · storage split | merged | `refactor/g3-storage-split` | worker | `storage_service.dart`, `lib/services/storage/**`, storage key-sweep tests | — | **#67.** HomePrefs first slice. `storage_service.dart` 9 963 → 9 835. Remaining Home keys merged #70. PlayerPrefs next. `@Deprecated` in Q2. `clearAllHomePageSettings` skips Trakt default keys (NOTES). |
 | G3 · step 2 remaining Home keys | merged | `refactor/g3-home-prefs-rest` | worker | `storage_service.dart`, `lib/services/storage/home_prefs.dart`, key-sweep tests | G3 slice 1 | **#70.** Pin + origin-diff. `storage_service.dart` 9 835 → 9 634. Callers stay on StorageService. Empty tick list, `'shelf'`→`'canvas'`, custom-hero-with-no-ids, façade `trackingSourceRevision++` (NOTES). PlayerPrefs next. `@Deprecated` in Q2. |
-| G3 · step 3 PlayerPrefs | assigned | `refactor/g3-player-prefs` | worker | `storage_service.dart`, new `lib/services/storage/player_prefs.dart`, `storage_key_ownership.dart`, key-sweep + snapshot tests | G3 step 2 | Player/external-player/dock/audio/subtitle/skip/renderer keys into PlayerPrefs. Same façade as HomePrefs. Gate (c) pin+origin-diff. Callers stay on StorageService. `@Deprecated` in Q2. IPTV playlists / Magic TV channels / playback_state out of slice. |
+| G3 · step 3 PlayerPrefs | parked | `refactor/g3-player-prefs` | — | — | superseded | **Do not merge.** Phase 2 correction replaces G3 with **S2**. PlayerPrefs is S2-3 (with `iptv_prefs`), after S2-0…S2-2. Branch left on origin for later reference. |
 | G4 · cloud file screens | merged | `refactor/g4-cloud-files-screen` | worker | `debrid_downloads_screen.dart`, `torbox/**`, `premiumize/**`, `alldebrid/**`, `pikpak/**` files screens | — | **#64.** RD + TorBox on shared `CloudFilesScreen`. PM/AD/PikPak follow-up. Selection bar stayed on hosts (shape-manifest floor; NOTES). Supersedes closed #36–#43. |
-| G4 · step 2 remaining hosts | queued | `refactor/g4-cloud-files-rest` | — | `premiumize/**`, `alldebrid/**`, `pikpak/**` files screens, `CloudFilesScreen` | G4 slice 1 | Route PM/AD/PikPak onto shared `CloudFilesScreen`. Selection bar stays on hosts (shape-manifest). Public types and sidebar ids frozen. |
-| G5 · scrobble coordinator | merged | `refactor/g5-scrobble-coordinator` | worker | `video_player_screen.dart` [scrobble hunks], `services/*/*_scrobble_session.dart`, new coordinator + tests | — | **#68.** `video_player_screen.dart` 16 278 → 15 771. Simkl pause-centric (NOTES). No TrackerRegistry factory. Native TV/launcher out of lane. |
+| G4 · step 2 remaining hosts | queued | `refactor/g4-cloud-files-rest` | — | `premiumize/**`, `alldebrid/**`, `pikpak/**` files screens, `CloudFilesScreen` | **P1b** | Route PM/AD/PikPak onto shared `CloudFilesScreen`. After P1b it can use RD/AD ports. Selection bar stays on hosts (shape-manifest). Public types and sidebar ids frozen. |
+| G5 · scrobble coordinator | closed | `refactor/g5-scrobble-coordinator` | — | — | — | **#68** extracted scrobble. Remaining triplication is **V1-9**. Do not open a G5 follow-up. |
 | T2 · tracker commons | merged | `refactor/t2-tracker-commons` | worker | `services/trakt/**`, `services/simkl/**`, `services/mdblist/**`, `tracking_source_policy.dart`, new `lib/services/tracking/**` | — | **#62.** Shared shapes only; HTTP unchanged. Local progress not dedicated; MDBList adapter ignores `inferredType` (NOTES). Out-of-lane callers not chased. |
+| P1b · RD/AD Magic-TV port | assigned | `refactor/p1b-magic-tv-unlock` | worker | `lib/services/cloud/**`, `test/cloud_*` | — | Expose Magic TV's RD `unrestrictLink` / `addTorrentToDebridPreferVideos` and AD `unlockLink` on `CloudUnlock`/`CloudMagnetAdd` (or a thin Magic-TV capability) with existing quirk pins. **Do not edit `magic_tv_screen.dart`.** Unblocks M1. |
+| G1'-0 · public types | assigned | `refactor/g1p-0-public-types` | worker | `search_screen.dart`, `lib/screens/search/**` (rename only) | — | Make `_Mode`, `_CwKind`, `_CwRow`, `_FavKind`, `_FavRowRef`, `_ArtPoster`, `_FavArtCell` public (rename, no behaviour). Leaves ≈ 0. Unblocks G1'-1…9. No new `part`/`extension on` State. |
+| G1'-1 … G1'-9 | queued | — | — | `search_screen.dart` | G1'-0 | Sequential after G1'-0. See PHASE2 §3. Target ≤ 7 500; no `extension on _SearchScreenState`. |
+| V1-0 · PlayerLaunchConfig | assigned | `refactor/v1-0-launch-config` | worker | `video_player_screen.dart` [ctor + `widget.*` reads], new `lib/screens/video_player/player_launch_config.dart` | — | Value object replacing ~60 ctor params / 64 `widget.*` reads. Leaves ≈ 0. No host-State privates in the new file. Unblocks V1-1…10. |
+| V1-1 … V1-10 | queued | — | — | `video_player_screen.dart` | V1-0 | Sequential. Target ≤ 9 500. V1-9 folds episode-progress into ScrobbleCoordinator. |
+| M1-0 … M1-6 | queued | — | — | `magic_tv_screen.dart` | **P1b** then M1-0 | Sequential. Target ≤ 4 500. WatchSession first. |
+| S2-0 · key registry + façade | assigned | `refactor/s2-0-key-registry` | worker | `storage_key_ownership.dart`, maybe `storage_service.dart` (no domain extract) | — | Every declared prefs key in `byKey`; façade rule (forwards until callers move). Leaves ≈ 0. **Do not extract PlayerPrefs** (S2-3). Do not merge parked `refactor/g3-player-prefs`. |
+| S2-1 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-0 | Sequential. Replaces remaining G3. Target ≤ 2 800. S2-3 = `player_prefs` + `iptv_prefs`. |
+| G2 · under 3 000 | queued | — | — | `settings_screen.dart` | when free | #63 left the file at 3 107; PHASE2 target ≤ 3 000. |
 | Q1 · layering enforcement | queued | — | — | `tool/check_layering.dart`, `test.yml` | gate 2 | — |
 | Q2 · shim + comment sweep | queued | — | — | per area, assigned at gate 2 | gate 2 | — |
 | Q3 · `.cursor` policy | queued | — | — | `.cursor/**`, `dev/design/ENGINEERING_RULES.md` | gate 2 | PR #56 (Qwen helper) held until Phase 3; it edits `.cursor/**`. |
@@ -71,4 +84,4 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
-Phase 1 merged. P2a–**P2e** merged (#60). **G1 steps 1–5 merged (#61, #65, #66, #69, #71).** **T2 #62 · G2 #63 · G4 #64 · G3 #67 + step 2 #70 · G5 #68 merged.** G3 PlayerPrefs assigned. G4 PM/AD/PikPak queued. Then gate 2. Gate 1 Windows pass; Android not run. PR #56 held. #36–#43 closed (G4).
+Phase 1 merged. Old Phase 2 G1–G5/T2/G3-HomePrefs **closed as insufficient** (audit in PHASE2 §1). Binding is **#72** `REFACTOR_PLAN_PHASE2.md`. **G3 PlayerPrefs parked** (`refactor/g3-player-prefs` — do not merge; S2-3 later). **G5 closed** (remainder is V1-9). First wave assigned: **P1b · G1'-0 · V1-0 · S2-0**. G4 remaining hosts after P1b. Mini-gate after every three merged extractions per lane. PR #56 held for Q3. #36–#43 closed (G4).

@@ -4,6 +4,16 @@ Quirks discovered during lanes. **Keep them**; do not "fix" in a refactor commit
 The orchestrator (or a later dedicated bugfix) owns follow-up.
 
 See `dev/design/REFACTOR_PLAN.md` §2 rule 1.
+Phase 2 extractions also follow `dev/design/REFACTOR_PLAN_PHASE2.md` (binding as of #72).
+
+## Phase 2 correction
+
+- **Old G1 steps 1–5 / remaining G3 / G5 follow-ups are not the template.** Wrappers,
+  `extension on _SearchScreenState` parts, and pins against the copy do not count.
+  New units must compile without the god file's private members (gate g).
+- **`refactor/g3-player-prefs` is parked.** Pin+move already exist on that branch
+  under the old G3 contract. PlayerPrefs is **S2-3** (with `iptv_prefs`) after
+  S2-0…S2-2. Do not merge the parked branch.
 
 ## Quirks kept, not fixed
 
