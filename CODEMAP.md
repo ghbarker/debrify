@@ -98,6 +98,9 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   so they share `HomeBoardController`, `CatalogSearchController`, and `TitleOpener`. Shell contracts
   live in `lib/screens/search/search_screen_shells.dart`.
   Detail opening is `lib/screens/search/title_opener.dart` (`TitleOpener`; State `_openItem` is a forward).
+  Catalog play/resume resolve is `lib/services/playback/catalog_play_resolver.dart`
+  (`CatalogPlayResolver` — meta + tracker snapshots → `PlaySelection`/`ResumeInfo`;
+  host `_onCatalogPlay` keeps overlay, `_activeAddonId`, and launch).
   TV Home stage layouts are `lib/screens/search/stages/` (`_CanvasBoardStage` and friends);
   the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
@@ -242,13 +245,13 @@ is an editor mirror, not the source of truth. How to add a provider:
 - File-tree browse (per provider, post-add): `debrid_service.getTorrentFolderTree`,
   `lib/utils/{rd,torbox}_folder_tree_builder.dart`, `lib/screens/playlist_content_view_screen.dart`.
 - Cloud/downloads screens: `lib/screens/cloud_files/cloud_files_screen.dart`
-  (`CloudFilesScreen` + local `CloudFilesSource`; **RD + TorBox** routed this
-  PR — G4). Hosts: `lib/screens/debrid_downloads_screen.dart`,
-  `lib/screens/torbox/torbox_downloads_screen.dart`. Not yet on the shared
-  screen: `lib/screens/pikpak/pikpak_files_screen.dart`,
+  (`CloudFilesScreen` + local `CloudFilesSource`; **RD + TorBox + Premiumize
+  + AllDebrid + PikPak** routed — G4). Hosts: `lib/screens/debrid_downloads_screen.dart`,
+  `lib/screens/torbox/torbox_downloads_screen.dart`,
   `lib/screens/premiumize/premiumize_files_screen.dart`,
-  `lib/screens/alldebrid/alldebrid_files_screen.dart`. Hub:
-  `lib/screens/cloud_screen.dart`.
+  `lib/screens/alldebrid/alldebrid_files_screen.dart`,
+  `lib/screens/pikpak/pikpak_files_screen.dart`. Selection bars stay on
+  hosts (shape-manifest floor). Hub: `lib/screens/cloud_screen.dart`.
 - WebDAV: `lib/services/webdav_service.dart` (read/browse only — no upload yet).
 
 ## Players
@@ -257,7 +260,10 @@ is an editor mirror, not the source of truth. How to add a provider:
   handlers arrowUp/Down/Left/Right; scrobble via `ScrobbleCoordinator` +
   `ScrobbleTarget`s in `lib/services/scrobble/`). Launch ctor fields:
   `lib/screens/video_player/player_launch_config.dart` (`PlayerLaunchConfig`;
-  `VideoPlayerScreen` public constructor stays). Controls overlay:
+  `VideoPlayerScreen` public constructor stays). Resume:
+  `lib/services/playback/resume_controller.dart` (`ResumeController` +
+  `ResumeContext` / `ResumeSession`; host keeps `_ResumeSession` adapter).
+  Controls overlay:
   `lib/screens/video_player/widgets/controls.dart`. Track/source sheets: `lib/screens/video_player/widgets/`.
 - Launch + native TV: `lib/services/video_player_launcher.dart` 🔴 (`_launchOnAndroidTv`, `_push`),
   `lib/services/android_tv_player_bridge.dart`, native Kotlin

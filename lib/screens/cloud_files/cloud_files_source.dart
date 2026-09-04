@@ -46,5 +46,7 @@ abstract class CloudFilesSource {
   bool get isPushedRoute;
   bool get selectSourceMode;
   String? get initialSearchQuery;
-  void Function(SeriesSource)? get onSourceSelected;
+
+  /// RD/TorBox bind is sync. PM/AD/PikPak bind is async and stays on the host.
+  void Function(SeriesSource)? get onSourceSelected => null;
 }
