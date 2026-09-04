@@ -53,6 +53,7 @@ import 'package:media_kit_video/media_kit_video.dart' as mkv;
 
 // Video Player Components
 import 'video_player/models/playlist_entry.dart';
+import 'video_player/player_launch_config.dart';
 import 'video_player/services/external_subtitle_payload.dart';
 import 'video_player/services/subtitle_track_utils.dart';
 import 'video_player/models/gesture_state.dart';
@@ -388,6 +389,8 @@ class VideoPlayerScreen extends StatefulWidget {
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     with TickerProviderStateMixin {
+  PlayerLaunchConfig get config => PlayerLaunchConfig.fromWidget(widget);
+
   static const MethodChannel _tvReleaseLogChannel = MethodChannel(
     'debrify/tvlog',
   );
@@ -1354,7 +1357,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   Timer? _analyticsHeartbeatTimer;
 
   Duration? _randomStartOffset(Duration duration) {
-    final num clampedPercent = widget.randomStartMaxPercent.clamp(0, 99);
+    final num clampedPercent = config.randomStartMaxPercent.clamp(0, 99);
     if (duration <= Duration.zero || clampedPercent <= 0) {
       return null;
     }
@@ -1371,7 +1374,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   Duration? _percentStartOffset(Duration duration) {
-    final percent = widget.startAtPercent;
+    final percent = config.startAtPercent;
     if (percent == null || percent <= 0 || duration <= Duration.zero) {
       return null;
     }
@@ -1385,8 +1388,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     super.initState();
     AnalyticsService.screenView('video_player');
     _startAnalyticsHeartbeat();
-    _activePlaylist = widget.playlist;
-    _seriesImdbKnownAtLaunch = widget.contentImdbId?.trim().isNotEmpty == true;
+    _activePlaylist = config.playlist;
+    _seriesImdbKnownAtLaunch = config.contentImdbId?.trim().isNotEmpty == true;
     // The dock and the zap banner share the bottom strip, and the dock is
     // raised from several places that never go through _toggleControls
     // (volume keys, pointer wake). Watching the notifier catches all of them.
@@ -1419,7 +1422,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     // Launch-time subtitles (e.g. YouTube captions): wrap into a single loaded
     // provider group so they appear in the subtitle menu without an addon
     // fetch. Grouped under the first track's source label (e.g. "YouTube").
-    final initialSubs = widget.initialSubtitles;
+    final initialSubs = config.initialSubtitles;
     if (initialSubs != null && initialSubs.isNotEmpty) {
       _injectedSubtitleSlots = [
         AddonSubtitleSlot(
@@ -1437,7 +1440,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     // ready (see the player `ready` callback), so pressing Home never shrinks
     // a black/loading frame. Skipped when options are hidden — that context
     // deliberately suppresses the PiP button and tap controls.
-    if (Platform.isAndroid && !widget.hideOptions) {
+    if (Platform.isAndroid && !config.hideOptions) {
       PipService.resolveSupport().then((ok) {
         if (!mounted || !ok) return;
         PipService.attach(
@@ -1465,12 +1468,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       }
     }
 
-    if (widget.channelName != null && widget.channelName!.trim().isNotEmpty) {
-      _currentChannelName = widget.channelName;
+    if (config.channelName != null && config.channelName!.trim().isNotEmpty) {
+      _currentChannelName = config.channelName;
     }
-    _currentChannelNumber = widget.channelNumber;
-    _currentIptvIndex = widget.iptvStartIndex ?? 0;
-    _currentSourceIndex = widget.stremioCurrentSourceIndex ?? 0;
+    _currentChannelNumber = config.channelNumber;
+    _currentIptvIndex = config.iptvStartIndex ?? 0;
+    _currentSourceIndex = config.stremioCurrentSourceIndex ?? 0;
     _initIptvStremioSources();
     _currentStremioTvChannelId = _findInitialStremioTvChannelId();
     _parseChannelDirectory();
@@ -1526,8 +1529,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
     // Check if Trakt/Simkl/MDBList scrobbling should be enabled for this playback
     final scrobblePlayback = ScrobblePlayback(
-      imdbIdOf: () => widget.contentImdbId,
-      contentTypeOf: () => widget.contentType,
+      imdbIdOf: () => config.contentImdbId,
+      contentTypeOf: () => config.contentType,
       durationOf: () => _duration,
       positionOf: () => _position,
       persistablePositionOf: () => _persistablePosition,
@@ -1540,15 +1543,15 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       playback: scrobblePlayback,
       targets: [
         TraktScrobbleTarget.production(
-          requested: widget.traktScrobble,
+          requested: config.traktScrobble,
           playback: scrobblePlayback,
         ),
         SimklScrobbleTarget.production(
-          requested: widget.simklScrobble,
+          requested: config.simklScrobble,
           playback: scrobblePlayback,
         ),
         MdblistScrobbleSessionTarget.production(
-          requested: widget.mdblistScrobble,
+          requested: config.mdblistScrobble,
           playback: scrobblePlayback,
           playerReady: _playerInitializationFuture,
         ),
@@ -1820,7 +1823,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   /// fall back to launch args, then filename parsing.
   ({int? season, int? episode}) _traktSeasonEpisode() {
     // Movies never have season/episode — avoid filename false positives (e.g. "5.1" surround)
-    if (widget.contentType == 'movie') {
+    if (config.contentType == 'movie') {
       return (season: null, episode: null);
     }
     // Prefer current playlist entry — correct even after auto-advance
@@ -1835,10 +1838,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       }
     }
     // Fallback: explicit launch args (single-stream series playback)
-    if (widget.contentSeason != null && widget.contentEpisode != null) {
-      return (season: widget.contentSeason, episode: widget.contentEpisode);
+    if (config.contentSeason != null && config.contentEpisode != null) {
+      return (season: config.contentSeason, episode: config.contentEpisode);
     }
-    final info = SeriesParser.parseFilename(widget.title);
+    final info = SeriesParser.parseFilename(config.title);
     return (season: info.season, episode: info.episode);
   }
 
@@ -2533,7 +2536,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     }
 
     // Determine the initial URL and index
-    String initialUrl = widget.videoUrl;
+    String initialUrl = config.videoUrl;
     var initialRankedAttemptFailed = false;
     int initialIndex = 0;
 
@@ -2541,8 +2544,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       // Initialize playlist
 
       // If auto-resume is disabled, use startIndex directly
-      if (widget.disableAutoResume) {
-        initialIndex = widget.startIndex ?? 0;
+      if (config.disableAutoResume) {
+        initialIndex = config.startIndex ?? 0;
         debugPrint(
           'VideoPlayer: auto-resume disabled, using startIndex=$initialIndex',
         );
@@ -2554,17 +2557,17 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           // jump directly to it instead of resuming from last played.
           bool targetEpisodeResolved = false;
           final hadExplicitTarget =
-              widget.contentSeason != null && widget.contentEpisode != null;
+              config.contentSeason != null && config.contentEpisode != null;
           if (hadExplicitTarget) {
             final targetIndex = seriesPlaylist.findOriginalIndexBySeasonEpisode(
-              widget.contentSeason!,
-              widget.contentEpisode!,
+              config.contentSeason!,
+              config.contentEpisode!,
             );
             if (targetIndex != -1) {
               initialIndex = targetIndex;
               targetEpisodeResolved = true;
               debugPrint(
-                'VideoPlayer: target episode S${widget.contentSeason}E${widget.contentEpisode} → index=$initialIndex',
+                'VideoPlayer: target episode S${config.contentSeason}E${config.contentEpisode} → index=$initialIndex',
               );
             }
           }
@@ -2591,11 +2594,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
               if (firstEpisodeIndex != -1) {
                 initialIndex = firstEpisodeIndex;
               } else {
-                initialIndex = widget.startIndex ?? 0;
+                initialIndex = config.startIndex ?? 0;
               }
               debugPrint(
                 'VideoPlayer: no resume target for "${seriesPlaylist.seriesTitle}"'
-                '${hadExplicitTarget ? ' (requested S${widget.contentSeason}E${widget.contentEpisode} not in pack)' : ''}, defaulting to index=$initialIndex',
+                '${hadExplicitTarget ? ' (requested S${config.contentSeason}E${config.contentEpisode} not in pack)' : ''}, defaulting to index=$initialIndex',
               );
             }
           }
@@ -2639,11 +2642,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
               final indices = _getMainGroupIndices(_activePlaylist!);
               initialIndex = indices.isNotEmpty
                   ? indices.first
-                  : (widget.startIndex ?? 0);
+                  : (config.startIndex ?? 0);
             }
           } else {
             // Not a series or no series playlist, use the provided startIndex
-            initialIndex = widget.startIndex ?? 0;
+            initialIndex = config.startIndex ?? 0;
           }
         }
       }
@@ -2668,15 +2671,15 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           final resolvedUrl = await _resolvePlaylistEntryUrl(initialIndex);
           if (resolvedUrl.isNotEmpty) {
             initialUrl = resolvedUrl;
-          } else if (widget.videoUrl.isNotEmpty) {
-            initialUrl = widget.videoUrl;
+          } else if (config.videoUrl.isNotEmpty) {
+            initialUrl = config.videoUrl;
           } else {
             initialRankedAttemptFailed = true;
           }
         } catch (e) {
           // Only fall back to widget.videoUrl if resolution fails
-          if (widget.videoUrl.isNotEmpty) {
-            initialUrl = widget.videoUrl;
+          if (config.videoUrl.isNotEmpty) {
+            initialUrl = config.videoUrl;
           } else {
             initialRankedAttemptFailed = true;
           }
@@ -2685,7 +2688,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     }
 
     _currentIndex = initialIndex;
-    _dynamicTitle = widget.title;
+    _dynamicTitle = config.title;
     await _claimVideoOutput();
     if (!mounted) return;
     _createPlayerInstance(_androidVideoRendererMode);
@@ -2739,7 +2742,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     var launchIsLiveIptv = false;
     final launchIptvChannels = _effectiveIptvChannels;
     if (launchIptvChannels != null && initialUrl.isNotEmpty) {
-      final launchIdx = widget.iptvStartIndex ?? 0;
+      final launchIdx = config.iptvStartIndex ?? 0;
       final launchChannel =
           (launchIdx >= 0 && launchIdx < launchIptvChannels.length)
           ? launchIptvChannels[launchIdx]
@@ -2771,7 +2774,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       // For non-playlist flows (Debrify TV, Stremio TV, etc.), detect PikPak by URL
       final isPikPakUrl =
           _activePlaylist == null && initialUrl.contains('mypikpak.com');
-      final isDebrifyTV = isPikPakUrl && widget.requestMagicNext != null;
+      final isDebrifyTV = isPikPakUrl && config.requestMagicNext != null;
 
       if (initialUrl.isNotEmpty &&
           ((isPikPak && _activePlaylist != null) || isPikPakUrl)) {
@@ -2807,7 +2810,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           // cold-storage streams are the slowest remote opens in the app, the
           // likeliest to answer the startup seek with a restart at 0 — so the
           // same guarded, landing-verified seeks apply.
-          if (widget.startFromRandom) {
+          if (config.startFromRandom) {
             final offset = _randomStartOffset(_duration);
             if (offset != null) {
               // A random start has no bookmark to protect — plain seek.
@@ -2815,7 +2818,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
             } else {
               await _maybeRestoreResume(verifyLanding: true);
             }
-          } else if (widget.startAtPercent != null) {
+          } else if (config.startAtPercent != null) {
             final offset = _percentStartOffset(_duration);
             if (offset != null) {
               await _seekForResume(offset.inMilliseconds, verifyLanding: true);
@@ -2834,14 +2837,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         // (Attaching audio mid-playback makes mpv resync, causing a few seconds
         // of A/V drift.)
         final hasExternalAudio =
-            widget.audioUrl != null && widget.audioUrl!.isNotEmpty;
+            config.audioUrl != null && config.audioUrl!.isNotEmpty;
         try {
           final plainOpen =
               initialUrl.isNotEmpty && (hasExternalAudio || launchIsLiveIptv);
           final opened = plainOpen
               ? await (() async {
                   await _openMedia(
-                    mk.Media(initialUrl, httpHeaders: widget.httpHeaders),
+                    mk.Media(initialUrl, httpHeaders: config.httpHeaders),
                     play: !hasExternalAudio,
                     desiredPlay: true,
                     liveStream: launchIsLiveIptv,
@@ -2850,12 +2853,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                 })()
               : await _openInitialVodWithFailover(
                   initialUrl,
-                  httpHeaders: widget.httpHeaders,
+                  httpHeaders: config.httpHeaders,
                   initialAttemptAlreadyFailed: initialRankedAttemptFailed,
                 );
           if (!opened) {
             if (mounted) {
-              final canRecover = widget.onStartupSourcesExhausted != null;
+              final canRecover = config.onStartupSourcesExhausted != null;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
@@ -2893,10 +2896,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           // Wait for duration-dependent resume and random-start calculations.
           await _waitForVideoReady();
           if (hasExternalAudio) {
-            await _setExternalAudioTrack(widget.audioUrl!);
+            await _setExternalAudioTrack(config.audioUrl!);
           }
           // Random start takes precedence over resume, then startAtPercent.
-          if (widget.startFromRandom) {
+          if (config.startFromRandom) {
             final offset = _randomStartOffset(_duration);
             if (offset != null) {
               // A random start has no bookmark to protect and no "correct"
@@ -2905,7 +2908,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
             } else {
               await _maybeRestoreResume(verifyLanding: true);
             }
-          } else if (widget.startAtPercent != null) {
+          } else if (config.startAtPercent != null) {
             final offset = _percentStartOffset(_duration);
             if (offset != null) {
               // An explicit promised start position, exposed to the same
@@ -4193,7 +4196,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
     // Debrify TV (no playlist): auto-advance using provider if available
     if ((_activePlaylist == null || _activePlaylist!.isEmpty) &&
-        widget.requestMagicNext != null) {
+        config.requestMagicNext != null) {
       await _goToNextEpisode();
       return;
     }
@@ -4464,8 +4467,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     if (seriesPlaylist == null || !seriesPlaylist.isSeries) {
       // Raw mode OR Sorted mode: sequential navigation through all files
       // In sorted mode, files are already pre-sorted A-Z, so sequential = alphabetical
-      if (widget.viewMode == PlaylistViewMode.raw ||
-          widget.viewMode == PlaylistViewMode.sorted) {
+      if (config.viewMode == PlaylistViewMode.raw ||
+          config.viewMode == PlaylistViewMode.sorted) {
         if (_activePlaylist == null || _activePlaylist!.isEmpty) return -1;
         if (_currentIndex + 1 < _activePlaylist!.length) {
           return _currentIndex + 1;
@@ -4711,8 +4714,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     if (seriesPlaylist == null || !seriesPlaylist.isSeries) {
       // Raw mode OR Sorted mode: sequential navigation through all files
       // In sorted mode, files are already pre-sorted A-Z, so sequential = alphabetical
-      if (widget.viewMode == PlaylistViewMode.raw ||
-          widget.viewMode == PlaylistViewMode.sorted) {
+      if (config.viewMode == PlaylistViewMode.raw ||
+          config.viewMode == PlaylistViewMode.sorted) {
         if (_activePlaylist == null || _activePlaylist!.isEmpty) return -1;
         if (_currentIndex - 1 >= 0) {
           return _currentIndex - 1;
@@ -4773,10 +4776,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     if (_findNextEpisodeIndex() != -1) return true;
     // Series content may have a next episode discoverable via Stremio metadata.
     // Requires episode info from widget params or a parsed series playlist.
-    if (widget.requestMagicNext == null &&
-        widget.contentType == 'series' &&
-        widget.contentImdbId != null &&
-        (widget.contentSeason != null || _seriesPlaylist != null)) {
+    if (config.requestMagicNext == null &&
+        config.contentType == 'series' &&
+        config.contentImdbId != null &&
+        (config.contentSeason != null || _seriesPlaylist != null)) {
       return true;
     }
     return false;
@@ -4815,7 +4818,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     });
 
     // Only show transition overlay for Debrify TV content (when requestMagicNext is available)
-    final isDebrifyTV = widget.requestMagicNext != null;
+    final isDebrifyTV = config.requestMagicNext != null;
     if (isDebrifyTV) {
       _startTransitionOverlay();
     }
@@ -4850,9 +4853,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       final se = _traktSeasonEpisode();
       if (se.season != null && se.episode != null) {
         var next = _adjacentEpisode(se.season!, se.episode!, 1);
-        if (next == null && widget.contentImdbId != null) {
+        if (next == null && config.contentImdbId != null) {
           final nextEp = await NextEpisodeService.findNextEpisode(
-            widget.contentImdbId!,
+            config.contentImdbId!,
             se.season!,
             se.episode!,
           );
@@ -4867,16 +4870,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     }
 
     // Series content without season pack: find next episode and trigger Quick Play
-    if (widget.requestMagicNext == null) {
+    if (config.requestMagicNext == null) {
       final handled = await _handleSeriesNextEpisode();
       if (handled) return;
     }
 
     // If there is no playlist-based next item and Debrify TV provider is present, use it
-    if (widget.requestMagicNext != null) {
+    if (config.requestMagicNext != null) {
       debugPrint('Player: MagicTV next requested.');
       try {
-        final result = await widget.requestMagicNext!();
+        final result = await config.requestMagicNext!();
         final url = result != null ? (result['url'] ?? '') : '';
         final title = result != null ? (result['title'] ?? '') : '';
         final provider = result != null ? (result['provider'] ?? '') : '';
@@ -4921,7 +4924,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
             // Cancel any ongoing PikPak retry when switching to non-PikPak video
             _pikPakRetryId++;
             await _openMedia(
-              mk.Media(url, httpHeaders: widget.httpHeaders),
+              mk.Media(url, httpHeaders: config.httpHeaders),
               play: true,
             );
           }
@@ -4932,13 +4935,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
             source: 'debrify-tv-open-disable-auto',
           );
           // If advanced option is enabled, jump to a random timestamp for Debrify TV items
-          if (widget.startFromRandom) {
+          if (config.startFromRandom) {
             await _waitForVideoReady();
             final offset = _randomStartOffset(_duration);
             if (offset != null) {
               await _player.seek(offset);
             }
-          } else if (widget.startAtPercent != null) {
+          } else if (config.startAtPercent != null) {
             await _waitForVideoReady();
             final offset = _percentStartOffset(_duration);
             if (offset != null) {
@@ -4978,7 +4981,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     // Already popping to hand off the next episode — a second trigger (manual
     // Next racing end-of-video auto-advance) must not run again.
     if (_seriesNextDispatched) return true;
-    if (widget.contentType != 'series' || widget.contentImdbId == null) {
+    if (config.contentType != 'series' || config.contentImdbId == null) {
       return false;
     }
 
@@ -5005,8 +5008,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     }
 
     // Fallback to widget params (single-file playback without a series playlist)
-    currentSeason ??= widget.contentSeason;
-    currentEpisode ??= widget.contentEpisode;
+    currentSeason ??= config.contentSeason;
+    currentEpisode ??= config.contentEpisode;
 
     if (currentSeason == null || currentEpisode == null) return false;
 
@@ -5014,7 +5017,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       'Player: Looking up next episode after S${currentSeason}E$currentEpisode',
     );
     final nextEp = await NextEpisodeService.findNextEpisode(
-      widget.contentImdbId!,
+      config.contentImdbId!,
       currentSeason,
       currentEpisode,
     );
@@ -5037,18 +5040,18 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     _seriesNextDispatched = true;
     Navigator.of(context).pop(<String, dynamic>{
       'quickPlayNext': true,
-      'imdbId': widget.contentImdbId,
+      'imdbId': config.contentImdbId,
       'season': nextEp.season,
       'episode': nextEp.episode,
-      'title': widget.contentTitle ?? widget.title,
-      'contentType': widget.contentType,
+      'title': config.contentTitle ?? config.title,
+      'contentType': config.contentType,
     });
     return true;
   }
 
   /// Parse channel directory from widget params into ChannelEntry list
   void _parseChannelDirectory() {
-    final directory = widget.channelDirectory;
+    final directory = config.channelDirectory;
     if (directory == null || directory.isEmpty) {
       _channelEntries = [];
       return;
@@ -6137,7 +6140,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   /// launch resolve) and populate the override for the starting channel.
   void _initIptvStremioSources() {
     final channels = _effectiveIptvChannels;
-    final idx = widget.iptvStartIndex ?? 0;
+    final idx = config.iptvStartIndex ?? 0;
     if (channels == null || idx < 0 || idx >= channels.length) return;
     final channel = channels[idx];
     if (!StremioIptvService.isStremioChannelUrl(channel.url)) return;
@@ -6145,7 +6148,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       if (!mounted || found.isEmpty) return;
       // The user already zapped away (or a switch populated sources itself).
       if (_iptvChannelKey != null || _currentIptvIndex != idx) return;
-      var current = found.indexWhere((c) => c.url == widget.videoUrl);
+      var current = found.indexWhere((c) => c.url == config.videoUrl);
       if (current < 0) current = 0;
       _setIptvSources(channel.url, found, currentIndex: current);
     });
@@ -8365,8 +8368,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
   String? _findInitialStremioTvChannelId() {
     // Use explicitly provided current channel ID
-    if (widget.stremioTvCurrentChannelId != null) {
-      return widget.stremioTvCurrentChannelId;
+    if (config.stremioTvCurrentChannelId != null) {
+      return config.stremioTvCurrentChannelId;
     }
     return null;
   }
@@ -8535,7 +8538,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   Future<bool> _goToNextStremioTvSlot({
     bool resumeCurrentOnFailure = true,
   }) async {
-    final requestNext = widget.stremioTvNextProvider;
+    final requestNext = config.stremioTvNextProvider;
     final channelId = _currentStremioTvChannelId;
     if (requestNext == null || channelId == null || channelId.isEmpty) {
       return false;
@@ -8605,7 +8608,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   Future<void> _goToChannelById(ChannelEntry channel) async {
     _hideChannelGuideOverlay();
 
-    final request = widget.requestChannelById;
+    final request = config.requestChannelById;
     if (request == null) {
       debugPrint('Player: requestChannelById not provided');
       return;
@@ -8702,7 +8705,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     try {
       _pikPakRetryId++;
       await _openMedia(
-        mk.Media(nextUrl, httpHeaders: widget.httpHeaders),
+        mk.Media(nextUrl, httpHeaders: config.httpHeaders),
         play: true,
       );
       _currentStreamUrl = nextUrl;
@@ -8733,7 +8736,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
   /// Switch to the next Debrify TV channel (MediaKit fallback)
   Future<void> _goToNextChannel() async {
-    final request = widget.requestNextChannel;
+    final request = config.requestNextChannel;
     if (request == null) {
       return;
     }
@@ -8831,7 +8834,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       // Cancel any ongoing PikPak retry when switching channels
       _pikPakRetryId++;
       await _openMedia(
-        mk.Media(nextUrl, httpHeaders: widget.httpHeaders),
+        mk.Media(nextUrl, httpHeaders: config.httpHeaders),
         play: true,
       );
       _currentStreamUrl = nextUrl;
@@ -8850,13 +8853,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       return;
     }
 
-    if (widget.startFromRandom) {
+    if (config.startFromRandom) {
       await _waitForVideoReady();
       final offset = _randomStartOffset(_duration);
       if (offset != null) {
         await _player.seek(offset);
       }
-    } else if (widget.startAtPercent != null) {
+    } else if (config.startAtPercent != null) {
       await _waitForVideoReady();
       final offset = _percentStartOffset(_duration);
       if (offset != null) {

@@ -6,7 +6,7 @@ import 'package:debrify/services/storage/storage_key_ownership.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Value-only consts on StorageService that are not persisted key names.
-const _notKeys = {
+const notPersistedValueConsts = {
   'skipSegmentProviderAuto',
   'skipSegmentProviderSkipDb',
   'skipSegmentProviderIntroDb',
@@ -17,6 +17,20 @@ const _notKeys = {
   'startupIptvModePinned',
   'startupIptvFirstAvailable',
   'iptvFavoritesListId',
+};
+
+/// JSON object field names inside persisted blobs — not SharedPreferences keys.
+const jsonPayloadFields = {
+  'finishedEpisodes',
+  'seasons',
+  'trackPreferences',
+};
+
+/// Interpolated names from `_ambientTrailerKeyFor` (detail surface). The
+/// Home-hero pair is already a HomePrefs const; these two have no `_…Key`.
+const interpolatedPrefsKeys = {
+  'detail_trailer_audio_enabled',
+  'detail_trailer_volume',
 };
 
 const _aliases = {
@@ -36,12 +50,19 @@ final _storageConstRe = RegExp(
 
 final _secretConstRe = RegExp(r"static const (\w+) = '([^']+)';");
 
-Set<String> _declaredOnStorageService() {
+/// `prefs.getBool('foo')` / `setInt('foo')` / `remove('foo')` / `key == 'foo'`.
+final _inlinePrefsKeyRe = RegExp(
+  r"(?:getBool|setBool|getInt|setInt|getString|setString|getDouble|setDouble|"
+  r"getStringList|setStringList|remove|containsKey)\(\s*'([^']+)'"
+  r"|key\s*==\s*'([^']+)'",
+);
+
+Set<String> declaredOnStorageService() {
   final source = File('lib/services/storage_service.dart').readAsStringSync();
   final out = <String>{};
   for (final match in _storageConstRe.allMatches(source)) {
     final name = match.group(1)!;
-    if (_notKeys.contains(name)) continue;
+    if (notPersistedValueConsts.contains(name)) continue;
     final raw = match.group(2)!.replaceAll(RegExp(r'\s+'), ' ').trim();
     if (raw.startsWith("'") && raw.endsWith("'")) {
       out.add(raw.substring(1, raw.length - 1));
@@ -56,7 +77,7 @@ Set<String> _declaredOnStorageService() {
   return out;
 }
 
-Set<String> _declaredOnCloudSecretPrefs() {
+Set<String> declaredOnCloudSecretPrefs() {
   final source = File(
     'lib/services/storage/cloud_secret_prefs.dart',
   ).readAsStringSync();
@@ -65,11 +86,41 @@ Set<String> _declaredOnCloudSecretPrefs() {
   };
 }
 
+/// Prefs names StorageService uses as string literals (no `_…Key` const).
+Set<String> inlinePrefsKeysOnStorageService() {
+  final source = File('lib/services/storage_service.dart').readAsStringSync();
+  final out = <String>{};
+  for (final match in _inlinePrefsKeyRe.allMatches(source)) {
+    final key = match.group(1) ?? match.group(2)!;
+    if (jsonPayloadFields.contains(key)) continue;
+    out.add(key);
+  }
+  return out;
+}
+
+/// Every name the completed registry must own: declared consts, store-owned
+/// keys, undeclared inline literals, and documented interpolated names.
+Set<String> allDiscoveredPrefsKeys() => {
+  ...declaredOnStorageService(),
+  ...declaredOnCloudSecretPrefs(),
+  ...HomePrefs.ownedKeys,
+  ...inlinePrefsKeysOnStorageService(),
+  ...interpolatedPrefsKeys,
+};
+
+/// Discovered names not yet in [StorageKeyOwnership.byKey]. Must stay empty.
+Set<String> unownedDiscoveredPrefsKeys() =>
+    allDiscoveredPrefsKeys().difference(StorageKeyOwnership.byKey.keys.toSet());
+
 void main() {
   test('every declared persisted key is owned by exactly one store', () {
-    final fromGodFile = _declaredOnStorageService();
-    final fromCloud = _declaredOnCloudSecretPrefs();
+    final fromGodFile = declaredOnStorageService();
+    final fromCloud = declaredOnCloudSecretPrefs();
     final fromHome = HomePrefs.ownedKeys;
+    final fromInline = {
+      ...inlinePrefsKeysOnStorageService(),
+      ...interpolatedPrefsKeys,
+    };
     expect(fromCloud, {
       CloudSecretPrefs.realDebridApiKey,
       CloudSecretPrefs.torboxApiKey,
@@ -79,13 +130,14 @@ void main() {
       CloudSecretPrefs.pikpakPassword,
     });
 
-    final declared = {...fromGodFile, ...fromCloud, ...fromHome};
+    final declared = allDiscoveredPrefsKeys();
     expect(
       StorageKeyOwnership.byKey.keys.toSet(),
       declared,
       reason:
           'StorageKeyOwnership.byKey must pin every StorageService '
-          '`const _…Key` / CloudSecretPrefs alias plus store-owned keys',
+          '`const _…Key` / CloudSecretPrefs alias, store-owned keys, '
+          'and undeclared inline / interpolated prefs names',
     );
 
     final claimed = <String, StorageKeyStore>{};
@@ -125,11 +177,30 @@ void main() {
       expect(
         claimed[key],
         StorageKeyStore.storageService,
-        reason: '$key is still declared on StorageService this slice',
+        reason: '$key is still declared or inlined on StorageService this slice',
       );
     }
 
+    expect(fromInline.difference(claimed.keys.toSet()), isEmpty);
     expect(claimed.length, declared.length);
+  });
+
+  test('a missing declaration fails the sweep', () {
+    expect(
+      unownedDiscoveredPrefsKeys(),
+      isEmpty,
+      reason:
+          'A new `const _…Key`, CloudSecretPrefs name, HomePrefs owned '
+          'key, inline prefs literal, or interpolated detail-trailer name '
+          'must be added to StorageKeyOwnership.byKey',
+    );
+    expect(
+      StorageKeyOwnership.byKey.containsKey('not_a_real_prefs_key'),
+      isFalse,
+      reason:
+          'Mutation: an undeclared name must not be in byKey, and a '
+          'discovered name must not be missing (holes above)',
+    );
   });
 
   test('CloudSecretPrefs aliases on StorageService keep historical names', () {
