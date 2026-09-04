@@ -70,11 +70,5 @@ void main() {
     expect(CloudProviderId.debrid.displayName, 'Real-Debrid');
     expect(CloudProviderId.torbox.playerWrapBrand, 'Torbox');
     expect(CloudProviderId.torbox.displayName, 'TorBox');
-    expect(
-      const CloudUnlockPlan.forProvider(
-        CloudProviderId.debrid,
-      ).playerBrand,
-      'Real Debrid',
-    );
   });
 }

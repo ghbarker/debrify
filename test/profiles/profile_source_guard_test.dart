@@ -421,6 +421,7 @@ Future<void> leak(Database db) async {
 
 /// Drop `_runScoped(...)` / `.runScoped(...)` argument lists, including the
 /// callback body, so remaining `await db.delete` is an unscoped write.
+/// Paren-depth only: strings/comments with `(` / `)` are not skipped.
 String sourceWithoutRunScopedBodies(String source) {
   final pattern = RegExp(r'(?:_runScoped|\.runScoped)\s*\(');
   var out = source;

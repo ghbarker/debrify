@@ -23,11 +23,6 @@ class CloudUnlockPlan {
 
   static const none = CloudUnlockPlan._(null);
 
-  String get playbackId => provider!.playbackId;
-
-  /// Player-screen wrap brand. See [CloudProviderId.playerWrapBrand].
-  String get playerBrand => provider!.playerWrapBrand;
-
   static CloudUnlockPlan choose(
     PlaylistEntry entry, {
     required bool playerScreen,
