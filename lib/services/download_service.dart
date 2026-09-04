@@ -3099,11 +3099,8 @@ class DownloadService {
           );
         }
         if (webDownloadId != null && fileId != null) {
-          final fresh = await TorboxService.requestWebDownloadFileLink(
-            apiKey: apiKey,
-            webId: webDownloadId,
-            fileId: fileId,
-          );
+          final fresh = await CloudProviderRegistry.instance
+              .webFileDownloadLink(webDownloadId, fileId);
           if (fresh.isEmpty) return null;
           return (url: fresh, fileName: null);
         }
@@ -3741,11 +3738,8 @@ class DownloadService {
                     );
                   }
                   debugPrint('DL TORBOX WEB: requesting signed link');
-                  finalUrl = await TorboxService.requestWebDownloadFileLink(
-                    apiKey: apiKey,
-                    webId: webDownloadId,
-                    fileId: fileId,
-                  );
+                  finalUrl = await CloudProviderRegistry.instance
+                      .webFileDownloadLink(webDownloadId, fileId);
                   debugPrint('DL TORBOX WEB: signed link ready');
                 }
 
@@ -4227,11 +4221,8 @@ class DownloadService {
                     );
                   } else if (webDownloadId != null && fileId != null) {
                     // Re-request file download link
-                    freshUrl = await TorboxService.requestWebDownloadFileLink(
-                      apiKey: apiKey,
-                      webId: webDownloadId,
-                      fileId: fileId,
-                    );
+                    freshUrl = await CloudProviderRegistry.instance
+                        .webFileDownloadLink(webDownloadId, fileId);
                     debugPrint('DL RETRY TORBOX WEB: Got fresh download URL');
                   }
 

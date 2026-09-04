@@ -80,7 +80,10 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   TorBox whole-torrent ZIP permalink is `zipPermalink` (not web-download ZIP,
   not Premiumize transfer+zip). TorBox web-download ZIP is `webZipPermalink`
   (`web_id`, not `torrent_id`). Download-service web ZIP refresh / enqueue /
-  retry uses that method with the same empty-key gates as torrent ZIP. Download-service torrent ZIP refresh / enqueue /
+  retry uses that method with the same empty-key gates as torrent ZIP. TorBox
+  web-download file `requestdl` is `webFileDownloadLink` (not ZIP, not torrent
+  file). Download-service web file refresh / enqueue / retry use that method
+  with the same empty-key gates as torrent file. Download-service torrent ZIP refresh / enqueue /
   retry uses that method but keeps its own empty-key gates (refresh → `null`,
   enqueue → throw, retry → skip). TPS still skips empty key before the call.
   TorBox torrent file `requestdl` is `fileDownloadLink` (not ZIP, not

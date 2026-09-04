@@ -289,6 +289,20 @@ class CloudProviderRegistry {
     return port.webZipPermalink(webId);
   }
 
+  /// TorBox web-download file link only. Missing adapter / unsupported throws
+  /// [CloudUnsupported]. Missing key throws [CloudMissingApiKey].
+  /// Not [webZipPermalink]. Not torrent [fileDownloadLink].
+  Future<String> webFileDownloadLink(int webId, int fileId) async {
+    final port = _byId[CloudProviderId.torbox];
+    if (port == null || !port.supports(CloudPortFeature.webFileDownloadLink)) {
+      throw const CloudUnsupported(
+        CloudProviderId.torbox,
+        CloudPortFeature.webFileDownloadLink,
+      );
+    }
+    return port.webFileDownloadLink(webId, fileId);
+  }
+
   /// Premiumize cloud transfer only. Missing adapter / unsupported throws
   /// [CloudUnsupported]. Missing key throws [CloudMissingApiKey].
   Future<void> createCloudTransfer(String magnet) async {
