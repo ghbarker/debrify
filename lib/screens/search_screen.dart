@@ -91,7 +91,6 @@ import '../widgets/search_loading_animation.dart';
 import '../widgets/skeleton_poster.dart';
 import '../widgets/source_row.dart';
 import '../widgets/torrent_filters_sheet.dart';
-import '../widgets/torrent_result_row.dart';
 import '../widgets/tv_text_field.dart';
 import 'collections/collection_folder_screen.dart';
 import 'iptv/xtream_series_detail.dart';
