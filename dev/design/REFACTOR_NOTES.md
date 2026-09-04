@@ -85,10 +85,19 @@ See `dev/design/REFACTOR_PLAN.md` §2 rule 1.
 - **`clearAllHomePageSettings` does not remove Trakt default keys**
   (`home_default_trakt_list_type` / `home_default_trakt_content_type`).
   Keep: origin clearer, pinned in `test/storage_home_prefs_snapshot_test.dart`.
+- **Empty `home_tick_sources` writes an empty list**, it does not remove the
+  key. Absent key still means all four `TrackingSource`s. Keep: origin setter,
+  pinned in `test/storage_home_prefs_snapshot_test.dart`.
+- **`'shelf'` (and any unknown `tv_home_style`) coerces to `'canvas'`** on
+  both read and write. Keep: origin `kTvHomeStyles` table.
+- **Hero `custom` with no ids reads `random`.** `auto` is stored; unknown
+  modes and corrupt JSON also fall back to `random`. Keep: origin getter.
+- **`trackingSourceRevision++` stays on the StorageService façade** of
+  `setHomeTickSources` (HomePrefs cannot import StorageService). Callers
+  still bump the notifier.
 - **Callers still import `StorageService`.** HomePrefs is a forwarding façade
-  only. Next slice: remaining Home keys (`home_disabled_sections_v1`, extra
-  rows, order, hero, ticks, `tv_home_style`), then PlayerPrefs. `@Deprecated`
-  on forwards waits for Q2.
+  only. Remaining Home keys are in HomePrefs (#70). Next: PlayerPrefs.
+  `@Deprecated` on forwards waits for Q2.
 
 ### G4 · cloud file screens
 
@@ -99,6 +108,19 @@ See `dev/design/REFACTOR_PLAN.md` §2 rule 1.
   the new file (and possibly lowers the 490 floor).
 - **Premiumize / AllDebrid / PikPak not routed** onto `CloudFilesScreen`.
   Follow-up lane; public types and sidebar ids stay frozen.
+
+### G1 · step 5 TV stages
+
+- **Empty Spotlight still `break`s to classic.** If every spotlight shelf
+  has empty `items`, the host switch falls through instead of rendering the
+  Spotlight board. Keep: origin `switch`, pinned in
+  `test/tv_home_stage_layouts_pin_test.dart`.
+- **`_buildDiscoverStage` stays on the host.** Discover chrome, not a TV
+  Home layout. Classic `LayoutBuilder` hero/rows also stay.
+- **Library-private `part`s.** Stage widgets are `part of search_screen.dart`
+  so they can read host fields. Analyzer diagnostics report the part path;
+  C0 baseline identity is `path|code|message`, so moved `cacheExtent` infos
+  were retargeted in `tool/analyze_baseline.json` (no new kinds).
 
 ### G1 · step 4 Search/Discover screens
 

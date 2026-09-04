@@ -12,11 +12,11 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 
 | File | Lines |
 |---|---:|
-| `lib/screens/search_screen.dart` | 19 070 |
+| `lib/screens/search_screen.dart` | 17 039 |
 | `lib/screens/search/` parts (4 files) | 8 321 |
 | `lib/screens/video_player_screen.dart` | 16 278 |
 | `lib/screens/magic_tv_screen.dart` | 10 716 |
-| `lib/services/storage_service.dart` | 9 963 |
+| `lib/services/storage_service.dart` | 9 634 |
 | `lib/screens/settings_screen.dart` | 3 107 |
 | `lib/screens/torbox/torbox_downloads_screen.dart` | 7 069 |
 | `lib/screens/debrid_downloads_screen.dart` | 6 444 |
@@ -28,6 +28,7 @@ Search `part` files: `lib/screens/search/search_sources.dart` (3 163),
 `lib/screens/search/search_hero_widgets.dart` (2 261),
 `lib/screens/search/search_stage_widgets.dart` (1 699),
 `lib/screens/search/search_card_widgets.dart` (1 198).
+TV Home stage parts (7 files, 1 661): `lib/screens/search/stages/*_board_stage.dart`.
 Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.dart`,
 `title_opener.dart` (`TitleOpener.open` — catalog detail from the board),
 `catalog_search_screen.dart` (Search tab), `discover_screen.dart` (Discover tab),
@@ -38,9 +39,9 @@ TV Home stages (parts of `search_screen.dart`, G1 step 5): `lib/screens/search/s
 `tv_home_stage_dispatch.dart` (`resolveTvHomeStageLayout`). Empty Spotlight shelves
 fall through to classic. `_buildDiscoverStage` stays on the host (Discover chrome).
 
-🔴 huge: `lib/screens/search_screen.dart` (19 070) · `lib/screens/video_player_screen.dart`
+🔴 huge: `lib/screens/search_screen.dart` (17 039) · `lib/screens/video_player_screen.dart`
 (16 278) · `lib/screens/magic_tv_screen.dart` (10 716) · `lib/services/storage_service.dart`
-(9 963) · `lib/screens/settings_screen.dart` (3 107) ·
+(9 634) · `lib/screens/settings_screen.dart` (3 107) ·
 `lib/screens/torbox/torbox_downloads_screen.dart` (7 069) ·
 `lib/screens/debrid_downloads_screen.dart` (6 444) ·
 `lib/services/video_player_launcher.dart` (5 769) ·
@@ -101,10 +102,11 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
-  home disabled-sections). **G3 slice 1:** Home page defaults (`getHomeDefaultSourceType` …
-  `clearAllHomePageSettings`) and `HomeCardOrientation` live in
-  `lib/services/storage/home_prefs.dart` (`HomePrefs`); StorageService forwards and re-exports
-  the enum. Key ownership pin: `lib/services/storage/storage_key_ownership.dart`.
+  home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
+  extra rows, order, hero source, tick sources, Home hero-trailer, `tv_home_style`) also
+  live in `lib/services/storage/home_prefs.dart` (`HomePrefs`); StorageService forwards
+  and re-exports `HomeCardOrientation`, `HomeHeroSourceMode`, `HomeHeroSource`,
+  `HomeExtraRow`. Key ownership pin: `lib/services/storage/storage_key_ownership.dart`.
   Remaining domains stay on StorageService until a later G3 slice.
 - **`lib/services/torrent_playback_service.dart`** 🔴 — provider-agnostic play/add/bind pipeline.
   Magnet add, hashless bound replay, download-picker lazy URLs, launcher/TV
@@ -308,10 +310,13 @@ is an editor mirror, not the source of truth. How to add a provider:
   `lib/screens/settings/backup_restore_page.dart` = Data & Backup create/restore UI,
   `lib/screens/settings/profiles_settings_page.dart` `ProfileSettingsRailActions` = Profiles card switch/add/edit). Metrics/format helpers: `lib/utils/`.
   Adding a settings page still touches ~6 sites until **S1**.
-- Storage split (**G3**, first slice): `lib/services/storage/home_prefs.dart` (`HomePrefs`,
-  `HomeCardOrientation`) owns Home page-default keys; `lib/services/storage/cloud_secret_prefs.dart`
-  owns credential keys; `lib/services/storage/storage_key_ownership.dart` asserts each declared
-  prefs name has exactly one owner. Callers still import `StorageService`.
+- Storage split (**G3**, slice 2): `lib/services/storage/home_prefs.dart` (`HomePrefs`,
+  `HomeCardOrientation`, `HomeHeroSourceMode`, `HomeHeroSource`, `HomeExtraRow`) owns
+  Home page-default keys plus remaining Home keys (`home_disabled_sections_v1`, extra
+  rows, order, hero source, tick sources, Home hero-trailer, `tv_home_style`);
+  `lib/services/storage/cloud_secret_prefs.dart` owns credential keys;
+  `lib/services/storage/storage_key_ownership.dart` asserts each declared prefs name
+  has exactly one owner. Callers still import `StorageService`. PlayerPrefs is next.
 - Collections (imported Nuvio/Xperience-style folder groups → Home rows of folder tiles):
   `lib/models/home_collection.dart` (schema + parser + `collection:<id>` row ids),
   `lib/services/home_collections_store.dart` (`home_collections_v1`, file/URL/paste import, addon
