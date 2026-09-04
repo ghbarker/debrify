@@ -9,6 +9,7 @@ import '../../models/torbox_torrent.dart';
 import '../../models/torbox_web_download.dart';
 import '../../models/rd_file_node.dart';
 import '../../services/analytics_service.dart';
+import '../../services/cloud/cloud_provider_registry.dart';
 import '../../services/series_source_service.dart';
 import '../../services/torbox_service.dart';
 import '../../services/video_player_launcher.dart';
@@ -516,7 +517,9 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
     }
 
     try {
-      final zipUrl = TorboxService.createZipPermalink(key, torrent.id);
+      final zipUrl = await CloudProviderRegistry.instance.zipPermalink(
+        torrent.id,
+      );
       await Clipboard.setData(ClipboardData(text: zipUrl));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -937,7 +940,7 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
     }
   }
 
-  void _copyTorboxZipLink(TorboxTorrent torrent) {
+  Future<void> _copyTorboxZipLink(TorboxTorrent torrent) async {
     final key = _apiKey;
     if (key == null || key.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -949,7 +952,9 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
       return;
     }
 
-    final zipLink = TorboxService.createZipPermalink(key, torrent.id);
+    final zipLink = await CloudProviderRegistry.instance.zipPermalink(
+      torrent.id,
+    );
     Clipboard.setData(ClipboardData(text: zipLink));
 
     if (!mounted) return;
@@ -3107,7 +3112,9 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
 
     try {
       // Generate ZIP permalink
-      final zipUrl = TorboxService.createZipPermalink(key, torrent.id);
+      final zipUrl = await CloudProviderRegistry.instance.zipPermalink(
+        torrent.id,
+      );
 
       if (zipUrl.isEmpty) {
         debugPrint('TorboxDownloadsScreen: Failed to generate ZIP permalink');
