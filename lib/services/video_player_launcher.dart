@@ -28,8 +28,6 @@ import '../services/episode_tracker_snapshot_service.dart';
 import '../services/local_playback_resume_resolver.dart';
 import '../services/series_source_fetcher.dart';
 import '../services/storage_service.dart';
-import 'cloud/cloud_capabilities.dart';
-import 'cloud/cloud_port_feature.dart';
 import 'cloud/cloud_provider_id.dart';
 import 'cloud/cloud_provider_port.dart';
 import 'cloud/cloud_provider_registry.dart';
@@ -281,11 +279,7 @@ Future<String> _resolveRedirectUrl(String url) async {
   }
 
   // Skip known debrid CDN domains (they don't redirect)
-  if (host.contains('real-debrid') ||
-      host.contains('torbox') ||
-      host.contains('pikpak') ||
-      host.contains('1fichier') ||
-      host.contains('rapidgator')) {
+  if (LauncherProviderDispatch.isKnownDebridCdnHost(host)) {
     debugPrint(
       '[RedirectResolver] SKIP: Known debrid CDN domain, using original',
     );
@@ -750,30 +744,10 @@ class VideoPlayerLauncher {
     PlaylistEntry entry, {
     String fallbackTitle = '',
   }) {
-    final provider = entry.provider?.toLowerCase();
-    // Torbox
-    if (provider == 'torbox') {
-      final torrentId = entry.torboxTorrentId;
-      final webDownloadId = entry.torboxWebDownloadId;
-      final fileId = entry.torboxFileId;
-      if (webDownloadId != null && fileId != null) {
-        return 'torbox_web_${webDownloadId}_$fileId';
-      }
-      if (torrentId != null && fileId != null) {
-        return 'torbox_${torrentId}_$fileId';
-      }
-    }
-    // PikPak
-    if (provider == 'pikpak') {
-      final fileId = entry.pikpakFileId;
-      if (fileId != null && fileId.isNotEmpty) {
-        return 'pikpak_$fileId';
-      }
-    }
-    // Fallback: filename hash
-    final name = entry.title.isNotEmpty ? entry.title : fallbackTitle;
-    final nameWithoutExt = name.replaceAll(RegExp(r'\.[^.]*$'), '');
-    return nameWithoutExt.hashCode.toString();
+    return LauncherProviderDispatch.resumeIdForEntry(
+      entry,
+      fallbackTitle: fallbackTitle,
+    );
   }
 
   /// Local resume record for a NON-series entry.
@@ -2247,85 +2221,7 @@ class VideoPlayerLauncher {
   }
 
   static String _analyticsProviderLabel(VideoPlayerLaunchArgs args) {
-    if (args.rdTorrentId != null && args.rdTorrentId!.isNotEmpty) {
-      return 'real_debrid';
-    }
-    if (args.torboxTorrentId != null && args.torboxTorrentId!.isNotEmpty) {
-      return 'torbox';
-    }
-    if (args.pikpakCollectionId != null &&
-        args.pikpakCollectionId!.isNotEmpty) {
-      return 'pikpak';
-    }
-    if (args.stremioTvChannels != null) {
-      return 'stremio_tv';
-    }
-    if (args.iptvChannels != null) {
-      return 'iptv';
-    }
-    if (args.stremioSources != null && args.stremioSources!.isNotEmpty) {
-      return 'stremio';
-    }
-    final playlistProvider = _analyticsPlaylistProviderLabel(args.playlist);
-    if (playlistProvider != null) {
-      return playlistProvider;
-    }
-    final urlProvider = _analyticsUrlProviderLabel(args.videoUrl);
-    if (urlProvider != null) {
-      return urlProvider;
-    }
-    return 'direct';
-  }
-
-  static String? _analyticsPlaylistProviderLabel(
-    List<PlaylistEntry>? playlist,
-  ) {
-    if (playlist == null || playlist.isEmpty) return null;
-
-    for (final entry in playlist) {
-      final explicitProvider = entry.provider?.trim().toLowerCase();
-      if (explicitProvider == 'torbox') return 'torbox';
-      if (explicitProvider == 'pikpak') return 'pikpak';
-      if (explicitProvider == 'realdebrid' ||
-          explicitProvider == 'real_debrid' ||
-          explicitProvider == 'real debrid') {
-        return 'real_debrid';
-      }
-
-      if (entry.torboxTorrentId != null ||
-          entry.torboxWebDownloadId != null ||
-          entry.torboxFileId != null) {
-        return 'torbox';
-      }
-      if (entry.pikpakFileId != null) {
-        return 'pikpak';
-      }
-      if (entry.rdTorrentId != null && entry.rdTorrentId!.isNotEmpty) {
-        return 'real_debrid';
-      }
-    }
-
-    return null;
-  }
-
-  static String? _analyticsUrlProviderLabel(String videoUrl) {
-    final uri = Uri.tryParse(videoUrl);
-    if (uri == null) return null;
-
-    final host = uri.host.toLowerCase();
-    if (host.isEmpty) return null;
-
-    if (host.contains('real-debrid')) {
-      return 'real_debrid';
-    }
-    if (host.contains('mypikpak') || host.contains('pikpak')) {
-      return 'pikpak';
-    }
-    if (host.contains('torbox') || host.contains('tb-cdn.')) {
-      return 'torbox';
-    }
-
-    return null;
+    return LauncherProviderDispatch.analyticsLabel(args);
   }
 
   static Future<bool> _launchOnAndroidTv(

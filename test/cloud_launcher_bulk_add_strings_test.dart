@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:debrify/screens/video_player/models/playlist_entry.dart';
 import 'package:debrify/services/cloud/cloud_capabilities.dart';
 import 'package:debrify/services/cloud/cloud_port_feature.dart';
@@ -402,4 +404,42 @@ void main() {
       expect(BulkAddDispatch.engineFor('torbox'), BulkAddEngine.pikpak);
     });
   });
+
+  test(
+    'owned files have no provider-id string literals outside comments',
+    () {
+      for (final path in [
+        'lib/services/video_player_launcher.dart',
+        'lib/services/torrent_bulk_add_service.dart',
+      ]) {
+        final source = File(path).readAsStringSync();
+        final withoutBlock = source.replaceAll(
+          RegExp(r'/\*.*?\*/', dotAll: true),
+          '',
+        );
+        final withoutLine = withoutBlock
+            .split('\n')
+            .where((line) => !line.trimLeft().startsWith('//'))
+            .join('\n');
+        final hits = RegExp(
+          r"'(realdebrid|real_debrid|torbox|premiumize|alldebrid|pikpak)'",
+        ).allMatches(withoutLine).map((m) => m.group(0)).toList();
+        expect(hits, isEmpty, reason: '$path string-match leftovers: $hits');
+      }
+      final launcher = File(
+        'lib/services/video_player_launcher.dart',
+      ).readAsStringSync();
+      expect(launcher.contains('LauncherProviderDispatch.resumeIdForEntry'), isTrue);
+      expect(launcher.contains('LauncherProviderDispatch.analyticsLabel'), isTrue);
+      expect(
+        launcher.contains('LauncherProviderDispatch.isKnownDebridCdnHost'),
+        isTrue,
+      );
+      final bulk = File(
+        'lib/services/torrent_bulk_add_service.dart',
+      ).readAsStringSync();
+      expect(bulk.contains('BulkAddDispatch.engineFor'), isTrue);
+      expect(bulk.contains('CloudCredentials.configured'), isTrue);
+    },
+  );
 }
