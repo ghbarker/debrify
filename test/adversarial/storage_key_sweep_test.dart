@@ -96,37 +96,25 @@ void main() {
     );
   });
 
-  test('a discovered prefs name missing from byKey is a hole the sweep sees', () {
-    final missing = sweep.unownedDiscoveredPrefsKeys();
+  test('a discovered prefs name missing from byKey fails the sweep', () {
     expect(
-      missing,
-      {
-        'series_browser_dense_view',
-        'merged_series_page_enabled',
-        'tv_keyboard_enabled',
-        'tv_ui_scale_percent',
-        'stremio_addon_hub_enabled',
-        'detail_trailer_autoplay_enabled',
-        'tv_trailer_underlay_enabled',
-        'tracking_progress_fallback_notice',
-        'trakt_sync_catalog_items',
-        'simkl_sync_catalog_items',
-        'mdblist_sync_catalog_items',
-        'debrify_tv_keyword_threshold',
-        'debrify_tv_min_torrents_per_keyword',
-        'detail_trailer_audio_enabled',
-        'detail_trailer_volume',
-      },
+      sweep.unownedDiscoveredPrefsKeys(),
+      isEmpty,
       reason:
-          'Const-only byKey left these inline/interpolated names unowned. '
-          'A new literal must not grow this set — add it to byKey instead.',
+          'Mutation: drop any byKey entry for an inline literal (e.g. '
+          'series_browser_dense_view) and this must fail.',
     );
     expect(
       StorageKeyOwnership.byKey.containsKey('series_browser_dense_view'),
-      isFalse,
-      reason:
-          'Mutation pin: this inline key is the hole the const sweep missed. '
-          'After the fill commit this expect flips to isTrue.',
+      isTrue,
+    );
+    expect(
+      StorageKeyOwnership.byKey['series_browser_dense_view'],
+      StorageKeyStore.storageService,
+    );
+    expect(
+      StorageKeyOwnership.byKey['home_tick_sources'],
+      StorageKeyStore.homePrefs,
     );
   });
 }

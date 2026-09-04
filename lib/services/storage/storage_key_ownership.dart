@@ -1,12 +1,18 @@
 /// Ownership of every persisted key name declared on [StorageService]
 /// (`const _…Key` / CloudSecretPrefs aliases) plus CloudSecretPrefs' own
-/// credential keys. Each name is owned by exactly one store.
+/// credential keys and undeclared inline / interpolated prefs literals
+/// the god file still reads. Each name is owned by exactly one store.
 ///
-/// Frozen compatibility surface: do not rename a key. Later G3 slices
-/// reassign ownership when a domain store is extracted; they must not
-/// change the string.
+/// Façade rule: [StorageService] public static methods remain a forwarding
+/// façade until callers move. `@Deprecated` on those forwards waits for Q2.
+/// Encodings and key **strings** are frozen — later S2 slices reassign
+/// [StorageKeyStore] ownership when a domain store is extracted; they must
+/// not change the string.
 enum StorageKeyStore {
-  /// Residual keys still declared on StorageService.
+  /// Residual keys still declared or inlined on StorageService.
+  ///
+  /// [StorageService] `x` stays a forwarding façade for these until callers
+  /// move. Do not `@Deprecated` the forwards until Q2.
   storageService,
 
   /// [CloudSecretPrefs] credential keys.
@@ -282,6 +288,22 @@ class StorageKeyOwnership {
     'home_hero_trailer_audio_enabled': StorageKeyStore.homePrefs,
     'home_hero_trailer_volume': StorageKeyStore.homePrefs,
     'real_debrid_api_key': StorageKeyStore.cloudSecretPrefs,
+    // S2-0: names StorageService persists without a `_…Key` const.
+    'series_browser_dense_view': StorageKeyStore.storageService,
+    'merged_series_page_enabled': StorageKeyStore.storageService,
+    'tv_keyboard_enabled': StorageKeyStore.storageService,
+    'tv_ui_scale_percent': StorageKeyStore.storageService,
+    'stremio_addon_hub_enabled': StorageKeyStore.storageService,
+    'detail_trailer_autoplay_enabled': StorageKeyStore.storageService,
+    'tv_trailer_underlay_enabled': StorageKeyStore.storageService,
+    'tracking_progress_fallback_notice': StorageKeyStore.storageService,
+    'trakt_sync_catalog_items': StorageKeyStore.storageService,
+    'simkl_sync_catalog_items': StorageKeyStore.storageService,
+    'mdblist_sync_catalog_items': StorageKeyStore.storageService,
+    'debrify_tv_keyword_threshold': StorageKeyStore.storageService,
+    'debrify_tv_min_torrents_per_keyword': StorageKeyStore.storageService,
+    'detail_trailer_audio_enabled': StorageKeyStore.storageService,
+    'detail_trailer_volume': StorageKeyStore.storageService,
   };
 
   static Set<String> keysFor(StorageKeyStore store) => {

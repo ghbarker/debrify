@@ -108,8 +108,7 @@ Set<String> allDiscoveredPrefsKeys() => {
   ...interpolatedPrefsKeys,
 };
 
-/// Inline / interpolated names the const-only sweep cannot see. Pin of the
-/// origin map: these are the holes S2-0 fills. Empty after the fill commit.
+/// Discovered names not yet in [StorageKeyOwnership.byKey]. Must stay empty.
 Set<String> unownedDiscoveredPrefsKeys() =>
     allDiscoveredPrefsKeys().difference(StorageKeyOwnership.byKey.keys.toSet());
 
@@ -118,6 +117,10 @@ void main() {
     final fromGodFile = declaredOnStorageService();
     final fromCloud = declaredOnCloudSecretPrefs();
     final fromHome = HomePrefs.ownedKeys;
+    final fromInline = {
+      ...inlinePrefsKeysOnStorageService(),
+      ...interpolatedPrefsKeys,
+    };
     expect(fromCloud, {
       CloudSecretPrefs.realDebridApiKey,
       CloudSecretPrefs.torboxApiKey,
@@ -127,13 +130,14 @@ void main() {
       CloudSecretPrefs.pikpakPassword,
     });
 
-    final declared = {...fromGodFile, ...fromCloud, ...fromHome};
+    final declared = allDiscoveredPrefsKeys();
     expect(
       StorageKeyOwnership.byKey.keys.toSet(),
       declared,
       reason:
           'StorageKeyOwnership.byKey must pin every StorageService '
-          '`const _…Key` / CloudSecretPrefs alias plus store-owned keys',
+          '`const _…Key` / CloudSecretPrefs alias, store-owned keys, '
+          'and undeclared inline / interpolated prefs names',
     );
 
     final claimed = <String, StorageKeyStore>{};
@@ -173,36 +177,29 @@ void main() {
       expect(
         claimed[key],
         StorageKeyStore.storageService,
-        reason: '$key is still declared on StorageService this slice',
+        reason: '$key is still declared or inlined on StorageService this slice',
       );
     }
 
+    expect(fromInline.difference(claimed.keys.toSet()), isEmpty);
     expect(claimed.length, declared.length);
   });
 
-  test('inline prefs literals the const sweep cannot see are pinned', () {
+  test('a missing declaration fails the sweep', () {
     expect(
       unownedDiscoveredPrefsKeys(),
-      {
-        'series_browser_dense_view',
-        'merged_series_page_enabled',
-        'tv_keyboard_enabled',
-        'tv_ui_scale_percent',
-        'stremio_addon_hub_enabled',
-        'detail_trailer_autoplay_enabled',
-        'tv_trailer_underlay_enabled',
-        'tracking_progress_fallback_notice',
-        'trakt_sync_catalog_items',
-        'simkl_sync_catalog_items',
-        'mdblist_sync_catalog_items',
-        'debrify_tv_keyword_threshold',
-        'debrify_tv_min_torrents_per_keyword',
-        'detail_trailer_audio_enabled',
-        'detail_trailer_volume',
-      },
+      isEmpty,
       reason:
-          'A new undeclared prefs literal (or interpolated name) must be '
-          'added to StorageKeyOwnership.byKey — do not grow this hole set',
+          'A new `const _…Key`, CloudSecretPrefs name, HomePrefs owned '
+          'key, inline prefs literal, or interpolated detail-trailer name '
+          'must be added to StorageKeyOwnership.byKey',
+    );
+    expect(
+      StorageKeyOwnership.byKey.containsKey('not_a_real_prefs_key'),
+      isFalse,
+      reason:
+          'Mutation: an undeclared name must not be in byKey, and a '
+          'discovered name must not be missing (holes above)',
     );
   });
 
