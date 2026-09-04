@@ -281,6 +281,8 @@ is an editor mirror, not the source of truth. How to add a provider:
 ## Debrify TV (keyword channels)
 - `lib/screens/magic_tv_screen.dart` 🔴 (favourites are an unordered `Set`; literal keyword match
   `_parseKeywords`; per-provider native launch `_launch{RealDebrid,Torbox}OnAndroidTv`).
+  Watch session: `lib/screens/debrify_tv/watch_session.dart` (`WatchSession` +
+  `ProgressSink`; screen keeps `_queue` / `_isBusy` accessors).
   Default pick / overlay strings: `lib/services/cloud/magic_tv_provider.dart`
   (`playbackPrecedence` mapped to `real_debrid`; display stays `Torbox` / `Real Debrid`).
 - Data: `lib/models/debrify_tv/`, `lib/services/debrify_tv_repository.dart`,
