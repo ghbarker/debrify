@@ -79,6 +79,19 @@ See `dev/design/REFACTOR_PLAN.md` §2 rule 1.
 - **Premiumize / AllDebrid / PikPak not routed** onto `CloudFilesScreen`.
   Follow-up lane; public types and sidebar ids stay frozen.
 
+### G1 · step 3 TitleOpener
+
+- **Merged path includes movies.** When `_mergedSeriesPage` is on, both
+  `series` and `movie` go to `MergedDetailScreen`. The origin comment said
+  movies fall through to `CatalogItemDetailScreen`; the code did not.
+  Keep: pinned in `test/title_opener_test.dart`.
+- **Merged `showQuickPlay` is always `true`**, including PikPak-only.
+  Legacy `CatalogItemDetailScreen` still uses `showQuickPlay: !_pikpakOnly`.
+  Keep: two different literals, not a unification.
+- **Simkl CW membership is `progress != null`; MDBList is `paused == true`.**
+  Local CW is `_cwIds.contains`; Trakt CW is `_traktByImdb.containsKey`.
+  Keep: origin predicates.
+
 ### G1 · step 2 CatalogSearchController
 
 - **`_restoreHome` does not zero failures.** `CatalogSearchController.cancel`
