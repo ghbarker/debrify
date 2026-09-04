@@ -70,8 +70,9 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   `CloudPortFeature.cachedHashes` is TorBox `checkcached` only — not Premiumize
   `checkCache` (positional bools). `CloudPortFeature.checkCache` is Premiumize
   only. Stremio auto-play (`StremioTvTorboxCache.load`) maps missing key to
-  empty; explicit `torbox` / `premiumize` filtering skips the call when there
-  is no key. Chunk HTTP is swallowed by `TorboxService.checkCachedTorrents`
+  empty; explicit `torbox` / `premiumize` filtering is
+  `StremioTvCacheFilter.apply` (skip the call when there is no key; keep
+  directs). Chunk HTTP is swallowed by `TorboxService.checkCachedTorrents`
   (partial or empty set) and by `PremiumizeService.checkCache` (slots stay
   `false`); those calls do not throw.
   HTTP clients remain in

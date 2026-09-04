@@ -21,6 +21,7 @@ import '../../widgets/cloud_provider_chrome.dart';
 import '../../services/cloud/cloud_credentials.dart';
 import '../../services/cloud/cloud_provider_id.dart';
 import '../../services/cloud/cloud_provider_registry.dart';
+import '../../services/cloud/stremio_tv_cache_filter.dart';
 import '../../services/cloud/stremio_tv_resolve_gate.dart';
 import '../../services/cloud/stremio_tv_torbox_cache.dart';
 import '../../services/video_player_launcher.dart';
@@ -937,88 +938,28 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
         );
       }
 
-      // For TorBox, filter torrent sources to only cached ones
-      if (_debridProvider == 'torbox') {
-        if (await CloudCredentials.isPlaybackConfigured(
-          CloudProviderId.torbox,
-        )) {
-          final torrentHashes = playableSources
-              .where((t) => t.streamType == StreamType.torrent)
-              .map((t) => t.infohash.trim().toLowerCase())
-              .where((h) => h.isNotEmpty)
-              .toList();
-          if (torrentHashes.isNotEmpty) {
-            if (!mounted) {
-              overlay.dismiss();
-              return;
-            }
-            overlay.setStage(PlayLoadStage.cacheCheck);
-            final cachedSet = await CloudProviderRegistry.instance
-                .checkCachedHashes(torrentHashes);
-            overlay.setStage(
-              PlayLoadStage.cacheCheck,
-              cachedCount: cachedSet.length,
-            );
-            debugPrint(
-              'StremioTV: TorBox cache check: ${cachedSet.length} cached '
-              'out of ${torrentHashes.length} torrents',
-            );
-            // Keep direct streams + only cached torrents
-            playableSources = playableSources
-                .where(
-                  (t) =>
-                      t.streamType != StreamType.torrent ||
-                      cachedSet.contains(t.infohash.trim().toLowerCase()),
-                )
-                .toList();
-          }
-        }
+      final filteredSources = await StremioTvCacheFilter.apply(
+        provider: _debridProvider,
+        sources: playableSources,
+        isCancelled: () => !mounted,
+        onStart: () => overlay.setStage(PlayLoadStage.cacheCheck),
+        onChecked: (cachedCount, torrentCount) {
+          overlay.setStage(
+            PlayLoadStage.cacheCheck,
+            cachedCount: cachedCount,
+          );
+          final label = _debridProvider == 'torbox' ? 'TorBox' : 'Premiumize';
+          debugPrint(
+            'StremioTV: $label cache check: $cachedCount cached '
+            'out of $torrentCount torrents',
+          );
+        },
+      );
+      if (filteredSources == null) {
+        overlay.dismiss();
+        return;
       }
-
-      // For Premiumize, filter torrent sources to only cached ones
-      if (_debridProvider == 'premiumize') {
-        if (await CloudCredentials.isPlaybackConfigured(
-          CloudProviderId.premiumize,
-        )) {
-          final torrentSources = playableSources
-              .where((t) => t.streamType == StreamType.torrent)
-              .toList();
-          final torrentHashes = torrentSources
-              .map((t) => t.infohash.trim().toLowerCase())
-              .where((h) => h.isNotEmpty)
-              .toList();
-          if (torrentHashes.isNotEmpty) {
-            if (!mounted) {
-              overlay.dismiss();
-              return;
-            }
-            overlay.setStage(PlayLoadStage.cacheCheck);
-            final cachedResults = await CloudProviderRegistry.instance
-                .checkCache(torrentHashes);
-            final cachedSet = <String>{};
-            for (int i = 0; i < torrentHashes.length; i++) {
-              if (i < cachedResults.length && cachedResults[i]) {
-                cachedSet.add(torrentHashes[i]);
-              }
-            }
-            overlay.setStage(
-              PlayLoadStage.cacheCheck,
-              cachedCount: cachedSet.length,
-            );
-            debugPrint(
-              'StremioTV: Premiumize cache check: ${cachedSet.length} cached '
-              'out of ${torrentHashes.length} torrents',
-            );
-            playableSources = playableSources
-                .where(
-                  (t) =>
-                      t.streamType != StreamType.torrent ||
-                      cachedSet.contains(t.infohash.trim().toLowerCase()),
-                )
-                .toList();
-          }
-        }
-      }
+      playableSources = filteredSources;
 
       if (playableSources.isEmpty) {
         overlay.dismiss();
@@ -1260,59 +1201,12 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
       );
     }
 
-    // TorBox cache filter
-    if (_debridProvider == 'torbox') {
-      if (await CloudCredentials.isPlaybackConfigured(CloudProviderId.torbox)) {
-        final torrentHashes = playableSources
-            .where((t) => t.streamType == StreamType.torrent)
-            .map((t) => t.infohash.trim().toLowerCase())
-            .where((h) => h.isNotEmpty)
-            .toList();
-        if (torrentHashes.isNotEmpty) {
-          final cachedSet = await CloudProviderRegistry.instance
-              .checkCachedHashes(torrentHashes);
-          playableSources = playableSources
-              .where(
-                (t) =>
-                    t.streamType != StreamType.torrent ||
-                    cachedSet.contains(t.infohash.trim().toLowerCase()),
-              )
-              .toList();
-        }
-      }
-    }
-
-    // Premiumize cache filter
-    if (_debridProvider == 'premiumize') {
-      if (await CloudCredentials.isPlaybackConfigured(
-        CloudProviderId.premiumize,
-      )) {
-        final torrentSources = playableSources
-            .where((t) => t.streamType == StreamType.torrent)
-            .toList();
-        final torrentHashes = torrentSources
-            .map((t) => t.infohash.trim().toLowerCase())
-            .where((h) => h.isNotEmpty)
-            .toList();
-        if (torrentHashes.isNotEmpty) {
-          final cachedResults = await CloudProviderRegistry.instance
-              .checkCache(torrentHashes);
-          final cachedSet = <String>{};
-          for (int i = 0; i < torrentHashes.length; i++) {
-            if (i < cachedResults.length && cachedResults[i]) {
-              cachedSet.add(torrentHashes[i]);
-            }
-          }
-          playableSources = playableSources
-              .where(
-                (t) =>
-                    t.streamType != StreamType.torrent ||
-                    cachedSet.contains(t.infohash.trim().toLowerCase()),
-              )
-              .toList();
-        }
-      }
-    }
+    playableSources =
+        await StremioTvCacheFilter.apply(
+          provider: _debridProvider,
+          sources: playableSources,
+        ) ??
+        playableSources;
 
     if (playableSources.isEmpty) return null;
 
