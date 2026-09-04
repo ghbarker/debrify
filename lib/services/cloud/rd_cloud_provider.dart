@@ -329,4 +329,27 @@ class RealDebridCloudProvider implements CloudProviderPort {
   Future<MagicTvPrepared?> prepareMagicTv(
     MagicTvPrepareRequest request,
   ) async => null;
+
+  @override
+  Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
+    MagicTvPrepareRequest request,
+  ) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) return null;
+    final result = await DebridService.addTorrentToDebridPreferVideos(
+      apiKey,
+      request.magnet,
+    );
+    final torrentId = result['torrentId'] as String? ?? '';
+    final links = (result['links'] as List<dynamic>? ?? const [])
+        .map((link) => link?.toString() ?? '')
+        .where((link) => link.isNotEmpty && !request.seenKeys.contains(link))
+        .toList();
+    if (links.isEmpty) return null;
+    return MagicTvLockedBatch(
+      remoteId: torrentId,
+      name: request.torrent.name,
+      lockedLinks: links,
+    );
+  }
 }

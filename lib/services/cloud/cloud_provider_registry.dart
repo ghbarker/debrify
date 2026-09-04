@@ -264,6 +264,18 @@ class CloudProviderRegistry {
     return port.prepareMagicTv(request);
   }
 
+  /// Locked-link queue fill. Same [CloudProviderId.tryParse] as
+  /// [prepareMagicTv] (`real_debrid` hits RD). Not playback unlock.
+  Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks({
+    required String provider,
+    required MagicTvPrepareRequest request,
+  }) async {
+    final id = CloudProviderId.tryParse(provider);
+    final port = id == null ? null : _byId[id];
+    if (port == null) return null;
+    return port.prepareMagicTvLockedLinks(request);
+  }
+
   static String? credentialKeyFor(String provider) =>
       CloudProviderId.tryParse(provider)?.credentialKey;
 }

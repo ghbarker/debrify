@@ -26,11 +26,12 @@ void main() {
     expect(helper, contains('showTitles: DiscoverPrefs.showTitles'));
 
     // Catalog rows, tracker-list rows, generic Continue Watching rows (also
-    // used by Simkl/MDBList), and Trakt Continue Watching each push a
-    // different screen. All four route builders must opt into the helper.
+    // used by Simkl/MDBList), Trakt Continue Watching, and collection folder
+    // browsers each push a different screen. All five route builders must
+    // opt into the helper.
     final routeUses = RegExp(
       r'builder: \(_\) => _withHomeExpandedCardSettings\(',
     ).allMatches(source);
-    expect(routeUses.length, 4);
+    expect(routeUses.length, 5);
   });
 }

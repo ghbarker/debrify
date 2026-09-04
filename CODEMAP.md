@@ -25,7 +25,9 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   Stremio TV uses `resolveStremioTorrent` (`realdebrid` + auto order with
   PikPak before Premiumize; null on miss). Debrify TV file prepare is
   `prepareMagicTv` (`real_debrid`; infohash-only magnet; random unseen file;
-  RD/AllDebrid stay on the screen). Player-screen unlock is
+  RD/AllDebrid return null). Locked-link queues are
+  `prepareMagicTvLockedLinks` (still-locked URLs; RD re-queues the torrent,
+  AllDebrid expands leftover files). Player-screen unlock is
   `unlockPlayerScreenEntry` (wraps HTTP as `Torbox link failed`; incomplete
   Premiumize throws). Playlist JSON, labels,
   and download credential keys live there too. Bind-source PM/AD/PP browsers:
@@ -113,6 +115,25 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 ## Settings · storage · misc infra
 - Settings: `screens/settings/*` (+ `home_sections_filter_page.dart` = show/hide home rows,
   `home_page_settings_page.dart`). Metrics/format helpers: `utils/*`.
+- Collections (imported Nuvio/Xperience-style folder groups → Home rows of folder tiles):
+  `models/home_collection.dart` (schema + parser + `collection:<id>` row ids),
+  `services/home_collections_store.dart` (`home_collections_v1`, file/URL/paste import, addon
+  resolution), `services/collection_folder_loader.dart` (merged multi-catalog paging),
+  `services/home_collection_rows.dart` (`HomeCollectionSection`), browser
+  `screens/collections/collection_folder_screen.dart` (+ `widgets/collections/rail_see_all_pill.dart`),
+  settings `screens/settings/collections_settings_page.dart` (+ `widgets/text_prompt_dialog.dart`).
+  Board wiring lives in `search_screen.dart` (`_buildCollectionSections`, `_openCollectionFolder`,
+  `_openCollectionScreen`). Docs: `docs/collections.md`.
+- Hide watched (Settings › Tracking): `services/hide_watched_prefs.dart` (sync flag),
+  `services/watched_filter.dart` (predicate over `WatchedStatusService`),
+  `services/filtered_catalog_pager.dart` (`fetchFilteredPage` top-up paging). Wired in
+  `search_screen.dart` (`_fetchBoardBatch`, `_loadMoreRow`, catalog search, hero source),
+  `see_all/catalog_see_all_screen.dart`, `services/home_list_rows.dart`, Trakt/MDBList See-All.
+- Stream badges (Nuvio `badges.json` rulesets → chips on source rows): `models/stream_badge_rules.dart`,
+  `services/{stream_badge_matcher,stream_badges_service}.dart`, `widgets/stream_badge_strip.dart`,
+  `screens/settings/stream_badges_settings_page.dart` (from the Play Loader page). Rendered by
+  `widgets/source_row.dart` and the in-player `video_player/widgets/source_sheet.dart`; the addon's
+  label/description ride `Torrent.streamLabel`/`streamDescription` (set in `stremio_service.dart`).
 - Backup/transfer/sync: `services/backup_restore_service.dart` (full config snapshot),
   `widgets/remote/*` + `services/remote_control/*` (device-to-device over LAN, no server).
 - Onboarding: `widgets/initial_setup_flow.dart` 🔴. Migration: `services/app_migration_service.dart`.

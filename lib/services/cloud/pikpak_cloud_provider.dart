@@ -460,6 +460,11 @@ class PikPakCloudProvider implements CloudProviderPort {
     );
   }
 
+  @override
+  Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
+    MagicTvPrepareRequest request,
+  ) async => null;
+
   static Future<List<Map<String, dynamic>>> extractPikPakVideos(
     PikPakApiService pikpak,
     String folderId, {

@@ -93,6 +93,28 @@ void main() {
     expect(condition(), isTrue, reason: 'Async checkpoint did not complete');
   }
 
+  /// Identity save is a sqflite write. A fixed settle loses under a busy
+  /// CI shard; poll the registry instead. Cursor blink still forbids
+  /// pumpAndSettle.
+  Future<UserProfile> waitForSavedProfile(
+    WidgetTester tester,
+    bool Function(UserProfile) match,
+  ) async {
+    UserProfile? last;
+    for (var i = 0; i < 40; i++) {
+      await tester.runAsync(() async {
+        last = await registry.getProfile(memberId);
+      });
+      final profile = last;
+      if (profile != null && match(profile)) return profile;
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    fail('profile write did not land: ${last?.name}');
+  }
+
   Future<void> pumpPage(WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -139,17 +161,16 @@ void main() {
       find.byKey(const ValueKey('self-profile-save-identity')),
     );
     await tester.tap(find.byKey(const ValueKey('self-profile-save-identity')));
-    await settle(tester, rounds: 16);
 
-    UserProfile? after;
-    await tester.runAsync(() async {
-      after = await registry.getProfile(memberId);
-    });
-    expect(after?.name, 'Maya Two');
-    expect(after?.avatarKey, 'child');
-    expect(after?.role, before.role);
-    expect(after?.policy.encode(), before.policy.encode());
-    expect(after?.authorizationRevision, before.authorizationRevision);
+    final after = await waitForSavedProfile(
+      tester,
+      (profile) => profile.name == 'Maya Two' && profile.avatarKey == 'child',
+    );
+    expect(after.name, 'Maya Two');
+    expect(after.avatarKey, 'child');
+    expect(after.role, before.role);
+    expect(after.policy.encode(), before.policy.encode());
+    expect(after.authorizationRevision, before.authorizationRevision);
     expect(tester.takeException(), isNull);
   });
 
@@ -165,14 +186,13 @@ void main() {
       find.byKey(const ValueKey('self-profile-save-identity')),
     );
     await tester.tap(find.byKey(const ValueKey('self-profile-save-identity')));
-    await settle(tester, rounds: 16);
 
-    UserProfile? after;
-    await tester.runAsync(() async {
-      after = await registry.getProfile(memberId);
-    });
-    expect(after?.name, 'Maya Renamed');
-    expect(after?.avatarKey, isNull);
+    final after = await waitForSavedProfile(
+      tester,
+      (profile) => profile.name == 'Maya Renamed' && profile.avatarKey == null,
+    );
+    expect(after.name, 'Maya Renamed');
+    expect(after.avatarKey, isNull);
     expect(tester.takeException(), isNull);
   });
 

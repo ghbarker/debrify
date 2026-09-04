@@ -475,6 +475,11 @@ class TorboxCloudProvider implements CloudProviderPort {
     }
   }
 
+  @override
+  Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
+    MagicTvPrepareRequest request,
+  ) async => null;
+
   static int? _asIntMapValue(dynamic data, String key) {
     if (data is Map<String, dynamic>) {
       final value = data[key];
