@@ -39,6 +39,7 @@ import 'steps/mode_step.dart';
 import 'steps/services_step.dart';
 import 'steps/trackers_step.dart';
 import '../../services/mdblist/mdblist_service.dart';
+import '../../services/transfer/transfer_category_registry.dart';
 import 'tv_keyboard_slot.dart';
 
 typedef OnboardingValidationOverride =
@@ -785,24 +786,10 @@ class _InitialSetupFlowState extends State<InitialSetupFlow> {
 
   String? _configLabel(String command, String? data) {
     return switch (command) {
-      ConfigCommand.realDebrid => 'Real-Debrid',
-      ConfigCommand.torbox => 'TorBox',
-      ConfigCommand.premiumize => 'Premiumize',
-      ConfigCommand.allDebrid => 'AllDebrid',
-      ConfigCommand.pikpak => 'PikPak',
-      ConfigCommand.trakt => 'Trakt',
-      ConfigCommand.simkl => 'Simkl',
-      ConfigCommand.searchEngines => 'Search engines',
-      ConfigCommand.webDav => 'WebDAV servers',
-      ConfigCommand.indexerManagers => 'Indexer managers',
-      ConfigCommand.iptvPlaylists => 'IPTV providers',
-      ConfigCommand.iptvFavorites => 'IPTV favorites',
-      ConfigCommand.iptvLists => 'IPTV lists',
-      ConfigCommand.streamBadges => 'Stream badges',
       ConfigCommand.debrifyChannel => 'TV channel',
       ConfigCommand.debrifyChannelStart => _chunkLabel(data),
       ConfigCommand.profileGraph => 'All profiles',
-      _ => null,
+      _ => TransferCategoryRegistry.instance.summarizeLabelForWire(command),
     };
   }
 

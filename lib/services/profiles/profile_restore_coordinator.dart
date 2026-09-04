@@ -780,28 +780,16 @@ class ProfileRestoreCoordinator {
             stagedIptvProviders,
             () => BackupRestoreService.applyBackup(
               Map<String, dynamic>.from(legacy),
-              selection: const BackupSelection(
-                realDebrid: false,
-                torbox: false,
-                premiumize: false,
-                allDebrid: false,
-                pikpak: false,
-                trakt: false,
-                simkl: false,
-                searchEngines: false,
-                addons: false,
-                webDav: false,
-                indexerManagers: false,
-                iptvPlaylists: false,
-                iptvFavorites: true,
-                iptvLists: true,
-                streamBadges: true,
+              selection: BackupSelection.only({
+                TransferCategories.iptvFavorites,
+                TransferCategories.iptvLists,
+                TransferCategories.streamBadges,
                 // Tracking prefs are profile-scoped plain prefs like the IPTV
                 // favorites above — they ride the legacy follow-up, not the
                 // staged-resource path, or a profile import silently resets
                 // them to Smart/all/seeded defaults.
-                trackingPreferences: true,
-              ),
+                TransferCategories.trackingPreferences,
+              }),
               refreshEngineRuntime: false,
             ),
           ),
@@ -965,23 +953,9 @@ class ProfileRestoreCoordinator {
             postScope,
             () => BackupRestoreService.applyBackup(
               Map<String, dynamic>.from(legacy),
-              selection: const BackupSelection(
-                realDebrid: false,
-                torbox: false,
-                premiumize: false,
-                allDebrid: false,
-                pikpak: false,
-                trakt: false,
-                simkl: false,
-                searchEngines: true,
-                addons: false,
-                webDav: false,
-                indexerManagers: false,
-                iptvPlaylists: false,
-                iptvFavorites: false,
-                iptvLists: false,
-                streamBadges: false,
-              ),
+              selection: BackupSelection.only({
+                TransferCategories.searchEngines,
+              }),
               refreshEngineRuntime: restoringActive,
             ),
           );
