@@ -307,4 +307,13 @@ class PremiumizeCloudProvider extends CloudProviderAdapter {
       CloudPortFeature.magicTvLockedLinks,
     );
   }
+
+  @override
+  Future<List<bool>> checkCache(List<String> items) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const CloudMissingApiKey('Missing Premiumize API key');
+    }
+    return PremiumizeService.checkCache(apiKey, items);
+  }
 }

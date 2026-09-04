@@ -235,6 +235,18 @@ class CloudProviderRegistry {
     return port.checkCachedHashes(infoHashes);
   }
 
+  /// Premiumize cache/check only. Missing adapter / unsupported → `[]`.
+  /// Missing key throws [CloudMissingApiKey]. Chunk HTTP does not throw
+  /// ([PremiumizeService.checkCache] leaves those slots `false`).
+  /// Positional bools, not a hash set.
+  Future<List<bool>> checkCache(List<String> items) async {
+    final port = _byId[CloudProviderId.premiumize];
+    if (port == null || !port.supports(CloudPortFeature.checkCache)) {
+      return const <bool>[];
+    }
+    return port.checkCache(items);
+  }
+
   static String? credentialKeyFor(String provider) =>
       CloudProviderId.tryParse(provider)?.credentialKey;
 }

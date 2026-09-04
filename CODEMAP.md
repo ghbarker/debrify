@@ -68,10 +68,12 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   `CloudPortFeature.forProvider` / `CloudProviderPort.supports` is "this adapter
   implements that method"; a null return from a supported method is a miss.
   `CloudPortFeature.cachedHashes` is TorBox `checkcached` only — not Premiumize
-  `checkCache` (positional bools). Stremio auto-play (`StremioTvTorboxCache.load`)
-  maps missing key to empty; explicit `torbox` filtering skips the call when
-  there is no key. Chunk HTTP is swallowed by `TorboxService.checkCachedTorrents`
-  (partial or empty set); it does not throw.
+  `checkCache` (positional bools). `CloudPortFeature.checkCache` is Premiumize
+  only. Stremio auto-play (`StremioTvTorboxCache.load`) maps missing key to
+  empty; explicit `torbox` / `premiumize` filtering skips the call when there
+  is no key. Chunk HTTP is swallowed by `TorboxService.checkCachedTorrents`
+  (partial or empty set) and by `PremiumizeService.checkCache` (slots stay
+  `false`); those calls do not throw.
   HTTP clients remain in
   `services/debrid_service.dart` (Real-Debrid), `services/torbox_service.dart`,
   `services/premiumize_service.dart`, `services/alldebrid_service.dart`,

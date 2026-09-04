@@ -70,9 +70,15 @@ abstract class CloudProviderPort {
   /// TorBox `checkcached` hashes. Missing key throws [CloudMissingApiKey].
   /// Per-chunk HTTP failures are swallowed by [TorboxService.checkCachedTorrents]
   /// (partial or empty set). Explicit Stremio filter skips the call when there
-  /// is no key. Not Premiumize `checkCache` (positional bools).
+  /// is no key. Not Premiumize [checkCache] (positional bools).
   /// Unsupported adapters throw [CloudUnsupported].
   Future<Set<String>> checkCachedHashes(List<String> infoHashes);
+
+  /// Premiumize `cache/check`. Returns positional bools aligned with [items],
+  /// not a hash set. Chunk HTTP misses stay `false` (service dialect).
+  /// Missing key throws [CloudMissingApiKey]. Not [checkCachedHashes].
+  /// Unsupported adapters throw [CloudUnsupported].
+  Future<List<bool>> checkCache(List<String> items);
 }
 
 /// Shared [supports] for production adapters (`implements` would re-require it).
@@ -86,5 +92,10 @@ abstract class CloudProviderAdapter implements CloudProviderPort {
   @override
   Future<Set<String>> checkCachedHashes(List<String> infoHashes) {
     throw CloudUnsupported(id, CloudPortFeature.cachedHashes);
+  }
+
+  @override
+  Future<List<bool>> checkCache(List<String> items) {
+    throw CloudUnsupported(id, CloudPortFeature.checkCache);
   }
 }
