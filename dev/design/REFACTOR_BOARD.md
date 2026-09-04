@@ -2,7 +2,7 @@
 
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 
-Baseline: `main` @ `d5111bb6` (Phase 0 merged; gate 0 partial) · Phase: **1** · Last gate: 0 (partial; human said proceed)
+Baseline: `main` @ `d5111bb6` (Phase 0 merged; gate 0 partial) · Phase: **2** · Last gate: 0 (partial; human said proceed)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -14,7 +14,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | D0 · delete dead code | merged | `refactor/d0-delete-dead-code` | — | `lib/screens/deprecated/**`, `lib/widgets/catalog_browser.dart`, `lib/screens/search/search_sources.dart` (`_redesign == false` branch only) | — | Unused `search_screen.dart` import dropped. CODEMAP left to M0. |
 | M0 · CODEMAP refresh | merged | `refactor/m0-codemap-refresh` | — | `CODEMAP.md`, `dev/design/ADDING_A_PROVIDER.md` | — | D0 merged; dropped `lib/screens/deprecated/` and `catalog_browser.dart`. |
 | P1 · capability interfaces | merged | `refactor/p1-capabilities` | — | `lib/services/cloud/**`, `test/cloud_*` | — | Fat-port CloudUnsupported defaults kept until FakeCloudProvider moves. |
-| P2a · Magic TV strings | review | `refactor/p2a-magic-tv-strings` | worker-p2a | `lib/screens/magic_tv_screen.dart` | — | Forbidden: `lib/services/cloud/**`. Pin string-switches with FakeCloudProvider. Did not edit the shared fake (subclassed in the pin test). |
+| P2a · Magic TV strings | merged | `refactor/p2a-magic-tv-strings` | — | `lib/screens/magic_tv_screen.dart` | — | Dispatch via MagicTvDispatch; no `lib/services/cloud/**` edits; pin test subclasses FakeCloudProvider. |
 | P2b · Stremio TV strings | assigned | `refactor/p2b-stremio-tv-strings` | worker-p2b | `lib/screens/stremio_tv/**` | — | Forbidden: `lib/services/cloud/**`. |
 | P2c · launcher + bulk-add | assigned | `refactor/p2c-launcher-bulk-add` | worker-p2c | `lib/services/video_player_launcher.dart`, `lib/services/torrent_bulk_add_service.dart` | — | Forbidden: `lib/services/cloud/**`. No dart format on launcher. |
 | P2d · playlist/cloud/settings strings | assigned | `refactor/p2d-playlist-cloud-settings` | worker-p2d | `lib/screens/playlist_content_view_screen.dart`, `lib/services/playlist_player_service.dart`, `lib/screens/cloud_screen.dart`, `lib/screens/settings/provider_settings_page.dart` | — | Forbidden: `lib/services/cloud/**`. |
