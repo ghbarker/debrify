@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:debrify/models/profiles/profile_policy.dart';
-import 'package:debrify/models/profiles/user_profile.dart';
 import 'package:debrify/screens/settings/profiles_settings_page.dart';
 import 'package:debrify/services/profiles/profile_bootstrap.dart';
 import 'package:debrify/services/profiles/profile_lock_controller.dart';

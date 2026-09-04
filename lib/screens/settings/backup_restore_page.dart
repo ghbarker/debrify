@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io' show File;
-import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -281,10 +280,12 @@ class BackupRestorePage {
     final fileName = backupExportFileName(DateTime.now());
 
     try {
+      if (!context.mounted) return;
       final savedPath = await ProfileBackupFlows(
         context,
       ).saveBackupFile(fileName: fileName, bytes: bytes);
-      if (!context.mounted || savedPath == null) return;
+      if (!context.mounted) return;
+      if (savedPath == null) return;
       // On Android, savedPath may be a content:// URI from the Storage
       // Access Framework — show it raw so the user has at least a
       // breadcrumb of where the backup went.
