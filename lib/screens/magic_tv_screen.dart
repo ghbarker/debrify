@@ -27,6 +27,7 @@ import '../services/android_tv_player_bridge.dart';
 import '../services/cloud/cloud_provider_registry.dart';
 import '../services/cloud/magic_tv_playable.dart';
 import '../services/cloud/magic_tv_prepare_args.dart';
+import '../services/cloud/magic_tv_provider.dart';
 import '../services/debrid_service.dart';
 import '../services/pikpak_tv_service.dart';
 import '../services/storage_service.dart';
@@ -685,42 +686,16 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     bool premiumizeAvailable,
     bool allDebridAvailable,
   ) {
-    // If user has a preferred provider that's available, use it
-    if (preferred == _providerPremiumize && premiumizeAvailable) {
-      return _providerPremiumize;
-    }
-    if (preferred == _providerAllDebrid && allDebridAvailable) {
-      return _providerAllDebrid;
-    }
-    if (preferred == _providerPikPak && pikpakAvailable) {
-      return _providerPikPak;
-    }
-    if (preferred == _providerTorbox && torboxAvailable) {
-      return _providerTorbox;
-    }
-    if (preferred == _providerRealDebrid && rdAvailable) {
-      return _providerRealDebrid;
-    }
-
-    // Fallback: pick first available provider
-    if (rdAvailable) {
-      return _providerRealDebrid;
-    }
-    if (torboxAvailable) {
-      return _providerTorbox;
-    }
-    if (premiumizeAvailable) {
-      return _providerPremiumize;
-    }
-    if (allDebridAvailable) {
-      return _providerAllDebrid;
-    }
-    if (pikpakAvailable) {
-      return _providerPikPak;
-    }
-
-    // No provider available, default to RD (will show as unavailable)
-    return _providerRealDebrid;
+    return MagicTvProvider.pickDefault(
+      preferred: preferred,
+      available: MagicTvProvider.availability(
+        realDebrid: rdAvailable,
+        torbox: torboxAvailable,
+        pikpak: pikpakAvailable,
+        premiumize: premiumizeAvailable,
+        allDebrid: allDebridAvailable,
+      ),
+    );
   }
 
   bool _isProviderSelectable(String provider) {
@@ -1786,13 +1761,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     return selected;
   }
 
-  String _providerDisplay(String provider) {
-    if (provider == _providerTorbox) return 'Torbox';
-    if (provider == _providerPikPak) return 'PikPak';
-    if (provider == _providerPremiumize) return 'Premiumize';
-    if (provider == _providerAllDebrid) return 'AllDebrid';
-    return 'Real Debrid';
-  }
+  String _providerDisplay(String provider) => MagicTvProvider.display(provider);
 
   /// Quality + size pickers for Debrify TV playback. One shared setting for
   /// both channels and quick play, so the same feed rules apply wherever you
