@@ -32,6 +32,9 @@ import '../video_player_screen.dart';
 import '../../utils/platform_util.dart';
 import '../../utils/tv_keys.dart';
 import '../../utils/tv_search_focus_handoff.dart';
+import '../cloud_files/cloud_files_opening_splash.dart';
+import '../cloud_files/cloud_files_screen.dart';
+import '../cloud_files/torbox_files_source.dart';
 
 /// TV: skip the dialog backdrop blur — the dialog panels here are fully
 /// opaque, so the blur only tints the thin margin ring around them, while its
@@ -44,7 +47,10 @@ Widget _maybeBlur(Widget child, {double sigma = 12}) {
   );
 }
 
-class TorboxDownloadsScreen extends StatefulWidget {
+/// TorBox cloud files. Public type is unchanged so sidebar, bind, and
+/// [CloudBrowseSelectSource] keep working. Body is [CloudFilesScreen] with a
+/// [TorBoxFilesSource] (G4).
+class TorboxDownloadsScreen extends StatelessWidget {
   const TorboxDownloadsScreen({
     super.key,
     this.initialTorrentToOpen,
@@ -70,14 +76,62 @@ class TorboxDownloadsScreen extends StatefulWidget {
   final void Function(SeriesSource)? onSourceSelected;
 
   @override
-  State<TorboxDownloadsScreen> createState() => _TorboxDownloadsScreenState();
+  Widget build(BuildContext context) {
+    return CloudFilesScreen(
+      source: TorBoxFilesSource(
+        initialTorrentToOpen: initialTorrentToOpen,
+        isPushedRoute: isPushedRoute,
+        initialSearchQuery: initialSearchQuery,
+        selectSourceMode: selectSourceMode,
+        onSourceSelected: onSourceSelected,
+      ),
+      host: TorboxCloudFilesHost(
+        initialTorrentToOpen: initialTorrentToOpen,
+        isPushedRoute: isPushedRoute,
+        initialSearchQuery: initialSearchQuery,
+        selectSourceMode: selectSourceMode,
+        onSourceSelected: onSourceSelected,
+      ),
+    );
+  }
+}
+
+/// Former [TorboxDownloadsScreen] State host. Constructor and fields are the
+/// origin widget moved verbatim.
+class TorboxCloudFilesHost extends StatefulWidget {
+  const TorboxCloudFilesHost({
+    super.key,
+    this.initialTorrentToOpen,
+    this.isPushedRoute = false,
+    this.initialSearchQuery,
+    this.selectSourceMode = false,
+    this.onSourceSelected,
+  });
+
+  final TorboxTorrent? initialTorrentToOpen;
+
+  /// When true, this screen was pushed as a route (not displayed in a tab).
+  /// Back navigation will pop the route instead of switching tabs.
+  final bool isPushedRoute;
+
+  /// Pre-populate torrent search with this query on init.
+  final String? initialSearchQuery;
+
+  /// When true, torrent cards show "Select" instead of Open/Play/3-dot.
+  final bool selectSourceMode;
+
+  /// Called when user selects a torrent in select-source mode.
+  final void Function(SeriesSource)? onSourceSelected;
+
+  @override
+  State<TorboxCloudFilesHost> createState() => _TorboxDownloadsScreenState();
 }
 
 enum _FolderViewMode { raw, sortedAZ, seriesArrange }
 
 enum _TorboxDownloadsView { torrents, webDownloads }
 
-class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
+class _TorboxDownloadsScreenState extends State<TorboxCloudFilesHost> {
   _TorboxDownloadsView _selectedView = _TorboxDownloadsView.torrents;
 
   final ScrollController _scrollController = ScrollController();
@@ -272,7 +326,10 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
         }
       });
     } else {
-      MainPageBridge.registerTabBackHandler('torbox', _handleBackNavigation);
+      MainPageBridge.registerTabBackHandler(
+        TorBoxFilesSource.destinationIdValue,
+        _handleBackNavigation,
+      );
       // Register TV sidebar focus handler (tab index 5 = Torbox)
       _tvContentFocusHandler = () {
         // Set flag to focus after data loads
@@ -285,7 +342,7 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
   }
 
   @override
-  void didUpdateWidget(TorboxDownloadsScreen oldWidget) {
+  void didUpdateWidget(TorboxCloudFilesHost oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.initialTorrentToOpen != null) {
       _pendingInitialTorrent = widget.initialTorrentToOpen;
@@ -1046,7 +1103,7 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
     if (widget.isPushedRoute) {
       MainPageBridge.popRouteBackHandler(_handleBackNavigation);
     } else {
-      MainPageBridge.unregisterTabBackHandler('torbox');
+      MainPageBridge.unregisterTabBackHandler(TorBoxFilesSource.destinationIdValue);
       if (_tvContentFocusHandler != null) {
         MainPageBridge.unregisterTvContentFocusHandler(
           5,
@@ -6117,26 +6174,7 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
         !widget.selectSourceMode &&
         widget.initialTorrentToOpen != null &&
         _isAtRoot) {
-      return CloudScaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
-            tooltip: 'Back',
-          ),
-          title: const Text('Opening torrent...'),
-        ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading torrent files...'),
-            ],
-          ),
-        ),
-      );
+      return const CloudFilesOpeningSplash();
     }
 
     final currentMode = _getCurrentViewMode();
@@ -6153,7 +6191,7 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
                       onPressed: () => Navigator.of(context).pop(),
                       tooltip: 'Back',
                     ),
-                    title: const Text('Select Source from TorBox'),
+                    title: const Text(TorBoxFilesSource.selectSourceTitleValue),
                   )
                 : null)
           : AppBar(
@@ -6630,16 +6668,16 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
       child: CloudSegmentedTabs<_TorboxDownloadsView>(
-        segments: const [
+        segments: [
           CloudSegment(
             _TorboxDownloadsView.torrents,
-            'Torrents',
-            Icons.folder_rounded,
+            TorBoxFilesSource.torrentsSection.label,
+            TorBoxFilesSource.torrentsSection.icon,
           ),
           CloudSegment(
             _TorboxDownloadsView.webDownloads,
-            'Web Downloads',
-            Icons.link_rounded,
+            TorBoxFilesSource.webDownloadsSection.label,
+            TorBoxFilesSource.webDownloadsSection.icon,
           ),
         ],
         selected: _selectedView,

@@ -69,6 +69,16 @@ See `dev/design/REFACTOR_PLAN.md` §2 rule 1.
   rows by family singleton; calendar / tracking settings / player scrobble
   still switch. G1 / G5 own those files.
 
+### G4 · cloud file screens
+
+- **Selection bar stays on both hosts.** Extracting `_buildSelectionBar` into
+  the shared screen dropped two `app.shape.br` sites from `kShapeResidue` and
+  failed `test/theme/shape_manifest_test.dart` (out of lane). Keep the bar on
+  `RealDebridCloudFilesHost` / `TorboxCloudFilesHost` until that test lists
+  the new file (and possibly lowers the 490 floor).
+- **Premiumize / AllDebrid / PikPak not routed** onto `CloudFilesScreen`.
+  Follow-up lane; public types and sidebar ids stay frozen.
+
 ### G1 · step 2 CatalogSearchController
 
 - **`_restoreHome` does not zero failures.** `CatalogSearchController.cancel`
