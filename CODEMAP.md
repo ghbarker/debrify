@@ -108,6 +108,8 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 ## Debrify TV (keyword channels)
 - `screens/magic_tv_screen.dart` 🔴 (favourites are an unordered `Set`; literal keyword match
   `_parseKeywords`; per-provider native launch `_launch{RealDebrid,Torbox}OnAndroidTv`).
+  Default pick / overlay strings: `services/cloud/magic_tv_provider.dart`
+  (`playbackPrecedence` mapped to `real_debrid`; display stays `Torbox` / `Real Debrid`).
 - Data: `models/debrify_tv/*`, `services/debrify_tv_{repository,database,cache_service,channel_add_service}.dart`,
   `services/debrify_tv_zip_importer.dart`. Dialogs: `screens/debrify_tv/*`.
 

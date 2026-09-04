@@ -55,6 +55,7 @@ jobs:
           test/cloud_stremio_resolve_test.dart
           test/cloud_magic_tv_prepare_test.dart
           test/cloud_magic_tv_locked_links_test.dart
+          test/cloud_magic_tv_provider_test.dart
           test/cloud_unlock_plan_test.dart
           test/cloud_port_feature_test.dart
           test/download_cloud_credential_key_test.dart
@@ -71,6 +72,7 @@ jobs:
           test/cloud_stremio_resolve_test.dart
           test/cloud_magic_tv_prepare_test.dart
           test/cloud_magic_tv_locked_links_test.dart
+          test/cloud_magic_tv_provider_test.dart
           test/cloud_unlock_plan_test.dart
           test/cloud_port_feature_test.dart
           test/download_cloud_credential_key_test.dart
