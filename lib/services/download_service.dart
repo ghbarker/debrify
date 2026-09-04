@@ -3122,10 +3122,9 @@ class DownloadService {
           );
         }
         if (torrentId != null && fileId != null) {
-          final fresh = await TorboxService.requestFileDownloadLink(
-            apiKey: apiKey,
-            torrentId: torrentId,
-            fileId: fileId,
+          final fresh = await CloudProviderRegistry.instance.fileDownloadLink(
+            torrentId,
+            fileId,
           );
           if (fresh.isEmpty) return null;
           return (url: fresh, fileName: null);
@@ -3798,11 +3797,8 @@ class DownloadService {
                     );
                   }
                   debugPrint('DL TORBOX: requesting signed link');
-                  finalUrl = await TorboxService.requestFileDownloadLink(
-                    apiKey: apiKey,
-                    torrentId: torrentId,
-                    fileId: fileId,
-                  );
+                  finalUrl = await CloudProviderRegistry.instance
+                      .fileDownloadLink(torrentId, fileId);
                   debugPrint('DL TORBOX: signed link ready');
                 }
 
@@ -4290,11 +4286,8 @@ class DownloadService {
                     debugPrint('DL RETRY TORBOX ZIP: Regenerated permalink');
                   } else if (torrentId != null && fileId != null) {
                     // Re-request file download link
-                    freshUrl = await TorboxService.requestFileDownloadLink(
-                      apiKey: apiKey,
-                      torrentId: torrentId,
-                      fileId: fileId,
-                    );
+                    freshUrl = await CloudProviderRegistry.instance
+                        .fileDownloadLink(torrentId, fileId);
                     debugPrint('DL RETRY TORBOX: Got fresh download URL');
                   }
 
