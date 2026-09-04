@@ -2312,11 +2312,8 @@ class PlaylistPlayerService {
     }
 
     try {
-      final response = await TorboxService.createTorrent(
-        apiKey: apiKey,
-        magnet: 'magnet:?xt=urn:btih:$hash',
-        seed: true,
-        allowZip: true,
+      final response = await CloudProviderRegistry.instance.createMagnetTorrent(
+        'magnet:?xt=urn:btih:$hash',
         addOnlyIfCached: true,
       );
 
