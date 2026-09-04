@@ -148,9 +148,12 @@ void main() {
     expect(resumeGetters, contains('final imdbId = _currentSeriesImdbId'));
     expect(player, contains('metadataReady: _episodeMetadataReady'));
 
+    final resumeSource = File(
+      'lib/services/playback/resume_controller.dart',
+    ).readAsStringSync();
     final resume = _between(
-      player,
-      'Future<void> _maybeRestoreResume(',
+      resumeSource,
+      'Future<void> maybeRestoreResume(',
       '/// Get enhanced playback state for current content',
     );
     expect(resume, contains('hasActiveTraktEpisodeRewatch'));
