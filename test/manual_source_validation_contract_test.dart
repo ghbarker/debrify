@@ -55,14 +55,17 @@ void main() {
       'Future<void> _onPlaybackEnded()',
       'void _startTransitionOverlay()',
     );
+    final resumeSource = File(
+      'lib/services/playback/resume_controller.dart',
+    ).readAsStringSync();
     final resume = _between(
-      flutterPlayer,
-      'Future<void> _saveResume(',
-      'bool _tvAutoHideBlocked',
+      resumeSource,
+      'Future<void> saveResume(',
+      'final aspectStr =',
     );
 
     expect(ended, contains('if (_validationGateActive) return;'));
-    expect(resume, contains('_validationGateActive'));
+    expect(resume, contains('validationGateActive'));
     expect(
       flutterPlayer,
       contains('void _resumeTrackingAfterValidationGate()'),

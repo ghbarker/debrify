@@ -244,7 +244,10 @@ is an editor mirror, not the source of truth. How to add a provider:
   handlers arrowUp/Down/Left/Right; scrobble via `ScrobbleCoordinator` +
   `ScrobbleTarget`s in `lib/services/scrobble/`). Launch ctor fields:
   `lib/screens/video_player/player_launch_config.dart` (`PlayerLaunchConfig`;
-  `VideoPlayerScreen` public constructor stays). Controls overlay:
+  `VideoPlayerScreen` public constructor stays). Resume:
+  `lib/services/playback/resume_controller.dart` (`ResumeController` +
+  `ResumeContext` / `ResumeSession`; host keeps `_ResumeSession` adapter).
+  Controls overlay:
   `lib/screens/video_player/widgets/controls.dart`. Track/source sheets: `lib/screens/video_player/widgets/`.
 - Launch + native TV: `lib/services/video_player_launcher.dart` 🔴 (`_launchOnAndroidTv`, `_push`),
   `lib/services/android_tv_player_bridge.dart`, native Kotlin
