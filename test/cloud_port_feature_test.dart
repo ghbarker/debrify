@@ -44,12 +44,24 @@ void main() {
       isFalse,
     );
     expect(
+      const PremiumizeCloudProvider().supports(CloudPortFeature.checkCache),
+      isTrue,
+    );
+    expect(
+      const TorboxCloudProvider().supports(CloudPortFeature.checkCache),
+      isFalse,
+    );
+    expect(
       CloudPortFeature.forProvider(CloudProviderId.torbox),
       {
         CloudPortFeature.playlistEntry,
         CloudPortFeature.magicTvPrepare,
         CloudPortFeature.cachedHashes,
       },
+    );
+    expect(
+      CloudPortFeature.forProvider(CloudProviderId.premiumize),
+      {CloudPortFeature.magicTvPrepare, CloudPortFeature.checkCache},
     );
   });
 }

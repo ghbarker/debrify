@@ -24,7 +24,6 @@ import '../../services/cloud/cloud_provider_registry.dart';
 import '../../services/cloud/stremio_tv_resolve_gate.dart';
 import '../../services/cloud/stremio_tv_torbox_cache.dart';
 import '../../services/video_player_launcher.dart';
-import '../../services/premiumize_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/stremio_tv_debrid_fallback.dart';
 import '../../utils/series_parser.dart';
@@ -978,8 +977,9 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
 
       // For Premiumize, filter torrent sources to only cached ones
       if (_debridProvider == 'premiumize') {
-        final pmKey = await StorageService.getPremiumizeApiKey();
-        if (pmKey != null && pmKey.isNotEmpty) {
+        if (await CloudCredentials.isPlaybackConfigured(
+          CloudProviderId.premiumize,
+        )) {
           final torrentSources = playableSources
               .where((t) => t.streamType == StreamType.torrent)
               .toList();
@@ -993,10 +993,8 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
               return;
             }
             overlay.setStage(PlayLoadStage.cacheCheck);
-            final cachedResults = await PremiumizeService.checkCache(
-              pmKey,
-              torrentHashes,
-            );
+            final cachedResults = await CloudProviderRegistry.instance
+                .checkCache(torrentHashes);
             final cachedSet = <String>{};
             for (int i = 0; i < torrentHashes.length; i++) {
               if (i < cachedResults.length && cachedResults[i]) {
@@ -1286,8 +1284,9 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
 
     // Premiumize cache filter
     if (_debridProvider == 'premiumize') {
-      final pmKey = await StorageService.getPremiumizeApiKey();
-      if (pmKey != null && pmKey.isNotEmpty) {
+      if (await CloudCredentials.isPlaybackConfigured(
+        CloudProviderId.premiumize,
+      )) {
         final torrentSources = playableSources
             .where((t) => t.streamType == StreamType.torrent)
             .toList();
@@ -1296,10 +1295,8 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
             .where((h) => h.isNotEmpty)
             .toList();
         if (torrentHashes.isNotEmpty) {
-          final cachedResults = await PremiumizeService.checkCache(
-            pmKey,
-            torrentHashes,
-          );
+          final cachedResults = await CloudProviderRegistry.instance
+              .checkCache(torrentHashes);
           final cachedSet = <String>{};
           for (int i = 0; i < torrentHashes.length; i++) {
             if (i < cachedResults.length && cachedResults[i]) {
