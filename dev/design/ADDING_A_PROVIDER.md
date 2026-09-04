@@ -85,12 +85,10 @@ strings outside `lib/services/cloud/`:
 | Playlist / cloud / default picker | `lib/screens/playlist_content_view_screen.dart`, `lib/services/playlist_player_service.dart`, `lib/screens/cloud_screen.dart`, `lib/screens/settings/provider_settings_page.dart` | P2d |
 | Storage toggles / keys | `lib/services/storage_service.dart` | later G3 / P2d callers |
 | Stremio TV settings picker | `lib/screens/settings/stremio_tv_settings_page.dart` (RD/TB/PikPak only) | P2 |
-| Dead legacy search | `lib/screens/deprecated/torrent_search_screen.dart` (D0 deletes) | D0 |
 
 A new provider that must work on those surfaces still has to be wired there
 until P2 lands. Live search/play is `lib/screens/search_screen.dart` +
-`lib/services/torrent_playback_service.dart` + the registry, not the
-deprecated screen.
+`lib/services/torrent_playback_service.dart` + the registry.
 
 ---
 
@@ -210,9 +208,7 @@ Until **S1**, adding a page still touches ~6 sites.
 
 ## 9–14. Search, cache badges, Quick Play, bound sources, bulk add, post-torrent
 
-These used to be documented against a 26k `torrent_search_screen.dart`. That
-file is now `lib/screens/deprecated/torrent_search_screen.dart` (D0). Live
-paths:
+Live search/play paths:
 
 - Play/add/bind: `lib/services/torrent_playback_service.dart` → registry
   (`addMagnet`, `resolveNativeBound`, `queueUncachedMagnet`, …).

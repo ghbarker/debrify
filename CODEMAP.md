@@ -6,17 +6,14 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 > ⚠️ **Grep, don't read whole.** The files flagged 🔴 are huge. Always `grep` for the
 > symbol and Read only the surrounding ±40 lines — never read them end-to-end.
 >
-> Line counts below are `wc -l` on this checkout (`main` @ `cdad318a`). D0 may delete
-> `lib/screens/deprecated/` and `lib/widgets/catalog_browser.dart`; they still exist
-> here, so they stay in this map until that merge.
+> Line counts below are `wc -l` on this checkout (`main` after D0, `3c170323`).
 
 ## Line counts (`wc -l`)
 
 | File | Lines |
 |---|---:|
-| `lib/screens/deprecated/torrent_search_screen.dart` | 26 413 |
-| `lib/screens/search_screen.dart` | 19 071 |
-| `lib/screens/search/` parts (4 files) | 8 364 |
+| `lib/screens/search_screen.dart` | 19 070 |
+| `lib/screens/search/` parts (4 files) | 8 321 |
 | `lib/screens/video_player_screen.dart` | 16 278 |
 | `lib/screens/magic_tv_screen.dart` | 10 716 |
 | `lib/services/storage_service.dart` | 9 963 |
@@ -26,15 +23,13 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 | `lib/services/video_player_launcher.dart` | 5 769 |
 | `lib/services/torrent_playback_service.dart` | 5 340 |
 | `lib/services/remote_control/remote_command_router.dart` | 5 100 |
-| `lib/widgets/catalog_browser.dart` | 2 062 |
 
-Search `part` files: `lib/screens/search/search_sources.dart` (3 206),
+Search `part` files: `lib/screens/search/search_sources.dart` (3 163),
 `lib/screens/search/search_hero_widgets.dart` (2 261),
 `lib/screens/search/search_stage_widgets.dart` (1 699),
 `lib/screens/search/search_card_widgets.dart` (1 198).
 
-🔴 huge: `lib/screens/deprecated/torrent_search_screen.dart` (26 413, legacy — usually
-ignore) · `lib/screens/search_screen.dart` (19 071) · `lib/screens/video_player_screen.dart`
+🔴 huge: `lib/screens/search_screen.dart` (19 070) · `lib/screens/video_player_screen.dart`
 (16 278) · `lib/screens/magic_tv_screen.dart` (10 716) · `lib/services/storage_service.dart`
 (9 963) · `lib/screens/settings_screen.dart` (7 905) ·
 `lib/screens/torbox/torbox_downloads_screen.dart` (7 069) ·
@@ -199,9 +194,6 @@ lane; list them.
 - Storage provider toggles: `lib/services/storage_service.dart` (still ~15
   provider-string sites). Magnet deep-link `isMagnetConfigured` vs playback
   `isConfigured` stay different dialects on `CloudCredentials`.
-- Dead legacy screen: `lib/screens/deprecated/torrent_search_screen.dart`
-  (142 provider-string sites). Only reachable behind a hard-coded flag; D0
-  deletes it together with `lib/widgets/catalog_browser.dart`.
 
 Strangler policy lives in `dev/design/REFACTOR_PLAN.md`; `.cursor/rules/debrify-refactor.mdc`
 is an editor mirror, not the source of truth. How to add a provider:
