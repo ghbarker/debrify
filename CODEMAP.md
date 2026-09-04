@@ -17,7 +17,7 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 | `lib/screens/video_player_screen.dart` | 16 278 |
 | `lib/screens/magic_tv_screen.dart` | 10 716 |
 | `lib/services/storage_service.dart` | 8 528 |
-| `lib/screens/settings_screen.dart` | 3 107 |
+| `lib/screens/settings_screen.dart` | 2 899 |
 | `lib/screens/torbox/torbox_downloads_screen.dart` | 7 069 |
 | `lib/screens/debrid_downloads_screen.dart` | 6 444 |
 | `lib/services/video_player_launcher.dart` | 5 769 |
@@ -41,7 +41,7 @@ fall through to classic. `_buildDiscoverStage` stays on the host (Discover chrom
 
 🔴 huge: `lib/screens/search_screen.dart` (17 039) · `lib/screens/video_player_screen.dart`
 (16 278) · `lib/screens/magic_tv_screen.dart` (10 716) · `lib/services/storage_service.dart`
-(9 634) · `lib/screens/settings_screen.dart` (3 107) ·
+(8 528) · `lib/screens/settings_screen.dart` (2 899) ·
 `lib/screens/torbox/torbox_downloads_screen.dart` (7 069) ·
 `lib/screens/debrid_downloads_screen.dart` (6 444) ·
 `lib/services/video_player_launcher.dart` (5 769) ·
@@ -86,6 +86,7 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
 - `lib/widgets/onboarding/onboarding_flow.dart` — `_configLabel`
 - `lib/services/profiles/profile_restore_coordinator.dart` — `BackupSelection` literals
 - `lib/screens/settings/backup_restore_page.dart` — backup/restore UI (`backupSummaryLines` / `formatRestoreReport`; G2, moved from `settings_screen.dart`)
+- `lib/screens/settings/download_location_controller.dart` — download-location picker (`DownloadLocationController`; G2, moved from `settings_screen.dart`)
 
 `ConfigCommand` **strings** are a frozen compatibility surface. Do not rename them.
 
@@ -345,6 +346,7 @@ is an editor mirror, not the source of truth. How to add a provider:
 - Settings: `lib/screens/settings/` (+ `lib/screens/settings/home_sections_filter_page.dart` = show/hide home rows,
   `lib/screens/settings/home_page_settings_page.dart`,
   `lib/screens/settings/backup_restore_page.dart` = Data & Backup create/restore UI,
+  `lib/screens/settings/download_location_controller.dart` = download-location picker (SAF vs path),
   `lib/screens/settings/profiles_settings_page.dart` `ProfileSettingsRailActions` = Profiles card switch/add/edit). Metrics/format helpers: `lib/utils/`.
   Adding a settings page still touches ~6 sites until **S1**.
 - Storage split (**S2**, replaces remaining G3): `lib/services/storage/home_prefs.dart`

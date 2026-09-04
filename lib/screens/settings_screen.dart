@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show File, Platform, exit;
+import 'dart:io' show Platform, exit;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -9,7 +9,6 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../utils/app_version_info.dart';
-import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -89,6 +88,7 @@ import 'settings/tv_sidebar_style_page.dart';
 import 'settings/sidebar_customization_page.dart';
 import 'settings/profile_backup_flows.dart';
 import 'settings/backup_restore_page.dart';
+import 'settings/download_location_controller.dart';
 import 'settings/profile_appearance_page.dart';
 import 'settings/widgets/settings_widgets.dart';
 import 'settings/pikpak_settings_page.dart';
@@ -259,7 +259,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _desktopSidebarStyle = 'rail';
   String _textBrightness = 'bright';
   String _launchAnimation = 'trace';
-  String _downloadLocationSubtitle = 'Downloads/Debrify (default)';
+  late final DownloadLocationController _downloadLocation;
   SupportDonationConfig _supportDonation = SupportDonationConfig.empty;
   String _supportSettingsLabel = 'Support Debrify';
   String _supportSettingsSubtitle = 'Help fund development with a donation';
@@ -270,7 +270,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     AnalyticsService.screenView('settings');
     _loadSummaries();
     _loadSupportConfig();
-    _loadDownloadLocation();
+    _downloadLocation = DownloadLocationController(
+      isMounted: () => mounted,
+      setState: setState,
+      contextOf: () => context,
+    );
+    _downloadLocation.loadDownloadLocation();
     // IPTV recording exists where its engine can run (Android 10+, or pre-Q
     // with the grantable legacy storage path) — the search index must not
     // advertise it elsewhere.
@@ -875,8 +880,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       openDebrifyTv: _openDebrifyTvSettings,
       openRecordings: _openRecordings,
       openIptv: _openIptvSettings,
-      openDownloadLocation: _downloadLocationSupported
-          ? _openDownloadLocationSettings
+      openDownloadLocation: _downloadLocation.downloadLocationSupported
+          ? _downloadLocation.openDownloadLocationSettings
           : null,
       clearDownloads: _clearDownloadData,
       clearPlayback: _clearPlaybackData,
@@ -972,7 +977,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       phoneNavStyleLabel: _phoneNavStyle == 'floating'
           ? 'Floating button'
           : 'Classic bar',
-      downloadLocationSubtitle: _downloadLocationSubtitle,
+      downloadLocationSubtitle: _downloadLocation.downloadLocationSubtitle,
       updateSubtitle: _updateSubtitle,
       supportDonationLabel: _supportSettingsLabel,
       supportDonationSubtitle: _supportSettingsSubtitle,
@@ -988,7 +993,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       isPhone: _isPhone,
       showSwitchProfile:
           ProfileRuntime.mode == ProfileRuntimeMode.profileCommitted,
-      downloadLocationSupported: _downloadLocationSupported,
+      downloadLocationSupported: _downloadLocation.downloadLocationSupported,
       diagnosticExportVisible: _diagnosticExportVisible,
       showSupportDonation: _supportDonation.hasProviders,
       iptvAppearanceSearchable: _iptvAppearanceSearchable,
@@ -1718,220 +1723,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // Android uses SAF; Windows/Linux use a plain picked path. macOS is
-  // deliberately excluded: the sandbox grants read-only user-selected access,
-  // so a writable custom folder needs security-scoped bookmarks (own feature).
-  bool get _downloadLocationSupported =>
-      !kIsWeb && (Platform.isAndroid || Platform.isWindows || Platform.isLinux);
-
-  bool get _downloadLocationUsesSaf => !kIsWeb && Platform.isAndroid;
-
-  String get _defaultDownloadLocationLabel {
-    if (_downloadLocationUsesSaf || Platform.isWindows) {
-      return 'Downloads/Debrify (default)';
-    }
-    // Linux: getDownloadsDirectory isn't used there — the app writes under
-    // its documents dir (see DownloadService._appDownloadsSubdir fallback).
-    return 'App folder (default)';
-  }
-
-  Future<void> _loadDownloadLocation() async {
-    if (!_downloadLocationSupported) return;
-    final String? name = _downloadLocationUsesSaf
-        ? await StorageService.getDownloadTreeDisplayName()
-        : await StorageService.getDownloadDirPath();
-    if (!mounted) return;
-    setState(() {
-      _downloadLocationSubtitle = name == null
-          ? _defaultDownloadLocationLabel
-          : 'Custom: $name';
-    });
-  }
-
-  Future<void> _openDownloadLocationSettings() async {
-    final String? currentTree = _downloadLocationUsesSaf
-        ? await StorageService.getDownloadTreeUri()
-        : await StorageService.getDownloadDirPath();
-    if (!mounted) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppThemeScope.of(context).settings.sheetBg,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 44,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF334155),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-              const SizedBox(height: 8),
-              ListTile(
-                leading: const Icon(Icons.folder_rounded),
-                title: const Text('Download location'),
-                subtitle: Text(_downloadLocationSubtitle),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                autofocus: true,
-                leading: const Icon(Icons.drive_folder_upload_rounded),
-                title: const Text('Choose folder…'),
-                subtitle: Text(
-                  _downloadLocationUsesSaf
-                      ? 'Pick any folder, including an SD card. New downloads go there.'
-                      : 'Pick any folder, including another drive. New downloads go there.',
-                ),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _chooseDownloadFolder();
-                },
-              ),
-              if (currentTree != null)
-                ListTile(
-                  leading: const Icon(Icons.restart_alt_rounded),
-                  title: const Text('Reset to default'),
-                  subtitle: Text(
-                    'Save to ${_defaultDownloadLocationLabel.replaceAll(' (default)', '')} again',
-                  ),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _resetDownloadFolder();
-                  },
-                ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _chooseDownloadFolder() async {
-    if (!_downloadLocationUsesSaf) {
-      await _chooseDownloadFolderDesktop();
-      return;
-    }
-    final res = await AndroidNativeDownloader.pickDownloadDirectory();
-    if (res == null) return; // user backed out of the picker
-    final newTree = (res['treeUri'] ?? '').toString();
-    final name = (res['displayName'] ?? 'Custom folder').toString();
-    if (newTree.isEmpty) return;
-    final old = await StorageService.getDownloadTreeUri();
-    if (old != null && old.isNotEmpty && old != newTree) {
-      // Release the previous grant — persisted-permission slots are limited.
-      await AndroidNativeDownloader.releaseDownloadDirectory(old);
-    }
-    await StorageService.setDownloadTreeUri(newTree, name);
-    await _loadDownloadLocation();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('New downloads will be saved to "$name"')),
-    );
-  }
-
-  /// Windows/Linux: a picked folder is a plain path — no grants to manage,
-  /// but verify it's writable before persisting so the pref can't be born
-  /// pointing at a read-only location.
-  Future<void> _chooseDownloadFolderDesktop() async {
-    String? dir;
-    try {
-      dir = await FilePicker.platform.getDirectoryPath(
-        dialogTitle: 'Choose download folder',
-      );
-    } catch (e) {
-      // file_picker shells out to zenity/qarma/kdialog on Linux and throws
-      // when none is installed — surface it instead of failing silently.
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Couldn't open a folder picker on this system (a dialog tool like zenity may be missing).",
-          ),
-        ),
-      );
-      return;
-    }
-    if (dir == null || dir.trim().isEmpty) return; // user backed out
-    // Normalize (also drops any trailing separator, so a drive-root pick
-    // like "C:\" can't render doubled separators downstream).
-    dir = path.normalize(dir.trim());
-    // UNC network shares break background_downloader's task construction
-    // (its Task constructor strips the leading backslash) — refuse rather
-    // than accept a folder downloads can't actually reach.
-    if (Platform.isWindows && dir.startsWith(r'\\')) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Network shares aren\'t supported yet — map the share to a drive letter or pick a local folder.',
-          ),
-        ),
-      );
-      return;
-    }
-    bool writable = false;
-    try {
-      final probe = File(
-        path.join(
-          dir,
-          '.debrify_write_probe_${DateTime.now().millisecondsSinceEpoch}',
-        ),
-      );
-      await probe.writeAsString('probe', flush: true);
-      // Write success alone proves writability; delete is best-effort (a
-      // Windows AV/indexer lock on the fresh file must not fail the pick).
-      try {
-        await probe.delete();
-      } catch (_) {}
-      writable = true;
-    } catch (_) {}
-    if (!writable) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("That folder isn't writable — pick another one."),
-        ),
-      );
-      return;
-    }
-    await StorageService.setDownloadDirPath(dir);
-    await _loadDownloadLocation();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('New downloads will be saved to "$dir"')),
-    );
-  }
-
-  Future<void> _resetDownloadFolder() async {
-    if (_downloadLocationUsesSaf) {
-      final old = await StorageService.getDownloadTreeUri();
-      if (old != null && old.isNotEmpty) {
-        await AndroidNativeDownloader.releaseDownloadDirectory(old);
-      }
-      await StorageService.clearDownloadTreeUri();
-    } else {
-      await StorageService.clearDownloadDirPath();
-    }
-    await _loadDownloadLocation();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Downloads will be saved to ${_defaultDownloadLocationLabel.replaceAll(' (default)', '')}',
-        ),
-      ),
-    );
-  }
-
+  // Download location lives on DownloadLocationController (G2).
   Future<void> _clearDownloadData() async {
     final confirmed = await showSettingsDialog<bool>(
       context: context,

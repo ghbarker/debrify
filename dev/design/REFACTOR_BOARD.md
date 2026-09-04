@@ -57,7 +57,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | S2-1 · stremio/social/TV prefs | merged | `refactor/s2-1-stremio-social-tv-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-0 | **#77.** Leaves −531. Prefixes `engine_tv_` in `byKey`. |
 | S2-2 · provider credential prefs | merged | `refactor/s2-2-provider-credential-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-1 | **#82.** Leaves −575. Named store 971. CloudSecretPrefs/MDBList skipped. |
 | S2-3 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-2 | Sequential. Target ≤ 2 800. S2-3 = `player_prefs` + `iptv_prefs`. |
-| G2 · under 3 000 | queued | — | — | `settings_screen.dart` | when free | #63 left the file at 3 107; PHASE2 target ≤ 3 000. |
+| G2 · under 3 000 | review | `refactor/g2-download-location` | worker | `settings_screen.dart` [download-location hunks], new `lib/screens/settings/download_location_controller.dart`, `test/download_location_pin_test.dart` | — | Pin + origin-diff. `settings_screen.dart` 3 107 → 2 899 (−208). SAF vs path, Linux `App folder (default)`, macOS excluded. Host keeps a controller field + three bindings (debt). `_clearDownloadData` stayed on the host. |
 | Q1 · layering enforcement | queued | — | — | `tool/check_layering.dart`, `test.yml` | gate 2 | — |
 | Q2 · shim + comment sweep | queued | — | — | per area, assigned at gate 2 | gate 2 | — |
 | Q3 · `.cursor` policy | queued | — | — | `.cursor/**`, `dev/design/ENGINEERING_RULES.md` | gate 2 | PR #56 (Qwen helper) held until Phase 3; it edits `.cursor/**`. |
