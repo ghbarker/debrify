@@ -277,12 +277,13 @@ is an editor mirror, not the source of truth. How to add a provider:
   `lib/services/home_collection_rows.dart` (`HomeCollectionSection`), browser
   `lib/screens/collections/collection_folder_screen.dart` (+ `lib/widgets/collections/rail_see_all_pill.dart`),
   settings `lib/screens/settings/collections_settings_page.dart` (+ `lib/widgets/text_prompt_dialog.dart`).
-  Board wiring lives in `lib/screens/search_screen.dart` (`_buildCollectionSections`, `_openCollectionFolder`,
-  `_openCollectionScreen`). Docs: `docs/collections.md`.
+  Board wiring lives in `lib/screens/search_screen.dart` (`_openCollectionFolder`,
+  `_openCollectionScreen`); collection row assembly is `HomeBoardController.buildCollectionSections`. Docs: `docs/collections.md`.
 - Hide watched (Settings › Tracking): `lib/services/hide_watched_prefs.dart` (sync flag),
   `lib/services/watched_filter.dart` (predicate over `WatchedStatusService`),
   `lib/services/filtered_catalog_pager.dart` (`fetchFilteredPage` top-up paging). Wired in
-  `lib/screens/search_screen.dart` (`_fetchBoardBatch`, `_loadMoreRow`, catalog search, hero source),
+  `lib/screens/search/home_board_controller.dart` (`fetchBoardBatch`, `loadMoreRow`, hero source)
+  plus catalog search still in `lib/screens/search_screen.dart`,
   `lib/screens/see_all/catalog_see_all_screen.dart`, `lib/services/home_list_rows.dart`, Trakt/MDBList See-All.
 - Stream badges (Nuvio `badges.json` rulesets → chips on source rows): `lib/models/stream_badge_rules.dart`,
   `lib/services/stream_badge_matcher.dart`, `lib/services/stream_badges_service.dart`, `lib/widgets/stream_badge_strip.dart`,
