@@ -602,6 +602,7 @@ class FavArtCell extends StatelessWidget {
   final Widget child;
 
   const FavArtCell({
+    super.key,
     required this.isTelevision,
     required this.column,
     required this.rowNodes,
@@ -710,6 +711,7 @@ class ArtPoster extends StatefulWidget {
   final VoidCallback? onFocused;
 
   const ArtPoster({
+    super.key,
     required this.imageUrl,
     required this.title,
     this.showTitle = true,
