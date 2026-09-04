@@ -216,7 +216,11 @@ void main() {
       find.byKey(const ValueKey('self-profile-change-pin')),
     );
     await tester.tap(find.byKey(const ValueKey('self-profile-change-pin')));
-    await settle(tester);
+    // PIN KDF + sqflite under a busy CI shard: do not use a fixed settle.
+    await waitFor(
+      tester,
+      () => find.text('Save this recovery code').evaluate().isNotEmpty,
+    );
 
     expect(find.text('Save this recovery code'), findsOneWidget);
     ProfilePinRecord? record;

@@ -8,6 +8,10 @@ not the cloud port.
 After `apt-get install libsqlite3-dev`, previously failing `test/iptv_catalog_db_test.dart`
 and `test/backup_encryption_test.dart` pass. CI installs the same library.
 
+The PIN recovery-dialog test in `self_profile_settings_page_test.dart`
+polls for the dialog (same pattern as identity save) because a fixed
+settle loses under a busy GitHub ubuntu shard.
+
 **New failures outside sqlite/golden environment issues are regressions.**
 
 CI (`.github/workflows/test.yml`) installs `libsqlite3-dev`, runs the
