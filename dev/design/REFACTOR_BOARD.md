@@ -48,7 +48,8 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | G1'-2 … G1'-9 | queued | — | — | `search_screen.dart` | G1'-1 | Sequential. Target ≤ 7 500; no `extension on _SearchScreenState`. |
 | V1-0 · PlayerLaunchConfig | merged | `refactor/v1-0-launch-config` | worker | `video_player_screen.dart` [ctor + `widget.*` reads], `lib/screens/video_player/player_launch_config.dart` | — | **#75.** Value object. Leaves +3 ≈ 0. Unblocks V1-1…10. |
 | V1-1 · resume controller | review | `refactor/v1-1-resume-controller` | worker | `video_player_screen.dart` [resume hunks], `lib/services/playback/resume_controller.dart` | V1-0 | **#79.** Leaves 666. Pin predates move. Adapter still `widget.*`. |
-| V1-2 … V1-10 | queued | — | — | `video_player_screen.dart` | V1-1 | Sequential. Target ≤ 9 500. V1-9 folds episode-progress into ScrobbleCoordinator. |
+| V1-2 · Identify-title sheet | review | `refactor/v1-2-identify-title-sheet` | worker | `video_player_screen.dart` [identify-title hunks], `lib/widgets/player/identify_title_sheet.dart` | V1-1 (#79) | Extract sheet + filter/query/tile + season dialog. Seam `StremioMeta?`. Leaves 527. Pin predates move. |
+| V1-3 … V1-10 | queued | — | — | `video_player_screen.dart` | V1-2 | Sequential. Target ≤ 9 500. Do not start V1-3 (subtitles) until V1-2 merges. |
 | M1-0 · WatchSession | review | `refactor/m1-0-watch-session` | worker | `magic_tv_screen.dart` [session fields], `lib/screens/debrify_tv/watch_session.dart` | P1b | **#81.** Leaves +12 ≈ 0. |
 | M1-1 … M1-6 | queued | — | — | `magic_tv_screen.dart` | M1-0 | Sequential. Target ≤ 4 500. |
 | S2-0 · key registry + façade | merged | `refactor/s2-0-key-registry` | worker | `storage_key_ownership.dart` | — | **#73.** `byKey` completed (274). Façade rule documented. Leaves 0. **Did not extract PlayerPrefs.** |
