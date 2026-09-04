@@ -222,7 +222,8 @@ is an editor mirror, not the source of truth. How to add a provider:
 ## Players
 - In-app player: `lib/screens/video_player_screen.dart` 🔴 (subtitles via media_kit
   `subtitleViewConfiguration`; `_restoreTrackPreferences`/`_applyDefault*Language`; per-key D-pad
-  handlers arrowUp/Down/Left/Right; duplicated Trakt+Simkl scrobble state machines). Controls overlay:
+  handlers arrowUp/Down/Left/Right; scrobble via `ScrobbleCoordinator` +
+  `ScrobbleTarget`s in `lib/services/scrobble/`). Controls overlay:
   `lib/screens/video_player/widgets/controls.dart`. Track/source sheets: `lib/screens/video_player/widgets/`.
 - Launch + native TV: `lib/services/video_player_launcher.dart` 🔴 (`_launchOnAndroidTv`, `_push`),
   `lib/services/android_tv_player_bridge.dart`, native Kotlin
@@ -266,7 +267,10 @@ is an editor mirror, not the source of truth. How to add a provider:
   iterates the registry. Home CW rows (`search_screen.dart`, G1) and
   `trakt_calendar_screen.dart` still call family singletons.
 - Settings: `lib/screens/settings/trakt_settings_page.dart`, `lib/screens/settings/simkl_settings_page.dart`.
-  Home rows + scrobble wiring live in `lib/screens/search_screen.dart` + both players. Discover source dropdown:
+  Home rows live in `lib/screens/search_screen.dart`. In-app player scrobble
+  machines live in `lib/services/scrobble/` (`ScrobbleCoordinator`,
+  `TraktScrobbleTarget`, `SimklScrobbleTarget`, `MdblistScrobbleSessionTarget`
+  wrapping `MdblistScrobbleSession`). Discover source dropdown:
   `lib/widgets/search_source_dropdown.dart`,
   `lib/widgets/trakt/trakt_results_view.dart`.
 
