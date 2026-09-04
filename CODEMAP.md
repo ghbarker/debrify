@@ -90,7 +90,10 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   Premiumize transfer+zip URL is `createTransferZip` (not TorBox zipPermalink).
   Not-cached keep-downloading is `queueUncachedMagnet` (TorBox
   `addOnlyIfCached: false`, Premiumize `createCloudTransfer`) — not
-  playback `addMagnet`.
+  playback `addMagnet`. Magnet share-sheet TorBox `createtorrent` is
+  `createMagnetTorrent` (raw payload, cached then uncached dialog) — not
+  `addMagnet` / not `queueUncachedMagnet`. Share-sheet Premiumize add uses
+  `createCloudTransfer`; `isCachedStrict` and the not-cached dialog stay.
   Chunk HTTP is swallowed by `TorboxService.checkCachedTorrents`
   (partial or empty set) and by `PremiumizeService.checkCache` (slots stay
   `false`); those calls do not throw.

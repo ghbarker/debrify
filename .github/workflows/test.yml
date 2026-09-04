@@ -64,6 +64,7 @@ jobs:
           test/cloud_premiumize_transfer_test.dart
           test/cloud_premiumize_zip_test.dart
           test/cloud_queue_uncached_test.dart
+          test/cloud_magnet_torrent_test.dart
           test/cloud_magic_tv_prepare_test.dart
           test/cloud_magic_tv_locked_links_test.dart
           test/cloud_magic_tv_provider_test.dart
@@ -92,6 +93,7 @@ jobs:
           test/cloud_premiumize_transfer_test.dart
           test/cloud_premiumize_zip_test.dart
           test/cloud_queue_uncached_test.dart
+          test/cloud_magnet_torrent_test.dart
           test/cloud_magic_tv_prepare_test.dart
           test/cloud_magic_tv_locked_links_test.dart
           test/cloud_magic_tv_provider_test.dart

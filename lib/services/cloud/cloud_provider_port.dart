@@ -108,6 +108,16 @@ abstract class CloudProviderPort {
   /// Not playback [addMagnet] (cached-only). Unsupported adapters throw
   /// [CloudUnsupported].
   Future<void> queueUncachedMagnet(String magnet);
+
+  /// Magnet share-sheet `createtorrent`. Returns the raw payload so the
+  /// sheet can keep DOWNLOAD_NOT_CACHED / error-string dialect.
+  /// Not playback [addMagnet]. Not TPS [queueUncachedMagnet] (void).
+  /// Missing key throws [CloudMissingApiKey].
+  /// Unsupported adapters throw [CloudUnsupported].
+  Future<Map<String, dynamic>> createMagnetTorrent(
+    String magnet, {
+    required bool addOnlyIfCached,
+  });
 }
 
 /// Shared [supports] for production adapters (`implements` would re-require it).
@@ -151,5 +161,13 @@ abstract class CloudProviderAdapter implements CloudProviderPort {
   @override
   Future<void> queueUncachedMagnet(String magnet) {
     throw CloudUnsupported(id, CloudPortFeature.queueUncached);
+  }
+
+  @override
+  Future<Map<String, dynamic>> createMagnetTorrent(
+    String magnet, {
+    required bool addOnlyIfCached,
+  }) {
+    throw CloudUnsupported(id, CloudPortFeature.magnetTorrent);
   }
 }

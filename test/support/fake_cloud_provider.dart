@@ -209,4 +209,23 @@ class FakeCloudProvider implements CloudProviderPort {
       throw CloudUnsupported(id, CloudPortFeature.queueUncached);
     }
   }
+
+  int createMagnetTorrentCount = 0;
+  bool? lastAddOnlyIfCached;
+  Map<String, dynamic> magnetTorrentResult = const {'success': true};
+
+  @override
+  Future<Map<String, dynamic>> createMagnetTorrent(
+    String magnet, {
+    required bool addOnlyIfCached,
+  }) async {
+    createMagnetTorrentCount++;
+    lastTransferMagnet = magnet;
+    lastAddOnlyIfCached = addOnlyIfCached;
+    if (error != null) throw error!;
+    if (!supports(CloudPortFeature.magnetTorrent)) {
+      throw CloudUnsupported(id, CloudPortFeature.magnetTorrent);
+    }
+    return magnetTorrentResult;
+  }
 }
