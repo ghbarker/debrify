@@ -648,3 +648,81 @@ class _ProfileRosterTileState extends State<_ProfileRosterTile> {
     );
   }
 }
+
+/// Settings-rail profile actions (the Profiles card rows). The hub page
+/// already has its own switch/create/edit; these skip the hub, matching the
+/// settings-screen originals. [onChanged] replaces the screen's `setState`.
+class ProfileSettingsRailActions {
+  const ProfileSettingsRailActions(this.context, {this.onChanged});
+
+  final BuildContext context;
+  final VoidCallback? onChanged;
+
+  /// Opens the Profiles hub (roster + switch + create). The bare
+  /// switch-picker call moved onto the hub itself.
+  Future<void> openHub() async {
+    await pushSettingsPage(context, const ProfilesSettingsPage());
+  }
+
+  /// The admin check the hub applies before its Create/Manage rows — the
+  /// Profiles card's action rows share it, but answer with a spoken refusal
+  /// instead of hiding: a card whose rows come and go with who is signed in
+  /// reads as broken, not as policy.
+  Future<bool> mayManageProfiles() async {
+    final registry = ProfileBootstrap.registry;
+    final authorization = await ProfileAuthorizationContext.capture(registry);
+    UserProfile? actor;
+    try {
+      actor = await authorization.validate(registry);
+    } catch (_) {
+      actor = null;
+    }
+    return actor != null &&
+        actor.role == UserProfileRole.admin &&
+        actor.allows(ProfileFeature.manageProfiles);
+  }
+
+  void profilesDenied(String action) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Only an admin can $action profiles.')),
+    );
+  }
+
+  /// The Profiles card's "Add a profile" row — the hub's create flow without
+  /// the detour through the hub.
+  Future<void> addProfile() async {
+    if (!await mayManageProfiles()) {
+      profilesDenied('add');
+      return;
+    }
+    if (!context.mounted) return;
+    await ProfileSetupFlow.show(context);
+    if (!context.mounted) return;
+    onChanged?.call();
+  }
+
+  /// The Profiles card's "Edit this profile" row — straight into the ACTIVE
+  /// profile's editor, matching the hub's active-card Edit button.
+  Future<void> editActiveProfile() async {
+    final registry = ProfileBootstrap.registry;
+    if (!await mayManageProfiles()) {
+      profilesDenied('edit');
+      return;
+    }
+    final profiles = await registry.listProfiles();
+    final activeId = ProfileRuntime.capture().profileId;
+    UserProfile? active;
+    for (final profile in profiles) {
+      if (profile.id == activeId) {
+        active = profile;
+        break;
+      }
+    }
+    if (active == null) return;
+    if (!context.mounted) return;
+    await ProfileSetupFlow.show(context, profile: active);
+    if (!context.mounted) return;
+    onChanged?.call();
+  }
+}
