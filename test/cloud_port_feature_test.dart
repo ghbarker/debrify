@@ -52,11 +52,20 @@ void main() {
       isFalse,
     );
     expect(
+      const TorboxCloudProvider().supports(CloudPortFeature.zipPermalink),
+      isTrue,
+    );
+    expect(
+      const PremiumizeCloudProvider().supports(CloudPortFeature.zipPermalink),
+      isFalse,
+    );
+    expect(
       CloudPortFeature.forProvider(CloudProviderId.torbox),
       {
         CloudPortFeature.playlistEntry,
         CloudPortFeature.magicTvPrepare,
         CloudPortFeature.cachedHashes,
+        CloudPortFeature.zipPermalink,
       },
     );
     expect(

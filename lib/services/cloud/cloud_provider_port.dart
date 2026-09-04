@@ -79,6 +79,12 @@ abstract class CloudProviderPort {
   /// Missing key throws [CloudMissingApiKey]. Not [checkCachedHashes].
   /// Unsupported adapters throw [CloudUnsupported].
   Future<List<bool>> checkCache(List<String> items);
+
+  /// TorBox whole-torrent ZIP permalink (`zip_link=true`). Sync URL builder
+  /// behind a Future. Missing key throws [CloudMissingApiKey]. Not the
+  /// web-download ZIP permalink. Not Premiumize transfer+zip.
+  /// Unsupported adapters throw [CloudUnsupported].
+  Future<String> zipPermalink(int torrentId);
 }
 
 /// Shared [supports] for production adapters (`implements` would re-require it).
@@ -97,5 +103,10 @@ abstract class CloudProviderAdapter implements CloudProviderPort {
   @override
   Future<List<bool>> checkCache(List<String> items) {
     throw CloudUnsupported(id, CloudPortFeature.checkCache);
+  }
+
+  @override
+  Future<String> zipPermalink(int torrentId) {
+    throw CloudUnsupported(id, CloudPortFeature.zipPermalink);
   }
 }

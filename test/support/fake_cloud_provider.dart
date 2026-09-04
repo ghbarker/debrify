@@ -1,5 +1,6 @@
 import 'package:debrify/models/torrent.dart';
 import 'package:debrify/screens/video_player/models/playlist_entry.dart';
+import 'package:debrify/services/cloud/cloud_exceptions.dart';
 import 'package:debrify/services/cloud/cloud_playback_result.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
 import 'package:debrify/services/cloud/cloud_provider_port.dart';
@@ -21,6 +22,7 @@ class FakeCloudProvider implements CloudProviderPort {
     this.lockedLinksResult,
     this.cachedHashes = const <String>{},
     this.cacheFlags = const <bool>[],
+    this.zipPermalinkUrl,
     this.error,
   });
 
@@ -40,6 +42,7 @@ class FakeCloudProvider implements CloudProviderPort {
   MagicTvLockedBatch? lockedLinksResult;
   Set<String> cachedHashes;
   List<bool> cacheFlags;
+  String? zipPermalinkUrl;
   Object? error;
 
   int addCount = 0;
@@ -51,6 +54,7 @@ class FakeCloudProvider implements CloudProviderPort {
   int lockedLinksCount = 0;
   int cachedHashesCount = 0;
   int checkCacheCount = 0;
+  int zipPermalinkCount = 0;
   String? lastMagnet;
   SeriesSource? lastBoundSource;
   PlaylistEntry? lastPlaylistEntry;
@@ -143,5 +147,13 @@ class FakeCloudProvider implements CloudProviderPort {
     lastCacheQuery = items;
     if (error != null) throw error!;
     return cacheFlags;
+  }
+
+  @override
+  Future<String> zipPermalink(int torrentId) async {
+    zipPermalinkCount++;
+    if (error != null) throw error!;
+    if (zipPermalinkUrl != null) return zipPermalinkUrl!;
+    throw CloudUnsupported(id, CloudPortFeature.zipPermalink);
   }
 }

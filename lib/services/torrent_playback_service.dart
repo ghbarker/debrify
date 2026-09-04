@@ -4995,7 +4995,7 @@ class TorrentPlaybackService {
   ) async {
     final apiKey = (await StorageService.getTorboxApiKey()) ?? '';
     if (apiKey.isEmpty) return;
-    final zipLink = TorboxService.createZipPermalink(apiKey, torrentId);
+    final zipLink = await CloudProviderRegistry.instance.zipPermalink(torrentId);
     await Clipboard.setData(ClipboardData(text: zipLink));
     if (context.mounted) {
       _snack(context, 'ZIP download link copied to clipboard!');
@@ -5012,7 +5012,7 @@ class TorrentPlaybackService {
   ) async {
     final apiKey = (await StorageService.getTorboxApiKey()) ?? '';
     if (apiKey.isEmpty) return;
-    final zipLink = TorboxService.createZipPermalink(apiKey, torrentId);
+    final zipLink = await CloudProviderRegistry.instance.zipPermalink(torrentId);
     try {
       await DownloadService.instance.enqueueDownload(
         credentialKey: 'torbox_api_key',

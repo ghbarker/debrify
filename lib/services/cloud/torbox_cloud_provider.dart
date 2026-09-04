@@ -501,6 +501,15 @@ class TorboxCloudProvider extends CloudProviderAdapter {
         .toSet();
   }
 
+  @override
+  Future<String> zipPermalink(int torrentId) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const CloudMissingApiKey('Missing TorBox API key');
+    }
+    return TorboxService.createZipPermalink(apiKey, torrentId);
+  }
+
   static int? _asIntMapValue(dynamic data, String key) {
     if (data is Map<String, dynamic>) {
       final value = data[key];
