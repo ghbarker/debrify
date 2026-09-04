@@ -488,10 +488,9 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
     }
 
     try {
-      final link = await TorboxService.requestFileDownloadLink(
-        apiKey: key,
-        torrentId: torrent.id,
-        fileId: file.id,
+      final link = await CloudProviderRegistry.instance.fileDownloadLink(
+        torrent.id,
+        file.id,
       );
       if (!mounted) return;
       await Clipboard.setData(ClipboardData(text: link));
@@ -2417,10 +2416,9 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
     required TorboxTorrent torrent,
     required TorboxFile file,
   }) async {
-    final url = await TorboxService.requestFileDownloadLink(
-      apiKey: apiKey,
-      torrentId: torrent.id,
-      fileId: file.id,
+    final url = await CloudProviderRegistry.instance.fileDownloadLink(
+      torrent.id,
+      file.id,
     );
     if (url.isEmpty) {
       throw Exception('Torbox returned an empty stream URL');
@@ -2973,11 +2971,8 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
           );
 
           // Request download link
-          final downloadUrl = await TorboxService.requestFileDownloadLink(
-            apiKey: key,
-            torrentId: torrent.id,
-            fileId: file.id,
-          );
+          final downloadUrl = await CloudProviderRegistry.instance
+              .fileDownloadLink(torrent.id, file.id);
 
           if (downloadUrl.isEmpty) {
             debugPrint(

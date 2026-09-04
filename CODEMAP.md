@@ -88,6 +88,9 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   enqueue → throw, retry → skip). TPS still skips empty key before the call.
   TorBox downloads screen torrent ZIP copy / enqueue uses `zipPermalink` and
   keeps its empty-key snacks (`Add Torbox API key` vs `API key not available`).
+  TorBox downloads torrent file copy / stream / batch enqueue uses
+  `fileDownloadLink` (empty stream URL still throws; batch empty URL still
+  continues).
   TorBox torrent file `requestdl` is `fileDownloadLink` (not ZIP, not
   web-download file, not playlist/player unlock dialects). Download-service
   torrent file refresh / enqueue / retry uses that method with the same
