@@ -1346,11 +1346,8 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
     if (videoFiles.length == 1) {
       final file = videoFiles.first;
       try {
-        final streamUrl = await TorboxService.requestWebDownloadFileLink(
-          apiKey: key,
-          webId: webDownload.id,
-          fileId: file.id,
-        );
+        final streamUrl = await CloudProviderRegistry.instance
+            .webFileDownloadLink(webDownload.id, file.id);
         if (!mounted) return;
         await VideoPlayerLauncher.push(
           context,
@@ -1394,12 +1391,8 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
                   onTap: () async {
                     Navigator.of(dialogContext).pop();
                     try {
-                      final streamUrl =
-                          await TorboxService.requestWebDownloadFileLink(
-                            apiKey: key,
-                            webId: webDownload.id,
-                            fileId: file.id,
-                          );
+                      final streamUrl = await CloudProviderRegistry.instance
+                          .webFileDownloadLink(webDownload.id, file.id);
                       if (!mounted) return;
                       await VideoPlayerLauncher.push(
                         context,
@@ -4305,10 +4298,9 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
           file: torboxFile,
         );
       } else {
-        streamUrl = await TorboxService.requestWebDownloadFileLink(
-          apiKey: key,
-          webId: _currentWebDownload!.id,
-          fileId: torboxFile.id,
+        streamUrl = await CloudProviderRegistry.instance.webFileDownloadLink(
+          _currentWebDownload!.id,
+          torboxFile.id,
         );
       }
 
@@ -4902,10 +4894,9 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
       try {
         String streamUrl;
         if (_currentWebDownload != null) {
-          streamUrl = await TorboxService.requestWebDownloadFileLink(
-            apiKey: key,
-            webId: _currentWebDownload!.id,
-            fileId: file.id,
+          streamUrl = await CloudProviderRegistry.instance.webFileDownloadLink(
+            _currentWebDownload!.id,
+            file.id,
           );
         } else {
           streamUrl = await _requestTorboxStreamUrl(
@@ -4988,10 +4979,9 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
     String initialUrl = '';
     try {
       if (_currentWebDownload != null) {
-        initialUrl = await TorboxService.requestWebDownloadFileLink(
-          apiKey: key,
-          webId: _currentWebDownload!.id,
-          fileId: sortedCandidates[startIndex].file.id,
+        initialUrl = await CloudProviderRegistry.instance.webFileDownloadLink(
+          _currentWebDownload!.id,
+          sortedCandidates[startIndex].file.id,
         );
       } else {
         initialUrl = await _requestTorboxStreamUrl(

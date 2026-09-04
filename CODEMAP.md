@@ -93,7 +93,9 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   continues). TorBox downloads web ZIP enqueue / multi-file copy uses
   `webZipPermalink` (empty enqueue URL still snacks; copy still has no
   empty-URL check). TorBox downloads web file copy uses `webFileDownloadLink`
-  and still snacks `_formatTorboxError`.
+  and still snacks `_formatTorboxError`. TorBox downloads web file play /
+  folder play / playlist start URL uses the same method (play snacks vs
+  playlist-prepare snack-and-return).
   TorBox torrent file `requestdl` is `fileDownloadLink` (not ZIP, not
   web-download file, not playlist/player unlock dialects). Download-service
   torrent file refresh / enqueue / retry uses that method with the same
