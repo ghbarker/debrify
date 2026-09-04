@@ -80,6 +80,7 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   TorBox whole-torrent ZIP permalink is `zipPermalink` (not web-download ZIP,
   not Premiumize transfer+zip). Premiumize `transfer/create` is
   `createCloudTransfer` (not ZIP generate, not TorBox createTorrent).
+  Premiumize transfer+zip URL is `createTransferZip` (not TorBox zipPermalink).
   Chunk HTTP is swallowed by `TorboxService.checkCachedTorrents`
   (partial or empty set) and by `PremiumizeService.checkCache` (slots stay
   `false`); those calls do not throw.

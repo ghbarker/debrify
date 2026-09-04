@@ -90,6 +90,11 @@ abstract class CloudProviderPort {
   /// Not [createTransferZip] (wait + zip URL). Not TorBox `createTorrent`.
   /// Unsupported adapters throw [CloudUnsupported].
   Future<void> createCloudTransfer(String magnet);
+
+  /// Premiumize transfer + poll + zip URL. Missing key throws
+  /// [CloudMissingApiKey]. Not [createCloudTransfer] (no wait). Not TorBox
+  /// [zipPermalink]. Unsupported adapters throw [CloudUnsupported].
+  Future<String> createTransferZip(String magnet);
 }
 
 /// Shared [supports] for production adapters (`implements` would re-require it).
@@ -118,5 +123,10 @@ abstract class CloudProviderAdapter implements CloudProviderPort {
   @override
   Future<void> createCloudTransfer(String magnet) {
     throw CloudUnsupported(id, CloudPortFeature.cloudTransfer);
+  }
+
+  @override
+  Future<String> createTransferZip(String magnet) {
+    throw CloudUnsupported(id, CloudPortFeature.transferZip);
   }
 }
