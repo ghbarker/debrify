@@ -119,6 +119,19 @@ Phase 2 extractions also follow `dev/design/REFACTOR_PLAN_PHASE2.md` (binding as
 - **Premiumize / AllDebrid / PikPak not routed** onto `CloudFilesScreen`.
   Follow-up lane; public types and sidebar ids stay frozen.
 
+### G1'-2 · source edit/add dialogs
+
+- **Movie chrome is `item.type == 'movie'` only.** Any other type (series,
+  tv, …) gets series chrome: reorder, "Add Source", "Series Sources (N)",
+  Remove All when count > 1. Keep: origin predicate.
+- **Empty `initial` or null IMDb returns** from the edit dialog without
+  opening the add picker.
+- **Reorder `setSources` is not awaited.** Same as origin
+  `ReorderableListView.onReorder`.
+- **Local pick uses `item.type == 'series'`** for folder vs file (not the
+  movie-chrome predicate). A `tv` title would take the movie-file picker
+  and then `setSources` replace. Keep: two different type checks.
+
 ### G1 · step 5 TV stages
 
 - **Empty Spotlight still `break`s to classic.** If every spotlight shelf
