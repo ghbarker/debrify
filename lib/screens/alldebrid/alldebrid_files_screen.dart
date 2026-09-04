@@ -24,6 +24,8 @@ import '../../widgets/cloud/cloud_theme.dart';
 import '../../widgets/file_selection_dialog.dart';
 import '../../widgets/tv_text_field.dart';
 import '../../utils/tv_keys.dart';
+import '../cloud_files/alldebrid_files_source.dart';
+import '../cloud_files/cloud_files_screen.dart';
 
 /// The two root views, switched via the segmented tabs under the toolbar:
 /// the magnet "cloud" library, and the saved direct-download links library
@@ -34,7 +36,10 @@ enum _AdView { torrents, webDownloads }
 /// magnets (each with files), so this is a two-level browser (magnet list →
 /// the selected magnet's files), built on the shared cloud widgets
 /// (CloudFileRow rows, CloudSegmentedTabs view switcher, CloudScaffold).
-class AllDebridFilesScreen extends StatefulWidget {
+///
+/// Public type is unchanged so sidebar, bind, and [CloudBrowseSelectSource]
+/// keep working. Body is [CloudFilesScreen] with an [AllDebridFilesSource] (G4).
+class AllDebridFilesScreen extends StatelessWidget {
   final bool isPushedRoute;
   final String? initialSearchQuery;
   final bool selectSourceMode;
@@ -49,10 +54,45 @@ class AllDebridFilesScreen extends StatefulWidget {
   });
 
   @override
-  State<AllDebridFilesScreen> createState() => _AllDebridFilesScreenState();
+  Widget build(BuildContext context) {
+    return CloudFilesScreen(
+      source: AllDebridFilesSource(
+        isPushedRoute: isPushedRoute,
+        initialSearchQuery: initialSearchQuery,
+        selectSourceMode: selectSourceMode,
+        onSourceSelectedAsync: onSourceSelected,
+      ),
+      host: AllDebridCloudFilesHost(
+        isPushedRoute: isPushedRoute,
+        initialSearchQuery: initialSearchQuery,
+        selectSourceMode: selectSourceMode,
+        onSourceSelected: onSourceSelected,
+      ),
+    );
+  }
 }
 
-class _AllDebridFilesScreenState extends State<AllDebridFilesScreen> {
+/// Former [AllDebridFilesScreen] State host. Constructor and fields are the
+/// origin widget moved verbatim.
+class AllDebridCloudFilesHost extends StatefulWidget {
+  final bool isPushedRoute;
+  final String? initialSearchQuery;
+  final bool selectSourceMode;
+  final Future<void> Function(SeriesSource)? onSourceSelected;
+
+  const AllDebridCloudFilesHost({
+    super.key,
+    this.isPushedRoute = false,
+    this.initialSearchQuery,
+    this.selectSourceMode = false,
+    this.onSourceSelected,
+  });
+
+  @override
+  State<AllDebridCloudFilesHost> createState() => _AllDebridFilesScreenState();
+}
+
+class _AllDebridFilesScreenState extends State<AllDebridCloudFilesHost> {
   static const int _tabIndex = 12;
 
   String? _apiKey;
