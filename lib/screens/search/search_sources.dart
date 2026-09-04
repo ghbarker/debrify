@@ -1791,9 +1791,8 @@ class _SourcesScreenState extends State<_SourcesScreen> {
     bool pmDone = !(_pmCacheOn && _pmKey != null);
     if (_tbCacheOn && _tbKey != null) {
       try {
-        final cached = await TorboxService.checkCachedTorrents(
-          apiKey: _tbKey!,
-          infoHashes: list,
+        final cached = await CloudProviderRegistry.instance.checkCachedHashes(
+          list,
         );
         if (!mounted || token != _cacheToken) return;
         (_tbCache ??= {}).addAll({for (final h in list) h: cached.contains(h)});
@@ -1802,7 +1801,7 @@ class _SourcesScreenState extends State<_SourcesScreen> {
     }
     if (_pmCacheOn && _pmKey != null) {
       try {
-        final res = await PremiumizeService.checkCache(_pmKey!, list);
+        final res = await CloudProviderRegistry.instance.checkCache(list);
         if (!mounted || token != _cacheToken) return;
         (_pmCache ??= {}).addAll({
           for (var i = 0; i < list.length; i++)

@@ -42,11 +42,11 @@ import '../services/iptv_cw_router.dart';
 import '../services/iptv_media_store.dart';
 import '../services/local_bound_source_service.dart';
 import '../widgets/cloud_provider_chrome.dart';
+import '../services/cloud/cloud_provider_registry.dart';
 import '../services/main_page_bridge.dart';
 import '../models/profiles/profile_policy.dart';
 import '../services/profiles/profile_policy_guard.dart';
 import '../services/playlist_player_service.dart';
-import '../services/premiumize_service.dart';
 import '../services/profiles/profile_session_memory.dart';
 import '../services/series_source_service.dart';
 import '../services/stremio_iptv_service.dart';
@@ -58,7 +58,6 @@ import '../services/source_priority.dart';
 import '../services/storage_service.dart';
 import '../services/tv_hero_artwork_quality_controller.dart';
 import '../services/tvos_top_shelf_service.dart';
-import '../services/torbox_service.dart';
 import '../services/torrent_bulk_add_service.dart';
 import '../services/torrent_playback_service.dart';
 import '../services/torrent_service.dart';
@@ -11851,9 +11850,8 @@ class _SearchScreenState extends State<SearchScreen>
     bool tbOk = false;
     if (_kwTbOn && _kwTbKey != null) {
       try {
-        final cached = await TorboxService.checkCachedTorrents(
-          apiKey: _kwTbKey!,
-          infoHashes: hashes,
+        final cached = await CloudProviderRegistry.instance.checkCachedHashes(
+          hashes,
         );
         tbDone = true;
         tbOk = true;
@@ -11864,7 +11862,7 @@ class _SearchScreenState extends State<SearchScreen>
     }
     if (_kwPmOn && _kwPmKey != null) {
       try {
-        final res = await PremiumizeService.checkCache(_kwPmKey!, hashes);
+        final res = await CloudProviderRegistry.instance.checkCache(hashes);
         pmDone = true;
         for (var i = 0; i < hashes.length && i < res.length; i++) {
           if (res[i]) (add[hashes[i]] ??= <String>[]).add('PM');
