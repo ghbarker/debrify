@@ -4,9 +4,12 @@ import 'package:debrify/services/profiles/profile_preferences.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
 import 'package:debrify/services/secret_vault.dart';
+import 'package:debrify/services/storage/storage_key_ownership.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../storage_key_sweep_test.dart' as sweep;
 
 /// Cloud credential helpers must not invent unscoped keys in committed profile
 /// mode. API-key writes in committed mode go through ProfileCredentialFacade
@@ -90,6 +93,28 @@ void main() {
         'alldebrid': 'alldebrid_api_key',
         'pikpak': 'pikpak_email',
       },
+    );
+  });
+
+  test('a discovered prefs name missing from byKey fails the sweep', () {
+    expect(
+      sweep.unownedDiscoveredPrefsKeys(),
+      isEmpty,
+      reason:
+          'Mutation: drop any byKey entry for an inline literal (e.g. '
+          'series_browser_dense_view) and this must fail.',
+    );
+    expect(
+      StorageKeyOwnership.byKey.containsKey('series_browser_dense_view'),
+      isTrue,
+    );
+    expect(
+      StorageKeyOwnership.byKey['series_browser_dense_view'],
+      StorageKeyStore.storageService,
+    );
+    expect(
+      StorageKeyOwnership.byKey['home_tick_sources'],
+      StorageKeyStore.homePrefs,
     );
   });
 }
