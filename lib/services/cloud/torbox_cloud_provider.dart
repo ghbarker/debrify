@@ -524,6 +524,15 @@ class TorboxCloudProvider extends CloudProviderAdapter {
   }
 
   @override
+  Future<String> webZipPermalink(int webId) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const CloudMissingApiKey('Missing TorBox API key');
+    }
+    return TorboxService.createWebDownloadZipPermalink(apiKey, webId);
+  }
+
+  @override
   Future<void> queueUncachedMagnet(String magnet) async {
     final apiKey = await CloudCredentials.apiKey(id);
     if (apiKey == null || apiKey.isEmpty) {
