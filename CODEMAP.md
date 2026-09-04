@@ -90,7 +90,9 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   keeps its empty-key snacks (`Add Torbox API key` vs `API key not available`).
   TorBox downloads torrent file copy / stream / batch enqueue uses
   `fileDownloadLink` (empty stream URL still throws; batch empty URL still
-  continues).
+  continues). TorBox downloads web ZIP enqueue / multi-file copy uses
+  `webZipPermalink` (empty enqueue URL still snacks; copy still has no
+  empty-URL check).
   TorBox torrent file `requestdl` is `fileDownloadLink` (not ZIP, not
   web-download file, not playlist/player unlock dialects). Download-service
   torrent file refresh / enqueue / retry uses that method with the same

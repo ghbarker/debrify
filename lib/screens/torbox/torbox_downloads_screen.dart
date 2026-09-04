@@ -1585,8 +1585,7 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
 
     try {
       // Generate ZIP permalink
-      final zipUrl = TorboxService.createWebDownloadZipPermalink(
-        key,
+      final zipUrl = await CloudProviderRegistry.instance.webZipPermalink(
         webDownload.id,
       );
 
@@ -1801,8 +1800,7 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
       }
     } else {
       // Multiple files - get ZIP link
-      final zipLink = TorboxService.createWebDownloadZipPermalink(
-        key,
+      final zipLink = await CloudProviderRegistry.instance.webZipPermalink(
         webDownload.id,
       );
       await Clipboard.setData(ClipboardData(text: zipLink));
