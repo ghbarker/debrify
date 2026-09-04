@@ -106,6 +106,7 @@ const Map<String, int> kShapeResidue = {
   'lib/widgets/see_all/see_all_header.dart': 0,
   'lib/widgets/see_all/see_all_random_button.dart': 0,
   'lib/widgets/see_all/stremio_dropdown.dart': 0,
+  'lib/widgets/sources/source_binding_dialogs.dart': 0,
   'lib/widgets/trakt_calendar_day_sheet.dart': 0,
   'lib/widgets/tv_sidebar_nav.dart': 0,
   'lib/widgets/tvmaze_search_dialog.dart': 0,
