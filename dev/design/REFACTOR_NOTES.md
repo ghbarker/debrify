@@ -69,6 +69,17 @@ See `dev/design/REFACTOR_PLAN.md` §2 rule 1.
   rows by family singleton; calendar / tracking settings / player scrobble
   still switch. G1 / G5 own those files.
 
+### G5 · scrobble coordinator
+
+- **Simkl is pause-centric.** No POST to `/scrobble/start`. `'start'` and
+  `'pause'` both call `scrobblePause`. Heartbeat force-sends pause and leaves
+  the local marker `'start'`. Keep: origin Simkl machine.
+- **Incomplete series season/episode skips Simkl only.** Trakt still sends
+  (latent gap). Keep: pinned in `test/scrobble_video_player_machines_pin_test.dart`.
+- **`_traktSeasonEpisode` stays on the player** (skip-segments / resume /
+  guide). No TrackerRegistry scrobble factory this phase. Native TV / launcher
+  paths still call Trakt/Simkl/MDBList directly.
+
 ### G3 · storage split
 
 - **`clearAllHomePageSettings` does not remove Trakt default keys**
