@@ -2,7 +2,7 @@
 
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 
-Baseline: `main` @ P2e merged · Phase: **2** (G1 #61 review; G2 G4 T2 assigned) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
+Baseline: `main` @ G1 step 1 merged · Phase: **2** (G1 step 2 + G2 G4 T2) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -25,7 +25,8 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | T1-fix · pikpak empty password | merged | `refactor/t1-pikpak-empty-password` | orchestrator | `lib/services/transfer/transfer_categories.dart`, `test/transfer_pikpak_wire_test.dart` | — | `_readPikpakWire` accepts empty password (email-only, matching both old senders). CI green then `--no-ff` merge. |
 | S1 · settings registry | merged | `refactor/s1-settings-registry` | — | `settings_screen.dart` [nav tables, `_formatBackupSummary`/`_formatRestoreReport`], `lib/screens/settings/settings_tv_layout.dart`, `lib/screens/settings/widgets/settings_widgets.dart` | — | Pages registered once. **Regression:** extraPlayerKeywords unbound — follow-up `s1-fix`. |
 | S1-fix · extraPlayerKeywords | merged | `refactor/s1-extra-player-keywords` | orchestrator | `lib/screens/settings_screen.dart` [binding site only], `lib/screens/settings/settings_search_leaves.dart` [leaf spread], `test/settings_page_registry_test.dart` | — | Pass extraPlayerKeywords at the settings_screen binding so external-player names are searchable. CI green then `--no-ff` merge. |
-| G1 · search_screen split | review | `refactor/g1-home-board-controller` | worker | `lib/screens/search_screen.dart`, `lib/screens/search/**`, new `lib/screens/search/home_board_controller.dart`, `test/home_board_controller_test.dart` | — | Step 1 PR **#61**. Later steps wait for merge. Gate (c) origin-diff present. |
+| G1 · step 1 HomeBoardController | merged | `refactor/g1-home-board-controller` | worker | `lib/screens/search/home_board_controller.dart`, `test/home_board_controller_test.dart`, `search_screen.dart` [board data layer] | — | **#61.** Pin + origin-diff. H1-fix section-band order preserved. `search_screen.dart` 19 089 → 18 890. |
+| G1 · step 2 CatalogSearchController | assigned | `refactor/g1-catalog-search-controller` | worker | `lib/screens/search_screen.dart` [catalog search hunks], `lib/screens/search/**`, new catalog search controller + tests | G1 step 1 | Extract catalog search only. Do not start steps 3–5. Gate (c). |
 | G2 · settings_screen split | assigned | `refactor/g2-backup-restore-page` | worker | `settings_screen.dart` [backup/restore + profile-switch hunks], new `lib/screens/settings/backup_restore_page.dart`, profile-switch page if extracted, tests | — | Extract backup/restore UI and profile switching; shell keeps rendering the S1 registry. No dart format on settings_screen. Gate (c). |
 | G3 · storage split | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | — | P2e merged. Gate 1 Windows done. |
 | G4 · cloud file screens | assigned | `refactor/g4-cloud-files-screen` | worker | `debrid_downloads_screen.dart`, `torbox/**`, `premiumize/**`, `alldebrid/**`, `pikpak/**` files screens | — | Shared `CloudFilesScreen` + local `CloudFilesSource` interface in screens (do not edit existing `lib/services/cloud/**` adapters unless Decisions needed). Supersedes closed #36–#43. Gate (c). |
@@ -64,4 +65,4 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
-Phase 1 merged. P2a–**P2e** merged (#60). G1 step 1 **#61** in CI. **G2, G4, T2 assigned in parallel** (disjoint files). G1 steps 2–5 wait for #61. G3/G5 still queued. Gate 1 Windows pass; Android not run. PR #56 held. #36–#43 closed (G4).
+Phase 1 merged. P2a–**P2e** merged (#60). **G1 step 1 merged (#61).** G1 step 2 + G2 + G4 + T2 in flight. G3/G5 queued. Gate 1 Windows pass; Android not run. PR #56 held. #36–#43 closed (G4).

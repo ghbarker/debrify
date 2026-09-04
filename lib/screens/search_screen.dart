@@ -3,7 +3,7 @@ import 'dart:math';
 import 'dart:ui' as ui show ImageFilter;
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart' show ValueListenable, listEquals;
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -36,6 +36,7 @@ import '../services/home_list_rows.dart';
 import '../services/home/home_row_family.dart';
 import '../services/home/home_row_registry.dart';
 import '../services/home_row_order.dart';
+import 'search/home_board_controller.dart';
 import '../services/filtered_catalog_pager.dart';
 import '../services/hide_watched_prefs.dart';
 import '../services/watched_filter.dart';
@@ -150,7 +151,7 @@ const Color _kCwProgressRed = Color(0xFFE50914);
 /// free (manifest metadata) — only fetching each row's items costs a call — so we
 /// list every catalog up front and lazily pull batches on scroll (Stremio-style)
 /// instead of a hard global row cap.
-const int _kBoardBatchSize = 8;
+/// Batch size lives on [HomeBoardController] (`kHomeBoardBatchSize`).
 
 /// When a row's horizontal scroll gets within this many pixels of the end, the
 /// next page for that catalog is fetched (Stremio-style unlimited rows).
@@ -682,7 +683,8 @@ class _SearchScreenState extends State<SearchScreen>
   // board and catalog search render through the same horizontal-row layout.
   bool _loading = true;
   String? _error;
-  List<CatalogSection> _homeSections = [];
+  List<CatalogSection> get _homeSections => _board.homeSections;
+  set _homeSections(List<CatalogSection> value) => _board.homeSections = value;
   List<CatalogSection> _sections = [];
   final List<List<FocusNode>> _rowNodes = [];
   // Per-row remembered focus column (leanback-style). DPAD up/down into a row
@@ -701,37 +703,42 @@ class _SearchScreenState extends State<SearchScreen>
   // "N sources didn't respond" note so failing addons don't just vanish.
   int _catalogSearchFailures = 0;
 
+  /// Home board data layer (batches, row paging, hero source, reload diffing).
+  late final HomeBoardController _board;
+
   // Rows the user hid via Settings → Home Page → Home Rows (fixed-section
   // leaves like `cw:movies`/`trakt:shows`/`fav:iptv` and catalog leaves
   // `addonId:type:catalogId`). Gates every Home board row below. Refreshed by
   // [_reloadForHomeSettings] when the manager saves.
-  Set<String> _homeDisabled = {};
+  Set<String> get _homeDisabled => _board.homeDisabled;
+  set _homeDisabled(Set<String> value) => _board.homeDisabled = value;
 
   // The OPT-IN extra rows (Trakt/Simkl list rows, IPTV custom-list rows) from
   // the same manager — default-off, so they live in their own store
   // (`home_extra_rows_v1`). Tracker ids become [HomeListSection]s at the head
   // of the board in [_load]; `iptvlist:` ids drive the IPTV list favourites
   // rows. Refreshed by [_reloadForHomeSettings].
-  List<HomeExtraRow> _homeExtras = const [];
+  List<HomeExtraRow> get _homeExtras => _board.homeExtras;
+  set _homeExtras(List<HomeExtraRow> value) => _board.homeExtras = value;
 
   /// Imported collections — each enabled one is a [HomeCollectionSection] row
   /// of folder tiles. [_homeCollectionsSig] is the store's change token the
   /// settings-changed listener diffs against.
-  List<HomeCollection> _homeCollections = const [];
-  String _homeCollectionsSig = '';
+  List<HomeCollection> get _homeCollections => _board.homeCollections;
+  set _homeCollections(List<HomeCollection> value) =>
+      _board.homeCollections = value;
   /// The hide-watched switch as of the last board load. Flipping it changes
   /// row membership, so [_reloadForHomeSettings] diffs it like a row toggle.
-  bool _hideWatched = HideWatchedPrefs.enabled;
+  /// Owned by [HomeBoardController.hideWatched].
 
   /// Stable ids in the user's global Home-row order. Rows not present append
   /// canonically; ids whose backing row is temporarily unavailable stay saved.
-  List<String> _homeRowOrder = const [];
+  List<String> get _homeRowOrder => _board.homeRowOrder;
+  set _homeRowOrder(List<String> value) => _board.homeRowOrder = value;
 
   /// The Spotlight hero-source pref (`home_hero_source_v1`): which catalog the
-  /// hero reel is built from. Read in [_load], refreshed by
-  /// [_reloadForHomeSettings]; resolved into [_spotlightHeroOverride] by
-  /// [_resolveSpotlightHeroSource].
-  HomeHeroSource _heroSource = (mode: HomeHeroSourceMode.random, ids: const []);
+  /// hero reel is built from. Owned by [HomeBoardController.heroSource];
+  /// resolved into [_spotlightHeroOverride] by [_resolveSpotlightHeroSource].
 
   /// Whether any Trakt/Simkl list row is opted in — gates the tracker-row
   /// resolve in [_load] and the integrations-triggered reload.
@@ -743,7 +750,7 @@ class _SearchScreenState extends State<SearchScreen>
   /// ([_boardRefs]/[_boardCursor]/[_homeSections]); every await inside the
   /// load pipeline re-checks this so a superseded load can neither apply its
   /// stale sections nor advance the new load's cursor.
-  int _boardLoadGen = 0;
+  int get _boardLoadGen => _board.boardLoadGen;
 
   /// A triggered board reload arrived while a catalog search was showing its
   /// results — running [_load] then would stomp the search view, so it's
@@ -754,8 +761,8 @@ class _SearchScreenState extends State<SearchScreen>
   // [_boardRefs] (cheap — manifest metadata, no network), then fetched in batches
   // as the user nears the bottom. [_boardCursor] is the next ref to load; it
   // persists across a search detour so returning to the board keeps its place.
-  final List<(StremioAddon, StremioAddonCatalog)> _boardRefs = [];
-  int _boardCursor = 0;
+  List<(StremioAddon, StremioAddonCatalog)> get _boardRefs => _board.boardRefs;
+  int get _boardCursor => _board.boardCursor;
   bool _boardLoadingMore = false;
   final ScrollController _boardScroll = ScrollController();
 
@@ -1624,6 +1631,12 @@ class _SearchScreenState extends State<SearchScreen>
   @override
   void initState() {
     super.initState();
+    _board = HomeBoardController(
+      fetchCatalog: _fetchBoardCatalog,
+      isLive: () => mounted,
+    );
+    _board.hideWatched = HideWatchedPrefs.enabled;
+    _board.addListener(_onBoardChanged);
     WidgetsBinding.instance.addObserver(this);
     _profileSessionOwner = ProfileSessionMemory.captureOwner();
     // This one widget backs three tabs (Home board / dedicated Search / Discover).
@@ -2120,6 +2133,8 @@ class _SearchScreenState extends State<SearchScreen>
 
   @override
   void dispose() {
+    _board.removeListener(_onBoardChanged);
+    _board.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _mdblistRevisionRefreshToken++;
     _spotlightHeroNode.dispose();
@@ -2468,68 +2483,22 @@ class _SearchScreenState extends State<SearchScreen>
     final heroSource = await StorageService.getHomeHeroSource();
     final collections = await HomeCollectionsStore.instance.getCollections();
     if (!mounted) return;
-    final collectionsSig = HomeCollectionsStore.signatureOf(collections);
-    final collectionsUnchanged = collectionsSig == _homeCollectionsSig;
-    final hideWatched = HideWatchedPrefs.enabled;
-    final hideWatchedUnchanged = hideWatched == _hideWatched;
-    final disabledUnchanged =
-        disabled.length == _homeDisabled.length &&
-        disabled.containsAll(_homeDisabled);
-    final heroSourceUnchanged =
-        heroSource.mode == _heroSource.mode &&
-        listEquals(heroSource.ids, _heroSource.ids);
-    final rowOrderUnchanged = HomeRowOrder.equals(rowOrder, _homeRowOrder);
-    // Titles participate too: a stored rename must re-render the row header.
-    // Diffed per family: `iptvlist:` extras feed the favourites-family rows,
-    // everything else feeds the board pipeline — so toggling an IPTV list
-    // row must not refetch every addon catalog, and vice versa.
-    List<HomeExtraRow> family(List<HomeExtraRow> rows, {required bool iptv}) =>
-        [
-          for (final r in rows)
-            if (HomeExtraRowIds.isIptv(r.id) == iptv) r,
-        ];
-    bool sameRows(List<HomeExtraRow> a, List<HomeExtraRow> b) =>
-        a.length == b.length &&
-        List.generate(
-          a.length,
-          (i) => a[i].id == b[i].id && a[i].title == b[i].title,
-        ).every((same) => same);
-    final boardExtrasUnchanged = sameRows(
-      family(extras, iptv: false),
-      family(_homeExtras, iptv: false),
+    final action = _board.diffAndApplySettings(
+      HomeBoardSettingsSnapshot(
+        disabled: disabled,
+        extras: extras,
+        rowOrder: rowOrder,
+        heroSource: heroSource,
+        collections: collections,
+        hideWatched: HideWatchedPrefs.enabled,
+      ),
+      isHomeBoard: !widget.searchMode && !widget.discoverMode,
     );
-    final iptvExtrasUnchanged = sameRows(
-      family(extras, iptv: true),
-      family(_homeExtras, iptv: true),
-    );
-    if (disabledUnchanged &&
-        boardExtrasUnchanged &&
-        iptvExtrasUnchanged &&
-        rowOrderUnchanged &&
-        heroSourceUnchanged &&
-        collectionsUnchanged &&
-        hideWatchedUnchanged) {
-      return;
-    }
-    setState(() {
-      _homeDisabled = disabled;
-      _homeExtras = extras;
-      _homeRowOrder = rowOrder;
-      _heroSource = heroSource;
-      _homeCollections = collections;
-      _homeCollectionsSig = collectionsSig;
-      _hideWatched = hideWatched;
-    });
+    if (action.nothingChanged) return;
     // Hide-watched changes row MEMBERSHIP, so it takes the full reload path.
-    if (!disabledUnchanged ||
-        !boardExtrasUnchanged ||
-        !collectionsUnchanged ||
-        !hideWatchedUnchanged ||
-        (!rowOrderUnchanged && !widget.searchMode && !widget.discoverMode)) {
+    if (action.requestBoardReload) {
       _requestBoardReload();
-    } else if (!heroSourceUnchanged &&
-        !widget.searchMode &&
-        !widget.discoverMode) {
+    } else if (action.rerollHero) {
       // Only the hero source moved — re-roll the reel without refetching the
       // whole board. `_load` isn't rerun here, so resolve from the addons the
       // last load cached.
@@ -2537,7 +2506,7 @@ class _SearchScreenState extends State<SearchScreen>
     }
     // IPTV list rows live outside the board's section pipeline. The loader
     // reads its own extras from storage, so it can't race the reload above.
-    if (!iptvExtrasUnchanged) unawaited(_loadIptvListRows());
+    if (action.reloadIptvLists) unawaited(_loadIptvListRows());
   }
 
   /// Run [_load] for a TRIGGERED reload (Home Rows save, integration
@@ -2571,7 +2540,7 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   Future<void> _load() async {
-    final gen = ++_boardLoadGen;
+    final gen = _board.beginLoad();
     setState(() {
       _loading = true;
       _error = null;
@@ -2591,10 +2560,10 @@ class _SearchScreenState extends State<SearchScreen>
       _homeDisabled = disabled;
       _homeExtras = extras;
       _homeRowOrder = rowOrder;
-      _heroSource = heroSource;
+      _board.heroSource = heroSource;
       _homeCollections = collections;
-      _homeCollectionsSig = HomeCollectionsStore.signatureOf(collections);
-      _hideWatched = HideWatchedPrefs.enabled;
+      _board.homeCollectionsSig = HomeCollectionsStore.signatureOf(collections);
+      _board.hideWatched = HideWatchedPrefs.enabled;
       // Opt-in Trakt/Simkl list rows, resolved IN PARALLEL with the first
       // catalog batch below. Home board only — the Search tab runs _load just
       // to warm the catalog refs for its search, and Discover never comes
@@ -2633,26 +2602,14 @@ class _SearchScreenState extends State<SearchScreen>
       // Catalogs the user hid in the Home Rows manager are skipped too.
       // Catalogs claimed by an enabled collection folder live inside that
       // folder (as in Nuvio) and never double up as plain board rows.
-      final claimed = HomeCollectionsStore.claimedCatalogKeys(
-        _homeCollections,
-        addons,
+      _board.replaceBoardRefs(
+        HomeBoardController.enumerateBoardRefs(
+          addons: addons,
+          disabled: _homeDisabled,
+          collections: _homeCollections,
+        ),
+        applySavedOrder: _homeRowOrderActive,
       );
-      final boardRefs = [
-        for (final a in addons)
-          for (final c in a.catalogs)
-            if (c.isBrowsable &&
-                !_homeDisabled.contains('${a.id}:${c.type}:${c.id}') &&
-                !claimed.contains('${a.id}:${c.type}:${c.id}'))
-              (a, c),
-      ];
-      _boardRefs
-        ..clear()
-        ..addAll(
-          _homeRowOrderActive
-              ? HomeRowOrder.apply(boardRefs, _homeRowOrder, _catalogRefRowId)
-              : boardRefs,
-        );
-      _boardCursor = 0;
       _addonsById.clear();
       for (final a in addons) {
         _addonsById.putIfAbsent(a.id, () => a);
@@ -2676,15 +2633,15 @@ class _SearchScreenState extends State<SearchScreen>
       // addon catalog row. No network — folders are static tiles.
       final collectionRows = widget.searchMode || widget.discoverMode
           ? const <HomeCollectionSection>[]
-          : _buildCollectionSections();
-      final sections = <CatalogSection>[
-        for (final s in collectionRows)
-          if (s.collection.pinToTop) s,
-        ...listRows,
-        for (final s in collectionRows)
-          if (!s.collection.pinToTop) s,
-        ...first,
-      ];
+          : HomeBoardController.buildCollectionSections(
+              collections: _homeCollections,
+              disabled: _homeDisabled,
+            );
+      final sections = HomeBoardController.assembleHomeSections(
+        collectionRows: collectionRows,
+        listRows: listRows,
+        firstBatch: first,
+      );
       _homeSections = sections;
       setState(() => _loading = false);
       MainPageBridge.homeBoardReady.value = true;
@@ -2723,57 +2680,41 @@ class _SearchScreenState extends State<SearchScreen>
   /// runs of empty catalogs, and return the non-empty sections (advancing the
   /// cursor as it goes). Empty result ⇒ the board is exhausted — or [gen] went
   /// stale (a newer [_load] owns the cursor now; stop without touching it).
-  Future<List<CatalogSection>> _fetchBoardBatchUntilNonEmpty(int gen) async {
-    while (gen == _boardLoadGen && _boardCursor < _boardRefs.length) {
-      final batch = await _fetchBoardBatch(_kBoardBatchSize, gen);
-      if (batch.isNotEmpty) return batch;
-    }
-    return const [];
+  Future<List<CatalogSection>> _fetchBoardBatchUntilNonEmpty(int gen) =>
+      _board.fetchBoardBatchUntilNonEmpty(gen);
+
+  /// Production catalog-page adapter for [HomeBoardController]: same
+  /// [fetchFilteredPage] + hide-watched predicate as the origin `_fetchBoardBatch`
+  /// / `_loadMoreRow` / `_resolveSpotlightHeroSource` inlines.
+  Future<FilteredPage> _fetchBoardCatalog(
+    StremioAddon addon,
+    StremioAddonCatalog catalog, {
+    required int skip,
+    Set<String>? seenIds,
+    int minItems = 12,
+  }) => fetchFilteredPage(
+    (s, onRaw) =>
+        _stremio.fetchCatalog(addon, catalog, skip: s, onRawCount: onRaw),
+    skip: skip,
+    hides: WatchedFilter.predicate,
+    seenIds: seenIds,
+    minItems: minItems,
+  );
+
+  void _onBoardChanged() {
+    _syncBoardRowNodes();
+    if (mounted) setState(() {});
   }
 
-  /// Fetch exactly one batch of up to [n] catalog rows in parallel, advancing
-  /// [_boardCursor], and return the non-empty ones (order preserved). No-ops
-  /// when [gen] is stale so a superseded load can't advance the fresh load's
-  /// cursor.
-  Future<List<CatalogSection>> _fetchBoardBatch(int n, int gen) async {
-    if (gen != _boardLoadGen) return const [];
-    final end = (_boardCursor + n).clamp(0, _boardRefs.length);
-    final slice = _boardRefs.sublist(_boardCursor, end);
-    _boardCursor = end;
-    final results = await Future.wait(
-      slice.map((ref) async {
-        final (addon, catalog) = ref;
-        try {
-          // With hide-watched on, the pager tops the row up across windows so
-          // an all-watched first page doesn't read as an empty catalog.
-          final page = await fetchFilteredPage(
-            (skip, onRaw) => _stremio.fetchCatalog(
-              addon,
-              catalog,
-              skip: skip,
-              onRawCount: onRaw,
-            ),
-            skip: 0,
-            hides: WatchedFilter.predicate,
-          );
-          if (page.items.isEmpty) return null;
-          return CatalogSection(
-            title: CatalogSection.rowTitle(catalog),
-            addon: addon,
-            catalog: catalog,
-            // Keep the whole first page; more pages stream in on horizontal scroll.
-            items: page.items.toList(),
-            // Past the addon's raw window(s), not the post-filter count, so
-            // paging is aligned from the very first fetch.
-            nextSkip: page.nextSkip,
-            exhausted: page.exhausted,
-          );
-        } catch (_) {
-          return null;
-        }
-      }),
-    );
-    return results.whereType<CatalogSection>().toList();
+  void _syncBoardRowNodes() {
+    for (var i = 0; i < _sections.length && i < _rowNodes.length; i++) {
+      final items = _sections[i].items;
+      final nodes = _rowNodes[i];
+      final base = nodes.length;
+      for (var j = base; j < items.length; j++) {
+        nodes.add(FocusNode(debugLabel: 'search_r${i}_c$j'));
+      }
+    }
   }
 
   /// After a batch lands, if the board still doesn't fill the viewport (so the
@@ -2857,74 +2798,16 @@ class _SearchScreenState extends State<SearchScreen>
   /// repeatedly — [CatalogSection.loadingMore]/[CatalogSection.exhausted] guard
   /// re-entrancy and the end of the catalog.
   Future<void> _loadMoreRow(int rowIndex) async {
-    // While a catalog search is active, `_sections` holds search results, which
-    // don't paginate — leave them alone.
-    if (_catalogQuery.isNotEmpty || _catalogSearching) return;
-    if (rowIndex < 0 || rowIndex >= _sections.length) return;
-    final section = _sections[rowIndex];
-    if (section.loadingMore || section.exhausted) return;
-    // Android TV: flip the guard silently. The setState exists to show the
-    // classic row's tail spinner, but it fires on the exact keypress that
-    // crossed the row-end threshold — a full-screen rebuild landing on the
-    // input frame, which an Amlogic box renders as the cursor hitching every
-    // time a row pages. The spinner is a nicety; the page landing repaints
-    // either way.
-    if (PlatformUtil.isAndroidTvCached) {
-      section.loadingMore = true;
-    } else {
-      setState(() => section.loadingMore = true);
-    }
-    try {
-      // Dedup against what we already have: some addons return valid ids but
-      // repeat entries, and some ignore `skip` entirely. The pager advances
-      // `skip` by the addon's RAW counts so paging never under-advances into a
-      // false "exhausted", and with hide-watched on it tops the window up so a
-      // page of watched titles doesn't end the row early.
-      final seen = section.items.map((m) => m.id).toSet();
-      final page = await fetchFilteredPage(
-        (skip, onRaw) => _stremio.fetchCatalog(
-          section.addon,
-          section.catalog,
-          skip: skip,
-          onRawCount: onRaw,
-        ),
-        skip: section.nextSkip,
-        hides: WatchedFilter.predicate,
-        seenIds: seen,
-      );
-      if (!mounted) return;
-      // The row may have been swapped out (a search started) while in flight.
-      if (rowIndex >= _sections.length ||
-          !identical(_sections[rowIndex], section)) {
-        return;
-      }
-      section.nextSkip = page.nextSkip;
-      if (page.exhausted) section.exhausted = true;
-      final fresh = page.items;
-      if (fresh.isEmpty) {
-        // Only duplicates, or the addon ignores skip — end of the row.
-        section.exhausted = true;
-        return;
-      }
-      // Grow this row's focus nodes in lockstep with the new items.
-      final nodes = _rowNodes[rowIndex];
-      final base = nodes.length;
-      for (var i = 0; i < fresh.length; i++) {
-        nodes.add(FocusNode(debugLabel: 'search_r${rowIndex}_c${base + i}'));
-      }
-      setState(() => section.items.addAll(fresh));
-      // A DPAD-right that ran off the end of this row may be waiting on it.
-      _maybeCompleteStageRight();
-      unawaited(_refreshBoundSources());
-    } catch (_) {
-      // Transient fetch failure — leave the row as-is so a later scroll retries.
-    } finally {
-      if (mounted) {
-        setState(() => section.loadingMore = false);
-      } else {
-        section.loadingMore = false;
-      }
-    }
+    final result = await _board.loadMoreRow(
+      sections: _sections,
+      rowIndex: rowIndex,
+      catalogSearchActive: _catalogQuery.isNotEmpty || _catalogSearching,
+      notifyLoadingGuard: !PlatformUtil.isAndroidTvCached,
+    );
+    if (!mounted || result.skipped || result.fresh.isEmpty) return;
+    // A DPAD-right that ran off the end of this row may be waiting on it.
+    _maybeCompleteStageRight();
+    unawaited(_refreshBoundSources());
   }
 
   /// IMDb id for a catalog item, or null when it isn't a `tt…` id.
@@ -3400,9 +3283,6 @@ class _SearchScreenState extends State<SearchScreen>
       catalogType: section.catalog.type,
       catalogId: section.catalog.id,
     );
-
-  String _catalogRefRowId((StremioAddon, StremioAddonCatalog) ref) =>
-      '${ref.$1.id}:${ref.$2.type}:${ref.$2.id}';
 
   /// The focus-node list backing a favourites row of the given [ref].
   List<FocusNode> _favNodesFor(_FavRowRef ref) {
@@ -4423,13 +4303,6 @@ class _SearchScreenState extends State<SearchScreen>
     }
     _onCatalogPlay(item, section.addon);
   }
-
-  /// Every enabled imported collection as a board row (hidden rows skipped).
-  List<HomeCollectionSection> _buildCollectionSections() => [
-    for (final c in _homeCollections)
-      if (c.enabled && c.folders.isNotEmpty && !_homeDisabled.contains(c.rowId))
-        HomeCollectionSection(collection: c),
-  ];
 
   /// A folder tile on a collection row opens that folder's merged grid.
   void _openCollectionFolder(HomeCollectionSection section, StremioMeta item) {
@@ -6793,11 +6666,11 @@ class _SearchScreenState extends State<SearchScreen>
   /// hidden as a row entirely. Null in `auto` mode, while the fetch is in
   /// flight, and when every candidate came up dead — all of which fall back
   /// to the first non-empty board row below.
-  CatalogSection? _spotlightHeroOverride;
+  CatalogSection? get _spotlightHeroOverride => _board.spotlightHeroOverride;
 
   /// Guards [_resolveSpotlightHeroSource] against overlapping runs (a Home
   /// Rows save landing mid-load): only the newest run may commit.
-  int _heroSourceResolveGen = 0;
+  int get _heroSourceResolveGen => _board.heroSourceResolveGen;
 
   /// Fetch the hero reel for the current [_heroSource] pref.
   ///
@@ -6809,81 +6682,9 @@ class _SearchScreenState extends State<SearchScreen>
   /// unbounded fetches; exhausting the cap (or the candidates) clears the
   /// override, which IS the auto fallback.
   Future<void> _resolveSpotlightHeroSource(List<StremioAddon> addons) async {
-    final gen = ++_heroSourceResolveGen;
-    final source = _heroSource;
-    if (source.mode != HomeHeroSourceMode.auto) {
-      final all = [
-        for (final a in addons)
-          for (final c in a.catalogs)
-            if (c.isBrowsable) (a, c),
-      ];
-      final List<(StremioAddon, StremioAddonCatalog)> candidates;
-      if (source.mode == HomeHeroSourceMode.random) {
-        // Random draws TITLES only. Live catalogs — 'tv' is what the
-        // Stremio-IPTV service itself keys on, 'channel'/'radio' are the
-        // spec's other live-ish types — serve channel logos as their art, so
-        // the reel cover-crops a wordmark to a full screen (TvVoo's logo,
-        // full-bleed, was the report). An EXPLICIT custom pick of such a
-        // catalog is left alone: choosing it by name is a deliberate act.
-        const live = {'tv', 'channel', 'radio'};
-        candidates = [
-          for (final ref in all)
-            if (!live.contains(ref.$2.type.toLowerCase())) ref,
-        ];
-      } else {
-        // Stored picks that no longer resolve (addon uninstalled, catalog
-        // gone from its manifest) simply drop out; they are NOT removed from
-        // the pref, so reinstalling the addon brings the pick back.
-        final byId = {
-          for (final (a, c) in all) '${a.id}:${c.type}:${c.id}': (a, c),
-        };
-        candidates = [
-          for (final id in source.ids)
-            if (byId.containsKey(id)) byId[id]!,
-        ];
-      }
-      candidates.shuffle(Random());
-      const maxAttempts = 8;
-      var attempts = 0;
-      for (final (addon, catalog) in candidates) {
-        if (attempts++ >= maxAttempts) break;
-        if (!mounted || gen != _heroSourceResolveGen) return;
-        try {
-          final page = await fetchFilteredPage(
-            (skip, onRaw) => _stremio.fetchCatalog(
-              addon,
-              catalog,
-              skip: skip,
-              onRawCount: onRaw,
-            ),
-            skip: 0,
-            hides: WatchedFilter.predicate,
-            minItems: 8,
-          );
-          if (!mounted || gen != _heroSourceResolveGen) return;
-          if (page.items.isEmpty) continue;
-          setState(() {
-            _spotlightHeroOverride = CatalogSection(
-              title: CatalogSection.rowTitle(catalog),
-              addon: addon,
-              catalog: catalog,
-              items: page.items.toList(),
-              nextSkip: page.nextSkip,
-            );
-          });
-          _publishTopShelfSpotlight();
-          return;
-        } catch (_) {
-          // Dead addon or catalog — try the next candidate.
-        }
-      }
-    }
-    // Auto mode, no usable candidate, or every attempt failed — drop any
-    // stale override so the reel falls back rather than pinning old prefs.
-    if (!mounted || gen != _heroSourceResolveGen) return;
-    if (_spotlightHeroOverride != null) {
-      setState(() => _spotlightHeroOverride = null);
-    }
+    final expected = _heroSourceResolveGen + 1;
+    await _board.resolveSpotlightHeroSource(addons);
+    if (!mounted || _heroSourceResolveGen != expected) return;
     _publishTopShelfSpotlight();
   }
 
