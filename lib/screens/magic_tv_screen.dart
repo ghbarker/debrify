@@ -24,6 +24,10 @@ import '../models/debrify_tv/import_results.dart';
 import '../services/analytics_service.dart';
 import '../services/android_native_downloader.dart';
 import '../services/android_tv_player_bridge.dart';
+import '../services/cloud/cloud_capabilities.dart';
+import '../services/cloud/cloud_port_feature.dart';
+import '../services/cloud/cloud_provider_id.dart';
+import '../services/cloud/cloud_provider_port.dart';
 import '../services/cloud/cloud_provider_registry.dart';
 import '../services/cloud/magic_tv_playable.dart';
 import '../services/cloud/magic_tv_prepare_args.dart';
@@ -73,6 +77,98 @@ import 'debrify_tv/dialogs/export_channels_dialog.dart';
 import 'debrify_tv/dialogs/import_channels_dialog.dart';
 import 'debrify_tv/dialogs/spotlight_dialog.dart';
 import 'settings/profile_backup_flows.dart';
+
+/// Magic TV provider-string dispatch. Persisted chip ids stay
+/// [CloudProviderId.magicTvId] (`real_debrid`, not playback `debrid`).
+///
+/// Production adapters are routed with capability `is` checks. Fat-port
+/// [FakeCloudProvider] (P1) does not implement those types, so [supports]
+/// is the fallback — same dual path as [CloudProviderRegistry.prepareMagicTv].
+class MagicTvDispatch {
+  MagicTvDispatch._();
+
+  static CloudProviderPort? portFor(String magicTvId) {
+    final id = CloudProviderId.fromMagicTvId(magicTvId);
+    if (id == null) return null;
+    return CloudProviderRegistry.instance[id];
+  }
+
+  /// Unknown chip ids fall through to Real-Debrid, matching the old `else`.
+  static CloudProviderId watchId(String magicTvId) =>
+      CloudProviderId.fromMagicTvId(magicTvId) ?? CloudProviderId.debrid;
+
+  static bool usesPrepare(String magicTvId) {
+    final port = portFor(magicTvId);
+    if (port == null) return false;
+    if (port is CloudMagicTvPrepare) return true;
+    return port.supports(CloudPortFeature.magicTvPrepare);
+  }
+
+  static bool usesLockedLinks(String magicTvId) {
+    final port = portFor(magicTvId);
+    if (port == null) return false;
+    if (port is CloudMagicTvLockedLinks) return true;
+    return port.supports(CloudPortFeature.magicTvLockedLinks);
+  }
+
+  /// TorBox `checkcached` window during channel switch. Not Premiumize
+  /// [CloudCheckCache].
+  static bool usesCachedHashes(String magicTvId) {
+    final port = portFor(magicTvId);
+    if (port == null) return false;
+    if (port is CloudCachedHashes) return true;
+    return port.supports(CloudPortFeature.cachedHashes);
+  }
+
+  static bool isSelectable(
+    String magicTvId, {
+    required bool realDebrid,
+    required bool torbox,
+    required bool pikpak,
+    required bool premiumize,
+    required bool allDebrid,
+  }) {
+    return switch (watchId(magicTvId)) {
+      CloudProviderId.torbox => torbox,
+      CloudProviderId.pikpak => pikpak,
+      CloudProviderId.premiumize => premiumize,
+      CloudProviderId.alldebrid => allDebrid,
+      CloudProviderId.debrid => realDebrid,
+    };
+  }
+
+  /// Next-channel button allowlists. These lists disagree on purpose
+  /// (Premiumize / AllDebrid omitted on some player launches). Do not unify.
+  static bool allowsNextChannel(
+    String magicTvId,
+    MagicTvNextChannelQuirk quirk,
+  ) {
+    final id = CloudProviderId.fromMagicTvId(magicTvId);
+    if (id == null) return false;
+    switch (quirk) {
+      case MagicTvNextChannelQuirk.exceptAllDebrid:
+        return id != CloudProviderId.alldebrid;
+      case MagicTvNextChannelQuirk.rdTorboxPikPak:
+        return id == CloudProviderId.debrid ||
+            id == CloudProviderId.torbox ||
+            id == CloudProviderId.pikpak;
+      case MagicTvNextChannelQuirk.allKnown:
+        return true;
+    }
+  }
+}
+
+/// Player `requestNextChannel` gates copied from the pre-P2a string ORs.
+enum MagicTvNextChannelQuirk {
+  /// RD|TB|PP|PM. Channel RD/TB/PP/PM and quick RD-early / PM.
+  exceptAllDebrid,
+
+  /// RD|TB|PP. Quick RD-late / TB / PP. Excludes Premiumize and AllDebrid.
+  rdTorboxPikPak,
+
+  /// All five Magic TV ids. Channel AllDebrid and quick AllDebrid.
+  allKnown,
+}
 
 const int _randomStartPercentDefault = 20;
 const int _randomStartPercentMin = 10;
