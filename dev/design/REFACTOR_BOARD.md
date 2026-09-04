@@ -2,7 +2,7 @@
 
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 
-Baseline: `main` @ H1/T1/S1-fix merged · Phase: **2** (P2e assigned) · Last gate: 1 (Linux done; Windows Flutter found at `C:\Users\hunth\flutter\bin\flutter.bat`, build log not pasted)
+Baseline: `main` @ H1/T1/S1-fix merged · Phase: **2** (P2e assigned) · Last gate: 1 (Linux done; Windows **build green**; smoke outstanding)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -40,7 +40,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | Gate | Date | Analyzer (all lib+test) | Full test suite | Windows build | Android build | Manual smoke | Result |
 |---|---|---|---|---|---|---|---|
 | 0 | 2026-09-04 | 466 (0 error · 83 warning · 383 info); analyze_baseline.py exit 0 (4 unused from deleted catalog_browser) | 4320 passed · 33 failed (same 33 as Phase 0 baseline; +4 vs 4316 from D0 pin + C0 layering) | not run (Linux host) | not run (no Android SDK) | Linux desktop: Home, Search, Keyword/Sources UI, play attempt → no sources (no debrid), Settings → Data & Backup export wrote `~/Documents/downloads/debrify-profile-2026-09-04.json` | **partial** — smoke + analyzer/tests ok; Windows/Android builds still outstanding. Phase 1 not assigned. |
-| 1 | 2026-09-04 | 466 issues (`flutter analyze lib test` exit 1; same count as gate 0) | 4405 passed · 33 failed (same 33 allowlisted failures; +85 vs gate 0 from Phase 1/2 pins) | **outstanding** — Flutter found at `C:\Users\hunth\flutter\bin\flutter.bat`; clone `C:\Users\hunth\debrify`; build/smoke log not yet pasted | not run (no Android SDK) | not re-run this pass (Linux smoke still from gate 0) | **partial** — P2e assigned (follow-ups merged). G1–G5/T2 wait on Windows build + smoke. |
+| 1 | 2026-09-04 | 466 issues (`flutter analyze lib test` exit 1; same count as gate 0) | 4405 passed · 33 failed (same 33 allowlisted failures; +85 vs gate 0 from Phase 1/2 pins) | **pass** — `flutter build windows` → `build\windows\x64\runner\Release\debrify.exe` (~206s) on `C:\Users\hunth\debrify` (Flutter `C:\Users\hunth\flutter`) | not run (no Android SDK) | Windows smoke outstanding (Linux smoke from gate 0) | **partial** — Windows compile green. G1–G5/T2 wait on Windows smoke. P2e in flight. |
 
 ## Notes
 
