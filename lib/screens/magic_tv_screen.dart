@@ -24,6 +24,8 @@ import '../models/debrify_tv/import_results.dart';
 import '../services/analytics_service.dart';
 import '../services/android_native_downloader.dart';
 import '../services/android_tv_player_bridge.dart';
+import '../services/cloud/cloud_provider_id.dart';
+import '../services/cloud/cloud_provider_port.dart';
 import '../services/cloud/cloud_provider_registry.dart';
 import '../services/cloud/magic_tv_playable.dart';
 import '../services/cloud/magic_tv_prepare_args.dart';
@@ -73,6 +75,98 @@ import 'debrify_tv/dialogs/export_channels_dialog.dart';
 import 'debrify_tv/dialogs/import_channels_dialog.dart';
 import 'debrify_tv/dialogs/spotlight_dialog.dart';
 import 'settings/profile_backup_flows.dart';
+
+/// Magic TV provider-string dispatch. Persisted chip ids stay
+/// [CloudProviderId.magicTvId] (`real_debrid`, not playback `debrid`).
+///
+/// Production adapters are routed with capability `is` checks. Fat-port
+/// [FakeCloudProvider] (P1) does not implement those types, so [supports]
+/// is the fallback — same dual path as [CloudProviderRegistry.prepareMagicTv].
+class MagicTvDispatch {
+  MagicTvDispatch._();
+
+  static CloudProviderPort? portFor(String magicTvId) {
+    final id = CloudProviderId.fromMagicTvId(magicTvId);
+    if (id == null) return null;
+    return CloudProviderRegistry.instance[id];
+  }
+
+  /// Unknown chip ids fall through to Real-Debrid, matching the old `else`.
+  static CloudProviderId watchId(String magicTvId) =>
+      CloudProviderId.fromMagicTvId(magicTvId) ?? CloudProviderId.debrid;
+
+  static bool usesPrepare(String magicTvId) {
+    final port = portFor(magicTvId);
+    if (port == null) return false;
+    if (port is CloudMagicTvPrepare) return true;
+    return port.supports(CloudPortFeature.magicTvPrepare);
+  }
+
+  static bool usesLockedLinks(String magicTvId) {
+    final port = portFor(magicTvId);
+    if (port == null) return false;
+    if (port is CloudMagicTvLockedLinks) return true;
+    return port.supports(CloudPortFeature.magicTvLockedLinks);
+  }
+
+  /// TorBox `checkcached` window during channel switch. Not Premiumize
+  /// [CloudCheckCache].
+  static bool usesCachedHashes(String magicTvId) {
+    final port = portFor(magicTvId);
+    if (port == null) return false;
+    if (port is CloudCachedHashes) return true;
+    return port.supports(CloudPortFeature.cachedHashes);
+  }
+
+  static bool isSelectable(
+    String magicTvId, {
+    required bool realDebrid,
+    required bool torbox,
+    required bool pikpak,
+    required bool premiumize,
+    required bool allDebrid,
+  }) {
+    return switch (watchId(magicTvId)) {
+      CloudProviderId.torbox => torbox,
+      CloudProviderId.pikpak => pikpak,
+      CloudProviderId.premiumize => premiumize,
+      CloudProviderId.alldebrid => allDebrid,
+      CloudProviderId.debrid => realDebrid,
+    };
+  }
+
+  /// Next-channel button allowlists. These lists disagree on purpose
+  /// (Premiumize / AllDebrid omitted on some player launches). Do not unify.
+  static bool allowsNextChannel(
+    String magicTvId,
+    MagicTvNextChannelQuirk quirk,
+  ) {
+    final id = CloudProviderId.fromMagicTvId(magicTvId);
+    if (id == null) return false;
+    switch (quirk) {
+      case MagicTvNextChannelQuirk.exceptAllDebrid:
+        return id != CloudProviderId.alldebrid;
+      case MagicTvNextChannelQuirk.rdTorboxPikPak:
+        return id == CloudProviderId.debrid ||
+            id == CloudProviderId.torbox ||
+            id == CloudProviderId.pikpak;
+      case MagicTvNextChannelQuirk.allKnown:
+        return true;
+    }
+  }
+}
+
+/// Player `requestNextChannel` gates copied from the pre-P2a string ORs.
+enum MagicTvNextChannelQuirk {
+  /// RD|TB|PP|PM. Channel RD/TB/PP/PM and quick RD-early / PM.
+  exceptAllDebrid,
+
+  /// RD|TB|PP. Quick RD-late / TB / PP. Excludes Premiumize and AllDebrid.
+  rdTorboxPikPak,
+
+  /// All five Magic TV ids. Channel AllDebrid and quick AllDebrid.
+  allKnown,
+}
 
 const int _randomStartPercentDefault = 20;
 const int _randomStartPercentMin = 10;
@@ -338,11 +432,6 @@ class DebrifyTVScreen extends StatefulWidget {
 }
 
 class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
-  static const String _providerRealDebrid = 'real_debrid';
-  static const String _providerTorbox = 'torbox';
-  static const String _providerPikPak = 'pikpak';
-  static const String _providerPremiumize = 'premiumize';
-  static const String _providerAllDebrid = 'alldebrid';
   static const String _torboxFileEntryType = 'torbox_file';
   static const int _torboxMinVideoSizeBytes =
       50 * 1024 * 1024; // 50 MB filter threshold
@@ -397,7 +486,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
   bool _showVideoTitle = true;
   bool _hideOptions = false;
   bool _hideBackButton = false;
-  String _provider = _providerRealDebrid;
+  String _provider = CloudProviderId.debrid.magicTvId;
 
   // Quick play options
   bool _quickStartRandom = true;
@@ -415,7 +504,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
   bool get _viewerForcesNsfw =>
       !ProfilePolicyGuard.allowsSync(ProfileFeature.allowAdultContent);
   bool _rdSkipBlockedTorrents = true;
-  String _quickProvider = _providerRealDebrid;
+  String _quickProvider = CloudProviderId.debrid.magicTvId;
 
   // Debrify TV playback filters. Shared by channels and quick play (one
   // Debrify TV feed preference, unlike provider/NSFW which are per-scope).
@@ -453,7 +542,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
   // are the two cache-check-less providers that use the background prefetcher;
   // this tells _prefetchOneAtIndex / requestMagicNext which add+resolve path to
   // use against _activeApiKey.
-  String _activeProvider = _providerRealDebrid;
+  String _activeProvider = CloudProviderId.debrid.magicTvId;
   final Set<String> _inflightInfohashes = {};
   bool _isAndroidTv = false;
   bool _showSearchBar = false;
@@ -697,19 +786,14 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
   }
 
   bool _isProviderSelectable(String provider) {
-    if (provider == _providerTorbox) {
-      return _torboxAvailable;
-    }
-    if (provider == _providerPikPak) {
-      return _pikpakAvailable;
-    }
-    if (provider == _providerPremiumize) {
-      return _premiumizeAvailable;
-    }
-    if (provider == _providerAllDebrid) {
-      return _allDebridAvailable;
-    }
-    return _rdAvailable;
+    return MagicTvDispatch.isSelectable(
+      provider,
+      realDebrid: _rdAvailable,
+      torbox: _torboxAvailable,
+      pikpak: _pikpakAvailable,
+      premiumize: _premiumizeAvailable,
+      allDebrid: _allDebridAvailable,
+    );
   }
 
   Future<void> _loadSettings() async {
@@ -1910,33 +1994,33 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
       runSpacing: 8,
       children: [
         providerChip(
-          value: _providerRealDebrid,
+          value: CloudProviderId.debrid.magicTvId,
           label: 'Real Debrid',
           available: _rdAvailable,
           unavailableMessage:
               'Enable Real Debrid and add an API key in Settings.',
         ),
         providerChip(
-          value: _providerTorbox,
+          value: CloudProviderId.torbox.magicTvId,
           label: 'Torbox',
           available: _torboxAvailable,
           unavailableMessage: 'Enable Torbox and add an API key in Settings.',
         ),
         providerChip(
-          value: _providerPikPak,
+          value: CloudProviderId.pikpak.magicTvId,
           label: 'PikPak',
           available: _pikpakAvailable,
           unavailableMessage: 'Log in to PikPak in Settings.',
         ),
         providerChip(
-          value: _providerPremiumize,
+          value: CloudProviderId.premiumize.magicTvId,
           label: 'Premiumize',
           available: _premiumizeAvailable,
           unavailableMessage:
               'Enable Premiumize and add an API key in Settings.',
         ),
         providerChip(
-          value: _providerAllDebrid,
+          value: CloudProviderId.alldebrid.magicTvId,
           label: 'AllDebrid',
           available: _allDebridAvailable,
           unavailableMessage:
@@ -4152,13 +4236,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     debugPrint('✅ [WATCH] Keywords: ${keywords.length}');
 
     await _syncProviderAvailability();
-    final bool providerReady = switch (_provider) {
-      _providerTorbox => _torboxAvailable,
-      _providerPikPak => _pikpakAvailable,
-      _providerPremiumize => _premiumizeAvailable,
-      _providerAllDebrid => _allDebridAvailable,
-      _ => _rdAvailable,
-    };
+    final bool providerReady = _isProviderSelectable(_provider);
     if (!providerReady) {
       debugPrint('❌ [WATCH] Provider not ready: $_provider');
       MainPageBridge.notifyAutoLaunchFailed('Provider not configured');
@@ -4244,48 +4322,49 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
       '✅ [WATCH] Selected ${cachedTorrents.length} torrents for playback',
     );
 
-    if (_provider == _providerTorbox) {
-      debugPrint('🎬 [WATCH] Launching Torbox flow...');
-      await _watchTorboxWithCachedTorrents(
-        cachedTorrents,
-        channelName: channel.name,
-        channelId: channel.id,
-        channelNumber: resolvedChannelNumber,
-      );
-    } else if (_provider == _providerPikPak) {
-      debugPrint('🎬 [WATCH] Launching PikPak flow...');
-      await _watchPikPakWithCachedTorrents(
-        cachedTorrents,
-        channelName: channel.name,
-        channelId: channel.id,
-        channelNumber: resolvedChannelNumber,
-      );
-    } else if (_provider == _providerPremiumize) {
-      debugPrint('🎬 [WATCH] Launching Premiumize flow...');
-      await _watchPremiumizeWithCachedTorrents(
-        cachedTorrents,
-        channelName: channel.name,
-        channelId: channel.id,
-        channelNumber: resolvedChannelNumber,
-      );
-    } else if (_provider == _providerAllDebrid) {
-      debugPrint('🎬 [WATCH] Launching AllDebrid flow...');
-      await _watchAllDebridWithCachedTorrents(
-        cachedTorrents,
-        applyNsfwFilter: channel.avoidNsfw || _viewerForcesNsfw,
-        channelName: channel.name,
-        channelId: channel.id,
-        channelNumber: resolvedChannelNumber,
-      );
-    } else {
-      debugPrint('🎬 [WATCH] Launching RealDebrid flow...');
-      await _watchWithCachedTorrents(
-        cachedTorrents,
-        applyNsfwFilter: channel.avoidNsfw || _viewerForcesNsfw,
-        channelName: channel.name,
-        channelId: channel.id,
-        channelNumber: resolvedChannelNumber,
-      );
+    switch (MagicTvDispatch.watchId(_provider)) {
+      case CloudProviderId.torbox:
+        debugPrint('🎬 [WATCH] Launching Torbox flow...');
+        await _watchTorboxWithCachedTorrents(
+          cachedTorrents,
+          channelName: channel.name,
+          channelId: channel.id,
+          channelNumber: resolvedChannelNumber,
+        );
+      case CloudProviderId.pikpak:
+        debugPrint('🎬 [WATCH] Launching PikPak flow...');
+        await _watchPikPakWithCachedTorrents(
+          cachedTorrents,
+          channelName: channel.name,
+          channelId: channel.id,
+          channelNumber: resolvedChannelNumber,
+        );
+      case CloudProviderId.premiumize:
+        debugPrint('🎬 [WATCH] Launching Premiumize flow...');
+        await _watchPremiumizeWithCachedTorrents(
+          cachedTorrents,
+          channelName: channel.name,
+          channelId: channel.id,
+          channelNumber: resolvedChannelNumber,
+        );
+      case CloudProviderId.alldebrid:
+        debugPrint('🎬 [WATCH] Launching AllDebrid flow...');
+        await _watchAllDebridWithCachedTorrents(
+          cachedTorrents,
+          applyNsfwFilter: channel.avoidNsfw || _viewerForcesNsfw,
+          channelName: channel.name,
+          channelId: channel.id,
+          channelNumber: resolvedChannelNumber,
+        );
+      case CloudProviderId.debrid:
+        debugPrint('🎬 [WATCH] Launching RealDebrid flow...');
+        await _watchWithCachedTorrents(
+          cachedTorrents,
+          applyNsfwFilter: channel.avoidNsfw || _viewerForcesNsfw,
+          channelName: channel.name,
+          channelId: channel.id,
+          channelNumber: resolvedChannelNumber,
+        );
     }
 
     if (!mounted) {
@@ -4375,15 +4454,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     // show non-dismissible loading modal
     _progress.value = [];
     _progressOpen = true;
-    final providerLabel = _quickProvider == _providerTorbox
-        ? 'Torbox'
-        : _quickProvider == _providerPikPak
-        ? 'PikPak'
-        : _quickProvider == _providerPremiumize
-        ? 'Premiumize'
-        : _quickProvider == _providerAllDebrid
-        ? 'AllDebrid'
-        : 'Real Debrid';
+    final providerLabel = _providerDisplay(_quickProvider);
     // ignore: unawaited_futures
     showDialog(
       context: context,
@@ -4403,24 +4474,21 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
       _progressSheetContext = null;
     });
 
-    if (_quickProvider == _providerTorbox) {
-      await _watchWithTorbox(keywords, _log);
-      return;
-    }
-
-    if (_quickProvider == _providerPikPak) {
-      await _watchWithPikPak(keywords, _log);
-      return;
-    }
-
-    if (_quickProvider == _providerPremiumize) {
-      await _watchWithPremiumize(keywords, _log);
-      return;
-    }
-
-    if (_quickProvider == _providerAllDebrid) {
-      await _watchWithAllDebrid(keywords, _log);
-      return;
+    switch (MagicTvDispatch.watchId(_quickProvider)) {
+      case CloudProviderId.torbox:
+        await _watchWithTorbox(keywords, _log);
+        return;
+      case CloudProviderId.pikpak:
+        await _watchWithPikPak(keywords, _log);
+        return;
+      case CloudProviderId.premiumize:
+        await _watchWithPremiumize(keywords, _log);
+        return;
+      case CloudProviderId.alldebrid:
+        await _watchWithAllDebrid(keywords, _log);
+        return;
+      case CloudProviderId.debrid:
+        break;
     }
 
     // Silent approach - no progress logging needed
@@ -4701,7 +4769,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
                 // Start background prefetch only while player is active
                 if (!_watchCancelled) {
                   _activeApiKey = apiKeyEarly;
-                  _activeProvider = _providerRealDebrid;
+                  _activeProvider = CloudProviderId.debrid.magicTvId;
                   unawaited(_startPrefetch());
 
                   final String? activeChannelId = _currentWatchingChannelId;
@@ -4778,10 +4846,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
                         requestMagicNext: requestMagicNext,
                         requestNextChannel:
                             _channels.length > 1 &&
-                                (_quickProvider == _providerRealDebrid ||
-                                    _quickProvider == _providerTorbox ||
-                                    _quickProvider == _providerPikPak ||
-                                    _quickProvider == _providerPremiumize)
+                                MagicTvDispatch.allowsNextChannel(_quickProvider, MagicTvNextChannelQuirk.exceptAllDebrid)
                             ? _requestNextChannel
                             : null,
                         channelDirectory: activeChannelDirectory,
@@ -5057,7 +5122,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
 
       // Start background prefetch while player is active
       _activeApiKey = apiKey;
-      _activeProvider = _providerRealDebrid;
+      _activeProvider = CloudProviderId.debrid.magicTvId;
       unawaited(_startPrefetch());
 
       if (_progressOpen && _progressSheetContext != null) {
@@ -5123,9 +5188,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
             requestMagicNext: requestMagicNext,
             requestNextChannel:
                 _channels.length > 1 &&
-                    (_quickProvider == _providerRealDebrid ||
-                        _quickProvider == _providerTorbox ||
-                        _quickProvider == _providerPikPak)
+                    MagicTvDispatch.allowsNextChannel(_quickProvider, MagicTvNextChannelQuirk.rdTorboxPikPak)
                 ? _requestNextChannel
                 : null,
             channelDirectory: quickChannelDirectory,
@@ -5511,9 +5574,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
               requestMagicNext: requestTorboxNext,
               requestNextChannel:
                   _channels.length > 1 &&
-                      (_quickProvider == _providerRealDebrid ||
-                          _quickProvider == _providerTorbox ||
-                          _quickProvider == _providerPikPak)
+                      MagicTvDispatch.allowsNextChannel(_quickProvider, MagicTvNextChannelQuirk.rdTorboxPikPak)
                   ? _requestNextChannel
                   : null,
             ),
@@ -5712,7 +5773,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
           return {
             'url': prepared.streamUrl,
             'title': prepared.title,
-            'provider': 'pikpak',
+            'provider': CloudProviderId.pikpak.magicTvId,
             'pikpakFileId': '',
           };
         }
@@ -5791,9 +5852,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
               requestMagicNext: requestPikPakNext,
               requestNextChannel:
                   _channels.length > 1 &&
-                      (_quickProvider == _providerRealDebrid ||
-                          _quickProvider == _providerTorbox ||
-                          _quickProvider == _providerPikPak)
+                      MagicTvDispatch.allowsNextChannel(_quickProvider, MagicTvNextChannelQuirk.rdTorboxPikPak)
                   ? _requestNextChannel
                   : null,
             ),
@@ -6030,7 +6089,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
 
       if (!mounted) return;
       _activeApiKey = apiKey;
-      _activeProvider = _providerRealDebrid;
+      _activeProvider = CloudProviderId.debrid.magicTvId;
       unawaited(_startPrefetch());
       _closeProgressDialog();
 
@@ -6077,10 +6136,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
             requestMagicNext: requestMagicNext,
             requestNextChannel:
                 _channels.length > 1 &&
-                    (_provider == _providerRealDebrid ||
-                        _provider == _providerTorbox ||
-                        _provider == _providerPikPak ||
-                        _provider == _providerPremiumize)
+                    MagicTvDispatch.allowsNextChannel(_provider, MagicTvNextChannelQuirk.exceptAllDebrid)
                 ? _requestNextChannel
                 : null,
             channelDirectory: channelDirectory,
@@ -6281,7 +6337,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
 
       if (!mounted) return;
       _activeApiKey = apiKey;
-      _activeProvider = _providerAllDebrid;
+      _activeProvider = CloudProviderId.alldebrid.magicTvId;
       unawaited(_startPrefetch());
       _closeProgressDialog();
 
@@ -6327,11 +6383,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
             requestMagicNext: requestMagicNext,
             requestNextChannel:
                 _channels.length > 1 &&
-                    (_provider == _providerRealDebrid ||
-                        _provider == _providerTorbox ||
-                        _provider == _providerPikPak ||
-                        _provider == _providerPremiumize ||
-                        _provider == _providerAllDebrid)
+                    MagicTvDispatch.allowsNextChannel(_provider, MagicTvNextChannelQuirk.allKnown)
                 ? _requestNextChannel
                 : null,
             channelDirectory: channelDirectory,
@@ -6555,7 +6607,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     final keywords = await _getChannelKeywords(targetChannel.id);
     if (keywords.isEmpty) {
       debugPrint('DebrifyTV: Channel "${targetChannel.name}" has no keywords');
-      if (_provider == _providerRealDebrid || _provider == _providerAllDebrid) {
+      if (MagicTvDispatch.usesLockedLinks(_provider)) {
         unawaited(_startPrefetch());
       }
       return null;
@@ -6569,7 +6621,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
 
     if (playbackSelection.isEmpty) {
       debugPrint('DebrifyTV: No torrents matched in selected channel');
-      if (_provider == _providerRealDebrid || _provider == _providerAllDebrid) {
+      if (MagicTvDispatch.usesLockedLinks(_provider)) {
         unawaited(_startPrefetch());
       }
       return null;
@@ -6580,14 +6632,14 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
         .toList();
     if (allTorrents.isEmpty) {
       debugPrint('DebrifyTV: No playable torrents resolved for channel');
-      if (_provider == _providerRealDebrid || _provider == _providerAllDebrid) {
+      if (MagicTvDispatch.usesLockedLinks(_provider)) {
         unawaited(_startPrefetch());
       }
       return null;
     }
 
     List<Torrent> filteredTorrents = allTorrents;
-    if (_provider == _providerTorbox) {
+    if (MagicTvDispatch.usesCachedHashes(_provider)) {
       final apiKey = await StorageService.getTorboxApiKey();
       if (apiKey == null || apiKey.isEmpty) {
         debugPrint('DebrifyTV: ❌ No Torbox API key configured');
@@ -6636,7 +6688,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     }
 
     try {
-      if (_provider == _providerRealDebrid) {
+      if (MagicTvDispatch.watchId(_provider) == CloudProviderId.debrid) {
         debugPrint('DebrifyTV: Selected channel uses Real-Debrid provider');
         final apiKey = await StorageService.getApiKey();
         if (apiKey == null || apiKey.isEmpty) {
@@ -6743,7 +6795,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
           }
 
           _activeApiKey = apiKey;
-          _activeProvider = _providerRealDebrid;
+          _activeProvider = CloudProviderId.debrid.magicTvId;
           unawaited(_startPrefetch());
           debugPrint(
             'DebrifyTV: Started Real-Debrid prefetcher for new channel',
@@ -6763,7 +6815,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
         return null;
       }
 
-      if (_provider == _providerAllDebrid) {
+      if (MagicTvDispatch.watchId(_provider) == CloudProviderId.alldebrid) {
         debugPrint('DebrifyTV: Selected channel uses AllDebrid provider');
         final apiKey = await StorageService.getAllDebridApiKey();
         if (apiKey == null || apiKey.isEmpty) {
@@ -6829,7 +6881,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
           }
 
           _activeApiKey = apiKey;
-          _activeProvider = _providerAllDebrid;
+          _activeProvider = CloudProviderId.alldebrid.magicTvId;
           unawaited(_startPrefetch());
           debugPrint('DebrifyTV: Started AllDebrid prefetcher for new channel');
           debugPrint('DebrifyTV: Successfully got stream from channel: $title');
@@ -6847,7 +6899,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
         return null;
       }
 
-      if (_provider == _providerTorbox) {
+      if (MagicTvDispatch.watchId(_provider) == CloudProviderId.torbox) {
         final apiKey = await StorageService.getTorboxApiKey();
         if (apiKey == null || apiKey.isEmpty) {
           debugPrint('DebrifyTV: ❌ No Torbox API key configured');
@@ -6900,7 +6952,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
         return null;
       }
 
-      if (_provider == _providerPikPak) {
+      if (MagicTvDispatch.watchId(_provider) == CloudProviderId.pikpak) {
         final pikpakAvailable = await PikPakTvService.instance.isAvailable();
         if (!pikpakAvailable) {
           debugPrint('DebrifyTV: PikPak not authenticated');
@@ -6962,7 +7014,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     }
 
     debugPrint('DebrifyTV: Channel switch failed');
-    if (_provider == _providerRealDebrid || _provider == _providerAllDebrid) {
+    if (MagicTvDispatch.usesLockedLinks(_provider)) {
       unawaited(_startPrefetch());
       debugPrint('DebrifyTV: Restarted prefetcher for current channel');
     }
@@ -7042,7 +7094,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
       final bool canSwitchChannels =
           _currentWatchingChannelId != null &&
           _channels.length > 1 &&
-          (_provider == _providerRealDebrid || _provider == _providerAllDebrid);
+          MagicTvDispatch.usesLockedLinks(_provider);
 
       // Hide auto-launch overlay before launching player
       MainPageBridge.notifyPlayerLaunching();
@@ -7354,10 +7406,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
             requestMagicNext: requestTorboxNext,
             requestNextChannel:
                 _channels.length > 1 &&
-                    (_provider == _providerRealDebrid ||
-                        _provider == _providerTorbox ||
-                        _provider == _providerPikPak ||
-                        _provider == _providerPremiumize)
+                    MagicTvDispatch.allowsNextChannel(_provider, MagicTvNextChannelQuirk.exceptAllDebrid)
                 ? _requestNextChannel
                 : null,
             channelDirectory: channelDirectory,
@@ -7458,7 +7507,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
         return {
           'url': prepared.streamUrl,
           'title': prepared.title,
-          'provider': 'pikpak',
+          'provider': CloudProviderId.pikpak.magicTvId,
         };
       }
       return null;
@@ -7523,10 +7572,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
             requestMagicNext: requestPikPakNext,
             requestNextChannel:
                 _channels.length > 1 &&
-                    (_provider == _providerRealDebrid ||
-                        _provider == _providerTorbox ||
-                        _provider == _providerPikPak ||
-                        _provider == _providerPremiumize)
+                    MagicTvDispatch.allowsNextChannel(_provider, MagicTvNextChannelQuirk.exceptAllDebrid)
                 ? _requestNextChannel
                 : null,
             channelDirectory: channelDirectory,
@@ -9466,7 +9512,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     required void Function(String message) log,
   }) async {
     final prepared = await CloudProviderRegistry.instance.prepareMagicTv(
-      provider: _providerTorbox,
+      provider: CloudProviderId.torbox.magicTvId,
       request: _magicTvPrepareRequest(candidate, log),
     );
     if (prepared == null) return null;
@@ -9482,7 +9528,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     required void Function(String message) log,
   }) async {
     final prepared = await CloudProviderRegistry.instance.prepareMagicTv(
-      provider: _providerPikPak,
+      provider: CloudProviderId.pikpak.magicTvId,
       request: _magicTvPrepareRequest(candidate, log),
     );
     if (prepared == null) return null;
@@ -9553,7 +9599,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     required void Function(String message) log,
   }) async {
     final prepared = await CloudProviderRegistry.instance.prepareMagicTv(
-      provider: _providerPremiumize,
+      provider: CloudProviderId.premiumize.magicTvId,
       request: _magicTvPrepareRequest(candidate, log),
     );
     if (prepared == null) return null;
@@ -9592,7 +9638,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     Torrent candidate, {
     Set<String>? seenKeys,
   }) => CloudProviderRegistry.instance.prepareMagicTvLockedLinks(
-    provider: _providerRealDebrid,
+    provider: CloudProviderId.debrid.magicTvId,
     request: _magicTvLockedRequest(candidate, seenKeys: seenKeys),
   );
 
@@ -9795,10 +9841,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
             requestMagicNext: requestPremiumizeNext,
             requestNextChannel:
                 _channels.length > 1 &&
-                    (_provider == _providerRealDebrid ||
-                        _provider == _providerTorbox ||
-                        _provider == _providerPikPak ||
-                        _provider == _providerPremiumize)
+                    MagicTvDispatch.allowsNextChannel(_provider, MagicTvNextChannelQuirk.exceptAllDebrid)
                 ? _requestNextChannel
                 : null,
             channelDirectory: channelDirectory,
@@ -10088,10 +10131,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
               requestMagicNext: requestPremiumizeNext,
               requestNextChannel:
                   _channels.length > 1 &&
-                      (_quickProvider == _providerRealDebrid ||
-                          _quickProvider == _providerTorbox ||
-                          _quickProvider == _providerPikPak ||
-                          _quickProvider == _providerPremiumize)
+                      MagicTvDispatch.allowsNextChannel(_quickProvider, MagicTvNextChannelQuirk.exceptAllDebrid)
                   ? _requestNextChannel
                   : null,
             ),
@@ -10323,7 +10363,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
       if (!mounted) return;
 
       _activeApiKey = apiKey;
-      _activeProvider = _providerAllDebrid;
+      _activeProvider = CloudProviderId.alldebrid.magicTvId;
       unawaited(_startPrefetch());
 
       if (await _handOffToExternalPlayer(first['url'] ?? '', firstTitle)) {
@@ -10359,11 +10399,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
               requestMagicNext: requestMagicNext,
               requestNextChannel:
                   _channels.length > 1 &&
-                      (_quickProvider == _providerRealDebrid ||
-                          _quickProvider == _providerTorbox ||
-                          _quickProvider == _providerPikPak ||
-                          _quickProvider == _providerPremiumize ||
-                          _quickProvider == _providerAllDebrid)
+                      MagicTvDispatch.allowsNextChannel(_quickProvider, MagicTvNextChannelQuirk.allKnown)
                   ? _requestNextChannel
                   : null,
             ),
@@ -10569,7 +10605,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     if (idx < 0 || idx >= _queue.length) return;
     final item = _queue[idx];
     if (item is! Torrent) return;
-    if (_activeProvider == _providerAllDebrid) {
+    if (MagicTvDispatch.watchId(_activeProvider) == CloudProviderId.alldebrid) {
       await _prefetchOneAllDebrid(idx, item);
       return;
     }
@@ -10579,7 +10615,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     try {
       final batch = await CloudProviderRegistry.instance
           .prepareMagicTvLockedLinks(
-            provider: _providerRealDebrid,
+            provider: CloudProviderId.debrid.magicTvId,
             request: _magicTvLockedRequest(item),
           );
       if (batch == null || batch.lockedLinks.isEmpty) {
@@ -10632,7 +10668,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
   Future<_AllDebridPrepared?> _resolveAllDebridLinks(Torrent candidate) async {
     final batch = await CloudProviderRegistry.instance
         .prepareMagicTvLockedLinks(
-          provider: _providerAllDebrid,
+          provider: CloudProviderId.alldebrid.magicTvId,
           request: _magicTvLockedRequest(candidate),
         );
     if (batch == null || batch.lockedLinks.isEmpty) return null;
