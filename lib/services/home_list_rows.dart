@@ -1,66 +1,14 @@
 import 'dart:async';
 
 import '../models/stremio_addon.dart';
+import 'home/home_row_ids.dart';
 import 'storage_service.dart';
 import 'trakt/trakt_list_source.dart';
 import 'watched_filter.dart';
 import 'simkl/simkl_list_source.dart';
 import 'mdblist/mdblist_list_source.dart';
 
-/// ID grammar for the opt-in extra Home rows (see
-/// [StorageService.getHomeExtraRows]). Kept together so the board, the
-/// resolver and the Home Rows manager can never drift on what an id means.
-class HomeExtraRowIds {
-  HomeExtraRowIds._();
-
-  static const String traktPrefix = 'traktlist:';
-  static const String traktCustomPrefix = 'traktlist:custom:';
-  static const String traktLikedPrefix = 'traktlist:liked:';
-  static const String simklPrefix = 'simkllist:';
-  static const String mdblistPrefix = 'mdblistlist:';
-  static const String mdblistMinePrefix = 'mdblistlist:mine:';
-  static const String mdblistLikedPrefix = 'mdblistlist:liked:';
-  static const String mdblistTopPrefix = 'mdblistlist:top:';
-  static const String iptvPrefix = 'iptvlist:';
-
-  /// `traktlist:watchlist` … — built-ins key off the API slug, which is
-  /// stable across enum reorderings.
-  static String traktBuiltin(TraktSeeAllList list) =>
-      '$traktPrefix${list.apiValue}';
-
-  static String traktUserList(TraktListChoice choice) => choice.liked
-      ? '$traktLikedPrefix${choice.userListId}'
-      : '$traktCustomPrefix${choice.userListId}';
-
-  /// `simkllist:planToWatch` … — enum names are part of the storage contract;
-  /// renaming a [SimklSeeAllList] value needs a migration.
-  static String simkl(SimklSeeAllList list) => '$simklPrefix${list.name}';
-
-  static String mdblistMine(MdblistListChoice list) =>
-      '$mdblistMinePrefix${list.id}';
-  static String mdblistLiked(MdblistListChoice list) =>
-      '$mdblistLikedPrefix${list.id}';
-  static String mdblistTop(MdblistListChoice list) =>
-      '$mdblistTopPrefix${list.id}';
-
-  static String iptvList(String listId) => '$iptvPrefix$listId';
-
-  static bool isTracker(String id) =>
-      id.startsWith(traktPrefix) ||
-      id.startsWith(simklPrefix) ||
-      id.startsWith(mdblistPrefix);
-
-  static bool isMdblist(String id) => id.startsWith(mdblistPrefix);
-
-  static bool isTraktUserList(String id) =>
-      id.startsWith(traktCustomPrefix) || id.startsWith(traktLikedPrefix);
-
-  static bool isIptv(String id) => id.startsWith(iptvPrefix);
-
-  /// The `<listId>` of an `iptvlist:` id (null for anything else).
-  static String? iptvListId(String id) =>
-      isIptv(id) ? id.substring(iptvPrefix.length) : null;
-}
+export 'home/home_row_ids.dart' show HomeExtraRowIds;
 
 /// A Home board row backed by a Trakt/Simkl list instead of an addon catalog.
 ///
@@ -361,8 +309,7 @@ class HomeListRowsService {
             if (!result.complete) return;
             // Public "top" lists hide watched titles; the user's own and
             // liked lists never do.
-            final items =
-                entry.key.startsWith(HomeExtraRowIds.mdblistTopPrefix)
+            final items = entry.key.startsWith(HomeExtraRowIds.mdblistTopPrefix)
                 ? WatchedFilter.apply(List.of(result.items))
                 : List.of(result.items);
             if (items.isEmpty) return;
