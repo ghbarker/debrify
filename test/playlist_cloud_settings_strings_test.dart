@@ -125,6 +125,11 @@ void main() {
           PlaylistProviderDispatch.kindOrRd('webdav'),
           PlaylistPlayKind.webdav,
         );
+        expect(
+          PlaylistProviderDispatch.kindOrRd(' torbox'),
+          PlaylistPlayKind.realdebrid,
+        );
+        expect(PlaylistProviderDispatch.idExact(' torbox'), isNull);
       },
     );
 

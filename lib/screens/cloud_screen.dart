@@ -121,44 +121,17 @@ class _CloudProviderInfo {
 
 class _CloudScreenState extends State<CloudScreen> {
   /// Canonical provider order (mirrors the old per-provider nav order).
-  static const List<_CloudProviderInfo> _allProviders = [
-    _CloudProviderInfo(
-      'realdebrid',
-      'Real Debrid',
-      'Debrid service',
-      Icons.cloud_download_rounded,
-      Color(0xFF60A5FA),
-    ),
-    _CloudProviderInfo(
-      'torbox',
-      'Torbox',
-      'Debrid service',
-      Icons.flash_on_rounded,
-      Color(0xFFFBBF24),
-    ),
-    _CloudProviderInfo(
-      'pikpak',
-      'PikPak',
-      'Cloud storage',
-      Icons.cloud_circle_rounded,
-      Color(0xFF34D399),
-    ),
-    _CloudProviderInfo(
-      'premiumize',
-      'Premiumize',
-      'Debrid service',
-      Icons.workspace_premium_rounded,
-      Color(0xFFFB923C),
-    ),
-    _CloudProviderInfo(
-      'alldebrid',
-      'AllDebrid',
-      'Debrid service',
-      Icons.all_inclusive_rounded,
-      Color(0xFFEF4444),
-    ),
-    _CloudProviderInfo(
-      'webdav',
+  static final List<_CloudProviderInfo> _allProviders = [
+    for (final id in CloudHubDispatch.cloudOrder)
+      _CloudProviderInfo(
+        CloudHubDispatch.hubKey(id),
+        CloudHubDispatch.hubName(id),
+        CloudHubDispatch.hubSubtitle(id),
+        CloudHubDispatch.hubIcon(id),
+        CloudHubDispatch.hubColor(id),
+      ),
+    const _CloudProviderInfo(
+      CloudHubDispatch.webDavKey,
       'WebDAV',
       'File server',
       Icons.cloud_sync_rounded,
@@ -239,38 +212,22 @@ class _CloudScreenState extends State<CloudScreen> {
   /// Which providers are enabled & not hidden — mirrors main.dart's
   /// `_computeVisibleNavIndices` per-provider conditions exactly.
   Future<List<_CloudProviderInfo>> _computeAvailableProviders() async {
+    final hidden = <CloudProviderId, bool>{
+      CloudProviderId.debrid: await StorageService.getRealDebridHiddenFromNav(),
+      CloudProviderId.torbox: await StorageService.getTorboxHiddenFromNav(),
+      CloudProviderId.pikpak: await StorageService.getPikPakHiddenFromNav(),
+      CloudProviderId.premiumize:
+          await StorageService.getPremiumizeHiddenFromNav(),
+      CloudProviderId.alldebrid:
+          await StorageService.getAllDebridHiddenFromNav(),
+    };
+
     final keys = <String>{};
-
-    final rdEnabled = await StorageService.getRealDebridIntegrationEnabled();
-    final rdKey = await StorageService.getApiKey();
-    final rdHidden = await StorageService.getRealDebridHiddenFromNav();
-    if (rdEnabled && (rdKey?.isNotEmpty ?? false) && !rdHidden) {
-      keys.add('realdebrid');
-    }
-
-    final tbEnabled = await StorageService.getTorboxIntegrationEnabled();
-    final tbKey = await StorageService.getTorboxApiKey();
-    final tbHidden = await StorageService.getTorboxHiddenFromNav();
-    if (tbEnabled && (tbKey?.isNotEmpty ?? false) && !tbHidden) {
-      keys.add('torbox');
-    }
-
-    final ppEnabled = await StorageService.getPikPakEnabled();
-    final ppHidden = await StorageService.getPikPakHiddenFromNav();
-    if (ppEnabled && !ppHidden) keys.add('pikpak');
-
-    final pmEnabled = await StorageService.getPremiumizeIntegrationEnabled();
-    final pmKey = await StorageService.getPremiumizeApiKey();
-    final pmHidden = await StorageService.getPremiumizeHiddenFromNav();
-    if (pmEnabled && (pmKey?.isNotEmpty ?? false) && !pmHidden) {
-      keys.add('premiumize');
-    }
-
-    final adEnabled = await StorageService.getAllDebridIntegrationEnabled();
-    final adKey = await StorageService.getAllDebridApiKey();
-    final adHidden = await StorageService.getAllDebridHiddenFromNav();
-    if (adEnabled && (adKey?.isNotEmpty ?? false) && !adHidden) {
-      keys.add('alldebrid');
+    for (final id in CloudHubDispatch.cloudOrder) {
+      if (!CloudHubDispatch.inRegistry(id)) continue;
+      if (hidden[id] == true) continue;
+      if (!await CloudHubDispatch.magnetConfigured(id)) continue;
+      keys.add(CloudHubDispatch.hubKey(id));
     }
 
     final webDavEnabled = await StorageService.getWebDavEnabled();
@@ -279,7 +236,7 @@ class _CloudScreenState extends State<CloudScreen> {
     );
     final wdHidden = await StorageService.getWebDavHiddenFromNav();
     if (webDavEnabled && webDavServers.isNotEmpty && !wdHidden) {
-      keys.add('webdav');
+      keys.add(CloudHubDispatch.webDavKey);
     }
 
     return [

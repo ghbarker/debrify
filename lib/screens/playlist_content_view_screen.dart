@@ -11,9 +11,11 @@ import '../services/storage_service.dart';
 import '../services/debrid_service.dart';
 import '../services/alldebrid_service.dart';
 import '../models/alldebrid_file.dart';
+import '../services/cloud/cloud_provider_id.dart';
 import '../services/cloud/cloud_provider_registry.dart';
 import '../services/torbox_service.dart';
 import '../services/pikpak_api_service.dart';
+import '../services/playlist_player_service.dart';
 import '../services/video_player_launcher.dart';
 import '../services/main_page_bridge.dart';
 import '../services/android_native_downloader.dart';
@@ -306,22 +308,21 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
     });
 
     try {
-      final provider =
-          (widget.playlistItem['provider'] as String?) ?? 'realdebrid';
-
-      final normalizedProvider = provider.toLowerCase();
-      if (normalizedProvider == 'torbox') {
-        await _loadTorboxContent();
-      } else if (normalizedProvider == 'pikpak') {
-        await _loadPikPakContent();
-      } else if (normalizedProvider == 'webdav') {
-        await _loadWebDavContent();
-      } else if (normalizedProvider == 'premiumize') {
-        await _loadPremiumizeContent();
-      } else if (normalizedProvider == 'alldebrid') {
-        await _loadAllDebridContent();
-      } else {
-        await _loadRealDebridContent();
+      switch (PlaylistProviderDispatch.kindOrRd(
+        widget.playlistItem['provider'] as String?,
+      )) {
+        case PlaylistPlayKind.torbox:
+          await _loadTorboxContent();
+        case PlaylistPlayKind.pikpak:
+          await _loadPikPakContent();
+        case PlaylistPlayKind.webdav:
+          await _loadWebDavContent();
+        case PlaylistPlayKind.premiumize:
+          await _loadPremiumizeContent();
+        case PlaylistPlayKind.alldebrid:
+          await _loadAllDebridContent();
+        case PlaylistPlayKind.realdebrid:
+          await _loadRealDebridContent();
       }
 
       // Note: View mode is now applied in _initializeScreen() after _parseSeriesPlaylist()
@@ -974,9 +975,9 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
 
     // Sort folder paths using SAME LOGIC AS UI (_applySortedView sorts folders)
     // Extract the top-level folder name from each path for sorting
-    final provider =
-        ((widget.playlistItem['provider'] as String?) ?? 'realdebrid')
-            .toLowerCase();
+    final skipTorrentName = PlaylistProviderDispatch.skipTorrentNameFolder(
+      widget.playlistItem['provider'] as String?,
+    );
     final folderPathsList = folderGroups.keys.toList();
     folderPathsList.sort((a, b) {
       // Extract the top-level folder name from the path
@@ -988,9 +989,9 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
         aFolderName = 'Root';
       } else {
         final aParts = a.split('/');
-        // For Torbox: skip first folder level (torrent name), use second level
+        // TorBox CloudFileDownloadLink: skip first folder level (torrent name)
         // For others: use first folder level
-        if (provider == 'torbox' && aParts.length > 1) {
+        if (skipTorrentName && aParts.length > 1) {
           aFolderName = aParts[1]; // Second folder (skip torrent name)
         } else {
           aFolderName = aParts[0]; // First folder (top-level)
@@ -1001,9 +1002,9 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
         bFolderName = 'Root';
       } else {
         final bParts = b.split('/');
-        // For Torbox: skip first folder level (torrent name), use second level
+        // TorBox CloudFileDownloadLink: skip first folder level (torrent name)
         // For others: use first folder level
-        if (provider == 'torbox' && bParts.length > 1) {
+        if (skipTorrentName && bParts.length > 1) {
           bFolderName = bParts[1]; // Second folder (skip torrent name)
         } else {
           bFolderName = bParts[0]; // First folder (top-level)
@@ -1157,22 +1158,23 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
         }
       }
 
-      final provider =
-          ((widget.playlistItem['provider'] as String?) ?? 'realdebrid')
-              .toLowerCase();
-
-      if (provider == 'realdebrid') {
-        await _playRealDebridPlaylist(videoFiles, startIndex);
-      } else if (provider == 'torbox') {
-        await _playTorboxPlaylist(videoFiles, startIndex);
-      } else if (provider == 'pikpak') {
-        await _playPikPakPlaylist(videoFiles, startIndex);
-      } else if (provider == 'webdav') {
-        await _playWebDavPlaylist(videoFiles, startIndex);
-      } else if (provider == 'premiumize') {
-        await _playPremiumizePlaylist(videoFiles, startIndex);
-      } else if (provider == 'alldebrid') {
-        await _playAllDebridPlaylist(videoFiles, startIndex);
+      switch (PlaylistProviderDispatch.kindOrNull(
+        widget.playlistItem['provider'] as String?,
+      )) {
+        case PlaylistPlayKind.realdebrid:
+          await _playRealDebridPlaylist(videoFiles, startIndex);
+        case PlaylistPlayKind.torbox:
+          await _playTorboxPlaylist(videoFiles, startIndex);
+        case PlaylistPlayKind.pikpak:
+          await _playPikPakPlaylist(videoFiles, startIndex);
+        case PlaylistPlayKind.webdav:
+          await _playWebDavPlaylist(videoFiles, startIndex);
+        case PlaylistPlayKind.premiumize:
+          await _playPremiumizePlaylist(videoFiles, startIndex);
+        case PlaylistPlayKind.alldebrid:
+          await _playAllDebridPlaylist(videoFiles, startIndex);
+        case null:
+          break;
       }
 
       if (mounted && Navigator.of(context).canPop()) {
@@ -2102,8 +2104,10 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
     final torboxTorrentId = widget.playlistItem?['torboxTorrentId']?.toString();
     final pikpakCollectionId = widget.playlistItem?['pikpakFileId'] as String?;
     final isPremiumize =
-        (widget.playlistItem?['provider'] as String?)?.toLowerCase() ==
-        'premiumize';
+        PlaylistProviderDispatch.idExact(
+          widget.playlistItem?['provider'] as String?,
+        ) ==
+        CloudProviderId.premiumize;
     final String? premiumizeHash = isPremiumize
         ? (widget.playlistItem?['torrent_hash'] as String?)
         : null;
@@ -2111,8 +2115,10 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
         ? (widget.playlistItem?['premiumizeItemId']?.toString())
         : null;
     final bool isAllDebrid =
-        (widget.playlistItem?['provider'] as String?)?.toLowerCase() ==
-        'alldebrid';
+        PlaylistProviderDispatch.idExact(
+          widget.playlistItem?['provider'] as String?,
+        ) ==
+        CloudProviderId.alldebrid;
     final String? allDebridHash = isAllDebrid
         ? (widget.playlistItem?['torrent_hash'] as String?)
         : null;
@@ -2389,66 +2395,70 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
       );
 
       // Also update the in-memory playlist item for immediate UI update
-      final provider =
-          (widget.playlistItem['provider'] as String?) ?? 'realdebrid';
       bool updated = false;
 
-      if (provider.toLowerCase() == 'realdebrid') {
-        final rdTorrentId = widget.playlistItem['rdTorrentId'] as String?;
-        if (rdTorrentId != null) {
-          updated = await StorageService.updatePlaylistItemPoster(
-            posterUrl,
-            rdTorrentId: rdTorrentId,
-          );
-        }
-      } else if (provider.toLowerCase() == 'torbox') {
-        final torboxTorrentId = widget.playlistItem['torboxTorrentId'];
-        if (torboxTorrentId != null) {
-          // Torbox uses integer IDs, but updatePlaylistItemPoster expects String
-          // We need to update the playlist manually
-          final items = await StorageService.getPlaylistItemsRaw();
-          final itemIndex = items.indexWhere(
-            (item) => item['torboxTorrentId'] == torboxTorrentId,
-          );
-
-          if (itemIndex >= 0) {
-            items[itemIndex]['posterUrl'] = posterUrl;
-            await StorageService.savePlaylistItemsRaw(items);
-            updated = true;
+      switch (PlaylistProviderDispatch.posterKind(
+        widget.playlistItem['provider'] as String?,
+      )) {
+        case PlaylistPlayKind.realdebrid:
+          final rdTorrentId = widget.playlistItem['rdTorrentId'] as String?;
+          if (rdTorrentId != null) {
+            updated = await StorageService.updatePlaylistItemPoster(
+              posterUrl,
+              rdTorrentId: rdTorrentId,
+            );
           }
-        }
-      } else if (provider.toLowerCase() == 'pikpak') {
-        final pikpakCollectionId =
-            widget.playlistItem['pikpakFileId'] as String?;
-        if (pikpakCollectionId != null) {
-          updated = await StorageService.updatePlaylistItemPoster(
-            posterUrl,
-            pikpakCollectionId: pikpakCollectionId,
-          );
-        }
-      } else if (provider.toLowerCase() == 'premiumize') {
-        final premiumizeHash = widget.playlistItem['torrent_hash'] as String?;
-        final premiumizeItemId = widget.playlistItem['premiumizeItemId']
-            ?.toString();
-        if (premiumizeHash != null && premiumizeHash.isNotEmpty) {
-          updated = await StorageService.updatePlaylistItemPoster(
-            posterUrl,
-            premiumizeHash: premiumizeHash,
-          );
-        } else if (premiumizeItemId != null && premiumizeItemId.isNotEmpty) {
-          updated = await StorageService.updatePlaylistItemPoster(
-            posterUrl,
-            premiumizeItemId: premiumizeItemId,
-          );
-        }
-      } else if (provider.toLowerCase() == 'alldebrid') {
-        final allDebridHash = widget.playlistItem['torrent_hash'] as String?;
-        if (allDebridHash != null && allDebridHash.isNotEmpty) {
-          updated = await StorageService.updatePlaylistItemPoster(
-            posterUrl,
-            allDebridHash: allDebridHash,
-          );
-        }
+        case PlaylistPlayKind.torbox:
+          final torboxTorrentId = widget.playlistItem['torboxTorrentId'];
+          if (torboxTorrentId != null) {
+            // Torbox uses integer IDs, but updatePlaylistItemPoster expects String
+            // We need to update the playlist manually
+            final items = await StorageService.getPlaylistItemsRaw();
+            final itemIndex = items.indexWhere(
+              (item) => item['torboxTorrentId'] == torboxTorrentId,
+            );
+
+            if (itemIndex >= 0) {
+              items[itemIndex]['posterUrl'] = posterUrl;
+              await StorageService.savePlaylistItemsRaw(items);
+              updated = true;
+            }
+          }
+        case PlaylistPlayKind.pikpak:
+          final pikpakCollectionId =
+              widget.playlistItem['pikpakFileId'] as String?;
+          if (pikpakCollectionId != null) {
+            updated = await StorageService.updatePlaylistItemPoster(
+              posterUrl,
+              pikpakCollectionId: pikpakCollectionId,
+            );
+          }
+        case PlaylistPlayKind.premiumize:
+          final premiumizeHash = widget.playlistItem['torrent_hash'] as String?;
+          final premiumizeItemId = widget.playlistItem['premiumizeItemId']
+              ?.toString();
+          if (premiumizeHash != null && premiumizeHash.isNotEmpty) {
+            updated = await StorageService.updatePlaylistItemPoster(
+              posterUrl,
+              premiumizeHash: premiumizeHash,
+            );
+          } else if (premiumizeItemId != null && premiumizeItemId.isNotEmpty) {
+            updated = await StorageService.updatePlaylistItemPoster(
+              posterUrl,
+              premiumizeItemId: premiumizeItemId,
+            );
+          }
+        case PlaylistPlayKind.alldebrid:
+          final allDebridHash = widget.playlistItem['torrent_hash'] as String?;
+          if (allDebridHash != null && allDebridHash.isNotEmpty) {
+            updated = await StorageService.updatePlaylistItemPoster(
+              posterUrl,
+              allDebridHash: allDebridHash,
+            );
+          }
+        case PlaylistPlayKind.webdav:
+        case null:
+          break;
       }
 
       if (updated) {
@@ -3439,22 +3449,23 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
         }
       }
 
-      final provider =
-          ((widget.playlistItem['provider'] as String?) ?? 'realdebrid')
-              .toLowerCase();
-
-      if (provider == 'realdebrid') {
-        await _playRealDebridPlaylist(videoFiles, startIndex);
-      } else if (provider == 'torbox') {
-        await _playTorboxPlaylist(videoFiles, startIndex);
-      } else if (provider == 'pikpak') {
-        await _playPikPakPlaylist(videoFiles, startIndex);
-      } else if (provider == 'webdav') {
-        await _playWebDavPlaylist(videoFiles, startIndex);
-      } else if (provider == 'premiumize') {
-        await _playPremiumizePlaylist(videoFiles, startIndex);
-      } else if (provider == 'alldebrid') {
-        await _playAllDebridPlaylist(videoFiles, startIndex);
+      switch (PlaylistProviderDispatch.kindOrNull(
+        widget.playlistItem['provider'] as String?,
+      )) {
+        case PlaylistPlayKind.realdebrid:
+          await _playRealDebridPlaylist(videoFiles, startIndex);
+        case PlaylistPlayKind.torbox:
+          await _playTorboxPlaylist(videoFiles, startIndex);
+        case PlaylistPlayKind.pikpak:
+          await _playPikPakPlaylist(videoFiles, startIndex);
+        case PlaylistPlayKind.webdav:
+          await _playWebDavPlaylist(videoFiles, startIndex);
+        case PlaylistPlayKind.premiumize:
+          await _playPremiumizePlaylist(videoFiles, startIndex);
+        case PlaylistPlayKind.alldebrid:
+          await _playAllDebridPlaylist(videoFiles, startIndex);
+        case null:
+          break;
       }
 
       if (mounted && Navigator.of(context).canPop()) {
@@ -3527,7 +3538,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
               rdTorrentId: rdTorrentId,
               rdLinkIndex: linkIndex,
               sizeBytes: file.bytes,
-              provider: 'realdebrid',
+              provider: CloudProviderId.debrid.playlistStoredProvider,
             ),
           );
         } catch (_) {
@@ -3540,7 +3551,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
               rdTorrentId: rdTorrentId,
               rdLinkIndex: linkIndex,
               sizeBytes: file.bytes,
-              provider: 'realdebrid',
+              provider: CloudProviderId.debrid.playlistStoredProvider,
             ),
           );
         }
@@ -3554,7 +3565,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
             rdTorrentId: rdTorrentId,
             rdLinkIndex: linkIndex,
             sizeBytes: file.bytes,
-            provider: 'realdebrid',
+            provider: CloudProviderId.debrid.playlistStoredProvider,
           ),
         );
       }
@@ -3626,7 +3637,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
           url: url,
           title: file.name,
           relativePath: file.relativePath ?? file.path,
-          provider: 'alldebrid',
+          provider: CloudProviderId.alldebrid.playlistStoredProvider,
           allDebridLink: lockedLink,
           torrentHash: torrentHash,
           sizeBytes: file.bytes,
@@ -3701,7 +3712,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
                 torboxTorrentId: torboxTorrentId,
                 torboxFileId: file.fileId,
                 sizeBytes: file.bytes,
-                provider: 'torbox',
+                provider: CloudProviderId.torbox.playlistStoredProvider,
               ),
             );
           }
@@ -3714,7 +3725,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
               torboxTorrentId: torboxTorrentId,
               torboxFileId: file.fileId,
               sizeBytes: file.bytes,
-              provider: 'torbox',
+              provider: CloudProviderId.torbox.playlistStoredProvider,
             ),
           );
         }
@@ -3727,7 +3738,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
             torboxTorrentId: torboxTorrentId,
             torboxFileId: file.fileId,
             sizeBytes: file.bytes,
-            provider: 'torbox',
+            provider: CloudProviderId.torbox.playlistStoredProvider,
           ),
         );
       }
@@ -3809,7 +3820,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
               relativePath: file.relativePath,
               pikpakFileId: fileId,
               sizeBytes: file.bytes,
-              provider: 'pikpak',
+              provider: CloudProviderId.pikpak.playlistStoredProvider,
             ),
           );
         } catch (_) {
@@ -3820,7 +3831,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
               relativePath: file.relativePath,
               pikpakFileId: fileId,
               sizeBytes: file.bytes,
-              provider: 'pikpak',
+              provider: CloudProviderId.pikpak.playlistStoredProvider,
             ),
           );
         }
@@ -3832,7 +3843,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
             relativePath: file.relativePath,
             pikpakFileId: fileId,
             sizeBytes: file.bytes,
-            provider: 'pikpak',
+            provider: CloudProviderId.pikpak.playlistStoredProvider,
           ),
         );
       }
@@ -3906,7 +3917,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
             url: i == startIndex ? startFile.link : '',
             title: file.name,
             relativePath: file.relativePath,
-            provider: 'premiumize',
+            provider: CloudProviderId.premiumize.playlistStoredProvider,
             premiumizeItemId: id,
             sizeBytes: file.bytes,
           ),
@@ -3956,7 +3967,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
           url: linkByPath[path] ?? '',
           title: file.name,
           relativePath: file.relativePath,
-          provider: 'premiumize',
+          provider: CloudProviderId.premiumize.playlistStoredProvider,
           premiumizeHash: infohash,
           premiumizePath: path,
           torrentHash: infohash,
@@ -4018,7 +4029,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
           title: file.name,
           relativePath: file.relativePath ?? path,
           sizeBytes: file.bytes,
-          provider: 'webdav',
+          provider: PlaylistProviderDispatch.webDavStoredProvider,
         ),
       );
     }

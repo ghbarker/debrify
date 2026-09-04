@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/analytics_service.dart';
-import '../../services/cloud/cloud_credentials.dart';
 import '../../services/cloud/cloud_provider_id.dart';
 import '../../services/storage_service.dart';
 import '../../services/pikpak_api_service.dart';
@@ -17,8 +16,7 @@ import '../../theme/app_theme_scope.dart';
 /// Option order is TorBox → Real-Debrid → Premiumize → AllDebrid →
 /// PikPak — not [CloudProviderId.playbackPrecedence]. PikPak
 /// availability is [PikPakApiService.isAuthenticated], not
-/// [CloudSurface.magnet] (enabled-only) and not playback
-/// `isConfigured()`.
+/// magnet-surface enabled-only and not playback `isConfigured()`.
 class DefaultProviderDispatch {
   DefaultProviderDispatch._();
 
@@ -54,13 +52,27 @@ class DefaultProviderDispatch {
     return current;
   }
 
-  /// RD/TB/PM/AD: magnet-surface (key + integration toggle). PikPak:
-  /// session auth, not the enabled flag.
-  static Future<bool> isAvailable(CloudProviderId id) {
-    if (id == CloudProviderId.pikpak) {
-      return PikPakApiService.instance.isAuthenticated();
+  /// RD/TB/PM/AD: `has*Credential` plus the integration toggle — not
+  /// magnet-surface `apiKey()` (that skips the profile-facade presence
+  /// check on `CloudSecretPrefs.isConfigured`). PikPak: session auth,
+  /// not the enabled flag.
+  static Future<bool> isAvailable(CloudProviderId id) async {
+    switch (id) {
+      case CloudProviderId.pikpak:
+        return PikPakApiService.instance.isAuthenticated();
+      case CloudProviderId.debrid:
+        return await StorageService.getRealDebridIntegrationEnabled() &&
+            await StorageService.hasRealDebridCredential();
+      case CloudProviderId.torbox:
+        return await StorageService.getTorboxIntegrationEnabled() &&
+            await StorageService.hasTorboxCredential();
+      case CloudProviderId.premiumize:
+        return await StorageService.getPremiumizeIntegrationEnabled() &&
+            await StorageService.hasPremiumizeCredential();
+      case CloudProviderId.alldebrid:
+        return await StorageService.getAllDebridIntegrationEnabled() &&
+            await StorageService.hasAllDebridCredential();
     }
-    return CloudCredentials.configured(id, CloudSurface.magnet);
   }
 
   static String optionTitle(CloudProviderId id) {
@@ -104,14 +116,9 @@ class ProviderSettingsPage extends StatefulWidget {
 
 class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
   bool _loading = true;
-  String _selectedProvider = 'none';
+  String _selectedProvider = DefaultProviderDispatch.askEveryTime;
 
-  // Available providers based on connected services
-  bool _torboxAvailable = false;
-  bool _realDebridAvailable = false;
-  bool _premiumizeAvailable = false;
-  bool _allDebridAvailable = false;
-  bool _pikpakAvailable = false;
+  Set<CloudProviderId> _availableProviders = {};
 
   // Focus nodes for D-pad navigation
   final List<FocusNode> _providerFocusNodes = [];
@@ -143,45 +150,22 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
   }
 
   Future<void> _loadSettings() async {
-    // Check which providers are available
-    final torboxConfigured = await StorageService.hasTorboxCredential();
-    final rdConfigured = await StorageService.hasRealDebridCredential();
-    final premiumizeConfigured = await StorageService.hasPremiumizeCredential();
-    final allDebridConfigured = await StorageService.hasAllDebridCredential();
-    final pikpakAuth = await PikPakApiService.instance.isAuthenticated();
-
-    final torboxEnabled = await StorageService.getTorboxIntegrationEnabled();
-    final rdEnabled = await StorageService.getRealDebridIntegrationEnabled();
-    final premiumizeEnabled =
-        await StorageService.getPremiumizeIntegrationEnabled();
-    final allDebridEnabled =
-        await StorageService.getAllDebridIntegrationEnabled();
-
-    final torboxAvailable = torboxEnabled && torboxConfigured;
-    final rdAvailable = rdEnabled && rdConfigured;
-    final premiumizeAvailable = premiumizeEnabled && premiumizeConfigured;
-    final allDebridAvailable = allDebridEnabled && allDebridConfigured;
-    final pikpakAvailable = pikpakAuth;
+    final available = <CloudProviderId>{};
+    for (final id in DefaultProviderDispatch.optionOrder) {
+      if (await DefaultProviderDispatch.isAvailable(id)) {
+        available.add(id);
+      }
+    }
 
     // Load current setting
     var currentProvider = await StorageService.getDefaultTorrentProvider();
-
-    // If the saved provider is no longer available, reset to 'none'
-    if (currentProvider == 'torbox' && !torboxAvailable) {
-      currentProvider = 'none';
-      await StorageService.setDefaultTorrentProvider('none');
-    } else if (currentProvider == 'debrid' && !rdAvailable) {
-      currentProvider = 'none';
-      await StorageService.setDefaultTorrentProvider('none');
-    } else if (currentProvider == 'premiumize' && !premiumizeAvailable) {
-      currentProvider = 'none';
-      await StorageService.setDefaultTorrentProvider('none');
-    } else if (currentProvider == 'alldebrid' && !allDebridAvailable) {
-      currentProvider = 'none';
-      await StorageService.setDefaultTorrentProvider('none');
-    } else if (currentProvider == 'pikpak' && !pikpakAvailable) {
-      currentProvider = 'none';
-      await StorageService.setDefaultTorrentProvider('none');
+    final next = DefaultProviderDispatch.resetIfUnavailable(
+      currentProvider,
+      available,
+    );
+    if (next != currentProvider) {
+      currentProvider = next;
+      await StorageService.setDefaultTorrentProvider(next);
     }
 
     if (!mounted) return;
@@ -189,13 +173,7 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
     // Initialize focus nodes for available providers
     _providerFocusNodes.clear();
     // +1 for "Ask every time" option
-    final providerCount =
-        1 +
-        (torboxAvailable ? 1 : 0) +
-        (rdAvailable ? 1 : 0) +
-        (premiumizeAvailable ? 1 : 0) +
-        (allDebridAvailable ? 1 : 0) +
-        (pikpakAvailable ? 1 : 0);
+    final providerCount = 1 + available.length;
     for (int i = 0; i < providerCount; i++) {
       final node = FocusNode(debugLabel: 'provider-$i');
       node.addListener(() => _onFocusChange(i));
@@ -204,11 +182,7 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
 
     if (mounted) {
       setState(() {
-        _torboxAvailable = torboxAvailable;
-        _realDebridAvailable = rdAvailable;
-        _premiumizeAvailable = premiumizeAvailable;
-        _allDebridAvailable = allDebridAvailable;
-        _pikpakAvailable = pikpakAvailable;
+        _availableProviders = available;
         _selectedProvider = currentProvider;
         _loading = false;
       });
@@ -249,12 +223,7 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
       );
     }
 
-    final hasAnyProvider =
-        _torboxAvailable ||
-        _realDebridAvailable ||
-        _premiumizeAvailable ||
-        _allDebridAvailable ||
-        _pikpakAvailable;
+    final hasAnyProvider = _availableProviders.isNotEmpty;
 
     return SettingsPageScaffold(
       title: 'Default Provider',
@@ -346,94 +315,29 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
         icon: Icons.help_outline_rounded,
         title: 'Ask every time',
         subtitle: 'Show provider selection dialog',
-        selected: _selectedProvider == 'none',
-        onSelected: () => _selectProvider('none'),
+        selected: _selectedProvider == DefaultProviderDispatch.askEveryTime,
+        onSelected: () =>
+            _selectProvider(DefaultProviderDispatch.askEveryTime),
       ),
     );
     nodeIndex++;
 
-    // Torbox option
-    if (_torboxAvailable) {
+    for (final id in DefaultProviderDispatch.optionOrder) {
+      if (!_availableProviders.contains(id)) continue;
       options.add(const SizedBox(height: 8));
       options.add(
         _ProviderOption(
           focusNode: _providerFocusNodes[nodeIndex],
           isFocused: _focusedIndex == nodeIndex,
-          icon: Icons.flash_on_rounded,
-          title: 'Torbox',
-          subtitle: 'Fast cloud torrent service',
-          selected: _selectedProvider == 'torbox',
-          onSelected: () => _selectProvider('torbox'),
+          icon: DefaultProviderDispatch.optionIcon(id),
+          title: DefaultProviderDispatch.optionTitle(id),
+          subtitle: DefaultProviderDispatch.optionSubtitle(id),
+          selected: _selectedProvider == DefaultProviderDispatch.prefValue(id),
+          onSelected: () =>
+              _selectProvider(DefaultProviderDispatch.prefValue(id)),
         ),
       );
       nodeIndex++;
-    }
-
-    // Real-Debrid option
-    if (_realDebridAvailable) {
-      options.add(const SizedBox(height: 8));
-      options.add(
-        _ProviderOption(
-          focusNode: _providerFocusNodes[nodeIndex],
-          isFocused: _focusedIndex == nodeIndex,
-          icon: Icons.cloud_rounded,
-          title: 'Real-Debrid',
-          subtitle: 'Premium link generator',
-          selected: _selectedProvider == 'debrid',
-          onSelected: () => _selectProvider('debrid'),
-        ),
-      );
-      nodeIndex++;
-    }
-
-    // Premiumize option
-    if (_premiumizeAvailable) {
-      options.add(const SizedBox(height: 8));
-      options.add(
-        _ProviderOption(
-          focusNode: _providerFocusNodes[nodeIndex],
-          isFocused: _focusedIndex == nodeIndex,
-          icon: Icons.workspace_premium_rounded,
-          title: 'Premiumize',
-          subtitle: 'Premium cloud downloader',
-          selected: _selectedProvider == 'premiumize',
-          onSelected: () => _selectProvider('premiumize'),
-        ),
-      );
-      nodeIndex++;
-    }
-
-    // AllDebrid option
-    if (_allDebridAvailable) {
-      options.add(const SizedBox(height: 8));
-      options.add(
-        _ProviderOption(
-          focusNode: _providerFocusNodes[nodeIndex],
-          isFocused: _focusedIndex == nodeIndex,
-          icon: Icons.all_inclusive_rounded,
-          title: 'AllDebrid',
-          subtitle: 'Premium link generator',
-          selected: _selectedProvider == 'alldebrid',
-          onSelected: () => _selectProvider('alldebrid'),
-        ),
-      );
-      nodeIndex++;
-    }
-
-    // PikPak option
-    if (_pikpakAvailable) {
-      options.add(const SizedBox(height: 8));
-      options.add(
-        _ProviderOption(
-          focusNode: _providerFocusNodes[nodeIndex],
-          isFocused: _focusedIndex == nodeIndex,
-          icon: Icons.folder_rounded,
-          title: 'PikPak',
-          subtitle: 'Cloud storage service',
-          selected: _selectedProvider == 'pikpak',
-          onSelected: () => _selectProvider('pikpak'),
-        ),
-      );
     }
 
     return options;

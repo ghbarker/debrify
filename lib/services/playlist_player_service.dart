@@ -59,9 +59,10 @@ class PlaylistProviderDispatch {
   /// Exact playlistStoredProvider match. tryParse aliases (`all-debrid`,
   /// `rd`) stay unmatched so load/play keep the old lowercase-equality
   /// fallthrough (unknown → RD on load, no-op on content-view play).
+  /// No trim — the old switches only `toLowerCase()`.
   static CloudProviderId? idExact(String? raw) {
     if (raw == null) return null;
-    final provider = raw.trim().toLowerCase();
+    final provider = raw.toLowerCase();
     for (final id in CloudProviderId.values) {
       if (id.playlistStoredProvider == provider) return id;
     }
@@ -69,7 +70,7 @@ class PlaylistProviderDispatch {
   }
 
   static bool isWebDav(String? raw) =>
-      (raw ?? '').trim().toLowerCase() == webDavStoredProvider;
+      (raw ?? '').toLowerCase() == webDavStoredProvider;
 
   static CloudProviderPort? portFor(String? raw) {
     final id = idExact(raw);
@@ -83,7 +84,7 @@ class PlaylistProviderDispatch {
   static PlaylistPlayKind kindOrRd(String? raw) {
     final provider =
         (raw ?? CloudProviderId.debrid.playlistStoredProvider).toLowerCase();
-    if (provider.trim() == webDavStoredProvider) {
+    if (provider == webDavStoredProvider) {
       return PlaylistPlayKind.webdav;
     }
     return switch (idExact(provider)) {
@@ -101,7 +102,7 @@ class PlaylistProviderDispatch {
   static PlaylistPlayKind? kindOrNull(String? raw) {
     final provider =
         (raw ?? CloudProviderId.debrid.playlistStoredProvider).toLowerCase();
-    if (provider.trim() == webDavStoredProvider) {
+    if (provider == webDavStoredProvider) {
       return PlaylistPlayKind.webdav;
     }
     return switch (idExact(provider)) {
@@ -176,59 +177,57 @@ class PlaylistPlayerService {
     );
 
     final String title = (freshItem['title'] as String?) ?? 'Video';
-    final String provider = ((freshItem['provider'] as String?) ?? 'realdebrid')
-        .toLowerCase();
-    if (provider == 'torbox') {
-      await _playTorboxItem(
-        context,
-        freshItem,
-        fallbackTitle: title,
-        playRandom: playRandom,
-      );
-      return;
+    switch (PlaylistProviderDispatch.kindOrRd(
+      freshItem['provider'] as String?,
+    )) {
+      case PlaylistPlayKind.torbox:
+        await _playTorboxItem(
+          context,
+          freshItem,
+          fallbackTitle: title,
+          playRandom: playRandom,
+        );
+        return;
+      case PlaylistPlayKind.pikpak:
+        await _playPikPakItem(
+          context,
+          freshItem,
+          fallbackTitle: title,
+          playRandom: playRandom,
+        );
+        return;
+      case PlaylistPlayKind.webdav:
+        await _playWebDavItem(
+          context,
+          freshItem,
+          fallbackTitle: title,
+          playRandom: playRandom,
+        );
+        return;
+      case PlaylistPlayKind.premiumize:
+        await _playPremiumizeItem(
+          context,
+          freshItem,
+          fallbackTitle: title,
+          playRandom: playRandom,
+        );
+        return;
+      case PlaylistPlayKind.alldebrid:
+        await _playAllDebridItem(
+          context,
+          freshItem,
+          title: title,
+          playRandom: playRandom,
+        );
+        return;
+      case PlaylistPlayKind.realdebrid:
+        await _playRealDebridItem(
+          context,
+          freshItem,
+          title: title,
+          playRandom: playRandom,
+        );
     }
-    if (provider == 'pikpak') {
-      await _playPikPakItem(
-        context,
-        freshItem,
-        fallbackTitle: title,
-        playRandom: playRandom,
-      );
-      return;
-    }
-    if (provider == 'webdav') {
-      await _playWebDavItem(
-        context,
-        freshItem,
-        fallbackTitle: title,
-        playRandom: playRandom,
-      );
-      return;
-    }
-    if (provider == 'premiumize') {
-      await _playPremiumizeItem(
-        context,
-        freshItem,
-        fallbackTitle: title,
-        playRandom: playRandom,
-      );
-      return;
-    }
-    if (provider == 'alldebrid') {
-      await _playAllDebridItem(
-        context,
-        freshItem,
-        title: title,
-        playRandom: playRandom,
-      );
-      return;
-    }
-    await _playRealDebridItem(
-      context,
-      freshItem,
-      title: title,
-      playRandom: playRandom,
-    );
   }
 
   // ── Real-Debrid ──────────────────────────────────────────────────────────
@@ -603,7 +602,7 @@ class PlaylistPlayerService {
                   PlaylistEntry(
                     url: url,
                     title: title,
-                    provider: 'alldebrid',
+                    provider: CloudProviderId.alldebrid.playlistStoredProvider,
                     allDebridLink: lockedLink,
                     torrentHash: torrentHash,
                   ),
@@ -729,7 +728,7 @@ class PlaylistPlayerService {
           url: i == firstIndex ? startUrl : '',
           title: f.fileName,
           relativePath: relativePath,
-          provider: 'alldebrid',
+          provider: CloudProviderId.alldebrid.playlistStoredProvider,
           allDebridLink: f.link,
           torrentHash: torrentHash,
           sizeBytes: f.size > 0 ? f.size : null,
@@ -1128,7 +1127,7 @@ class PlaylistPlayerService {
                 url: url,
                 title: resolvedTitle,
                 relativePath: singleFileRelativePath,
-                provider: 'pikpak',
+                provider: CloudProviderId.pikpak.playlistStoredProvider,
                 pikpakFileId: pikpakFileId,
                 sizeBytes: sizeBytes,
               ),
@@ -1352,7 +1351,7 @@ class PlaylistPlayerService {
             url: i == startIndex ? initialUrl : '',
             title: combinedTitle,
             relativePath: relativePath,
-            provider: 'pikpak',
+            provider: CloudProviderId.pikpak.playlistStoredProvider,
             pikpakFileId: fileId,
             sizeBytes: sizeBytes,
           ),
@@ -1538,7 +1537,7 @@ class PlaylistPlayerService {
                 url: file.link,
                 title: resolvedTitle,
                 relativePath: file.path,
-                provider: 'premiumize',
+                provider: CloudProviderId.premiumize.playlistStoredProvider,
                 premiumizeHash: infohash,
                 premiumizePath: file.path,
                 torrentHash: infohash,
@@ -1634,7 +1633,7 @@ class PlaylistPlayerService {
             url: file.link, // direct link, already resolved
             title: title,
             relativePath: relativePath,
-            provider: 'premiumize',
+            provider: CloudProviderId.premiumize.playlistStoredProvider,
             premiumizeHash: infohash,
             premiumizePath: file.path,
             torrentHash: infohash,
@@ -1790,7 +1789,7 @@ class PlaylistPlayerService {
               PlaylistEntry(
                 url: resolved.link,
                 title: resolvedTitle,
-                provider: 'premiumize',
+                provider: CloudProviderId.premiumize.playlistStoredProvider,
                 premiumizeItemId: itemId,
                 sizeBytes: sizeBytes,
               ),
@@ -1939,7 +1938,7 @@ class PlaylistPlayerService {
           PlaylistEntry(
             url: i == startIndex ? resolvedStart.link : '',
             title: title,
-            provider: 'premiumize',
+            provider: CloudProviderId.premiumize.playlistStoredProvider,
             premiumizeItemId: candidate.id,
             sizeBytes: candidate.sizeBytes > 0 ? candidate.sizeBytes : null,
           ),
@@ -2058,7 +2057,7 @@ class PlaylistPlayerService {
             url: url,
             title: title,
             relativePath: path,
-            provider: 'webdav',
+            provider: PlaylistProviderDispatch.webDavStoredProvider,
             sizeBytes: sizeBytes,
           ),
         ],
@@ -2191,7 +2190,7 @@ class PlaylistPlayerService {
           url: WebDavService.directUrl(config, path),
           title: title,
           relativePath: path,
-          provider: 'webdav',
+          provider: PlaylistProviderDispatch.webDavStoredProvider,
           sizeBytes: _asInt(file['sizeBytes']),
         ),
       );
@@ -2785,7 +2784,7 @@ class PlaylistPlayerService {
           url: '',
           title: candidate.displayName,
           relativePath: relativePath,
-          provider: 'torbox',
+          provider: CloudProviderId.torbox.playlistStoredProvider,
           torboxTorrentId: torrent.id,
           torboxFileId: candidate.file.id,
           torrentHash: torrent.hash.isNotEmpty ? torrent.hash : null,
