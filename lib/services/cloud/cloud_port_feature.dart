@@ -15,7 +15,8 @@ enum CloudPortFeature {
   fileDownloadLink,
   cloudTransfer,
   transferZip,
-  queueUncached;
+  queueUncached,
+  magnetTorrent;
 
   static Set<CloudPortFeature> forProvider(CloudProviderId id) => switch (id) {
     CloudProviderId.debrid => {
@@ -29,6 +30,7 @@ enum CloudPortFeature {
       zipPermalink,
       fileDownloadLink,
       queueUncached,
+      magnetTorrent,
     },
     CloudProviderId.premiumize => {
       magicTvPrepare,

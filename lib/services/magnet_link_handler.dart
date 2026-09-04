@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'deep_link_service.dart';
 import 'debrid_service.dart';
+import 'cloud/cloud_provider_registry.dart';
 import 'torbox_service.dart';
 import 'pikpak_api_service.dart';
 import 'premiumize_service.dart';
@@ -541,11 +542,8 @@ class MagnetLinkHandler {
     _showLoadingDialog(torrentName, 'Torbox');
 
     try {
-      final result = await TorboxService.createTorrent(
-        apiKey: apiKey,
-        magnet: magnetUri,
-        seed: true,
-        allowZip: true,
+      final result = await CloudProviderRegistry.instance.createMagnetTorrent(
+        magnetUri,
         addOnlyIfCached: true, // Only add if cached (same as torrent search)
       );
 
@@ -559,13 +557,8 @@ class MagnetLinkHandler {
           final keep = await showNotCachedDialog(context, 'TorBox');
           if (!keep || !context.mounted) return;
           _showLoadingDialog(torrentName, 'Torbox');
-          final queued = await TorboxService.createTorrent(
-            apiKey: apiKey,
-            magnet: magnetUri,
-            seed: true,
-            allowZip: true,
-            addOnlyIfCached: false,
-          );
+          final queued = await CloudProviderRegistry.instance
+              .createMagnetTorrent(magnetUri, addOnlyIfCached: false);
           if (!context.mounted) return;
           Navigator.of(context).pop();
           if (queued['success'] as bool? ?? false) {
@@ -741,7 +734,7 @@ class MagnetLinkHandler {
       }
 
       _showLoadingDialog(torrentName, 'Premiumize');
-      await PremiumizeService.createTransfer(apiKey, magnetUri);
+      await CloudProviderRegistry.instance.createCloudTransfer(magnetUri);
 
       if (!context.mounted) return;
       Navigator.of(context).pop();
@@ -766,7 +759,7 @@ class MagnetLinkHandler {
     _showLoadingDialog(displayName, 'Premiumize');
 
     try {
-      await PremiumizeService.createTransfer(apiKey, url);
+      await CloudProviderRegistry.instance.createCloudTransfer(url);
 
       if (!context.mounted) return;
       Navigator.of(context).pop();

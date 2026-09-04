@@ -313,6 +313,26 @@ class CloudProviderRegistry {
     await port.queueUncachedMagnet(magnet);
   }
 
+  /// Magnet share-sheet createtorrent only. Missing adapter / unsupported
+  /// throws [CloudUnsupported]. Missing key throws [CloudMissingApiKey].
+  /// Not playback [CloudProviderPort.addMagnet]. Not [queueUncachedMagnet].
+  Future<Map<String, dynamic>> createMagnetTorrent(
+    String magnet, {
+    required bool addOnlyIfCached,
+  }) async {
+    final port = _byId[CloudProviderId.torbox];
+    if (port == null || !port.supports(CloudPortFeature.magnetTorrent)) {
+      throw const CloudUnsupported(
+        CloudProviderId.torbox,
+        CloudPortFeature.magnetTorrent,
+      );
+    }
+    return port.createMagnetTorrent(
+      magnet,
+      addOnlyIfCached: addOnlyIfCached,
+    );
+  }
+
   static String? credentialKeyFor(String provider) =>
       CloudProviderId.tryParse(provider)?.credentialKey;
 }

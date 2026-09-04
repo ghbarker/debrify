@@ -86,6 +86,14 @@ void main() {
       isFalse,
     );
     expect(
+      const TorboxCloudProvider().supports(CloudPortFeature.magnetTorrent),
+      isTrue,
+    );
+    expect(
+      const PremiumizeCloudProvider().supports(CloudPortFeature.magnetTorrent),
+      isFalse,
+    );
+    expect(
       CloudPortFeature.forProvider(CloudProviderId.torbox),
       {
         CloudPortFeature.playlistEntry,
@@ -94,6 +102,7 @@ void main() {
         CloudPortFeature.zipPermalink,
         CloudPortFeature.fileDownloadLink,
         CloudPortFeature.queueUncached,
+        CloudPortFeature.magnetTorrent,
       },
     );
     expect(
