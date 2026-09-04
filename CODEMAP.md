@@ -271,16 +271,19 @@ is an editor mirror, not the source of truth. How to add a provider:
 
 ## Players
 - In-app player: `lib/screens/video_player_screen.dart` 🔴 (subtitles via media_kit
-  `subtitleViewConfiguration`; `_restoreTrackPreferences`/`_applyDefault*Language`; per-key D-pad
-  handlers arrowUp/Down/Left/Right; scrobble via `ScrobbleCoordinator` +
-  `ScrobbleTarget`s in `lib/services/scrobble/`). Launch ctor fields:
+  `subtitleViewConfiguration`; per-key D-pad handlers arrowUp/Down/Left/Right;
+  scrobble via `ScrobbleCoordinator` + `ScrobbleTarget`s in
+  `lib/services/scrobble/`). Launch ctor fields:
   `lib/screens/video_player/player_launch_config.dart` (`PlayerLaunchConfig`;
   `VideoPlayerScreen` public constructor stays). Resume:
   `lib/services/playback/resume_controller.dart` (`ResumeController` +
   `ResumeContext` / `ResumeSession`; host keeps `_ResumeSession` adapter).
   Identify-title sheet: `lib/widgets/player/identify_title_sheet.dart`
-  (`showIdentifyTitleSearchSheet` → `StremioMeta?`; host keeps
-  `_identifyTitleAndFetchSubtitles`).
+  (`showIdentifyTitleSearchSheet` → `StremioMeta?`). Subtitle/track restore,
+  persist, diagnostics, and addon fetch:
+  `lib/services/playback/subtitle_track_controller.dart`
+  (`SubtitleTrackController` + `SubtitleTrackSession`; host keeps
+  `_SubtitleTrackSession` adapter and title/season resolvers).
   Controls overlay:
   `lib/screens/video_player/widgets/controls.dart`. Track/source sheets: `lib/screens/video_player/widgets/`.
 - Launch + native TV: `lib/services/video_player_launcher.dart` 🔴 (`_launchOnAndroidTv`, `_push`),
