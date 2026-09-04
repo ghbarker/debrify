@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:debrify/screens/stremio_tv/stremio_tv_dispatch.dart';
 import 'package:debrify/services/cloud/cloud_capabilities.dart';
 import 'package:debrify/services/cloud/cloud_port_feature.dart';
@@ -127,4 +129,39 @@ void main() {
     expect(StremioTvDispatch.overlayInfo('premiumize').label, 'Premiumize');
     expect(StremioTvDispatch.overlayInfo('premiumize').code, 'PM');
   });
+
+  test(
+    'Stremio TV screens have no provider-id string literals outside comments',
+    () {
+      final files = Directory('lib/screens/stremio_tv')
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'));
+      expect(files, isNotEmpty);
+      final leftover = <String>[];
+      for (final file in files) {
+        final source = file.readAsStringSync();
+        final withoutBlock = source.replaceAll(
+          RegExp(r'/\*.*?\*/', dotAll: true),
+          '',
+        );
+        final withoutLine = withoutBlock
+            .split('\n')
+            .where((line) => !line.trimLeft().startsWith('//'))
+            .join('\n');
+        final hits = RegExp(
+          r"'(realdebrid|real_debrid|torbox|premiumize|alldebrid|pikpak)'",
+        ).allMatches(withoutLine).map((m) => m.group(0)).toList();
+        if (hits.isNotEmpty) {
+          leftover.add('${file.path}: $hits');
+        }
+      }
+      expect(leftover, isEmpty, reason: 'string-match leftovers: $leftover');
+      final screen = File(
+        'lib/screens/stremio_tv/stremio_tv_screen.dart',
+      ).readAsStringSync();
+      expect(screen.contains('StremioTvDispatch.overlayInfo'), isTrue);
+      expect(screen.contains('StremioTvDispatch.cacheCheckDebugLabel'), isTrue);
+    },
+  );
 }

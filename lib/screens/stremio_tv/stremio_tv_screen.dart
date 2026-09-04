@@ -19,7 +19,6 @@ import '../../services/main_page_bridge.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/cloud_provider_chrome.dart';
 import '../../services/cloud/cloud_credentials.dart';
-import '../../services/cloud/cloud_provider_id.dart';
 import '../../services/cloud/cloud_provider_registry.dart';
 import '../../services/cloud/stremio_tv_cache_filter.dart';
 import '../../services/cloud/stremio_tv_resolve_gate.dart';
@@ -33,6 +32,7 @@ import '../../utils/torrent_coverage_detector.dart';
 import '../../services/torrent_service.dart';
 import '../catalog_item_detail_screen.dart';
 import '../settings/stremio_tv_settings_page.dart';
+import 'stremio_tv_dispatch.dart';
 import 'stremio_tv_filter_page.dart';
 import 'stremio_tv_service.dart';
 import 'widgets/stremio_tv_tuner.dart';
@@ -736,24 +736,8 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
   Future<bool> _isValidStreamUrl(String url) =>
       StreamUrlValidator.isPlayableVideoUrl(url);
 
-  ({String label, String code, Color color, bool cacheCheck}) _tvProviderInfo() {
-    final id = CloudProviderId.tryParse(_debridProvider);
-    if (id == null) {
-      return (
-        label: 'Debrid',
-        code: 'DB',
-        color: PipelineLoadingOverlay.accent,
-        cacheCheck: false,
-      );
-    }
-    return (
-      label: id.displayName,
-      code: id.chipCode,
-      color: CloudProviderChrome.gradient(id.playbackId).first,
-      cacheCheck:
-          id == CloudProviderId.torbox || id == CloudProviderId.premiumize,
-    );
-  }
+  ({String label, String code, Color color, bool cacheCheck}) _tvProviderInfo() =>
+      StremioTvDispatch.overlayInfo(_debridProvider);
 
   Future<void> _playChannel(StremioTvChannel channel) async {
     final myGeneration = ++_playGeneration;
@@ -948,7 +932,8 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
             PlayLoadStage.cacheCheck,
             cachedCount: cachedCount,
           );
-          final label = _debridProvider == 'torbox' ? 'TorBox' : 'Premiumize';
+          final label =
+              StremioTvDispatch.cacheCheckDebugLabel(_debridProvider);
           debugPrint(
             'StremioTV: $label cache check: $cachedCount cached '
             'out of $torrentCount torrents',
