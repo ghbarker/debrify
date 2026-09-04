@@ -24,6 +24,9 @@ enum CloudProviderId {
   /// Id used by [TorrentPlaybackService] switches and the default-provider pref.
   String get playbackId => name;
 
+  /// Debrify TV stored / chip id. Real-Debrid is `real_debrid`, not `debrid`.
+  String get magicTvId => this == debrid ? 'real_debrid' : name;
+
   /// Id stored on [SeriesSource] / Home (`rd` instead of `debrid`).
   String get storedId => this == debrid ? 'rd' : name;
 
@@ -72,6 +75,14 @@ enum CloudProviderId {
   /// Stremio / catalog picker row (`realdebrid` → Real-Debrid).
   MapEntry<String, String> get catalogChoice =>
       MapEntry(playlistStoredProvider, displayName);
+
+  /// [magicTvId] only (`real_debrid`, not `debrid` / `rd` / `realdebrid`).
+  static CloudProviderId? fromMagicTvId(String provider) {
+    for (final id in values) {
+      if (id.magicTvId == provider) return id;
+    }
+    return null;
+  }
 
   /// [playbackId] only (`debrid`, not `rd` / `realdebrid`).
   static CloudProviderId? fromPlaybackId(String provider) {
