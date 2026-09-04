@@ -21,10 +21,10 @@ import '../../widgets/cloud_provider_chrome.dart';
 import '../../services/cloud/cloud_credentials.dart';
 import '../../services/cloud/cloud_provider_id.dart';
 import '../../services/cloud/cloud_provider_registry.dart';
+import '../../services/cloud/stremio_tv_resolve_gate.dart';
 import '../../services/video_player_launcher.dart';
 import '../../services/torbox_service.dart';
 import '../../services/premiumize_service.dart';
-import '../../utils/rd_blocked_filter.dart';
 import '../../utils/formatters.dart';
 import '../../utils/stremio_tv_debrid_fallback.dart';
 import '../../utils/series_parser.dart';
@@ -1675,30 +1675,21 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
     season: season,
     episode: episode,
     isCancelled: isCancelled,
-    canAttempt: (provider) async {
-      switch (provider) {
-        case 'realdebrid':
-          return !_rdSkipBlockedTorrents ||
-              !isRdBlockedTorrent(torrent.name);
-        case 'torbox':
-          if (debridProvider != 'auto') return true;
-          final cachedHashes = loadAutoTorboxCachedHashes != null
-              ? await loadAutoTorboxCachedHashes()
-              : await _loadTorboxCachedHashes(
-                  <Torrent>[torrent],
-                  isCancelled: isCancelled,
-                );
-          return cachedHashes.contains(
-            torrent.infohash.trim().toLowerCase(),
-          );
-        case 'premiumize':
-          return StorageService.getPremiumizeIntegrationEnabled();
-        case 'alldebrid':
-          return StorageService.getAllDebridIntegrationEnabled();
-        default:
-          return true;
-      }
-    },
+    canAttempt: (provider) => StremioTvResolveGate.canAttempt(
+      provider: provider,
+      selected: debridProvider,
+      torrent: torrent,
+      skipBlockedRd: _rdSkipBlockedTorrents,
+      torboxCachedHashes: () async {
+        if (loadAutoTorboxCachedHashes != null) {
+          return loadAutoTorboxCachedHashes();
+        }
+        return _loadTorboxCachedHashes(
+          <Torrent>[torrent],
+          isCancelled: isCancelled,
+        );
+      },
+    ),
   );
 
   Future<Set<String>> _loadTorboxCachedHashes(
