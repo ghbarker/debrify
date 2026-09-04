@@ -7,4 +7,77 @@ See `dev/design/REFACTOR_PLAN.md` §2 rule 1.
 
 ## Quirks kept, not fixed
 
-_(empty)_
+### H1 · Home row registry
+
+- **Rail de-dup.** `_canonicalCanvasRails` now keys rails by row id (`railsById`)
+  instead of appending. Duplicate live ids collapse to one rail. Pre-H1 the list
+  could theoretically carry two `_CanvasRail`s with the same `_sectionRowId`.
+  Keep: a duplicated id is a data bug, not a feature.
+- **Wider stray leaves.** `HomeRowRegistry.buildManagerModel` materializes
+  enabled extra rows that no family resolved (outage / vanished list) as
+  `unavailable` leaves, so a save cannot silently drop them. Pre-H1 only some
+  prefixes got this treatment. Keep: it is strictly more conservative.
+- **Addon-group merge by name.** Families that share `groupName` (Trakt CW +
+  Trakt lists, Simkl CW + Simkl lists, MDBList CW + MDBList lists) merge into
+  one manager group. Pre-H1 the manager had separate rails per builder. Keep:
+  the manager was always grouped by provider label; the registry made that
+  rule uniform.
+
+### T1 · transfer category registry
+
+- **Tracking-prefs apply/send order.** Apply/send now follows
+  `TransferCategoryRegistry` iteration, not the old hand-written switch order.
+  Payload keys and `ConfigCommand` strings are unchanged. Keep: order is not a
+  compatibility surface.
+- **Tile icon / colour.** Remote tiles take `TransferCategory.icon` / `.color`.
+  A few categories do not match the pre-T1 `_iconFor` / `_colorFor` switch
+  pixel-for-pixel. Keep: visual, not wire.
+- **Label case.** Registry `label` / `summarizeLabel` is the display string
+  (e.g. `PikPak`). Pre-T1 onboarding `_configLabel` had mixed case. Keep:
+  not a persisted string.
+- **JSON key order.** `jsonEncode` of registry-built maps may emit keys in a
+  different order than the old literal maps. Keys themselves are frozen. Keep.
+- **`BackupSelection.all()` is non-const.** It now derives from the registry
+  (`Set<TransferCategory>`). Call sites that needed a const value still use
+  the named constructor. Keep: required for fake-category tests.
+- **Double-apply fix.** Profile restore used to apply default-on categories
+  twice (named constructor defaults plus an explicit set). T1 made coordinator
+  sets explicit so default-on categories are not applied twice. Keep: this was
+  a latent bug; do not restore double-apply.
+
+### P2a · Magic TV strings
+
+- **`MagicTvDispatch` is a screen façade**, not a new cloud capability. It
+  lives in `magic_tv_screen.dart` and routes string switches through
+  `CloudProviderRegistry` / `is` checks. Follow-up should not move it into
+  `lib/services/cloud/` from a P2 lane (cloud is P1-owned).
+- **Next-channel allowlists are a moved table.** The Real-Debrid / TorBox / …
+  allowlists that decide which providers may auto-advance were lifted into
+  the dispatch table, not redesigned. Keep the membership identical.
+
+## Regressions (follow-up PRs; do not leave on `main`)
+
+These were **not** declared in the lane PRs. They change user-visible or wire
+behaviour and must be restored, not kept as quirks.
+
+| Lane | Regression | Follow-up |
+|---|---|---|
+| H1 | Canonical board rails regroup section ids by family `canonicalIndex`, so pinned collections no longer lead the board (they sat first in `_sections`: pinned collections, tracker lists, unpinned collections, catalogs). | `refactor/h1-pinned-collections-lead` |
+| T1 | `_readPikpakWire` returned null when `pikpakPassword` was empty. Both old senders (Send Setup to TV + Transfer Everything) encoded `{email}` (password omitted when empty). | `refactor/t1-pikpak-empty-password` |
+| S1 | `settings_screen.dart` never passed `extraPlayerKeywords`, so VLC / mpv / Infuse / … names dropped out of Settings search. | `refactor/s1-extra-player-keywords` |
+
+## Process
+
+Gate check **(c)** is tightened (plan §6): the pinning test must be committed
+and shown green **before** the move commit, and the PR must include an
+origin-diff of each moved body with every difference listed and justified.
+
+P2b / P2c / P2d had pin-before-move commits but **no origin-diff table**. They
+stay on `main` (no revert without a behaviour audit); they are not the
+template for later lanes. Reject any new review PR that omits the table.
+
+## Out of plan
+
+- **PR #56** (Qwen helper) edits `.cursor/**` (Q3) and is held until Phase 3.
+- **PRs #36–#43** (stacked TorBox / web download port) are superseded by **G4**
+  (cloud file screens). Close rather than rebase through the refactor.

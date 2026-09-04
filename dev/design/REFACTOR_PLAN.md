@@ -178,14 +178,17 @@ null ambiguity with a sealed result. Accept: no `throw CloudUnsupported` anywher
 four wrappers have zero non-deprecated callers; `cloud_stremio_*` and
 `cloud_unlock_plan_test` pass unchanged.
 
-**P2 · finish the provider migration** (L, splittable into P2a–P2d by file). Owns, one
+**P2 · finish the provider migration** (L, splittable into P2a–P2e by file). Owns, one
 sub-lane each: `magic_tv_screen.dart` (P2a), `stremio_tv_screen.dart` (P2b),
 `video_player_launcher.dart` + `torrent_bulk_add_service.dart` (P2c),
 `playlist_content_view_screen.dart` + `playlist_player_service.dart` + `cloud_screen.dart`
-+ `provider_settings_page.dart` (P2d). Forbidden: `lib/services/cloud/**` (request via P1).
-Steps per file: pin each string-switch path with a test using `FakeCloudProvider`; route
-through the registry; delete the switch. Accept: `grep -rE "'(realdebrid|real_debrid|torbox|premiumize|alldebrid|pikpak)'" lib` returns hits only under `lib/services/cloud/`
-and `lib/main.dart` sidebar labels. Each sub-lane merges on its own.
++ `provider_settings_page.dart` (P2d), `torrent_playback_service.dart` (P2e). Forbidden:
+`lib/services/cloud/**` (request via P1). Steps per file: pin each string-switch path
+with a test using `FakeCloudProvider`; route through the registry; delete the switch.
+Accept: `grep -rE "'(realdebrid|real_debrid|torbox|premiumize|alldebrid|pikpak)'" lib`
+returns hits only under `lib/services/cloud/` and **`lib/main.dart` sidebar / hub
+destination labels** (explicitly exempt). Each sub-lane merges on its own.
+Do not assign P2e until H1/T1/S1 regression follow-ups merge.
 
 **H1 · Home row registry** (M). Owns new `lib/services/home/**`, the row-id hunks of
 `search_screen.dart` (`_sectionRowId`, `_canonicalCanvasRails`, `_buildRow` dispatch),
@@ -311,10 +314,13 @@ Statuses: `queued` → `assigned` → `in-progress` → `review` → `merged` / 
    `assigned`.
 2. **Gate**: when a worker sets `review`, check the PR: (a) the verification block is
    present and reproduces; (b) diff touches only owned files; (c) every moved function
-   has a pinning test named in a commit body; (d) CODEMAP updated if it names a moved
-   symbol; (e) no compatibility surface changed (grep the frozen lists). Reject with
-   specific lines, or merge with squash if the lane's commits aren't individually
-   valuable, merge-commit if they are.
+   has a pinning test **committed and shown green before the move commit**, and the PR
+   body includes a diff of each moved body against its origin with **every difference
+   listed and justified**; (d) CODEMAP updated if it names a moved symbol; (e) no
+   compatibility surface changed (grep the frozen lists). Reject with specific lines,
+   or merge with squash if the lane's commits aren't individually valuable,
+   merge-commit if they are. A pin named only in the move commit, or a move that
+   rewrites without an origin-diff table, fails (c) — send the PR back.
 3. **Answer decisions**: anything under "Decisions needed" gets a one-line answer in the
    board's Decisions column and a comment on the PR. Decisions are final for the phase.
 4. **Rebase fan-out**: after each merge, tell every `in-progress` lane touching a
@@ -332,8 +338,11 @@ Statuses: `queued` → `assigned` → `in-progress` → `review` → `merged` / 
 1. Read this document, `CODEMAP.md`, and the board row for your lane. Confirm your
    branch is fresh from `main`.
 2. For each function you will move: locate it, write the pinning test, run it green,
-   commit `test: pin <path> behaviour before move`.
-3. Move. Commit `<Area>: move <symbol> to <file>` with the quirk named in the body.
+   commit `test: pin <path> behaviour before move`. Do not start the move until that
+   commit is green on its own.
+3. Move verbatim. Commit `<Area>: move <symbol> to <file>` with the quirk named in
+   the body. In the PR, paste an origin-diff of the moved body and justify every
+   remaining difference (signature, import, otherwise identical).
 4. Run the verification block (§7) and paste it into the PR description.
 5. Set the board status to `review` by editing only your row in the PR (the orchestrator
    merges the board row with the code).
@@ -364,10 +373,12 @@ You own dev/design/REFACTOR_BOARD.md and dev/design/REFACTOR_NOTES.md and nothin
 you never edit lane files. Loop: assign the next queued lane whose owned files overlap no
 in-progress lane; write its worker prompt from the template with the exact file list;
 gate PRs on the five checks in §6 (verification block reproduces, diff within owned
-files, pinning test per moved function, CODEMAP updated, no compatibility surface
-changed); answer "Decisions needed" in one line each; after every merge note which lanes
-must rebase; at phase end run the phase gate and record it. Reject scope creep without
-discussion. Report to the human after every merge and at every phase gate with: merged
+files, pinning test committed and green BEFORE the move plus origin-diff table of every
+moved body, CODEMAP updated, no compatibility surface changed); answer "Decisions needed"
+in one line each; after every merge note which lanes must rebase; at phase end run the
+phase gate and record it. Reject a PR that skips the origin-diff table. Reject scope
+creep without discussion. Report to the human after every merge and at every phase gate
+with: merged
 lanes, open decisions, blocked lanes, line-count deltas of the god files.
 ```
 

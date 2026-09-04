@@ -15,16 +15,16 @@ You may edit ONLY: `<owned file list>`. You may not edit: `<forbidden list>`. If
 
 Compatibility surfaces are frozen (prefs keys, DB schema, backup keys, remote ConfigCommand strings, MainTab indices, Home row id grammar).
 
-Procedure per moved function: pin with a test → commit → move verbatim → commit naming the quirk and the test. No dart format on the god files. Before pushing, run and paste the verification block.
+Procedure per moved function: write the pinning test, run it **green**, commit `test: pin <path> behaviour before move`, **then** move verbatim and commit naming the quirk and the test. The PR must include a diff of each moved body against its origin with every difference listed and justified. A pin that lands in the same commit as the move, or a rewrite without that table, fails gate (c). No dart format on the god files. Before pushing, run and paste the verification block.
 
 Acceptance for this lane: `<acceptance criteria from §4>`.
 
 ## Worker loop (plan §6)
 
 1. Confirm owned files overlap no other `in-progress` / `assigned` lane on the board.
-2. For each function you will move: locate it, write the pinning test, run it green, commit `test: pin <path> behaviour before move`.
-3. Move. Commit `<Area>: move <symbol> to <file>` with the quirk named in the body.
-4. Run the verification block and paste it into the PR description.
+2. For each function you will move: locate it, write the pinning test, run it green, commit `test: pin <path> behaviour before move`. Do not start the move until that commit is green on its own.
+3. Move verbatim. Commit `<Area>: move <symbol> to <file>` with the quirk named in the body. Paste an origin-diff of the moved body in the PR and justify every remaining difference.
+4. Run the verification block and paste it into the PR description. Include the origin-diff table.
 5. Set the board status to `review` by editing **only your row** in the PR (the orchestrator merges the board row with the code). Do not edit other lanes' rows.
 6. Stop. Do not start the next lane until assigned.
 
