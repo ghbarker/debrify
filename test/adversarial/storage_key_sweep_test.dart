@@ -4,9 +4,12 @@ import 'package:debrify/services/profiles/profile_preferences.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
 import 'package:debrify/services/secret_vault.dart';
+import 'package:debrify/services/storage/storage_key_ownership.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../storage_key_sweep_test.dart' as sweep;
 
 /// Cloud credential helpers must not invent unscoped keys in committed profile
 /// mode. API-key writes in committed mode go through ProfileCredentialFacade
@@ -90,6 +93,40 @@ void main() {
         'alldebrid': 'alldebrid_api_key',
         'pikpak': 'pikpak_email',
       },
+    );
+  });
+
+  test('a discovered prefs name missing from byKey is a hole the sweep sees', () {
+    final missing = sweep.unownedDiscoveredPrefsKeys();
+    expect(
+      missing,
+      {
+        'series_browser_dense_view',
+        'merged_series_page_enabled',
+        'tv_keyboard_enabled',
+        'tv_ui_scale_percent',
+        'stremio_addon_hub_enabled',
+        'detail_trailer_autoplay_enabled',
+        'tv_trailer_underlay_enabled',
+        'tracking_progress_fallback_notice',
+        'trakt_sync_catalog_items',
+        'simkl_sync_catalog_items',
+        'mdblist_sync_catalog_items',
+        'debrify_tv_keyword_threshold',
+        'debrify_tv_min_torrents_per_keyword',
+        'detail_trailer_audio_enabled',
+        'detail_trailer_volume',
+      },
+      reason:
+          'Const-only byKey left these inline/interpolated names unowned. '
+          'A new literal must not grow this set — add it to byKey instead.',
+    );
+    expect(
+      StorageKeyOwnership.byKey.containsKey('series_browser_dense_view'),
+      isFalse,
+      reason:
+          'Mutation pin: this inline key is the hole the const sweep missed. '
+          'After the fill commit this expect flips to isTrue.',
     );
   });
 }
