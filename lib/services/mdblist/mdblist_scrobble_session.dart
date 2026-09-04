@@ -15,6 +15,9 @@ typedef MdblistScrobbleSender =
 
 /// MDBList-only pause-centric playback state machine. Existing Trakt and Simkl
 /// state/timers deliberately do not pass through this class.
+///
+/// G5 drives this session as a ScrobbleTarget via
+/// `MdblistScrobbleSessionTarget`. HTTP senders stay here.
 class MdblistScrobbleSession {
   static const completionPercent = 80.0;
   static const defaultCheckpointInterval = Duration(minutes: 2);
