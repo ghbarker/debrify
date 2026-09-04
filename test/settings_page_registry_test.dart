@@ -147,9 +147,16 @@ void main() {
   });
 
   testWidgets('search page lists the new row under Playback', (tester) async {
+    final theme = AppThemes.byId('spotlight');
     await tester.pumpWidget(
-      MaterialApp(home: SettingsSearchPage(entries: registry.searchIndex())),
+      MaterialApp(
+        theme: AppThemeAdapter.themed(theme, TextBrightness.bright),
+        builder: (context, child) => AppThemeScope(theme: theme, child: child!),
+        home: SettingsSearchPage(entries: registry.searchIndex()),
+      ),
     );
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'fake-lane-keyword');
     await tester.pump();
     expect(find.text('Fake Lane Page'), findsOneWidget);
   });
