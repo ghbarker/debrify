@@ -2,7 +2,7 @@
 
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 
-Baseline: `main` @ H1/T1/S1-fix merged · Phase: **2** (P2e + G1 step 1) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
+Baseline: `main` @ P2e merged · Phase: **2** (G1 step 1) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -18,7 +18,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | P2b · Stremio TV strings | merged | `refactor/p2b-stremio-tv-strings` | — | `lib/screens/stremio_tv/**` | — | Pin-before-move present; **fails tightened (c)** (no origin-diff table). Keep on main; not a template. `StremioTvCacheFilter` strings in cloud/ stay. |
 | P2c · launcher + bulk-add | merged | `refactor/p2c-launcher-bulk-add` | — | `lib/services/video_player_launcher.dart`, `lib/services/torrent_bulk_add_service.dart` | — | Pin-before-move present; **fails tightened (c)** (no origin-diff table). Keep on main; not a template. |
 | P2d · playlist/cloud/settings strings | merged | `refactor/p2d-playlist-cloud-settings` | — | `lib/screens/playlist_content_view_screen.dart`, `lib/services/playlist_player_service.dart`, `lib/screens/cloud_screen.dart`, `lib/screens/settings/provider_settings_page.dart` | — | Pin-before-move present; **fails tightened (c)** (no origin-diff table). Keep on main; not a template. |
-| P2e · playback-service strings | review | `refactor/p2e-playback-service-strings` | worker | `lib/services/torrent_playback_service.dart`, `test/torrent_playback_service_strings_test.dart`, `lib/services/playback_service_dispatch.dart` | — | Route remaining provider-string sites through registry / `CloudProviderId`. Forbidden: `lib/services/cloud/**`. `lib/main.dart` sidebar/hub labels exempt. Gate (c): pin green before move + origin-diff table. |
+| P2e · playback-service strings | merged | `refactor/p2e-playback-service-strings` | worker | `lib/services/torrent_playback_service.dart`, `test/torrent_playback_service_strings_test.dart`, `lib/services/playback_service_dispatch.dart` | — | `PlaybackServiceDispatch` façade; origin-diff table present. `PlaybackCacheFirst.reorder` in cloud/ still string-switches (out of lane). `lib/main.dart` sidebar exempt. |
 | H1 · Home row registry | merged | `refactor/h1-home-row-registry` | — | new `lib/services/home/**`, `search_screen.dart` [row-id hunks only], `lib/screens/settings/home_sections_filter_page.dart`, `lib/services/home_list_rows.dart`, `lib/services/home_row_order.dart` | — | Frozen row-id grammar. Undeclared: rail de-dup, wider stray leaves, addon-group merge (NOTES). **Regression:** pinned collections must lead the board — follow-up `h1-fix`. |
 | H1-fix · pinned collections lead | merged | `refactor/h1-pinned-collections-lead` | orchestrator | `lib/services/home/home_row_registry.dart`, `test/home_row_registry_test.dart` | — | Preserve `_sections` order in the section band so pinned collections lead tracker lists. CI green then `--no-ff` merge. |
 | T1 · transfer category registry | merged | `refactor/t1-transfer-category-registry` | — | new `lib/services/transfer/**`, `lib/services/backup_restore_service.dart`, `remote_command_router.dart` [config hunks], `lib/widgets/remote/remote_config_export.dart`, `lib/widgets/remote/remote_transfer_all.dart`, `lib/widgets/onboarding/onboarding_flow.dart` [`_configLabel`], `lib/services/profiles/profile_restore_coordinator.dart` [selection literals] | — | Frozen: ConfigCommand, backup keys. Undeclared deltas in NOTES. **Regression:** empty PikPak password — follow-up `t1-fix`. |
@@ -27,7 +27,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | S1-fix · extraPlayerKeywords | merged | `refactor/s1-extra-player-keywords` | orchestrator | `lib/screens/settings_screen.dart` [binding site only], `lib/screens/settings/settings_search_leaves.dart` [leaf spread], `test/settings_page_registry_test.dart` | — | Pass extraPlayerKeywords at the settings_screen binding so external-player names are searchable. CI green then `--no-ff` merge. |
 | G1 · search_screen split | assigned | `refactor/g1-home-board-controller` | worker | `lib/screens/search_screen.dart`, `lib/screens/search/**`, new `lib/screens/search/home_board_controller.dart`, `test/home_board_controller_test.dart` | — | **Step 1 only this PR:** extract Home board data layer into `HomeBoardController`. Later steps are separate PRs. Gate (c): pin green before move + origin-diff table. Preserve H1-fix section-band order. |
 | G2 · settings_screen split | queued | — | — | `settings_screen.dart` | — | S1-fix and gate 1 Windows done. Assign after G1 step 1 is in flight if width allows. |
-| G3 · storage split | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | P2e | Gate 1 Windows done. Still wait for P2e merge. |
+| G3 · storage split | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | — | P2e merged. Gate 1 Windows done. |
 | G4 · cloud file screens | queued | — | — | `debrid_downloads_screen.dart`, `torbox/**`, `premiumize/**`, `alldebrid/**`, `pikpak/**` | — | P1 + gate 1 Windows done. Supersedes PRs #36–#43 (closed, do not rebase). |
 | G5 · scrobble coordinator | queued | — | — | `video_player_screen.dart` [scrobble hunks], `services/*/*_scrobble_session.dart` | — | Gate 1 Windows done. |
 | T2 · tracker commons | queued | — | — | `services/trakt/**`, `services/simkl/**`, `services/mdblist/**`, `tracking_source_policy.dart` | — | Gate 1 Windows done. |
@@ -64,4 +64,4 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
-Phase 1 merged. P2a–P2d merged. H1/T1/S1-fix merged (#57–#59). **P2e in flight. G1 step 1 assigned.** Gate 1 Windows build+smoke **pass**; Android not run. Gate (c) tightened. PR #56 held to Phase 3. PRs #36–#43 closed (G4).
+Phase 1 merged. P2a–**P2e** merged (#60). **G1 step 1 in flight.** Gate 1 Windows build+smoke **pass**; Android not run. Gate (c) tightened. PR #56 held to Phase 3. PRs #36–#43 closed (G4).
