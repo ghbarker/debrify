@@ -69,6 +69,16 @@ See `dev/design/REFACTOR_PLAN.md` §2 rule 1.
   rows by family singleton; calendar / tracking settings / player scrobble
   still switch. G1 / G5 own those files.
 
+### G3 · storage split
+
+- **`clearAllHomePageSettings` does not remove Trakt default keys**
+  (`home_default_trakt_list_type` / `home_default_trakt_content_type`).
+  Keep: origin clearer, pinned in `test/storage_home_prefs_snapshot_test.dart`.
+- **Callers still import `StorageService`.** HomePrefs is a forwarding façade
+  only. Next slice: remaining Home keys (`home_disabled_sections_v1`, extra
+  rows, order, hero, ticks, `tv_home_style`), then PlayerPrefs. `@Deprecated`
+  on forwards waits for Q2.
+
 ### G4 · cloud file screens
 
 - **Selection bar stays on both hosts.** Extracting `_buildSelectionBar` into
