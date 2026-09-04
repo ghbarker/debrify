@@ -44,7 +44,7 @@ void main() {
   });
 
   test('BackupSelection.all includes homeCollections and streamBadges', () {
-    const selection = BackupSelection.all();
+    final selection = BackupSelection.all();
     expect(selection.homeCollections, isTrue);
     expect(selection.streamBadges, isTrue);
     expect(selection.trackingPreferences, isTrue);
@@ -72,7 +72,11 @@ void main() {
         {'id': 'col-1', 'title': 'Pinned', 'folders': <Object>[]},
       ],
       'streamBadges': [
-        {'id': 'badge-1', 'name': 'Preset', 'json': '{"groups":[],"filters":[]}'},
+        {
+          'id': 'badge-1',
+          'name': 'Preset',
+          'json': '{"groups":[],"filters":[]}',
+        },
       ],
     });
     expect(report.homeCollectionsImported, 1);
