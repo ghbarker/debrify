@@ -31,7 +31,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | G3 · storage split | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | — | P2e merged. Gate 1 Windows done. |
 | G4 · cloud file screens | assigned | `refactor/g4-cloud-files-screen` | worker | `debrid_downloads_screen.dart`, `torbox/**`, `premiumize/**`, `alldebrid/**`, `pikpak/**` files screens | — | Shared `CloudFilesScreen` + local `CloudFilesSource` interface in screens (do not edit existing `lib/services/cloud/**` adapters unless Decisions needed). Supersedes closed #36–#43. Gate (c). |
 | G5 · scrobble coordinator | queued | — | — | `video_player_screen.dart` [scrobble hunks], `services/*/*_scrobble_session.dart` | — | Gate 1 Windows done. |
-| T2 · tracker commons | assigned | `refactor/t2-tracker-commons` | worker | `services/trakt/**`, `services/simkl/**`, `services/mdblist/**`, `tracking_source_policy.dart` | — | Shared shapes only; HTTP code unchanged. Gate (c). |
+| T2 · tracker commons | review | `refactor/t2-tracker-commons` | worker | `services/trakt/**`, `services/simkl/**`, `services/mdblist/**`, `tracking_source_policy.dart`, new `lib/services/tracking/**` | — | Shared shapes only; HTTP unchanged. Gate (c). Origin-diff in PR. |
 | Q1 · layering enforcement | queued | — | — | `tool/check_layering.dart`, `test.yml` | gate 2 | — |
 | Q2 · shim + comment sweep | queued | — | — | per area, assigned at gate 2 | gate 2 | — |
 | Q3 · `.cursor` policy | queued | — | — | `.cursor/**`, `dev/design/ENGINEERING_RULES.md` | gate 2 | PR #56 (Qwen helper) held until Phase 3; it edits `.cursor/**`. |

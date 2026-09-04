@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/advanced_search_selection.dart';
 import '../../models/stremio_addon.dart';
+import '../tracking/tracker_continue_watching.dart';
 import 'trakt_item_transformer.dart';
 import 'trakt_service.dart';
 
@@ -38,7 +39,7 @@ class TraktContinueWatchingItem {
   bool get isSeries => meta.type == 'series';
 }
 
-class TraktContinueWatchingService {
+class TraktContinueWatchingService implements TrackerContinueWatching {
   TraktContinueWatchingService._({TraktService? traktService})
     : _traktService = traktService ?? TraktService.instance;
 
@@ -96,6 +97,14 @@ class TraktContinueWatchingService {
       debugPrint('TraktContinueWatchingService: fetchItems failed: $e');
       return null;
     }
+  }
+
+  @override
+  Future<TrackerContinueWatchingPage?> fetchContinueWatching() async {
+    final movies = await fetchMoviesOrNull();
+    final shows = await fetchShowsOrNull();
+    if (movies == null || shows == null) return null;
+    return TrackerContinueWatchingPage(movies: movies, shows: shows);
   }
 
   Future<AdvancedSearchSelection?> resolveSelection({

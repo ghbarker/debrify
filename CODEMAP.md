@@ -52,7 +52,7 @@ except `CloudProviderRegistry` (half-migrated; capability split is **P1**).
 | `HomeRowRegistry` | **H1** | `_sectionRowId`, `_canonicalOrderIds`, group builders, id-prefix checks in `lib/screens/search_screen.dart`, `lib/screens/settings/home_sections_filter_page.dart`, `lib/services/home_list_rows.dart` |
 | `TransferCategoryRegistry` | **T1** | backup build/summarize/apply, `BackupSelection` / `BackupSummary` / `RestoreReport` field triplets, remote router's five maps, export/transfer-all tiles, onboarding labels |
 | `SettingsPageRegistry` | **S1** | the 6-site registration in `lib/screens/settings_screen.dart` + `lib/screens/settings/settings_tv_layout.dart`, the search index `leaf()` tables |
-| `TrackerRegistry` (light) | **T2** | per-tracker `switch` in tick policy, scrobble targets, CW row wiring |
+| `TrackerRegistry` (exists) | **T2** | per-tracker `switch` in tick policy, scrobble targets, CW row wiring |
 
 Until **T1** lands, adding a remote/backup transfer category still needs the
 **11-site checklist** (plan §0: “11 registrations”; §3 maps that to the three
@@ -249,8 +249,12 @@ is an editor mirror, not the source of truth. How to add a provider:
 ## Trackers & continue-watching
 - Trakt: `lib/services/trakt/` (service, continue_watching, list_source, transformer, calendar).
   Simkl: `lib/services/simkl/` (incl. `lib/services/simkl/simkl_menu_helpers.dart` remove/On-Hold, `lib/services/simkl/simkl_continue_watching_service.dart`).
-  MDBList: `lib/services/mdblist/`. **Trackers share no abstraction — fully parallel by design**
-  until **T2** (`TrackerRegistry`).
+  MDBList: `lib/services/mdblist/`. Shared shapes live in `lib/services/tracking/`
+  (`TrackerListSource`, `TrackerCalendar`, `TrackerContinueWatching`,
+  `TrackerItemTransformer`, `TrackerRegistry` keyed by `TrackingSource`). Each
+  family implements those without sharing HTTP clients. `TrackingSourcePolicy`
+  iterates the registry. Home CW rows (`search_screen.dart`, G1) and
+  `trakt_calendar_screen.dart` still call family singletons.
 - Settings: `lib/screens/settings/trakt_settings_page.dart`, `lib/screens/settings/simkl_settings_page.dart`.
   Home rows + scrobble wiring live in `lib/screens/search_screen.dart` + both players. Discover source dropdown:
   `lib/widgets/search_source_dropdown.dart`,

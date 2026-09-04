@@ -1,4 +1,5 @@
 import '../../models/stremio_addon.dart';
+import '../tracking/tracker_item_transformer.dart';
 
 /// Transforms MDBList list items into [StremioMeta] objects.
 ///
@@ -173,4 +174,22 @@ class MdblistItemTransformer {
       : value is String
       ? double.tryParse(value)
       : null;
+}
+
+/// Registry-facing instance wrapper. Static helpers above stay the call sites.
+/// [inferredType] is ignored — MDBList rows carry their own type.
+class MdblistTrackerItemTransformer implements TrackerItemTransformer {
+  const MdblistTrackerItemTransformer();
+
+  @override
+  StremioMeta? transformItem(
+    Map<String, dynamic> raw, {
+    String? inferredType,
+  }) => MdblistItemTransformer.transformItem(raw);
+
+  @override
+  List<StremioMeta> transformList(
+    List<dynamic> items, {
+    String? inferredType,
+  }) => MdblistItemTransformer.transformItems(items);
 }

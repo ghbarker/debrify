@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../models/trakt/trakt_calendar_entry.dart';
+import '../tracking/tracker_calendar.dart';
 import 'mdblist_models.dart';
 import 'mdblist_service.dart';
 
@@ -13,7 +14,7 @@ typedef MdblistShowResolver =
     Future<MdblistResult<Map<String, dynamic>>> Function(int tmdbId);
 
 /// Profile-scoped, last-good calendar cache for MDBList episode events.
-class MdblistCalendarService {
+class MdblistCalendarService implements TrackerCalendar {
   MdblistCalendarService._({
     required MdblistCalendarFetcher fetcher,
     required MdblistShowResolver resolver,
@@ -40,6 +41,7 @@ class MdblistCalendarService {
   final Map<String, Future<Map<DateTime, List<TraktCalendarEntry>>>> _inFlight =
       {};
 
+  @override
   Future<Map<DateTime, List<TraktCalendarEntry>>> getRange(
     DateTime start,
     DateTime end,

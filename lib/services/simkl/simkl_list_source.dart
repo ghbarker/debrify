@@ -1,4 +1,5 @@
 import '../../models/stremio_addon.dart';
+import '../tracking/tracker_list_source.dart';
 import 'simkl_constants.dart';
 import 'simkl_item_transformer.dart';
 import 'simkl_service.dart';
@@ -89,7 +90,7 @@ extension SimklSeeAllListX on SimklSeeAllList {
 /// views. Pure data logic — no UI. Stateless; construct one or use
 /// [instance]. Deliberately independent of [TraktListSource] — see
 /// [SimklService]'s doc comment on why Simkl stays parallel, not shared.
-class SimklListSource {
+class SimklListSource implements TrackerListSource {
   SimklListSource._();
   static final SimklListSource instance = SimklListSource._();
 
@@ -116,6 +117,15 @@ class SimklListSource {
       case SimklSeeAllList.newAndUpcoming:
         return _loadNewAndUpcoming();
     }
+  }
+
+  @override
+  Future<TrackerListPage> loadPage(
+    Object choice, {
+    List<StremioMeta> cwItems = const [],
+  }) async {
+    final result = await loadList(choice as SimklSeeAllList);
+    return TrackerListPage(items: result.items, failed: result.failed);
   }
 
   /// The five watchlist-state lists: one call with `type=all` returns

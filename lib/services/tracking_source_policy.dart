@@ -1,5 +1,6 @@
 import '../models/tracking_source.dart';
 import 'storage_service.dart';
+import 'tracking/tracker_registry.dart';
 
 export '../models/tracking_source.dart';
 
@@ -21,21 +22,14 @@ class TrackingSourcePolicy {
   static Future<TrackingSourcePolicy> load() async {
     final scrobbleTargets = await StorageService.getTrackingScrobbleTargets();
     var progressSource = await StorageService.getWatchProgressSource();
-    final dedicated = switch (progressSource) {
-      WatchProgressSource.trakt => TrackingSource.trakt,
-      WatchProgressSource.simkl => TrackingSource.simkl,
-      WatchProgressSource.mdblist => TrackingSource.mdblist,
-      _ => null,
-    };
+    final dedicated = TrackerRegistry.instance.dedicatedProgress(
+      progressSource,
+    );
     if (dedicated != null) {
-      final connected = switch (dedicated) {
-        TrackingSource.trakt => StorageService.hasTraktCredential(),
-        TrackingSource.simkl => StorageService.hasSimklCredential(),
-        TrackingSource.mdblist => StorageService.hasMdblistCredential(),
-        TrackingSource.local => Future<bool>.value(true),
-      };
-      if (!await connected) {
-        await StorageService.fallbackDisconnectedProgressSource(dedicated);
+      if (!await dedicated.hasCredential()) {
+        await StorageService.fallbackDisconnectedProgressSource(
+          dedicated.source,
+        );
         progressSource = WatchProgressSource.smart;
       }
     }
@@ -51,13 +45,11 @@ class TrackingSourcePolicy {
 
   /// Smart preserves the legacy merged/recency behavior. A dedicated source
   /// admits only itself; local means data written by this Debrify profile.
-  bool progressFrom(TrackingSource source) => switch (progressSource) {
-    WatchProgressSource.smart => true,
-    WatchProgressSource.local => source == TrackingSource.local,
-    WatchProgressSource.trakt => source == TrackingSource.trakt,
-    WatchProgressSource.simkl => source == TrackingSource.simkl,
-    WatchProgressSource.mdblist => source == TrackingSource.mdblist,
-  };
+  bool progressFrom(TrackingSource source) {
+    if (progressSource == WatchProgressSource.smart) return true;
+    final spec = TrackerRegistry.instance.forProgress(progressSource);
+    return spec != null && spec.source == source;
+  }
 
   bool homeTicksFrom(TrackingSource source) => homeTickSources.contains(source);
 

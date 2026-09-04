@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/advanced_search_selection.dart';
 import '../../models/stremio_addon.dart';
+import '../tracking/tracker_continue_watching.dart';
 import 'simkl_item_transformer.dart';
 import 'simkl_service.dart';
 
@@ -55,7 +56,7 @@ class SimklContinueWatchingItem {
 /// ids/progress, so title + poster are enriched from the user's cached library
 /// snapshot (with a metahub poster fallback from the IMDb id). Parallel to
 /// TraktContinueWatchingService, sharing none of its Trakt-specific logic.
-class SimklContinueWatchingService {
+class SimklContinueWatchingService implements TrackerContinueWatching {
   SimklContinueWatchingService._();
   static final SimklContinueWatchingService instance =
       SimklContinueWatchingService._();
@@ -118,6 +119,16 @@ class SimklContinueWatchingService {
       debugPrint('SimklContinueWatchingService: fetch failed: $e');
       return null;
     }
+  }
+
+  @override
+  Future<TrackerContinueWatchingPage?> fetchContinueWatching() async {
+    final result = await fetchItems();
+    if (result == null) return null;
+    return TrackerContinueWatchingPage(
+      movies: result.movies,
+      shows: result.shows,
+    );
   }
 
   /// A ready-to-play selection for a CW item — carries the Simkl resume percent

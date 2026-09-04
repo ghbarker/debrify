@@ -1,4 +1,5 @@
 import '../../models/stremio_addon.dart';
+import '../tracking/tracker_list_source.dart';
 import 'trakt_item_transformer.dart';
 import 'trakt_service.dart';
 
@@ -160,7 +161,7 @@ class TraktListChoice {
 /// Loads Trakt lists into [StremioMeta] grids for the See-All / Discover views.
 /// Pure data logic — no UI — so it can be shared by every screen that browses
 /// Trakt lists. Stateless; construct one or use [instance].
-class TraktListSource {
+class TraktListSource implements TrackerListSource {
   TraktListSource._();
   static final TraktListSource instance = TraktListSource._();
 
@@ -238,6 +239,18 @@ class TraktListSource {
     if (raw == null) return (items: const <StremioMeta>[], failed: true);
     final metas = TraktItemTransformer.transformList(raw);
     return (items: _dedup(metas), failed: false);
+  }
+
+  @override
+  Future<TrackerListPage> loadPage(
+    Object choice, {
+    List<StremioMeta> cwItems = const [],
+  }) async {
+    final result = await loadList(
+      choice as TraktListChoice,
+      cwItems: cwItems,
+    );
+    return TrackerListPage(items: result.items, failed: result.failed);
   }
 
   Future<List<dynamic>?> _safeFetchBuiltin(

@@ -1,4 +1,5 @@
 import '../../models/stremio_addon.dart';
+import '../tracking/tracker_list_source.dart';
 import 'mdblist_item_transformer.dart';
 import 'mdblist_models.dart';
 import 'mdblist_service.dart';
@@ -69,7 +70,7 @@ class MdblistListChoice {
 ///
 /// Step 2 scope: the user's OWN lists only. Top/public lists and list search
 /// are a later step (see project memory).
-class MdblistListSource {
+class MdblistListSource implements TrackerListSource {
   final MdblistService service;
 
   MdblistListSource._(this.service);
@@ -160,6 +161,19 @@ class MdblistListSource {
       items: _dedup(metas),
       failed: !result.isUsable,
       complete: result.isComplete,
+    );
+  }
+
+  @override
+  Future<TrackerListPage> loadPage(
+    Object choice, {
+    List<StremioMeta> cwItems = const [],
+  }) async {
+    final result = await loadListItems(choice as MdblistListChoice);
+    return TrackerListPage(
+      items: result.items,
+      failed: result.failed,
+      complete: result.complete,
     );
   }
 
