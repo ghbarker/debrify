@@ -128,8 +128,8 @@ See `dev/design/REFACTOR_PLAN.md` §2 rule 1.
   analytics name all use `searchMode ? … : (discoverMode ? … : home)`.
   Keep: origin `?:` order, pinned in `test/search_discover_shells_test.dart`.
 - **God file stayed in place.** `SearchScreenHost` is still the 18k State;
-  this step only split public types and shell contracts. TV stages remain
-  for step 5.
+  this step only split public types and shell contracts. TV stages landed
+  in step 5 (#71).
 
 ### G1 · step 3 TitleOpener
 
