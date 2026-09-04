@@ -2,7 +2,7 @@
 
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 
-Baseline: `main` @ G1 step 5 merged · Phase: **2** (G3 PlayerPrefs + G4 remaining providers next) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
+Baseline: `main` @ G1 step 5 merged · Phase: **2** (G3 PlayerPrefs assigned) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -33,8 +33,9 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | G2 · settings_screen split | merged | `refactor/g2-backup-restore-page` | worker | `settings_screen.dart` [backup/restore + profile-switch hunks], new `lib/screens/settings/backup_restore_page.dart`, `profiles_settings_page.dart` `ProfileSettingsRailActions`, tests | — | **#63.** Pin + origin-diff. `settings_screen.dart` 3 923 → 3 107. `extraPlayerKeywords` still bound. Restore-report omits `homeCollectionsFailed` / `streamBadgeSourcesFailed` from the snackbar list (NOTES). |
 | G3 · storage split | merged | `refactor/g3-storage-split` | worker | `storage_service.dart`, `lib/services/storage/**`, storage key-sweep tests | — | **#67.** HomePrefs first slice. `storage_service.dart` 9 963 → 9 835. Remaining Home keys merged #70. PlayerPrefs next. `@Deprecated` in Q2. `clearAllHomePageSettings` skips Trakt default keys (NOTES). |
 | G3 · step 2 remaining Home keys | merged | `refactor/g3-home-prefs-rest` | worker | `storage_service.dart`, `lib/services/storage/home_prefs.dart`, key-sweep tests | G3 slice 1 | **#70.** Pin + origin-diff. `storage_service.dart` 9 835 → 9 634. Callers stay on StorageService. Empty tick list, `'shelf'`→`'canvas'`, custom-hero-with-no-ids, façade `trackingSourceRevision++` (NOTES). PlayerPrefs next. `@Deprecated` in Q2. |
-| G3 · step 3 PlayerPrefs | queued | `refactor/g3-player-prefs` | — | `storage_service.dart`, new `lib/services/storage/player_prefs.dart`, key-sweep tests | G3 step 2 | Player/external-player/dock/audio/subtitle keys into PlayerPrefs. Same façade rules as HomePrefs. Gate (c) pin+origin-diff. Callers stay on StorageService. `@Deprecated` in Q2. |
+| G3 · step 3 PlayerPrefs | assigned | `refactor/g3-player-prefs` | worker | `storage_service.dart`, new `lib/services/storage/player_prefs.dart`, `storage_key_ownership.dart`, key-sweep + snapshot tests | G3 step 2 | Player/external-player/dock/audio/subtitle/skip/renderer keys into PlayerPrefs. Same façade as HomePrefs. Gate (c) pin+origin-diff. Callers stay on StorageService. `@Deprecated` in Q2. IPTV playlists / Magic TV channels / playback_state out of slice. |
 | G4 · cloud file screens | merged | `refactor/g4-cloud-files-screen` | worker | `debrid_downloads_screen.dart`, `torbox/**`, `premiumize/**`, `alldebrid/**`, `pikpak/**` files screens | — | **#64.** RD + TorBox on shared `CloudFilesScreen`. PM/AD/PikPak follow-up. Selection bar stayed on hosts (shape-manifest floor; NOTES). Supersedes closed #36–#43. |
+| G4 · step 2 remaining hosts | queued | `refactor/g4-cloud-files-rest` | — | `premiumize/**`, `alldebrid/**`, `pikpak/**` files screens, `CloudFilesScreen` | G4 slice 1 | Route PM/AD/PikPak onto shared `CloudFilesScreen`. Selection bar stays on hosts (shape-manifest). Public types and sidebar ids frozen. |
 | G5 · scrobble coordinator | merged | `refactor/g5-scrobble-coordinator` | worker | `video_player_screen.dart` [scrobble hunks], `services/*/*_scrobble_session.dart`, new coordinator + tests | — | **#68.** `video_player_screen.dart` 16 278 → 15 771. Simkl pause-centric (NOTES). No TrackerRegistry factory. Native TV/launcher out of lane. |
 | T2 · tracker commons | merged | `refactor/t2-tracker-commons` | worker | `services/trakt/**`, `services/simkl/**`, `services/mdblist/**`, `tracking_source_policy.dart`, new `lib/services/tracking/**` | — | **#62.** Shared shapes only; HTTP unchanged. Local progress not dedicated; MDBList adapter ignores `inferredType` (NOTES). Out-of-lane callers not chased. |
 | Q1 · layering enforcement | queued | — | — | `tool/check_layering.dart`, `test.yml` | gate 2 | — |
@@ -70,4 +71,4 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
-Phase 1 merged. P2a–**P2e** merged (#60). **G1 steps 1–5 merged (#61, #65, #66, #69, #71).** **T2 #62 · G2 #63 · G4 #64 · G3 #67 + step 2 #70 · G5 #68 merged.** Next: G3 PlayerPrefs, G4 PM/AD/PikPak onto `CloudFilesScreen`, then gate 2. Gate 1 Windows pass; Android not run. PR #56 held. #36–#43 closed (G4).
+Phase 1 merged. P2a–**P2e** merged (#60). **G1 steps 1–5 merged (#61, #65, #66, #69, #71).** **T2 #62 · G2 #63 · G4 #64 · G3 #67 + step 2 #70 · G5 #68 merged.** G3 PlayerPrefs assigned. G4 PM/AD/PikPak queued. Then gate 2. Gate 1 Windows pass; Android not run. PR #56 held. #36–#43 closed (G4).
