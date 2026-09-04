@@ -1070,11 +1070,17 @@ Future<Object?> _readPikpakWire(TransferSendContext ctx) async {
   final email = await StorageService.getPikPakEmail(
     forRemoteTransfer: ctx.forRemoteTransfer,
   );
-  final password = ctx.pikpakPassword;
-  if (email == null || email.isEmpty || password == null || password.isEmpty) {
+  if (email == null || email.isEmpty) {
     return null;
   }
-  return <String, Object?>{'email': email, 'password': password};
+  // Origin senders (Send Setup to TV + Transfer Everything) encoded
+  // `{email}` when the typed password was empty; only a missing email
+  // skipped the item. Do not require a non-empty password here.
+  final password = ctx.pikpakPassword;
+  return <String, Object?>{
+    'email': email,
+    if (password != null && password.isNotEmpty) 'password': password,
+  };
 }
 
 Future<Object?> _readTraktWire(TransferSendContext ctx) async {
