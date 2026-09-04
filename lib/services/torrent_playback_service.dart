@@ -41,6 +41,7 @@ import '../widgets/cloud_provider_chrome.dart';
 import 'cloud/cloud_provider_id.dart';
 import 'cloud/cloud_provider_registry.dart';
 import 'cloud/pack_negative_cache.dart';
+import 'cloud/playback_cache_first.dart';
 import 'debrid_service.dart';
 import 'debrify_tv_channel_add_service.dart';
 import 'download_service.dart';
@@ -5208,38 +5209,7 @@ class TorrentPlaybackService {
   static Future<List<Torrent>> _cacheFirst(
     String provider,
     List<Torrent> candidates,
-  ) async {
-    final hashes = candidates
-        .map((t) => t.infohash.toLowerCase())
-        .where((h) => h.isNotEmpty)
-        .toList();
-    final cached = <String>{};
-    try {
-      if (provider == 'torbox') {
-        final key = (await StorageService.getTorboxApiKey()) ?? '';
-        cached.addAll(
-          await TorboxService.checkCachedTorrents(
-            apiKey: key,
-            infoHashes: hashes,
-          ),
-        );
-      } else if (provider == 'premiumize') {
-        final key = (await StorageService.getPremiumizeApiKey()) ?? '';
-        final res = await PremiumizeService.checkCache(key, hashes);
-        for (var i = 0; i < hashes.length && i < res.length; i++) {
-          if (res[i]) cached.add(hashes[i]);
-        }
-      }
-    } catch (_) {}
-    if (cached.isEmpty) return candidates;
-    final hit = candidates
-        .where((t) => cached.contains(t.infohash.toLowerCase()))
-        .toList();
-    final miss = candidates
-        .where((t) => !cached.contains(t.infohash.toLowerCase()))
-        .toList();
-    return [...hit, ...miss];
-  }
+  ) => PlaybackCacheFirst.reorder(provider, candidates);
 
   static String _fileName(String path) => CloudPlaybackHelpers.fileName(path);
 
