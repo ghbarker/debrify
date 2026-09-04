@@ -17,7 +17,7 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 | `lib/screens/video_player_screen.dart` | 16 278 |
 | `lib/screens/magic_tv_screen.dart` | 10 716 |
 | `lib/services/storage_service.dart` | 9 963 |
-| `lib/screens/settings_screen.dart` | 7 905 |
+| `lib/screens/settings_screen.dart` | 3 107 |
 | `lib/screens/torbox/torbox_downloads_screen.dart` | 7 069 |
 | `lib/screens/debrid_downloads_screen.dart` | 6 444 |
 | `lib/services/video_player_launcher.dart` | 5 769 |
@@ -31,7 +31,7 @@ Search `part` files: `lib/screens/search/search_sources.dart` (3 163),
 
 🔴 huge: `lib/screens/search_screen.dart` (19 070) · `lib/screens/video_player_screen.dart`
 (16 278) · `lib/screens/magic_tv_screen.dart` (10 716) · `lib/services/storage_service.dart`
-(9 963) · `lib/screens/settings_screen.dart` (7 905) ·
+(9 963) · `lib/screens/settings_screen.dart` (3 107) ·
 `lib/screens/torbox/torbox_downloads_screen.dart` (7 069) ·
 `lib/screens/debrid_downloads_screen.dart` (6 444) ·
 `lib/services/video_player_launcher.dart` (5 769) ·
@@ -75,7 +75,7 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
 
 - `lib/widgets/onboarding/onboarding_flow.dart` — `_configLabel`
 - `lib/services/profiles/profile_restore_coordinator.dart` — `BackupSelection` literals
-- `lib/screens/settings_screen.dart` — settings summary (`_formatBackupSummary` / `_formatRestoreReport`; S1 hunk)
+- `lib/screens/settings/backup_restore_page.dart` — backup/restore UI (`backupSummaryLines` / `formatRestoreReport`; G2, moved from `settings_screen.dart`)
 
 `ConfigCommand` **strings** are a frozen compatibility surface. Do not rename them.
 
@@ -272,7 +272,9 @@ is an editor mirror, not the source of truth. How to add a provider:
 
 ## Settings · storage · misc infra
 - Settings: `lib/screens/settings/` (+ `lib/screens/settings/home_sections_filter_page.dart` = show/hide home rows,
-  `lib/screens/settings/home_page_settings_page.dart`). Metrics/format helpers: `lib/utils/`.
+  `lib/screens/settings/home_page_settings_page.dart`,
+  `lib/screens/settings/backup_restore_page.dart` = Data & Backup create/restore UI,
+  `lib/screens/settings/profiles_settings_page.dart` `ProfileSettingsRailActions` = Profiles card switch/add/edit). Metrics/format helpers: `lib/utils/`.
   Adding a settings page still touches ~6 sites until **S1**.
 - Collections (imported Nuvio/Xperience-style folder groups → Home rows of folder tiles):
   `lib/models/home_collection.dart` (schema + parser + `collection:<id>` row ids),
@@ -295,6 +297,7 @@ is an editor mirror, not the source of truth. How to add a provider:
   `lib/widgets/source_row.dart` and the in-player `lib/screens/video_player/widgets/source_sheet.dart`; the addon's
   label/description ride `Torrent.streamLabel`/`streamDescription` (set in `lib/services/stremio_service.dart`).
 - Backup/transfer/sync: `lib/services/backup_restore_service.dart` (full config snapshot),
+  settings UI `lib/screens/settings/backup_restore_page.dart` (legacy create/restore; profile mode delegates to `profile_backup_flows.dart`),
   `lib/widgets/remote/` + `lib/services/remote_control/` (device-to-device over LAN, no server).
   See the 11-site checklist above until **T1**.
 - Onboarding: `lib/widgets/initial_setup_flow.dart` (export) → `lib/widgets/onboarding/onboarding_flow.dart`.
