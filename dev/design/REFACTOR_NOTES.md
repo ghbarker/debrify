@@ -174,6 +174,15 @@ Phase 2 extractions also follow `dev/design/REFACTOR_PLAN_PHASE2.md` (binding as
   `test/backup_restore_page_test.dart`.
 - **`extraPlayerKeywords` stays bound** at `settings_screen.dart` (S1-fix).
   Do not drop the argument when extracting further settings pages.
+- **Linux default label is `App folder (default)`.** SAF and Windows share
+  `Downloads/Debrify (default)`. Keep: origin
+  `DownloadService._appDownloadsSubdir` fallback on Linux.
+- **macOS is excluded** from custom download location (sandbox grants
+  read-only user-selected access; writable folder needs security-scoped
+  bookmarks). Keep: origin comment, not a missing-platform bug.
+- **Host keeps a `DownloadLocationController` field** plus three binding
+  reads (`supported` / `subtitle` / `openSettings`). Not a method
+  forwarder; delete only if a later settings-shell lane owns the field.
 
 ### P2e · playback-service strings
 
