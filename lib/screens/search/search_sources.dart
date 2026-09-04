@@ -42,15 +42,14 @@ class _SourcesScreenState extends State<_SourcesScreen> {
   String? _error;
   List<Torrent> _torrents = [];
 
-  /// The rows actually rendered — [_torrents] after the redesign toolbar's
+  /// The rows actually rendered — [_torrents] after the toolbar's
   /// source-group filter, quality/rip/language filter, and sort are applied.
-  /// Equals [_torrents] when the redesign is off (no toolbar). [_nodes] is kept
-  /// in lock-step with THIS list, never [_torrents].
+  /// [_nodes] is kept in lock-step with THIS list, never [_torrents].
   List<Torrent> _visible = [];
   final List<FocusNode> _nodes = [];
   List<SeriesSource> _bound = [];
 
-  // --- redesign toolbar state (unused when _redesign is false) ---
+  // --- redesign toolbar state ---
   TorrentFilterState _filters = const TorrentFilterState.empty();
   String _sortBy = 'source'; // source | name | size | seeders | date
   bool _sortAsc = false;
@@ -145,10 +144,6 @@ class _SourcesScreenState extends State<_SourcesScreen> {
 
   /// Monotonic guard so a slow earlier search can't clobber a newer one.
   int _searchToken = 0;
-
-  /// Stremio-style redesigned presentation — now the default. Kept as a field
-  /// (rather than inlined) so the classic-row branches remain an easy fallback.
-  final bool _redesign = true;
 
   String get _imdbId => widget.selection.imdbId;
   bool get _isMovie => !widget.selection.isSeries;
@@ -526,7 +521,7 @@ class _SourcesScreenState extends State<_SourcesScreen> {
       }
     }
     _torrents = torrents;
-    _visible = _redesign ? _applyToolbar(torrents) : torrents;
+    _visible = _applyToolbar(torrents);
     _syncStreamNodes();
     if (mounted) {
       setState(() {
@@ -608,7 +603,7 @@ class _SourcesScreenState extends State<_SourcesScreen> {
         )) {
       _sourceFilter = null;
       if (_pendingTorrents == null) {
-        _visible = _redesign ? _applyToolbar(_torrents) : _torrents;
+        _visible = _applyToolbar(_torrents);
         _syncStreamNodes();
       }
     }
@@ -981,14 +976,13 @@ class _SourcesScreenState extends State<_SourcesScreen> {
                 ? _centered(scheme, 'Search failed.\n$_error')
                 : Column(
                     children: [
-                      if (_redesign && !_keywordMode) _redesignHero(scheme),
+                      if (!_keywordMode) _redesignHero(scheme),
                       // Keep the toolbar when a season scope is available even
                       // with zero results — otherwise a no-result season would
                       // strand the user with no way to switch back.
-                      if (_redesign &&
-                          (_torrents.isNotEmpty ||
-                              _seasonChipVisible ||
-                              _hasRetryableAddon))
+                      if (_torrents.isNotEmpty ||
+                          _seasonChipVisible ||
+                          _hasRetryableAddon)
                         _redesignToolbar(scheme),
                       if (_searching) _searchingStrip(),
                       if (_bound.isNotEmpty) _pinnedBanner(),
@@ -1024,50 +1018,13 @@ class _SourcesScreenState extends State<_SourcesScreen> {
                                           vertical: widget.isTelevision
                                               ? 24
                                               : 8,
-                                          horizontal: _redesign ? 10 : 0,
+                                          horizontal: 10,
                                         ),
                                         cacheExtent: 1200,
                                         itemCount: _visible.length,
                                         itemBuilder: (context, i) {
                                           final t = _visible[i];
-                                          if (_redesign) {
-                                            return _redesignRow(t, i);
-                                          }
-                                          return TorrentResultRow(
-                                            torrent: t,
-                                            index: i,
-                                            focusNode: _nodes[i],
-                                            isTelevision: widget.isTelevision,
-                                            qualityTier: t.qualityTier,
-                                            onTap: () {
-                                              if (widget.bindMode) {
-                                                unawaited(_pin(t));
-                                              } else {
-                                                _play(t, i);
-                                              }
-                                            },
-                                            onLongPress: () =>
-                                                _showRowMenu(t, i),
-                                            onCopyMagnet: t.copyLink == null
-                                                ? null
-                                                : () => unawaited(
-                                                    _copySourceLink(t),
-                                                  ),
-                                            onNavigateUp: () {
-                                              _freezeStreaming();
-                                              if (i > 0) {
-                                                _nodes[i - 1].requestFocus();
-                                              } else if (_pendingNewCount > 0) {
-                                                _pillFocus.requestFocus();
-                                              }
-                                            },
-                                            onNavigateDown: () {
-                                              _freezeStreaming();
-                                              if (i < _nodes.length - 1) {
-                                                _nodes[i + 1].requestFocus();
-                                              }
-                                            },
-                                          );
+                                          return _redesignRow(t, i);
                                         },
                                       ),
                                     ),
@@ -1758,13 +1715,13 @@ class _SourcesScreenState extends State<_SourcesScreen> {
     _maybeCheckCache();
   }
 
-  /// Kick an additive cache check iff the redesign is on and a provider is
+  /// Kick an additive cache check iff a provider is
   /// checkable. [rows] scopes the check to a specific set (a streaming batch);
   /// null sweeps the whole current list. Called from every path that adds rows
   /// (each batch, search completion, adopt) — [_runCacheCheck] skips hashes an
   /// earlier call already dispatched, so it's cheap to over-call.
   void _maybeCheckCache([List<Torrent>? rows]) {
-    if (!_redesign || (!_tbCacheOn && !_pmCacheOn)) return;
+    if (!_tbCacheOn && !_pmCacheOn) return;
     unawaited(_runCacheCheck(rows ?? _torrents));
   }
 
