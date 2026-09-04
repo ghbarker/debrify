@@ -32,7 +32,6 @@ import '../widgets/tv_text_field.dart';
 import '../utils/tv_keys.dart';
 import 'cloud_files/cloud_files_opening_splash.dart';
 import 'cloud_files/cloud_files_screen.dart';
-import 'cloud_files/cloud_files_selection_bar.dart';
 import 'cloud_files/real_debrid_files_source.dart';
 
 /// Real-Debrid cloud files. Public type is unchanged so sidebar, bind, and
@@ -3004,12 +3003,56 @@ class _DebridDownloadsScreenState extends State<RealDebridCloudFilesHost> {
   }
 
   Widget _buildSelectionBar() {
-    return CloudFilesSelectionBar(
-      count: _activeSelectedIds.length,
-      isAllSelected: _isAllSelected,
-      onToggleSelectAll: _toggleSelectAll,
-      onDelete: _activeSelectedIds.isEmpty ? null : _handleDeleteSelected,
-      deleteFocusNode: _deleteButtonFocusNode,
+    final app = AppThemeScope.of(context);
+    final theme = Theme.of(context);
+    final count = _activeSelectedIds.length;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+        borderRadius: app.shape.br(12),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Text(
+            '$count selected',
+            style: TextStyle(
+              color: theme.colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: _toggleSelectAll,
+            child: Text(_isAllSelected ? 'Deselect All' : 'Select All'),
+          ),
+          const SizedBox(width: 8),
+          FilledButton.icon(
+            focusNode: _deleteButtonFocusNode,
+            onPressed: count > 0 ? _handleDeleteSelected : null,
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: const Text('Delete'),
+            style:
+                FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.error,
+                  disabledBackgroundColor: theme.colorScheme.error.withValues(
+                    alpha: 0.3,
+                  ),
+                ).copyWith(
+                  side: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.focused)) {
+                      return BorderSide(color: app.core.tx, width: 3);
+                    }
+                    return null;
+                  }),
+                ),
+          ),
+        ],
+      ),
     );
   }
 
