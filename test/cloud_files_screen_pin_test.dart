@@ -257,7 +257,7 @@ void main() {
     );
   });
 
-  group('other providers (not routed onto CloudFilesScreen this PR)', () {
+  group('other providers (PM / AD / PikPak, also on CloudFilesScreen)', () {
     testWidgets('Premiumize unconfigured copy without an API key', (
       tester,
     ) async {
