@@ -287,6 +287,18 @@ class CloudProviderRegistry {
     return port.createTransferZip(magnet);
   }
 
+  /// Not-cached keep-downloading. Unknown / unsupported provider is a no-op
+  /// (RD/AD already added while resolving).
+  Future<void> queueUncachedMagnet(String provider, String magnet) async {
+    final id = CloudProviderId.tryParse(provider);
+    if (id == null) return;
+    final port = _byId[id];
+    if (port == null || !port.supports(CloudPortFeature.queueUncached)) {
+      return;
+    }
+    await port.queueUncachedMagnet(magnet);
+  }
+
   static String? credentialKeyFor(String provider) =>
       CloudProviderId.tryParse(provider)?.credentialKey;
 }

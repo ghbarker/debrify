@@ -82,6 +82,7 @@ void main() {
         CloudPortFeature.magicTvPrepare,
         CloudPortFeature.cachedHashes,
         CloudPortFeature.zipPermalink,
+        CloudPortFeature.queueUncached,
       },
     );
     expect(
@@ -91,6 +92,7 @@ void main() {
         CloudPortFeature.checkCache,
         CloudPortFeature.cloudTransfer,
         CloudPortFeature.transferZip,
+        CloudPortFeature.queueUncached,
       },
     );
   });
