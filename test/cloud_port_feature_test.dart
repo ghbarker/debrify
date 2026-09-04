@@ -60,6 +60,16 @@ void main() {
       isFalse,
     );
     expect(
+      const TorboxCloudProvider().supports(CloudPortFeature.fileDownloadLink),
+      isTrue,
+    );
+    expect(
+      const PremiumizeCloudProvider().supports(
+        CloudPortFeature.fileDownloadLink,
+      ),
+      isFalse,
+    );
+    expect(
       const PremiumizeCloudProvider().supports(CloudPortFeature.cloudTransfer),
       isTrue,
     );
@@ -82,6 +92,7 @@ void main() {
         CloudPortFeature.magicTvPrepare,
         CloudPortFeature.cachedHashes,
         CloudPortFeature.zipPermalink,
+        CloudPortFeature.fileDownloadLink,
         CloudPortFeature.queueUncached,
       },
     );

@@ -78,7 +78,9 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   memoization, and cached-only TorBox narrowing. Magic TV cache windows keep
   90/100 chunking and two-call budgets; empty `apiKey` skips HTTP.
   TorBox whole-torrent ZIP permalink is `zipPermalink` (not web-download ZIP,
-  not Premiumize transfer+zip). Premiumize `transfer/create` is
+  not Premiumize transfer+zip). TorBox torrent file `requestdl` is
+  `fileDownloadLink` (not ZIP, not web-download file, not playlist/player
+  unlock dialects). Premiumize `transfer/create` is
   `createCloudTransfer` (not ZIP generate, not TorBox createTorrent).
   Premiumize transfer+zip URL is `createTransferZip` (not TorBox zipPermalink).
   Not-cached keep-downloading is `queueUncachedMagnet` (TorBox

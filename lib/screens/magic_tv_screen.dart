@@ -36,7 +36,6 @@ import '../services/debrify_tv_channel_archive_service.dart';
 import '../services/debrify_tv_cache_service.dart';
 import '../services/debrify_tv_repository.dart';
 import '../services/alldebrid_service.dart';
-import '../services/torbox_service.dart';
 import '../services/torrent_service.dart';
 import '../services/engine/engine_registry.dart';
 import '../services/engine/dynamic_engine.dart';
@@ -5391,7 +5390,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
           if (item is Map && item['type'] == _torboxFileEntryType) {
             final resolved = await _resolveTorboxQueuedFile(
               entry: item as Map<String, dynamic>,
-              apiKey: apiKey,
               log: log,
             );
             if (_watchCancelled) {
@@ -7267,7 +7265,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
         if (next is Map && next['type'] == _torboxFileEntryType) {
           final resolved = await _resolveTorboxQueuedFile(
             entry: Map<String, dynamic>.from(next as Map),
-            apiKey: apiKey,
             log: log,
           );
           if (resolved != null) {
@@ -9441,7 +9438,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
 
   Future<Map<String, String>?> _resolveTorboxQueuedFile({
     required Map<String, dynamic> entry,
-    required String apiKey,
     required void Function(String message) log,
   }) async {
     final torrentId = entry['torrentId'] as int?;
@@ -9451,10 +9447,9 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
       return null;
     }
     try {
-      final streamUrl = await TorboxService.requestFileDownloadLink(
-        apiKey: apiKey,
-        torrentId: torrentId,
-        fileId: file.id,
+      final streamUrl = await CloudProviderRegistry.instance.fileDownloadLink(
+        torrentId,
+        file.id,
       );
       final resolvedTitle = title ?? MagicTvPlayable.torboxDisplayName(file);
       log('➡️ Torbox: streaming $resolvedTitle');

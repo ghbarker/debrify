@@ -60,6 +60,7 @@ jobs:
           test/cloud_stremio_cache_filter_test.dart
           test/cloud_playback_cache_first_test.dart
           test/cloud_zip_permalink_test.dart
+          test/cloud_file_download_link_test.dart
           test/cloud_premiumize_transfer_test.dart
           test/cloud_premiumize_zip_test.dart
           test/cloud_queue_uncached_test.dart
@@ -87,6 +88,7 @@ jobs:
           test/cloud_stremio_cache_filter_test.dart
           test/cloud_playback_cache_first_test.dart
           test/cloud_zip_permalink_test.dart
+          test/cloud_file_download_link_test.dart
           test/cloud_premiumize_transfer_test.dart
           test/cloud_premiumize_zip_test.dart
           test/cloud_queue_uncached_test.dart

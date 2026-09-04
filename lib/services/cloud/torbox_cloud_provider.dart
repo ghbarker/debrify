@@ -502,6 +502,19 @@ class TorboxCloudProvider extends CloudProviderAdapter {
   }
 
   @override
+  Future<String> fileDownloadLink(int torrentId, int fileId) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const CloudMissingApiKey('Missing TorBox API key');
+    }
+    return TorboxService.requestFileDownloadLink(
+      apiKey: apiKey,
+      torrentId: torrentId,
+      fileId: fileId,
+    );
+  }
+
+  @override
   Future<String> zipPermalink(int torrentId) async {
     final apiKey = await CloudCredentials.apiKey(id);
     if (apiKey == null || apiKey.isEmpty) {
