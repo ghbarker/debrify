@@ -10,7 +10,10 @@ import 'debrify_tv_channel_add_service.dart';
 import 'pikpak_api_service.dart';
 import 'premiumize_service.dart';
 import 'storage_service.dart';
+import 'cloud/cloud_credentials.dart';
 import 'cloud/cloud_provider_id.dart';
+import 'cloud/cloud_provider_port.dart';
+import 'cloud/cloud_provider_registry.dart';
 import 'torbox_service.dart';
 import 'torrent_file_service.dart';
 
@@ -22,6 +25,97 @@ import 'torrent_file_service.dart';
 /// keeps its exact semantics: TorBox cache-checks up front and honours the
 /// 60/hr limit, Premiumize adds only cached torrents, Real-Debrid / AllDebrid
 /// auto-remove anything uncached, and PikPak batches into a subfolder.
+
+/// Bulk-add chooser / dispatch. Dialog pop ids stay today's strings
+/// (Real-Debrid is playlist `realdebrid`, not playback `debrid`).
+///
+/// Production adapters are routed with capability `is` checks. Fat-port
+/// [FakeCloudProvider] (P1) does not implement those types, so [supports]
+/// is the fallback — same dual path as [CloudProviderRegistry.prepareMagicTv].
+enum BulkAddEngine {
+  torbox,
+  realDebrid,
+  pikpak,
+  premiumize,
+  allDebrid,
+  createChannel,
+  none,
+}
+
+class BulkAddDispatch {
+  BulkAddDispatch._();
+
+  /// Chooser order: TB, RD, PP, PM, AD — not [CloudProviderId.playbackPrecedence].
+  static const List<CloudProviderId> chooserOrder = [
+    CloudProviderId.torbox,
+    CloudProviderId.debrid,
+    CloudProviderId.pikpak,
+    CloudProviderId.premiumize,
+    CloudProviderId.alldebrid,
+  ];
+
+  static const createChannelResult = 'create_channel';
+
+  /// Dialog pop id. RD is playlist JSON `realdebrid`, not playback `debrid`.
+  static String dialogResultFor(CloudProviderId id) =>
+      id == CloudProviderId.debrid ? id.playlistStoredProvider : id.playbackId;
+
+  static CloudProviderId? idForDialogResult(String result) {
+    for (final id in chooserOrder) {
+      if (result == dialogResultFor(id)) return id;
+    }
+    return null;
+  }
+
+  static CloudProviderId? autoFocus(Map<CloudProviderId, bool> enabled) {
+    for (final id in chooserOrder) {
+      if (enabled[id] == true) return id;
+    }
+    return null;
+  }
+
+  static CloudProviderPort? portFor(CloudProviderId id) =>
+      CloudProviderRegistry.instance[id];
+
+  static bool usesCachedHashGate(CloudProviderPort port) {
+    if (port is CloudCachedHashes) return true;
+    return port.supports(CloudPortFeature.cachedHashes);
+  }
+
+  static bool usesCheckCacheGate(CloudProviderPort port) {
+    if (port is CloudCheckCache) return true;
+    return port.supports(CloudPortFeature.checkCache);
+  }
+
+  static bool usesPikpakGate(CloudProviderPort port) {
+    final prepare = port is CloudMagicTvPrepare ||
+        port.supports(CloudPortFeature.magicTvPrepare);
+    if (!prepare) return false;
+    if (usesCachedHashGate(port)) return false;
+    if (usesCheckCacheGate(port)) return false;
+    return true;
+  }
+
+  static BulkAddEngine engineFor(String result) {
+    if (result == createChannelResult) return BulkAddEngine.createChannel;
+    final id = idForDialogResult(result);
+    if (id == null) return BulkAddEngine.none;
+    final port = portFor(id);
+    if (port != null) {
+      if (usesCachedHashGate(port)) return BulkAddEngine.torbox;
+      if (usesCheckCacheGate(port)) return BulkAddEngine.premiumize;
+      if (usesPikpakGate(port)) return BulkAddEngine.pikpak;
+    }
+    return switch (id) {
+      CloudProviderId.torbox => BulkAddEngine.torbox,
+      CloudProviderId.debrid => BulkAddEngine.realDebrid,
+      CloudProviderId.pikpak => BulkAddEngine.pikpak,
+      CloudProviderId.premiumize => BulkAddEngine.premiumize,
+      CloudProviderId.alldebrid => BulkAddEngine.allDebrid,
+    };
+  }
+}
+
 class TorrentBulkAddService {
   /// Only real (non-direct/external) torrents can be bulk-added.
   static List<Torrent> selectable(List<Torrent> torrents) => torrents
@@ -43,45 +137,27 @@ class TorrentBulkAddService {
       return false;
     }
 
-    final torboxKey = await StorageService.getTorboxApiKey();
-    final rdKey = await StorageService.getApiKey();
-    final premiumizeKey = await StorageService.getPremiumizeApiKey();
-    final allDebridKey = await StorageService.getAllDebridApiKey();
-    final pikpakEnabled = await StorageService.getPikPakEnabled();
-    // A provider is offered only when its integration toggle is on AND a key is
-    // saved — matching Home. A saved key with the integration disabled must not
-    // be bulk-addable.
-    final rdIntegration = await StorageService.getRealDebridIntegrationEnabled();
-    final torboxIntegration =
-        await StorageService.getTorboxIntegrationEnabled();
-    final premiumizeIntegration =
-        await StorageService.getPremiumizeIntegrationEnabled();
-    final allDebridIntegration =
-        await StorageService.getAllDebridIntegrationEnabled();
+    final enabled = <CloudProviderId, bool>{};
+    for (final id in BulkAddDispatch.chooserOrder) {
+      enabled[id] = await CloudCredentials.configured(id, CloudSurface.magnet);
+    }
+    final torboxKey = await CloudCredentials.apiKey(CloudProviderId.torbox);
+    final rdKey = await CloudCredentials.apiKey(CloudProviderId.debrid);
+    final premiumizeKey =
+        await CloudCredentials.apiKey(CloudProviderId.premiumize);
+    final allDebridKey =
+        await CloudCredentials.apiKey(CloudProviderId.alldebrid);
     if (!context.mounted) return false;
 
-    final torboxEnabled =
-        torboxIntegration && torboxKey != null && torboxKey.isNotEmpty;
-    final rdEnabled = rdIntegration && rdKey != null && rdKey.isNotEmpty;
-    final premiumizeEnabled =
-        premiumizeIntegration && premiumizeKey != null && premiumizeKey.isNotEmpty;
-    final allDebridEnabled = allDebridIntegration &&
-        allDebridKey != null &&
-        allDebridKey.isNotEmpty;
+    final torboxEnabled = enabled[CloudProviderId.torbox] ?? false;
+    final rdEnabled = enabled[CloudProviderId.debrid] ?? false;
+    final pikpakEnabled = enabled[CloudProviderId.pikpak] ?? false;
+    final premiumizeEnabled = enabled[CloudProviderId.premiumize] ?? false;
+    final allDebridEnabled = enabled[CloudProviderId.alldebrid] ?? false;
 
     // First reachable option gets D-pad focus when the dialog opens on TV
     // (Create Channel is always enabled, so there is always a focus target).
-    final autoFocused = torboxEnabled
-        ? 'torbox'
-        : rdEnabled
-            ? 'realdebrid'
-            : pikpakEnabled
-                ? 'pikpak'
-                : premiumizeEnabled
-                    ? 'premiumize'
-                    : allDebridEnabled
-                        ? 'alldebrid'
-                        : 'create_channel';
+    final autoFocused = BulkAddDispatch.autoFocus(enabled);
 
     final result = await showDialog<String>(
       context: context,
@@ -155,8 +231,10 @@ class TorrentBulkAddService {
                     ? 'Limit: 60 adds per hour'
                     : 'Not configured',
                 enabled: torboxEnabled,
-                autofocus: autoFocused == 'torbox',
-                onTap: () => Navigator.of(context).pop('torbox'),
+                autofocus: autoFocused == CloudProviderId.torbox,
+                onTap: () => Navigator.of(context).pop(
+                  BulkAddDispatch.dialogResultFor(CloudProviderId.torbox),
+                ),
               ),
               const SizedBox(height: 8),
               _optionTile(
@@ -167,8 +245,10 @@ class TorrentBulkAddService {
                     ? 'Uncached torrents auto-removed'
                     : 'Not configured',
                 enabled: rdEnabled,
-                autofocus: autoFocused == 'realdebrid',
-                onTap: () => Navigator.of(context).pop('realdebrid'),
+                autofocus: autoFocused == CloudProviderId.debrid,
+                onTap: () => Navigator.of(context).pop(
+                  BulkAddDispatch.dialogResultFor(CloudProviderId.debrid),
+                ),
               ),
               const SizedBox(height: 8),
               _optionTile(
@@ -177,8 +257,10 @@ class TorrentBulkAddService {
                 title: CloudProviderId.pikpak.displayName,
                 subtitle: pikpakEnabled ? null : 'Not configured',
                 enabled: pikpakEnabled,
-                autofocus: autoFocused == 'pikpak',
-                onTap: () => Navigator.of(context).pop('pikpak'),
+                autofocus: autoFocused == CloudProviderId.pikpak,
+                onTap: () => Navigator.of(context).pop(
+                  BulkAddDispatch.dialogResultFor(CloudProviderId.pikpak),
+                ),
               ),
               const SizedBox(height: 8),
               _optionTile(
@@ -189,8 +271,10 @@ class TorrentBulkAddService {
                     ? 'Only cached torrents are added'
                     : 'Not configured',
                 enabled: premiumizeEnabled,
-                autofocus: autoFocused == 'premiumize',
-                onTap: () => Navigator.of(context).pop('premiumize'),
+                autofocus: autoFocused == CloudProviderId.premiumize,
+                onTap: () => Navigator.of(context).pop(
+                  BulkAddDispatch.dialogResultFor(CloudProviderId.premiumize),
+                ),
               ),
               const SizedBox(height: 8),
               _optionTile(
@@ -201,8 +285,10 @@ class TorrentBulkAddService {
                     ? 'Only cached torrents are added'
                     : 'Not configured',
                 enabled: allDebridEnabled,
-                autofocus: autoFocused == 'alldebrid',
-                onTap: () => Navigator.of(context).pop('alldebrid'),
+                autofocus: autoFocused == CloudProviderId.alldebrid,
+                onTap: () => Navigator.of(context).pop(
+                  BulkAddDispatch.dialogResultFor(CloudProviderId.alldebrid),
+                ),
               ),
               const SizedBox(height: 16),
               _sectionHeader('CREATE CHANNEL'),
@@ -211,8 +297,9 @@ class TorrentBulkAddService {
                 color: const Color(0xFF14B8A6),
                 title: 'Debrify TV Channel',
                 subtitle: 'Save as a local channel',
-                autofocus: autoFocused == 'create_channel',
-                onTap: () => Navigator.of(context).pop('create_channel'),
+                autofocus: autoFocused == null,
+                onTap: () => Navigator.of(context)
+                    .pop(BulkAddDispatch.createChannelResult),
               ),
             ],
           ),
@@ -223,27 +310,29 @@ class TorrentBulkAddService {
     if (result == null) return false;
     if (!context.mounted) return true;
 
-    switch (result) {
-      case 'pikpak':
+    switch (BulkAddDispatch.engineFor(result)) {
+      case BulkAddEngine.pikpak:
         await _bulkAddToPikPak(context, items);
         break;
-      case 'torbox':
+      case BulkAddEngine.torbox:
         await _bulkAddToTorbox(context, items, torboxKey!);
         break;
-      case 'realdebrid':
+      case BulkAddEngine.realDebrid:
         await _bulkAddToRealDebrid(context, items, rdKey!);
         break;
-      case 'premiumize':
+      case BulkAddEngine.premiumize:
         final proceed = await _showPremiumizeFairUseDialog(context);
         if (proceed && context.mounted) {
           await _bulkAddToPremiumize(context, items, premiumizeKey!);
         }
         break;
-      case 'alldebrid':
+      case BulkAddEngine.allDebrid:
         await _bulkAddToAllDebrid(context, items, allDebridKey!);
         break;
-      case 'create_channel':
+      case BulkAddEngine.createChannel:
         await _createChannel(context, items, keyword);
+        break;
+      case BulkAddEngine.none:
         break;
     }
     return true;
