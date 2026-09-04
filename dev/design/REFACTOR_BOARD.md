@@ -2,13 +2,17 @@
 
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 
-Baseline: `main` @ 92b41125 · Phase: **0** · Last gate: none yet
+Baseline: `main` @ `9326eb70` (2026-09-04, after merge of #44) · Phase: **0** · Last gate: none yet
+
+Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
+
+Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed · **33** failed · 0 skipped. Failures are mostly goldens plus a few non-golden cases also listed in `test/BASELINE_ALLOWLIST.txt` / `test/BASELINE_FAILURES.md`. C0 must not "fix" these; pin CI against them.
 
 | Lane | Status | Branch | Worker | Owns | Blocked on | Decisions |
 |---|---|---|---|---|---|---|
-| C0 · CI truth | queued | — | — | `.github/workflows/test.yml`, `tool/ci_test_allowlist.py`, `test/BASELINE_*`, `dart_test.yaml`, `tool/check_layering.dart` | — | — |
-| D0 · delete dead code | queued | — | — | `lib/screens/deprecated/**`, `lib/widgets/catalog_browser.dart`, `search_sources.dart` [`_redesign` branch] | — | — |
-| M0 · CODEMAP refresh | queued | — | — | `CODEMAP.md`, `dev/design/ADDING_A_PROVIDER.md` | — | — |
+| C0 · CI truth | assigned | `refactor/c0-ci-truth` | worker-c0 | `.github/workflows/test.yml`, `tool/ci_test_allowlist.py`, `tool/ci_test_allowlist_test.py`, `test/BASELINE_ALLOWLIST.txt`, `test/BASELINE_FAILURES.md`, `dart_test.yaml`, new `tool/check_layering.dart`, new `tool/analyze_baseline.json`, plus a new layering test file if needed | — | Prove analyze-all fails on a new diagnostic without committing an error into `search_screen.dart`. Goldens: Linux tolerance job, do not delete goldens. |
+| D0 · delete dead code | assigned | `refactor/d0-delete-dead-code` | worker-d0 | `lib/screens/deprecated/**`, `lib/widgets/catalog_browser.dart`, `lib/screens/search/search_sources.dart` (`_redesign == false` branch only) | — | Do **not** edit `CODEMAP.md` (M0 owns it). List deleted paths in the PR for M0. |
+| M0 · CODEMAP refresh | assigned | `refactor/m0-codemap-refresh` | worker-m0 | `CODEMAP.md`, `dev/design/ADDING_A_PROVIDER.md` | — | If D0 has not merged, paths under `lib/screens/deprecated/` and `catalog_browser.dart` still exist — keep them until D0 lands, then rebase and drop. Accept: every remaining path exists. |
 | P1 · capability interfaces | queued | — | — | `lib/services/cloud/**`, `test/cloud_*` | gate 0 | — |
 | P2a · Magic TV strings | queued | — | — | `lib/screens/magic_tv_screen.dart` | P1 | — |
 | P2b · Stremio TV strings | queued | — | — | `lib/screens/stremio_tv/**` | P1 | — |
@@ -35,4 +39,24 @@ Baseline: `main` @ 92b41125 · Phase: **0** · Last gate: none yet
 
 ## Notes
 
-- God-file line counts at baseline: search_screen 19 073 · video_player_screen 16 278 · magic_tv_screen 10 712 · storage_service 9 963 · settings_screen 7 905 · torbox_downloads 7 069 · debrid_downloads 6 444 · video_player_launcher 5 769 · torrent_playback_service 5 384 · remote_command_router 5 100.
+God-file line counts at baseline `9326eb70` (`wc -l`):
+
+| File | Lines |
+|---|---:|
+| `lib/screens/deprecated/torrent_search_screen.dart` | 26 413 |
+| `lib/screens/search_screen.dart` | 19 071 |
+| `lib/screens/search/` parts (4 files) | 8 364 |
+| `lib/screens/video_player_screen.dart` | 16 278 |
+| `lib/screens/magic_tv_screen.dart` | 10 716 |
+| `lib/services/storage_service.dart` | 9 963 |
+| `lib/screens/settings_screen.dart` | 7 905 |
+| `lib/screens/torbox/torbox_downloads_screen.dart` | 7 069 |
+| `lib/screens/debrid_downloads_screen.dart` | 6 444 |
+| `lib/services/video_player_launcher.dart` | 5 769 |
+| `lib/services/torrent_playback_service.dart` | 5 340 |
+| `lib/services/remote_control/remote_command_router.dart` | 5 100 |
+| `lib/widgets/catalog_browser.dart` | 2 062 |
+
+Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
+
+Phase 1 is blocked on gate 0. Do not assign P1/H1/T1/S1 until C0, D0, and M0 merge and the gate 0 row is filled.
