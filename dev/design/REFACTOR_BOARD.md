@@ -56,7 +56,8 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | S2-0 · key registry + façade | merged | `refactor/s2-0-key-registry` | worker | `storage_key_ownership.dart` | — | **#73.** `byKey` completed (274). Façade rule documented. Leaves 0. **Did not extract PlayerPrefs.** |
 | S2-1 · stremio/social/TV prefs | merged | `refactor/s2-1-stremio-social-tv-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-0 | **#77.** Leaves −531. Prefixes `engine_tv_` in `byKey`. |
 | S2-2 · provider credential prefs | review | `refactor/s2-2-provider-credential-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-1 | **#82.** Leaves −575. Named store 971. CloudSecretPrefs/MDBList skipped. |
-| S2-3 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-2 | Sequential. Target ≤ 2 800. S2-3 = `player_prefs` + `iptv_prefs`. |
+| S2-3 · player + IPTV prefs | review | `refactor/s2-3-player-iptv-prefs` | worker | `storage_service.dart` [player/IPTV hunks], `lib/services/storage/player_prefs.dart`, `iptv_prefs.dart`, `storage_key_ownership.dart`, tests | S2-2 merged (#82) | **this PR.** Leaves −1 067 (target 1 600; style/completion stayed). Did not merge parked `refactor/g3-player-prefs`. |
+| S2-4 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-3 | Sequential. Target ≤ 2 800. S2-4 = `app_style_prefs`. |
 | G2 · under 3 000 | queued | — | — | `settings_screen.dart` | when free | #63 left the file at 3 107; PHASE2 target ≤ 3 000. |
 | Q1 · layering enforcement | queued | — | — | `tool/check_layering.dart`, `test.yml` | gate 2 | — |
 | Q2 · shim + comment sweep | queued | — | — | per area, assigned at gate 2 | gate 2 | — |

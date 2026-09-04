@@ -238,7 +238,42 @@ behaviour and must be restored, not kept as quirks.
 - **`clearAllFilterSettings` still clears `default_torrent_provider_v1`**
   via the store's `clearDefaultTorrentProvider` (same key, same remove).
 - **Callers still import `StorageService`.** `@Deprecated` waits for Q2.
-- **PlayerPrefs / IptvPrefs / tracking** were not extracted (S2-3 / S2-5).
+- **PlayerPrefs / IptvPrefs** extracted in S2-3. Tracking stays S2-5.
+
+### S2-3 · Player and IPTV prefs
+
+- **Style keys stayed.** `player_dock_style` / `palette` / `size`,
+  `play_loader_style`, `tv_player_controls_style`, `debrify_tv_player_style`,
+  `iptv_style`, `iptv_channel_preview_enabled`, `iptv_player_guide_style`
+  remain on StorageService for S2-4 (`app_style_prefs`).
+- **Completion thresholds stayed.** `movie_completion_threshold`,
+  `episode_completion_threshold`, purge/migrate hooks, and
+  `_getPlaybackStateMap` stay for S2-6 / S2-7.
+- **iOS external player defaults to `vlc`**, not `system_default`.
+- **`clearExternalPlayerSettings` drops Android/generic keys only.**
+  iOS / Linux / Windows preferred-player keys survive.
+- **Empty path/name/command remove the key.** Empty subtitle/audio language
+  codes persist (`''`); only `null` clears those two.
+- **Unknown skip-segment provider reads and writes `auto`.**
+- **`uiSoundsCached` is published before the prefs write.**
+- **Android renderer first read migrates null/`direct_surface` to
+  `direct_mediacodec` once** (`android_video_renderer_gpu_migration_v1`).
+- **IPTV decoder / startup-mode coerce unknown values; network tuning does
+  not.**
+- **Virtual playlists are dropped on set.** Favorites / continue / list /
+  stremio-addon URLs never reach `iptv_playlists`.
+- **Last-live and pinned startup blobs are SecretVault-sealed** (Xtream URL
+  embeds the password). Empty last-live URL is a no-op; malformed JSON
+  reads as null.
+- **`setStartupIptvEnabled(false)` removes `startup_mode`.** The comment
+  says "leave the mode behind"; the body clears it. Shared keys
+  `startup_auto_launch_enabled` / `startup_mode` stay owned by
+  StorageService.
+- **`warmStartupIptv` last-with-no-channel sets the `firstAvailable`
+  sentinel; pinned-with-no-channel leaves the cache null.**
+- **`recordIptvWatch` / `getIptvContinueWatching` no-op when tracking is
+  off** without deleting stored history.
+- **Callers still import `StorageService`.** `@Deprecated` waits for Q2.
 
 ## Process
 
