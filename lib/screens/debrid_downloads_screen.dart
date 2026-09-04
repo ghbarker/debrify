@@ -30,8 +30,15 @@ import '../widgets/cloud/cloud_theme.dart';
 import '../widgets/file_selection_dialog.dart';
 import '../widgets/tv_text_field.dart';
 import '../utils/tv_keys.dart';
+import 'cloud_files/cloud_files_opening_splash.dart';
+import 'cloud_files/cloud_files_screen.dart';
+import 'cloud_files/cloud_files_selection_bar.dart';
+import 'cloud_files/real_debrid_files_source.dart';
 
-class DebridDownloadsScreen extends StatefulWidget {
+/// Real-Debrid cloud files. Public type is unchanged so sidebar, bind, and
+/// [CloudBrowseSelectSource] keep working. Body is [CloudFilesScreen] with a
+/// [RealDebridFilesSource] (G4).
+class DebridDownloadsScreen extends StatelessWidget {
   const DebridDownloadsScreen({
     super.key,
     this.initialTorrentForOptions,
@@ -57,14 +64,62 @@ class DebridDownloadsScreen extends StatefulWidget {
   final void Function(SeriesSource)? onSourceSelected;
 
   @override
-  State<DebridDownloadsScreen> createState() => _DebridDownloadsScreenState();
+  Widget build(BuildContext context) {
+    return CloudFilesScreen(
+      source: RealDebridFilesSource(
+        initialTorrentForOptions: initialTorrentForOptions,
+        isPushedRoute: isPushedRoute,
+        initialSearchQuery: initialSearchQuery,
+        selectSourceMode: selectSourceMode,
+        onSourceSelected: onSourceSelected,
+      ),
+      host: RealDebridCloudFilesHost(
+        initialTorrentForOptions: initialTorrentForOptions,
+        isPushedRoute: isPushedRoute,
+        initialSearchQuery: initialSearchQuery,
+        selectSourceMode: selectSourceMode,
+        onSourceSelected: onSourceSelected,
+      ),
+    );
+  }
+}
+
+/// Former [DebridDownloadsScreen] State host. Constructor and fields are the
+/// origin widget moved verbatim.
+class RealDebridCloudFilesHost extends StatefulWidget {
+  const RealDebridCloudFilesHost({
+    super.key,
+    this.initialTorrentForOptions,
+    this.isPushedRoute = false,
+    this.initialSearchQuery,
+    this.selectSourceMode = false,
+    this.onSourceSelected,
+  });
+
+  final RDTorrent? initialTorrentForOptions;
+
+  /// When true, this screen was pushed as a route (not displayed in a tab).
+  /// Back navigation will pop the route instead of switching tabs.
+  final bool isPushedRoute;
+
+  /// Pre-populate torrent search with this query on init.
+  final String? initialSearchQuery;
+
+  /// When true, torrent cards show "Select" instead of Open/Play/3-dot.
+  final bool selectSourceMode;
+
+  /// Called when user selects a torrent in select-source mode.
+  final void Function(SeriesSource)? onSourceSelected;
+
+  @override
+  State<RealDebridCloudFilesHost> createState() => _DebridDownloadsScreenState();
 }
 
 enum _DebridDownloadsView { torrents, ddl }
 
 enum _FolderViewMode { raw, sortedAZ, seriesArrange }
 
-class _DebridDownloadsScreenState extends State<DebridDownloadsScreen> {
+class _DebridDownloadsScreenState extends State<RealDebridCloudFilesHost> {
   _DebridDownloadsView _selectedView = _DebridDownloadsView.torrents;
 
   // TV content focus handler (stored for proper unregistration)
@@ -234,7 +289,7 @@ class _DebridDownloadsScreenState extends State<DebridDownloadsScreen> {
     } else {
       // Displayed in a tab
       MainPageBridge.registerTabBackHandler(
-        'realdebrid',
+        RealDebridFilesSource.destinationIdValue,
         _handleBackNavigation,
       );
       // Register TV sidebar focus handler (tab index 4 = Real Debrid)
@@ -302,7 +357,7 @@ class _DebridDownloadsScreenState extends State<DebridDownloadsScreen> {
     if (widget.isPushedRoute) {
       MainPageBridge.popRouteBackHandler(_handleBackNavigation);
     } else {
-      MainPageBridge.unregisterTabBackHandler('realdebrid');
+      MainPageBridge.unregisterTabBackHandler(RealDebridFilesSource.destinationIdValue);
       if (_tvContentFocusHandler != null) {
         MainPageBridge.unregisterTvContentFocusHandler(
           4,
@@ -2660,26 +2715,7 @@ class _DebridDownloadsScreenState extends State<DebridDownloadsScreen> {
         !widget.selectSourceMode &&
         widget.initialTorrentForOptions != null &&
         _currentTorrentId == null) {
-      return CloudScaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
-            tooltip: 'Back',
-          ),
-          title: const Text('Opening torrent...'),
-        ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading torrent files...'),
-            ],
-          ),
-        ),
-      );
+      return const CloudFilesOpeningSplash();
     }
 
     // If in folder browsing mode, show folder view
@@ -2700,7 +2736,7 @@ class _DebridDownloadsScreenState extends State<DebridDownloadsScreen> {
                 onPressed: () => Navigator.of(context).pop(),
                 tooltip: 'Back',
               ),
-              title: const Text('Select Source from Real-Debrid'),
+              title: const Text(RealDebridFilesSource.selectSourceTitleValue),
             )
           : null,
       body: FocusTraversalGroup(
@@ -2942,16 +2978,16 @@ class _DebridDownloadsScreenState extends State<DebridDownloadsScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
       child: CloudSegmentedTabs<_DebridDownloadsView>(
-        segments: const [
+        segments: [
           CloudSegment(
             _DebridDownloadsView.torrents,
-            'Torrent Downloads',
-            Icons.folder_rounded,
+            RealDebridFilesSource.torrentsSection.label,
+            RealDebridFilesSource.torrentsSection.icon,
           ),
           CloudSegment(
             _DebridDownloadsView.ddl,
-            'DDL Downloads',
-            Icons.download_rounded,
+            RealDebridFilesSource.ddlSection.label,
+            RealDebridFilesSource.ddlSection.icon,
           ),
         ],
         selected: _selectedView,
@@ -2968,56 +3004,12 @@ class _DebridDownloadsScreenState extends State<DebridDownloadsScreen> {
   }
 
   Widget _buildSelectionBar() {
-    final app = AppThemeScope.of(context);
-    final theme = Theme.of(context);
-    final count = _activeSelectedIds.length;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-        borderRadius: app.shape.br(12),
-        border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        children: [
-          Text(
-            '$count selected',
-            style: TextStyle(
-              color: theme.colorScheme.onSurface,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const Spacer(),
-          TextButton(
-            onPressed: _toggleSelectAll,
-            child: Text(_isAllSelected ? 'Deselect All' : 'Select All'),
-          ),
-          const SizedBox(width: 8),
-          FilledButton.icon(
-            focusNode: _deleteButtonFocusNode,
-            onPressed: count > 0 ? _handleDeleteSelected : null,
-            icon: const Icon(Icons.delete_outline, size: 18),
-            label: const Text('Delete'),
-            style:
-                FilledButton.styleFrom(
-                  backgroundColor: theme.colorScheme.error,
-                  disabledBackgroundColor: theme.colorScheme.error.withValues(
-                    alpha: 0.3,
-                  ),
-                ).copyWith(
-                  side: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.focused)) {
-                      return BorderSide(color: app.core.tx, width: 3);
-                    }
-                    return null;
-                  }),
-                ),
-          ),
-        ],
-      ),
+    return CloudFilesSelectionBar(
+      count: _activeSelectedIds.length,
+      isAllSelected: _isAllSelected,
+      onToggleSelectAll: _toggleSelectAll,
+      onDelete: _activeSelectedIds.isEmpty ? null : _handleDeleteSelected,
+      deleteFocusNode: _deleteButtonFocusNode,
     );
   }
 

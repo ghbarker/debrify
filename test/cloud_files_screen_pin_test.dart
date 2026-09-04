@@ -2,6 +2,9 @@ import 'package:debrify/models/rd_torrent.dart';
 import 'package:debrify/models/torbox_torrent.dart';
 import 'package:debrify/screens/alldebrid/alldebrid_files_screen.dart';
 import 'package:debrify/screens/cloud/cloud_browse_select_source.dart';
+import 'package:debrify/screens/cloud_files/cloud_files_screen.dart';
+import 'package:debrify/screens/cloud_files/real_debrid_files_source.dart';
+import 'package:debrify/screens/cloud_files/torbox_files_source.dart';
 import 'package:debrify/screens/debrid_downloads_screen.dart';
 import 'package:debrify/screens/pikpak/pikpak_files_screen.dart';
 import 'package:debrify/screens/premiumize/premiumize_files_screen.dart';
@@ -302,6 +305,81 @@ void main() {
 
       expect(find.text('PikPak Files'), findsOneWidget);
       expect(find.text('PikPak Not Configured'), findsOneWidget);
+      await drainOpenTimeout(tester);
+    });
+  });
+
+  group('CloudFilesSource (RD + TorBox on the shared screen)', () {
+    test('RD destination id and sections match the frozen literals', () {
+      const source = RealDebridFilesSource();
+      expect(source.destinationId, 'realdebrid');
+      expect(source.selectSourceTitle, 'Select Source from Real-Debrid');
+      expect(source.openingTitle, 'Opening torrent...');
+      expect(source.openingBody, 'Loading torrent files...');
+      expect(
+        source.openFailedMessage,
+        'Failed to open torrent. Please try again.',
+      );
+      expect(source.sections.map((s) => s.label).toList(), [
+        'Torrent Downloads',
+        'DDL Downloads',
+      ]);
+    });
+
+    test('TorBox destination id and web-download section', () {
+      const source = TorBoxFilesSource();
+      expect(source.destinationId, 'torbox');
+      expect(source.selectSourceTitle, 'Select Source from TorBox');
+      expect(source.openingTitle, 'Opening torrent...');
+      expect(source.sections.map((s) => s.label).toList(), [
+        'Torrents',
+        'Web Downloads',
+      ]);
+    });
+
+    testWidgets('DebridDownloadsScreen routes through CloudFilesScreen', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          const DebridDownloadsScreen(
+            isPushedRoute: true,
+            selectSourceMode: true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(CloudFilesScreen), findsOneWidget);
+      expect(find.byType(DebridDownloadsScreen), findsOneWidget);
+      expect(find.byType(RealDebridCloudFilesHost), findsOneWidget);
+      final screen = tester.widget<CloudFilesScreen>(
+        find.byType(CloudFilesScreen),
+      );
+      expect(screen.source, isA<RealDebridFilesSource>());
+      expect(screen.source.destinationId, 'realdebrid');
+      await drainOpenTimeout(tester);
+    });
+
+    testWidgets('TorboxDownloadsScreen routes through CloudFilesScreen', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          const TorboxDownloadsScreen(
+            isPushedRoute: true,
+            selectSourceMode: true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(CloudFilesScreen), findsOneWidget);
+      expect(find.byType(TorboxDownloadsScreen), findsOneWidget);
+      expect(find.byType(TorboxCloudFilesHost), findsOneWidget);
+      final screen = tester.widget<CloudFilesScreen>(
+        find.byType(CloudFilesScreen),
+      );
+      expect(screen.source, isA<TorBoxFilesSource>());
+      expect(screen.source.destinationId, 'torbox');
       await drainOpenTimeout(tester);
     });
   });
