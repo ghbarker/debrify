@@ -85,6 +85,11 @@ abstract class CloudProviderPort {
   /// web-download ZIP permalink. Not Premiumize transfer+zip.
   /// Unsupported adapters throw [CloudUnsupported].
   Future<String> zipPermalink(int torrentId);
+
+  /// Premiumize `transfer/create`. Missing key throws [CloudMissingApiKey].
+  /// Not [createTransferZip] (wait + zip URL). Not TorBox `createTorrent`.
+  /// Unsupported adapters throw [CloudUnsupported].
+  Future<void> createCloudTransfer(String magnet);
 }
 
 /// Shared [supports] for production adapters (`implements` would re-require it).
@@ -108,5 +113,10 @@ abstract class CloudProviderAdapter implements CloudProviderPort {
   @override
   Future<String> zipPermalink(int torrentId) {
     throw CloudUnsupported(id, CloudPortFeature.zipPermalink);
+  }
+
+  @override
+  Future<void> createCloudTransfer(String magnet) {
+    throw CloudUnsupported(id, CloudPortFeature.cloudTransfer);
   }
 }

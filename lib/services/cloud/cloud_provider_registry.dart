@@ -261,6 +261,19 @@ class CloudProviderRegistry {
     return port.zipPermalink(torrentId);
   }
 
+  /// Premiumize cloud transfer only. Missing adapter / unsupported throws
+  /// [CloudUnsupported]. Missing key throws [CloudMissingApiKey].
+  Future<void> createCloudTransfer(String magnet) async {
+    final port = _byId[CloudProviderId.premiumize];
+    if (port == null || !port.supports(CloudPortFeature.cloudTransfer)) {
+      throw const CloudUnsupported(
+        CloudProviderId.premiumize,
+        CloudPortFeature.cloudTransfer,
+      );
+    }
+    return port.createCloudTransfer(magnet);
+  }
+
   static String? credentialKeyFor(String provider) =>
       CloudProviderId.tryParse(provider)?.credentialKey;
 }
