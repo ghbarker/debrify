@@ -8,6 +8,9 @@ import '../../utils/platform_util.dart';
 import '../../theme/app_focus.dart';
 import '../../theme/widgets/parallax_focus.dart';
 import 'settings_spotlight_shell.dart';
+import 'settings_catalog.dart';
+import 'settings_page_registry.dart';
+import 'settings_page_spec.dart';
 import 'widgets/settings_widgets.dart';
 import '../../theme/app_theme_scope.dart';
 
@@ -44,108 +47,13 @@ class SettingsTvLayout extends StatefulWidget {
   /// Opens the full-screen settings search (the rail's search item / OK / Right).
   final VoidCallback onOpenSearch;
 
-  final Future<void> Function() onOpenHomePageSettings;
-  final Future<void> Function() onOpenExternalPlayerSettings;
-  final VoidCallback onOpenRemoteControl;
   final bool showSwitchProfile;
-  final Future<void> Function()? onSwitchProfile;
-  final Future<void> Function()? onAddProfile;
-  final Future<void> Function()? onEditProfile;
-  final Future<void> Function() onOpenTorrentSettings;
-  final Future<void> Function() onOpenFilterSettings;
-  final Future<void> Function() onOpenProviderSettings;
-  final Future<void> Function() onOpenQuickPlaySettings;
-  final Future<void> Function() onOpenDiscoverSettings;
-  final Future<void> Function() onOpenDebrifyTvSettings;
-  final Future<void> Function() onClearDownloads;
-  final Future<void> Function() onClearPlayback;
-  // Android-only custom download folder (SAF); null hides the row.
-  final Future<void> Function()? onOpenDownloadLocation;
-  final String downloadLocationSubtitle;
-  final Future<void> Function() onCreateBackup;
-  final Future<void> Function() onRestoreBackup;
-  final Future<void> Function()? onExportDiagnosticLogs;
-  final Future<void> Function() onDangerAction;
-  final String appVersion;
-  final Future<void> Function() onCheckForUpdates;
-  final String updateSubtitle;
-  final bool checkingUpdates;
-  final bool autoUpdateChecksEnabled;
-  final ValueChanged<bool> onToggleAutoUpdateChecks;
-  final bool tvKeyboardEnabled;
-  final ValueChanged<bool> onToggleTvKeyboard;
-  // Appearance rows. Labels caption the rows; every picker is its own page.
-  final String textBrightnessLabel;
-  final Future<void> Function() onOpenTextBrightness;
-  final String launchAnimationLabel;
-  final Future<void> Function() onOpenLaunchAnimation;
-  // Screen size: percentage of the panel's native density the UI is laid out
-  // at — 100 is the panel's own size, and smaller fits more on screen.
-  final int tvUiScalePercent;
-  final Future<void> Function() onOpenTvScreenSize;
-  // Rendering: whether the UI is rastered at the panel's own resolution or at
-  // a ~720p buffer the TV scales back up. Label, not enum — this file only
-  // captions the row.
-  final String tvRenderQualityLabel;
-  final Future<void> Function() onOpenTvRenderQuality;
-  final String tvHeroArtworkQualityLabel;
-  final Future<void> Function() onOpenTvHeroArtworkQuality;
-  final String tvSidebarStyleLabel;
-  final Future<void> Function() onOpenTvSidebarStyle;
-  final String discoverLayoutLabel;
-  final Future<void> Function() onOpenDiscoverLayout;
-  final String tvHomeStyleLabel;
-  final Future<void> Function() onOpenTvHomeStyle;
-  final String iptvStyleLabel;
-  final Future<void> Function() onOpenIptvStyle;
-  final String debrifyTvStyleLabel;
-  final Future<void> Function() onOpenDebrifyTvStyle;
-  final String playerGuideStyleLabel;
-  final Future<void> Function() onOpenPlayerGuideStyle;
-  final String playLoaderStyleLabel;
-  final Future<void> Function() onOpenPlayLoaderStyle;
-  // Native player control skin (OTT dock vs Legacy). The ROW is gated on
-  // PlatformUtil.isAndroidTvCached in the pane builder: this layout renders
-  // on Apple TV too (form-factor TV), where the native player — the pref's
-  // only reader — doesn't exist.
-  final String tvPlayerControlsStyleLabel;
-  final Future<void> Function() onOpenTvPlayerControlsStyle;
-  // Debrify TV playback-screen style — same Android-TV-only gating story as
-  // the control skin row above.
-  final String debrifyTvPlayerStyleLabel;
-  final Future<void> Function() onOpenDebrifyTvPlayerStyle;
-  final String detailPageStyleLabel;
-  final Future<void> Function() onOpenDetailPageStyle;
-  final String looksLabel;
-  final Future<void> Function() onOpenLooks;
-  final Future<void> Function() onOpenThemeTokens;
-  final String themeTokensLabel;
-
-  /// Withheld like [detailThemeLabel]: Theme Lab is a preview TOOL, not a
-  /// setting — it changes nothing. Page and wiring stay.
-  final Future<void> Function() onOpenThemeLab;
-  final String appThemeLabel;
-  final Future<void> Function() onOpenAppTheme;
-
-  /// Still plumbed, deliberately: the Details Theme ROW is withheld from the
-  /// Appearance list because App Theme write-through-mirrors into
-  /// `detail_theme`, so two rows set the same thing and one silently
-  /// overwrote the other. The page and its wiring stay so restoring the row is
-  /// a few lines rather than an archaeology exercise — the same
-  /// withheld-not-deleted pattern `kDetailThemesShipped` uses.
-  final String detailThemeLabel;
-  final Future<void> Function() onOpenDetailTheme;
-  final String parentsGuideStyleLabel;
-  final Future<void> Function() onOpenParentsGuideStyle;
-  final String profileAppearanceLabel;
-  final Future<void> Function() onOpenProfileAppearance;
-  // Live TV & DVR.
-  final Future<void> Function() onOpenRecordings;
-  final Future<void> Function() onOpenIptvSettings;
   final bool showSupportDonation;
-  final String supportDonationLabel;
-  final String supportDonationSubtitle;
-  final Future<void> Function() onOpenSupportDonation;
+
+  /// Bound settings pages from [SettingsPageRegistry]. Empty falls back
+  /// to the production catalog (existing layout tests only exercise the
+  /// Connections pane, which is still a special-case card grid).
+  final List<SettingsPageSpec> pages;
 
   const SettingsTvLayout({
     super.key,
@@ -154,84 +62,9 @@ class SettingsTvLayout extends StatefulWidget {
     required this.trackers,
     required this.firstFocusNode,
     required this.onOpenSearch,
-    required this.onOpenHomePageSettings,
-    required this.onOpenExternalPlayerSettings,
-    required this.onOpenRemoteControl,
     this.showSwitchProfile = false,
-    this.onSwitchProfile,
-    this.onAddProfile,
-    this.onEditProfile,
-    required this.onOpenTorrentSettings,
-    required this.onOpenFilterSettings,
-    required this.onOpenProviderSettings,
-    required this.onOpenQuickPlaySettings,
-    required this.onOpenDiscoverSettings,
-    required this.onOpenDebrifyTvSettings,
-    required this.onClearDownloads,
-    required this.onClearPlayback,
-    this.onOpenDownloadLocation,
-    this.downloadLocationSubtitle = '',
-    required this.onCreateBackup,
-    required this.onRestoreBackup,
-    this.onExportDiagnosticLogs,
-    required this.onDangerAction,
-    required this.appVersion,
-    required this.onCheckForUpdates,
-    required this.updateSubtitle,
-    required this.checkingUpdates,
-    required this.autoUpdateChecksEnabled,
-    required this.onToggleAutoUpdateChecks,
-    required this.tvKeyboardEnabled,
-    required this.onToggleTvKeyboard,
-    required this.textBrightnessLabel,
-    required this.onOpenTextBrightness,
-    required this.launchAnimationLabel,
-    required this.onOpenLaunchAnimation,
-    required this.tvUiScalePercent,
-    required this.onOpenTvScreenSize,
-    required this.tvRenderQualityLabel,
-    required this.onOpenTvRenderQuality,
-    required this.tvHeroArtworkQualityLabel,
-    required this.onOpenTvHeroArtworkQuality,
-    required this.tvSidebarStyleLabel,
-    required this.onOpenTvSidebarStyle,
-    required this.discoverLayoutLabel,
-    required this.onOpenDiscoverLayout,
-    required this.tvHomeStyleLabel,
-    required this.onOpenTvHomeStyle,
-    required this.iptvStyleLabel,
-    required this.onOpenIptvStyle,
-    required this.debrifyTvStyleLabel,
-    required this.onOpenDebrifyTvStyle,
-    required this.playerGuideStyleLabel,
-    required this.onOpenPlayerGuideStyle,
-    required this.playLoaderStyleLabel,
-    required this.onOpenPlayLoaderStyle,
-    required this.tvPlayerControlsStyleLabel,
-    required this.onOpenTvPlayerControlsStyle,
-    required this.debrifyTvPlayerStyleLabel,
-    required this.onOpenDebrifyTvPlayerStyle,
-    required this.detailPageStyleLabel,
-    required this.onOpenDetailPageStyle,
-    required this.looksLabel,
-    required this.onOpenLooks,
-    required this.onOpenThemeTokens,
-    required this.themeTokensLabel,
-    required this.onOpenThemeLab,
-    required this.appThemeLabel,
-    required this.onOpenAppTheme,
-    required this.detailThemeLabel,
-    required this.onOpenDetailTheme,
-    required this.parentsGuideStyleLabel,
-    required this.onOpenParentsGuideStyle,
-    required this.profileAppearanceLabel,
-    required this.onOpenProfileAppearance,
-    required this.onOpenRecordings,
-    required this.onOpenIptvSettings,
-    required this.showSupportDonation,
-    required this.supportDonationLabel,
-    required this.supportDonationSubtitle,
-    required this.onOpenSupportDonation,
+    this.showSupportDonation = false,
+    this.pages = const [],
   });
 
   @override
@@ -256,120 +89,33 @@ class _Category {
   );
 }
 
-// ONE information architecture, shared verbatim with the phone layout and the
-// search index — organized by what the user is changing, never by platform.
-// Section names here MUST match _SettingsLayout's section titles and the
-// search registrations in settings_screen.dart.
-const List<_Category> _kCategories = [
-  _Category(
-    Icons.link_rounded,
-    'Connections',
-    'Debrid, cloud, IPTV & more',
-    'Services, all in one place.',
-    'See what is ready, what needs attention, and where playback will go.',
-  ),
-  _Category(
-    Icons.sync_rounded,
-    'Trackers',
-    'Trakt & Simkl watch history',
-    'Keep every watch in sync.',
-    'Choose how tracking works, then connect each watch-history service.',
-  ),
-  _Category(
-    Icons.home_rounded,
-    'Home & Display',
-    'Home screen rows & keyboard',
-    'Shape the room you come home to.',
-    'Arrange the home screen and tune this television for the room.',
-  ),
-  _Category(
-    Icons.auto_awesome_rounded,
-    'Appearance',
-    'Text, home, sidebar, IPTV & player looks',
-    'Make the interface feel like yours.',
-    'A Look sets the room. Fine-tune only the controls that matter.',
-  ),
-  _Category(
-    Icons.play_circle_outline_rounded,
-    'Playback',
-    'Player, skip segments, subtitles & audio',
-    'Playback without surprises.',
-    'Choose how videos start and what plays them on this television.',
-  ),
-  _Category(
-    Icons.search_rounded,
-    'Search',
-    'Engines, filters & providers',
-    'Find the right source faster.',
-    'Engines, default filters, and provider routing form one pipeline.',
-  ),
-  _Category(
-    Icons.explore_rounded,
-    'Discover',
-    'Source & poster cards',
-    'Open Discover where you left it.',
-    'Remember the last source or choose one place to open every time.',
-  ),
-  _Category(
-    Icons.fiber_dvr_rounded,
-    'Live TV & DVR',
-    'Debrify TV, recordings & IPTV',
-    'Live television, organized.',
-    'Manage channel sources, recordings, and the on-screen guide.',
-  ),
-  _Category(
-    Icons.devices_rounded,
-    'Devices',
-    'Remote control & setup transfer',
-    'Let your devices work together.',
-    'Control another screen or move this setup without retyping it.',
-  ),
-  _Category(
-    Icons.switch_account_rounded,
-    'Profiles',
-    'Who can use this device',
-    'One device, many viewers.',
-    'Switch between people, add someone new, and shape their access.',
-  ),
-  _Category(
-    Icons.storage_rounded,
-    'Data & Backup',
-    'Downloads, backup & restore',
-    'Your data, under your control.',
-    'Manage stored state and keep a portable copy of your setup.',
-  ),
-  _Category(
-    Icons.info_outline_rounded,
-    'About',
-    'Updates, version & community',
-    'Debrify, up to date.',
-    'Version, release checks, and the places where the community meets.',
-  ),
-  _Category(
-    Icons.warning_amber_rounded,
-    'Danger Zone',
-    'Reset Debrify',
-    'Start over, deliberately.',
-    'Destructive actions stay isolated and explain what they remove.',
-  ),
-];
-
+// Rail copy lives on kSettingsCategories (settings_page_registry.dart) —
+// one list shared with the phone/desktop shells and the search index.
 class _SettingsTvLayoutState extends State<SettingsTvLayout> {
-  /// Max focusable rows in any single FIXED category — one whose rows are
-  /// written out here rather than driven by a provider list (Appearance has
-  /// exactly 17 — Looks from the theme work, Profile Picker, Hero Artwork
-  /// Quality from the player-dock merge, and Player Controls from the native
-  /// OTT-skin work, less Details Theme (App Theme covers it) and Theme Lab
-  /// (a tool, not a setting); About has up to 6 with the conditional donation
-  /// row;
-  /// Data & Backup up to 6). Connections and Trackers are sized from their
-  /// own lists; see the pool computation in [initState].
-  ///
-  /// MUST cover the largest category: the pane indexes [_paneNodes] directly,
-  /// so a row added past the pool throws on build.
-  /// Appearance is the longest fixed category. The pool must cover it, or the
-  /// last row of that category has no node and cannot be reached.
+  /// Max focusable rows in any single FIXED category. Kept as a floor;
+  /// the pane pool also covers [SettingsPageRegistry.tvMaxFocusableRows]
+  /// so a newly registered page cannot land past the pool.
   static const int _kMaxCategoryRows = 19;
+
+  List<_Category> get _rail => [
+    for (final c in kSettingsCategories)
+      _Category(c.icon, c.label, c.tvSubtitle, c.tvTitle, c.tvDescription),
+  ];
+
+  SettingsPageRegistry get _pageRegistry => SettingsPageRegistry(
+    pages: widget.pages.isNotEmpty
+        ? widget.pages
+        : buildSettingsPages(
+            SettingsPageBindings.noop(
+              isAndroidTv: PlatformUtil.isAndroidTvCached,
+              isTelevision: true,
+              showSwitchProfile: widget.showSwitchProfile,
+              downloadLocationSupported: true,
+              diagnosticExportVisible: true,
+              showSupportDonation: widget.showSupportDonation,
+            ),
+          ),
+  );
 
   /// Selected category. A [ValueNotifier] (not setState) so a rail focus-move
   /// only rebuilds the pane and the two affected rail items via their
@@ -408,7 +154,7 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
   void initState() {
     super.initState();
     _railNodes = List.generate(
-      _kCategories.length,
+      _rail.length,
       (i) => FocusNode(debugLabel: 'settings-tv-rail-$i'),
     );
     // The pool must cover whichever category has the most rows. Connections
@@ -417,6 +163,8 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
     // assuming Connections is always the biggest — it no longer holds every
     // provider.
     var poolSize = _kMaxCategoryRows;
+    final catalogMax = _pageRegistry.tvMaxFocusableRows;
+    if (catalogMax > poolSize) poolSize = catalogMax;
     for (final n in [widget.connections.length, widget.trackers.length + 1]) {
       if (n > poolSize) poolSize = n;
     }
@@ -791,10 +539,10 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
               onActivate: widget.onOpenSearch,
             ),
             const SizedBox(height: 12),
-            for (int i = 0; i < _kCategories.length; i++)
+            for (int i = 0; i < _rail.length; i++)
               _RailItem(
                 index: i,
-                category: _kCategories[i],
+                category: _rail[i],
                 focusNode: _railNodes[i],
                 selected: _selected,
                 onKey: _railKey,
@@ -829,13 +577,13 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _kCategories[selected].label.toUpperCase(),
+                        _rail[selected].label.toUpperCase(),
                         style: TextStyle(
                           fontFamily: 'JetBrainsMono',
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 2,
-                          color: _kCategories[selected].label == 'Danger Zone'
+                          color: _rail[selected].label == 'Danger Zone'
                               ? AppThemeScope.of(context).settings.danger
                               : AppThemeScope.of(
                                   context,
@@ -844,7 +592,7 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        _kCategories[selected].title,
+                        _rail[selected].title,
                         style: const TextStyle(
                           fontSize: 28,
                           height: 1.06,
@@ -856,7 +604,7 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 620),
                         child: Text(
-                          _kCategories[selected].description,
+                          _rail[selected].description,
                           style: TextStyle(
                             fontSize: 12,
                             height: 1.45,
@@ -882,328 +630,32 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
         return [_buildConnectionGrid(widget.connections)];
       case 1: // Trackers
         return [_buildTrackerGroups()];
-      case 2: // Home & Display
+      default:
+        if (category < 0 || category >= kSettingsCategories.length) {
+          return const [];
+        }
         // Nodes stay CONTIGUOUS from 0 — the DPAD walker only advances to
         // the immediately adjacent live node, so a gap strands Down.
-        return [
-          SettingsSection(
-            title: '',
-            children: [
-              SettingsTile.spec(
-                SettingsRows.homePage,
-                onTap: widget.onOpenHomePageSettings,
-                focusNode: _paneNodes[0],
-              ),
-              SettingsToggleTile.spec(
-                SettingsRows.tvKeyboard,
-                value: widget.tvKeyboardEnabled,
-                onChanged: widget.onToggleTvKeyboard,
-                focusNode: _paneNodes[1],
-              ),
-            ],
-          ),
-        ];
-      case 3: // Appearance — grouped by the QUESTION each row answers.
-        // Four groups, not one list of fifteen. The rows used to interleave
-        // four different kinds of decision — a global theme, a per-screen
-        // layout, a per-device performance cap and a preset that sets several
-        // of the others — which is what made the category read as noise.
-        //
-        // `_paneNodes` is indexed POSITIONALLY and `_paneKey` wires Up/Down as
-        // index ± 1, so the numbering has to stay contiguous across the group
-        // boundaries: 0..15 top to bottom, headers excluded. Section headers
-        // are plain text and take no focus, so DPAD steps over them.
-        return [
-          SettingsLookHero(
-            label: widget.looksLabel,
-            subtitle: 'Full-bleed art, borderless focus, and ambient detail.',
-            onTap: widget.onOpenLooks,
-            focusNode: _paneNodes[0],
-          ),
-          const SizedBox(height: 18),
-          SettingsSection(
-            title: 'Presets',
-            blurb:
-                'One pick that sets the theme, layouts and launch '
-                'animation together.',
-            children: [
-              SettingsTile.spec(
-                SettingsRows.themeTokens,
-                subtitle: widget.themeTokensLabel,
-                onTap: widget.onOpenThemeTokens,
-                focusNode: _paneNodes[1],
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          // The App Theme row is gone: a Look is the single top-level choice
-          // now, and Advanced under it edits the individual tokens. The rows
-          // below were RENUMBERED rather than left with a hole — the pane
-          // indexes `_paneNodes` directly and a test asserts the indices are
-          // contiguous from zero, because a gap is a row the remote skips.
-          SettingsSection(
-            title: 'Theme',
-            blurb: 'Colour, focus and motion. Applies everywhere in the app.',
-            children: [
-              SettingsTile.spec(
-                SettingsRows.textBrightness,
-                subtitle: widget.textBrightnessLabel,
-                onTap: widget.onOpenTextBrightness,
-                focusNode: _paneNodes[2],
-              ),
-              SettingsTile.spec(
-                SettingsRows.launchAnimation,
-                subtitle: widget.launchAnimationLabel,
-                onTap: widget.onOpenLaunchAnimation,
-                focusNode: _paneNodes[3],
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          SettingsSection(
-            title: 'Screen layouts',
-            blurb: 'Where things sit. Each screen is chosen separately.',
-            children: [
-              SettingsTile.spec(
-                SettingsRows.tvHomeStyle,
-                subtitle: widget.tvHomeStyleLabel,
-                onTap: widget.onOpenTvHomeStyle,
-                focusNode: _paneNodes[4],
-              ),
-              SettingsTile.spec(
-                SettingsRows.discoverLayout,
-                subtitle: widget.discoverLayoutLabel,
-                onTap: widget.onOpenDiscoverLayout,
-                focusNode: _paneNodes[5],
-              ),
-              SettingsTile.spec(
-                SettingsRows.detailPageStyle,
-                subtitle: widget.detailPageStyleLabel,
-                onTap: widget.onOpenDetailPageStyle,
-                focusNode: _paneNodes[6],
-              ),
-              SettingsTile.spec(
-                SettingsRows.tvSidebarStyle,
-                subtitle: widget.tvSidebarStyleLabel,
-                onTap: widget.onOpenTvSidebarStyle,
-                focusNode: _paneNodes[7],
-              ),
-              SettingsTile.spec(
-                SettingsRows.iptvAppearance,
-                subtitle: widget.iptvStyleLabel,
-                onTap: widget.onOpenIptvStyle,
-                focusNode: _paneNodes[8],
-              ),
-              SettingsTile.spec(
-                SettingsRows.debrifyTvAppearance,
-                subtitle: widget.debrifyTvStyleLabel,
-                onTap: widget.onOpenDebrifyTvStyle,
-                focusNode: _paneNodes[9],
-              ),
-              SettingsTile.spec(
-                SettingsRows.playerGuideStyle,
-                subtitle: widget.playerGuideStyleLabel,
-                onTap: widget.onOpenPlayerGuideStyle,
-                focusNode: _paneNodes[10],
-              ),
-              SettingsTile.spec(
-                SettingsRows.playLoaderStyle,
-                subtitle: widget.playLoaderStyleLabel,
-                onTap: widget.onOpenPlayLoaderStyle,
-                focusNode: _paneNodes[11],
-              ),
-              SettingsTile.spec(
-                SettingsRows.parentsGuideStyle,
-                subtitle: widget.parentsGuideStyleLabel,
-                onTap: widget.onOpenParentsGuideStyle,
-                focusNode: _paneNodes[12],
-              ),
-              SettingsTile.spec(
-                SettingsRows.profileAppearance,
-                subtitle: widget.profileAppearanceLabel,
-                onTap: widget.onOpenProfileAppearance,
-                focusNode: _paneNodes[13],
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          SettingsSection(
-            title: 'Display',
-            blurb:
-                'How this device draws. These affect performance, not '
-                'style.',
-            children: [
-              SettingsTile.spec(
-                SettingsRows.tvScreenSize,
-                subtitle: tvUiScaleLabel(widget.tvUiScalePercent),
-                onTap: widget.onOpenTvScreenSize,
-                focusNode: _paneNodes[14],
-              ),
-              SettingsTile.spec(
-                SettingsRows.tvRenderQuality,
-                subtitle: widget.tvRenderQualityLabel,
-                onTap: widget.onOpenTvRenderQuality,
-                focusNode: _paneNodes[15],
-              ),
-              SettingsTile.spec(
-                SettingsRows.tvHeroArtworkQuality,
-                subtitle: widget.tvHeroArtworkQualityLabel,
-                onTap: widget.onOpenTvHeroArtworkQuality,
-                focusNode: _paneNodes[16],
-              ),
-            ],
-          ),
-          // Android TV only, and LAST on purpose: this layout also renders on
-          // Apple TV (AndroidNativeDownloader.isTelevision answers the
-          // form-factor question), where the native player — the pref's only
-          // reader — doesn't exist. A conditional row in the middle would
-          // strand DPAD traversal on tvOS (Up/Down is index ± 1 and stops at
-          // a dead node), so the gated section sits at the end where the walk
-          // clamps naturally.
-          if (PlatformUtil.isAndroidTvCached) ...[
-            const SizedBox(height: 18),
+        // buildSettingsCategoryChildren claims [_paneNodes] sequentially
+        // (headers and info tiles take no node).
+        final label = kSettingsCategories[category].label;
+        final t = AppThemeScope.of(context).settings;
+        final built = buildSettingsCategoryChildren(
+          registry: _pageRegistry,
+          surface: SettingsLayoutSurface.tv,
+          category: label,
+          paneNodes: _paneNodes,
+          accentColor: label == 'Danger Zone' ? t.danger : null,
+        );
+        if (built.isEmpty && label == 'Profiles') {
+          return [
             SettingsSection(
-              title: 'Player',
-              blurb: 'The on-screen controls during playback on this TV.',
+              title: '',
               children: [
-                SettingsTile.spec(
-                  SettingsRows.tvPlayerControls,
-                  subtitle: widget.tvPlayerControlsStyleLabel,
-                  onTap: widget.onOpenTvPlayerControlsStyle,
-                  focusNode: _paneNodes[17],
-                ),
-                SettingsTile.spec(
-                  SettingsRows.debrifyTvPlayer,
-                  subtitle: widget.debrifyTvPlayerStyleLabel,
-                  onTap: widget.onOpenDebrifyTvPlayerStyle,
-                  focusNode: _paneNodes[18],
-                ),
-              ],
-            ),
-          ],
-        ];
-      case 4: // Playback
-        return [
-          SettingsSection(
-            title: '',
-            children: [
-              SettingsTile.spec(
-                SettingsRows.player,
-                onTap: widget.onOpenExternalPlayerSettings,
-                focusNode: _paneNodes[0],
-              ),
-            ],
-          ),
-        ];
-      case 5: // Search
-        return [
-          SettingsSection(
-            title: '',
-            children: [
-              SettingsTile.spec(
-                SettingsRows.searchSettings,
-                onTap: widget.onOpenTorrentSettings,
-                focusNode: _paneNodes[0],
-              ),
-              SettingsTile.spec(
-                SettingsRows.filterSettings,
-                onTap: widget.onOpenFilterSettings,
-                focusNode: _paneNodes[1],
-              ),
-              SettingsTile.spec(
-                SettingsRows.providerSettings,
-                onTap: widget.onOpenProviderSettings,
-                focusNode: _paneNodes[2],
-              ),
-              SettingsTile.spec(
-                SettingsRows.quickPlay,
-                onTap: widget.onOpenQuickPlaySettings,
-                focusNode: _paneNodes[3],
-              ),
-            ],
-          ),
-        ];
-      case 6: // Discover
-        return [
-          SettingsSection(
-            title: '',
-            children: [
-              SettingsTile.spec(
-                SettingsRows.discoverDefault,
-                onTap: widget.onOpenDiscoverSettings,
-                focusNode: _paneNodes[0],
-              ),
-            ],
-          ),
-        ];
-      case 7: // Live TV & DVR
-        return [
-          SettingsSection(
-            title: '',
-            children: [
-              SettingsTile.spec(
-                SettingsRows.debrifyTv,
-                onTap: widget.onOpenDebrifyTvSettings,
-                focusNode: _paneNodes[0],
-              ),
-              SettingsTile.spec(
-                SettingsRows.recordings,
-                onTap: widget.onOpenRecordings,
-                focusNode: _paneNodes[1],
-              ),
-              SettingsTile.spec(
-                SettingsRows.iptvPlaylists,
-                onTap: widget.onOpenIptvSettings,
-                focusNode: _paneNodes[2],
-              ),
-            ],
-          ),
-        ];
-      case 8: // Devices
-        return [
-          SettingsSection(
-            title: '',
-            children: [
-              SettingsTile.spec(
-                SettingsRows.remote,
-                onTap: () async => widget.onOpenRemoteControl(),
-                focusNode: _paneNodes[0],
-              ),
-            ],
-          ),
-        ];
-      case 9: // Profiles — its own card (it was a tenant row under Devices).
-        return [
-          SettingsSection(
-            title: '',
-            children: [
-              if (widget.showSwitchProfile) ...[
-                SettingsTile.spec(
-                  SettingsRows.switchProfile,
-                  onTap: widget.onSwitchProfile ?? () async {},
-                  focusNode: _paneNodes[0],
-                ),
-                SettingsTile.spec(
-                  SettingsRows.addProfile,
-                  onTap: widget.onAddProfile ?? () async {},
-                  focusNode: _paneNodes[1],
-                ),
-                SettingsTile.spec(
-                  SettingsRows.editProfile,
-                  onTap: widget.onEditProfile ?? () async {},
-                  focusNode: _paneNodes[2],
-                ),
-              ] else
-                // Legacy-mode installs keep the card but say why it's empty
-                // rather than presenting actions that would fail — and OK
-                // opens the full captured reason, because a photo of that
-                // dialog is the whole bug report a TV user can give.
                 SettingsTile.spec(
                   SettingsRowContent(
                     icon: Icons.info_outline_rounded,
                     title: 'Profiles unavailable',
-                    // First line only: the reason's second line can be a
-                    // stack frame, and the row is one-line copy.
                     subtitle: ProfileBootstrap.legacyReasonSummary
                         .split('\n')
                         .first,
@@ -1211,168 +663,11 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
                   onTap: () => showLegacyModeInfoDialog(context),
                   focusNode: _paneNodes[0],
                 ),
-            ],
-          ),
-        ];
-      case 10: // Data & Backup
-        {
-          // Focus nodes are claimed sequentially so the optional
-          // download-location row doesn't shift hardcoded indices.
-          int paneIdx = 0;
-          FocusNode nextNode() => _paneNodes[paneIdx++];
-          return [
-            if (widget.onOpenDownloadLocation != null) ...[
-              const SettingsSectionLabel('Downloads'),
-              SettingsSection(
-                title: '',
-                children: [
-                  SettingsTile.spec(
-                    SettingsRows.downloadLocation,
-                    subtitle: widget.downloadLocationSubtitle,
-                    onTap: widget.onOpenDownloadLocation!,
-                    focusNode: nextNode(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-            ],
-            const SettingsSectionLabel('Maintenance'),
-            SettingsSection(
-              title: '',
-              children: [
-                SettingsTile.spec(
-                  SettingsRows.clearDownloads,
-                  onTap: widget.onClearDownloads,
-                  focusNode: nextNode(),
-                ),
-                SettingsTile.spec(
-                  SettingsRows.clearPlayback,
-                  onTap: widget.onClearPlayback,
-                  focusNode: nextNode(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            const SettingsSectionLabel('Backup & Restore'),
-            SettingsSection(
-              title: '',
-              children: [
-                SettingsTile.spec(
-                  SettingsRows.createBackup,
-                  onTap: widget.onCreateBackup,
-                  focusNode: nextNode(),
-                ),
-                SettingsTile.spec(
-                  SettingsRows.restoreBackup,
-                  onTap: widget.onRestoreBackup,
-                  focusNode: nextNode(),
-                ),
-              ],
-            ),
-            if (widget.onExportDiagnosticLogs != null) ...[
-              const SizedBox(height: 18),
-              const SettingsSectionLabel('Diagnostics'),
-              SettingsSection(
-                title: '',
-                children: [
-                  SettingsTile.spec(
-                    SettingsRows.exportDiagnosticLogs,
-                    onTap: widget.onExportDiagnosticLogs!,
-                    focusNode: nextNode(),
-                  ),
-                ],
-              ),
-            ],
-          ];
-        }
-      case 11: // About (Updates + Support merged — matches the phone layout)
-        {
-          // The donation row is conditional, so index the pane nodes off a
-          // running counter to keep Up/Down wiring contiguous.
-          int p = 0;
-          return [
-            const SettingsSectionLabel('Updates'),
-            SettingsSection(
-              title: '',
-              children: [
-                SettingsToggleTile.spec(
-                  SettingsRows.autoUpdate,
-                  value: widget.autoUpdateChecksEnabled,
-                  onChanged: widget.onToggleAutoUpdateChecks,
-                  focusNode: _paneNodes[p++],
-                ),
-                SettingsTile.spec(
-                  SettingsRows.checkUpdates,
-                  subtitle: widget.updateSubtitle,
-                  onTap: widget.onCheckForUpdates,
-                  tag: 'New',
-                  focusNode: _paneNodes[p++],
-                  trailing: widget.checkingUpdates
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2.5),
-                        )
-                      : null,
-                ),
-                SettingsInfoTile.spec(
-                  SettingsRows.version,
-                  value: widget.appVersion,
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            const SettingsSectionLabel('Community & Support'),
-            SettingsSection(
-              title: '',
-              children: [
-                if (widget.showSupportDonation)
-                  SettingsTile(
-                    icon: SettingsRows.supportDebrify.icon,
-                    title: widget.supportDonationLabel,
-                    subtitle: widget.supportDonationSubtitle,
-                    onTap: widget.onOpenSupportDonation,
-                    focusNode: _paneNodes[p++],
-                  ),
-                SettingsTile.spec(
-                  SettingsRows.reddit,
-                  onTap: () => launchSettingsUrl(SettingsRows.reddit.url!),
-                  focusNode: _paneNodes[p++],
-                ),
-                SettingsTile.spec(
-                  SettingsRows.discord,
-                  onTap: () => launchSettingsUrl(SettingsRows.discord.url!),
-                  focusNode: _paneNodes[p++],
-                ),
-                SettingsTile.spec(
-                  SettingsRows.github,
-                  onTap: () => launchSettingsUrl(SettingsRows.github.url!),
-                  focusNode: _paneNodes[p++],
-                ),
               ],
             ),
           ];
         }
-      case 12: // Danger Zone
-        return [
-          SettingsSection(
-            title: '',
-            children: [
-              SettingsTile.spec(
-                SettingsRows.resetDebrify,
-                onTap: widget.onDangerAction,
-                destructive: true,
-                focusNode: _paneNodes[0],
-              ),
-            ],
-          ),
-        ];
-      // Deliberately NOT sharing a body with Danger Zone, which is how this
-      // read before: an index nobody wrote a case for used to fall through
-      // and render Reset Debrify. A forgotten case should show nothing, never
-      // the destructive pane.
-      default:
-        return const [];
+        return built;
     }
   }
 

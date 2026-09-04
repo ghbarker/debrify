@@ -1,59 +1,53 @@
 import 'dart:io';
 
+import 'package:debrify/screens/settings/settings_catalog.dart';
+import 'package:debrify/screens/settings/settings_page_registry.dart';
+import 'package:debrify/screens/settings/settings_page_spec.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Pins today's settings information architecture before the S1 registry
+/// Pins today's settings information architecture after the S1 registry
 /// move. Order is a user-visible quirk: a page that jumps a section, or a
 /// rail that swaps Connections and Trackers, is a behaviour change.
 ///
-/// Source-level because the failure is structural (the 6-site tables drifting
-/// apart), not visual. After the registry lands this file still asserts the
-/// same lists; the reader switches from three files to one catalog.
+/// The three layouts and search all read [kSettingsCategories] /
+/// [buildSettingsPages]; this file asserts the same lists the pre-move
+/// source pin covered.
 void main() {
-  late String screen;
-  late String tv;
-  late String widgets;
+  late SettingsPageRegistry registry;
 
   setUpAll(() {
-    screen = File('lib/screens/settings_screen.dart').readAsStringSync();
-    tv = File('lib/screens/settings/settings_tv_layout.dart').readAsStringSync();
-    widgets = File(
-      'lib/screens/settings/widgets/settings_widgets.dart',
-    ).readAsStringSync();
+    registry = SettingsPageRegistry(
+      pages: buildSettingsPages(
+        SettingsPageBindings.noop(
+          showSwitchProfile: true,
+          downloadLocationSupported: true,
+          diagnosticExportVisible: true,
+        ),
+      ),
+    );
   });
 
-  test('the 13 rail categories stay in todays order on TV and desktop', () {
-    final tvBlock = tv.substring(
-      tv.indexOf('const List<_Category> _kCategories'),
-      tv.indexOf('class _SettingsTvLayoutState'),
-    );
-    final desktopStart = screen.indexOf(
-      'const List<SettingsCategoryDefinition> _kAdaptiveSettingsCategories',
-    );
-    final desktopBlock = screen.substring(
-      desktopStart,
-      screen.indexOf('class _SettingsLayout', desktopStart),
-    );
+  test('the 13 rail categories stay in todays order', () {
     expect(
-      _quotedOrder(tvBlock, kSettingsCategoryOrder),
+      [for (final c in kSettingsCategories) c.label],
       kSettingsCategoryOrder,
-      reason: 'TV _kCategories',
-    );
-    expect(
-      _quotedOrder(desktopBlock, kSettingsCategoryOrder),
-      kSettingsCategoryOrder,
-      reason: 'desktop _kAdaptiveSettingsCategories',
     );
   });
 
   test('Search rows are Engines, Filters, Default Provider, Quick Play', () {
-    expect(_rowOrder(tv, 'searchSettings', 'filterSettings'), [
+    expect(_ids(registry, SettingsLayoutSurface.tv, 'Search'), [
       'searchSettings',
       'filterSettings',
       'providerSettings',
       'quickPlay',
     ]);
-    expect(_rowOrder(screen, 'searchSettings', 'filterSettings'), [
+    expect(_ids(registry, SettingsLayoutSurface.phone, 'Search'), [
+      'searchSettings',
+      'filterSettings',
+      'providerSettings',
+      'quickPlay',
+    ]);
+    expect(_ids(registry, SettingsLayoutSurface.desktop, 'Search'), [
       'searchSettings',
       'filterSettings',
       'providerSettings',
@@ -62,12 +56,12 @@ void main() {
   });
 
   test('Live TV & DVR rows are Debrify TV, Recordings, IPTV Playlists', () {
-    expect(_rowOrder(tv, 'debrifyTv', 'recordings'), [
+    expect(_ids(registry, SettingsLayoutSurface.tv, 'Live TV & DVR'), [
       'debrifyTv',
       'recordings',
       'iptvPlaylists',
     ]);
-    expect(_rowOrder(screen, 'debrifyTv', 'recordings'), [
+    expect(_ids(registry, SettingsLayoutSurface.phone, 'Live TV & DVR'), [
       'debrifyTv',
       'recordings',
       'iptvPlaylists',
@@ -75,35 +69,38 @@ void main() {
   });
 
   test('Data & Backup rows keep download / clear / backup / logs order', () {
-    expect(_rowOrder(tv, 'downloadLocation', 'clearDownloads'), [
+    const wanted = [
       'downloadLocation',
       'clearDownloads',
       'clearPlayback',
       'createBackup',
       'restoreBackup',
       'exportDiagnosticLogs',
-    ]);
-    expect(_rowOrder(screen, 'downloadLocation', 'clearDownloads'), [
-      'downloadLocation',
-      'clearDownloads',
-      'clearPlayback',
-      'createBackup',
-      'restoreBackup',
-      'exportDiagnosticLogs',
-    ]);
-  });
-
-  test('Danger Zone is last and uses resetDebrify', () {
-    expect(screen, contains("title: 'Danger Zone'"));
-    expect(tv, contains("'Danger Zone'"));
-    expect(widgets, contains('static const resetDebrify'));
+    ];
+    expect(_ids(registry, SettingsLayoutSurface.tv, 'Data & Backup'), wanted);
     expect(
-      screen.lastIndexOf("title: 'Danger Zone'"),
-      greaterThan(screen.lastIndexOf("title: 'About'")),
+      _ids(registry, SettingsLayoutSurface.phone, 'Data & Backup'),
+      wanted,
     );
   });
 
+  test('Danger Zone is last and uses resetDebrify', () {
+    expect(kSettingsCategories.last.label, 'Danger Zone');
+    expect(kSettingsCategories.last.id, 'danger');
+    expect(
+      _ids(registry, SettingsLayoutSurface.phone, 'Danger Zone'),
+      ['resetDebrify'],
+    );
+    final widgets = File(
+      'lib/screens/settings/widgets/settings_widgets.dart',
+    ).readAsStringSync();
+    expect(widgets, contains('static const resetDebrify'));
+  });
+
   test('SettingsRows still owns the shared icon+copy for nav rows', () {
+    final widgets = File(
+      'lib/screens/settings/widgets/settings_widgets.dart',
+    ).readAsStringSync();
     for (final id in [
       'homePage',
       'player',
@@ -141,61 +138,10 @@ const kSettingsCategoryOrder = [
   'Danger Zone',
 ];
 
-/// First-appearance order of `SettingsRows.<id>` identifiers starting at
-/// [first]. Used to pin a run of rows without swallowing the whole file.
-List<String> _rowOrder(String src, String first, String second) {
-  final ids = RegExp(
-    r'SettingsRows\.([A-Za-z0-9_]+)',
-  ).allMatches(src).map((m) => m.group(1)!).toList();
-  final start = ids.indexOf(first);
-  expect(start, isNonNegative, reason: 'missing SettingsRows.$first');
-  expect(
-    ids.indexOf(second, start + 1),
-    start + 1,
-    reason: '$first should be immediately followed by $second',
-  );
-  final wanted = {
-    'searchSettings',
-    'filterSettings',
-    'providerSettings',
-    'quickPlay',
-    'debrifyTv',
-    'recordings',
-    'iptvPlaylists',
-    'downloadLocation',
-    'clearDownloads',
-    'clearPlayback',
-    'createBackup',
-    'restoreBackup',
-    'exportDiagnosticLogs',
-  };
-  final run = <String>[];
-  for (var i = start; i < ids.length; i++) {
-    if (!wanted.contains(ids[i])) break;
-    run.add(ids[i]);
-  }
-  return run;
-}
-
-List<String> _quotedOrder(String src, List<String> labels) {
-  final pairs = [
-    for (final label in labels)
-      () {
-        final a = src.indexOf("'$label'");
-        final b = src.indexOf('"$label"');
-        final index = a < 0
-            ? b
-            : b < 0
-            ? a
-            : (a < b ? a : b);
-        return (index, label);
-      }(),
-  ];
-  expect(
-    pairs.every((p) => p.$1 >= 0),
-    isTrue,
-    reason: 'missing label in ${pairs.where((p) => p.$1 < 0).toList()}',
-  );
-  pairs.sort((a, b) => a.$1.compareTo(b.$1));
-  return [for (final p in pairs) p.$2];
-}
+List<String> _ids(
+  SettingsPageRegistry registry,
+  SettingsLayoutSurface surface,
+  String category,
+) => [
+  for (final page in registry.visibleOn(surface, category: category)) page.id,
+];
