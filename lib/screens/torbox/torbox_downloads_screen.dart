@@ -2279,9 +2279,8 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
     );
 
     try {
-      final response = await TorboxService.createWebDownload(
-        apiKey: apiKey,
-        link: link,
+      final response = await CloudProviderRegistry.instance.createWebDownload(
+        link,
         name: _webNameController.text.trim().isNotEmpty
             ? _webNameController.text.trim()
             : null,

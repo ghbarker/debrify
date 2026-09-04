@@ -114,6 +114,16 @@ void main() {
       isFalse,
     );
     expect(
+      const TorboxCloudProvider().supports(CloudPortFeature.webDownloadCreate),
+      isTrue,
+    );
+    expect(
+      const PremiumizeCloudProvider().supports(
+        CloudPortFeature.webDownloadCreate,
+      ),
+      isFalse,
+    );
+    expect(
       CloudPortFeature.forProvider(CloudProviderId.torbox),
       {
         CloudPortFeature.playlistEntry,
@@ -125,6 +135,7 @@ void main() {
         CloudPortFeature.webFileDownloadLink,
         CloudPortFeature.queueUncached,
         CloudPortFeature.magnetTorrent,
+        CloudPortFeature.webDownloadCreate,
       },
     );
     expect(

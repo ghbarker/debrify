@@ -361,6 +361,24 @@ class CloudProviderRegistry {
     );
   }
 
+  /// TorBox createwebdownload only. Missing adapter / unsupported throws
+  /// [CloudUnsupported]. Missing key throws [CloudMissingApiKey].
+  /// Not [createMagnetTorrent].
+  Future<Map<String, dynamic>> createWebDownload(
+    String link, {
+    String? name,
+    String? password,
+  }) async {
+    final port = _byId[CloudProviderId.torbox];
+    if (port == null || !port.supports(CloudPortFeature.webDownloadCreate)) {
+      throw const CloudUnsupported(
+        CloudProviderId.torbox,
+        CloudPortFeature.webDownloadCreate,
+      );
+    }
+    return port.createWebDownload(link, name: name, password: password);
+  }
+
   static String? credentialKeyFor(String provider) =>
       CloudProviderId.tryParse(provider)?.credentialKey;
 }

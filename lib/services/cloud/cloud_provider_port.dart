@@ -130,6 +130,17 @@ abstract class CloudProviderPort {
     String magnet, {
     required bool addOnlyIfCached,
   });
+
+  /// TorBox `createwebdownload`. Returns the raw payload so callers can keep
+  /// success / error-string dialect. Optional name/password. Defaults match
+  /// the downloads screen (`asQueued` / `addOnlyIfCached` false).
+  /// Not [createMagnetTorrent]. Missing key throws [CloudMissingApiKey].
+  /// Unsupported adapters throw [CloudUnsupported].
+  Future<Map<String, dynamic>> createWebDownload(
+    String link, {
+    String? name,
+    String? password,
+  });
 }
 
 /// Shared [supports] for production adapters (`implements` would re-require it).
@@ -191,5 +202,14 @@ abstract class CloudProviderAdapter implements CloudProviderPort {
     required bool addOnlyIfCached,
   }) {
     throw CloudUnsupported(id, CloudPortFeature.magnetTorrent);
+  }
+
+  @override
+  Future<Map<String, dynamic>> createWebDownload(
+    String link, {
+    String? name,
+    String? password,
+  }) {
+    throw CloudUnsupported(id, CloudPortFeature.webDownloadCreate);
   }
 }

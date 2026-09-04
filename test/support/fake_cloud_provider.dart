@@ -255,4 +255,27 @@ class FakeCloudProvider implements CloudProviderPort {
     }
     return magnetTorrentResult;
   }
+
+  int createWebDownloadCount = 0;
+  String? lastWebDownloadLink;
+  String? lastWebDownloadName;
+  String? lastWebDownloadPassword;
+  Map<String, dynamic> webDownloadResult = const {'success': true};
+
+  @override
+  Future<Map<String, dynamic>> createWebDownload(
+    String link, {
+    String? name,
+    String? password,
+  }) async {
+    createWebDownloadCount++;
+    lastWebDownloadLink = link;
+    lastWebDownloadName = name;
+    lastWebDownloadPassword = password;
+    if (error != null) throw error!;
+    if (!supports(CloudPortFeature.webDownloadCreate)) {
+      throw CloudUnsupported(id, CloudPortFeature.webDownloadCreate);
+    }
+    return webDownloadResult;
+  }
 }
