@@ -2,7 +2,7 @@
 
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 
-Baseline: `main` @ `4e72c296` (P2a–d merged) · Phase: **2 hold** · Last gate: 1 (Linux only; Windows still outstanding)
+Baseline: `main` @ H1-fix merged · Phase: **2 hold** · Last gate: 1 (Linux only; Windows worker connected, build outstanding)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -20,7 +20,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | P2d · playlist/cloud/settings strings | merged | `refactor/p2d-playlist-cloud-settings` | — | `lib/screens/playlist_content_view_screen.dart`, `lib/services/playlist_player_service.dart`, `lib/screens/cloud_screen.dart`, `lib/screens/settings/provider_settings_page.dart` | — | Pin-before-move present; **fails tightened (c)** (no origin-diff table). Keep on main; not a template. |
 | P2e · playback-service strings | queued | — | — | `lib/services/torrent_playback_service.dart` | H1/T1/S1 follow-ups | `lib/main.dart` sidebar/hub labels explicitly exempt. Forbidden: `lib/services/cloud/**`. |
 | H1 · Home row registry | merged | `refactor/h1-home-row-registry` | — | new `lib/services/home/**`, `search_screen.dart` [row-id hunks only], `lib/screens/settings/home_sections_filter_page.dart`, `lib/services/home_list_rows.dart`, `lib/services/home_row_order.dart` | — | Frozen row-id grammar. Undeclared: rail de-dup, wider stray leaves, addon-group merge (NOTES). **Regression:** pinned collections must lead the board — follow-up `h1-fix`. |
-| H1-fix · pinned collections lead | assigned | `refactor/h1-pinned-collections-lead` | orchestrator | `lib/services/home/home_row_registry.dart`, `test/home_row_registry_test.dart` | — | Preserve `_sections` order in the section band so pinned collections lead tracker lists. |
+| H1-fix · pinned collections lead | merged | `refactor/h1-pinned-collections-lead` | orchestrator | `lib/services/home/home_row_registry.dart`, `test/home_row_registry_test.dart` | — | Preserve `_sections` order in the section band so pinned collections lead tracker lists. CI green then `--no-ff` merge. |
 | T1 · transfer category registry | merged | `refactor/t1-transfer-category-registry` | — | new `lib/services/transfer/**`, `lib/services/backup_restore_service.dart`, `remote_command_router.dart` [config hunks], `lib/widgets/remote/remote_config_export.dart`, `lib/widgets/remote/remote_transfer_all.dart`, `lib/widgets/onboarding/onboarding_flow.dart` [`_configLabel`], `lib/services/profiles/profile_restore_coordinator.dart` [selection literals] | — | Frozen: ConfigCommand, backup keys. Undeclared deltas in NOTES. **Regression:** empty PikPak password — follow-up `t1-fix`. |
 | T1-fix · pikpak empty password | assigned | `refactor/t1-pikpak-empty-password` | orchestrator | `lib/services/transfer/transfer_categories.dart`, `test/transfer_pikpak_wire_test.dart` | — | `_readPikpakWire` accepts empty password (email-only, matching both old senders). |
 | S1 · settings registry | merged | `refactor/s1-settings-registry` | — | `settings_screen.dart` [nav tables, `_formatBackupSummary`/`_formatRestoreReport`], `lib/screens/settings/settings_tv_layout.dart`, `lib/screens/settings/widgets/settings_widgets.dart` | — | Pages registered once. **Regression:** extraPlayerKeywords unbound — follow-up `s1-fix`. |
@@ -64,4 +64,4 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
-Phase 1 merged. Phase 2 string lanes P2a–P2d merged. **Hold:** H1/T1/S1 regression follow-ups in flight; P2e queued; G1–G5/T2 wait on those follow-ups **and** gate 1 Windows. Gate (c) tightened (pin green before move + origin-diff table). PR #56 held to Phase 3. PRs #36–#43 closed (G4).
+Phase 1 merged. Phase 2 string lanes P2a–P2d merged. **H1-fix merged** (#57). T1-fix/S1-fix still in CI. P2e queued; G1–G5/T2 wait on remaining follow-ups **and** gate 1 Windows. Windows worker `win-build` is connected. Gate (c) tightened. PR #56 held to Phase 3. PRs #36–#43 closed (G4).
