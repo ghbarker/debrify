@@ -240,6 +240,25 @@ behaviour and must be restored, not kept as quirks.
 - **Callers still import `StorageService`.** `@Deprecated` waits for Q2.
 - **PlayerPrefs / IptvPrefs / tracking** were not extracted (S2-3 / S2-5).
 
+### V1-3 · subtitle track controller
+
+- **Stored `auto` is no-choice.** A persisted subtitle id of `auto` (audio-only
+  persist) falls through to the default-language path so addon auto-select is
+  not blocked by mpv's file-default track.
+- **Stored `no` is always honored.** It never counts as a default-language
+  conflict, including when the global default is `off`.
+- **Conflicting bare mpv ordinals lose.** A stored embedded id whose language
+  does not match the current default (or when default is `off`) takes the
+  default-language path. Ids are file-local ordinals.
+- **Addon auto-select defaults to English** when no subtitle-language
+  preference is set (`defaultLang ?? 'en'`).
+- **Temp-file cleanup stays on host dispose.** Controller owns the delete
+  loop; `_VideoPlayerScreenState.dispose` still calls it.
+- **Identify sheet was not re-extracted.** Controller calls
+  `showIdentifyTitleSearchSheet` / `requestSeasonEpisodeForIdentity`. Host
+  keeps `_currentPlaybackTitleForIdentity` and
+  `_currentSeasonEpisodeForIdentity`.
+
 ## Process
 
 Gate check **(c)** is tightened (plan §6): the pinning test must be committed
