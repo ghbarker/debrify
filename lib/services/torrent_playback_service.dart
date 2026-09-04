@@ -37,7 +37,7 @@ import 'cloud/cloud_exceptions.dart';
 import 'cloud/cloud_playback_helpers.dart';
 import 'cloud/cloud_playback_result.dart';
 import 'cloud/cloud_playlist_payload.dart';
-import 'cloud/cloud_provider_chrome.dart';
+import '../widgets/cloud_provider_chrome.dart';
 import 'cloud/cloud_provider_id.dart';
 import 'cloud/cloud_provider_registry.dart';
 import 'cloud/pack_negative_cache.dart';

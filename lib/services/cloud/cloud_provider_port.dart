@@ -2,9 +2,12 @@ import '../../models/torrent.dart';
 import '../../screens/video_player/models/playlist_entry.dart';
 import '../series_source_service.dart';
 import 'cloud_playback_result.dart';
+import 'cloud_port_feature.dart';
 import 'cloud_provider_id.dart';
 import 'stremio_torrent_resolve_args.dart';
 import 'magic_tv_prepare_args.dart';
+
+export 'cloud_port_feature.dart';
 
 /// Narrow playback port: add a magnet and resolve a playable result.
 ///
@@ -13,6 +16,13 @@ import 'magic_tv_prepare_args.dart';
 /// download-picker lazy URL used to inline.
 abstract class CloudProviderPort {
   CloudProviderId get id;
+
+  /// Whether this adapter implements [feature]. False means do not call the
+  /// method; a supported method may still return null on a miss.
+  ///
+  /// Classes that `implement` this port (test fakes) must declare this.
+  /// Production adapters `extend` [CloudProviderAdapter] and inherit it.
+  bool supports(CloudPortFeature feature);
 
   /// Playback-pipeline "has credentials" check (API key present / PikPak
   /// enabled). Magnet deep-links also require the integration-enabled flags;
@@ -45,12 +55,23 @@ abstract class CloudProviderPort {
   Future<String?> resolveStremioTorrent(StremioTorrentResolveArgs args);
 
   /// Debrify TV file prepare. Random unseen file; infohash-only magnet.
-  /// RD / AllDebrid return null — they use [prepareMagicTvLockedLinks].
+  /// Unsupported adapters throw [CloudUnsupported]; the registry maps that
+  /// to null for screen callers.
   Future<MagicTvPrepared?> prepareMagicTv(MagicTvPrepareRequest request);
 
   /// Debrify TV locked-link queue fill. Still-locked URLs, not a stream.
-  /// TorBox / PikPak / Premiumize return null (they use [prepareMagicTv]).
+  /// Unsupported adapters throw [CloudUnsupported]; the registry maps that
+  /// to null for screen callers.
   Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
     MagicTvPrepareRequest request,
   );
+}
+
+/// Shared [supports] for production adapters (`implements` would re-require it).
+abstract class CloudProviderAdapter implements CloudProviderPort {
+  const CloudProviderAdapter();
+
+  @override
+  bool supports(CloudPortFeature feature) =>
+      CloudPortFeature.forProvider(id).contains(feature);
 }
