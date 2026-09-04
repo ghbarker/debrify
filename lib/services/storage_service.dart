@@ -32,7 +32,10 @@ import '../utils/json_isolate.dart';
 import '../utils/platform_util.dart';
 import 'tracking_scrobble_preferences.dart';
 import 'storage/cloud_secret_prefs.dart';
+import 'storage/debrify_tv_prefs.dart';
 import 'storage/home_prefs.dart';
+import 'storage/social_prefs.dart';
+import 'storage/stremio_tv_prefs.dart';
 
 export 'storage/home_prefs.dart'
     show
@@ -253,33 +256,6 @@ class StorageService {
   static const String localSeriesCalendarAttemptedAtKey =
       'local_series_completion_calendar_attempted_at_v1';
   static const String _finishedMoviesKey = 'finished_movies_v1';
-  static const String _debrifyTvStartRandomKey = 'debrify_tv_start_random';
-  static const String _debrifyTvHideSeekbarKey = 'debrify_tv_hide_seekbar';
-  static const String _debrifyTvShowChannelNameKey =
-      'debrify_tv_show_watermark';
-  static const String _debrifyTvShowVideoTitleKey =
-      'debrify_tv_show_video_title';
-  static const String _debrifyTvHideOptionsKey = 'debrify_tv_hide_options';
-  static const String _debrifyTvHideBackButtonKey =
-      'debrify_tv_hide_back_button';
-  static const String _debrifyTvAvoidNsfwKey = 'debrify_tv_avoid_nsfw';
-  static const String _debrifyTvProviderKey = 'debrify_tv_provider';
-  static const String _debrifyTvRandomStartPercentKey =
-      'debrify_tv_random_start_percent';
-  static const String _debrifyTvChannelsKey = 'debrify_tv_channels';
-  // Debrify TV playback filters. Quality is matched on the torrent NAME
-  // (applied when a channel's cache is read); size is matched on the real
-  // per-FILE byte count after the debrid provider returns its file list —
-  // per-file sizes are per-episode, so packs need no series/movie detection.
-  static const String _debrifyTvFilterQualitiesKey =
-      'debrify_tv_filter_qualities';
-  static const String _debrifyTvFilterSizesKey = 'debrify_tv_filter_sizes';
-
-  // "You're using an external player" notice shown before Debrify TV hands a
-  // stream to another app. Dismissible forever, because the trade-off it
-  // explains (one title, no channel rotation) never changes.
-  static const String _debrifyTvExternalNoticeDismissedKey =
-      'debrify_tv_external_notice_dismissed';
 
   static const String _supportRemoteConfigCacheKey =
       'support_remote_config_cache_v1';
@@ -302,26 +278,6 @@ class StorageService {
   static const String _startupTraktContinueWatchingShowIdKey =
       'startup_trakt_continue_watching_show_id';
 
-  // Reddit settings
-  static const String _redditAccessTokenKey = 'reddit_access_token';
-  static const String _redditRefreshTokenKey = 'reddit_refresh_token';
-  static const String _redditUsernameKey = 'reddit_username';
-  static const String _redditEnabledKey = 'reddit_enabled';
-  static const String _redditHiddenFromNavKey = 'reddit_hidden_from_nav';
-  static const String _redditLastSubredditKey = 'reddit_last_subreddit';
-  static const String _redditRecentSubredditsKey = 'reddit_recent_subreddits';
-  static const String _redditAllowNsfwKey = 'reddit_allow_nsfw';
-  static const String _redditFavoriteSubredditsKey =
-      'reddit_favorite_subreddits';
-  static const String _redditDefaultSubredditKey = 'reddit_default_subreddit';
-  // Lemmy settings
-  static const String _lemmyInstanceKey = 'lemmy_instance';
-  static const String _lemmyAllowNsfwKey = 'lemmy_allow_nsfw';
-  static const String _lemmyFavoriteCommunitiesKey =
-      'lemmy_favorite_communities';
-  static const String _lemmyDefaultCommunityKey = 'lemmy_default_community';
-  // YouTube settings
-  static const String _youtubeMaxHeightKey = 'youtube_max_height';
   // Network tuning (Debrify player). 'standard' = leave the player's own
   // defaults completely untouched — see NetworkTuning.
   static const String _networkConnectPatienceKey = 'network_connect_patience';
@@ -464,32 +420,6 @@ class StorageService {
   static const String _playlistPosterOverridesKey =
       'playlist_poster_overrides_v1';
 
-  static const String _debrifyTvFavoriteChannelsKey =
-      'debrify_tv_favorite_channels_v1';
-
-  // Stremio TV settings
-  static const String _stremioTvRotationMinutesKey =
-      'stremio_tv_rotation_minutes';
-  static const String _stremioTvSeriesRotationMinutesKey =
-      'stremio_tv_series_rotation_minutes';
-  static const String _stremioTvAutoRefreshKey = 'stremio_tv_auto_refresh';
-  static const String _stremioTvFavoriteChannelsKey =
-      'stremio_tv_favorite_channels_v1';
-  static const String _stremioTvPreferredQualityKey =
-      'stremio_tv_preferred_quality';
-  static const String _stremioTvDebridProviderKey =
-      'stremio_tv_debrid_provider';
-  static const String _stremioTvMaxStartPercentKey =
-      'stremio_tv_max_start_percent';
-  static const String _stremioTvRandomEpisodesKey =
-      'stremio_tv_random_episodes';
-  static const String _stremioTvLocalCatalogsKey =
-      'stremio_tv_local_catalogs_v1';
-  static const String _stremioTvCatalogRepoUrlsKey =
-      'stremio_tv_catalog_repo_urls_v1';
-  static const String _stremioTvHideNowPlayingKey =
-      'stremio_tv_hide_now_playing';
-  static const String _stremioTvTorrentsFirstKey = 'stremio_tv_torrents_first';
 
   static const String _playlistKey = 'user_playlist_v1';
   static const String _playlistViewModesKey = 'playlist_view_modes_v1';
@@ -582,10 +512,6 @@ class StorageService {
   static const String _remoteIntroShownKey = 'remote_intro_shown';
   static const String _remoteTvDeviceNameKey = 'remote_tv_device_name';
   static const String _remoteLastDeviceKey = 'remote_last_device';
-
-  static const int _debrifyTvRandomStartPercentDefault = 20;
-  static const int _debrifyTvRandomStartPercentMin = 10;
-  static const int _debrifyTvRandomStartPercentMax = 90;
 
   static Future<String?> getApiKey({bool forRemoteTransfer = false}) =>
       CloudSecretPrefs.read(
@@ -3981,140 +3907,71 @@ class StorageService {
     return trackPreferences as Map<String, dynamic>;
   }
 
-  // Debrify TV settings methods
-  static Future<String> getDebrifyTvProvider() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_debrifyTvProviderKey) ?? 'real_debrid';
-  }
+  // Debrify TV settings — forwarding façade; bodies live on DebrifyTvPrefs.
+  static Future<String> getDebrifyTvProvider() =>
+      DebrifyTvPrefs.getDebrifyTvProvider();
 
-  static Future<void> saveDebrifyTvProvider(String value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_debrifyTvProviderKey, value);
-  }
+  static Future<void> saveDebrifyTvProvider(String value) =>
+      DebrifyTvPrefs.saveDebrifyTvProvider(value);
 
-  static Future<bool> hasDebrifyTvProvider() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.containsKey(_debrifyTvProviderKey);
-  }
+  static Future<bool> hasDebrifyTvProvider() =>
+      DebrifyTvPrefs.hasDebrifyTvProvider();
 
-  static Future<bool> getDebrifyTvStartRandom() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_debrifyTvStartRandomKey) ?? true;
-  }
+  static Future<bool> getDebrifyTvStartRandom() =>
+      DebrifyTvPrefs.getDebrifyTvStartRandom();
 
-  static Future<void> saveDebrifyTvStartRandom(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_debrifyTvStartRandomKey, value);
-  }
+  static Future<void> saveDebrifyTvStartRandom(bool value) =>
+      DebrifyTvPrefs.saveDebrifyTvStartRandom(value);
 
-  static int _normalizeDebrifyTvRandomStartPercent(int? value) {
-    final candidate = value ?? _debrifyTvRandomStartPercentDefault;
-    if (candidate < _debrifyTvRandomStartPercentMin) {
-      return _debrifyTvRandomStartPercentMin;
-    }
-    if (candidate > _debrifyTvRandomStartPercentMax) {
-      return _debrifyTvRandomStartPercentMax;
-    }
-    return candidate;
-  }
+  static Future<int> getDebrifyTvRandomStartPercent() =>
+      DebrifyTvPrefs.getDebrifyTvRandomStartPercent();
 
-  static Future<int> getDebrifyTvRandomStartPercent() async {
-    final prefs = await ProfilePreferences.instance();
-    final stored = prefs.getInt(_debrifyTvRandomStartPercentKey);
-    return _normalizeDebrifyTvRandomStartPercent(stored);
-  }
+  static Future<void> saveDebrifyTvRandomStartPercent(int value) =>
+      DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(value);
 
-  static Future<void> saveDebrifyTvRandomStartPercent(int value) async {
-    final prefs = await ProfilePreferences.instance();
-    final normalized = _normalizeDebrifyTvRandomStartPercent(value);
-    await prefs.setInt(_debrifyTvRandomStartPercentKey, normalized);
-  }
+  static Future<bool> getDebrifyTvHideSeekbar() =>
+      DebrifyTvPrefs.getDebrifyTvHideSeekbar();
 
-  static Future<bool> getDebrifyTvHideSeekbar() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_debrifyTvHideSeekbarKey) ?? true;
-  }
+  static Future<void> saveDebrifyTvHideSeekbar(bool value) =>
+      DebrifyTvPrefs.saveDebrifyTvHideSeekbar(value);
 
-  static Future<void> saveDebrifyTvHideSeekbar(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_debrifyTvHideSeekbarKey, value);
-  }
+  static Future<bool> getDebrifyTvShowChannelName() =>
+      DebrifyTvPrefs.getDebrifyTvShowChannelName();
 
-  static Future<bool> getDebrifyTvShowChannelName() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_debrifyTvShowChannelNameKey) ?? true;
-  }
+  static Future<void> saveDebrifyTvShowChannelName(bool value) =>
+      DebrifyTvPrefs.saveDebrifyTvShowChannelName(value);
 
-  static Future<void> saveDebrifyTvShowChannelName(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_debrifyTvShowChannelNameKey, value);
-  }
+  static Future<bool> getDebrifyTvShowVideoTitle() =>
+      DebrifyTvPrefs.getDebrifyTvShowVideoTitle();
 
-  static Future<bool> getDebrifyTvShowVideoTitle() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_debrifyTvShowVideoTitleKey) ?? true;
-  }
+  static Future<void> saveDebrifyTvShowVideoTitle(bool value) =>
+      DebrifyTvPrefs.saveDebrifyTvShowVideoTitle(value);
 
-  static Future<void> saveDebrifyTvShowVideoTitle(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_debrifyTvShowVideoTitleKey, value);
-  }
+  static Future<bool> getDebrifyTvHideOptions() =>
+      DebrifyTvPrefs.getDebrifyTvHideOptions();
 
-  static Future<bool> getDebrifyTvHideOptions() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_debrifyTvHideOptionsKey) ?? true;
-  }
+  static Future<void> saveDebrifyTvHideOptions(bool value) =>
+      DebrifyTvPrefs.saveDebrifyTvHideOptions(value);
 
-  static Future<void> saveDebrifyTvHideOptions(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_debrifyTvHideOptionsKey, value);
-  }
+  static Future<bool> getDebrifyTvHideBackButton() =>
+      DebrifyTvPrefs.getDebrifyTvHideBackButton();
 
-  static Future<bool> getDebrifyTvHideBackButton() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_debrifyTvHideBackButtonKey) ?? true;
-  }
+  static Future<void> saveDebrifyTvHideBackButton(bool value) =>
+      DebrifyTvPrefs.saveDebrifyTvHideBackButton(value);
 
-  static Future<void> saveDebrifyTvHideBackButton(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_debrifyTvHideBackButtonKey, value);
-  }
+  static Future<bool> getDebrifyTvAvoidNsfw() =>
+      DebrifyTvPrefs.getDebrifyTvAvoidNsfw();
 
-  static Future<bool> getDebrifyTvAvoidNsfw() async {
-    if (!await profileAllowsAdultContent()) return true;
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_debrifyTvAvoidNsfwKey) ?? true; // Default enabled
-  }
+  static Future<void> saveDebrifyTvAvoidNsfw(bool value) =>
+      DebrifyTvPrefs.saveDebrifyTvAvoidNsfw(value);
 
-  static Future<void> saveDebrifyTvAvoidNsfw(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(
-      _debrifyTvAvoidNsfwKey,
-      await profileAllowsAdultContent() ? value : true,
-    );
-  }
-
-  static Future<List<Map<String, dynamic>>> getDebrifyTvChannels() async {
-    final prefs = await ProfilePreferences.instance();
-    final raw = prefs.getString(_debrifyTvChannelsKey);
-    if (raw == null || raw.isEmpty) return <Map<String, dynamic>>[];
-    try {
-      final List<dynamic> list = await decodeJsonAsync(raw) as List<dynamic>;
-      return list
-          .where((entry) => entry is Map)
-          .map((entry) => Map<String, dynamic>.from(entry as Map))
-          .toList();
-    } catch (_) {
-      return <Map<String, dynamic>>[];
-    }
-  }
+  static Future<List<Map<String, dynamic>>> getDebrifyTvChannels() =>
+      DebrifyTvPrefs.getDebrifyTvChannels();
 
   static Future<void> saveDebrifyTvChannels(
     List<Map<String, dynamic>> channels,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_debrifyTvChannelsKey, jsonEncode(channels));
-  }
+  ) => DebrifyTvPrefs.saveDebrifyTvChannels(channels);
+
 
   // Playlist storage (local-only MVP)
   static Future<List<Map<String, dynamic>>> getPlaylistItemsRaw() async {
@@ -4393,11 +4250,9 @@ class StorageService {
   }
 
   /// Clear Debrify TV provider and legacy channels key
-  static Future<void> clearDebrifyTvProviderAndLegacy() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_debrifyTvProviderKey);
-    await prefs.remove(_debrifyTvChannelsKey);
-  }
+  static Future<void> clearDebrifyTvProviderAndLegacy() =>
+      DebrifyTvPrefs.clearDebrifyTvProviderAndLegacy();
+
 
   /// Clear filter settings (qualities, rip sources, languages)
   static Future<void> clearAllFilterSettings() async {
@@ -4435,37 +4290,9 @@ class StorageService {
   }
 
   /// Clear all Debrify TV display and engine settings
-  static Future<void> clearAllDebrifyTvSettings() async {
-    final prefs = await ProfilePreferences.instance();
-    // Display settings
-    await prefs.remove(_debrifyTvStartRandomKey);
-    await prefs.remove(_debrifyTvHideSeekbarKey);
-    await prefs.remove(_debrifyTvShowChannelNameKey);
-    await prefs.remove(_debrifyTvShowVideoTitleKey);
-    await prefs.remove(_debrifyTvHideOptionsKey);
-    await prefs.remove(_debrifyTvHideBackButtonKey);
-    await prefs.remove(_debrifyTvAvoidNsfwKey);
-    await prefs.remove(_debrifyTvRandomStartPercentKey);
-    // Playback filters
-    await prefs.remove(_debrifyTvFilterQualitiesKey);
-    await prefs.remove(_debrifyTvFilterSizesKey);
-    for (final key
-        in prefs
-            .getKeys()
-            .where(
-              (key) =>
-                  key.startsWith('engine_tv_') ||
-                  key.startsWith('debrify_tv_use_') ||
-                  key.startsWith('debrify_tv_channel_small_') ||
-                  key.startsWith('debrify_tv_channel_large_') ||
-                  key.startsWith('debrify_tv_quick_play_') ||
-                  key == 'debrify_tv_keyword_threshold' ||
-                  key == 'debrify_tv_min_torrents_per_keyword',
-            )
-            .toList()) {
-      await prefs.remove(key);
-    }
-  }
+  static Future<void> clearAllDebrifyTvSettings() =>
+      DebrifyTvPrefs.clearAllDebrifyTvSettings();
+
 
   /// Update an existing playlist item with poster URL
   /// Supports both RealDebrid (rdTorrentId) and PikPak (pikpakCollectionId)
@@ -5061,65 +4888,18 @@ class StorageService {
     await prefs.remove(_myWatchlistKey);
   }
 
-  // ==========================================================================
-  // Debrify TV Channel Favorites
-  // ==========================================================================
+  // Debrify TV Channel Favorites — forwarding façade; bodies live on DebrifyTvPrefs.
+  static Future<bool> isDebrifyTvChannelFavorited(String channelId) =>
+      DebrifyTvPrefs.isDebrifyTvChannelFavorited(channelId);
 
-  /// Check if a Debrify TV channel is favorited
-  static Future<bool> isDebrifyTvChannelFavorited(String channelId) async {
-    final prefs = await ProfilePreferences.instance();
-    final favoritesJson = prefs.getString(_debrifyTvFavoriteChannelsKey);
-
-    if (favoritesJson == null) return false;
-
-    try {
-      final favorites = jsonDecode(favoritesJson) as Map<String, dynamic>;
-      return favorites.containsKey(channelId);
-    } catch (e) {
-      debugPrint('Error reading Debrify TV channel favorites: $e');
-      return false;
-    }
-  }
-
-  /// Set favorite status for a Debrify TV channel
   static Future<void> setDebrifyTvChannelFavorited(
     String channelId,
     bool isFavorited,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    final favoritesJson = prefs.getString(_debrifyTvFavoriteChannelsKey);
+  ) => DebrifyTvPrefs.setDebrifyTvChannelFavorited(channelId, isFavorited);
 
-    Map<String, dynamic> favorites = {};
-    if (favoritesJson != null) {
-      try {
-        favorites = jsonDecode(favoritesJson) as Map<String, dynamic>;
-      } catch (_) {}
-    }
+  static Future<Set<String>> getDebrifyTvFavoriteChannelIds() =>
+      DebrifyTvPrefs.getDebrifyTvFavoriteChannelIds();
 
-    if (isFavorited) {
-      favorites[channelId] = true;
-    } else {
-      favorites.remove(channelId);
-    }
-
-    await prefs.setString(_debrifyTvFavoriteChannelsKey, jsonEncode(favorites));
-  }
-
-  /// Get all favorite Debrify TV channel IDs
-  static Future<Set<String>> getDebrifyTvFavoriteChannelIds() async {
-    final prefs = await ProfilePreferences.instance();
-    final favoritesJson = prefs.getString(_debrifyTvFavoriteChannelsKey);
-
-    if (favoritesJson == null) return {};
-
-    try {
-      final favorites = jsonDecode(favoritesJson) as Map<String, dynamic>;
-      return favorites.keys.toSet();
-    } catch (e) {
-      debugPrint('Error reading Debrify TV channel favorites: $e');
-      return {};
-    }
-  }
 
   // ==========================================================================
   // IPTV Channel Favorites
@@ -5893,56 +5673,35 @@ class StorageService {
   static Future<void> clearAllHomePageSettings() =>
       HomePrefs.clearAllHomePageSettings();
 
-  // Reddit Settings
-  static Future<String?> getRedditAccessToken() async {
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _redditAccessTokenKey);
-  }
+  // Reddit Settings — forwarding façade; bodies live on SocialPrefs.
+  static Future<String?> getRedditAccessToken() =>
+      SocialPrefs.getRedditAccessToken();
 
-  static Future<void> setRedditAccessToken(String token) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _redditAccessTokenKey, token);
-  }
+  static Future<void> setRedditAccessToken(String token) =>
+      SocialPrefs.setRedditAccessToken(token);
 
-  static Future<String?> getRedditRefreshToken() async {
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _redditRefreshTokenKey);
-  }
+  static Future<String?> getRedditRefreshToken() =>
+      SocialPrefs.getRedditRefreshToken();
 
-  static Future<void> setRedditRefreshToken(String token) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _redditRefreshTokenKey, token);
-  }
+  static Future<void> setRedditRefreshToken(String token) =>
+      SocialPrefs.setRedditRefreshToken(token);
 
-  static Future<String?> getRedditUsername() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_redditUsernameKey);
-  }
+  static Future<String?> getRedditUsername() => SocialPrefs.getRedditUsername();
 
-  static Future<void> setRedditUsername(String username) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_redditUsernameKey, username);
-  }
+  static Future<void> setRedditUsername(String username) =>
+      SocialPrefs.setRedditUsername(username);
 
-  static Future<bool> getRedditEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_redditEnabledKey) ?? true; // Default enabled
-  }
+  static Future<bool> getRedditEnabled() => SocialPrefs.getRedditEnabled();
 
-  static Future<void> setRedditEnabled(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_redditEnabledKey, value);
-  }
+  static Future<void> setRedditEnabled(bool value) =>
+      SocialPrefs.setRedditEnabled(value);
 
-  static Future<bool> getRedditHiddenFromNav() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_redditHiddenFromNavKey) ?? false;
-  }
+  static Future<bool> getRedditHiddenFromNav() =>
+      SocialPrefs.getRedditHiddenFromNav();
 
-  static Future<void> setRedditHiddenFromNav(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_redditHiddenFromNavKey, value);
-  }
+  static Future<void> setRedditHiddenFromNav(bool value) =>
+      SocialPrefs.setRedditHiddenFromNav(value);
+
 
   // Tracking source policy -------------------------------------------------
 
@@ -6074,24 +5833,14 @@ class StorageService {
     if (hideWatched is bool) await HideWatchedPrefs.setEnabled(hideWatched);
   }
 
-  static Future<String?> getRedditLastSubreddit() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_redditLastSubredditKey);
-  }
+  static Future<String?> getRedditLastSubreddit() =>
+      SocialPrefs.getRedditLastSubreddit();
 
-  static Future<void> setRedditLastSubreddit(String subreddit) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_redditLastSubredditKey, subreddit);
-  }
+  static Future<void> setRedditLastSubreddit(String subreddit) =>
+      SocialPrefs.setRedditLastSubreddit(subreddit);
 
-  static Future<void> clearRedditAuth() async {
-    final prefs = await ProfilePreferences.instance();
-    if (!await ProfileCredentialFacade.disconnect(_redditAccessTokenKey)) {
-      await prefs.remove(_redditAccessTokenKey);
-      await prefs.remove(_redditRefreshTokenKey);
-    }
-    await prefs.remove(_redditUsernameKey);
-  }
+  static Future<void> clearRedditAuth() => SocialPrefs.clearRedditAuth();
+
 
   // Trakt Settings
   static Future<bool> getTraktSyncCatalogItems() async {
@@ -6241,120 +5990,60 @@ class StorageService {
     await fallbackDisconnectedProgressSource(TrackingSource.simkl);
   }
 
-  static Future<List<String>> getRedditRecentSubreddits() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getStringList(_redditRecentSubredditsKey) ?? [];
-  }
+  static Future<List<String>> getRedditRecentSubreddits() =>
+      SocialPrefs.getRedditRecentSubreddits();
 
-  static Future<void> setRedditRecentSubreddits(List<String> subreddits) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setStringList(_redditRecentSubredditsKey, subreddits);
-  }
+  static Future<void> setRedditRecentSubreddits(List<String> subreddits) =>
+      SocialPrefs.setRedditRecentSubreddits(subreddits);
 
-  static Future<bool> getRedditAllowNsfw() async {
-    if (!await profileAllowsAdultContent()) return false;
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_redditAllowNsfwKey) ?? false;
-  }
+  static Future<bool> getRedditAllowNsfw() => SocialPrefs.getRedditAllowNsfw();
 
-  static Future<void> setRedditAllowNsfw(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(
-      _redditAllowNsfwKey,
-      await profileAllowsAdultContent() && value,
-    );
-  }
+  static Future<void> setRedditAllowNsfw(bool value) =>
+      SocialPrefs.setRedditAllowNsfw(value);
 
-  static Future<List<String>> getRedditFavoriteSubreddits() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getStringList(_redditFavoriteSubredditsKey) ?? [];
-  }
+  static Future<List<String>> getRedditFavoriteSubreddits() =>
+      SocialPrefs.getRedditFavoriteSubreddits();
 
   static Future<void> setRedditFavoriteSubreddits(
     List<String> subreddits,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setStringList(_redditFavoriteSubredditsKey, subreddits);
-  }
+  ) => SocialPrefs.setRedditFavoriteSubreddits(subreddits);
 
-  static Future<String?> getRedditDefaultSubreddit() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_redditDefaultSubredditKey);
-  }
+  static Future<String?> getRedditDefaultSubreddit() =>
+      SocialPrefs.getRedditDefaultSubreddit();
 
-  static Future<void> setRedditDefaultSubreddit(String? subreddit) async {
-    final prefs = await ProfilePreferences.instance();
-    if (subreddit == null || subreddit.isEmpty) {
-      await prefs.remove(_redditDefaultSubredditKey);
-    } else {
-      await prefs.setString(_redditDefaultSubredditKey, subreddit);
-    }
-  }
+  static Future<void> setRedditDefaultSubreddit(String? subreddit) =>
+      SocialPrefs.setRedditDefaultSubreddit(subreddit);
 
-  // Lemmy Settings
-  static Future<String> getLemmyInstance() async {
-    final prefs = await ProfilePreferences.instance();
-    final value = prefs.getString(_lemmyInstanceKey);
-    return (value != null && value.isNotEmpty) ? value : 'https://lemmy.world';
-  }
+  // Lemmy Settings — forwarding façade; bodies live on SocialPrefs.
+  static Future<String> getLemmyInstance() => SocialPrefs.getLemmyInstance();
 
-  static Future<void> setLemmyInstance(String instance) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_lemmyInstanceKey, instance);
-  }
+  static Future<void> setLemmyInstance(String instance) =>
+      SocialPrefs.setLemmyInstance(instance);
 
-  static Future<bool> getLemmyAllowNsfw() async {
-    if (!await profileAllowsAdultContent()) return false;
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_lemmyAllowNsfwKey) ?? false;
-  }
+  static Future<bool> getLemmyAllowNsfw() => SocialPrefs.getLemmyAllowNsfw();
 
-  static Future<void> setLemmyAllowNsfw(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(
-      _lemmyAllowNsfwKey,
-      await profileAllowsAdultContent() && value,
-    );
-  }
+  static Future<void> setLemmyAllowNsfw(bool value) =>
+      SocialPrefs.setLemmyAllowNsfw(value);
 
-  static Future<List<String>> getLemmyFavoriteCommunities() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getStringList(_lemmyFavoriteCommunitiesKey) ?? [];
-  }
+  static Future<List<String>> getLemmyFavoriteCommunities() =>
+      SocialPrefs.getLemmyFavoriteCommunities();
 
   static Future<void> setLemmyFavoriteCommunities(
     List<String> communities,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setStringList(_lemmyFavoriteCommunitiesKey, communities);
-  }
+  ) => SocialPrefs.setLemmyFavoriteCommunities(communities);
 
-  static Future<String?> getLemmyDefaultCommunity() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_lemmyDefaultCommunityKey);
-  }
+  static Future<String?> getLemmyDefaultCommunity() =>
+      SocialPrefs.getLemmyDefaultCommunity();
 
-  static Future<void> setLemmyDefaultCommunity(String? community) async {
-    final prefs = await ProfilePreferences.instance();
-    if (community == null || community.isEmpty) {
-      await prefs.remove(_lemmyDefaultCommunityKey);
-    } else {
-      await prefs.setString(_lemmyDefaultCommunityKey, community);
-    }
-  }
+  static Future<void> setLemmyDefaultCommunity(String? community) =>
+      SocialPrefs.setLemmyDefaultCommunity(community);
 
-  // YouTube Settings
-  /// Preferred max playback height for YouTube (1080/720/480/360). Default 1080.
-  static Future<int> getYoutubeMaxHeight() async {
-    final prefs = await ProfilePreferences.instance();
-    final v = prefs.getInt(_youtubeMaxHeightKey);
-    return (v != null && v > 0) ? v : 1080;
-  }
+  // YouTube Settings — forwarding façade; bodies live on SocialPrefs.
+  static Future<int> getYoutubeMaxHeight() => SocialPrefs.getYoutubeMaxHeight();
 
-  static Future<void> setYoutubeMaxHeight(int height) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setInt(_youtubeMaxHeightKey, height);
-  }
+  static Future<void> setYoutubeMaxHeight(int height) =>
+      SocialPrefs.setYoutubeMaxHeight(height);
+
 
   /// Android TV IPTV video decoder: 'auto' | 'hardware' | 'software'.
   ///
@@ -7699,45 +7388,26 @@ class StorageService {
     await prefs.setString(_defaultFilterDynamicRangesKey, jsonEncode(ranges));
   }
 
-  // Debrify TV Filter Settings — scoped to Debrify TV only, deliberately
-  // separate from the Search tab's default filters above so tuning a channel
-  // feed never changes search behaviour (and vice versa).
-  static Future<List<String>> getDebrifyTvFilterQualities() async {
-    final prefs = await ProfilePreferences.instance();
-    final json = prefs.getString(_debrifyTvFilterQualitiesKey);
-    if (json == null) return [];
-    return List<String>.from(jsonDecode(json));
-  }
+  // Debrify TV Filter Settings — forwarding façade; bodies live on DebrifyTvPrefs.
+  static Future<List<String>> getDebrifyTvFilterQualities() =>
+      DebrifyTvPrefs.getDebrifyTvFilterQualities();
 
   static Future<void> setDebrifyTvFilterQualities(
     List<String> qualities,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_debrifyTvFilterQualitiesKey, jsonEncode(qualities));
-  }
+  ) => DebrifyTvPrefs.setDebrifyTvFilterQualities(qualities);
 
-  static Future<List<String>> getDebrifyTvFilterSizes() async {
-    final prefs = await ProfilePreferences.instance();
-    final json = prefs.getString(_debrifyTvFilterSizesKey);
-    if (json == null) return [];
-    return List<String>.from(jsonDecode(json));
-  }
+  static Future<List<String>> getDebrifyTvFilterSizes() =>
+      DebrifyTvPrefs.getDebrifyTvFilterSizes();
 
-  static Future<void> setDebrifyTvFilterSizes(List<String> sizes) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_debrifyTvFilterSizesKey, jsonEncode(sizes));
-  }
+  static Future<void> setDebrifyTvFilterSizes(List<String> sizes) =>
+      DebrifyTvPrefs.setDebrifyTvFilterSizes(sizes);
 
-  /// Whether the user dismissed the Debrify TV external-player notice forever.
-  static Future<bool> getDebrifyTvExternalNoticeDismissed() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_debrifyTvExternalNoticeDismissedKey) ?? false;
-  }
+  static Future<bool> getDebrifyTvExternalNoticeDismissed() =>
+      DebrifyTvPrefs.getDebrifyTvExternalNoticeDismissed();
 
-  static Future<void> setDebrifyTvExternalNoticeDismissed(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_debrifyTvExternalNoticeDismissedKey, value);
-  }
+  static Future<void> setDebrifyTvExternalNoticeDismissed(bool value) =>
+      DebrifyTvPrefs.setDebrifyTvExternalNoticeDismissed(value);
+
 
   // Default Torrent Provider methods
   // Returns: 'none' (ask every time), 'torbox', 'debrid', or 'pikpak'
@@ -9230,309 +8900,108 @@ class StorageService {
     await prefs.remove(_remoteLastDeviceKey);
   }
 
-  // ==========================================================================
-  // Stremio TV Settings
-  // ==========================================================================
+  // Stremio TV Settings — forwarding façade; bodies live on StremioTvPrefs.
+  static Future<int> getStremioTvRotationMinutes() =>
+      StremioTvPrefs.getStremioTvRotationMinutes();
 
-  /// Get the Stremio TV rotation interval in minutes (default: 90)
-  static Future<int> getStremioTvRotationMinutes() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getInt(_stremioTvRotationMinutesKey) ?? 90;
-  }
+  static Future<void> setStremioTvRotationMinutes(int value) =>
+      StremioTvPrefs.setStremioTvRotationMinutes(value);
 
-  /// Save the Stremio TV rotation interval in minutes
-  static Future<void> setStremioTvRotationMinutes(int value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setInt(_stremioTvRotationMinutesKey, value);
-  }
+  static Future<int> getStremioTvSeriesRotationMinutes() =>
+      StremioTvPrefs.getStremioTvSeriesRotationMinutes();
 
-  /// Get the Stremio TV series rotation interval in minutes (default: 45)
-  static Future<int> getStremioTvSeriesRotationMinutes() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getInt(_stremioTvSeriesRotationMinutesKey) ?? 45;
-  }
+  static Future<void> setStremioTvSeriesRotationMinutes(int value) =>
+      StremioTvPrefs.setStremioTvSeriesRotationMinutes(value);
 
-  /// Save the Stremio TV series rotation interval in minutes
-  static Future<void> setStremioTvSeriesRotationMinutes(int value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setInt(_stremioTvSeriesRotationMinutesKey, value);
-  }
+  static Future<bool> getStremioTvRandomEpisodes() =>
+      StremioTvPrefs.getStremioTvRandomEpisodes();
 
-  /// Get whether Stremio TV picks a random episode each time (default: false)
-  static Future<bool> getStremioTvRandomEpisodes() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_stremioTvRandomEpisodesKey) ?? false;
-  }
+  static Future<void> setStremioTvRandomEpisodes(bool value) =>
+      StremioTvPrefs.setStremioTvRandomEpisodes(value);
 
-  /// Save whether Stremio TV picks a random episode each time
-  static Future<void> setStremioTvRandomEpisodes(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_stremioTvRandomEpisodesKey, value);
-  }
+  static Future<bool> getStremioTvAutoRefresh() =>
+      StremioTvPrefs.getStremioTvAutoRefresh();
 
-  /// Get whether Stremio TV auto-refreshes catalogs (default: true)
-  static Future<bool> getStremioTvAutoRefresh() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_stremioTvAutoRefreshKey) ?? true;
-  }
+  static Future<void> setStremioTvAutoRefresh(bool value) =>
+      StremioTvPrefs.setStremioTvAutoRefresh(value);
 
-  /// Save whether Stremio TV auto-refreshes catalogs
-  static Future<void> setStremioTvAutoRefresh(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_stremioTvAutoRefreshKey, value);
-  }
+  static Future<bool> getStremioTvHideNowPlaying() =>
+      StremioTvPrefs.getStremioTvHideNowPlaying();
 
-  /// Get whether Stremio TV hides now-playing details (default: false)
-  static Future<bool> getStremioTvHideNowPlaying() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_stremioTvHideNowPlayingKey) ?? false;
-  }
+  static Future<void> setStremioTvHideNowPlaying(bool value) =>
+      StremioTvPrefs.setStremioTvHideNowPlaying(value);
 
-  /// Save whether Stremio TV hides now-playing details
-  static Future<void> setStremioTvHideNowPlaying(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_stremioTvHideNowPlayingKey, value);
-  }
+  static Future<bool> getStremioTvTorrentsFirst() =>
+      StremioTvPrefs.getStremioTvTorrentsFirst();
 
-  static Future<bool> getStremioTvTorrentsFirst() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_stremioTvTorrentsFirstKey) ?? true;
-  }
+  static Future<void> setStremioTvTorrentsFirst(bool value) =>
+      StremioTvPrefs.setStremioTvTorrentsFirst(value);
 
-  static Future<void> setStremioTvTorrentsFirst(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_stremioTvTorrentsFirstKey, value);
-  }
+  static Future<String> getStremioTvPreferredQuality() =>
+      StremioTvPrefs.getStremioTvPreferredQuality();
 
-  /// Get preferred quality for Stremio TV streams (default: 'auto')
-  /// Values: 'auto', '720p', '1080p', '2160p'
-  static Future<String> getStremioTvPreferredQuality() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_stremioTvPreferredQualityKey) ?? 'auto';
-  }
+  static Future<void> setStremioTvPreferredQuality(String value) =>
+      StremioTvPrefs.setStremioTvPreferredQuality(value);
 
-  /// Save preferred quality for Stremio TV streams
-  static Future<void> setStremioTvPreferredQuality(String value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_stremioTvPreferredQualityKey, value);
-  }
+  static Future<String> getStremioTvDebridProvider() =>
+      StremioTvPrefs.getStremioTvDebridProvider();
 
-  /// Get preferred debrid provider for Stremio TV (auto = first available)
-  static Future<String> getStremioTvDebridProvider() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_stremioTvDebridProviderKey) ?? 'auto';
-  }
+  static Future<void> setStremioTvDebridProvider(String value) =>
+      StremioTvPrefs.setStremioTvDebridProvider(value);
 
-  /// Save preferred debrid provider for Stremio TV
-  static Future<void> setStremioTvDebridProvider(String value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_stremioTvDebridProviderKey, value);
-  }
+  static Future<int> getStremioTvMaxStartPercent() =>
+      StremioTvPrefs.getStremioTvMaxStartPercent();
 
-  /// Get max start position percent for Stremio TV (0 = always from beginning, -1 = no limit)
-  static Future<int> getStremioTvMaxStartPercent() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getInt(_stremioTvMaxStartPercentKey) ?? -1;
-  }
+  static Future<void> setStremioTvMaxStartPercent(int value) =>
+      StremioTvPrefs.setStremioTvMaxStartPercent(value);
 
-  /// Save max start position percent for Stremio TV
-  static Future<void> setStremioTvMaxStartPercent(int value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setInt(_stremioTvMaxStartPercentKey, value);
-  }
+  static Future<bool> isStremioTvChannelFavorited(String channelId) =>
+      StremioTvPrefs.isStremioTvChannelFavorited(channelId);
 
-  // ==========================================================================
-  // Stremio TV Channel Favorites
-  // ==========================================================================
-
-  /// Check if a Stremio TV channel is favorited
-  static Future<bool> isStremioTvChannelFavorited(String channelId) async {
-    final prefs = await ProfilePreferences.instance();
-    final favoritesJson = prefs.getString(_stremioTvFavoriteChannelsKey);
-
-    if (favoritesJson == null) return false;
-
-    try {
-      final favorites = jsonDecode(favoritesJson) as Map<String, dynamic>;
-      return favorites.containsKey(channelId);
-    } catch (e) {
-      debugPrint('Error reading Stremio TV channel favorites: $e');
-      return false;
-    }
-  }
-
-  /// Set favorite status for a Stremio TV channel
   static Future<void> setStremioTvChannelFavorited(
     String channelId,
     bool isFavorited,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    final favoritesJson = prefs.getString(_stremioTvFavoriteChannelsKey);
+  ) => StremioTvPrefs.setStremioTvChannelFavorited(channelId, isFavorited);
 
-    Map<String, dynamic> favorites = {};
-    if (favoritesJson != null) {
-      try {
-        favorites = jsonDecode(favoritesJson) as Map<String, dynamic>;
-      } catch (_) {}
-    }
+  static Future<Set<String>> getStremioTvFavoriteChannelIds() =>
+      StremioTvPrefs.getStremioTvFavoriteChannelIds();
 
-    if (isFavorited) {
-      favorites[channelId] = true;
-    } else {
-      favorites.remove(channelId);
-    }
+  static Future<List<Map<String, dynamic>>> getStremioTvLocalCatalogs() =>
+      StremioTvPrefs.getStremioTvLocalCatalogs();
 
-    await prefs.setString(_stremioTvFavoriteChannelsKey, jsonEncode(favorites));
-  }
-
-  /// Get all favorite Stremio TV channel IDs
-  static Future<Set<String>> getStremioTvFavoriteChannelIds() async {
-    final prefs = await ProfilePreferences.instance();
-    final favoritesJson = prefs.getString(_stremioTvFavoriteChannelsKey);
-
-    if (favoritesJson == null) return {};
-
-    try {
-      final favorites = jsonDecode(favoritesJson) as Map<String, dynamic>;
-      return favorites.keys.toSet();
-    } catch (e) {
-      debugPrint('Error reading Stremio TV channel favorites: $e');
-      return {};
-    }
-  }
-
-  // ==========================================================================
-  // Stremio TV Local Catalogs
-  // ==========================================================================
-
-  /// Get all locally imported catalogs for Stremio TV.
-  static Future<List<Map<String, dynamic>>> getStremioTvLocalCatalogs() async {
-    final prefs = await ProfilePreferences.instance();
-    final json = prefs.getString(_stremioTvLocalCatalogsKey);
-    if (json == null) return [];
-
-    try {
-      final list = await decodeJsonAsync(json) as List<dynamic>;
-      return list.whereType<Map<String, dynamic>>().toList();
-    } catch (e) {
-      debugPrint('Error reading Stremio TV local catalogs: $e');
-      return [];
-    }
-  }
-
-  /// Save all locally imported catalogs for Stremio TV.
   static Future<void> setStremioTvLocalCatalogs(
     List<Map<String, dynamic>> catalogs,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    if (catalogs.isEmpty) {
-      await prefs.remove(_stremioTvLocalCatalogsKey);
-    } else {
-      await prefs.setString(_stremioTvLocalCatalogsKey, jsonEncode(catalogs));
-    }
-  }
+  ) => StremioTvPrefs.setStremioTvLocalCatalogs(catalogs);
 
-  /// Add a single local catalog. Returns false if a catalog with the same ID
-  /// already exists.
   static Future<bool> addStremioTvLocalCatalog(
     Map<String, dynamic> catalog,
-  ) async {
-    final existing = await getStremioTvLocalCatalogs();
-    final id = catalog['id'] as String?;
-    if (id == null) return false;
-    if (existing.any((c) => c['id'] == id)) return false;
-    existing.add(catalog);
-    await setStremioTvLocalCatalogs(existing);
-    return true;
-  }
+  ) => StremioTvPrefs.addStremioTvLocalCatalog(catalog);
 
-  /// Remove a local catalog by its ID.
-  static Future<void> removeStremioTvLocalCatalog(String catalogId) async {
-    final existing = await getStremioTvLocalCatalogs();
-    existing.removeWhere((c) => c['id'] == catalogId);
-    await setStremioTvLocalCatalogs(existing);
-  }
+  static Future<void> removeStremioTvLocalCatalog(String catalogId) =>
+      StremioTvPrefs.removeStremioTvLocalCatalog(catalogId);
 
-  /// Update an existing local catalog by its ID (replaces the entry in-place).
   static Future<bool> updateStremioTvLocalCatalog(
     Map<String, dynamic> catalog,
-  ) async {
-    final existing = await getStremioTvLocalCatalogs();
-    final id = catalog['id'] as String?;
-    if (id == null) return false;
-    final idx = existing.indexWhere((c) => c['id'] == id);
-    if (idx < 0) return false;
-    existing[idx] = catalog;
-    await setStremioTvLocalCatalogs(existing);
-    return true;
-  }
+  ) => StremioTvPrefs.updateStremioTvLocalCatalog(catalog);
 
-  // --------------------------------------------------------------------------
-  // Stremio TV Catalog Repo URLs
-  // --------------------------------------------------------------------------
+  static Future<List<String>> getStremioTvCatalogRepoUrls() =>
+      StremioTvPrefs.getStremioTvCatalogRepoUrls();
 
-  /// Get saved catalog repository URLs.
-  static Future<List<String>> getStremioTvCatalogRepoUrls() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getStringList(_stremioTvCatalogRepoUrlsKey) ?? [];
-  }
+  static Future<void> setStremioTvCatalogRepoUrls(List<String> urls) =>
+      StremioTvPrefs.setStremioTvCatalogRepoUrls(urls);
 
-  /// Set catalog repository URLs.
-  static Future<void> setStremioTvCatalogRepoUrls(List<String> urls) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setStringList(_stremioTvCatalogRepoUrlsKey, urls);
-  }
+  static Future<bool> addStremioTvCatalogRepoUrl(String url) =>
+      StremioTvPrefs.addStremioTvCatalogRepoUrl(url);
 
-  /// Add a catalog repository URL. Returns false if already present.
-  static Future<bool> addStremioTvCatalogRepoUrl(String url) async {
-    final urls = await getStremioTvCatalogRepoUrls();
-    if (urls.contains(url)) return false;
-    urls.add(url);
-    await setStremioTvCatalogRepoUrls(urls);
-    return true;
-  }
+  static Future<void> removeStremioTvCatalogRepoUrl(String url) =>
+      StremioTvPrefs.removeStremioTvCatalogRepoUrl(url);
 
-  /// Remove a catalog repository URL.
-  static Future<void> removeStremioTvCatalogRepoUrl(String url) async {
-    final urls = await getStremioTvCatalogRepoUrls();
-    urls.remove(url);
-    await setStremioTvCatalogRepoUrls(urls);
-  }
+  static Future<Set<String>> getStremioTvDisabledFilters() =>
+      StremioTvPrefs.getStremioTvDisabledFilters();
 
-  // ==========================================================================
-  // Stremio TV Channel Filters
-  // ==========================================================================
+  static Future<void> setStremioTvDisabledFilters(Set<String> disabled) =>
+      StremioTvPrefs.setStremioTvDisabledFilters(disabled);
 
-  static const String _stremioTvDisabledChannelFiltersKey =
-      'stremio_tv_disabled_channel_filters_v1';
-
-  /// Get set of disabled channel filter IDs (addon, catalog, or genre level).
-  static Future<Set<String>> getStremioTvDisabledFilters() async {
-    final prefs = await ProfilePreferences.instance();
-    final json = prefs.getString(_stremioTvDisabledChannelFiltersKey);
-    if (json == null) return {};
-
-    try {
-      final list = jsonDecode(json) as List<dynamic>;
-      return list.cast<String>().toSet();
-    } catch (e) {
-      debugPrint('Error reading Stremio TV disabled filters: $e');
-      return {};
-    }
-  }
-
-  /// Save set of disabled channel filter IDs.
-  static Future<void> setStremioTvDisabledFilters(Set<String> disabled) async {
-    final prefs = await ProfilePreferences.instance();
-    if (disabled.isEmpty) {
-      await prefs.remove(_stremioTvDisabledChannelFiltersKey);
-    } else {
-      await prefs.setString(
-        _stremioTvDisabledChannelFiltersKey,
-        jsonEncode(disabled.toList()),
-      );
-    }
-  }
 
   static const String _catalogSearchDisabledAddonsKey =
       'catalog_search_disabled_addons_v1';

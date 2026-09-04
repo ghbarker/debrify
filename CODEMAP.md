@@ -106,11 +106,14 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   extra rows, order, hero source, tick sources, Home hero-trailer, `tv_home_style`) also
   live in `lib/services/storage/home_prefs.dart` (`HomePrefs`); StorageService forwards
   and re-exports `HomeCardOrientation`, `HomeHeroSourceMode`, `HomeHeroSource`,
-  `HomeExtraRow`. Key ownership pin: `lib/services/storage/storage_key_ownership.dart`
+  `HomeExtraRow`. **S2-1:** Stremio TV, social (reddit/lemmy/youtube), and Debrify TV
+  prefs live in `lib/services/storage/stremio_tv_prefs.dart` (`StremioTvPrefs`),
+  `social_prefs.dart` (`SocialPrefs`), and `debrify_tv_prefs.dart` (`DebrifyTvPrefs`);
+  StorageService forwards. Key ownership pin: `lib/services/storage/storage_key_ownership.dart`
   (`byKey` — every declared / inline / interpolated prefs name, one store).
   **Façade rule (S2-0):** `StorageService.x` stays a forwarding façade until callers
   move; `@Deprecated` waits for Q2; encodings and key **strings** are frozen.
-  Remaining domains stay on StorageService until S2-1…S2-7 (not PlayerPrefs here).
+  Remaining domains stay on StorageService until S2-2…S2-7 (not PlayerPrefs here).
 - **`lib/services/torrent_playback_service.dart`** 🔴 — provider-agnostic play/add/bind pipeline.
   Magnet add, hashless bound replay, download-picker lazy URLs, launcher/TV
   unlock, in-app player unlock, and Stremio TV torrent resolve go through
@@ -329,12 +332,15 @@ is an editor mirror, not the source of truth. How to add a provider:
   (`HomePrefs`, `HomeCardOrientation`, `HomeHeroSourceMode`, `HomeHeroSource`,
   `HomeExtraRow`) owns Home page-default keys plus remaining Home keys
   (`home_disabled_sections_v1`, extra rows, order, hero source, tick sources, Home
-  hero-trailer, `tv_home_style`); `lib/services/storage/cloud_secret_prefs.dart` owns
+  hero-trailer, `tv_home_style`); `lib/services/storage/stremio_tv_prefs.dart`
+  (`StremioTvPrefs`); `lib/services/storage/social_prefs.dart` (`SocialPrefs`);
+  `lib/services/storage/debrify_tv_prefs.dart` (`DebrifyTvPrefs`, including
+  `engine_tv_` / `debrify_tv_use_` prefix families); `lib/services/storage/cloud_secret_prefs.dart` owns
   credential keys; `lib/services/storage/storage_key_ownership.dart` `byKey` asserts
   each declared / inline / interpolated prefs name has exactly one owner. Callers
   still import `StorageService` (façade until callers move; `@Deprecated` in Q2).
-  S2-1 next (`stremio_tv_prefs` / `social_prefs` / `debrify_tv_prefs`). PlayerPrefs
-  is S2-3.
+  S2-2 next (`provider_credential_prefs`). PlayerPrefs is S2-3. `debrify_tv_style` /
+  `debrify_tv_player_style` stay on StorageService until S2-4.
 - Collections (imported Nuvio/Xperience-style folder groups → Home rows of folder tiles):
   `lib/models/home_collection.dart` (schema + parser + `collection:<id>` row ids),
   `lib/services/home_collections_store.dart` (`home_collections_v1`, file/URL/paste import, addon
