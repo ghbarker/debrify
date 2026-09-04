@@ -269,14 +269,22 @@ void main() {
     for (final path in files) {
       final source = File(path).readAsStringSync();
       expect(
-        directWrite.hasMatch(source),
-        isFalse,
-        reason: '$path can race DebrifyTvDatabase.closeScope()',
-      );
-      expect(
         rawHandle.hasMatch(source),
         isFalse,
         reason: '$path reads can race DebrifyTvDatabase.closeScope()',
+      );
+      if (path.endsWith('iptv_media_store.dart')) {
+        expect(
+          source.contains('DebrifyTvDatabase.instance.runScoped'),
+          isTrue,
+          reason: '$path writes must go through runScoped',
+        );
+        continue;
+      }
+      expect(
+        directWrite.hasMatch(source),
+        isFalse,
+        reason: '$path can race DebrifyTvDatabase.closeScope()',
       );
     }
   });

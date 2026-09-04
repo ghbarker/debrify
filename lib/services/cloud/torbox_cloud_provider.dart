@@ -23,7 +23,7 @@ import 'magic_tv_playable.dart';
 import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
-class TorboxCloudProvider implements CloudProviderPort {
+class TorboxCloudProvider extends CloudProviderAdapter {
   const TorboxCloudProvider();
 
   @override
@@ -235,11 +235,11 @@ class TorboxCloudProvider implements CloudProviderPort {
     final webDownloadId = entry.torboxWebDownloadId;
     final fileId = entry.torboxFileId;
     if (fileId == null || (torrentId == null && webDownloadId == null)) {
-      throw Exception('Torbox file metadata missing');
+      throw const CloudMetadataMissing('Torbox file metadata missing');
     }
     final apiKey = await CloudCredentials.apiKey(id);
     if (apiKey == null || apiKey.isEmpty) {
-      throw Exception('Missing Torbox API key');
+      throw const CloudMissingApiKey('Missing Torbox API key');
     }
     final String url;
     if (webDownloadId != null) {
@@ -478,7 +478,12 @@ class TorboxCloudProvider implements CloudProviderPort {
   @override
   Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
     MagicTvPrepareRequest request,
-  ) async => null;
+  ) {
+    throw const CloudUnsupported(
+      CloudProviderId.torbox,
+      CloudPortFeature.magicTvLockedLinks,
+    );
+  }
 
   static int? _asIntMapValue(dynamic data, String key) {
     if (data is Map<String, dynamic>) {

@@ -1,4 +1,5 @@
 import 'package:debrify/models/torrent.dart';
+import 'package:debrify/services/cloud/cloud_port_feature.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
 import 'package:debrify/services/cloud/cloud_provider_registry.dart';
 import 'package:debrify/services/cloud/magic_tv_prepare_args.dart';
@@ -84,7 +85,8 @@ void main() {
       ),
       isNull,
     );
-    expect(debrid.magicTvCount, 1);
+    expect(debrid.magicTvCount, 0);
+    expect(debrid.supports(CloudPortFeature.magicTvPrepare), isFalse);
     expect(torbox.magicTvCount, 0);
   });
 
@@ -120,7 +122,35 @@ void main() {
       ),
       isNull,
     );
-    expect(alldebrid.magicTvCount, 1);
+    expect(alldebrid.magicTvCount, 0);
+    expect(alldebrid.supports(CloudPortFeature.magicTvPrepare), isFalse);
     expect(torbox.magicTvCount, 0);
+  });
+
+  test('supported miss is a call; unsupported is not', () async {
+    expect(
+      await CloudProviderRegistry.instance.prepareMagicTv(
+        provider: 'torbox',
+        request: _req(),
+      ),
+      isA<MagicTvPrepared>(),
+    );
+    torbox.magicTvResult = null;
+    expect(
+      await CloudProviderRegistry.instance.prepareMagicTv(
+        provider: 'torbox',
+        request: _req(),
+      ),
+      isNull,
+    );
+    expect(torbox.magicTvCount, 2);
+    expect(
+      await CloudProviderRegistry.instance.prepareMagicTv(
+        provider: 'debrid',
+        request: _req(),
+      ),
+      isNull,
+    );
+    expect(debrid.magicTvCount, 0);
   });
 }

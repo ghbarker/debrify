@@ -15,13 +15,13 @@ import '../episode_tile.dart';
 import '../../services/tvmaze_service.dart';
 import '../../services/local_bound_source_service.dart';
 import '../../services/series_source_service.dart';
-import '../../services/cloud/cloud_provider_chrome.dart';
+import '../cloud_provider_chrome.dart';
+import '../../screens/cloud/cloud_browse_select_source.dart';
 import '../../services/storage_service.dart';
 import '../../screens/catalog_item_detail_screen.dart';
 import '../../screens/debrify_tv/widgets/tv_focus_scroll_wrapper.dart';
 import '../../screens/stremio_tv/widgets/stremio_tv_catalog_picker_dialog.dart';
 import '../add_source_picker_dialog.dart';
-import '../cloud_browse_select_source.dart';
 import '../../utils/tv_keys.dart';
 
 /// Trakt list type options

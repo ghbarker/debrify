@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-import '../services/cloud/cloud_provider_chrome.dart';
+import 'cloud_provider_chrome.dart';
 import '../services/cloud/cloud_provider_id.dart';
 
 /// Full-screen add-to-debrid overlay (replaces the old dialog spinner).

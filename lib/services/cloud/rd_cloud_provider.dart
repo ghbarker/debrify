@@ -11,13 +11,14 @@ import '../debrid_service.dart';
 import '../main_page_bridge.dart';
 import '../series_source_service.dart';
 import 'cloud_credentials.dart';
+import 'cloud_exceptions.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
 import 'cloud_provider_port.dart';
 import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
-class RealDebridCloudProvider implements CloudProviderPort {
+class RealDebridCloudProvider extends CloudProviderAdapter {
   const RealDebridCloudProvider();
 
   @override
@@ -137,7 +138,7 @@ class RealDebridCloudProvider implements CloudProviderPort {
   Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
     final apiKey = await CloudCredentials.apiKey(id);
     if (apiKey == null || apiKey.isEmpty) {
-      throw Exception('Missing Real Debrid API key');
+      throw const CloudMissingApiKey('Missing Real Debrid API key');
     }
     final unrestrictResult = await DebridService.unrestrictLink(
       apiKey,
@@ -326,9 +327,12 @@ class RealDebridCloudProvider implements CloudProviderPort {
   }
 
   @override
-  Future<MagicTvPrepared?> prepareMagicTv(
-    MagicTvPrepareRequest request,
-  ) async => null;
+  Future<MagicTvPrepared?> prepareMagicTv(MagicTvPrepareRequest request) {
+    throw const CloudUnsupported(
+      CloudProviderId.debrid,
+      CloudPortFeature.magicTvPrepare,
+    );
+  }
 
   @override
   Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(

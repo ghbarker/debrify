@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../series_source_service.dart';
-import 'cloud_provider_id.dart';
+import '../services/cloud/cloud_provider_id.dart';
+import '../services/series_source_service.dart';
 
 /// Flutter colors/icons. String identity lives on [CloudProviderId].
 ///

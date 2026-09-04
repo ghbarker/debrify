@@ -14,8 +14,9 @@ void main() {
   testWidgets('Debrify app smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const DebrifyApp());
-
-    // Verify that the app loads without errors
     expect(find.byType(MaterialApp), findsOneWidget);
+    // Migrations time-box at 4s; Home splash safety valve is 10s.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(seconds: 10));
   });
 }

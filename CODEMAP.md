@@ -25,18 +25,20 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   Stremio TV uses `resolveStremioTorrent` (`realdebrid` + auto order with
   PikPak before Premiumize; null on miss). Debrify TV file prepare is
   `prepareMagicTv` (`real_debrid`; infohash-only magnet; random unseen file;
-  RD/AllDebrid return null). Locked-link queues are
+  RD/AllDebrid `supports(magicTvPrepare)` is false). Locked-link queues are
   `prepareMagicTvLockedLinks` (still-locked URLs; RD re-queues the torrent,
   AllDebrid expands leftover files). Player-screen unlock is
   `unlockPlayerScreenEntry` (wraps HTTP as `Torbox link failed`; incomplete
   Premiumize throws). Playlist JSON, labels,
   and download credential keys live there too. Bind-source PM/AD/PP browsers:
-  `widgets/cloud_browse_select_source.dart`.
+  `screens/cloud/cloud_browse_select_source.dart`.
   Cloud credential keys live in `CloudSecretPrefs` (must match
   `CloudProviderId.credentialKey`); `StorageService` remains the public
   static API. Display names / chips / overlay titles live on
-  `CloudProviderId`; `CloudProviderChrome` is Flutter colors/icons plus
-  non-cloud loader ids.
+  `CloudProviderId`; `CloudProviderChrome` (`widgets/cloud_provider_chrome.dart`)
+  is Flutter colors/icons plus non-cloud loader ids. Strangler policy is
+  documented here; `.cursor/rules/debrify-refactor.mdc` is an editor
+  mirror, not the source of truth.
 - **`main.dart`** — app shell + nav branch (TV rail / desktop rail / `MobileFloatingNav`), tab indices.
 
 ## Search, sources & addons
@@ -55,11 +57,31 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   `widgets/torrent_result_row.dart`; source picker: `screens/video_player/widgets/source_sheet.dart`.
 
 ## Debrid providers & cloud
-- Provider clients: `services/debrid_service.dart` (Real-Debrid), `services/torbox_service.dart`,
-  `services/premiumize_service.dart`, `services/alldebrid_service.dart`, `services/pikpak_api_service.dart`.
-  **No shared provider interface** — each is hand-wired via string-keyed switches (see hubs +
-  `download_service.dart`, `magnet_link_handler.dart`, `backup_restore_service.dart`, pickers, settings).
-  AllDebrid is the newest = the template for adding a provider.
+- Playback adapters: `services/cloud/cloud_provider_port.dart` (`CloudProviderPort`)
+  plus `rd_cloud_provider.dart` / `torbox_cloud_provider.dart` /
+  `premiumize_cloud_provider.dart` / `alldebrid_cloud_provider.dart` /
+  `pikpak_cloud_provider.dart`, dispatched by `cloud_provider_registry.dart`.
+  Lookup dialects stay split: `tryParse` vs `fromStoredId` vs `fromPlaybackId`.
+  `CloudPortFeature.forProvider` / `CloudProviderPort.supports` is "this adapter
+  implements that method"; a null return from a supported method is a miss.
+  HTTP clients remain in
+  `services/debrid_service.dart` (Real-Debrid), `services/torbox_service.dart`,
+  `services/premiumize_service.dart`, `services/alldebrid_service.dart`,
+  `services/pikpak_api_service.dart`.
+  Playlist unlock classification is `CloudUnlockPlan` (one lane order;
+  launcher vs player differ only at incomplete Premiumize and empty
+  `restrictedLink`). Player-screen HTTP wrap is typed
+  (`CloudMetadataMissing` / `CloudMissingApiKey` rethrow; other errors
+  become `$brand link failed`) — not substring matching.
+
+  **Still on string switches** (not this extract): Stremio TV *availability*
+  gates (`stremio_tv_screen` `_loadAvailableProviders`: RD/TB key-only,
+  PikPak enabled-only, PM/AD toggle+key — not `isConfigured()`), Debrify TV
+  RD/AllDebrid `downloadLink` PreferVideos on `magic_tv_screen`, launcher
+  Real-Debrid spellings, bulk-add, `storage_service` provider toggles,
+  magnet deep-link `isMagnetConfigured` vs playback `isConfigured`.
+  Playback still exposes one-line delegates onto the registry so god-file
+  call sites do not change.
 - File-tree browse (per provider, post-add): `debrid_service.getTorrentFolderTree`,
   `utils/{rd,torbox}_folder_tree_builder.dart`, `screens/playlist_content_view_screen.dart`.
 - Cloud/downloads screens: `screens/{debrid_downloads,torbox/torbox_downloads,pikpak/pikpak_files,`
@@ -86,6 +108,8 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 ## Debrify TV (keyword channels)
 - `screens/magic_tv_screen.dart` 🔴 (favourites are an unordered `Set`; literal keyword match
   `_parseKeywords`; per-provider native launch `_launch{RealDebrid,Torbox}OnAndroidTv`).
+  Default pick / overlay strings: `services/cloud/magic_tv_provider.dart`
+  (`playbackPrecedence` mapped to `real_debrid`; display stays `Torbox` / `Real Debrid`).
 - Data: `models/debrify_tv/*`, `services/debrify_tv_{repository,database,cache_service,channel_add_service}.dart`,
   `services/debrify_tv_zip_importer.dart`. Dialogs: `screens/debrify_tv/*`.
 

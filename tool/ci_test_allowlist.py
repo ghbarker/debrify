@@ -51,18 +51,14 @@ def repo_test_path(url: str | None) -> str:
 
 
 def is_allowlisted(path: str, name: str, allow: set[tuple[str, str]]) -> bool:
-    if name in {allowed_name for _, allowed_name in allow}:
-        return True
-    for allowed_path, allowed_name in allow:
-        if name != allowed_name:
-            continue
-        if path == allowed_path:
-            return True
-        if path.endswith(allowed_path) or allowed_path.endswith(path):
-            return True
-        if path.endswith(allowed_path.split("/")[-1]):
-            return True
-    return False
+    """Exact path + name only. A matching name in another file is a NEW failure."""
+    return (path, name) in allow
+
+
+def unused_allowlist(
+    allow: set[tuple[str, str]], failed: list[tuple[str, str]]
+) -> list[tuple[str, str]]:
+    return sorted(allow - set(failed))
 
 
 def parse_report(text: str) -> list[tuple[str, str]]:
@@ -114,16 +110,14 @@ def main() -> int:
     failed = parse_report(REPORT.read_text(encoding="utf-8"))
     unexpected = [item for item in failed if not is_allowlisted(*item, allow)]
     matched = [item for item in failed if is_allowlisted(*item, allow)]
-    unused = sorted(
-        allow
-        - {(path, name) for path, name in failed if is_allowlisted(path, name, allow)}
-    )
+    unused = unused_allowlist(allow, failed)
 
     print(f"Allowlisted failures: {len(matched)}/{len(allow)}")
     if unused:
-        print("Allowlist entries that did not fail (safe to delete later):")
+        print("UNUSED allowlist entries (must still fail, or delete them):")
         for path, name in unused:
             print(f"  {path} :: {name}")
+        return 1
     if unexpected:
         print("NEW failures (not in test/BASELINE_ALLOWLIST.txt):")
         for path, name in unexpected:
