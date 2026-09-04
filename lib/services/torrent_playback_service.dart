@@ -43,6 +43,7 @@ import 'cloud/cloud_provider_registry.dart';
 import 'cloud/pack_negative_cache.dart';
 import 'cloud/playback_cache_first.dart';
 import 'debrid_service.dart';
+import 'playback_service_dispatch.dart';
 import 'debrify_tv_channel_add_service.dart';
 import 'download_service.dart';
 import 'local_bound_source_service.dart';
@@ -654,7 +655,7 @@ class TorrentPlaybackService {
                 (t) => t.streamType == StreamType.torrent && _hasAcquisition(t),
               )
               .toList();
-          if (strictProvider == 'torbox' || strictProvider == 'premiumize') {
+          if (PlaybackServiceDispatch.hasCacheCheck(strictProvider)) {
             ov ??= _showPipeline(
               context,
               provider: strictProvider,
@@ -712,9 +713,9 @@ class TorrentPlaybackService {
         // PikPak's one-probe safety is per PLAY, not per `_probeCandidates`
         // invocation. Keep walking so a later direct link can still play, but
         // never queue a second cloud download during this exact-order pass.
-        if (strictProvider == 'pikpak' && pikPakTorrentProbed) continue;
+        if (PlaybackServiceDispatch.oneProbeSafety(strictProvider) && pikPakTorrentProbed) continue;
         attempts++;
-        if (strictProvider == 'pikpak') pikPakTorrentProbed = true;
+        if (PlaybackServiceDispatch.oneProbeSafety(strictProvider)) pikPakTorrentProbed = true;
         ov ??= _showPipeline(
           context,
           provider: strictProvider,
@@ -857,7 +858,7 @@ class TorrentPlaybackService {
     );
     final loader = ov;
     loader.setStage(PlayLoadStage.searching, sourceCount: candidates.length);
-    if (prov == 'torbox' || prov == 'premiumize') {
+    if (PlaybackServiceDispatch.hasCacheCheck(prov)) {
       loader.setStage(PlayLoadStage.cacheCheck);
       candidates = await _cacheFirst(prov, candidates);
       // One cache call for the whole list, then a stable tier re-sort:
@@ -1002,7 +1003,7 @@ class TorrentPlaybackService {
     required int maxRetries,
     int minAttempts = 1,
   }) {
-    if (prov == 'pikpak') return 1;
+    if (PlaybackServiceDispatch.oneProbeSafety(prov)) return 1;
     final base = tryMultiple ? maxRetries.clamp(1, 10) : 1;
     return base < minAttempts ? minAttempts : base;
   }
@@ -1050,7 +1051,7 @@ class TorrentPlaybackService {
     if (singleIdx <= 0) return (candidates, 1);
     final list = List.of(candidates);
     final single = list.removeAt(singleIdx);
-    if (provider == 'pikpak') {
+    if (PlaybackServiceDispatch.oneProbeSafety(provider)) {
       list.insert(0, single);
       return (list, 1);
     }
@@ -1112,12 +1113,12 @@ class TorrentPlaybackService {
             // Delete the fresh RD/PikPak entry this probe created so skips
             // don't pile up orphans (TorBox/AllDebrid dedup the add; Premiumize
             // adds nothing), matching _playViaBound's cleanup.
-            if (prov == 'debrid' && (r.rdTorrentId?.isNotEmpty ?? false)) {
+            if (PlaybackServiceDispatch.deletesRdOrphan(prov) && (r.rdTorrentId?.isNotEmpty ?? false)) {
               try {
                 final apiKey = (await StorageService.getApiKey()) ?? '';
                 await DebridService.deleteTorrent(apiKey, r.rdTorrentId!);
               } catch (_) {}
-            } else if (prov == 'pikpak' &&
+            } else if (PlaybackServiceDispatch.deletesPikPakOrphan(prov) &&
                 (r.pikpakFileId?.isNotEmpty ?? false)) {
               try {
                 await PikPakApiService.instance.batchDeleteFiles([
@@ -1513,7 +1514,7 @@ class TorrentPlaybackService {
         !isMovie &&
         season != null &&
         episode != null &&
-        provider != 'pikpak' &&
+        !PlaybackServiceDispatch.skipSeriesTorrentPin(provider) &&
         !_recentlyNoPack(imdbId, season, provider, activeRules) &&
         activeRules.packPreference != QuickPlayPackPreference.exactEpisodeOnly;
 
@@ -2070,7 +2071,7 @@ class TorrentPlaybackService {
     packs = orderCandidatesForRules(packs, rules: activeRules, ladder: ladder);
     if (isCancelled?.call() ?? false) return packs;
     if (packs.isNotEmpty &&
-        (provider == 'torbox' || provider == 'premiumize')) {
+        PlaybackServiceDispatch.hasCacheCheck(provider)) {
       onCacheCheck?.call();
       packs = await _cacheFirst(provider, packs);
       // Exact/provider-order profiles keep cached hits globally first. Other
@@ -2541,7 +2542,7 @@ class TorrentPlaybackService {
     );
 
     // 3. RD blocked-keyword filter (RD provider + setting enabled).
-    if (provider == 'debrid' &&
+    if (PlaybackServiceDispatch.isDebrid(provider) &&
         await StorageService.getRdSkipBlockedTorrents()) {
       final unblocked = out.where((t) => !isRdBlockedTorrent(t.name)).toList();
       if (unblocked.isNotEmpty) out = unblocked;
@@ -2594,7 +2595,7 @@ class TorrentPlaybackService {
 
     out = out.where(coversSeason).toList();
 
-    if (provider == 'debrid' &&
+    if (PlaybackServiceDispatch.isDebrid(provider) &&
         await StorageService.getRdSkipBlockedTorrents()) {
       out = out.where((t) => !isRdBlockedTorrent(t.name)).toList();
     }
@@ -2859,24 +2860,14 @@ class TorrentPlaybackService {
   /// storage) but `'debrid'` as this service's provider key. Map between them so
   /// bindings created in Home replay here and vice-versa.
   static String _providerFromStored(String stored) =>
-      CloudProviderId.playbackIdFromStored(stored);
+      PlaybackServiceDispatch.providerFromStored(stored);
   static String storedProviderKey(String provider) =>
-      CloudProviderId.storedIdFromPlayback(provider);
+      PlaybackServiceDispatch.storedProviderKey(provider);
 
   /// Providers whose bound sources this isolated engine can replay — the five
   /// debrid providers plus 'local' (on-device file/folder).
-  static bool _boundProviderSupported(String stored) {
-    const supported = {
-      'rd',
-      'torbox',
-      'premiumize',
-      'alldebrid',
-      'pikpak',
-      SeriesSource.localService,
-      SeriesSource.addonDirectService,
-    };
-    return supported.contains(stored);
-  }
+  static bool _boundProviderSupported(String stored) =>
+      PlaybackServiceDispatch.boundProviderSupported(stored);
 
   /// Resolve a 'local' bound source (on-device movie file or series folder) into
   /// a playable [_Resolved]. Self-heals (removes) a source whose file/folder is
@@ -3336,14 +3327,14 @@ class TorrentPlaybackService {
             // add to an existing entry (deleting could break other bindings)
             // and Premiumize adds nothing, so those are left alone.
             if (!nativeCloud &&
-                prov == 'debrid' &&
+                PlaybackServiceDispatch.deletesRdOrphan(prov) &&
                 (r.rdTorrentId?.isNotEmpty ?? false)) {
               try {
                 final apiKey = (await StorageService.getApiKey()) ?? '';
                 await DebridService.deleteTorrent(apiKey, r.rdTorrentId!);
               } catch (_) {}
             } else if (!nativeCloud &&
-                prov == 'pikpak' &&
+                PlaybackServiceDispatch.deletesPikPakOrphan(prov) &&
                 (r.pikpakFileId?.isNotEmpty ?? false)) {
               try {
                 await PikPakApiService.instance.batchDeleteFiles([
@@ -3965,7 +3956,8 @@ class TorrentPlaybackService {
         // Consistent with the pack-first block: the whole auto-pin feature is
         // off for PikPak (its bindings re-queue real downloads on each replay),
         // so a stale-true pref after switching default to PikPak stays inert.
-        (winner.streamType == StreamType.torrent && provider == 'pikpak')) {
+        (winner.streamType == StreamType.torrent &&
+            PlaybackServiceDispatch.skipSeriesTorrentPin(provider))) {
       return;
     }
     final source = _durableBindingForSource(winner, provider);
@@ -4531,7 +4523,7 @@ class TorrentPlaybackService {
         (meta.season == null ||
             meta.episode == null ||
             (switched.streamType == StreamType.torrent &&
-                provider == 'pikpak'))) {
+                PlaybackServiceDispatch.skipSeriesTorrentPin(provider)))) {
       return;
     }
     final source = _durableBindingForSource(switched, provider);
@@ -4923,7 +4915,7 @@ class TorrentPlaybackService {
         ),
         // TorBox power actions: download the whole-torrent ZIP to device, or
         // copy its permalink (parity with the old screen's TorBox download menu).
-        if (provider == 'torbox' && r.torboxTorrentId != null) ...[
+        if (PlaybackServiceDispatch.showTorboxPowerActions(provider) && r.torboxTorrentId != null) ...[
           DebridActionItem(
             icon: Icons.folder_zip_rounded,
             color: const Color(0xFFA78BFA),
@@ -4943,7 +4935,7 @@ class TorrentPlaybackService {
           ),
         ],
         // Premiumize power actions (need the magnet — cloud transfer + ZIP).
-        if (provider == 'premiumize' && magnet != null) ...[
+        if (PlaybackServiceDispatch.showPremiumizePowerActions(provider) && magnet != null) ...[
           DebridActionItem(
             icon: Icons.cloud_upload_rounded,
             color: const Color(0xFFF59E0B),
@@ -5013,7 +5005,9 @@ class TorrentPlaybackService {
     final zipLink = await CloudProviderRegistry.instance.zipPermalink(torrentId);
     try {
       await DownloadService.instance.enqueueDownload(
-        credentialKey: 'torbox_api_key',
+        credentialKey: DownloadService.credentialKeyForCloudProvider(
+          CloudProviderId.torbox.playbackId,
+        ),
         url: zipLink,
         fileName: '$torrentName.zip',
         torrentName: torrentName,
@@ -5092,7 +5086,7 @@ class TorrentPlaybackService {
       } else {
         await DownloadService.instance.enqueueDownload(
           credentialKey: DownloadService.credentialKeyForCloudProvider(
-            'premiumize',
+            CloudProviderId.premiumize.playbackId,
           ),
           url: zipUrl,
           fileName: '$torrentName.zip',
@@ -5274,7 +5268,7 @@ class TorrentPlaybackService {
       providerCode: _providerCode(provider),
       providerColor: _providerGradient(provider).first,
       bound: bound,
-      hasCacheCheck: provider == 'torbox' || provider == 'premiumize',
+      hasCacheCheck: PlaybackServiceDispatch.hasCacheCheck(provider),
       // The loader is a dark cinematic plate on every theme (black Material,
       // black-at-alpha scrims), so its ink is `onGlass`, never page ink.
       // `inkOnFill` is already contrast-scored against the accent it sits on.

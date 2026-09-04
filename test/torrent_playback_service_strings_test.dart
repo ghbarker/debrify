@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:debrify/models/torrent.dart';
 import 'package:debrify/models/torrent_filter_state.dart';
 import 'package:debrify/services/cloud/cloud_capabilities.dart';
@@ -294,5 +296,38 @@ void main() {
       expect(CloudProviderId.torbox.credentialKey, 'torbox_api_key');
       expect(CloudProviderId.premiumize.credentialKey, 'premiumize_api_key');
     });
+  });
+
+  test('owned file has no provider-id string literals outside comments', () {
+    const path = 'lib/services/torrent_playback_service.dart';
+    final source = File(path).readAsStringSync();
+    final withoutBlock = source.replaceAll(
+      RegExp(r'/\*.*?\*/', dotAll: true),
+      '',
+    );
+    final withoutLine = withoutBlock
+        .split('\n')
+        .where((line) => !line.trimLeft().startsWith('//'))
+        .join('\n');
+    final hits = RegExp(
+      r"'(realdebrid|real_debrid|torbox|premiumize|alldebrid|pikpak)'",
+    ).allMatches(withoutLine).map((m) => m.group(0)).toList();
+    expect(hits, isEmpty, reason: '$path string-match leftovers: $hits');
+    expect(source.contains('PlaybackServiceDispatch.hasCacheCheck'), isTrue);
+    expect(source.contains('PlaybackServiceDispatch.oneProbeSafety'), isTrue);
+    expect(
+      source.contains('PlaybackServiceDispatch.boundProviderSupported'),
+      isTrue,
+    );
+    expect(
+      source.contains('PlaybackServiceDispatch.showTorboxPowerActions'),
+      isTrue,
+    );
+    expect(
+      source.contains('PlaybackServiceDispatch.showPremiumizePowerActions'),
+      isTrue,
+    );
+    expect(source.contains('CloudProviderId.premiumize.playbackId'), isTrue);
+    expect(source.contains('CloudProviderId.torbox.playbackId'), isTrue);
   });
 }
