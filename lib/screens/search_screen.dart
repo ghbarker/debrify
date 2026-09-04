@@ -33,6 +33,8 @@ import '../services/episode_artwork_service.dart';
 import '../services/home_collection_rows.dart';
 import '../services/home_collections_store.dart';
 import '../services/home_list_rows.dart';
+import '../services/home/home_row_family.dart';
+import '../services/home/home_row_registry.dart';
 import '../services/home_row_order.dart';
 import '../services/filtered_catalog_pager.dart';
 import '../services/hide_watched_prefs.dart';
@@ -3390,11 +3392,14 @@ class _SearchScreenState extends State<SearchScreen>
     };
   }
 
-  String _sectionRowId(CatalogSection section) => section is HomeListSection
-      ? section.rowId
-      : section is HomeCollectionSection
-      ? section.rowId
-      : '${section.addon.id}:${section.catalog.type}:${section.catalog.id}';
+  String _sectionRowId(CatalogSection section) => HomeRowRegistry.sectionRowId(
+      listRowId: section is HomeListSection ? section.rowId : null,
+      collectionRowId:
+          section is HomeCollectionSection ? section.rowId : null,
+      addonId: section.addon.id,
+      catalogType: section.catalog.type,
+      catalogId: section.catalog.id,
+    );
 
   String _catalogRefRowId((StremioAddon, StremioAddonCatalog) ref) =>
       '${ref.$1.id}:${ref.$2.type}:${ref.$2.id}';
@@ -7348,23 +7353,29 @@ class _SearchScreenState extends State<SearchScreen>
   /// one view is ever mounted, and reuse keeps node counts synced through
   /// paging for free.
   List<_CanvasRail> get _canonicalCanvasRails {
-    final rails = <_CanvasRail>[];
+    final railsById = <String, _CanvasRail>{};
     if (_cwVisible) {
       final cwRows = _cwRows;
       for (var i = 0; i < cwRows.length; i++) {
         if (cwRows[i].items.isEmpty) continue;
-        rails.add(_CanvasRail(cw: cwRows[i], cwIndex: i));
+        railsById[cwRows[i].rowId] = _CanvasRail(cw: cwRows[i], cwIndex: i);
       }
     }
     for (final ref in _favRowKinds) {
       if (_canvasFavItemCount(ref) == 0) continue;
-      rails.add(_CanvasRail(favKind: ref));
+      railsById[_favRowId(ref)] = _CanvasRail(favKind: ref);
     }
     for (var i = 0; i < _sections.length; i++) {
       if (_sections[i].items.isEmpty || i >= _rowNodes.length) continue;
-      rails.add(_CanvasRail(sectionIndex: i));
+      railsById[_sectionRowId(_sections[i])] = _CanvasRail(sectionIndex: i);
     }
-    return rails;
+    final ordered = HomeRowRegistry.instance.canonicalBoardRailIds(
+      visibleIds: railsById.keys,
+    );
+    return [
+      for (final id in ordered)
+        if (railsById[id] != null) railsById[id]!,
+    ];
   }
 
   /// The canonical rails, globally sorted by the user's saved row ids.
@@ -17616,24 +17627,7 @@ class _SearchScreenState extends State<SearchScreen>
                                 final rail = homeRails[i];
                                 final rowId = _canvasRailRowId(rail);
                                 revealIdentity = rowId;
-                                if (rail.traktSkeletonIndex >= 0) {
-                                  row = _buildTraktSkeletonRow(
-                                    rail.traktSkeletonIndex,
-                                  );
-                                } else if (rail.cw != null) {
-                                  row = _buildContinueWatchingRow(
-                                    rail.cw!,
-                                    rail.cwIndex,
-                                    rowId,
-                                  );
-                                } else if (rail.favKind != null) {
-                                  row = _buildFavRow(rail.favKind!, rowId);
-                                } else {
-                                  row = _buildRow(
-                                    rail.sectionIndex!,
-                                    homeRowId: rowId,
-                                  );
-                                }
+                                row = _buildHomeRail(rail, rowId);
                               } else if (orderedHome) {
                                 return _buildBoardFooter();
                               } else {
@@ -18447,6 +18441,31 @@ class _SearchScreenState extends State<SearchScreen>
         ],
       ),
     );
+  }
+
+  /// Registry-driven dispatch for a canonical Home rail. Skeleton placeholders
+  /// keep their dedicated builder; live rails follow [HomeRowFamily.boardSlot].
+  Widget _buildHomeRail(_CanvasRail rail, String rowId) {
+    if (rail.traktSkeletonIndex >= 0) {
+      return _buildTraktSkeletonRow(rail.traktSkeletonIndex);
+    }
+    final slot = HomeRowRegistry.instance.familyFor(rowId)?.boardSlot;
+    switch (slot) {
+      case HomeBoardSlot.continueWatching:
+        return _buildContinueWatchingRow(rail.cw!, rail.cwIndex, rowId);
+      case HomeBoardSlot.favourites:
+        return _buildFavRow(rail.favKind!, rowId);
+      case HomeBoardSlot.section:
+        return _buildRow(rail.sectionIndex!, homeRowId: rowId);
+      case null:
+        if (rail.cw != null) {
+          return _buildContinueWatchingRow(rail.cw!, rail.cwIndex, rowId);
+        }
+        if (rail.favKind != null) {
+          return _buildFavRow(rail.favKind!, rowId);
+        }
+        return _buildRow(rail.sectionIndex!, homeRowId: rowId);
+    }
   }
 
   Widget _buildRow(int rowIndex, {String? homeRowId}) {

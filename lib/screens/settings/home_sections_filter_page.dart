@@ -4,11 +4,10 @@ import 'package:flutter/services.dart';
 
 import '../../models/home_collection.dart';
 import '../../models/stremio_addon.dart';
-import '../../services/home_collections_store.dart';
-import '../../services/home_list_rows.dart';
+import '../../services/home/home_row_family.dart';
+import '../../services/home/home_row_registry.dart';
 import '../../services/home_row_order.dart';
 import '../../services/iptv_media_store.dart' show IptvListMeta;
-import '../../services/simkl/simkl_list_source.dart';
 import '../../services/mdblist/mdblist_service.dart';
 import '../../services/mdblist/mdblist_list_source.dart';
 import '../../services/storage_service.dart';
@@ -16,7 +15,6 @@ import '../../services/trakt/trakt_list_source.dart';
 import '../../services/analytics_service.dart';
 import '../../utils/tv_keys.dart';
 import '../../widgets/home/home_theme.dart';
-import '../../models/tracking_source.dart';
 
 /// Full-screen DPAD-first Home-row manager — a two-pane "group → item" filter,
 /// modelled on the Stremio TV channel filter's grammar but 2 levels deep (no
@@ -207,191 +205,36 @@ class _HomeSectionsFilterPageState extends State<HomeSectionsFilterPage> {
   }
 
   List<_Group> _buildModel() {
-    final d = widget.disabled;
-    bool on(String id) => !d.contains(id);
-    final extraById = {for (final r in widget.extraRows) r.id: r};
-    bool extraOn(String id) => extraById.containsKey(id);
-    _Item cw(String id, String label, TrackingSource source, {String? badge}) =>
-        _Item(id, label, on(id), badge: badge);
-
-    // Opt-in leaf factory: ON = present in the extras store.
-    _Item opt(String id, String label, {String? badge}) => _Item(
-      id,
-      label,
-      extraOn(id),
-      badge: badge,
-      defaultOn: false,
-      extraTitle: label,
+    final model = HomeRowRegistry.instance.buildManagerModel(
+      HomeRowResolveContext(
+        disabled: widget.disabled,
+        extraRows: widget.extraRows,
+        traktUserLists: widget.traktUserLists,
+        mdblistMine: widget.mdblistMine,
+        mdblistLiked: widget.mdblistLiked,
+        mdblistTop: widget.mdblistTop,
+        iptvLists: widget.iptvLists,
+        collections: widget.collections,
+        catalogTree: widget.catalogTree,
+        mdblistEnabled: kMdblistEnabled,
+      ),
     );
-
-    final customLists = [
-      for (final c in widget.traktUserLists)
-        if (!c.liked && c.userListId != null) c,
-    ];
-    final likedLists = [
-      for (final c in widget.traktUserLists)
-        if (c.liked && c.userListId != null) c,
-    ];
-
-    final groups = <_Group>[
-      _Group('Continue Watching', [
-        cw('cw:movies', 'Movies', TrackingSource.local),
-        cw('cw:series', 'Series', TrackingSource.local),
-      ]),
-      _Group('Trakt', [
-        cw('trakt:movies', 'Movies', TrackingSource.trakt, badge: 'CW'),
-        cw('trakt:shows', 'Shows', TrackingSource.trakt, badge: 'CW'),
-        for (final l in TraktSeeAllList.values)
-          if (l != TraktSeeAllList.continueWatching)
-            opt(HomeExtraRowIds.traktBuiltin(l), l.label, badge: 'LIST'),
-        for (final c in customLists)
-          opt(HomeExtraRowIds.traktUserList(c), c.label, badge: 'CUSTOM'),
-        for (final c in likedLists)
-          opt(HomeExtraRowIds.traktUserList(c), c.label, badge: 'LIKED'),
-      ]),
-      _Group('Simkl', [
-        cw('simkl:movies', 'Movies', TrackingSource.simkl, badge: 'CW'),
-        cw('simkl:shows', 'Shows', TrackingSource.simkl, badge: 'CW'),
-        for (final l in SimklSeeAllList.values)
-          if (l != SimklSeeAllList.continueWatching)
-            opt(HomeExtraRowIds.simkl(l), l.label, badge: 'LIST'),
-      ]),
-      if (kMdblistEnabled)
-        _Group('MDBList', [
-          cw('mdblist:movies', 'Movies', TrackingSource.mdblist, badge: 'CW'),
-          cw('mdblist:shows', 'Shows', TrackingSource.mdblist, badge: 'CW'),
-          for (final l in widget.mdblistMine)
-            opt(HomeExtraRowIds.mdblistMine(l), l.label, badge: 'MINE'),
-          for (final l in widget.mdblistLiked)
-            opt(HomeExtraRowIds.mdblistLiked(l), l.label, badge: 'LIKED'),
-          for (final l in widget.mdblistTop)
-            opt(HomeExtraRowIds.mdblistTop(l), l.label, badge: 'TOP'),
-        ]),
-      _Group('IPTV Continue Watching', [
-        _Item('iptv:movies', 'Movies', on('iptv:movies')),
-        _Item('iptv:series', 'Series', on('iptv:series')),
-      ]),
-      if (widget.iptvLists.any((m) => !m.isFavorites))
-        _Group('IPTV Lists', [
-          for (final m in widget.iptvLists)
-            if (!m.isFavorites)
-              opt(HomeExtraRowIds.iptvList(m.id), m.name, badge: 'LIST'),
-        ]),
-      if (widget.collections.isNotEmpty)
-        _Group('Collections', [
-          for (final c in widget.collections)
+    return [
+      for (final g in model)
+        _Group(g.name, [
+          for (final it in g.items)
             _Item(
-              c.rowId,
-              c.title,
-              on(c.rowId),
-              badge: c.pinToTop ? 'PINNED' : 'FOLDERS',
+              it.id,
+              it.label,
+              it.on,
+              badge: it.badge,
+              defaultOn: it.defaultOn,
+              extraTitle: it.extraTitle,
+              unavailable: it.unavailable,
+              arrangeable: it.arrangeable,
             ),
         ]),
-      // Each folder's catalog lists: toggled here like any addon catalog but
-      // never arranged, since they live inside the folder, not on the board.
-      for (final c in widget.collections)
-        for (final f in c.folders)
-          if (f.sources.isNotEmpty)
-            _Group('${c.title} › ${f.title}', [
-              for (final s in f.sources)
-                _Item(
-                  HomeCollectionRowIds.folderList(c.id, f.id, s),
-                  _folderListLabel(s),
-                  on(HomeCollectionRowIds.folderList(c.id, f.id, s)),
-                  badge: s.type,
-                  arrangeable: false,
-                ),
-            ]),
-      _Group('My Watchlist', [
-        _Item('watchlist:movies', 'Movies', on('watchlist:movies')),
-        _Item('watchlist:series', 'Series', on('watchlist:series')),
-      ]),
-      _Group('Favorites', [
-        _Item('fav:playlist', 'Playlist', on('fav:playlist')),
-        _Item('fav:debrify', 'Debrify TV', on('fav:debrify')),
-        _Item('fav:stremio', 'Stremio TV', on('fav:stremio')),
-        _Item('fav:iptv', 'IPTV', on('fav:iptv')),
-      ]),
     ];
-
-    // Enabled opt-in rows the groups above couldn't represent (Trakt outage,
-    // a deleted list, an unmatched id): materialize each as an UNAVAILABLE
-    // leaf from its stored title so it stays visible, survives a save
-    // verbatim, and can still be deliberately turned off.
-    final represented = <String>{
-      for (final g in groups)
-        for (final it in g.items) it.id,
-    };
-    _Item stray(HomeExtraRow r) => _Item(
-      r.id,
-      r.title.isNotEmpty ? r.title : r.id,
-      true,
-      defaultOn: false,
-      extraTitle: r.title,
-      unavailable: true,
-    );
-    for (final r in widget.extraRows) {
-      if (represented.contains(r.id)) continue;
-      final String groupName;
-      if (r.id.startsWith(HomeExtraRowIds.traktPrefix)) {
-        groupName = 'Trakt';
-      } else if (r.id.startsWith(HomeExtraRowIds.simklPrefix)) {
-        groupName = 'Simkl';
-      } else if (r.id.startsWith(HomeExtraRowIds.mdblistPrefix)) {
-        groupName = 'MDBList';
-      } else if (r.id.startsWith(HomeExtraRowIds.iptvPrefix)) {
-        groupName = 'IPTV Lists';
-      } else {
-        continue; // unknown grammar — preserved by _persist, not shown
-      }
-      final target = groups.cast<_Group?>().firstWhere(
-        (g) => g!.name == groupName,
-        orElse: () => null,
-      );
-      if (target != null) {
-        target.items.add(stray(r));
-      } else {
-        groups.add(_Group(groupName, [stray(r)]));
-      }
-    }
-
-    // Catalogs claimed by a collection folder are listed under that folder
-    // above, not under their addon (the board skips them too).
-    final claimed = HomeCollectionsStore.claimedCatalogKeys(
-      widget.collections,
-      [for (final e in widget.catalogTree) e.addon],
-    );
-    for (final entry in widget.catalogTree) {
-      final addon = entry.addon;
-      final items = [
-        for (final c in entry.catalogs)
-          if (!claimed.contains('${addon.id}:${c.type}:${c.id}'))
-            _Item(
-              '${addon.id}:${c.type}:${c.id}',
-              c.name,
-              on('${addon.id}:${c.type}:${c.id}'),
-              badge: c.type,
-            ),
-      ];
-      if (items.isEmpty) continue;
-      groups.add(_Group(addon.name, items));
-    }
-    return groups;
-  }
-
-  /// "Popular Movies · Action" for a folder list, resolved against the
-  /// installed addons. Falls back to the raw catalog id when nothing serves
-  /// it, so the list can still be switched off deliberately.
-  String _folderListLabel(CollectionCatalogSource s) {
-    final addons = [for (final e in widget.catalogTree) e.addon];
-    final addon = HomeCollectionsStore.resolveAddon(s, addons);
-    final catalog = addon == null
-        ? null
-        : HomeCollectionsStore.resolveCatalog(s, addon);
-    final base = catalog == null
-        ? '${s.catalogId} (${s.type})'
-        : CatalogSection.rowTitle(catalog);
-    return s.genre == null ? base : '$base · ${s.genre}';
   }
 
   /// The board's pre-customization order. Keep this aligned with Home's row
@@ -399,61 +242,23 @@ class _HomeSectionsFilterPageState extends State<HomeSectionsFilterPage> {
   /// then addon catalogs. The settings page groups rows by provider for
   /// toggling, so simply flattening [_groups] would produce a different order.
   List<String> _canonicalOrderIds() {
-    final items = <String, _Item>{
+    return HomeRowRegistry.instance.canonicalOrderIds([
       for (final group in _groups)
-        for (final item in group.items) item.id: item,
-    };
-    final out = <String>[];
-    final seen = <String>{};
-    void add(String id) {
-      if (items.containsKey(id) && seen.add(id)) out.add(id);
-    }
-
-    for (final id in const [
-      'cw:movies',
-      'cw:series',
-      'trakt:movies',
-      'trakt:shows',
-      'simkl:movies',
-      'simkl:shows',
-      'mdblist:movies',
-      'mdblist:shows',
-      'iptv:movies',
-      'iptv:series',
-      'watchlist:movies',
-      'watchlist:series',
-      'fav:playlist',
-      'fav:debrify',
-      'fav:stremio',
-      'fav:iptv',
-    ]) {
-      add(id);
-    }
-    for (final group in _groups) {
-      for (final item in group.items) {
-        if (HomeExtraRowIds.isIptv(item.id)) add(item.id);
-      }
-    }
-    for (final group in _groups) {
-      for (final item in group.items) {
-        if (HomeExtraRowIds.isTracker(item.id)) add(item.id);
-      }
-    }
-    // Collection rows follow the tracker lists and lead the addon catalogs,
-    // matching the board's placement of unpinned collections.
-    for (final group in _groups) {
-      for (final item in group.items) {
-        if (HomeCollectionRowIds.isCollection(item.id)) add(item.id);
-      }
-    }
-    // Anything left is an addon catalog (or a future row family unknown to
-    // this version). Stable group/item order is the safest default for both.
-    for (final group in _groups) {
-      for (final item in group.items) {
-        if (item.arrangeable) add(item.id);
-      }
-    }
-    return out;
+        HomeManagerGroup(group.name, [
+          for (final item in group.items)
+            HomeRowLeaf(
+              id: item.id,
+              label: item.label,
+              groupName: group.name,
+              on: item.on,
+              defaultOn: item.defaultOn,
+              arrangeable: item.arrangeable,
+              badge: item.badge,
+              extraTitle: item.extraTitle,
+              unavailable: item.unavailable,
+            ),
+        ]),
+    ]);
   }
 
   List<_ArrangeEntry> get _arrangeEntries {
