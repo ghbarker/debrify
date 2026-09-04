@@ -1,15 +1,15 @@
 part of '../search_screen.dart';
 
-enum _CwKind { local, trakt, simkl, mdblist, iptv }
+enum CwKind { local, trakt, simkl, mdblist, iptv }
 
 /// A leading "Continue Watching" board row (local or Trakt). Carries its own
 /// header, focus nodes, per-item progress lookup, and open / quick-play
 /// handlers so the local and Trakt sources render through one row builder.
-class _CwRow {
+class CwRow {
   final String rowId;
   final String title; // e.g. 'Continue Watching' or 'Trakt Movies'
   final String? tag; // 'Movies' / 'Series' pill, or null
-  final _CwKind kind;
+  final CwKind kind;
   final List<StremioMeta> items;
   final List<FocusNode> nodes;
   final double? Function(StremioMeta) progressOf;
@@ -34,7 +34,7 @@ class _CwRow {
   /// Opens the "See All" grid for this row's source, or null to hide the link.
   final VoidCallback? onSeeAll;
 
-  const _CwRow({
+  const CwRow({
     required this.rowId,
     required this.title,
     required this.tag,
@@ -364,9 +364,9 @@ String? _firstNonEmpty(String? a, String? b) =>
 /// custom-list row), or a catalog section ([sectionIndex] into
 /// `_sections`/`_rowNodes`).
 class _CanvasRail {
-  final _CwRow? cw;
+  final CwRow? cw;
   final int cwIndex;
-  final _FavRowRef? favKind;
+  final FavRowRef? favKind;
   final int? sectionIndex;
   final int traktSkeletonIndex;
   const _CanvasRail({
