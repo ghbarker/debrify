@@ -55,6 +55,15 @@ See `dev/design/REFACTOR_PLAN.md` §2 rule 1.
   allowlists that decide which providers may auto-advance were lifted into
   the dispatch table, not redesigned. Keep the membership identical.
 
+### P2e · playback-service strings
+
+- **`PlaybackServiceDispatch` is a service façade**, not a new cloud
+  capability. Same pattern as P2a `MagicTvDispatch`. Do not move it into
+  `lib/services/cloud/` from a later lane (cloud is P1-owned).
+- **`PlaybackCacheFirst.reorder` still string-switches** in
+  `lib/services/cloud/` (`torbox` / `premiumize`). Out of P2e (forbidden).
+  Keep until a cloud-owned follow-up.
+
 ## Regressions (follow-up PRs; do not leave on `main`)
 
 These were **not** declared in the lane PRs. They change user-visible or wire
@@ -62,9 +71,9 @@ behaviour and must be restored, not kept as quirks.
 
 | Lane | Regression | Follow-up |
 |---|---|---|
-| H1 | Canonical board rails regroup section ids by family `canonicalIndex`, so pinned collections no longer lead the board (they sat first in `_sections`: pinned collections, tracker lists, unpinned collections, catalogs). | `refactor/h1-pinned-collections-lead` |
-| T1 | `_readPikpakWire` returned null when `pikpakPassword` was empty. Both old senders (Send Setup to TV + Transfer Everything) encoded `{email}` (password omitted when empty). | `refactor/t1-pikpak-empty-password` |
-| S1 | `settings_screen.dart` never passed `extraPlayerKeywords`, so VLC / mpv / Infuse / … names dropped out of Settings search. | `refactor/s1-extra-player-keywords` |
+| H1 | Canonical board rails regroup section ids by family `canonicalIndex`, so pinned collections no longer lead the board (they sat first in `_sections`: pinned collections, tracker lists, unpinned collections, catalogs). | **merged** `refactor/h1-pinned-collections-lead` (#57) |
+| T1 | `_readPikpakWire` returned null when `pikpakPassword` was empty. Both old senders (Send Setup to TV + Transfer Everything) encoded `{email}` (password omitted when empty). | **merged** `refactor/t1-pikpak-empty-password` (#58) |
+| S1 | `settings_screen.dart` never passed `extraPlayerKeywords`, so VLC / mpv / Infuse / … names dropped out of Settings search. | **merged** `refactor/s1-extra-player-keywords` (#59) |
 
 ## Process
 
