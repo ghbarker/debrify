@@ -156,4 +156,17 @@ class FakeCloudProvider implements CloudProviderPort {
     if (zipPermalinkUrl != null) return zipPermalinkUrl!;
     throw CloudUnsupported(id, CloudPortFeature.zipPermalink);
   }
+
+  int createCloudTransferCount = 0;
+  String? lastTransferMagnet;
+
+  @override
+  Future<void> createCloudTransfer(String magnet) async {
+    createCloudTransferCount++;
+    lastTransferMagnet = magnet;
+    if (error != null) throw error!;
+    if (!supports(CloudPortFeature.cloudTransfer)) {
+      throw CloudUnsupported(id, CloudPortFeature.cloudTransfer);
+    }
+  }
 }

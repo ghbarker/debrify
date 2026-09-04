@@ -60,6 +60,14 @@ void main() {
       isFalse,
     );
     expect(
+      const PremiumizeCloudProvider().supports(CloudPortFeature.cloudTransfer),
+      isTrue,
+    );
+    expect(
+      const TorboxCloudProvider().supports(CloudPortFeature.cloudTransfer),
+      isFalse,
+    );
+    expect(
       CloudPortFeature.forProvider(CloudProviderId.torbox),
       {
         CloudPortFeature.playlistEntry,
@@ -70,7 +78,7 @@ void main() {
     );
     expect(
       CloudPortFeature.forProvider(CloudProviderId.premiumize),
-      {CloudPortFeature.magicTvPrepare, CloudPortFeature.checkCache},
+      {CloudPortFeature.magicTvPrepare, CloudPortFeature.checkCache, CloudPortFeature.cloudTransfer},
     );
   });
 }

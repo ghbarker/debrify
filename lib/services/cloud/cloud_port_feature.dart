@@ -11,7 +11,8 @@ enum CloudPortFeature {
   magicTvLockedLinks,
   cachedHashes,
   checkCache,
-  zipPermalink;
+  zipPermalink,
+  cloudTransfer;
 
   static Set<CloudPortFeature> forProvider(CloudProviderId id) => switch (id) {
     CloudProviderId.debrid => {
@@ -24,7 +25,11 @@ enum CloudPortFeature {
       cachedHashes,
       zipPermalink,
     },
-    CloudProviderId.premiumize => {magicTvPrepare, checkCache},
+    CloudProviderId.premiumize => {
+      magicTvPrepare,
+      checkCache,
+      cloudTransfer,
+    },
     CloudProviderId.alldebrid => {playlistEntry, magicTvLockedLinks},
     CloudProviderId.pikpak => {magicTvPrepare},
   };

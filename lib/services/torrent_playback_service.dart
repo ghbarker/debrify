@@ -5038,7 +5038,7 @@ class TorrentPlaybackService {
     final apiKey = (await StorageService.getPremiumizeApiKey()) ?? '';
     if (apiKey.isEmpty) return;
     try {
-      await PremiumizeService.createTransfer(apiKey, magnet);
+      await CloudProviderRegistry.instance.createCloudTransfer(magnet);
       if (context.mounted) {
         _snack(
           context,

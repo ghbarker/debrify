@@ -316,4 +316,13 @@ class PremiumizeCloudProvider extends CloudProviderAdapter {
     }
     return PremiumizeService.checkCache(apiKey, items);
   }
+
+  @override
+  Future<void> createCloudTransfer(String magnet) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const CloudMissingApiKey('Missing Premiumize API key');
+    }
+    await PremiumizeService.createTransfer(apiKey, magnet);
+  }
 }
