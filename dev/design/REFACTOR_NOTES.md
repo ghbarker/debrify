@@ -55,6 +55,29 @@ See `dev/design/REFACTOR_PLAN.md` §2 rule 1.
   allowlists that decide which providers may auto-advance were lifted into
   the dispatch table, not redesigned. Keep the membership identical.
 
+### T2 · tracker commons
+
+- **Local progress is not dedicated.** `WatchProgressSource.local` has
+  `isDedicatedProgress: false`, so `TrackingSourcePolicy.load` still returns
+  null for local (same as the old `_ => null` arm). Keep: local never had a
+  dedicated tracker credential.
+- **MDBList adapter ignores `inferredType`.** The new
+  `TrackerItemTransformer` method on MDBList does not use `inferredType`.
+  Keep: origin transformer behaviour; do not "fix" in a follow-up that is
+  not a dedicated bugfix.
+- **Out-of-lane callers not chased.** `search_screen.dart` still wires CW
+  rows by family singleton; calendar / tracking settings / player scrobble
+  still switch. G1 / G5 own those files.
+
+### G2 · settings_screen split
+
+- **Restore-report omitted keys.** `homeCollectionsFailed` and
+  `streamBadgeSourcesFailed` feed `hasAnyFailure` but are omitted from the
+  snackbar failed-list. Keep: origin formatter quirk, pinned in
+  `test/backup_restore_page_test.dart`.
+- **`extraPlayerKeywords` stays bound** at `settings_screen.dart` (S1-fix).
+  Do not drop the argument when extracting further settings pages.
+
 ### P2e · playback-service strings
 
 - **`PlaybackServiceDispatch` is a service façade**, not a new cloud
