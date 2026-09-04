@@ -111,7 +111,9 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   playback `addMagnet`. Magnet share-sheet TorBox `createtorrent` is
   `createMagnetTorrent` (raw payload, cached then uncached dialog) — not
   `addMagnet` / not `queueUncachedMagnet`. Playlist-player hash recovery
-  uses the same method cached-only and keeps its snack-on-error dialect. Share-sheet Premiumize add uses
+  uses the same method cached-only and keeps its snack-on-error dialect.
+  TorBox downloads magnet add uses it cached-only with snack-on-error (no
+  not-cached dialog). Share-sheet Premiumize add uses
   `createCloudTransfer`; `isCachedStrict` and the not-cached dialog stay.
   Chunk HTTP is swallowed by `TorboxService.checkCachedTorrents`
   (partial or empty set) and by `PremiumizeService.checkCache` (slots stay

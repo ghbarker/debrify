@@ -4173,11 +4173,8 @@ class _TorboxDownloadsScreenState extends State<TorboxDownloadsScreen> {
     );
 
     try {
-      final response = await TorboxService.createTorrent(
-        apiKey: apiKey,
-        magnet: magnetLink,
-        seed: true,
-        allowZip: true,
+      final response = await CloudProviderRegistry.instance.createMagnetTorrent(
+        magnetLink,
         addOnlyIfCached: true,
       );
 
