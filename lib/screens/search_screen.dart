@@ -259,7 +259,7 @@ class SearchScreenHost extends StatefulWidget {
   State<SearchScreenHost> createState() => _SearchScreenState();
 }
 
-enum _Mode { catalog, keyword, lists }
+enum SearchBoardMode { catalog, keyword, lists }
 
 /// Snapshot of an in-progress keyword search, preserved across a tab switch so
 /// returning restores results + scroll instead of a blank prompt — the nav
@@ -319,7 +319,7 @@ bool discoverLandingLoadIsCurrent({
   required bool hasPendingHandoff,
 }) => !hasPendingHandoff && capturedRevision == currentRevision;
 
-// Metrics for the inline caption under an [_ArtPoster] (the favourites rails).
+// Metrics for the inline caption under an [ArtPoster] (the favourites rails).
 // Kept as the single source of truth so anything reserving vertical space for
 // the caption (the cell height, the hero's row-reserve budget) can't drift from
 // the widget's own layout.
@@ -328,7 +328,7 @@ const double _kArtTitleFontSize = 14;
 const double _kArtTitleHeight = 1.25;
 const int _kArtTitleMaxLines = 2;
 
-/// Height of the caption band under an [_ArtPoster]: the gap plus its up-to-two
+/// Height of the caption band under an [ArtPoster]: the gap plus its up-to-two
 /// lines at the current text scale.
 double _artPosterCaptionBand(BuildContext context) =>
     _kArtTitleGap +
@@ -542,7 +542,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   // stack two pushed item screens (TV) / double-fire the handoff.
   DateTime? _lastListOpenAt;
 
-  _Mode _mode = _Mode.catalog;
+  SearchBoardMode _mode = SearchBoardMode.catalog;
 
   /// Committed catalog query (drives per-addon catalog search). Empty = board.
   String get _catalogQuery => _catalogSearch.query;
@@ -981,7 +981,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   // Debrify TV favourites — a leading "Debrify TV" row of the user's starred
   // keyword channels, shown between Continue Watching and the catalog rows.
   // Channels have no artwork, so they render as Stremio-shaped cards with a
-  // gradient + glyph placeholder (see [_ArtPoster]).
+  // gradient + glyph placeholder (see [ArtPoster]).
   List<DebrifyTvChannel> _tvFavChannels = [];
   final List<FocusNode> _tvFavNodes = [];
 
@@ -1090,13 +1090,13 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// in a dedicated mode a title the chosen source doesn't know simply renders
   /// as a plain poster. IPTV rows are exempt: they are routeKey-keyed player
   /// history that no tracker can describe.
-  double? _cwCardProgress(_CwKind kind, StremioMeta item) =>
+  double? _cwCardProgress(CwKind kind, StremioMeta item) =>
       _cwCardMaps(kind).progress[item.imdbId];
 
-  String? _cwCardEpisode(_CwKind kind, StremioMeta item) =>
+  String? _cwCardEpisode(CwKind kind, StremioMeta item) =>
       _cwCardMaps(kind).episode[item.imdbId];
 
-  int? _cwCardRemainingMinutes(_CwKind kind, StremioMeta item) =>
+  int? _cwCardRemainingMinutes(CwKind kind, StremioMeta item) =>
       _cwCardMaps(kind).remaining?[item.imdbId];
 
   ({
@@ -1104,38 +1104,38 @@ class _SearchScreenState extends State<SearchScreenHost>
     Map<String, String> episode,
     Map<String, int>? remaining,
   })
-  _cwCardMaps(_CwKind kind) {
-    final effective = kind == _CwKind.iptv
+  _cwCardMaps(CwKind kind) {
+    final effective = kind == CwKind.iptv
         ? kind
         : switch (_cwProgressSource) {
             WatchProgressSource.smart => kind,
-            WatchProgressSource.local => _CwKind.local,
-            WatchProgressSource.trakt => _CwKind.trakt,
-            WatchProgressSource.simkl => _CwKind.simkl,
-            WatchProgressSource.mdblist => _CwKind.mdblist,
+            WatchProgressSource.local => CwKind.local,
+            WatchProgressSource.trakt => CwKind.trakt,
+            WatchProgressSource.simkl => CwKind.simkl,
+            WatchProgressSource.mdblist => CwKind.mdblist,
           };
     return switch (effective) {
-      _CwKind.local => (
+      CwKind.local => (
         progress: _cwProgress,
         episode: _cwEpisode,
         remaining: _cwRemainingMinutes,
       ),
-      _CwKind.trakt => (
+      CwKind.trakt => (
         progress: _traktProgress,
         episode: _traktEpisode,
         remaining: _traktRemainingMinutes,
       ),
-      _CwKind.simkl => (
+      CwKind.simkl => (
         progress: _simklProgress,
         episode: _simklEpisode,
         remaining: null,
       ),
-      _CwKind.mdblist => (
+      CwKind.mdblist => (
         progress: _mdblistProgress,
         episode: _mdblistEpisode,
         remaining: null,
       ),
-      _CwKind.iptv => (
+      CwKind.iptv => (
         progress: _iptvCwProgress,
         episode: _iptvCwEpisode,
         remaining: null,
@@ -1151,7 +1151,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// Series (when enabled), then Trakt Movies / Shows (when connected). Only
   /// non-empty groups are included. Each row carries its own progress lookup
   /// and open / quick-play handlers so local and Trakt sources coexist.
-  List<_CwRow> get _cwRows => [
+  List<CwRow> get _cwRows => [
     // Merged providers ship their combined list through the MOVIES slot (same
     // row id, same node list — see the merge-pref field comment); the episode
     // and artwork lookups are imdbId-keyed maps that only hold series entries,
@@ -1159,18 +1159,18 @@ class _SearchScreenState extends State<SearchScreenHost>
     if (_cwEnabled &&
         (_cwMergeLocal ? _cwAll : _cwMovies).isNotEmpty &&
         !_homeDisabled.contains('cw:movies'))
-      _CwRow(
+      CwRow(
         rowId: 'cw:movies',
         title: 'Continue Watching',
         tag: _cwMergeLocal ? null : 'Movies',
-        kind: _CwKind.local,
+        kind: CwKind.local,
         items: _cwMergeLocal ? _cwAll : _cwMovies,
         nodes: _cwMovieNodes,
-        progressOf: (m) => _cwCardProgress(_CwKind.local, m),
+        progressOf: (m) => _cwCardProgress(CwKind.local, m),
         episodeOf: _cwMergeLocal
-            ? (m) => _cwCardEpisode(_CwKind.local, m)
+            ? (m) => _cwCardEpisode(CwKind.local, m)
             : (_) => null,
-        remainingMinutesOf: (m) => _cwCardRemainingMinutes(_CwKind.local, m),
+        remainingMinutesOf: (m) => _cwCardRemainingMinutes(CwKind.local, m),
         episodeArtworkOf: _cwMergeLocal
             ? (m) => _cwEpisodeArtwork[m.imdbId]
             : (_) => null,
@@ -1184,16 +1184,16 @@ class _SearchScreenState extends State<SearchScreenHost>
         _cwEnabled &&
         _cwSeries.isNotEmpty &&
         !_homeDisabled.contains('cw:series'))
-      _CwRow(
+      CwRow(
         rowId: 'cw:series',
         title: 'Continue Watching',
         tag: 'Series',
-        kind: _CwKind.local,
+        kind: CwKind.local,
         items: _cwSeries,
         nodes: _cwSeriesNodes,
-        progressOf: (m) => _cwCardProgress(_CwKind.local, m),
-        episodeOf: (m) => _cwCardEpisode(_CwKind.local, m),
-        remainingMinutesOf: (m) => _cwCardRemainingMinutes(_CwKind.local, m),
+        progressOf: (m) => _cwCardProgress(CwKind.local, m),
+        episodeOf: (m) => _cwCardEpisode(CwKind.local, m),
+        remainingMinutesOf: (m) => _cwCardRemainingMinutes(CwKind.local, m),
         episodeArtworkOf: (m) => _cwEpisodeArtwork[m.imdbId],
         onOpen: _openContinueItem,
         onQuickPlay: _onContinuePlay,
@@ -1202,18 +1202,18 @@ class _SearchScreenState extends State<SearchScreenHost>
       ),
     if ((_cwMergeTrakt ? _traktAll : _traktMovies).isNotEmpty &&
         !_homeDisabled.contains('trakt:movies'))
-      _CwRow(
+      CwRow(
         rowId: 'trakt:movies',
         title: 'Trakt Continue Watching',
         tag: _cwMergeTrakt ? null : 'Movies',
-        kind: _CwKind.trakt,
+        kind: CwKind.trakt,
         items: _cwMergeTrakt ? _traktAll : _traktMovies,
         nodes: _traktMovieNodes,
-        progressOf: (m) => _cwCardProgress(_CwKind.trakt, m),
+        progressOf: (m) => _cwCardProgress(CwKind.trakt, m),
         episodeOf: _cwMergeTrakt
-            ? (m) => _cwCardEpisode(_CwKind.trakt, m)
+            ? (m) => _cwCardEpisode(CwKind.trakt, m)
             : (_) => null,
-        remainingMinutesOf: (m) => _cwCardRemainingMinutes(_CwKind.trakt, m),
+        remainingMinutesOf: (m) => _cwCardRemainingMinutes(CwKind.trakt, m),
         episodeArtworkOf: _cwMergeTrakt
             ? (m) => _traktEpisodeArtwork[m.imdbId]
             : (_) => null,
@@ -1225,16 +1225,16 @@ class _SearchScreenState extends State<SearchScreenHost>
     if (!_cwMergeTrakt &&
         _traktSeries.isNotEmpty &&
         !_homeDisabled.contains('trakt:shows'))
-      _CwRow(
+      CwRow(
         rowId: 'trakt:shows',
         title: 'Trakt Continue Watching',
         tag: 'Shows',
-        kind: _CwKind.trakt,
+        kind: CwKind.trakt,
         items: _traktSeries,
         nodes: _traktSeriesNodes,
-        progressOf: (m) => _cwCardProgress(_CwKind.trakt, m),
-        episodeOf: (m) => _cwCardEpisode(_CwKind.trakt, m),
-        remainingMinutesOf: (m) => _cwCardRemainingMinutes(_CwKind.trakt, m),
+        progressOf: (m) => _cwCardProgress(CwKind.trakt, m),
+        episodeOf: (m) => _cwCardEpisode(CwKind.trakt, m),
+        remainingMinutesOf: (m) => _cwCardRemainingMinutes(CwKind.trakt, m),
         episodeArtworkOf: (m) => _traktEpisodeArtwork[m.imdbId],
         onOpen: _openTraktItem,
         onQuickPlay: _playTraktItem,
@@ -1249,18 +1249,18 @@ class _SearchScreenState extends State<SearchScreenHost>
     // that zero-shift too, but it isn't worth the board index-math complexity.)
     if ((_cwMergeSimkl ? _simklAll : _simklMovies).isNotEmpty &&
         !_homeDisabled.contains('simkl:movies'))
-      _CwRow(
+      CwRow(
         rowId: 'simkl:movies',
         title: 'Simkl Continue Watching',
         tag: _cwMergeSimkl ? null : 'Movies',
-        kind: _CwKind.simkl,
+        kind: CwKind.simkl,
         items: _cwMergeSimkl ? _simklAll : _simklMovies,
         nodes: _simklMovieNodes,
-        progressOf: (m) => _cwCardProgress(_CwKind.simkl, m),
+        progressOf: (m) => _cwCardProgress(CwKind.simkl, m),
         episodeOf: _cwMergeSimkl
-            ? (m) => _cwCardEpisode(_CwKind.simkl, m)
+            ? (m) => _cwCardEpisode(CwKind.simkl, m)
             : (_) => null,
-        remainingMinutesOf: (m) => _cwCardRemainingMinutes(_CwKind.simkl, m),
+        remainingMinutesOf: (m) => _cwCardRemainingMinutes(CwKind.simkl, m),
         episodeArtworkOf: _cwMergeSimkl
             ? (m) => _simklEpisodeArtwork[m.imdbId]
             : (_) => null,
@@ -1272,16 +1272,16 @@ class _SearchScreenState extends State<SearchScreenHost>
     if (!_cwMergeSimkl &&
         _simklSeries.isNotEmpty &&
         !_homeDisabled.contains('simkl:shows'))
-      _CwRow(
+      CwRow(
         rowId: 'simkl:shows',
         title: 'Simkl Continue Watching',
         tag: 'Shows',
-        kind: _CwKind.simkl,
+        kind: CwKind.simkl,
         items: _simklSeries,
         nodes: _simklSeriesNodes,
-        progressOf: (m) => _cwCardProgress(_CwKind.simkl, m),
-        episodeOf: (m) => _cwCardEpisode(_CwKind.simkl, m),
-        remainingMinutesOf: (m) => _cwCardRemainingMinutes(_CwKind.simkl, m),
+        progressOf: (m) => _cwCardProgress(CwKind.simkl, m),
+        episodeOf: (m) => _cwCardEpisode(CwKind.simkl, m),
+        remainingMinutesOf: (m) => _cwCardRemainingMinutes(CwKind.simkl, m),
         episodeArtworkOf: (m) => _simklEpisodeArtwork[m.imdbId],
         onOpen: _openSimklCwItem,
         onQuickPlay: _playSimklCwItem,
@@ -1290,18 +1290,18 @@ class _SearchScreenState extends State<SearchScreenHost>
       ),
     if ((_cwMergeMdblist ? _mdblistAll : _mdblistMovies).isNotEmpty &&
         !_homeDisabled.contains('mdblist:movies'))
-      _CwRow(
+      CwRow(
         rowId: 'mdblist:movies',
         title: 'MDBList Continue Watching',
         tag: _cwMergeMdblist ? null : 'Movies',
-        kind: _CwKind.mdblist,
+        kind: CwKind.mdblist,
         items: _cwMergeMdblist ? _mdblistAll : _mdblistMovies,
         nodes: _mdblistMovieNodes,
-        progressOf: (m) => _cwCardProgress(_CwKind.mdblist, m),
+        progressOf: (m) => _cwCardProgress(CwKind.mdblist, m),
         episodeOf: _cwMergeMdblist
-            ? (m) => _cwCardEpisode(_CwKind.mdblist, m)
+            ? (m) => _cwCardEpisode(CwKind.mdblist, m)
             : (_) => null,
-        remainingMinutesOf: (m) => _cwCardRemainingMinutes(_CwKind.mdblist, m),
+        remainingMinutesOf: (m) => _cwCardRemainingMinutes(CwKind.mdblist, m),
         episodeArtworkOf: (_) => null,
         onOpen: _openMdblistCwItem,
         onQuickPlay: _playMdblistCwItem,
@@ -1312,16 +1312,16 @@ class _SearchScreenState extends State<SearchScreenHost>
     if (!_cwMergeMdblist &&
         _mdblistSeries.isNotEmpty &&
         !_homeDisabled.contains('mdblist:shows'))
-      _CwRow(
+      CwRow(
         rowId: 'mdblist:shows',
         title: 'MDBList Continue Watching',
         tag: 'Shows',
-        kind: _CwKind.mdblist,
+        kind: CwKind.mdblist,
         items: _mdblistSeries,
         nodes: _mdblistSeriesNodes,
-        progressOf: (m) => _cwCardProgress(_CwKind.mdblist, m),
-        episodeOf: (m) => _cwCardEpisode(_CwKind.mdblist, m),
-        remainingMinutesOf: (m) => _cwCardRemainingMinutes(_CwKind.mdblist, m),
+        progressOf: (m) => _cwCardProgress(CwKind.mdblist, m),
+        episodeOf: (m) => _cwCardEpisode(CwKind.mdblist, m),
+        remainingMinutesOf: (m) => _cwCardRemainingMinutes(CwKind.mdblist, m),
         episodeArtworkOf: (_) => null,
         onOpen: _openMdblistCwItem,
         onQuickPlay: _playMdblistCwItem,
@@ -1334,11 +1334,11 @@ class _SearchScreenState extends State<SearchScreenHost>
     // merged Xtream series page. Progress/episode key off the synthetic meta id
     // (routeKey) since these metas carry no imdbId.
     if (_iptvCwMovies.isNotEmpty && !_homeDisabled.contains('iptv:movies'))
-      _CwRow(
+      CwRow(
         rowId: 'iptv:movies',
         title: 'IPTV Continue Watching',
         tag: 'Movies',
-        kind: _CwKind.iptv,
+        kind: CwKind.iptv,
         items: _iptvCwMovies,
         nodes: _iptvCwMovieNodes,
         progressOf: (m) => _iptvCwProgress[m.id],
@@ -1350,11 +1350,11 @@ class _SearchScreenState extends State<SearchScreenHost>
         onRemove: _removeIptvCwItem,
       ),
     if (_iptvCwSeries.isNotEmpty && !_homeDisabled.contains('iptv:series'))
-      _CwRow(
+      CwRow(
         rowId: 'iptv:series',
         title: 'IPTV Continue Watching',
         tag: 'Series',
-        kind: _CwKind.iptv,
+        kind: CwKind.iptv,
         items: _iptvCwSeries,
         nodes: _iptvCwSeriesNodes,
         progressOf: (m) => _iptvCwProgress[m.id],
@@ -2023,7 +2023,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // Back also drops out of Keyword/Lists mode, so the tab returns to its
     // default Catalog prompt (matches the old overlay-close behaviour).
     // _clearQuery rebuilds, so setting the field first is enough.
-    _mode = _Mode.catalog;
+    _mode = SearchBoardMode.catalog;
     _clearQuery();
     if (widget.isTelevision) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2101,7 +2101,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     _kwSearchToken++;
     _kwSearching = false;
     _kwLoading = false;
-    _mode = _Mode.catalog;
+    _mode = SearchBoardMode.catalog;
     _clearQuery(); // clears the field, kw/lists state, and the catalog query
     _searchFocusNode.unfocus();
     setState(() => _searchSheetOpen = false);
@@ -2154,7 +2154,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   Future<void> _refreshMdblistAuthState() async {
     final auth = await MdblistService.instance.isAuthenticated();
     if (!mounted || auth == _isMdblistAuthenticated) return;
-    final leaveLists = !auth && _mode == _Mode.lists;
+    final leaveLists = !auth && _mode == SearchBoardMode.lists;
     if (leaveLists) {
       _listsToken++;
       _disposeListsNodes();
@@ -2162,7 +2162,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     setState(() {
       _isMdblistAuthenticated = auth;
       if (leaveLists) {
-        _mode = _Mode.catalog;
+        _mode = SearchBoardMode.catalog;
         _listsQuery = '';
         _listsResults = const [];
         _listsSearching = false;
@@ -2201,7 +2201,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     if (!ProfilePolicyGuard.allowsSync(ProfileFeature.keywordSearch)) {
       return false;
     }
-    _mode = _Mode.keyword;
+    _mode = SearchBoardMode.keyword;
     _kwQuery = snap.query;
     _kwAll = snap.all;
     _kwResults = snap.results;
@@ -2240,7 +2240,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // instance, so the snapshot would freeze a partial set that restores
     // looking complete (no strip, no cache badges) — matching pre-streaming
     // behavior, where a mid-flight switch preserved nothing.
-    if (_mode == _Mode.keyword &&
+    if (_mode == SearchBoardMode.keyword &&
         _kwQuery.isNotEmpty &&
         _kwResults.isNotEmpty &&
         !_kwSearching) {
@@ -2622,7 +2622,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // Android TV has dedicated Home and Search tabs. Its Home is always the
     // catalog board, regardless of a preference saved on another platform.
     if (widget.isTelevision) {
-      if (_mode != _Mode.catalog) _switchMode(_Mode.catalog);
+      if (_mode != SearchBoardMode.catalog) _switchMode(SearchBoardMode.catalog);
       return;
     }
     final saved = await StorageService.getHomeDefaultSourceType();
@@ -2630,8 +2630,8 @@ class _SearchScreenState extends State<SearchScreenHost>
     final mode =
         saved == 'keyword' &&
             ProfilePolicyGuard.allowsSync(ProfileFeature.keywordSearch)
-        ? _Mode.keyword
-        : _Mode.catalog;
+        ? SearchBoardMode.keyword
+        : SearchBoardMode.catalog;
     if (_mode != mode) _switchMode(mode);
   }
 
@@ -3339,39 +3339,39 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// lists.
   // Reach-sweep rule: a feature that's off drops its Home rows too, not
   // just its tab — the profile should never see a shelf it can't open.
-  List<_FavRowRef> get _favRowKinds => [
-    if (_watchlistMoviesVisible) const _FavRowRef(_FavKind.watchlistMovies),
-    if (_watchlistSeriesVisible) const _FavRowRef(_FavKind.watchlistSeries),
-    if (_playlistFavVisible) const _FavRowRef(_FavKind.playlist),
+  List<FavRowRef> get _favRowKinds => [
+    if (_watchlistMoviesVisible) const FavRowRef(FavKind.watchlistMovies),
+    if (_watchlistSeriesVisible) const FavRowRef(FavKind.watchlistSeries),
+    if (_playlistFavVisible) const FavRowRef(FavKind.playlist),
     if (_tvFavVisible &&
         ProfilePolicyGuard.allowsSync(ProfileFeature.debrifyTv))
-      const _FavRowRef(_FavKind.debrify),
+      const FavRowRef(FavKind.debrify),
     if (_stvFavVisible &&
         ProfilePolicyGuard.allowsSync(ProfileFeature.stremioTv))
-      const _FavRowRef(_FavKind.stremio),
+      const FavRowRef(FavKind.stremio),
     if (_iptvFavVisible && ProfilePolicyGuard.allowsSync(ProfileFeature.iptv))
-      const _FavRowRef(_FavKind.iptv),
+      const FavRowRef(FavKind.iptv),
     if (_catalogQuery.isEmpty &&
         !_catalogSearching &&
         ProfilePolicyGuard.allowsSync(ProfileFeature.iptv))
       for (var i = 0; i < _iptvListRows.length; i++)
-        if (_iptvListRows[i].channels.isNotEmpty) _FavRowRef(_FavKind.iptv, i),
+        if (_iptvListRows[i].channels.isNotEmpty) FavRowRef(FavKind.iptv, i),
   ];
 
   int get _favRowCount => _favRowKinds.length;
   bool get _anyFavVisible => _favRowKinds.isNotEmpty;
 
-  String _favRowId(_FavRowRef ref) {
+  String _favRowId(FavRowRef ref) {
     if (ref.isIptvList) {
       return HomeExtraRowIds.iptvList(_iptvListRows[ref.list].listId);
     }
     return switch (ref.kind) {
-      _FavKind.watchlistMovies => 'watchlist:movies',
-      _FavKind.watchlistSeries => 'watchlist:series',
-      _FavKind.playlist => 'fav:playlist',
-      _FavKind.debrify => 'fav:debrify',
-      _FavKind.stremio => 'fav:stremio',
-      _FavKind.iptv => 'fav:iptv',
+      FavKind.watchlistMovies => 'watchlist:movies',
+      FavKind.watchlistSeries => 'watchlist:series',
+      FavKind.playlist => 'fav:playlist',
+      FavKind.debrify => 'fav:debrify',
+      FavKind.stremio => 'fav:stremio',
+      FavKind.iptv => 'fav:iptv',
     };
   }
 
@@ -3385,20 +3385,20 @@ class _SearchScreenState extends State<SearchScreenHost>
     );
 
   /// The focus-node list backing a favourites row of the given [ref].
-  List<FocusNode> _favNodesFor(_FavRowRef ref) {
+  List<FocusNode> _favNodesFor(FavRowRef ref) {
     if (ref.isIptvList) return _iptvListRows[ref.list].nodes;
     switch (ref.kind) {
-      case _FavKind.watchlistMovies:
+      case FavKind.watchlistMovies:
         return _watchlistMovieNodes;
-      case _FavKind.watchlistSeries:
+      case FavKind.watchlistSeries:
         return _watchlistSeriesNodes;
-      case _FavKind.iptv:
+      case FavKind.iptv:
         return _iptvFavNodes;
-      case _FavKind.debrify:
+      case FavKind.debrify:
         return _tvFavNodes;
-      case _FavKind.stremio:
+      case FavKind.stremio:
         return _stvFavNodes;
-      case _FavKind.playlist:
+      case FavKind.playlist:
         return _playlistFavNodes;
     }
   }
@@ -4885,7 +4885,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   bool _cwMenuOpen = false;
 
   /// Long-press (hold-OK on TV) on a Continue Watching card: Play, or take the
-  /// title off the row. Each row supplies its own removal (see [_CwRow.onRemove])
+  /// title off the row. Each row supplies its own removal (see [CwRow.onRemove])
   /// because the four sources write to four different places.
   /// When Home's Hold to Quick Play preference is on, the same gesture skips
   /// this menu and invokes the row's Quick Play action directly.
@@ -4893,7 +4893,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// [cwIndex]/[col] are the card's board coordinates, used to put TV focus back
   /// on a live card once the row rebuilds without the removed one.
   Future<void> _openCwCardMenu(
-    _CwRow row,
+    CwRow row,
     StremioMeta item,
     int cwIndex,
     int col,
@@ -4901,7 +4901,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     if (_cwMenuOpen) return;
     _cwMenuOpen = true;
     final isSeries = item.type == 'series';
-    final playActionAvailable = row.kind == _CwKind.iptv || !_pikpakOnly;
+    final playActionAvailable = row.kind == CwKind.iptv || !_pikpakOnly;
     final removeActionAvailable = row.canRemove?.call(item) ?? true;
     if (!playActionAvailable && !removeActionAvailable) {
       _cwMenuOpen = false;
@@ -4911,7 +4911,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // still useful in the menu, but it is not the immediate playback this
     // preference promises.
     final quickPlayAvailable =
-        playActionAvailable && !(row.kind == _CwKind.iptv && isSeries);
+        playActionAvailable && !(row.kind == CwKind.iptv && isSeries);
     try {
       final holdToQuickPlay = await StorageService.getHomeCwHoldToQuickPlay();
       if (!mounted) return;
@@ -4930,27 +4930,27 @@ class _SearchScreenState extends State<SearchScreenHost>
     _cwMenuOpen = true;
     // An IPTV series card routes to its Xtream series page rather than playing
     // outright (see [_openIptvCwItem]) — so name the action for what it does.
-    final playLabel = (row.kind == _CwKind.iptv && isSeries)
+    final playLabel = (row.kind == CwKind.iptv && isSeries)
         ? 'Open series'
         : 'Play';
     final String playDescription;
     final String removeDescription;
     switch (row.kind) {
-      case _CwKind.local:
+      case CwKind.local:
         playDescription = isSeries
             ? 'Jump back into the episode you stopped on.'
             : 'Resume from where you left off.';
         removeDescription =
             'Takes it off this row and clears the position saved on this '
             'device.';
-      case _CwKind.trakt:
+      case CwKind.trakt:
         playDescription = isSeries
             ? 'Jump back into the episode you stopped on.'
             : 'Resume from where you left off.';
         removeDescription =
             'Deletes this title\'s playback progress (and watch history) on '
             'Trakt, so it leaves the Trakt rows everywhere.';
-      case _CwKind.simkl:
+      case CwKind.simkl:
         playDescription = isSeries
             ? 'Jump back into the episode you stopped on.'
             : 'Resume from where you left off.';
@@ -4958,13 +4958,13 @@ class _SearchScreenState extends State<SearchScreenHost>
             ? 'Moves the show to On Hold on Simkl and clears the paused '
                   'position, so it stops resurfacing as up next.'
             : 'Clears this movie\'s paused position on Simkl.';
-      case _CwKind.mdblist:
+      case CwKind.mdblist:
         playDescription = isSeries
             ? 'Jump into the paused or next unwatched episode from MDBList.'
             : 'Resume from the position saved on MDBList.';
         removeDescription =
             'Clears this paused playback position from MDBList.';
-      case _CwKind.iptv:
+      case CwKind.iptv:
         playDescription = isSeries
             ? 'Open the series and pick up where you left off.'
             : 'Resume from where you left off.';
@@ -5223,7 +5223,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       title: 'Simkl Continue Watching',
       initialCategory: initialCategory,
       items: _simklAll,
-      progressOf: (m) => _cwCardProgress(_CwKind.simkl, m),
+      progressOf: (m) => _cwCardProgress(CwKind.simkl, m),
       onOpen: _openSimklCwItem,
       onQuickPlay: _pikpakOnly ? null : _playSimklCwItem,
       // One uniform pass instead of an explicit Simkl fetch followed by
@@ -5424,7 +5424,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       title: 'MDBList Continue Watching',
       initialCategory: initialCategory,
       items: _mdblistAll,
-      progressOf: (m) => _cwCardProgress(_CwKind.mdblist, m),
+      progressOf: (m) => _cwCardProgress(CwKind.mdblist, m),
       onOpen: _openMdblistCwItem,
       onQuickPlay: _pikpakOnly ? null : _playMdblistCwItem,
       onReload: () async {
@@ -5729,7 +5729,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // rows when a query is actually showing them — otherwise their nodes aren't
     // mounted and focus would be stranded.
     if (widget.searchMode) {
-      if (_mode == _Mode.keyword) {
+      if (_mode == SearchBoardMode.keyword) {
         if (_kwToolbarVisible) {
           _kwToolbarNodes.first.requestFocus();
         } else {
@@ -5737,7 +5737,7 @@ class _SearchScreenState extends State<SearchScreenHost>
         }
         return;
       }
-      if (_mode == _Mode.lists) {
+      if (_mode == SearchBoardMode.lists) {
         if (_listsResults.isNotEmpty && _listsNodes.isNotEmpty) {
           _listsNodes.first.requestFocus();
         } else {
@@ -5757,7 +5757,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       }
       return;
     }
-    if (_mode == _Mode.keyword) {
+    if (_mode == SearchBoardMode.keyword) {
       // Toolbar + result rows render together, so entering the content lands on
       // the toolbar first (Down then reaches the rows). When it isn't visible
       // (loading / error / pre-search) nothing below is focusable, so keep the
@@ -5769,7 +5769,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       }
       return;
     }
-    if (_mode == _Mode.lists) {
+    if (_mode == SearchBoardMode.lists) {
       if (_listsResults.isNotEmpty && _listsNodes.isNotEmpty) {
         _listsNodes.first.requestFocus();
       } else {
@@ -5806,9 +5806,9 @@ class _SearchScreenState extends State<SearchScreenHost>
       return;
     }
     (switch (_mode) {
-      _Mode.catalog => _modeCatalogNode,
-      _Mode.keyword => _modeKeywordNode,
-      _Mode.lists => _modeListsNode,
+      SearchBoardMode.catalog => _modeCatalogNode,
+      SearchBoardMode.keyword => _modeKeywordNode,
+      SearchBoardMode.lists => _modeListsNode,
     }).requestFocus();
   }
 
@@ -5835,7 +5835,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// Whether the keyword results toolbar (Sort/Filters/Sources/…) is on-screen,
   /// so focus can route into it between the search field and the result rows.
   bool get _kwToolbarVisible =>
-      _mode == _Mode.keyword &&
+      _mode == SearchBoardMode.keyword &&
       !_kwLoading &&
       _kwError == null &&
       _kwQuery.isNotEmpty;
@@ -5844,7 +5844,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// state, before a query. It's the only focusable content then, so DPAD-down
   /// from the search field must land on it (see the field's key handler).
   bool get _kwSourcesButtonVisible =>
-      _mode == _Mode.keyword &&
+      _mode == SearchBoardMode.keyword &&
       !_kwLoading &&
       _kwError == null &&
       _kwQuery.isEmpty;
@@ -5852,7 +5852,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// Catalog-mode twin of [_kwSourcesButtonVisible]: the Sources button shown
   /// on the empty catalog prompt (Search tab, no query yet, not mid-search).
   bool get _catalogSourcesButtonVisible =>
-      _mode == _Mode.catalog &&
+      _mode == SearchBoardMode.catalog &&
       widget.searchMode &&
       _catalogQuery.isEmpty &&
       !_catalogSearching;
@@ -6002,7 +6002,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// restore, preserved keyword results, a committed catalog search, or the
   /// dedicated Lists surface.
   bool get _sheetForced =>
-      _mode != _Mode.catalog ||
+      _mode != SearchBoardMode.catalog ||
       _catalogQuery.isNotEmpty ||
       _catalogSearching ||
       // Belt to the focus latch's braces: interactive typing always comes
@@ -6316,13 +6316,13 @@ class _SearchScreenState extends State<SearchScreenHost>
     _canvasFavFocus.value = focus;
   }
 
-  /// One favourites cell on the Canvas shelf — the SAME [_FavArtCell] +
-  /// [_ArtPoster] stack the classic rows use (identical art, badges, hold
+  /// One favourites cell on the Canvas shelf — the SAME [FavArtCell] +
+  /// [ArtPoster] stack the classic rows use (identical art, badges, hold
   /// behaviour and open actions), with UP/DOWN rewired to rail switching and
   /// focus driving the Canvas stage override (and the full-bleed live
   /// preview, for IPTV).
   Widget _canvasFavCell(
-    _FavRowRef ref,
+    FavRowRef ref,
     String railKey,
     int col, {
     VoidCallback? onUp,
@@ -6344,7 +6344,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       final row = _iptvListRows[ref.list];
       final channel = row.channels[col];
       final live = channel.isLive;
-      return _FavArtCell(
+      return FavArtCell(
         isTelevision: true,
         column: col,
         rowNodes: nodes,
@@ -6354,7 +6354,7 @@ class _SearchScreenState extends State<SearchScreenHost>
         onRight: onRight,
         onUpHold: onUpHold,
         onDownHold: onDownHold,
-        child: _ArtPoster(
+        child: ArtPoster(
           imageUrl: channel.logoUrl,
           title: channel.name,
           showTitle: !_hideHomeCardTitlesAndRatings,
@@ -6378,13 +6378,13 @@ class _SearchScreenState extends State<SearchScreenHost>
       );
     }
     switch (ref.kind) {
-      case _FavKind.watchlistMovies:
-      case _FavKind.watchlistSeries:
-        final items = ref.kind == _FavKind.watchlistMovies
+      case FavKind.watchlistMovies:
+      case FavKind.watchlistSeries:
+        final items = ref.kind == FavKind.watchlistMovies
             ? _watchlistMovieItems
             : _watchlistSeriesItems;
         final item = items[col];
-        return _FavArtCell(
+        return FavArtCell(
           isTelevision: true,
           column: col,
           rowNodes: nodes,
@@ -6394,7 +6394,7 @@ class _SearchScreenState extends State<SearchScreenHost>
           onRight: onRight,
           onUpHold: onUpHold,
           onDownHold: onDownHold,
-          child: _ArtPoster(
+          child: ArtPoster(
             imageUrl: item.poster,
             title: item.name,
             showTitle: !_hideHomeCardTitlesAndRatings,
@@ -6413,9 +6413,9 @@ class _SearchScreenState extends State<SearchScreenHost>
             ),
           ),
         );
-      case _FavKind.iptv:
+      case FavKind.iptv:
         final channel = _iptvFavChannels[col];
-        return _FavArtCell(
+        return FavArtCell(
           isTelevision: true,
           column: col,
           rowNodes: nodes,
@@ -6425,7 +6425,7 @@ class _SearchScreenState extends State<SearchScreenHost>
           onRight: onRight,
           onUpHold: onUpHold,
           onDownHold: onDownHold,
-          child: _ArtPoster(
+          child: ArtPoster(
             imageUrl: channel.logoUrl,
             title: channel.name,
             showTitle: !_hideHomeCardTitlesAndRatings,
@@ -6449,12 +6449,12 @@ class _SearchScreenState extends State<SearchScreenHost>
             ),
           ),
         );
-      case _FavKind.debrify:
+      case FavKind.debrify:
         final channel = _tvFavChannels[col];
         final number = channel.channelNumber > 0
             ? channel.channelNumber
             : col + 1;
-        return _FavArtCell(
+        return FavArtCell(
           isTelevision: true,
           column: col,
           rowNodes: nodes,
@@ -6464,7 +6464,7 @@ class _SearchScreenState extends State<SearchScreenHost>
           onRight: onRight,
           onUpHold: onUpHold,
           onDownHold: onDownHold,
-          child: _ArtPoster(
+          child: ArtPoster(
             imageUrl: null,
             title: channel.name,
             showTitle: !_hideHomeCardTitlesAndRatings,
@@ -6484,10 +6484,10 @@ class _SearchScreenState extends State<SearchScreenHost>
             ),
           ),
         );
-      case _FavKind.stremio:
+      case FavKind.stremio:
         final channel = _stvFavChannels[col];
         final item = _stvNowPlaying(channel)?.item;
-        return _FavArtCell(
+        return FavArtCell(
           isTelevision: true,
           column: col,
           rowNodes: nodes,
@@ -6497,7 +6497,7 @@ class _SearchScreenState extends State<SearchScreenHost>
           onRight: onRight,
           onUpHold: onUpHold,
           onDownHold: onDownHold,
-          child: _ArtPoster(
+          child: ArtPoster(
             imageUrl: _firstNonEmpty(item?.poster, item?.background),
             title: channel.displayName,
             showTitle: !_hideHomeCardTitlesAndRatings,
@@ -6520,11 +6520,11 @@ class _SearchScreenState extends State<SearchScreenHost>
             ),
           ),
         );
-      case _FavKind.playlist:
+      case FavKind.playlist:
         final item = _playlistItems[col];
         final posterUrl = item['posterUrl'] as String?;
         final title = (item['title'] as String?) ?? 'Unknown';
-        return _FavArtCell(
+        return FavArtCell(
           isTelevision: true,
           column: col,
           rowNodes: nodes,
@@ -6534,7 +6534,7 @@ class _SearchScreenState extends State<SearchScreenHost>
           onRight: onRight,
           onUpHold: onUpHold,
           onDownHold: onDownHold,
-          child: _ArtPoster(
+          child: ArtPoster(
             imageUrl: posterUrl,
             title: title,
             showTitle: !_hideHomeCardTitlesAndRatings,
@@ -6815,7 +6815,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   }
 
   SpotlightCard _spotlightContinueWatchingCard(
-    _CwRow row,
+    CwRow row,
     StremioMeta item,
     int cwIndex,
     int col,
@@ -6840,7 +6840,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       shape: _homeLandscapeCards
           ? SpotlightCardShape.wide
           : SpotlightCardShape.poster,
-      // `_CwRow` publishes a 0..1 fraction; the card draws 0..100.
+      // `CwRow` publishes a 0..1 fraction; the card draws 0..100.
       progress: (row.progressOf(item) ?? 0) * 100,
       onOpen: () => row.onOpen(item),
       // Spotlight used to bypass the shared CW hold handler and Quick Play
@@ -6858,7 +6858,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// says how many items it holds. The three channel kinds carry LOGOS — wide,
   /// frequently transparent marks — which a 2:3 crop cuts in half, so they get
   /// a square tile that contains the art on a plate instead of filling with it.
-  SpotlightShelf _spotlightFavShelf(_FavRowRef ref, {String? id}) {
+  SpotlightShelf _spotlightFavShelf(FavRowRef ref, {String? id}) {
     final nodes = _favNodesFor(ref);
     if (ref.isIptvList) {
       final row = _iptvListRows[ref.list];
@@ -6887,9 +6887,9 @@ class _SearchScreenState extends State<SearchScreenHost>
       );
     }
     switch (ref.kind) {
-      case _FavKind.watchlistMovies:
-      case _FavKind.watchlistSeries:
-        final isMovies = ref.kind == _FavKind.watchlistMovies;
+      case FavKind.watchlistMovies:
+      case FavKind.watchlistSeries:
+        final isMovies = ref.kind == FavKind.watchlistMovies;
         final items = isMovies ? _watchlistMovieItems : _watchlistSeriesItems;
         return SpotlightShelf(
           id: id,
@@ -6918,7 +6918,7 @@ class _SearchScreenState extends State<SearchScreenHost>
               ),
           ],
         );
-      case _FavKind.playlist:
+      case FavKind.playlist:
         return SpotlightShelf(
           id: id,
           title: 'Playlists',
@@ -6933,7 +6933,7 @@ class _SearchScreenState extends State<SearchScreenHost>
               ),
           ],
         );
-      case _FavKind.iptv:
+      case FavKind.iptv:
         return SpotlightShelf(
           id: id,
           title: 'IPTV Favourites',
@@ -6957,7 +6957,7 @@ class _SearchScreenState extends State<SearchScreenHost>
               ),
           ],
         );
-      case _FavKind.debrify:
+      case FavKind.debrify:
         return SpotlightShelf(
           id: id,
           title: 'Debrify TV',
@@ -6974,7 +6974,7 @@ class _SearchScreenState extends State<SearchScreenHost>
               ),
           ],
         );
-      case _FavKind.stremio:
+      case FavKind.stremio:
         return SpotlightShelf(
           id: id,
           title: 'Stremio TV',
@@ -7255,38 +7255,38 @@ class _SearchScreenState extends State<SearchScreenHost>
         ]
       : _canvasRails;
 
-  int _canvasFavItemCount(_FavRowRef ref) {
+  int _canvasFavItemCount(FavRowRef ref) {
     if (ref.isIptvList) return _iptvListRows[ref.list].channels.length;
     switch (ref.kind) {
-      case _FavKind.watchlistMovies:
+      case FavKind.watchlistMovies:
         return _watchlistMovieItems.length;
-      case _FavKind.watchlistSeries:
+      case FavKind.watchlistSeries:
         return _watchlistSeriesItems.length;
-      case _FavKind.iptv:
+      case FavKind.iptv:
         return _iptvFavChannels.length;
-      case _FavKind.debrify:
+      case FavKind.debrify:
         return _tvFavChannels.length;
-      case _FavKind.stremio:
+      case FavKind.stremio:
         return _stvFavChannels.length;
-      case _FavKind.playlist:
+      case FavKind.playlist:
         return _playlistItems.length;
     }
   }
 
-  String _canvasFavTitle(_FavRowRef ref) {
+  String _canvasFavTitle(FavRowRef ref) {
     if (ref.isIptvList) return _iptvListRows[ref.list].title;
     switch (ref.kind) {
-      case _FavKind.watchlistMovies:
+      case FavKind.watchlistMovies:
         return 'Watchlist Movies';
-      case _FavKind.watchlistSeries:
+      case FavKind.watchlistSeries:
         return 'Watchlist Series';
-      case _FavKind.iptv:
+      case FavKind.iptv:
         return 'IPTV Favorites';
-      case _FavKind.debrify:
+      case FavKind.debrify:
         return 'Debrify TV';
-      case _FavKind.stremio:
+      case FavKind.stremio:
         return 'Stremio TV';
-      case _FavKind.playlist:
+      case FavKind.playlist:
         return 'Playlist';
     }
   }
@@ -9158,17 +9158,17 @@ class _SearchScreenState extends State<SearchScreenHost>
       _searchSubmitFocus.arm(enabled: widget.isTelevision);
     }
     switch (_mode) {
-      case _Mode.keyword:
+      case SearchBoardMode.keyword:
         _runKeyword(q);
         return;
-      case _Mode.catalog:
+      case SearchBoardMode.catalog:
         if (q.isEmpty) {
           _restoreHome();
         } else {
           _runCatalogSearch(q);
         }
         return;
-      case _Mode.lists:
+      case SearchBoardMode.lists:
         if (q.isEmpty) {
           _clearListsSearch();
         } else {
@@ -10457,10 +10457,10 @@ class _SearchScreenState extends State<SearchScreenHost>
     _kwNodes.clear();
   }
 
-  void _switchMode(_Mode mode) {
+  void _switchMode(SearchBoardMode mode) {
     // Belt for every entry point at once: the keyword surface is gated per
     // profile (catalog search never is).
-    if (mode == _Mode.keyword &&
+    if (mode == SearchBoardMode.keyword &&
         !ProfilePolicyGuard.allowsSync(ProfileFeature.keywordSearch)) {
       return;
     }
@@ -10476,13 +10476,13 @@ class _SearchScreenState extends State<SearchScreenHost>
     final query = _searchController.text.trim();
     if (query.isEmpty) return;
     switch (mode) {
-      case _Mode.keyword:
+      case SearchBoardMode.keyword:
         if (query != _kwQuery) _runKeyword(query);
         return;
-      case _Mode.catalog:
+      case SearchBoardMode.catalog:
         if (query != _catalogQuery) _runCatalogSearch(query);
         return;
-      case _Mode.lists:
+      case SearchBoardMode.lists:
         if (query != _listsQuery) _runListsSearch(query);
         return;
     }
@@ -12929,7 +12929,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     if (widget.isTelevision || widget.searchMode) {
       return const SizedBox.shrink();
     }
-    final show = _catalogSourcesBarShown && _mode == _Mode.catalog;
+    final show = _catalogSourcesBarShown && _mode == SearchBoardMode.catalog;
     return AnimatedSize(
       duration: const Duration(milliseconds: 160),
       curve: Curves.easeOut,
@@ -13111,9 +13111,9 @@ class _SearchScreenState extends State<SearchScreenHost>
                 : null,
             decoration: InputDecoration(
               hintText: switch (_mode) {
-                _Mode.catalog => 'Search or paste link',
-                _Mode.keyword => 'Search torrents by keyword',
-                _Mode.lists => 'Search MDBList lists',
+                SearchBoardMode.catalog => 'Search or paste link',
+                SearchBoardMode.keyword => 'Search torrents by keyword',
+                SearchBoardMode.lists => 'Search MDBList lists',
               },
               hintStyle: TextStyle(color: app.fade(app.core.tx, 0.32)),
               suffixIcon: hasText
@@ -13178,8 +13178,8 @@ class _SearchScreenState extends State<SearchScreenHost>
   }
 
   Widget _buildBody() {
-    if (_mode == _Mode.keyword) return _buildKeyword();
-    if (_mode == _Mode.lists) return _buildListsSearch();
+    if (_mode == SearchBoardMode.keyword) return _buildKeyword();
+    if (_mode == SearchBoardMode.lists) return _buildListsSearch();
     // Full-screen spinner only until the FIRST result row streams in — after
     // that the board renders and late rows append beneath it (a slim progress
     // strip in _buildBoard signals the search is still running).
@@ -15205,7 +15205,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       return TraktSeeAllScreen(
         key: const ValueKey('disc_trakt'),
         cwItems: _traktAll,
-        cwProgress: _cwCardMaps(_CwKind.trakt).progress,
+        cwProgress: _cwCardMaps(CwKind.trakt).progress,
         onOpen: _openTraktItem,
         onQuickPlay: _pikpakOnly ? null : _playTraktItem,
         onItemFocused: _onDiscFocused,
@@ -15297,7 +15297,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       key: const ValueKey('disc_cw'),
       title: 'Continue Watching',
       items: _cwAll,
-      progressOf: (m) => _cwCardProgress(_CwKind.local, m),
+      progressOf: (m) => _cwCardProgress(CwKind.local, m),
       onOpen: _openContinueItem,
       onQuickPlay: _pikpakOnly ? null : _onContinuePlay,
       onItemFocused: _onDiscFocused,
@@ -16091,7 +16091,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       screen = TraktSeeAllScreen(
         initialList: section.traktChoice,
         cwItems: List<StremioMeta>.of(_traktAll),
-        cwProgress: _cwCardMaps(_CwKind.trakt).progress,
+        cwProgress: _cwCardMaps(CwKind.trakt).progress,
         onOpen: _openTraktItem,
         onQuickPlay: _pikpakOnly ? null : _playTraktItem,
         isBound: _isBound,
@@ -16271,7 +16271,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       title: 'Continue Watching',
       initialCategory: initialCategory,
       items: _cwAll,
-      progressOf: (m) => _cwCardProgress(_CwKind.local, m),
+      progressOf: (m) => _cwCardProgress(CwKind.local, m),
       onOpen: _openContinueItem,
       onQuickPlay: _pikpakOnly ? null : _onContinuePlay,
       // Reload CW + refresh bound sources (sequenced), then hand the grid the
@@ -16309,7 +16309,7 @@ class _SearchScreenState extends State<SearchScreenHost>
                 // bars reflect any refresh while the screen is open, matching the
                 // old live-closure behaviour; items stay a snapshot so the grid
                 // doesn't shift under the user.
-                cwProgress: _cwCardMaps(_CwKind.trakt).progress,
+                cwProgress: _cwCardMaps(CwKind.trakt).progress,
                 onOpen: _openTraktItem,
                 onQuickPlay: _pikpakOnly ? null : _playTraktItem,
                 // CW items are all rail-loaded, so _boundCounts covers them.
@@ -16585,7 +16585,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// A leading Continue Watching row (local or Trakt) — same poster cards as the
   /// catalog rows, plus a bottom progress bar and an optional type tag. Vertical
   /// navigation resolves [homeRowId] against the live global order.
-  Widget _buildContinueWatchingRow(_CwRow row, int cwIndex, String homeRowId) {
+  Widget _buildContinueWatchingRow(CwRow row, int cwIndex, String homeRowId) {
     final tv = widget.isTelevision;
     final posterW = _railTitleCardW(context);
     final cellH = _railTitleCardH(context);
@@ -16683,28 +16683,28 @@ class _SearchScreenState extends State<SearchScreenHost>
   }
 
   /// Dispatch to the right favourites-row builder for [ref].
-  Widget _buildFavRow(_FavRowRef ref, String homeRowId) {
+  Widget _buildFavRow(FavRowRef ref, String homeRowId) {
     if (ref.isIptvList) {
       return _buildIptvListRow(ref, homeRowId);
     }
     switch (ref.kind) {
-      case _FavKind.watchlistMovies:
-      case _FavKind.watchlistSeries:
+      case FavKind.watchlistMovies:
+      case FavKind.watchlistSeries:
         return _buildWatchlistRow(ref, homeRowId);
-      case _FavKind.iptv:
+      case FavKind.iptv:
         return _buildIptvFavRow(homeRowId);
-      case _FavKind.debrify:
+      case FavKind.debrify:
         return _buildTvFavRow(homeRowId);
-      case _FavKind.stremio:
+      case FavKind.stremio:
         return _buildStremioTvFavRow(homeRowId);
-      case _FavKind.playlist:
+      case FavKind.playlist:
         return _buildPlaylistFavRow(homeRowId);
     }
   }
 
-  Widget _buildWatchlistRow(_FavRowRef ref, String homeRowId) {
+  Widget _buildWatchlistRow(FavRowRef ref, String homeRowId) {
     final tv = widget.isTelevision;
-    final isMovies = ref.kind == _FavKind.watchlistMovies;
+    final isMovies = ref.kind == FavKind.watchlistMovies;
     final items = isMovies ? _watchlistMovieItems : _watchlistSeriesItems;
     final nodes = isMovies ? _watchlistMovieNodes : _watchlistSeriesNodes;
     return _buildFavRowShell(
@@ -16718,13 +16718,13 @@ class _SearchScreenState extends State<SearchScreenHost>
       itemCount: items.length,
       cellBuilder: (col, posterW, cellH) {
         final item = items[col];
-        return _FavArtCell(
+        return FavArtCell(
           isTelevision: tv,
           column: col,
           rowNodes: nodes,
           onUp: _favRowOnUp(homeRowId, col),
           onDown: _favRowOnDown(homeRowId, col),
-          child: _ArtPoster(
+          child: ArtPoster(
             imageUrl: item.poster,
             title: item.name,
             showTitle: !_hideHomeCardTitlesAndRatings,
@@ -16825,7 +16825,7 @@ class _SearchScreenState extends State<SearchScreenHost>
         final number = channel.channelNumber > 0
             ? channel.channelNumber
             : col + 1;
-        return _FavArtCell(
+        return FavArtCell(
           isTelevision: tv,
           column: col,
           rowNodes: _tvFavNodes,
@@ -16833,7 +16833,7 @@ class _SearchScreenState extends State<SearchScreenHost>
           onDown: _favRowOnDown(homeRowId, col),
           // Debrify channels have no artwork — the glyph fallback + channel
           // number badge is the intended look.
-          child: _ArtPoster(
+          child: ArtPoster(
             imageUrl: null,
             title: channel.name,
             showTitle: !_hideHomeCardTitlesAndRatings,
@@ -16867,13 +16867,13 @@ class _SearchScreenState extends State<SearchScreenHost>
         // (landscape) background so channels whose now-playing meta lacks a
         // poster still show art instead of a blank glyph.
         final art = _firstNonEmpty(item?.poster, item?.background);
-        return _FavArtCell(
+        return FavArtCell(
           isTelevision: tv,
           column: col,
           rowNodes: _stvFavNodes,
           onUp: _favRowOnUp(homeRowId, col),
           onDown: _favRowOnDown(homeRowId, col),
-          child: _ArtPoster(
+          child: ArtPoster(
             imageUrl: art,
             title: channel.displayName,
             showTitle: !_hideHomeCardTitlesAndRatings,
@@ -16901,13 +16901,13 @@ class _SearchScreenState extends State<SearchScreenHost>
       itemCount: _iptvFavChannels.length,
       cellBuilder: (col, posterW, cellH) {
         final channel = _iptvFavChannels[col];
-        return _FavArtCell(
+        return FavArtCell(
           isTelevision: tv,
           column: col,
           rowNodes: _iptvFavNodes,
           onUp: _favRowOnUp(homeRowId, col),
           onDown: _favRowOnDown(homeRowId, col),
-          child: _ArtPoster(
+          child: ArtPoster(
             imageUrl: channel.logoUrl,
             title: channel.name,
             showTitle: !_hideHomeCardTitlesAndRatings,
@@ -16931,7 +16931,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// favourites row, but content-aware: play routes by the stored content
   /// type (lists can hold VOD/series alongside live), and only a live entry
   /// retunes the hero's live preview on focus.
-  Widget _buildIptvListRow(_FavRowRef ref, String homeRowId) {
+  Widget _buildIptvListRow(FavRowRef ref, String homeRowId) {
     final tv = widget.isTelevision;
     final row = _iptvListRows[ref.list];
     return _buildFavRowShell(
@@ -16944,13 +16944,13 @@ class _SearchScreenState extends State<SearchScreenHost>
       cellBuilder: (col, posterW, cellH) {
         final channel = row.channels[col];
         final live = channel.isLive;
-        return _FavArtCell(
+        return FavArtCell(
           isTelevision: tv,
           column: col,
           rowNodes: row.nodes,
           onUp: _favRowOnUp(homeRowId, col),
           onDown: _favRowOnDown(homeRowId, col),
-          child: _ArtPoster(
+          child: ArtPoster(
             imageUrl: channel.logoUrl,
             title: channel.name,
             showTitle: !_hideHomeCardTitlesAndRatings,
@@ -16982,13 +16982,13 @@ class _SearchScreenState extends State<SearchScreenHost>
         final item = _playlistItems[col];
         final posterUrl = item['posterUrl'] as String?;
         final title = (item['title'] as String?) ?? 'Unknown';
-        return _FavArtCell(
+        return FavArtCell(
           isTelevision: tv,
           column: col,
           rowNodes: _playlistFavNodes,
           onUp: _favRowOnUp(homeRowId, col),
           onDown: _favRowOnDown(homeRowId, col),
-          child: _ArtPoster(
+          child: ArtPoster(
             imageUrl: posterUrl,
             title: title,
             showTitle: !_hideHomeCardTitlesAndRatings,

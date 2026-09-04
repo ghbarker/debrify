@@ -537,7 +537,7 @@ class _SeeAllLinkState extends State<_SeeAllLink> {
 /// Watchlist Series, Playlist, Debrify TV, Stremio TV, IPTV) is defined by
 /// [_SearchScreenState._favRowKinds], the single source of truth for rendering
 /// and the index-based DPAD focus wiring.
-enum _FavKind {
+enum FavKind {
   watchlistMovies,
   watchlistSeries,
   iptv,
@@ -547,19 +547,19 @@ enum _FavKind {
 }
 
 /// One visible favourites-family row: a singleton [kind] row ([list] == -1),
-/// or — for `kind == _FavKind.iptv` with [list] >= 0 — the IPTV custom-list
+/// or — for `kind == FavKind.iptv` with [list] >= 0 — the IPTV custom-list
 /// row at that index of [_SearchScreenState._iptvListRows]. Value-equal so
 /// rebuilt ref lists compare cleanly.
-class _FavRowRef {
-  final _FavKind kind;
+class FavRowRef {
+  final FavKind kind;
   final int list;
-  const _FavRowRef(this.kind, [this.list = -1]);
+  const FavRowRef(this.kind, [this.list = -1]);
 
   bool get isIptvList => list >= 0;
 
   @override
   bool operator ==(Object other) =>
-      other is _FavRowRef && other.kind == kind && other.list == list;
+      other is FavRowRef && other.kind == kind && other.list == list;
 
   @override
   int get hashCode => Object.hash(kind, list);
@@ -581,10 +581,10 @@ class _IptvListRow {
 
 /// Generic DPAD arrow-handling wrapper for a favourites-row card — the arrow
 /// counterpart to [_BoardCell] for the IPTV / Debrify TV / Stremio TV rows.
-/// Holds no focus itself — the inner [_ArtPoster] does; this only routes
+/// Holds no focus itself — the inner [ArtPoster] does; this only routes
 /// left/right within the row and up/down out of it, matching the catalog
 /// cards' navigation exactly.
-class _FavArtCell extends StatelessWidget {
+class FavArtCell extends StatelessWidget {
   final bool isTelevision;
   final int column;
   final List<FocusNode> rowNodes;
@@ -601,7 +601,7 @@ class _FavArtCell extends StatelessWidget {
   final VoidCallback? onDownHold;
   final Widget child;
 
-  const _FavArtCell({
+  const FavArtCell({
     required this.isTelevision,
     required this.column,
     required this.rowNodes,
@@ -675,7 +675,7 @@ class _FavArtCell extends StatelessWidget {
 /// over a purple gradient — with a live-TV glyph fallback when it's missing or
 /// fails to load — and the title below, matching [_StremioCard]'s size, corner
 /// radius, hover/focus lift and selection ring so the row reads as one board.
-class _ArtPoster extends StatefulWidget {
+class ArtPoster extends StatefulWidget {
   final String? imageUrl;
   final String title;
   final bool showTitle;
@@ -709,7 +709,7 @@ class _ArtPoster extends StatefulWidget {
   /// passing through a catalog/CW card first.
   final VoidCallback? onFocused;
 
-  const _ArtPoster({
+  const ArtPoster({
     required this.imageUrl,
     required this.title,
     this.showTitle = true,
@@ -725,10 +725,10 @@ class _ArtPoster extends StatefulWidget {
   });
 
   @override
-  State<_ArtPoster> createState() => _ArtPosterState();
+  State<ArtPoster> createState() => _ArtPosterState();
 }
 
-class _ArtPosterState extends State<_ArtPoster> {
+class _ArtPosterState extends State<ArtPoster> {
   bool _focused = false;
   bool _hovered = false;
   bool _keyDown = false;
@@ -943,14 +943,14 @@ class _ArtPosterState extends State<_ArtPoster> {
 
 /// Catalog / Keyword / Lists mode selector.
 class _ModeToggle extends StatelessWidget {
-  final _Mode mode;
+  final SearchBoardMode mode;
   final bool isTelevision;
   final bool listsAvailable;
 
   /// When true the two segments split the full available width (used when the
   /// toggle is stacked below the search box on narrow screens).
   final bool fullWidth;
-  final ValueChanged<_Mode> onChanged;
+  final ValueChanged<SearchBoardMode> onChanged;
 
   /// TV-only DPAD focus nodes for the segments (null off-TV, where the
   /// InkWell handles pointer taps and normal Tab traversal instead).
@@ -983,28 +983,28 @@ class _ModeToggle extends StatelessWidget {
     this.onLeaveToContent,
   });
 
-  List<_Mode> get _modes => [
-    _Mode.catalog,
+  List<SearchBoardMode> get _modes => [
+    SearchBoardMode.catalog,
     if (ProfilePolicyGuard.allowsSync(ProfileFeature.keywordSearch))
-      _Mode.keyword,
-    if (listsAvailable) _Mode.lists,
+      SearchBoardMode.keyword,
+    if (listsAvailable) SearchBoardMode.lists,
   ];
 
-  FocusNode? _nodeFor(_Mode value) => switch (value) {
-    _Mode.catalog => catalogNode,
-    _Mode.keyword => keywordNode,
-    _Mode.lists => listsNode,
+  FocusNode? _nodeFor(SearchBoardMode value) => switch (value) {
+    SearchBoardMode.catalog => catalogNode,
+    SearchBoardMode.keyword => keywordNode,
+    SearchBoardMode.lists => listsNode,
   };
 
-  String _labelFor(_Mode value) => switch (value) {
-    _Mode.catalog => 'Catalog',
-    _Mode.keyword => 'Keyword',
-    _Mode.lists => 'Lists',
+  String _labelFor(SearchBoardMode value) => switch (value) {
+    SearchBoardMode.catalog => 'Catalog',
+    SearchBoardMode.keyword => 'Keyword',
+    SearchBoardMode.lists => 'Lists',
   };
 
   /// DPAD handling for a focused segment: select switches mode, arrows move
   /// between the segments and out to the field (up/left) or content (down).
-  KeyEventResult _handleSegmentKey(_Mode value, KeyEvent event) {
+  KeyEventResult _handleSegmentKey(SearchBoardMode value, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     if (isActivateKey(key) || key == LogicalKeyboardKey.space) {
@@ -1049,7 +1049,7 @@ class _ModeToggle extends StatelessWidget {
     if (compact) {
       return SizedBox(
         width: fullWidth ? double.infinity : 156,
-        child: StremioDropdown<_Mode>(
+        child: StremioDropdown<SearchBoardMode>(
           label: 'Search',
           value: modes.contains(mode) ? mode : modes.first,
           options: [
@@ -1066,26 +1066,26 @@ class _ModeToggle extends StatelessWidget {
     }
     final catalog = _segment(
       context,
-      _Mode.catalog,
+      SearchBoardMode.catalog,
       'Catalog',
       Icons.grid_view_rounded,
     );
     final keyword = _segment(
       context,
-      _Mode.keyword,
+      SearchBoardMode.keyword,
       'Keyword',
       Icons.bolt_rounded,
     );
     final lists = _segment(
       context,
-      _Mode.lists,
+      SearchBoardMode.lists,
       'Lists',
       Icons.playlist_play_rounded,
     );
     final segments = <Widget>[
       catalog,
-      if (modes.contains(_Mode.keyword)) keyword,
-      if (modes.contains(_Mode.lists)) lists,
+      if (modes.contains(SearchBoardMode.keyword)) keyword,
+      if (modes.contains(SearchBoardMode.lists)) lists,
     ];
     return Container(
       height: isTelevision ? 54 : 48,
@@ -1106,16 +1106,16 @@ class _ModeToggle extends StatelessWidget {
 
   Widget _segment(
     BuildContext context,
-    _Mode value,
+    SearchBoardMode value,
     String label,
     IconData icon,
   ) {
     final app = AppThemeScope.of(context);
     final on = mode == value;
     final node = switch (value) {
-      _Mode.catalog => catalogNode,
-      _Mode.keyword => keywordNode,
-      _Mode.lists => listsNode,
+      SearchBoardMode.catalog => catalogNode,
+      SearchBoardMode.keyword => keywordNode,
+      SearchBoardMode.lists => listsNode,
     };
 
     Widget content(bool focused) => AnimatedContainer(
