@@ -18,6 +18,7 @@ import '../../services/stream_url_validator.dart';
 import '../../services/main_page_bridge.dart';
 import '../../services/storage_service.dart';
 import '../../services/cloud/cloud_provider_chrome.dart';
+import '../../services/cloud/cloud_credentials.dart';
 import '../../services/cloud/cloud_provider_id.dart';
 import '../../services/cloud/cloud_provider_registry.dart';
 import '../../services/video_player_launcher.dart';
@@ -224,32 +225,8 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
     _hideNowPlaying = await StorageService.getStremioTvHideNowPlaying();
   }
 
-  Future<List<MapEntry<String, String>>> _loadAvailableProviders() async {
-    final providers = <MapEntry<String, String>>[];
-    final rdKey = await StorageService.getApiKey();
-    if (rdKey != null && rdKey.isNotEmpty) {
-      providers.add(CloudProviderId.debrid.catalogChoice);
-    }
-    final tbKey = await StorageService.getTorboxApiKey();
-    if (tbKey != null && tbKey.isNotEmpty) {
-      providers.add(CloudProviderId.torbox.catalogChoice);
-    }
-    final pikpakEnabled = await StorageService.getPikPakEnabled();
-    if (pikpakEnabled) {
-      providers.add(CloudProviderId.pikpak.catalogChoice);
-    }
-    final pmEnabled = await StorageService.getPremiumizeIntegrationEnabled();
-    final pmKey = await StorageService.getPremiumizeApiKey();
-    if (pmEnabled && pmKey != null && pmKey.isNotEmpty) {
-      providers.add(CloudProviderId.premiumize.catalogChoice);
-    }
-    final adEnabled = await StorageService.getAllDebridIntegrationEnabled();
-    final adKey = await StorageService.getAllDebridApiKey();
-    if (adEnabled && adKey != null && adKey.isNotEmpty) {
-      providers.add(CloudProviderId.alldebrid.catalogChoice);
-    }
-    return providers;
-  }
+  Future<List<MapEntry<String, String>>> _loadAvailableProviders() =>
+      CloudCredentials.stremioPickerChoices();
 
   Future<void> _discoverAndLoad() async {
     setState(() => _loading = true);
