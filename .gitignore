@@ -51,6 +51,12 @@ app.*.map.json
 # Release automation secrets/tooling — never commit
 .release/
 
+# Qwen Code local secrets / session files — settings.json is tracked
+.qwen/.env
+.qwen/QWEN.local.md
+.qwen/tmp/
+.qwen/projects/
+
 # Discord bot secrets & deps — code is tracked, secrets/deps are not
 dev/tool/discord/.dev.vars
 dev/tool/discord/.deploy.env
