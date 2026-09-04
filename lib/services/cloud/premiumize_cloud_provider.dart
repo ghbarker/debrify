@@ -20,14 +20,23 @@ import 'magic_tv_playable.dart';
 import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
-class PremiumizeCloudProvider extends CloudProviderAdapter {
+class PremiumizeCloudProvider extends CloudProviderAdapter
+    implements
+        CloudUnlock,
+        CloudMagnetAdd,
+        CloudMagicTvPrepare,
+        CloudCheckCache,
+        CloudTransfer,
+        CloudTransferZip,
+        CloudQueueUncached {
   const PremiumizeCloudProvider();
 
   @override
   CloudProviderId get id => CloudProviderId.premiumize;
 
   @override
-  Future<bool> isConfigured() => CloudCredentials.isPlaybackConfigured(id);
+  Future<bool> isConfigured() =>
+      CloudCredentials.configured(id, CloudSurface.playback);
 
   @override
   Future<CloudPlaybackResult> addMagnet(String magnet, Torrent torrent) async {
@@ -155,14 +164,6 @@ class PremiumizeCloudProvider extends CloudProviderAdapter {
       playlist: entries.length > 1 ? entries : null,
       startIndex: startIndex,
       fileName: entries.length == 1 ? entries.first.title : null,
-    );
-  }
-
-  @override
-  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) {
-    throw const CloudUnsupported(
-      CloudProviderId.premiumize,
-      CloudPortFeature.playlistEntry,
     );
   }
 
@@ -299,16 +300,6 @@ class PremiumizeCloudProvider extends CloudProviderAdapter {
   }
 
   @override
-  Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
-    MagicTvPrepareRequest request,
-  ) {
-    throw const CloudUnsupported(
-      CloudProviderId.premiumize,
-      CloudPortFeature.magicTvLockedLinks,
-    );
-  }
-
-  @override
   Future<List<bool>> checkCache(List<String> items) async {
     final apiKey = await CloudCredentials.apiKey(id);
     if (apiKey == null || apiKey.isEmpty) {
@@ -336,5 +327,6 @@ class PremiumizeCloudProvider extends CloudProviderAdapter {
   }
 
   @override
-  Future<void> queueUncachedMagnet(String magnet) => createCloudTransfer(magnet);
+  Future<void> queueUncachedMagnet(String magnet) =>
+      createCloudTransfer(magnet);
 }

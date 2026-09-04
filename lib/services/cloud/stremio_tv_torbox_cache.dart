@@ -20,7 +20,10 @@ class StremioTvTorboxCache {
   }) async {
     if (isCancelled?.call() ?? false) return const <String>{};
 
-    if (!await CloudCredentials.isPlaybackConfigured(CloudProviderId.torbox)) {
+    if (!await CloudCredentials.configured(
+      CloudProviderId.torbox,
+      CloudSurface.playback,
+    )) {
       return const <String>{};
     }
     if (isCancelled?.call() ?? false) return const <String>{};

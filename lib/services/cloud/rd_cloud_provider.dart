@@ -18,14 +18,20 @@ import 'cloud_provider_port.dart';
 import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
-class RealDebridCloudProvider extends CloudProviderAdapter {
+class RealDebridCloudProvider extends CloudProviderAdapter
+    implements
+        CloudUnlock,
+        CloudMagnetAdd,
+        CloudPlaylist,
+        CloudMagicTvLockedLinks {
   const RealDebridCloudProvider();
 
   @override
   CloudProviderId get id => CloudProviderId.debrid;
 
   @override
-  Future<bool> isConfigured() => CloudCredentials.isPlaybackConfigured(id);
+  Future<bool> isConfigured() =>
+      CloudCredentials.configured(id, CloudSurface.playback);
 
   @override
   Future<CloudPlaybackResult> addMagnet(String magnet, Torrent torrent) async {
@@ -126,13 +132,19 @@ class RealDebridCloudProvider extends CloudProviderAdapter {
   }
 
   @override
-  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async {
+  Future<CloudPlaylistResolve> resolvePlaylist(PlaylistEntry entry) async {
     final link = entry.restrictedLink;
-    if (link == null || link.isEmpty) return null;
+    if (link == null || link.isEmpty) return const CloudPlaylistMiss();
     final apiKey = (await CloudCredentials.apiKey(id)) ?? '';
     final r = await DebridService.unrestrictLink(apiKey, link);
-    return r['download']?.toString();
+    final url = r['download']?.toString();
+    if (url == null || url.isEmpty) return const CloudPlaylistMiss();
+    return CloudPlaylistResolved(url);
   }
+
+  @override
+  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async =>
+      (await resolvePlaylist(entry)).urlOrNull;
 
   @override
   Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
@@ -324,14 +336,6 @@ class RealDebridCloudProvider extends CloudProviderAdapter {
       debugPrint('StremioTV: RD resolve error: $e');
       return null;
     }
-  }
-
-  @override
-  Future<MagicTvPrepared?> prepareMagicTv(MagicTvPrepareRequest request) {
-    throw const CloudUnsupported(
-      CloudProviderId.debrid,
-      CloudPortFeature.magicTvPrepare,
-    );
   }
 
   @override

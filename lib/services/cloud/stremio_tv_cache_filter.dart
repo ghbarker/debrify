@@ -50,14 +50,13 @@ class StremioTvCacheFilter {
   static List<Torrent> _keepDirectsAndCached(
     List<Torrent> sources,
     Set<String> cached,
-  ) =>
-      sources
-          .where(
-            (torrent) =>
-                torrent.streamType != StreamType.torrent ||
-                cached.contains(torrent.infohash.trim().toLowerCase()),
-          )
-          .toList();
+  ) => sources
+      .where(
+        (torrent) =>
+            torrent.streamType != StreamType.torrent ||
+            cached.contains(torrent.infohash.trim().toLowerCase()),
+      )
+      .toList();
 
   static Future<List<Torrent>?> _filterTorbox({
     required List<Torrent> sources,
@@ -65,7 +64,10 @@ class StremioTvCacheFilter {
     VoidCallback? onStart,
     void Function(int cachedCount, int torrentCount)? onChecked,
   }) async {
-    if (!await CloudCredentials.isPlaybackConfigured(CloudProviderId.torbox)) {
+    if (!await CloudCredentials.configured(
+      CloudProviderId.torbox,
+      CloudSurface.playback,
+    )) {
       return sources;
     }
     final hashes = _torrentHashes(sources);
@@ -86,8 +88,9 @@ class StremioTvCacheFilter {
     VoidCallback? onStart,
     void Function(int cachedCount, int torrentCount)? onChecked,
   }) async {
-    if (!await CloudCredentials.isPlaybackConfigured(
+    if (!await CloudCredentials.configured(
       CloudProviderId.premiumize,
+      CloudSurface.playback,
     )) {
       return sources;
     }

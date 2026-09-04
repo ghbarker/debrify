@@ -74,7 +74,11 @@ class CloudProviderRegistry {
     String provider,
     String magnet,
     Torrent torrent,
-  ) => require(provider).addMagnet(magnet, torrent);
+  ) {
+    final port = require(provider);
+    if (port is CloudMagnetAdd) return port.addMagnet(magnet, torrent);
+    return port.addMagnet(magnet, torrent);
+  }
 
   /// Bound replay looks up [SeriesSource.debridService] as a stored id
   /// (`rd`, not `debrid`). Unknown ids return null; they do not throw.
@@ -87,6 +91,9 @@ class CloudProviderRegistry {
     final id = CloudProviderId.fromStoredId(source.debridService);
     final port = id == null ? null : _byId[id];
     if (port == null) return null;
+    if (port is CloudUnlock) {
+      return port.resolveNativeBound(source, contentType: contentType);
+    }
     return port.resolveNativeBound(source, contentType: contentType);
   }
 
@@ -96,17 +103,31 @@ class CloudProviderRegistry {
     if (entry.url.isNotEmpty) return entry.url;
     try {
       if (entry.restrictedLink != null && entry.restrictedLink!.isNotEmpty) {
-        return await _byId[CloudProviderId.debrid]?.resolvePlaylistEntry(entry);
+        return await _resolvePlaylist(_byId[CloudProviderId.debrid], entry);
       }
       if (entry.torboxTorrentId != null && entry.torboxFileId != null) {
-        return await _byId[CloudProviderId.torbox]?.resolvePlaylistEntry(entry);
+        return await _resolvePlaylist(_byId[CloudProviderId.torbox], entry);
       }
       if (entry.allDebridLink != null && entry.allDebridLink!.isNotEmpty) {
-        return await _byId[CloudProviderId.alldebrid]?.resolvePlaylistEntry(
-          entry,
-        );
+        return await _resolvePlaylist(_byId[CloudProviderId.alldebrid], entry);
       }
     } catch (_) {}
+    return null;
+  }
+
+  /// Production [CloudPlaylist] returns a sealed miss/url. Fat-port fakes
+  /// keep [CloudProviderPort.resolvePlaylistEntry] (`String?`).
+  Future<String?> _resolvePlaylist(
+    CloudProviderPort? port,
+    PlaylistEntry entry,
+  ) async {
+    final playlist = _as<CloudPlaylist>(port);
+    if (playlist != null) {
+      return (await playlist.resolvePlaylist(entry)).urlOrNull;
+    }
+    if (port != null && port.supports(CloudPortFeature.playlistEntry)) {
+      return port.resolvePlaylistEntry(entry);
+    }
     return null;
   }
 
@@ -122,7 +143,7 @@ class CloudProviderRegistry {
       if (fallbackUrl.isNotEmpty) return fallbackUrl;
       throw Exception('No URL metadata available for this entry');
     }
-    return requireId(provider).unlockPlaybackEntry(entry);
+    return _unlock(requireId(provider), entry);
   }
 
   /// In-app player (`video_player_screen._resolvePlaylistEntryUrl`). Same
@@ -141,12 +162,17 @@ class CloudProviderRegistry {
     return _playerWrappedUnlock(provider, entry);
   }
 
+  Future<String> _unlock(CloudProviderPort port, PlaylistEntry entry) {
+    if (port is CloudUnlock) return port.unlockPlaybackEntry(entry);
+    return port.unlockPlaybackEntry(entry);
+  }
+
   Future<String> _playerWrappedUnlock(
     CloudProviderId provider,
     PlaylistEntry entry,
   ) async {
     try {
-      return await requireId(provider).unlockPlaybackEntry(entry);
+      return await _unlock(requireId(provider), entry);
     } on CloudMetadataMissing {
       rethrow;
     } on CloudMissingApiKey {
@@ -184,6 +210,7 @@ class CloudProviderRegistry {
         final id = CloudProviderId.tryParse(provider);
         final port = id == null ? null : _byId[id];
         if (port == null) return null;
+        if (port is CloudUnlock) return port.resolveStremioTorrent(args);
         return port.resolveStremioTorrent(args);
       },
     );
@@ -199,12 +226,10 @@ class CloudProviderRegistry {
     final id = CloudProviderId.tryParse(provider);
     final port = id == null ? null : _byId[id];
     if (port == null) return null;
+    final prepare = _as<CloudMagicTvPrepare>(port);
+    if (prepare != null) return prepare.prepareMagicTv(request);
     if (!port.supports(CloudPortFeature.magicTvPrepare)) return null;
-    try {
-      return await port.prepareMagicTv(request);
-    } on CloudUnsupported {
-      return null;
-    }
+    return port.prepareMagicTv(request);
   }
 
   /// Locked-link queue fill. Same [CloudProviderId.tryParse] as
@@ -216,12 +241,10 @@ class CloudProviderRegistry {
     final id = CloudProviderId.tryParse(provider);
     final port = id == null ? null : _byId[id];
     if (port == null) return null;
+    final locked = _as<CloudMagicTvLockedLinks>(port);
+    if (locked != null) return locked.prepareMagicTvLockedLinks(request);
     if (!port.supports(CloudPortFeature.magicTvLockedLinks)) return null;
-    try {
-      return await port.prepareMagicTvLockedLinks(request);
-    } on CloudUnsupported {
-      return null;
-    }
+    return port.prepareMagicTvLockedLinks(request);
   }
 
   /// TorBox cache-check only. Missing adapter / unsupported → empty set.
@@ -229,10 +252,12 @@ class CloudProviderRegistry {
   /// ([TorboxService.checkCachedTorrents] swallows per-chunk failures).
   Future<Set<String>> checkCachedHashes(List<String> infoHashes) async {
     final port = _byId[CloudProviderId.torbox];
-    if (port == null || !port.supports(CloudPortFeature.cachedHashes)) {
-      return const <String>{};
+    final hashes = _as<CloudCachedHashes>(port);
+    if (hashes != null) return hashes.checkCachedHashes(infoHashes);
+    if (port != null && port.supports(CloudPortFeature.cachedHashes)) {
+      return port.checkCachedHashes(infoHashes);
     }
-    return port.checkCachedHashes(infoHashes);
+    return const <String>{};
   }
 
   /// Premiumize cache/check only. Missing adapter / unsupported → `[]`.
@@ -241,10 +266,12 @@ class CloudProviderRegistry {
   /// Positional bools, not a hash set.
   Future<List<bool>> checkCache(List<String> items) async {
     final port = _byId[CloudProviderId.premiumize];
-    if (port == null || !port.supports(CloudPortFeature.checkCache)) {
-      return const <bool>[];
+    final cache = _as<CloudCheckCache>(port);
+    if (cache != null) return cache.checkCache(items);
+    if (port != null && port.supports(CloudPortFeature.checkCache)) {
+      return port.checkCache(items);
     }
-    return port.checkCache(items);
+    return const <bool>[];
   }
 
   /// TorBox torrent ZIP permalink only. Missing adapter / unsupported throws
@@ -252,13 +279,15 @@ class CloudProviderRegistry {
   /// Not web-download ZIP.
   Future<String> zipPermalink(int torrentId) async {
     final port = _byId[CloudProviderId.torbox];
-    if (port == null || !port.supports(CloudPortFeature.zipPermalink)) {
-      throw const CloudUnsupported(
-        CloudProviderId.torbox,
-        CloudPortFeature.zipPermalink,
-      );
+    final zip = _as<CloudZipPermalink>(port);
+    if (zip != null) return zip.zipPermalink(torrentId);
+    if (port != null && port.supports(CloudPortFeature.zipPermalink)) {
+      return port.zipPermalink(torrentId);
     }
-    return port.zipPermalink(torrentId);
+    throw const CloudUnsupported(
+      CloudProviderId.torbox,
+      CloudPortFeature.zipPermalink,
+    );
   }
 
   /// TorBox torrent file download link only. Missing adapter / unsupported
@@ -266,13 +295,15 @@ class CloudProviderRegistry {
   /// Not web-download file link. Not [zipPermalink].
   Future<String> fileDownloadLink(int torrentId, int fileId) async {
     final port = _byId[CloudProviderId.torbox];
-    if (port == null || !port.supports(CloudPortFeature.fileDownloadLink)) {
-      throw const CloudUnsupported(
-        CloudProviderId.torbox,
-        CloudPortFeature.fileDownloadLink,
-      );
+    final files = _as<CloudFileDownloadLink>(port);
+    if (files != null) return files.fileDownloadLink(torrentId, fileId);
+    if (port != null && port.supports(CloudPortFeature.fileDownloadLink)) {
+      return port.fileDownloadLink(torrentId, fileId);
     }
-    return port.fileDownloadLink(torrentId, fileId);
+    throw const CloudUnsupported(
+      CloudProviderId.torbox,
+      CloudPortFeature.fileDownloadLink,
+    );
   }
 
   /// TorBox web-download ZIP permalink only. Missing adapter / unsupported
@@ -280,39 +311,45 @@ class CloudProviderRegistry {
   /// Not torrent [zipPermalink].
   Future<String> webZipPermalink(int webId) async {
     final port = _byId[CloudProviderId.torbox];
-    if (port == null || !port.supports(CloudPortFeature.webZipPermalink)) {
-      throw const CloudUnsupported(
-        CloudProviderId.torbox,
-        CloudPortFeature.webZipPermalink,
-      );
+    final web = _as<CloudWebZipPermalink>(port);
+    if (web != null) return web.webZipPermalink(webId);
+    if (port != null && port.supports(CloudPortFeature.webZipPermalink)) {
+      return port.webZipPermalink(webId);
     }
-    return port.webZipPermalink(webId);
+    throw const CloudUnsupported(
+      CloudProviderId.torbox,
+      CloudPortFeature.webZipPermalink,
+    );
   }
 
   /// Premiumize cloud transfer only. Missing adapter / unsupported throws
   /// [CloudUnsupported]. Missing key throws [CloudMissingApiKey].
   Future<void> createCloudTransfer(String magnet) async {
     final port = _byId[CloudProviderId.premiumize];
-    if (port == null || !port.supports(CloudPortFeature.cloudTransfer)) {
-      throw const CloudUnsupported(
-        CloudProviderId.premiumize,
-        CloudPortFeature.cloudTransfer,
-      );
+    final transfer = _as<CloudTransfer>(port);
+    if (transfer != null) return transfer.createCloudTransfer(magnet);
+    if (port != null && port.supports(CloudPortFeature.cloudTransfer)) {
+      return port.createCloudTransfer(magnet);
     }
-    return port.createCloudTransfer(magnet);
+    throw const CloudUnsupported(
+      CloudProviderId.premiumize,
+      CloudPortFeature.cloudTransfer,
+    );
   }
 
   /// Premiumize transfer+zip only. Missing adapter / unsupported throws
   /// [CloudUnsupported]. Missing key throws [CloudMissingApiKey].
   Future<String> createTransferZip(String magnet) async {
     final port = _byId[CloudProviderId.premiumize];
-    if (port == null || !port.supports(CloudPortFeature.transferZip)) {
-      throw const CloudUnsupported(
-        CloudProviderId.premiumize,
-        CloudPortFeature.transferZip,
-      );
+    final zip = _as<CloudTransferZip>(port);
+    if (zip != null) return zip.createTransferZip(magnet);
+    if (port != null && port.supports(CloudPortFeature.transferZip)) {
+      return port.createTransferZip(magnet);
     }
-    return port.createTransferZip(magnet);
+    throw const CloudUnsupported(
+      CloudProviderId.premiumize,
+      CloudPortFeature.transferZip,
+    );
   }
 
   /// Not-cached keep-downloading. Unknown / unsupported provider is a no-op
@@ -321,10 +358,14 @@ class CloudProviderRegistry {
     final id = CloudProviderId.tryParse(provider);
     if (id == null) return;
     final port = _byId[id];
-    if (port == null || !port.supports(CloudPortFeature.queueUncached)) {
+    final queue = _as<CloudQueueUncached>(port);
+    if (queue != null) {
+      await queue.queueUncachedMagnet(magnet);
       return;
     }
-    await port.queueUncachedMagnet(magnet);
+    if (port != null && port.supports(CloudPortFeature.queueUncached)) {
+      await port.queueUncachedMagnet(magnet);
+    }
   }
 
   /// Magnet share-sheet createtorrent only. Missing adapter / unsupported
@@ -335,17 +376,23 @@ class CloudProviderRegistry {
     required bool addOnlyIfCached,
   }) async {
     final port = _byId[CloudProviderId.torbox];
-    if (port == null || !port.supports(CloudPortFeature.magnetTorrent)) {
-      throw const CloudUnsupported(
-        CloudProviderId.torbox,
-        CloudPortFeature.magnetTorrent,
+    final torrent = _as<CloudMagnetTorrent>(port);
+    if (torrent != null) {
+      return torrent.createMagnetTorrent(
+        magnet,
+        addOnlyIfCached: addOnlyIfCached,
       );
     }
-    return port.createMagnetTorrent(
-      magnet,
-      addOnlyIfCached: addOnlyIfCached,
+    if (port != null && port.supports(CloudPortFeature.magnetTorrent)) {
+      return port.createMagnetTorrent(magnet, addOnlyIfCached: addOnlyIfCached);
+    }
+    throw const CloudUnsupported(
+      CloudProviderId.torbox,
+      CloudPortFeature.magnetTorrent,
     );
   }
+
+  static T? _as<T>(CloudProviderPort? port) => port is T ? port as T : null;
 
   static String? credentialKeyFor(String provider) =>
       CloudProviderId.tryParse(provider)?.credentialKey;

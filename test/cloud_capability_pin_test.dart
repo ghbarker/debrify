@@ -1,6 +1,7 @@
 import 'package:debrify/models/torrent.dart';
 import 'package:debrify/screens/video_player/models/playlist_entry.dart';
 import 'package:debrify/services/cloud/alldebrid_cloud_provider.dart';
+import 'package:debrify/services/cloud/cloud_capabilities.dart';
 import 'package:debrify/services/cloud/cloud_credentials.dart';
 import 'package:debrify/services/cloud/cloud_exceptions.dart';
 import 'package:debrify/services/cloud/cloud_port_feature.dart';
@@ -82,32 +83,37 @@ void main() {
     );
   });
 
-  test('unsupported playlist is CloudUnsupported, empty RD link is null', () async {
-    expect(
-      () => const PremiumizeCloudProvider().resolvePlaylistEntry(
-        const PlaylistEntry(url: '', title: 'a', premiumizePath: '/x'),
-      ),
-      throwsA(isA<CloudUnsupported>()),
-    );
-    expect(
-      () => const PikPakCloudProvider().resolvePlaylistEntry(
-        const PlaylistEntry(url: '', title: 'a', pikpakFileId: 'file'),
-      ),
-      throwsA(isA<CloudUnsupported>()),
-    );
-    expect(
-      await const RealDebridCloudProvider().resolvePlaylistEntry(
-        const PlaylistEntry(url: '', title: 'a'),
-      ),
-      isNull,
-    );
-    expect(
-      await const RealDebridCloudProvider().resolvePlaylistEntry(
-        const PlaylistEntry(url: '', title: 'a', restrictedLink: ''),
-      ),
-      isNull,
-    );
-  });
+  test(
+    'unsupported playlist is CloudUnsupported, empty RD link is null',
+    () async {
+      expect(
+        () => const PremiumizeCloudProvider().resolvePlaylistEntry(
+          const PlaylistEntry(url: '', title: 'a', premiumizePath: '/x'),
+        ),
+        throwsA(isA<CloudUnsupported>()),
+      );
+      expect(
+        () => const PikPakCloudProvider().resolvePlaylistEntry(
+          const PlaylistEntry(url: '', title: 'a', pikpakFileId: 'file'),
+        ),
+        throwsA(isA<CloudUnsupported>()),
+      );
+      expect(
+        await const RealDebridCloudProvider().resolvePlaylistEntry(
+          const PlaylistEntry(url: '', title: 'a'),
+        ),
+        isNull,
+      );
+      expect(
+        await const RealDebridCloudProvider().resolvePlaylist(
+          const PlaylistEntry(url: '', title: 'a', restrictedLink: ''),
+        ),
+        isA<CloudPlaylistMiss>(),
+      );
+      expect(const PremiumizeCloudProvider(), isNot(isA<CloudPlaylist>()));
+      expect(const PikPakCloudProvider(), isNot(isA<CloudPlaylist>()));
+    },
+  );
 
   test('unsupported Magic TV methods throw CloudUnsupported', () {
     expect(
@@ -132,21 +138,21 @@ void main() {
       expect(
         await CloudCredentials.configured(
           CloudProviderId.debrid,
-          CloudConfiguredCheck.playback,
+          CloudSurface.playback,
         ),
         isTrue,
       );
       expect(
         await CloudCredentials.configured(
           CloudProviderId.debrid,
-          CloudConfiguredCheck.magnet,
+          CloudSurface.magnet,
         ),
         isFalse,
       );
       expect(
         await CloudCredentials.configured(
           CloudProviderId.debrid,
-          CloudConfiguredCheck.stremioPicker,
+          CloudSurface.stremioPicker,
         ),
         isTrue,
       );
@@ -156,16 +162,31 @@ void main() {
       expect(
         await CloudCredentials.configured(
           CloudProviderId.premiumize,
-          CloudConfiguredCheck.playback,
+          CloudSurface.playback,
         ),
         isTrue,
       );
       expect(
         await CloudCredentials.configured(
           CloudProviderId.premiumize,
-          CloudConfiguredCheck.stremioPicker,
+          CloudSurface.stremioPicker,
         ),
         isFalse,
+      );
+      expect(
+        await CloudCredentials.configured(
+          CloudProviderId.premiumize,
+          CloudSurface.stremioResolve,
+        ),
+        isFalse,
+      );
+      await StorageService.setPremiumizeIntegrationEnabled(true);
+      expect(
+        await CloudCredentials.configured(
+          CloudProviderId.premiumize,
+          CloudSurface.stremioResolve,
+        ),
+        isTrue,
       );
     },
   );

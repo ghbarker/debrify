@@ -21,14 +21,16 @@ import 'cloud_provider_port.dart';
 import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
-class PikPakCloudProvider extends CloudProviderAdapter {
+class PikPakCloudProvider extends CloudProviderAdapter
+    implements CloudUnlock, CloudMagnetAdd, CloudMagicTvPrepare {
   const PikPakCloudProvider();
 
   @override
   CloudProviderId get id => CloudProviderId.pikpak;
 
   @override
-  Future<bool> isConfigured() => CloudCredentials.isPlaybackConfigured(id);
+  Future<bool> isConfigured() =>
+      CloudCredentials.configured(id, CloudSurface.playback);
 
   @override
   Future<CloudPlaybackResult> addMagnet(String magnet, Torrent torrent) async {
@@ -212,14 +214,6 @@ class PikPakCloudProvider extends CloudProviderAdapter {
   }
 
   @override
-  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) {
-    throw const CloudUnsupported(
-      CloudProviderId.pikpak,
-      CloudPortFeature.playlistEntry,
-    );
-  }
-
-  @override
   Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
     final fileId = entry.pikpakFileId;
     if (fileId == null) {
@@ -236,7 +230,9 @@ class PikPakCloudProvider extends CloudProviderAdapter {
 
   @override
   Future<String?> resolveStremioTorrent(StremioTorrentResolveArgs args) async {
-    if (!await CloudCredentials.isPlaybackConfigured(id)) return null;
+    if (!await CloudCredentials.configured(id, CloudSurface.playback)) {
+      return null;
+    }
     Map<String, dynamic>? preparedForCleanup;
     var keepPreparedItem = false;
     try {
@@ -462,16 +458,6 @@ class PikPakCloudProvider extends CloudProviderAdapter {
       streamUrl: streamUrl,
       title: selectedFileName,
       hasMore: unseenFiles.isNotEmpty,
-    );
-  }
-
-  @override
-  Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
-    MagicTvPrepareRequest request,
-  ) {
-    throw const CloudUnsupported(
-      CloudProviderId.pikpak,
-      CloudPortFeature.magicTvLockedLinks,
     );
   }
 
