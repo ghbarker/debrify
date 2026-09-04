@@ -1,12 +1,98 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/analytics_service.dart';
+import '../../services/cloud/cloud_credentials.dart';
+import '../../services/cloud/cloud_provider_id.dart';
 import '../../services/storage_service.dart';
 import '../../services/pikpak_api_service.dart';
 import '../../utils/platform_util.dart';
 import '../../utils/tv_keys.dart';
 import 'widgets/settings_widgets.dart';
 import '../../theme/app_theme_scope.dart';
+
+/// Default-torrent-provider picker. Pref values are
+/// [CloudProviderId.playbackId] (`debrid`, not playlist `realdebrid`)
+/// plus the frozen sentinel [DefaultProviderDispatch.askEveryTime].
+///
+/// Option order is TorBox → Real-Debrid → Premiumize → AllDebrid →
+/// PikPak — not [CloudProviderId.playbackPrecedence]. PikPak
+/// availability is [PikPakApiService.isAuthenticated], not
+/// [CloudSurface.magnet] (enabled-only) and not playback
+/// `isConfigured()`.
+class DefaultProviderDispatch {
+  DefaultProviderDispatch._();
+
+  /// Frozen pref sentinel: ask every time. Key
+  /// `default_torrent_provider_v1` is unchanged.
+  static const askEveryTime = 'none';
+
+  static const List<CloudProviderId> optionOrder = [
+    CloudProviderId.torbox,
+    CloudProviderId.debrid,
+    CloudProviderId.premiumize,
+    CloudProviderId.alldebrid,
+    CloudProviderId.pikpak,
+  ];
+
+  static String prefValue(CloudProviderId id) => id.playbackId;
+
+  /// Playback id only. `realdebrid` / `rd` / `real_debrid` do not match
+  /// and are not reset (the old `== 'debrid'` chain skipped them).
+  static CloudProviderId? parsePref(String raw) =>
+      CloudProviderId.fromPlaybackId(raw);
+
+  /// If the saved playback id is no longer available, persist `none`.
+  /// Unknown spellings pass through unchanged.
+  static String resetIfUnavailable(
+    String current,
+    Set<CloudProviderId> available,
+  ) {
+    if (current == askEveryTime) return current;
+    final id = parsePref(current);
+    if (id == null) return current;
+    if (!available.contains(id)) return askEveryTime;
+    return current;
+  }
+
+  /// RD/TB/PM/AD: magnet-surface (key + integration toggle). PikPak:
+  /// session auth, not the enabled flag.
+  static Future<bool> isAvailable(CloudProviderId id) {
+    if (id == CloudProviderId.pikpak) {
+      return PikPakApiService.instance.isAuthenticated();
+    }
+    return CloudCredentials.configured(id, CloudSurface.magnet);
+  }
+
+  static String optionTitle(CloudProviderId id) {
+    return switch (id) {
+      CloudProviderId.torbox => 'Torbox',
+      CloudProviderId.debrid => 'Real-Debrid',
+      CloudProviderId.premiumize => 'Premiumize',
+      CloudProviderId.alldebrid => 'AllDebrid',
+      CloudProviderId.pikpak => 'PikPak',
+    };
+  }
+
+  static String optionSubtitle(CloudProviderId id) {
+    return switch (id) {
+      CloudProviderId.torbox => 'Fast cloud torrent service',
+      CloudProviderId.debrid => 'Premium link generator',
+      CloudProviderId.premiumize => 'Premium cloud downloader',
+      CloudProviderId.alldebrid => 'Premium link generator',
+      CloudProviderId.pikpak => 'Cloud storage service',
+    };
+  }
+
+  static IconData optionIcon(CloudProviderId id) {
+    return switch (id) {
+      CloudProviderId.torbox => Icons.flash_on_rounded,
+      CloudProviderId.debrid => Icons.cloud_rounded,
+      CloudProviderId.premiumize => Icons.workspace_premium_rounded,
+      CloudProviderId.alldebrid => Icons.all_inclusive_rounded,
+      CloudProviderId.pikpak => Icons.folder_rounded,
+    };
+  }
+}
 
 /// Provider settings page for configuring default torrent provider.
 class ProviderSettingsPage extends StatefulWidget {

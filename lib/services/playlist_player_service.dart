@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 
 import 'storage_service.dart';
 import 'debrid_service.dart';
+import 'cloud/cloud_capabilities.dart';
+import 'cloud/cloud_port_feature.dart';
+import 'cloud/cloud_provider_id.dart';
+import 'cloud/cloud_provider_port.dart';
 import 'cloud/cloud_provider_registry.dart';
 import 'torbox_service.dart';
 import 'video_player_launcher.dart';
@@ -25,6 +29,110 @@ import '../models/webdav_item.dart';
 import '../screens/video_player/models/playlist_entry.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_theme_scope.dart';
+
+/// Playlist JSON `provider` dispatch. Stored ids are
+/// [CloudProviderId.playlistStoredProvider] (`realdebrid`, not playback
+/// `debrid` and not Magic TV `real_debrid`). `webdav` is a frozen sentinel,
+/// not a [CloudProviderId].
+///
+/// Production adapters are routed with capability `is` checks. Fat-port
+/// [FakeCloudProvider] (P1) does not implement those types, so [supports]
+/// is the fallback — same dual path as [CloudProviderRegistry.prepareMagicTv].
+enum PlaylistPlayKind {
+  realdebrid,
+  torbox,
+  pikpak,
+  webdav,
+  premiumize,
+  alldebrid,
+}
+
+class PlaylistProviderDispatch {
+  PlaylistProviderDispatch._();
+
+  /// Frozen playlist JSON / hub key for WebDAV. Not a cloud provider id.
+  static const webDavStoredProvider = 'webdav';
+
+  static String storedProvider(CloudProviderId id) =>
+      id.playlistStoredProvider;
+
+  /// Exact playlistStoredProvider match. tryParse aliases (`all-debrid`,
+  /// `rd`) stay unmatched so load/play keep the old lowercase-equality
+  /// fallthrough (unknown → RD on load, no-op on content-view play).
+  static CloudProviderId? idExact(String? raw) {
+    if (raw == null) return null;
+    final provider = raw.trim().toLowerCase();
+    for (final id in CloudProviderId.values) {
+      if (id.playlistStoredProvider == provider) return id;
+    }
+    return null;
+  }
+
+  static bool isWebDav(String? raw) =>
+      (raw ?? '').trim().toLowerCase() == webDavStoredProvider;
+
+  static CloudProviderPort? portFor(String? raw) {
+    final id = idExact(raw);
+    if (id == null) return null;
+    return CloudProviderRegistry.instance[id];
+  }
+
+  /// Load and [PlaylistPlayerService.play]: missing provider defaults to
+  /// Real-Debrid; unknown / empty / playback spellings (`debrid`) also
+  /// fall through to Real-Debrid. WebDAV is the only non-cloud match.
+  static PlaylistPlayKind kindOrRd(String? raw) {
+    final provider =
+        (raw ?? CloudProviderId.debrid.playlistStoredProvider).toLowerCase();
+    if (provider.trim() == webDavStoredProvider) {
+      return PlaylistPlayKind.webdav;
+    }
+    return switch (idExact(provider)) {
+      CloudProviderId.torbox => PlaylistPlayKind.torbox,
+      CloudProviderId.pikpak => PlaylistPlayKind.pikpak,
+      CloudProviderId.premiumize => PlaylistPlayKind.premiumize,
+      CloudProviderId.alldebrid => PlaylistPlayKind.alldebrid,
+      CloudProviderId.debrid || null => PlaylistPlayKind.realdebrid,
+    };
+  }
+
+  /// Content-view play file/episode. Missing provider (`?? realdebrid`)
+  /// plays RD; empty / unknown / `debrid` is a no-op — the old switch had
+  /// no `else`. WebDAV matches.
+  static PlaylistPlayKind? kindOrNull(String? raw) {
+    final provider =
+        (raw ?? CloudProviderId.debrid.playlistStoredProvider).toLowerCase();
+    if (provider.trim() == webDavStoredProvider) {
+      return PlaylistPlayKind.webdav;
+    }
+    return switch (idExact(provider)) {
+      CloudProviderId.torbox => PlaylistPlayKind.torbox,
+      CloudProviderId.pikpak => PlaylistPlayKind.pikpak,
+      CloudProviderId.premiumize => PlaylistPlayKind.premiumize,
+      CloudProviderId.alldebrid => PlaylistPlayKind.alldebrid,
+      CloudProviderId.debrid => PlaylistPlayKind.realdebrid,
+      null => null,
+    };
+  }
+
+  /// Poster update has no WebDAV branch. Unknown / empty / WebDAV no-op.
+  static PlaylistPlayKind? posterKind(String? raw) {
+    final kind = kindOrNull(raw);
+    if (kind == PlaylistPlayKind.webdav) return null;
+    return kind;
+  }
+
+  /// TorBox folder-path sort skips the torrent-name first segment.
+  /// Gated on [CloudFileDownloadLink] (TorBox `requestdl`), not a
+  /// string compare. Fat-port fakes fall back to [supports].
+  static bool skipTorrentNameFolder(String? raw) {
+    final provider =
+        (raw ?? CloudProviderId.debrid.playlistStoredProvider).toLowerCase();
+    final port = portFor(provider);
+    if (port == null) return false;
+    if (port is CloudFileDownloadLink) return true;
+    return port.supports(CloudPortFeature.fileDownloadLink);
+  }
+}
 
 /// Standalone service for playing playlist items.
 /// Extracted from PlaylistScreen so it can be called from any screen.
