@@ -57,10 +57,12 @@ void main() {
     expect(CloudPortFeature.forProvider(CloudProviderId.debrid), {
       CloudPortFeature.playlistEntry,
       CloudPortFeature.magicTvLockedLinks,
+      CloudPortFeature.magicTvRdUnlock,
     });
     expect(CloudPortFeature.forProvider(CloudProviderId.alldebrid), {
       CloudPortFeature.playlistEntry,
       CloudPortFeature.magicTvLockedLinks,
+      CloudPortFeature.magicTvAdUnlock,
     });
     expect(CloudPortFeature.forProvider(CloudProviderId.pikpak), {
       CloudPortFeature.magicTvPrepare,

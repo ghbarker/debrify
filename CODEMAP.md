@@ -192,6 +192,14 @@ lane; list them.
 - Debrify TV file prepare is `prepareMagicTv` (`real_debrid`; infohash-only
   magnet; random unseen file; RD/AllDebrid `supports(magicTvPrepare)` is
   false). Locked-link queues are `prepareMagicTvLockedLinks`.
+  Live RD/AD unlock is `CloudMagicTvRdUnlock` / `CloudMagicTvAdUnlock`
+  (`lib/services/cloud/cloud_magic_tv_unlock.dart`) — same Maps / String
+  as `DebridService.unrestrictLink`, `addTorrentToDebridPreferVideos`,
+  and `AllDebridService.unlockLink`. The port looks up the API key via
+  `CloudCredentials`; Magic TV still passes `apiKey` until M1. Distinct
+  from `CloudUnlock.unlockPlaybackEntry` (String URL), `CloudMagnetAdd`,
+  and locked-link prepare. Capability `is` checks only — no fat-port
+  throw-stubs. `CloudPortFeature.magicTvRdUnlock` / `magicTvAdUnlock`.
 - Player-screen unlock is `unlockPlayerScreenEntry` (wraps HTTP as
   `Torbox link failed`; incomplete Premiumize throws).
 - `CloudPortFeature.cachedHashes` is TorBox `checkcached` only — not
@@ -210,8 +218,10 @@ lane; list them.
 
 **Still on string matches** (high level; P2 owns the migration, not this lane)
 
-- Magic TV / Debrify TV: `lib/screens/magic_tv_screen.dart` (**P2a**) — provider
-  constants, chips, `_watch*` dispatch, RD/AllDebrid `downloadLink` PreferVideos.
+- Magic TV / Debrify TV: `lib/screens/magic_tv_screen.dart` (**P2a**, **M1**) —
+  provider constants, chips, `_watch*` dispatch. Still calls
+  `DebridService.unrestrictLink` / `addTorrentToDebridPreferVideos` and
+  `AllDebridService.unlockLink` directly; the P1b port is ready for M1.
 - Stremio TV screen + picker: `lib/screens/stremio_tv/` (**P2b**).
 - Launcher Real-Debrid spellings + bulk-add: `lib/services/video_player_launcher.dart`,
   `lib/services/torrent_bulk_add_service.dart` (**P2c**).

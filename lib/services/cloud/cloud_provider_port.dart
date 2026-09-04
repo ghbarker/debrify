@@ -9,6 +9,7 @@ import 'stremio_torrent_resolve_args.dart';
 import 'magic_tv_prepare_args.dart';
 
 export 'cloud_capabilities.dart';
+export 'cloud_magic_tv_unlock.dart';
 export 'cloud_port_feature.dart';
 
 /// Fat playback port kept so [FakeCloudProvider] still compiles.
@@ -16,8 +17,9 @@ export 'cloud_port_feature.dart';
 /// Production adapters `extend` [CloudProviderAdapter] and `implement` only
 /// the capability interfaces they support ([CloudUnlock], [CloudMagnetAdd],
 /// [CloudPlaylist], [CloudMagicTvPrepare] / [CloudMagicTvLockedLinks],
-/// [CloudCachedHashes], …). [supports] on production is `is`-checks via
-/// [CloudPortFeature.of].
+/// [CloudMagicTvRdUnlock] / [CloudMagicTvAdUnlock], [CloudCachedHashes], …).
+/// [supports] on production is `is`-checks via [CloudPortFeature.of].
+/// Magic TV live unlock is capability-`is` only — no fat-port throw-stubs.
 abstract class CloudProviderPort {
   CloudProviderId get id;
 
