@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:debrify/screens/magic_tv_screen.dart';
 import 'package:debrify/services/cloud/cloud_capabilities.dart';
 import 'package:debrify/services/cloud/cloud_port_feature.dart';
@@ -211,6 +213,32 @@ void main() {
       expect(MagicTvDispatch.usesLockedLinks('torbox'), isFalse);
       expect(MagicTvDispatch.usesLockedLinks('pikpak'), isFalse);
       expect(MagicTvDispatch.usesLockedLinks('premiumize'), isFalse);
+    },
+  );
+
+  test(
+    'Magic TV screen has no provider-id string literals outside comments',
+    () {
+      final source = File(
+        'lib/screens/magic_tv_screen.dart',
+      ).readAsStringSync();
+      final withoutBlock = source.replaceAll(
+        RegExp(r'/\*.*?\*/', dotAll: true),
+        '',
+      );
+      final withoutLine = withoutBlock
+          .split('\n')
+          .where((line) => !line.trimLeft().startsWith('//'))
+          .join('\n');
+      final hits = RegExp(
+        r"'(realdebrid|real_debrid|torbox|premiumize|alldebrid|pikpak)'",
+      ).allMatches(withoutLine).map((m) => m.group(0)).toList();
+      expect(hits, isEmpty, reason: 'string-match leftovers: $hits');
+      expect(source.contains('MagicTvDispatch.watchId'), isTrue);
+      expect(source.contains('MagicTvDispatch.usesLockedLinks'), isTrue);
+      expect(source.contains('MagicTvDispatch.usesCachedHashes'), isTrue);
+      expect(source.contains('MagicTvDispatch.allowsNextChannel'), isTrue);
+      expect(source.contains('CloudProviderId.fromMagicTvId'), isTrue);
     },
   );
 }
