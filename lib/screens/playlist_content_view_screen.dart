@@ -11,6 +11,7 @@ import '../services/storage_service.dart';
 import '../services/debrid_service.dart';
 import '../services/alldebrid_service.dart';
 import '../models/alldebrid_file.dart';
+import '../services/cloud/cloud_provider_registry.dart';
 import '../services/torbox_service.dart';
 import '../services/pikpak_api_service.dart';
 import '../services/video_player_launcher.dart';
@@ -3688,10 +3689,9 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
         // Get streaming URL for first file
         try {
           if (file.fileId != null) {
-            final url = await TorboxService.requestFileDownloadLink(
-              apiKey: apiKey,
-              torrentId: torboxTorrentId,
-              fileId: file.fileId!,
+            final url = await CloudProviderRegistry.instance.fileDownloadLink(
+              torboxTorrentId,
+              file.fileId!,
             );
             entries.add(
               PlaylistEntry(
