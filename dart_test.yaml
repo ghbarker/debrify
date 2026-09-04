@@ -1,3 +1,6 @@
 tags:
   golden:
-    description: Pixel-diff screenshots. Skipped on GitHub Actions via --exclude-tags.
+    description: >
+      Pixel-diff screenshots. GitHub ubuntu runs them in the goldens job with
+      retries plus `[golden]` allowlist entries (Linux raster diffs are
+      expected). Do not delete the PNG files. Local: flutter test --tags golden.

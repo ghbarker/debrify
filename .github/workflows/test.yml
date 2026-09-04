@@ -11,7 +11,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,8 +21,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libsqlite3-dev libsqlite3-0
 
-      - name: Test CI allowlist matcher
-        run: python3 -m unittest ci_test_allowlist_test.py
+      - name: Test CI allowlist and analyze-baseline matchers
+        run: python3 -m unittest ci_test_allowlist_test.py analyze_baseline_test.py
         working-directory: tool
 
       - name: Setup Flutter
@@ -35,43 +35,13 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      # Scoped to the new port/tests. God files still have pre-existing
-      # infos/warnings; do not fail the job on those (see test/BASELINE_FAILURES.md).
-      - name: Analyze refactor surface
-        run: flutter analyze
-          lib/services/cloud
-          lib/services/storage
-          lib/widgets/debrid_loading_overlay.dart
-          lib/widgets/cloud_provider_chrome.dart
-          lib/screens/cloud/cloud_browse_select_source.dart
-          test/adversarial
-          test/support
-          test/cloud_playback_characterization_test.dart
-          test/cloud_playlist_and_chrome_test.dart
-          test/cloud_native_bound_test.dart
-          test/cloud_lazy_entry_url_test.dart
-          test/cloud_playback_unlock_test.dart
-          test/cloud_player_screen_unlock_test.dart
-          test/cloud_stremio_resolve_test.dart
-          test/cloud_stremio_available_test.dart
-          test/cloud_stremio_resolve_gate_test.dart
-          test/cloud_stremio_torbox_cache_test.dart
-          test/cloud_stremio_premiumize_cache_test.dart
-          test/cloud_stremio_cache_filter_test.dart
-          test/cloud_playback_cache_first_test.dart
-          test/cloud_zip_permalink_test.dart
-          test/cloud_file_download_link_test.dart
-          test/cloud_web_zip_permalink_test.dart
-          test/cloud_premiumize_transfer_test.dart
-          test/cloud_premiumize_zip_test.dart
-          test/cloud_queue_uncached_test.dart
-          test/cloud_magnet_torrent_test.dart
-          test/cloud_magic_tv_prepare_test.dart
-          test/cloud_magic_tv_locked_links_test.dart
-          test/cloud_magic_tv_provider_test.dart
-          test/cloud_unlock_plan_test.dart
-          test/cloud_port_feature_test.dart
-          test/download_cloud_credential_key_test.dart
+      # All of lib/ and test/. New diagnostics vs tool/analyze_baseline.json
+      # fail the job. The baseline may only shrink (see tool/analyze_baseline.py).
+      - name: Analyze lib and test vs baseline
+        run: python3 tool/analyze_baseline.py
+
+      - name: Import layering check (warn-only until Q1)
+        run: dart run tool/check_layering.dart
 
       - name: Run refactor contract tests
         run: flutter test
@@ -102,9 +72,34 @@ jobs:
           test/cloud_unlock_plan_test.dart
           test/cloud_port_feature_test.dart
           test/download_cloud_credential_key_test.dart
+          test/check_layering_test.dart
           --reporter compact
 
-      # Full suite minus pixel goldens. Historical Linux failures are listed
-      # in test/BASELINE_ALLOWLIST.txt; only new failures fail the job.
+      # Full suite minus pixel goldens (those have their own tolerance job).
+      # Historical Linux failures are listed in test/BASELINE_ALLOWLIST.txt;
+      # only new failures fail the job. Unused allowlist entries also fail.
       - name: Run app tests against baseline allowlist
         run: python3 tool/ci_test_allowlist.py
+
+  # Pixel goldens rasterize differently on GitHub ubuntu than the checked-in
+  # PNGs. Do not delete goldens and do not skip the tag wholesale: run them
+  # with retries and allowlisted names.
+  goldens:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Run golden tests with Linux tolerance
+        run: python3 tool/ci_test_allowlist.py --tags golden --retries 2
