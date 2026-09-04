@@ -6,12 +6,16 @@ import 'search_screen_shells.dart';
 /// (Continue Watching / Trakt / …) instead of the Home board's stacked rails.
 ///
 /// Shares [HomeBoardController], [CatalogSearchController], and
-/// [TitleOpener] with Home and Search via the host wired in G1 step 4.
+/// [TitleOpener] with Home and Search via [host] ([SearchScreenHost]).
 /// TV stage layouts stay on the host (G1 step 5).
 class DiscoverScreen extends StatelessWidget {
-  const DiscoverScreen({super.key, this.isTelevision = false});
+  const DiscoverScreen({super.key, this.isTelevision = false, this.host});
 
   final bool isTelevision;
+
+  /// Shared host from `search_screen.dart`. Optional so pin tests can
+  /// construct this type without mounting the 18k State.
+  final Widget? host;
 
   int get tabIndex =>
       searchScreenTabIndex(searchMode: false, discoverMode: true);
@@ -25,8 +29,5 @@ class DiscoverScreen extends StatelessWidget {
   List<String> get sharedControllers => kSearchScreenSharedControllerNames;
 
   @override
-  Widget build(BuildContext context) {
-    // Host wiring (`SearchScreenHost(discoverMode: true)`) lands in the move.
-    return const SizedBox.shrink();
-  }
+  Widget build(BuildContext context) => host ?? const SizedBox.shrink();
 }

@@ -11,11 +11,11 @@ Widget _shell({
   bool isTelevision = false,
   bool searchMode = false,
   bool discoverMode = false,
-}) {
-  if (searchMode) return CatalogSearchScreen(isTelevision: isTelevision);
-  if (discoverMode) return DiscoverScreen(isTelevision: isTelevision);
-  return SearchScreen(isTelevision: isTelevision);
-}
+}) => SearchScreen.forFlags(
+  isTelevision: isTelevision,
+  searchMode: searchMode,
+  discoverMode: discoverMode,
+);
 
 void main() {
   group('searchMode vs discoverMode vs Home tab / variant', () {
@@ -91,15 +91,25 @@ void main() {
       expect(tv.isTelevision, isTrue);
     });
 
-    test('dispatcher: Search/Discover shells, Home stays SearchScreen', () {
+    test('dispatcher: Search/Discover shells, Home stays SearchScreenHost', () {
       expect(_shell(searchMode: true), isA<CatalogSearchScreen>());
       expect(_shell(discoverMode: true), isA<DiscoverScreen>());
-      expect(_shell(), isA<SearchScreen>());
+      expect(_shell(), isA<SearchScreenHost>());
       expect(
         _shell(searchMode: true, discoverMode: true),
         isA<CatalogSearchScreen>(),
         reason: 'quirk: searchMode wins',
       );
+      final search = _shell(searchMode: true) as CatalogSearchScreen;
+      expect(search.host, isA<SearchScreenHost>());
+      expect((search.host as SearchScreenHost).searchMode, isTrue);
+      expect((search.host as SearchScreenHost).discoverMode, isFalse);
+      final discover = _shell(discoverMode: true) as DiscoverScreen;
+      expect(discover.host, isA<SearchScreenHost>());
+      expect((discover.host as SearchScreenHost).discoverMode, isTrue);
+      expect((discover.host as SearchScreenHost).searchMode, isFalse);
+      expect((_shell() as SearchScreenHost).searchMode, isFalse);
+      expect((_shell() as SearchScreenHost).discoverMode, isFalse);
     });
 
     test('CatalogSearchScreen / DiscoverScreen expose frozen tabs', () {

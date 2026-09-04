@@ -6,11 +6,15 @@ import 'search_screen_shells.dart';
 /// blank prompt until the user types — no Home hero/board.
 ///
 /// Shares [HomeBoardController], [CatalogSearchController], and
-/// [TitleOpener] with Home and Discover via the host wired in G1 step 4.
+/// [TitleOpener] with Home and Discover via [host] ([SearchScreenHost]).
 class CatalogSearchScreen extends StatelessWidget {
-  const CatalogSearchScreen({super.key, this.isTelevision = false});
+  const CatalogSearchScreen({super.key, this.isTelevision = false, this.host});
 
   final bool isTelevision;
+
+  /// Shared host from `search_screen.dart`. Optional so pin tests can
+  /// construct this type without mounting the 18k State.
+  final Widget? host;
 
   int get tabIndex =>
       searchScreenTabIndex(searchMode: true, discoverMode: false);
@@ -24,8 +28,5 @@ class CatalogSearchScreen extends StatelessWidget {
   List<String> get sharedControllers => kSearchScreenSharedControllerNames;
 
   @override
-  Widget build(BuildContext context) {
-    // Host wiring (`SearchScreenHost(searchMode: true)`) lands in the move.
-    return const SizedBox.shrink();
-  }
+  Widget build(BuildContext context) => host ?? const SizedBox.shrink();
 }

@@ -29,7 +29,9 @@ Search `part` files: `lib/screens/search/search_sources.dart` (3 163),
 `lib/screens/search/search_stage_widgets.dart` (1 699),
 `lib/screens/search/search_card_widgets.dart` (1 198).
 Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.dart`,
-`title_opener.dart` (`TitleOpener.open` — catalog detail from the board).
+`title_opener.dart` (`TitleOpener.open` — catalog detail from the board),
+`catalog_search_screen.dart` (Search tab), `discover_screen.dart` (Discover tab),
+`search_screen_shells.dart` (tab/variant/landing/dropdown contracts).
 
 🔴 huge: `lib/screens/search_screen.dart` (19 070) · `lib/screens/video_player_screen.dart`
 (16 278) · `lib/screens/magic_tv_screen.dart` (10 716) · `lib/services/storage_service.dart`
@@ -82,8 +84,13 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
 `ConfigCommand` **strings** are a frozen compatibility surface. Do not rename them.
 
 ## Cross-cutting hubs (touched by many features)
-- **`lib/screens/search_screen.dart`** 🔴 — the Home/Discover board: continue-watching rows, catalog rows,
+- **`lib/screens/search_screen.dart`** 🔴 — Home board host (`SearchScreenHost`): continue-watching rows, catalog rows,
   favourites rows, the D-pad `_BoardCell` focus grid, poster sizing (`_railPosterW`), bind-sources entry.
+  Public `SearchScreen` is a G4-style wrapper (`main.dart` constructors unchanged). Search tab is
+  `lib/screens/search/catalog_search_screen.dart` (`CatalogSearchScreen`, MainTab 17); Discover is
+  `lib/screens/search/discover_screen.dart` (`DiscoverScreen`, MainTab 18). Both wrap the same host
+  so they share `HomeBoardController`, `CatalogSearchController`, and `TitleOpener`. Shell contracts
+  live in `lib/screens/search/search_screen_shells.dart`.
   Detail opening is `lib/screens/search/title_opener.dart` (`TitleOpener`; State `_openItem` is a forward).
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
@@ -266,8 +273,9 @@ is an editor mirror, not the source of truth. How to add a provider:
   iterates the registry. Home CW rows (`search_screen.dart`, G1) and
   `trakt_calendar_screen.dart` still call family singletons.
 - Settings: `lib/screens/settings/trakt_settings_page.dart`, `lib/screens/settings/simkl_settings_page.dart`.
-  Home rows + scrobble wiring live in `lib/screens/search_screen.dart` + both players. Discover source dropdown:
-  `lib/widgets/search_source_dropdown.dart`,
+  Home rows + scrobble wiring live in `lib/screens/search_screen.dart` (`SearchScreenHost`) + both players. Discover source dropdown:
+  `lib/screens/search/discover_screen.dart` + `lib/screens/search/search_screen_shells.dart`
+  (`discoverSourceDropdownOptions`), `lib/widgets/search_source_dropdown.dart`,
   `lib/widgets/trakt/trakt_results_view.dart`.
 
 ## Detail screens & trailers
