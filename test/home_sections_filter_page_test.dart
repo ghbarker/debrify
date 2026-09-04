@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:debrify/screens/settings/home_sections_filter_page.dart';
+import 'package:debrify/services/home/home_row_family.dart';
+import 'package:debrify/services/home/home_row_registry.dart';
 import 'package:debrify/services/storage_service.dart';
 
 Future<void> _pumpPage(
@@ -199,4 +201,30 @@ void main() {
       'cw:movies',
     ]);
   });
+
+  testWidgets(
+    'adding a fake family makes it appear in the manager with no other edits',
+    (tester) async {
+      addTearDown(HomeRowRegistry.debugReset);
+      HomeRowRegistry.instance = HomeRowRegistry([
+        ...HomeRowRegistry.production().families,
+        HomeRowFamily(
+          id: 'fake',
+          prefix: 'fake:',
+          groupName: 'Fake Family',
+          boardSlot: HomeBoardSlot.section,
+          canonicalIndex: 99,
+          resolve: (ctx) => [
+            ctx.defaultOnLeaf('fake:row', 'Fake Row', groupName: 'Fake Family'),
+          ],
+          boardIds: (_) => const ['fake:row'],
+        ),
+      ]);
+      await _pumpPage(tester);
+      expect(find.text('Fake Family'), findsOneWidget);
+      await tester.tap(find.text('Fake Family'));
+      await tester.pump();
+      expect(find.text('Fake Row'), findsOneWidget);
+    },
+  );
 }
