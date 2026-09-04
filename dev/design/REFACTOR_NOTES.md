@@ -69,6 +69,13 @@ See `dev/design/REFACTOR_PLAN.md` §2 rule 1.
   rows by family singleton; calendar / tracking settings / player scrobble
   still switch. G1 / G5 own those files.
 
+### G1 · step 2 CatalogSearchController
+
+- **`_restoreHome` does not zero failures.** `CatalogSearchController.cancel`
+  clears query/searching and bumps the generation token, but leaves
+  `failures` at the last search's count. Keep: origin `_restoreHome`
+  behaviour, pinned in `test/catalog_search_controller_test.dart`.
+
 ### G2 · settings_screen split
 
 - **Restore-report omitted keys.** `homeCollectionsFailed` and

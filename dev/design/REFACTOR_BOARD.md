@@ -2,7 +2,7 @@
 
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 
-Baseline: `main` @ T2 + G2 merged · Phase: **2** (G1 step 2 + G4 review; G3/G5 next) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
+Baseline: `main` @ G1 step 2 merged · Phase: **2** (G4 review; G1 step 3 + G3/G5 next) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -26,7 +26,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | S1 · settings registry | merged | `refactor/s1-settings-registry` | — | `settings_screen.dart` [nav tables, `_formatBackupSummary`/`_formatRestoreReport`], `lib/screens/settings/settings_tv_layout.dart`, `lib/screens/settings/widgets/settings_widgets.dart` | — | Pages registered once. **Regression:** extraPlayerKeywords unbound — follow-up `s1-fix`. |
 | S1-fix · extraPlayerKeywords | merged | `refactor/s1-extra-player-keywords` | orchestrator | `lib/screens/settings_screen.dart` [binding site only], `lib/screens/settings/settings_search_leaves.dart` [leaf spread], `test/settings_page_registry_test.dart` | — | Pass extraPlayerKeywords at the settings_screen binding so external-player names are searchable. CI green then `--no-ff` merge. |
 | G1 · step 1 HomeBoardController | merged | `refactor/g1-home-board-controller` | worker | `lib/screens/search/home_board_controller.dart`, `test/home_board_controller_test.dart`, `search_screen.dart` [board data layer] | — | **#61.** Pin + origin-diff. H1-fix section-band order preserved. `search_screen.dart` 19 089 → 18 890. |
-| G1 · step 2 CatalogSearchController | review | `refactor/g1-catalog-search-controller` | worker | `lib/screens/search_screen.dart` [catalog search hunks], `lib/screens/search/**`, new catalog search controller + tests | G1 step 1 | **#65.** Pin + origin-diff. `search_screen.dart` 18 890 → 18 814. Steps 3–5 not started. |
+| G1 · step 2 CatalogSearchController | merged | `refactor/g1-catalog-search-controller` | worker | `lib/screens/search_screen.dart` [catalog search hunks], `lib/screens/search/**`, new catalog search controller + tests | G1 step 1 | **#65.** Pin + origin-diff. `search_screen.dart` 18 890 → 18 814. `_restoreHome` does not zero catalog-search failures (NOTES). Steps 3–5 next. |
 | G2 · settings_screen split | merged | `refactor/g2-backup-restore-page` | worker | `settings_screen.dart` [backup/restore + profile-switch hunks], new `lib/screens/settings/backup_restore_page.dart`, `profiles_settings_page.dart` `ProfileSettingsRailActions`, tests | — | **#63.** Pin + origin-diff. `settings_screen.dart` 3 923 → 3 107. `extraPlayerKeywords` still bound. Restore-report omits `homeCollectionsFailed` / `streamBadgeSourcesFailed` from the snackbar list (NOTES). |
 | G3 · storage split | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | — | P2e + G2 merged. Assign when width allows. Keys/encodings frozen. |
 | G4 · cloud file screens | review | `refactor/g4-cloud-files-screen` | worker | `debrid_downloads_screen.dart`, `torbox/**`, `premiumize/**`, `alldebrid/**`, `pikpak/**` files screens | — | **#64.** RD + TorBox on shared `CloudFilesScreen`; PM/AD/PikPak follow-up. Selection bar stayed on hosts (shape-manifest floor). Supersedes closed #36–#43. |
@@ -65,4 +65,4 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
-Phase 1 merged. P2a–**P2e** merged (#60). **G1 step 1 merged (#61).** **T2 merged (#62).** **G2 merged (#63).** G1 step 2 #65 + G4 #64 in review. G3/G5 queued. Gate 1 Windows pass; Android not run. PR #56 held. #36–#43 closed (G4).
+Phase 1 merged. P2a–**P2e** merged (#60). **G1 step 1 merged (#61).** **T2 merged (#62).** **G2 merged (#63).** **G1 step 2 merged (#65).** G4 #64 in review. G1 step 3 / G3 / G5 next. Gate 1 Windows pass; Android not run. PR #56 held. #36–#43 closed (G4).
