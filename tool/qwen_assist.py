@@ -60,11 +60,23 @@ APPEND_SYSTEM_PROMPT = (
 
 
 def _auth_file_candidates(home: Path, root: Path) -> tuple[Path, ...]:
+    # settings.json may exist without a key (envKey wiring only). .env holds secrets.
     return (
         home / ".qwen" / ".env",
         root / ".qwen" / ".env",
-        home / ".qwen" / "settings.json",
     )
+
+
+def find_qwen_cli(*, home: Path | None = None, path: str | None = None) -> str | None:
+    found = shutil.which("qwen", path=path)
+    if found:
+        return found
+    home = Path.home() if home is None else home
+    for directory in (home / ".local" / "bin", Path("/usr/local/bin")):
+        candidate = directory / "qwen"
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return None
 
 
 def detect_auth_source(
@@ -95,12 +107,15 @@ def probe(
 ) -> dict:
     """Describe whether a headless Qwen run can start. Never includes secrets."""
     env = os.environ if env is None else env
-    cli = shutil.which("qwen") if which is ... else which
+    if which is ...:
+        cli = find_qwen_cli(home=home)
+    else:
+        cli = which
     auth = detect_auth_source(env, home=home, root=root)
     if not cli:
         return {
             "available": False,
-            "reason": "qwen CLI not on PATH",
+            "reason": "qwen CLI not on PATH or ~/.local/bin",
             "cli": None,
             "auth": None,
         }

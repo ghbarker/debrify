@@ -16,6 +16,7 @@ from qwen_assist import (
     UNAVAILABLE_EXIT,
     build_argv,
     detect_auth_source,
+    find_qwen_cli,
     probe,
 )
 
@@ -27,7 +28,7 @@ class ProbeTest(unittest.TestCase):
         env = {name: "sk-secret" for name in AUTH_ENV_VARS}
         info = probe(env, home=Path("/tmp/no-qwen-home"), root=REPO, which=None)
         self.assertFalse(info["available"])
-        self.assertEqual(info["reason"], "qwen CLI not on PATH")
+        self.assertEqual(info["reason"], "qwen CLI not on PATH or ~/.local/bin")
         self.assertIsNone(info["cli"])
         dumped = str(info)
         self.assertNotIn("sk-secret", dumped)
@@ -50,6 +51,29 @@ class ProbeTest(unittest.TestCase):
         self.assertEqual(info["cli"], "/opt/qwen")
         self.assertEqual(info["mode_default"], "plan")
         self.assertNotIn("sk-not-for-output", str(info))
+
+    def test_settings_json_alone_is_not_auth(self):
+        env = {}
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            (home / ".qwen").mkdir()
+            (home / ".qwen" / "settings.json").write_text(
+                '{"security":{"auth":{"selectedType":"openai"}}}\n'
+            )
+            self.assertIsNone(detect_auth_source(env, home=home, root=REPO))
+            info = probe(env, home=home, root=REPO, which="/opt/qwen")
+        self.assertFalse(info["available"])
+
+    def test_local_bin_qwen_is_found_without_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            bindir = home / ".local" / "bin"
+            bindir.mkdir(parents=True)
+            cli = bindir / "qwen"
+            cli.write_text("#!/bin/sh\nexit 0\n")
+            cli.chmod(0o755)
+            found = find_qwen_cli(home=home, path="/usr/bin:/bin")
+        self.assertEqual(found, str(cli))
 
     def test_home_env_file_counts_as_auth(self):
         env = {}
