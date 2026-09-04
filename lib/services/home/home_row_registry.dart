@@ -126,9 +126,11 @@ class HomeRowRegistry {
     return out;
   }
 
-  /// Canonical board rail ids: live [visibleIds] partitioned by family
-  /// board-slot / canonicalIndex, then any [HomeRowFamily.boardIds] extras
-  /// (fake families in tests). Unknown live ids append in input order.
+  /// Canonical board rail ids: Continue Watching and favourites are grouped
+  /// by family `canonicalIndex`. The section band keeps [visibleIds] order
+  /// so pinned collections that lead `_sections` still lead the board,
+  /// ahead of tracker list families. Unknown live ids and [HomeRowFamily.boardIds]
+  /// extras (fake families in tests) append.
   List<String> canonicalBoardRailIds({
     Iterable<String> visibleIds = const [],
     HomeRowResolveContext? ctx,
@@ -139,17 +141,29 @@ class HomeRowRegistry {
     ];
     final out = <String>[];
     final seen = <String>{};
+    void add(String id) {
+      if (id.isNotEmpty && seen.add(id)) out.add(id);
+    }
+
     for (final family in familiesInCanonicalOrder) {
+      if (family.boardSlot == HomeBoardSlot.section) continue;
       for (final id in visible) {
-        if (family.owns(id) && seen.add(id)) out.add(id);
+        if (family.owns(id)) add(id);
       }
       if (ctx == null || family.boardIds == null) continue;
       for (final id in family.boardIds!(ctx)) {
-        if (id.isNotEmpty && seen.add(id)) out.add(id);
+        add(id);
       }
     }
     for (final id in visible) {
-      if (seen.add(id)) out.add(id);
+      add(id);
+    }
+    for (final family in familiesInCanonicalOrder) {
+      if (family.boardSlot != HomeBoardSlot.section) continue;
+      if (ctx == null || family.boardIds == null) continue;
+      for (final id in family.boardIds!(ctx)) {
+        add(id);
+      }
     }
     return out;
   }

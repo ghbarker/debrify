@@ -102,6 +102,36 @@ void main() {
     );
   });
 
+  test('pinned collections lead tracker lists in the section band', () {
+    // Origin `_sections` order: pinToTop collections, list rows, unpinned
+    // collections, addon catalogs. Pre-H1 `_canonicalCanvasRails` appended
+    // those rails in that order. Regrouping by family canonicalIndex put
+    // collections (index 11) after trakt/simkl/mdblist lists (8–10).
+    final registry = HomeRowRegistry.production();
+    expect(
+      registry.canonicalBoardRailIds(
+        visibleIds: const [
+          'cw:movies',
+          'fav:playlist',
+          'collection:pinned',
+          'traktlist:watchlist',
+          'simkllist:watching',
+          'collection:unpinned',
+          'com.linvo.cinemeta:movie:top',
+        ],
+      ),
+      [
+        'cw:movies',
+        'fav:playlist',
+        'collection:pinned',
+        'traktlist:watchlist',
+        'simkllist:watching',
+        'collection:unpinned',
+        'com.linvo.cinemeta:movie:top',
+      ],
+    );
+  });
+
   test('sectionRowId keeps list, collection, and catalog grammar', () {
     expect(
       HomeRowRegistry.sectionRowId(
