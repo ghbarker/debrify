@@ -242,13 +242,13 @@ is an editor mirror, not the source of truth. How to add a provider:
 - File-tree browse (per provider, post-add): `debrid_service.getTorrentFolderTree`,
   `lib/utils/{rd,torbox}_folder_tree_builder.dart`, `lib/screens/playlist_content_view_screen.dart`.
 - Cloud/downloads screens: `lib/screens/cloud_files/cloud_files_screen.dart`
-  (`CloudFilesScreen` + local `CloudFilesSource`; **RD + TorBox** routed this
-  PR — G4). Hosts: `lib/screens/debrid_downloads_screen.dart`,
-  `lib/screens/torbox/torbox_downloads_screen.dart`. Not yet on the shared
-  screen: `lib/screens/pikpak/pikpak_files_screen.dart`,
+  (`CloudFilesScreen` + local `CloudFilesSource`; **RD + TorBox + Premiumize
+  + AllDebrid + PikPak** routed — G4). Hosts: `lib/screens/debrid_downloads_screen.dart`,
+  `lib/screens/torbox/torbox_downloads_screen.dart`,
   `lib/screens/premiumize/premiumize_files_screen.dart`,
-  `lib/screens/alldebrid/alldebrid_files_screen.dart`. Hub:
-  `lib/screens/cloud_screen.dart`.
+  `lib/screens/alldebrid/alldebrid_files_screen.dart`,
+  `lib/screens/pikpak/pikpak_files_screen.dart`. Selection bars stay on
+  hosts (shape-manifest floor). Hub: `lib/screens/cloud_screen.dart`.
 - WebDAV: `lib/services/webdav_service.dart` (read/browse only — no upload yet).
 
 ## Players

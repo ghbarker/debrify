@@ -2,6 +2,10 @@ import 'dart:io';
 
 import 'package:debrify/screens/alldebrid/alldebrid_files_screen.dart';
 import 'package:debrify/screens/cloud/cloud_browse_select_source.dart';
+import 'package:debrify/screens/cloud_files/alldebrid_files_source.dart';
+import 'package:debrify/screens/cloud_files/cloud_files_screen.dart';
+import 'package:debrify/screens/cloud_files/pikpak_files_source.dart';
+import 'package:debrify/screens/cloud_files/premiumize_files_source.dart';
 import 'package:debrify/screens/pikpak/pikpak_files_screen.dart';
 import 'package:debrify/screens/premiumize/premiumize_files_screen.dart';
 import 'package:debrify/services/series_source_service.dart';
@@ -293,16 +297,15 @@ void main() {
     });
 
     test('frozen sidebar destination ids stay in host register calls', () {
-      final pm = _readHost('lib/screens/premiumize/premiumize_files_screen.dart');
+      final pm = _readHost(
+        'lib/screens/premiumize/premiumize_files_screen.dart',
+      );
       expect(pm.contains("registerTabBackHandler("), isTrue);
       expect(pm.contains("'premiumize'"), isTrue);
       expect(pm.contains("unregisterTabBackHandler('premiumize')"), isTrue);
 
       final ad = _readHost('lib/screens/alldebrid/alldebrid_files_screen.dart');
-      expect(
-        ad.contains("registerTabBackHandler('alldebrid'"),
-        isTrue,
-      );
+      expect(ad.contains("registerTabBackHandler('alldebrid'"), isTrue);
       expect(ad.contains("unregisterTabBackHandler('alldebrid')"), isTrue);
 
       final pk = _readHost('lib/screens/pikpak/pikpak_files_screen.dart');
@@ -331,6 +334,113 @@ void main() {
       );
     });
   });
+
+  group('CloudFilesSource (PM / AD / PikPak on the shared screen)', () {
+    test('Premiumize destination id and My Files / Transfers sections', () {
+      const source = PremiumizeFilesSource();
+      expect(source.destinationId, 'premiumize');
+      expect(source.selectSourceTitle, 'Select Premiumize Source');
+      expect(source.openingTitle, 'Opening folder...');
+      expect(source.sections.map((s) => s.label).toList(), [
+        'My Files',
+        'Transfers',
+      ]);
+    });
+
+    test('AllDebrid destination id and magnet / web sections', () {
+      const source = AllDebridFilesSource();
+      expect(source.destinationId, 'alldebrid');
+      expect(source.selectSourceTitle, 'Select AllDebrid Source');
+      expect(source.sections.map((s) => s.label).toList(), [
+        'Torrent Downloads',
+        'Web Downloads',
+      ]);
+    });
+
+    test('PikPak destination id, folder splash, empty sections', () {
+      const source = PikPakFilesSource();
+      expect(source.destinationId, 'pikpak');
+      expect(source.selectSourceTitle, 'Select PikPak Source');
+      expect(source.openingTitle, 'Opening folder...');
+      expect(source.openingBody, 'Loading folder contents...');
+      expect(
+        source.openFailedMessage,
+        'Failed to open folder. Please try again.',
+      );
+      expect(source.initialSearchQuery, isNull);
+      expect(source.sections, isEmpty);
+    });
+
+    testWidgets('PremiumizeFilesScreen routes through CloudFilesScreen', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          PremiumizeFilesScreen(
+            isPushedRoute: true,
+            selectSourceMode: true,
+            onSourceSelected: asyncBind,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(CloudFilesScreen), findsOneWidget);
+      expect(find.byType(PremiumizeFilesScreen), findsOneWidget);
+      expect(find.byType(PremiumizeCloudFilesHost), findsOneWidget);
+      final screen = tester.widget<CloudFilesScreen>(
+        find.byType(CloudFilesScreen),
+      );
+      expect(screen.source, isA<PremiumizeFilesSource>());
+      expect(screen.source.destinationId, 'premiumize');
+    });
+
+    testWidgets('AllDebridFilesScreen routes through CloudFilesScreen', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          AllDebridFilesScreen(
+            isPushedRoute: true,
+            selectSourceMode: true,
+            onSourceSelected: asyncBind,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(CloudFilesScreen), findsOneWidget);
+      expect(find.byType(AllDebridFilesScreen), findsOneWidget);
+      expect(find.byType(AllDebridCloudFilesHost), findsOneWidget);
+      final screen = tester.widget<CloudFilesScreen>(
+        find.byType(CloudFilesScreen),
+      );
+      expect(screen.source, isA<AllDebridFilesSource>());
+      expect(screen.source.destinationId, 'alldebrid');
+    });
+
+    testWidgets('PikPakFilesScreen routes through CloudFilesScreen', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          PikPakFilesScreen(
+            isPushedRoute: true,
+            selectSourceMode: true,
+            onSourceSelected: asyncBind,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(CloudFilesScreen), findsOneWidget);
+      expect(find.byType(PikPakFilesScreen), findsOneWidget);
+      expect(find.byType(PikPakCloudFilesHost), findsOneWidget);
+      final screen = tester.widget<CloudFilesScreen>(
+        find.byType(CloudFilesScreen),
+      );
+      expect(screen.source, isA<PikPakFilesSource>());
+      expect(screen.source.destinationId, 'pikpak');
+      await drainOpenTimeout(tester);
+    });
+  });
 }
 
 String _readHost(String path) => File(path).readAsStringSync();
@@ -339,6 +449,8 @@ String _methodBody(String src, String name) {
   final start = src.indexOf('Widget $name()');
   expect(start, greaterThanOrEqualTo(0), reason: 'missing $name');
   final rest = src.substring(start);
-  final next = RegExp(r'\n  (?:Widget |void |Future|InputDecoration |bool |String )').firstMatch(rest.substring(1));
+  final next = RegExp(
+    r'\n  (?:Widget |void |Future|InputDecoration |bool |String )',
+  ).firstMatch(rest.substring(1));
   return next == null ? rest : rest.substring(0, next.start + 1);
 }

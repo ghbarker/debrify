@@ -19,8 +19,13 @@ import '../../widgets/cloud/cloud_row_skeleton.dart';
 import '../../widgets/cloud/cloud_theme.dart';
 import '../../widgets/file_selection_dialog.dart';
 import '../../widgets/tv_text_field.dart';
+import '../cloud_files/cloud_files_screen.dart';
+import '../cloud_files/pikpak_files_source.dart';
 
-class PikPakFilesScreen extends StatefulWidget {
+/// PikPak cloud files. Public type is unchanged so sidebar, bind, and
+/// [CloudBrowseSelectSource] keep working. Body is [CloudFilesScreen] with a
+/// [PikPakFilesSource] (G4).
+class PikPakFilesScreen extends StatelessWidget {
   final String? initialFolderId;
   final String? initialFolderName;
   final bool selectSourceMode;
@@ -40,13 +45,55 @@ class PikPakFilesScreen extends StatefulWidget {
   });
 
   @override
-  State<PikPakFilesScreen> createState() => _PikPakFilesScreenState();
+  Widget build(BuildContext context) {
+    return CloudFilesScreen(
+      source: PikPakFilesSource(
+        initialFolderId: initialFolderId,
+        initialFolderName: initialFolderName,
+        isPushedRoute: isPushedRoute,
+        selectSourceMode: selectSourceMode,
+        onSourceSelectedAsync: onSourceSelected,
+      ),
+      host: PikPakCloudFilesHost(
+        initialFolderId: initialFolderId,
+        initialFolderName: initialFolderName,
+        isPushedRoute: isPushedRoute,
+        selectSourceMode: selectSourceMode,
+        onSourceSelected: onSourceSelected,
+      ),
+    );
+  }
+}
+
+/// Former [PikPakFilesScreen] State host. Constructor and fields are the
+/// origin widget moved verbatim.
+class PikPakCloudFilesHost extends StatefulWidget {
+  final String? initialFolderId;
+  final String? initialFolderName;
+  final bool selectSourceMode;
+  final Future<void> Function(SeriesSource)? onSourceSelected;
+
+  /// When true, this screen was pushed as a route (not displayed in a tab).
+  /// Back navigation will pop the route instead of switching tabs.
+  final bool isPushedRoute;
+
+  const PikPakCloudFilesHost({
+    super.key,
+    this.initialFolderId,
+    this.initialFolderName,
+    this.isPushedRoute = false,
+    this.selectSourceMode = false,
+    this.onSourceSelected,
+  });
+
+  @override
+  State<PikPakCloudFilesHost> createState() => _PikPakFilesScreenState();
 }
 
 /// View modes for folder display
 enum _FolderViewMode { raw, sortedAZ, seriesArrange }
 
-class _PikPakFilesScreenState extends State<PikPakFilesScreen> {
+class _PikPakFilesScreenState extends State<PikPakCloudFilesHost> {
   final ScrollController _scrollController = ScrollController();
   final List<Map<String, dynamic>> _files = [];
 
