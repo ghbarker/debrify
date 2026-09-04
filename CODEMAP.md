@@ -242,7 +242,9 @@ is an editor mirror, not the source of truth. How to add a provider:
 - In-app player: `lib/screens/video_player_screen.dart` 🔴 (subtitles via media_kit
   `subtitleViewConfiguration`; `_restoreTrackPreferences`/`_applyDefault*Language`; per-key D-pad
   handlers arrowUp/Down/Left/Right; scrobble via `ScrobbleCoordinator` +
-  `ScrobbleTarget`s in `lib/services/scrobble/`). Controls overlay:
+  `ScrobbleTarget`s in `lib/services/scrobble/`). Launch ctor fields:
+  `lib/screens/video_player/player_launch_config.dart` (`PlayerLaunchConfig`;
+  `VideoPlayerScreen` public constructor stays). Controls overlay:
   `lib/screens/video_player/widgets/controls.dart`. Track/source sheets: `lib/screens/video_player/widgets/`.
 - Launch + native TV: `lib/services/video_player_launcher.dart` 🔴 (`_launchOnAndroidTv`, `_push`),
   `lib/services/android_tv_player_bridge.dart`, native Kotlin
