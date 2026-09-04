@@ -84,7 +84,7 @@ AdvancedSearchSelection movieSelection(
   mdblistProgressPercent: mdblistProgressPercent,
 );
 
-typedef _Cand = ({
+typedef ResumeCandidate = ({
   int prio,
   int? tsMs,
   int s,
@@ -95,7 +95,7 @@ typedef _Cand = ({
 });
 
 /// Origin `_reconcileSeriesResume` candidate sort.
-List<_Cand> sortResumeCandidates(List<_Cand> candidates) {
+List<ResumeCandidate> sortResumeCandidates(List<ResumeCandidate> candidates) {
   final copy = [...candidates];
   copy.sort((a, b) {
     final at = a.tsMs;
@@ -147,7 +147,7 @@ List<_Cand> sortResumeCandidates(List<_Cand> candidates) {
   return (
     overridden: overridden,
     started: started,
-    season: overridden ? promised!.season : reconciledSeason,
+    season: overridden ? promised.season : reconciledSeason,
     episode: overridden ? promised.episode : reconciledEpisode,
   );
 }
