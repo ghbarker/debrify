@@ -12,7 +12,7 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 
 | File | Lines |
 |---|---:|
-| `lib/screens/search_screen.dart` | 19 070 |
+| `lib/screens/search_screen.dart` | 17 039 |
 | `lib/screens/search/` parts (4 files) | 8 321 |
 | `lib/screens/video_player_screen.dart` | 16 278 |
 | `lib/screens/magic_tv_screen.dart` | 10 716 |
@@ -28,12 +28,18 @@ Search `part` files: `lib/screens/search/search_sources.dart` (3 163),
 `lib/screens/search/search_hero_widgets.dart` (2 261),
 `lib/screens/search/search_stage_widgets.dart` (1 699),
 `lib/screens/search/search_card_widgets.dart` (1 198).
+TV Home stage parts (7 files, 1 661): `lib/screens/search/stages/*_board_stage.dart`.
 Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.dart`,
 `title_opener.dart` (`TitleOpener.open` — catalog detail from the board),
 `catalog_search_screen.dart` (Search tab), `discover_screen.dart` (Discover tab),
 `search_screen_shells.dart` (tab/variant/landing/dropdown contracts).
+TV Home stages (parts of `search_screen.dart`, G1 step 5): `lib/screens/search/stages/`
+— `_CanvasBoardStage`, `_AtriumBoardStage`, `_MosaicBoardStage`, `_PromenadeBoardStage`,
+`_DeckBoardStage`, `_TonightBoardStage`, `_SpotlightBoardStage`. Dispatch helper:
+`tv_home_stage_dispatch.dart` (`resolveTvHomeStageLayout`). Empty Spotlight shelves
+fall through to classic. `_buildDiscoverStage` stays on the host (Discover chrome).
 
-🔴 huge: `lib/screens/search_screen.dart` (19 070) · `lib/screens/video_player_screen.dart`
+🔴 huge: `lib/screens/search_screen.dart` (17 039) · `lib/screens/video_player_screen.dart`
 (16 278) · `lib/screens/magic_tv_screen.dart` (10 716) · `lib/services/storage_service.dart`
 (9 634) · `lib/screens/settings_screen.dart` (3 107) ·
 `lib/screens/torbox/torbox_downloads_screen.dart` (7 069) ·
@@ -92,6 +98,8 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   so they share `HomeBoardController`, `CatalogSearchController`, and `TitleOpener`. Shell contracts
   live in `lib/screens/search/search_screen_shells.dart`.
   Detail opening is `lib/screens/search/title_opener.dart` (`TitleOpener`; State `_openItem` is a forward).
+  TV Home stage layouts are `lib/screens/search/stages/` (`_CanvasBoardStage` and friends);
+  the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,

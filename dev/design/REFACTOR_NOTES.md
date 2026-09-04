@@ -109,6 +109,19 @@ See `dev/design/REFACTOR_PLAN.md` §2 rule 1.
 - **Premiumize / AllDebrid / PikPak not routed** onto `CloudFilesScreen`.
   Follow-up lane; public types and sidebar ids stay frozen.
 
+### G1 · step 5 TV stages
+
+- **Empty Spotlight still `break`s to classic.** If every spotlight shelf
+  has empty `items`, the host switch falls through instead of rendering the
+  Spotlight board. Keep: origin `switch`, pinned in
+  `test/tv_home_stage_layouts_pin_test.dart`.
+- **`_buildDiscoverStage` stays on the host.** Discover chrome, not a TV
+  Home layout. Classic `LayoutBuilder` hero/rows also stay.
+- **Library-private `part`s.** Stage widgets are `part of search_screen.dart`
+  so they can read host fields. Analyzer diagnostics report the part path;
+  C0 baseline identity is `path|code|message`, so moved `cacheExtent` infos
+  were retargeted in `tool/analyze_baseline.json` (no new kinds).
+
 ### G1 · step 4 Search/Discover screens
 
 - **`searchMode` wins if both flags are true.** Tab index, variant key, and
