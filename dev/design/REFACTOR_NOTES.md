@@ -127,7 +127,9 @@ Phase 2 extractions also follow `dev/design/REFACTOR_PLAN_PHASE2.md` (binding as
 - **Empty `initial` or null IMDb returns** from the edit dialog without
   opening the add picker.
 - **Reorder `setSources` is not awaited.** Same as origin
-  `ReorderableListView.onReorder`.
+  `ReorderableListView.onReorder`. Keep `onReorder` + `newIndex--`
+  (not `onReorderItem`); an `// ignore: deprecated_member_use` hides
+  the relocated INFO so `analyze_baseline.json` is not grown.
 - **Local pick uses `item.type == 'series'`** for folder vs file (not the
   movie-chrome predicate). A `tv` title would take the movie-file picker
   and then `setSources` replace. Keep: two different type checks.

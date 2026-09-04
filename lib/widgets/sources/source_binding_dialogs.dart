@@ -147,6 +147,7 @@ class SourceBindingDialogs {
                             : ReorderableListView.builder(
                                 shrinkWrap: true,
                                 itemCount: sources.length,
+                                // ignore: deprecated_member_use
                                 onReorder: (oldIndex, newIndex) {
                                   if (newIndex > oldIndex) newIndex--;
                                   setDialogState(() {
