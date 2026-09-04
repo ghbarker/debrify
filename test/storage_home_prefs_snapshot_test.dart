@@ -2,7 +2,8 @@ import 'dart:convert';
 
 import 'package:debrify/models/tracking_source.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
-import 'package:debrify/services/storage_service.dart' hide HomeCardOrientation;
+import 'package:debrify/services/storage_service.dart'
+    hide HomeCardOrientation, HomeHeroSourceMode, HomeHeroSource, HomeExtraRow;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -334,62 +335,65 @@ void main() {
     expect(StorageService.tvHomeStyleCached, 'canvas');
   });
 
-  test('StorageService writes the historical remaining Home key bytes', () async {
-    await StorageService.setHomeDisabledSections({'cw:movies', 'fav:iptv'});
-    await StorageService.setHomeExtraRows(const [
-      (id: 'traktlist:watchlist', title: ''),
-      (id: 'iptvlist:list_1', title: 'Sports'),
-    ]);
-    await StorageService.setHomeRowOrder(['fav:playlist', 'cw:movies']);
-    await StorageService.setHomeHeroSource((
-      mode: HomeHeroSourceMode.custom,
-      ids: ['cinemeta:movie:top', 'cinemeta:series:top'],
-    ));
-    await StorageService.setHomeTickSources({
-      TrackingSource.local,
-      TrackingSource.simkl,
-    });
-    await StorageService.setHomeHeroTrailerEnabled(false);
-    await StorageService.setAmbientTrailerAudioEnabled(
-      AmbientTrailerSurface.homeHero,
-      false,
-    );
-    await StorageService.setAmbientTrailerVolume(
-      AmbientTrailerSurface.homeHero,
-      40,
-    );
-    await StorageService.setTvHomeStyle('spotlight');
+  test(
+    'StorageService writes the historical remaining Home key bytes',
+    () async {
+      await StorageService.setHomeDisabledSections({'cw:movies', 'fav:iptv'});
+      await StorageService.setHomeExtraRows(const [
+        (id: 'traktlist:watchlist', title: ''),
+        (id: 'iptvlist:list_1', title: 'Sports'),
+      ]);
+      await StorageService.setHomeRowOrder(['fav:playlist', 'cw:movies']);
+      await StorageService.setHomeHeroSource((
+        mode: HomeHeroSourceMode.custom,
+        ids: ['cinemeta:movie:top', 'cinemeta:series:top'],
+      ));
+      await StorageService.setHomeTickSources({
+        TrackingSource.local,
+        TrackingSource.simkl,
+      });
+      await StorageService.setHomeHeroTrailerEnabled(false);
+      await StorageService.setAmbientTrailerAudioEnabled(
+        AmbientTrailerSurface.homeHero,
+        false,
+      );
+      await StorageService.setAmbientTrailerVolume(
+        AmbientTrailerSurface.homeHero,
+        40,
+      );
+      await StorageService.setTvHomeStyle('spotlight');
 
-    final prefs = await SharedPreferences.getInstance();
-    expect(
-      prefs.getString('home_disabled_sections_v1'),
-      jsonEncode(['cw:movies', 'fav:iptv']),
-    );
-    expect(
-      prefs.getString('home_extra_rows_v1'),
-      jsonEncode([
-        {'id': 'traktlist:watchlist', 'title': ''},
-        {'id': 'iptvlist:list_1', 'title': 'Sports'},
-      ]),
-    );
-    expect(
-      prefs.getString('home_row_order_v1'),
-      jsonEncode(['fav:playlist', 'cw:movies']),
-    );
-    expect(
-      prefs.getString('home_hero_source_v1'),
-      jsonEncode({
-        'mode': 'custom',
-        'ids': ['cinemeta:movie:top', 'cinemeta:series:top'],
-      }),
-    );
-    expect(prefs.getStringList('home_tick_sources'), ['local', 'simkl']);
-    expect(prefs.getBool('home_hero_trailer_enabled'), isFalse);
-    expect(prefs.getBool('home_hero_trailer_audio_enabled'), isFalse);
-    expect(prefs.getInt('home_hero_trailer_volume'), 40);
-    expect(prefs.getString('tv_home_style'), 'spotlight');
-    expect(StorageService.tvHomeStyleCached, 'spotlight');
-  });
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getString('home_disabled_sections_v1'),
+        jsonEncode(['cw:movies', 'fav:iptv']),
+      );
+      expect(
+        prefs.getString('home_extra_rows_v1'),
+        jsonEncode([
+          {'id': 'traktlist:watchlist', 'title': ''},
+          {'id': 'iptvlist:list_1', 'title': 'Sports'},
+        ]),
+      );
+      expect(
+        prefs.getString('home_row_order_v1'),
+        jsonEncode(['fav:playlist', 'cw:movies']),
+      );
+      expect(
+        prefs.getString('home_hero_source_v1'),
+        jsonEncode({
+          'mode': 'custom',
+          'ids': ['cinemeta:movie:top', 'cinemeta:series:top'],
+        }),
+      );
+      expect(prefs.getStringList('home_tick_sources'), ['local', 'simkl']);
+      expect(prefs.getBool('home_hero_trailer_enabled'), isFalse);
+      expect(prefs.getBool('home_hero_trailer_audio_enabled'), isFalse);
+      expect(prefs.getInt('home_hero_trailer_volume'), 40);
+      expect(prefs.getString('tv_home_style'), 'spotlight');
+      expect(StorageService.tvHomeStyleCached, 'spotlight');
+    },
+  );
 
   test(
     'raw remaining Home bytes round-trip through StorageService getters',
@@ -419,7 +423,9 @@ void main() {
       final hero = await StorageService.getHomeHeroSource();
       expect(hero.mode, HomeHeroSourceMode.auto);
       expect(hero.ids, ['kept']);
-      expect(await StorageService.getHomeTickSources(), {TrackingSource.mdblist});
+      expect(await StorageService.getHomeTickSources(), {
+        TrackingSource.mdblist,
+      });
       expect(await StorageService.getHomeHeroTrailerEnabled(), isFalse);
       expect(
         await StorageService.getAmbientTrailerAudioEnabled(
@@ -464,108 +470,125 @@ void main() {
     expect(prefs.containsKey('home_hero_source_v1'), isFalse);
   });
 
-  test('home extra rows skip malformed entries and degrade non-string titles',
-      () async {
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      'home_extra_rows_v1': jsonEncode([
-        {'id': 'simkllist:trending', 'title': 'Trending'},
-        {'title': 'no id'},
-        'bare string',
-        {'id': '', 'title': 'empty id'},
-        {'id': 'simkllist:trending', 'title': 'duplicate'},
-        {'id': 'traktlist:popular', 'title': 42},
-      ]),
-    });
-    final rows = await StorageService.getHomeExtraRows();
-    expect(rows, hasLength(2));
-    expect(rows[0], (id: 'simkllist:trending', title: 'Trending'));
-    expect(rows[1], (id: 'traktlist:popular', title: ''));
-  });
+  test(
+    'home extra rows skip malformed entries and degrade non-string titles',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'home_extra_rows_v1': jsonEncode([
+          {'id': 'simkllist:trending', 'title': 'Trending'},
+          {'title': 'no id'},
+          'bare string',
+          {'id': '', 'title': 'empty id'},
+          {'id': 'simkllist:trending', 'title': 'duplicate'},
+          {'id': 'traktlist:popular', 'title': 42},
+        ]),
+      });
+      final rows = await StorageService.getHomeExtraRows();
+      expect(rows, hasLength(2));
+      expect(rows[0], (id: 'simkllist:trending', title: 'Trending'));
+      expect(rows[1], (id: 'traktlist:popular', title: ''));
+    },
+  );
 
-  test('home row order deduplicates and ignores empty or non-string ids',
-      () async {
-    await StorageService.setHomeRowOrder([
-      'fav:playlist',
-      'cw:movies',
-      'fav:playlist',
-      '',
-    ]);
-    expect(await StorageService.getHomeRowOrder(), [
-      'fav:playlist',
-      'cw:movies',
-    ]);
+  test(
+    'home row order deduplicates and ignores empty or non-string ids',
+    () async {
+      await StorageService.setHomeRowOrder([
+        'fav:playlist',
+        'cw:movies',
+        'fav:playlist',
+        '',
+      ]);
+      expect(await StorageService.getHomeRowOrder(), [
+        'fav:playlist',
+        'cw:movies',
+      ]);
 
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      'home_row_order_v1': jsonEncode(['cw:series', 4, '', 'cw:series', 'fav:iptv']),
-    });
-    expect(await StorageService.getHomeRowOrder(), ['cw:series', 'fav:iptv']);
-  });
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'home_row_order_v1': jsonEncode([
+          'cw:series',
+          4,
+          '',
+          'cw:series',
+          'fav:iptv',
+        ]),
+      });
+      expect(await StorageService.getHomeRowOrder(), ['cw:series', 'fav:iptv']);
+    },
+  );
 
-  test('home hero source quirks: auto is stored; custom with no ids reads random',
-      () async {
-    await StorageService.setHomeHeroSource((
-      mode: HomeHeroSourceMode.auto,
-      ids: const [],
-    ));
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('home_hero_source_v1'), isNotNull);
-    expect(
-      (await StorageService.getHomeHeroSource()).mode,
-      HomeHeroSourceMode.auto,
-    );
+  test(
+    'home hero source quirks: auto is stored; custom with no ids reads random',
+    () async {
+      await StorageService.setHomeHeroSource((
+        mode: HomeHeroSourceMode.auto,
+        ids: const [],
+      ));
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('home_hero_source_v1'), isNotNull);
+      expect(
+        (await StorageService.getHomeHeroSource()).mode,
+        HomeHeroSourceMode.auto,
+      );
 
-    await StorageService.setHomeHeroSource((
-      mode: HomeHeroSourceMode.random,
-      ids: ['cinemeta:movie:top'],
-    ));
-    expect(prefs.getString('home_hero_source_v1'), isNotNull);
-    final withIds = await StorageService.getHomeHeroSource();
-    expect(withIds.mode, HomeHeroSourceMode.random);
-    expect(withIds.ids, ['cinemeta:movie:top']);
+      await StorageService.setHomeHeroSource((
+        mode: HomeHeroSourceMode.random,
+        ids: ['cinemeta:movie:top'],
+      ));
+      expect(prefs.getString('home_hero_source_v1'), isNotNull);
+      final withIds = await StorageService.getHomeHeroSource();
+      expect(withIds.mode, HomeHeroSourceMode.random);
+      expect(withIds.ids, ['cinemeta:movie:top']);
 
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      'home_hero_source_v1': jsonEncode({'mode': 'custom', 'ids': <String>[]}),
-    });
-    expect(
-      (await StorageService.getHomeHeroSource()).mode,
-      HomeHeroSourceMode.random,
-    );
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'home_hero_source_v1': jsonEncode({
+          'mode': 'custom',
+          'ids': <String>[],
+        }),
+      });
+      expect(
+        (await StorageService.getHomeHeroSource()).mode,
+        HomeHeroSourceMode.random,
+      );
 
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      'home_hero_source_v1': 'not-json{',
-    });
-    final corrupt = await StorageService.getHomeHeroSource();
-    expect(corrupt.mode, HomeHeroSourceMode.random);
-    expect(corrupt.ids, isEmpty);
-  });
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'home_hero_source_v1': 'not-json{',
+      });
+      final corrupt = await StorageService.getHomeHeroSource();
+      expect(corrupt.mode, HomeHeroSourceMode.random);
+      expect(corrupt.ids, isEmpty);
+    },
+  );
 
-  test('home tick sources: absent is all, empty list is none, unknowns drop',
-      () async {
-    expect(
-      await StorageService.getHomeTickSources(),
-      Set<TrackingSource>.of(TrackingSource.values),
-    );
+  test(
+    'home tick sources: absent is all, empty list is none, unknowns drop',
+    () async {
+      expect(
+        await StorageService.getHomeTickSources(),
+        Set<TrackingSource>.of(TrackingSource.values),
+      );
 
-    await StorageService.setHomeTickSources(<TrackingSource>{});
-    final prefs = await SharedPreferences.getInstance();
-    // Quirk: empty set writes an empty list; it does not remove the key.
-    expect(prefs.getStringList('home_tick_sources'), isEmpty);
-    expect(await StorageService.getHomeTickSources(), isEmpty);
+      await StorageService.setHomeTickSources(<TrackingSource>{});
+      final prefs = await SharedPreferences.getInstance();
+      // Quirk: empty set writes an empty list; it does not remove the key.
+      expect(prefs.getStringList('home_tick_sources'), isEmpty);
+      expect(await StorageService.getHomeTickSources(), isEmpty);
 
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      'home_tick_sources': <String>['local', 'nope', 'simkl', 'local'],
-    });
-    expect(await StorageService.getHomeTickSources(), {
-      TrackingSource.local,
-      TrackingSource.simkl,
-    });
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'home_tick_sources': <String>['local', 'nope', 'simkl', 'local'],
+      });
+      expect(await StorageService.getHomeTickSources(), {
+        TrackingSource.local,
+        TrackingSource.simkl,
+      });
 
-    final before = StorageService.trackingSourceRevision.value;
-    await StorageService.setHomeTickSources({TrackingSource.trakt});
-    expect(StorageService.trackingSourceRevision.value, before + 1);
-    final after = await SharedPreferences.getInstance();
-    expect(after.getStringList('home_tick_sources'), ['trakt']);
-  });
+      final before = StorageService.trackingSourceRevision.value;
+      await StorageService.setHomeTickSources({TrackingSource.trakt});
+      expect(StorageService.trackingSourceRevision.value, before + 1);
+      final after = await SharedPreferences.getInstance();
+      expect(after.getStringList('home_tick_sources'), ['trakt']);
+    },
+  );
 
   test('tv home style coerces unknown values to canvas both ways', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
@@ -586,53 +609,158 @@ void main() {
     }
   });
 
-  test('home hero trailer volume clamps to 10–100; detail keys stay separate',
-      () async {
-    await StorageService.setAmbientTrailerVolume(
-      AmbientTrailerSurface.homeHero,
-      1,
-    );
-    await StorageService.setAmbientTrailerVolume(
-      AmbientTrailerSurface.detail,
-      1000,
-    );
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getInt('home_hero_trailer_volume'), 10);
-    expect(prefs.getInt('detail_trailer_volume'), 100);
-    expect(
-      await StorageService.getAmbientTrailerVolume(
+  test(
+    'home hero trailer volume clamps to 10–100; detail keys stay separate',
+    () async {
+      await StorageService.setAmbientTrailerVolume(
         AmbientTrailerSurface.homeHero,
-      ),
-      10,
-    );
-    expect(
-      await StorageService.getAmbientTrailerVolume(
+        1,
+      );
+      await StorageService.setAmbientTrailerVolume(
         AmbientTrailerSurface.detail,
-      ),
-      100,
-    );
+        1000,
+      );
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('home_hero_trailer_volume'), 10);
+      expect(prefs.getInt('detail_trailer_volume'), 100);
+      expect(
+        await StorageService.getAmbientTrailerVolume(
+          AmbientTrailerSurface.homeHero,
+        ),
+        10,
+      );
+      expect(
+        await StorageService.getAmbientTrailerVolume(
+          AmbientTrailerSurface.detail,
+        ),
+        100,
+      );
 
-    await StorageService.setAmbientTrailerAudioEnabled(
-      AmbientTrailerSurface.homeHero,
-      false,
-    );
-    await StorageService.setAmbientTrailerAudioEnabled(
-      AmbientTrailerSurface.detail,
-      true,
-    );
-    expect(prefs.getBool('home_hero_trailer_audio_enabled'), isFalse);
-    expect(prefs.getBool('detail_trailer_audio_enabled'), isTrue);
-  });
+      await StorageService.setAmbientTrailerAudioEnabled(
+        AmbientTrailerSurface.homeHero,
+        false,
+      );
+      await StorageService.setAmbientTrailerAudioEnabled(
+        AmbientTrailerSurface.detail,
+        true,
+      );
+      expect(prefs.getBool('home_hero_trailer_audio_enabled'), isFalse);
+      expect(prefs.getBool('detail_trailer_audio_enabled'), isTrue);
+    },
+  );
 
-  test('corrupt remaining Home JSON reads as the empty/default fallback',
-      () async {
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      'home_disabled_sections_v1': 'not-json{',
-      'home_extra_rows_v1': 'not-json{',
-      'home_row_order_v1': 'not-json{',
-    });
-    expect(await StorageService.getHomeDisabledSections(), isEmpty);
-    expect(await StorageService.getHomeExtraRows(), isEmpty);
-    expect(await StorageService.getHomeRowOrder(), isEmpty);
-  });
+  test(
+    'corrupt remaining Home JSON reads as the empty/default fallback',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'home_disabled_sections_v1': 'not-json{',
+        'home_extra_rows_v1': 'not-json{',
+        'home_row_order_v1': 'not-json{',
+      });
+      expect(await StorageService.getHomeDisabledSections(), isEmpty);
+      expect(await StorageService.getHomeExtraRows(), isEmpty);
+      expect(await StorageService.getHomeRowOrder(), isEmpty);
+    },
+  );
+
+  test(
+    'StorageService remaining Home writes are readable through HomePrefs',
+    () async {
+      await StorageService.setHomeDisabledSections({'cw:movies'});
+      await StorageService.setHomeExtraRows(const [
+        (id: 'iptvlist:list_1', title: 'Sports'),
+      ]);
+      await StorageService.setHomeRowOrder(['cw:movies', 'fav:iptv']);
+      await StorageService.setHomeHeroSource((
+        mode: HomeHeroSourceMode.custom,
+        ids: ['cinemeta:movie:top'],
+      ));
+      await StorageService.setHomeTickSources({TrackingSource.simkl});
+      await StorageService.setHomeHeroTrailerEnabled(false);
+      await StorageService.setAmbientTrailerAudioEnabled(
+        AmbientTrailerSurface.homeHero,
+        false,
+      );
+      await StorageService.setAmbientTrailerVolume(
+        AmbientTrailerSurface.homeHero,
+        40,
+      );
+      await StorageService.setTvHomeStyle('spotlight');
+
+      expect(await HomePrefs.getHomeDisabledSections(), {'cw:movies'});
+      expect(await HomePrefs.getHomeExtraRows(), [
+        (id: 'iptvlist:list_1', title: 'Sports'),
+      ]);
+      expect(await HomePrefs.getHomeRowOrder(), ['cw:movies', 'fav:iptv']);
+      final hero = await HomePrefs.getHomeHeroSource();
+      expect(hero.mode, HomeHeroSourceMode.custom);
+      expect(hero.ids, ['cinemeta:movie:top']);
+      expect(await HomePrefs.getHomeTickSources(), {TrackingSource.simkl});
+      expect(await HomePrefs.getHomeHeroTrailerEnabled(), isFalse);
+      expect(await HomePrefs.getHomeHeroTrailerAudioEnabled(), isFalse);
+      expect(await HomePrefs.getHomeHeroTrailerVolume(), 40);
+      expect(await HomePrefs.getTvHomeStyle(), 'spotlight');
+      expect(HomePrefs.tvHomeStyleCached, 'spotlight');
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getString('home_disabled_sections_v1'),
+        jsonEncode(['cw:movies']),
+      );
+      expect(prefs.getStringList('home_tick_sources'), ['simkl']);
+      expect(prefs.getBool('home_hero_trailer_enabled'), isFalse);
+      expect(prefs.getString('tv_home_style'), 'spotlight');
+    },
+  );
+
+  test(
+    'HomePrefs remaining Home writes are readable through StorageService',
+    () async {
+      await HomePrefs.setHomeDisabledSections({'fav:iptv'});
+      await HomePrefs.setHomeExtraRows(const [
+        (id: 'traktlist:watchlist', title: ''),
+      ]);
+      await HomePrefs.setHomeRowOrder(['fav:iptv']);
+      await HomePrefs.setHomeHeroSource((
+        mode: HomeHeroSourceMode.auto,
+        ids: const [],
+      ));
+      await HomePrefs.setHomeTickSources({TrackingSource.mdblist});
+      await HomePrefs.setHomeHeroTrailerEnabled(true);
+      await HomePrefs.setHomeHeroTrailerAudioEnabled(true);
+      await HomePrefs.setHomeHeroTrailerVolume(70);
+      await HomePrefs.setTvHomeStyle('atrium');
+
+      expect(await StorageService.getHomeDisabledSections(), {'fav:iptv'});
+      expect(await StorageService.getHomeExtraRows(), [
+        (id: 'traktlist:watchlist', title: ''),
+      ]);
+      expect(await StorageService.getHomeRowOrder(), ['fav:iptv']);
+      final hero = await StorageService.getHomeHeroSource();
+      expect(hero.mode, HomeHeroSourceMode.auto);
+      expect(await StorageService.getHomeTickSources(), {
+        TrackingSource.mdblist,
+      });
+      expect(await StorageService.getHomeHeroTrailerEnabled(), isTrue);
+      expect(
+        await StorageService.getAmbientTrailerAudioEnabled(
+          AmbientTrailerSurface.homeHero,
+        ),
+        isTrue,
+      );
+      expect(
+        await StorageService.getAmbientTrailerVolume(
+          AmbientTrailerSurface.homeHero,
+        ),
+        70,
+      );
+      expect(await StorageService.getTvHomeStyle(), 'atrium');
+      expect(StorageService.tvHomeStyleCached, 'atrium');
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('home_row_order_v1'), jsonEncode(['fav:iptv']));
+      expect(prefs.getStringList('home_tick_sources'), ['mdblist']);
+      expect(prefs.getString('tv_home_style'), 'atrium');
+    },
+  );
 }

@@ -12,7 +12,7 @@ enum StorageKeyStore {
   /// [CloudSecretPrefs] credential keys.
   cloudSecretPrefs,
 
-  /// Home page defaults ([HomePrefs]).
+  /// Home page defaults and remaining Home keys ([HomePrefs]).
   homePrefs,
 }
 
@@ -24,7 +24,7 @@ class StorageKeyOwnership {
     'explicitly_watched_series_v1': StorageKeyStore.storageService,
     'tracking_scrobble_targets': StorageKeyStore.storageService,
     'watch_progress_source': StorageKeyStore.storageService,
-    'home_tick_sources': StorageKeyStore.storageService,
+    'home_tick_sources': StorageKeyStore.homePrefs,
     'defaults_generation': StorageKeyStore.storageService,
     'real_debrid_endpoint': StorageKeyStore.storageService,
     'real_debrid_file_selection': StorageKeyStore.storageService,
@@ -233,7 +233,7 @@ class StorageKeyOwnership {
     'tv_hero_artwork_quality': StorageKeyStore.storageService,
     'phone_nav_style': StorageKeyStore.storageService,
     'phone_nav_bar_indices': StorageKeyStore.storageService,
-    'tv_home_style': StorageKeyStore.storageService,
+    'tv_home_style': StorageKeyStore.homePrefs,
     'debrify_tv_style': StorageKeyStore.storageService,
     'detail_page_style': StorageKeyStore.storageService,
     'detail_theme': StorageKeyStore.storageService,
@@ -274,10 +274,13 @@ class StorageKeyOwnership {
     'startup_iptv_channel': StorageKeyStore.storageService,
     'stremio_tv_disabled_channel_filters_v1': StorageKeyStore.storageService,
     'catalog_search_disabled_addons_v1': StorageKeyStore.storageService,
-    'home_disabled_sections_v1': StorageKeyStore.storageService,
-    'home_extra_rows_v1': StorageKeyStore.storageService,
-    'home_row_order_v1': StorageKeyStore.storageService,
-    'home_hero_source_v1': StorageKeyStore.storageService,
+    'home_disabled_sections_v1': StorageKeyStore.homePrefs,
+    'home_extra_rows_v1': StorageKeyStore.homePrefs,
+    'home_row_order_v1': StorageKeyStore.homePrefs,
+    'home_hero_source_v1': StorageKeyStore.homePrefs,
+    'home_hero_trailer_enabled': StorageKeyStore.homePrefs,
+    'home_hero_trailer_audio_enabled': StorageKeyStore.homePrefs,
+    'home_hero_trailer_volume': StorageKeyStore.homePrefs,
     'real_debrid_api_key': StorageKeyStore.cloudSecretPrefs,
   };
 

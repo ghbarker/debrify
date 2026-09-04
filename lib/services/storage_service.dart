@@ -34,7 +34,12 @@ import 'tracking_scrobble_preferences.dart';
 import 'storage/cloud_secret_prefs.dart';
 import 'storage/home_prefs.dart';
 
-export 'storage/home_prefs.dart' show HomeCardOrientation;
+export 'storage/home_prefs.dart'
+    show
+        HomeCardOrientation,
+        HomeHeroSourceMode,
+        HomeHeroSource,
+        HomeExtraRow;
 
 /// Which ambient-trailer surface a sound/volume preference belongs to.
 ///
@@ -64,7 +69,6 @@ class StorageService {
   static const String trackingScrobbleTargetsKey =
       TrackingScrobblePreferences.key;
   static const String watchProgressSourceKey = 'watch_progress_source';
-  static const String homeTickSourcesKey = 'home_tick_sources';
 
   /// Invalidates policy consumers that keep an in-memory snapshot.
   static final ValueNotifier<int> trackingSourceRevision = ValueNotifier(0);
@@ -152,7 +156,7 @@ class StorageService {
       }
       const bundle = <String, String>{
         _detailPageStyleKey: 'showcase',
-        _tvHomeStyleKey: 'spotlight',
+        HomePrefs.tvHomeStyleKey: 'spotlight',
         _tvSidebarStyleKey: 'pill',
         _desktopSidebarStyleKey: 'pill',
       };
@@ -846,24 +850,11 @@ class StorageService {
     await prefs.setBool('detail_trailer_autoplay_enabled', enabled);
   }
 
-  /// Ambient trailer in the hero surfaces — the Home board's spotlight and
-  /// the Discover rail.
-  ///
-  /// **Defaults ON everywhere** (generation 2). This was once hard-off
-  /// anywhere but a television, then a form-factor default that kept phones
-  /// and tablets opted out on battery-and-cellular grounds. The hero is the
-  /// Spotlight layout's centrepiece on every device now, so it starts on and
-  /// the toggle in Settings is where a phone user turns it off. The stored
-  /// value, once written, wins everywhere.
-  static Future<bool> getHomeHeroTrailerEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool('home_hero_trailer_enabled') ?? true;
-  }
+  static Future<bool> getHomeHeroTrailerEnabled() =>
+      HomePrefs.getHomeHeroTrailerEnabled();
 
-  static Future<void> setHomeHeroTrailerEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool('home_hero_trailer_enabled', enabled);
-  }
+  static Future<void> setHomeHeroTrailerEnabled(bool enabled) =>
+      HomePrefs.setHomeHeroTrailerEnabled(enabled);
 
   /// Pref key for the ambient-trailer sound pair, resolved per platform.
   /// Resolves to exactly four keys, spelled out here because the returns
@@ -901,6 +892,9 @@ class StorageService {
   static Future<bool> getAmbientTrailerAudioEnabled(
     AmbientTrailerSurface surface,
   ) async {
+    if (surface == AmbientTrailerSurface.homeHero) {
+      return HomePrefs.getHomeHeroTrailerAudioEnabled();
+    }
     final prefs = await ProfilePreferences.instance();
     return prefs.getBool(_ambientTrailerKeyFor(surface, 'audio_enabled')) ??
         true;
@@ -910,6 +904,10 @@ class StorageService {
     AmbientTrailerSurface surface,
     bool enabled,
   ) async {
+    if (surface == AmbientTrailerSurface.homeHero) {
+      await HomePrefs.setHomeHeroTrailerAudioEnabled(enabled);
+      return;
+    }
     final prefs = await ProfilePreferences.instance();
     await prefs.setBool(
       _ambientTrailerKeyFor(surface, 'audio_enabled'),
@@ -923,6 +921,9 @@ class StorageService {
   static Future<int> getAmbientTrailerVolume(
     AmbientTrailerSurface surface,
   ) async {
+    if (surface == AmbientTrailerSurface.homeHero) {
+      return HomePrefs.getHomeHeroTrailerVolume();
+    }
     final prefs = await ProfilePreferences.instance();
     final v = prefs.getInt(_ambientTrailerKeyFor(surface, 'volume')) ?? 70;
     return v.clamp(10, 100);
@@ -932,6 +933,10 @@ class StorageService {
     AmbientTrailerSurface surface,
     int percent,
   ) async {
+    if (surface == AmbientTrailerSurface.homeHero) {
+      await HomePrefs.setHomeHeroTrailerVolume(percent);
+      return;
+    }
     final prefs = await ProfilePreferences.instance();
     await prefs.setInt(
       _ambientTrailerKeyFor(surface, 'volume'),
@@ -1024,46 +1029,16 @@ class StorageService {
     );
   }
 
-  static const String _tvHomeStyleKey = 'tv_home_style';
+  static const Set<String> kTvHomeStyles = HomePrefs.kTvHomeStyles;
 
-  /// Every shipping TV Home layout. 'canvas' is the product default;
-  /// 'classic' is the original hero + scrolling rows. The rest are the
-  /// alternate stages (see `_buildAtriumBoard` and friends in search_screen).
-  ///
-  /// Coercion is TOTAL and both ways: a value written by a newer build and
-  /// read by an older one — or the long-removed 'shelf' — lands on 'canvas'
-  /// rather than rendering nothing.
-  static const Set<String> kTvHomeStyles = {
-    'canvas',
-    'classic',
-    'atrium',
-    'mosaic',
-    'promenade',
-    'deck',
-    'tonight',
-    'spotlight',
-  };
+  static String get tvHomeStyleCached => HomePrefs.tvHomeStyleCached;
+  static set tvHomeStyleCached(String value) =>
+      HomePrefs.tvHomeStyleCached = value;
 
-  /// TV Home layout. Phone/desktop and the Search tab never read it.
-  /// Synchronous mirror of `tvHomeStyle`, kept so a Look can read
-  /// the current value without an await. Additive: every existing caller
-  /// still goes through the async getter, which now also refreshes this.
-  static String tvHomeStyleCached = 'canvas';
+  static Future<String> getTvHomeStyle() => HomePrefs.getTvHomeStyle();
 
-  static Future<String> getTvHomeStyle() async {
-    final prefs = await ProfilePreferences.instance();
-    final raw = prefs.getString(_tvHomeStyleKey);
-    return tvHomeStyleCached = kTvHomeStyles.contains(raw) ? raw! : 'canvas';
-  }
-
-  static Future<void> setTvHomeStyle(String style) async {
-    final normalized = kTvHomeStyles.contains(style) ? style : 'canvas';
-    // Mirror BEFORE the await, so anything reading synchronously on the next
-    // frame sees the choice. Existing async readers are unaffected.
-    tvHomeStyleCached = normalized;
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_tvHomeStyleKey, normalized);
-  }
+  static Future<void> setTvHomeStyle(String style) =>
+      HomePrefs.setTvHomeStyle(style);
 
   static const String _debrifyTvStyleKey = 'debrify_tv_style';
 
@@ -5971,13 +5946,6 @@ class StorageService {
 
   // Tracking source policy -------------------------------------------------
 
-  static const Set<TrackingSource> _allTrackingSources = <TrackingSource>{
-    TrackingSource.local,
-    TrackingSource.trakt,
-    TrackingSource.simkl,
-    TrackingSource.mdblist,
-  };
-
   /// Reads the new master scrobble switches. On first read, adopt the retired
   /// per-tracker catalog switches once. An absent legacy value means ON: that
   /// matches interactive connection and old Trakt/Simkl restore behavior.
@@ -6041,23 +6009,11 @@ class StorageService {
     return pending;
   }
 
-  static Future<Set<TrackingSource>> getHomeTickSources() async {
-    final prefs = await ProfilePreferences.instance();
-    final stored = prefs.getStringList(homeTickSourcesKey);
-    if (stored == null) return Set<TrackingSource>.of(_allTrackingSources);
-    return <TrackingSource>{
-      for (final value in stored)
-        if (TrackingSourceStorageName.parse(value) case final source?) source,
-    };
-  }
+  static Future<Set<TrackingSource>> getHomeTickSources() =>
+      HomePrefs.getHomeTickSources();
 
   static Future<void> setHomeTickSources(Set<TrackingSource> value) async {
-    final prefs = await ProfilePreferences.instance();
-    final normalized = value.where(_allTrackingSources.contains).toSet();
-    await prefs.setStringList(
-      homeTickSourcesKey,
-      normalized.map((source) => source.storageName).toList(growable: false),
-    );
+    await HomePrefs.setHomeTickSources(value);
     trackingSourceRevision.value++;
   }
 
@@ -9611,174 +9567,28 @@ class StorageService {
     }
   }
 
-  static const String _homeDisabledSectionsKey = 'home_disabled_sections_v1';
+  static Future<Set<String>> getHomeDisabledSections() =>
+      HomePrefs.getHomeDisabledSections();
 
-  /// Get the set of Home-row IDs the user has hidden via the Home Page manager
-  /// (empty = every row shown). IDs are fixed-section leaves (e.g. `cw:movies`,
-  /// `trakt:shows`, `fav:iptv`) and catalog leaves (`addonId:type:catalogId`).
-  static Future<Set<String>> getHomeDisabledSections() async {
-    final prefs = await ProfilePreferences.instance();
-    final json = prefs.getString(_homeDisabledSectionsKey);
-    if (json == null) return {};
-    try {
-      final list = jsonDecode(json) as List<dynamic>;
-      return list.cast<String>().toSet();
-    } catch (e) {
-      debugPrint('Error reading home disabled sections: $e');
-      return {};
-    }
-  }
+  static Future<void> setHomeDisabledSections(Set<String> disabled) =>
+      HomePrefs.setHomeDisabledSections(disabled);
 
-  /// Save the set of hidden Home-row IDs.
-  static Future<void> setHomeDisabledSections(Set<String> disabled) async {
-    final prefs = await ProfilePreferences.instance();
-    if (disabled.isEmpty) {
-      await prefs.remove(_homeDisabledSectionsKey);
-    } else {
-      await prefs.setString(
-        _homeDisabledSectionsKey,
-        jsonEncode(disabled.toList()),
-      );
-    }
-  }
+  static Future<List<HomeExtraRow>> getHomeExtraRows() =>
+      HomePrefs.getHomeExtraRows();
 
-  static const String _homeExtraRowsKey = 'home_extra_rows_v1';
+  static Future<void> setHomeExtraRows(List<HomeExtraRow> rows) =>
+      HomePrefs.setHomeExtraRows(rows);
 
-  /// The OPT-IN extra Home rows (default-off, so the disabled-set above can't
-  /// express them): Trakt/Simkl list rows and IPTV custom-list rows. IDs are
-  /// `traktlist:<apiValue>`, `traktlist:custom:<id>`, `traktlist:liked:<id>`,
-  /// `simkllist:<enumName>`, `iptvlist:<listId>`. [HomeExtraRow.title] is the
-  /// display name captured at opt-in time so dynamic rows (custom/liked
-  /// lists, IPTV lists) render a header instantly and stay representable in
-  /// the Home Rows manager through an API outage; built-in rows ignore it.
-  /// Order is NOT meaningful — the board renders extras in canonical order.
-  static Future<List<HomeExtraRow>> getHomeExtraRows() async {
-    final prefs = await ProfilePreferences.instance();
-    final json = prefs.getString(_homeExtraRowsKey);
-    if (json == null) return const [];
-    try {
-      final list = jsonDecode(json) as List<dynamic>;
-      final seen = <String>{};
-      final out = <HomeExtraRow>[];
-      for (final e in list) {
-        if (e is! Map) continue;
-        final id = e['id'];
-        if (id is! String || id.isEmpty || !seen.add(id)) continue;
-        final title = e['title'];
-        out.add((id: id, title: title is String ? title : ''));
-      }
-      return out;
-    } catch (e) {
-      debugPrint('Error reading home extra rows: $e');
-      return const [];
-    }
-  }
+  static Future<List<String>> getHomeRowOrder() => HomePrefs.getHomeRowOrder();
 
-  /// Save the opted-in extra Home rows (empty = key removed).
-  static Future<void> setHomeExtraRows(List<HomeExtraRow> rows) async {
-    final prefs = await ProfilePreferences.instance();
-    if (rows.isEmpty) {
-      await prefs.remove(_homeExtraRowsKey);
-    } else {
-      await prefs.setString(
-        _homeExtraRowsKey,
-        jsonEncode([
-          for (final r in rows) {'id': r.id, 'title': r.title},
-        ]),
-      );
-    }
-  }
+  static Future<void> setHomeRowOrder(List<String> order) =>
+      HomePrefs.setHomeRowOrder(order);
 
-  static const String _homeRowOrderKey = 'home_row_order_v1';
+  static Future<HomeHeroSource> getHomeHeroSource() =>
+      HomePrefs.getHomeHeroSource();
 
-  /// The user's global Home-row order, expressed with the same stable ids used
-  /// by the Home Rows manager. Missing/unavailable ids remain in this list so
-  /// reconnecting a tracker or reinstalling an addon restores its old slot.
-  /// An empty list means the board's canonical order.
-  static Future<List<String>> getHomeRowOrder() async {
-    final prefs = await ProfilePreferences.instance();
-    final json = prefs.getString(_homeRowOrderKey);
-    if (json == null) return const [];
-    try {
-      final raw = jsonDecode(json);
-      if (raw is! List) return const [];
-      final seen = <String>{};
-      return [
-        for (final value in raw)
-          if (value is String && value.isNotEmpty && seen.add(value)) value,
-      ];
-    } catch (e) {
-      debugPrint('Error reading home row order: $e');
-      return const [];
-    }
-  }
-
-  /// Save the user's global Home-row order. Empty restores canonical order.
-  static Future<void> setHomeRowOrder(List<String> order) async {
-    final prefs = await ProfilePreferences.instance();
-    final seen = <String>{};
-    final normalized = [
-      for (final id in order)
-        if (id.isNotEmpty && seen.add(id)) id,
-    ];
-    if (normalized.isEmpty) {
-      await prefs.remove(_homeRowOrderKey);
-    } else {
-      await prefs.setString(_homeRowOrderKey, jsonEncode(normalized));
-    }
-  }
-
-  static const String _homeHeroSourceKey = 'home_hero_source_v1';
-
-  /// Where the Spotlight home layout's hero reel comes from.
-  ///
-  /// Modes: `random` (the DEFAULT — "Surprise me": any installed browsable
-  /// catalog, re-rolled each board load), `auto` (the first non-empty board
-  /// row) and `custom` (one of [HomeHeroSource.ids], catalog leaves in the
-  /// Home Rows grammar `addonId:type:catalogId`; more than one re-rolls among
-  /// them each load). Unknown modes and a custom mode with no ids read back
-  /// as `random` so a bad write can never wedge the hero. `auto` is an
-  /// explicit choice now, so it is STORED — only the default removes the key.
-  static Future<HomeHeroSource> getHomeHeroSource() async {
-    const fallback = (mode: HomeHeroSourceMode.random, ids: <String>[]);
-    final prefs = await ProfilePreferences.instance();
-    final json = prefs.getString(_homeHeroSourceKey);
-    if (json == null) return fallback;
-    try {
-      final map = jsonDecode(json) as Map<String, dynamic>;
-      final ids = <String>[];
-      final seen = <String>{};
-      final rawIds = map['ids'];
-      if (rawIds is List) {
-        for (final e in rawIds) {
-          if (e is String && e.isNotEmpty && seen.add(e)) ids.add(e);
-        }
-      }
-      final mode = switch (map['mode']) {
-        'auto' => HomeHeroSourceMode.auto,
-        'custom' when ids.isNotEmpty => HomeHeroSourceMode.custom,
-        _ => HomeHeroSourceMode.random,
-      };
-      return (mode: mode, ids: ids);
-    } catch (e) {
-      debugPrint('Error reading home hero source: $e');
-      return fallback;
-    }
-  }
-
-  /// Save the Spotlight hero source (the default `random` + no ids = key
-  /// removed; `auto` is stored, or it would read back as the default).
-  static Future<void> setHomeHeroSource(HomeHeroSource source) async {
-    final prefs = await ProfilePreferences.instance();
-    if (source.mode == HomeHeroSourceMode.random && source.ids.isEmpty) {
-      await prefs.remove(_homeHeroSourceKey);
-    } else {
-      await prefs.setString(
-        _homeHeroSourceKey,
-        jsonEncode({'mode': source.mode.name, 'ids': source.ids}),
-      );
-    }
-  }
+  static Future<void> setHomeHeroSource(HomeHeroSource source) =>
+      HomePrefs.setHomeHeroSource(source);
 
   /// Clears synchronous mirrors before a profile activation is published.
   /// The target bootstrap immediately warms them from its captured scope.
@@ -9804,17 +9614,6 @@ class StorageService {
     _startupIptvChannelCached = null;
   }
 }
-
-/// See [StorageService.getHomeHeroSource].
-enum HomeHeroSourceMode { auto, random, custom }
-
-/// The Spotlight hero source pref — see [StorageService.getHomeHeroSource].
-/// [ids] are kept even in `auto`/`random` mode so a user flipping modes in
-/// Settings doesn't lose their custom picks.
-typedef HomeHeroSource = ({HomeHeroSourceMode mode, List<String> ids});
-
-/// One opted-in extra Home row — see [StorageService.getHomeExtraRows].
-typedef HomeExtraRow = ({String id, String title});
 
 class ApiKeyValidator {
   static bool isValidFormat(String apiKey) {
