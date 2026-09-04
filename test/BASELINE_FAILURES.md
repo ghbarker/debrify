@@ -14,25 +14,33 @@ settle loses under a busy GitHub ubuntu shard.
 
 **New failures outside sqlite/golden environment issues are regressions.**
 
-CI (`.github/workflows/test.yml`) installs `libsqlite3-dev`, runs the
-allowlist matcher unit tests, the refactor contract tests, then
-`flutter test test --exclude-tags golden` through `tool/ci_test_allowlist.py`.
+CI (`.github/workflows/test.yml`):
 
-That script fails the job when:
+- installs `libsqlite3-dev`
+- runs the allowlist and analyze-baseline matcher unit tests
+- analyzes **all** of `lib/` and `test/` via `tool/analyze_baseline.py`
+  (`dart analyze --format=machine`). New diagnostics vs
+  `tool/analyze_baseline.json` fail; the JSON may only shrink. Recorded at
+  C0 against `main` (470 issues: 0 error, 85 warning, 385 info).
+- runs `dart run tool/check_layering.dart` **warn-only** (plan §3). Lane Q1
+  turns `--strict` on after Phase 2.
+- runs the refactor contract tests
+- runs `flutter test test --exclude-tags golden` through
+  `tool/ci_test_allowlist.py` (unused allowlist entries still fail)
+- a separate **goldens** job runs `flutter test --tags golden` with retries
+  and `[golden]` allowlist lines. Pixel diffs on ubuntu are expected; PNG
+  files are not deleted.
+
+That allowlist script fails the job when:
 
 - a test fails whose **exact** `path :: name` is not in
-  `test/BASELINE_ALLOWLIST.txt`, or
-- an allowlist entry did not fail (the list cannot silently rot).
+  `test/BASELINE_ALLOWLIST.txt` (or `[golden]` lines for the goldens job), or
+- an allowlist entry for that job did not fail (the list cannot silently rot).
 
 Name-only matching is forbidden: a new test that reuses an allowlisted
 name is a regression.
 
-Pixel goldens stay tagged `golden` because GitHub ubuntu rasterizes fonts
-differently than the checked-in PNGs. Run them locally with
-`flutter test test --tags golden`. `flutter analyze` is scoped to
-`lib/services/cloud` plus chrome/browse widgets and the contract tests —
-god files still carry pre-existing infos. The analyzer step is the
-refactor surface, not the whole app.
+The regression list (unused entries + new failures) is printed first.
 
 Reproduced (not assumed) on 2026-09-04, Linux Flutter 3.44.8:
 

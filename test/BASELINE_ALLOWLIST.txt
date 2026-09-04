@@ -15,3 +15,27 @@ test/series_parser_test.dart :: cleanCollectionTitle Tests PHASE 2: should handl
 test/detail_theme_test.dart :: no raw colour literals survive in the themed files detail_episode_cells.dart
 test/xmltv_legacy_guide_retention_test.dart :: a guide with nothing to import is still dropped
 test/profiles/edit_profile_screen_test.dart :: rendering no control goes missing in a regrouping
+
+# Linux pixel diffs for --tags golden (reproduced 2026-09-04, Flutter 3.44.8).
+# The goldens job uses only these lines. Do not delete the PNG files.
+[golden] test/debrify_tv_spotlight_dialog_test.dart :: TV import dialog matches the Spotlight visual contract
+[golden] test/debrify_tv_spotlight_dialog_test.dart :: phone import dialog matches the responsive visual contract
+[golden] test/dock_golden_test.dart :: narrow — phone landscape
+[golden] test/dock_golden_test.dart :: regular — two tiers
+[golden] test/dock_golden_test.dart :: wide — cinema bar
+[golden] test/dock_golden_test.dart :: wide — large density
+[golden] test/dock_golden_test.dart :: wide — aurum, the dark-ink palette
+[golden] test/dock_golden_test.dart :: regular — a plain single-file session
+[golden] test/theme/goldens_test.dart :: boundary demo — legacy
+[golden] test/theme/goldens_test.dart :: boundary demo — signal (dark theme)
+[golden] test/theme/goldens_test.dart :: boundary demo — broadsheet (light theme)
+[golden] test/theme/goldens_test.dart :: boundary demo — broadsheet × dim (preset on a light ground)
+[golden] test/theme/goldens_test.dart :: surface gallery — legacy
+[golden] test/theme/goldens_test.dart :: surface gallery — broadsheet
+[golden] test/theme/goldens_test.dart :: surface gallery — concrete
+[golden] test/theme/goldens_test.dart :: surface gallery — noir
+[golden] test/settings_tv_spotlight_layout_test.dart :: TV Spotlight settings visual
+[golden] test/settings_spotlight_shell_test.dart :: phone Spotlight settings visual
+[golden] test/settings_spotlight_shell_test.dart :: phone Spotlight appearance visual
+[golden] test/settings_spotlight_shell_test.dart :: tablet Spotlight appearance visual
+[golden] test/settings_spotlight_shell_test.dart :: desktop Spotlight appearance visual

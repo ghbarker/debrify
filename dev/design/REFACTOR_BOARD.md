@@ -10,9 +10,9 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 
 | Lane | Status | Branch | Worker | Owns | Blocked on | Decisions |
 |---|---|---|---|---|---|---|
-| C0 · CI truth | assigned | `refactor/c0-ci-truth` | worker-c0 | `.github/workflows/test.yml`, `tool/ci_test_allowlist.py`, `tool/ci_test_allowlist_test.py`, `test/BASELINE_ALLOWLIST.txt`, `test/BASELINE_FAILURES.md`, `dart_test.yaml`, new `tool/check_layering.dart`, new `tool/analyze_baseline.json`, plus a new layering test file if needed | — | Prove analyze-all fails on a new diagnostic without committing an error into `search_screen.dart`. Goldens: Linux tolerance job, do not delete goldens. |
+| C0 · CI truth | merged | `refactor/c0-ci-truth` | — | `.github/workflows/test.yml`, `tool/ci_test_allowlist.py`, `tool/ci_test_allowlist_test.py`, `test/BASELINE_ALLOWLIST.txt`, `test/BASELINE_FAILURES.md`, `dart_test.yaml`, new `tool/check_layering.dart`, new `tool/analyze_baseline.json`, plus a new layering test file if needed | — | Analyze-all vs 470-issue baseline; goldens Linux tolerance; layering warn-only until Q1. |
 | D0 · delete dead code | merged | `refactor/d0-delete-dead-code` | — | `lib/screens/deprecated/**`, `lib/widgets/catalog_browser.dart`, `lib/screens/search/search_sources.dart` (`_redesign == false` branch only) | — | Unused `search_screen.dart` import dropped. CODEMAP left to M0. |
-| M0 · CODEMAP refresh | assigned | `refactor/m0-codemap-refresh` | worker-m0 | `CODEMAP.md`, `dev/design/ADDING_A_PROVIDER.md` | rebase on main (D0 merged) | D0 landed: drop `lib/screens/deprecated/` and `catalog_browser.dart` from CODEMAP. Accept: every remaining path exists. |
+| M0 · CODEMAP refresh | review | `refactor/m0-codemap-refresh` | worker-m0 | `CODEMAP.md`, `dev/design/ADDING_A_PROVIDER.md` | — | D0 merged; dropped `lib/screens/deprecated/` and `catalog_browser.dart`. Accept: every remaining path exists. |
 | P1 · capability interfaces | queued | — | — | `lib/services/cloud/**`, `test/cloud_*` | gate 0 | — |
 | P2a · Magic TV strings | queued | — | — | `lib/screens/magic_tv_screen.dart` | P1 | — |
 | P2b · Stremio TV strings | queued | — | — | `lib/screens/stremio_tv/**` | P1 | — |

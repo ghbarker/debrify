@@ -1,0 +1,4715 @@
+{
+  "commit": "f0a7a0825fe428fd012fb9a299e06d4c5dfb28fd",
+  "command": [
+    "dart",
+    "analyze",
+    "--format=machine",
+    "--no-fatal-warnings",
+    "lib",
+    "test"
+  ],
+  "identity": "path|code|message",
+  "count": 470,
+  "diagnostics": [
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/debrid_downloads_screen.dart",
+      "line": 757,
+      "column": 16,
+      "length": 16,
+      "message": "The declaration '_handlePlayVideo' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/debrid_downloads_screen.dart",
+      "line": 5462,
+      "column": 10,
+      "length": 23,
+      "message": "The declaration '_buildSeriesFileBrowser' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/debrid_downloads_screen.dart",
+      "line": 6389,
+      "column": 16,
+      "length": 17,
+      "message": "The declaration '_copyDownloadLink' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_IMPORT",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 54,
+      "column": 8,
+      "length": 26,
+      "message": "Unused import: '../utils/file_utils.dart'."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 92,
+      "column": 5,
+      "length": 24,
+      "message": "The declaration '_parseRandomStartPercent' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 355,
+      "column": 10,
+      "length": 7,
+      "message": "The value of the field '_status' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 399,
+      "column": 8,
+      "length": 15,
+      "message": "The value of the field '_hideBackButton' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 409,
+      "column": 8,
+      "length": 20,
+      "message": "The value of the field '_quickHideBackButton' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 483,
+      "column": 7,
+      "length": 14,
+      "message": "The value of the field '_lastQueueSize' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 484,
+      "column": 13,
+      "length": 13,
+      "message": "The value of the field '_lastSearchAt' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 487,
+      "column": 8,
+      "length": 15,
+      "message": "The value of the field '_originalMaxCap' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNNECESSARY_CAST",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 7267,
+      "column": 46,
+      "length": 11,
+      "message": "Unnecessary cast."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 7721,
+      "column": 16,
+      "length": 18,
+      "message": "The declaration '_playNextFromQueue' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_LOCAL_VARIABLE",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 9060,
+      "column": 16,
+      "length": 15,
+      "message": "The value of the local variable 'showChannelName' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 9063,
+      "column": 10,
+      "length": 18,
+      "message": "The declaration 'setShowChannelName' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_LOCAL_VARIABLE",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 9077,
+      "column": 16,
+      "length": 14,
+      "message": "The value of the local variable 'showVideoTitle' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 9080,
+      "column": 10,
+      "length": 17,
+      "message": "The declaration 'setShowVideoTitle' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_LOCAL_VARIABLE",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 9095,
+      "column": 16,
+      "length": 11,
+      "message": "The value of the local variable 'hideOptions' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 9096,
+      "column": 10,
+      "length": 14,
+      "message": "The declaration 'setHideOptions' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_LOCAL_VARIABLE",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 9102,
+      "column": 16,
+      "length": 14,
+      "message": "The value of the local variable 'hideBackButton' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 9103,
+      "column": 10,
+      "length": 17,
+      "message": "The declaration 'setHideBackButton' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/screens/pikpak/pikpak_files_screen.dart",
+      "line": 62,
+      "column": 11,
+      "length": 6,
+      "message": "The value of the field '_email' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 260,
+      "column": 16,
+      "length": 17,
+      "message": "The declaration '_loadProgressData' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "DEAD_NULL_AWARE_EXPRESSION",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 425,
+      "column": 45,
+      "length": 2,
+      "message": "The left operand can't be null, so the right operand is never executed."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNNECESSARY_NULL_COMPARISON",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 817,
+      "column": 19,
+      "length": 7,
+      "message": "The operand can't be 'null', so the condition is always 'true'."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "INVALID_NULL_AWARE_OPERATOR",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2099,
+      "column": 39,
+      "length": 2,
+      "message": "The receiver can't be null, so the null-aware operator '?[' is unnecessary."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "INVALID_NULL_AWARE_OPERATOR",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2101,
+      "column": 44,
+      "length": 2,
+      "message": "The receiver can't be null, so the null-aware operator '?[' is unnecessary."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "INVALID_NULL_AWARE_OPERATOR",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2102,
+      "column": 48,
+      "length": 2,
+      "message": "The receiver can't be null, so the null-aware operator '?[' is unnecessary."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "INVALID_NULL_AWARE_OPERATOR",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2103,
+      "column": 51,
+      "length": 2,
+      "message": "The receiver can't be null, so the null-aware operator '?[' is unnecessary."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "INVALID_NULL_AWARE_OPERATOR",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2105,
+      "column": 29,
+      "length": 2,
+      "message": "The receiver can't be null, so the null-aware operator '?[' is unnecessary."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "INVALID_NULL_AWARE_OPERATOR",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2108,
+      "column": 31,
+      "length": 2,
+      "message": "The receiver can't be null, so the null-aware operator '?[' is unnecessary."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "INVALID_NULL_AWARE_OPERATOR",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2111,
+      "column": 31,
+      "length": 2,
+      "message": "The receiver can't be null, so the null-aware operator '?[' is unnecessary."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "INVALID_NULL_AWARE_OPERATOR",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2114,
+      "column": 29,
+      "length": 2,
+      "message": "The receiver can't be null, so the null-aware operator '?[' is unnecessary."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "INVALID_NULL_AWARE_OPERATOR",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2117,
+      "column": 31,
+      "length": 2,
+      "message": "The receiver can't be null, so the null-aware operator '?[' is unnecessary."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNNECESSARY_NULL_COMPARISON",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2197,
+      "column": 31,
+      "length": 7,
+      "message": "The operand can't be 'null', so the condition is always 'true'."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNNECESSARY_NON_NULL_ASSERTION",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2199,
+      "column": 30,
+      "length": 1,
+      "message": "The '!' will have no effect because the receiver can't be null."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "INVALID_NULL_AWARE_OPERATOR",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2217,
+      "column": 42,
+      "length": 2,
+      "message": "The receiver can't be null, so the null-aware operator '?[' is unnecessary."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "INVALID_NULL_AWARE_OPERATOR",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2314,
+      "column": 42,
+      "length": 2,
+      "message": "The receiver can't be null, so the null-aware operator '?[' is unnecessary."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "DEAD_NULL_AWARE_EXPRESSION",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 3510,
+      "column": 43,
+      "length": 1,
+      "message": "The left operand can't be null, so the right operand is never executed."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/settings/theme_tokens_page.dart",
+      "line": 224,
+      "column": 23,
+      "length": 5,
+      "message": "The declaration '_noop' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 536,
+      "column": 8,
+      "length": 29,
+      "message": "The declaration '_showTorboxTorrentMoreOptions' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 1810,
+      "column": 16,
+      "length": 31,
+      "message": "The declaration '_handleAddWebDownloadToPlaylist' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 2347,
+      "column": 7,
+      "length": 22,
+      "message": "The declaration '_findFirstEpisodeIndex' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 2502,
+      "column": 16,
+      "length": 29,
+      "message": "The declaration '_showTorboxFileSelectionSheet' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNNECESSARY_NULL_COMPARISON",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 3967,
+      "column": 38,
+      "length": 7,
+      "message": "The operand can't be 'null', so the condition is always 'true'."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4761,
+      "column": 16,
+      "length": 22,
+      "message": "The declaration '_downloadMultipleFiles' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT_PARAMETER",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 7053,
+      "column": 10,
+      "length": 7,
+      "message": "A value for optional parameter 'enabled' isn't ever given."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/screens/video_player/widgets/stremio_tv_guide_sheet.dart",
+      "line": 774,
+      "column": 17,
+      "length": 13,
+      "message": "The declaration '_letterAvatar' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT_PARAMETER",
+      "path": "lib/screens/video_player/widgets/stremio_tv_guide_sheet.dart",
+      "line": 830,
+      "column": 10,
+      "length": 12,
+      "message": "A value for optional parameter 'hasGuideData' isn't ever given."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 473,
+      "column": 7,
+      "length": 17,
+      "message": "The value of the field '_pikPakRetryCount' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 582,
+      "column": 8,
+      "length": 20,
+      "message": "The value of the field '_isSeekingWithSlider' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 1317,
+      "column": 26,
+      "length": 15,
+      "message": "The value of the field '_rainbowOpacity' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 1322,
+      "column": 7,
+      "length": 16,
+      "message": "The value of the field '_transitionPhase' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 1323,
+      "column": 13,
+      "length": 24,
+      "message": "The value of the field '_transitionPhase2Started' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "INVALID_USE_OF_VISIBLE_FOR_TESTING_MEMBER",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 2573,
+      "column": 27,
+      "length": 6,
+      "message": "The member 'isHeld' can only be used within 'package:debrify/widgets/video_output_lease.dart' or a test."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "INVALID_NULL_AWARE_OPERATOR",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 8218,
+      "column": 36,
+      "length": 2,
+      "message": "The receiver can't be null, so the null-aware operator '?.' is unnecessary."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/services/android_tv_player_bridge.dart",
+      "line": 246,
+      "column": 34,
+      "length": 19,
+      "message": "The declaration '_torboxNextProvider' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/services/android_tv_player_bridge.dart",
+      "line": 247,
+      "column": 14,
+      "length": 19,
+      "message": "The declaration '_torboxNextProvider' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/services/android_tv_player_bridge.dart",
+      "line": 251,
+      "column": 40,
+      "length": 23,
+      "message": "The declaration '_torboxFinishedCallback' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/services/android_tv_player_bridge.dart",
+      "line": 253,
+      "column": 14,
+      "length": 23,
+      "message": "The declaration '_torboxFinishedCallback' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNNECESSARY_NULL_COMPARISON",
+      "path": "lib/services/community/magnet_yaml_service.dart",
+      "line": 38,
+      "column": 25,
+      "length": 7,
+      "message": "The operand can't be 'null', so the condition is always 'false'."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "DEAD_CODE_ON_CATCH_SUBTYPE",
+      "path": "lib/services/community/magnet_yaml_service.dart",
+      "line": 128,
+      "column": 7,
+      "length": 191,
+      "message": "Dead code: This on-catch block won't be executed because 'ArchiveException' is a subtype of 'FormatException' and hence will have been caught already."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNNECESSARY_NULL_COMPARISON",
+      "path": "lib/services/community/magnet_yaml_service.dart",
+      "line": 156,
+      "column": 27,
+      "length": 7,
+      "message": "The operand can't be 'null', so the condition is always 'false'."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNNECESSARY_NULL_COMPARISON",
+      "path": "lib/services/community/magnet_yaml_service.dart",
+      "line": 175,
+      "column": 27,
+      "length": 7,
+      "message": "The operand can't be 'null', so the condition is always 'false'."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/services/download_service.dart",
+      "line": 141,
+      "column": 45,
+      "length": 17,
+      "message": "The value of the field '_androidEventsSub' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNNECESSARY_TYPE_CHECK",
+      "path": "lib/services/download_service.dart",
+      "line": 570,
+      "column": 11,
+      "length": 28,
+      "message": "Unnecessary type check; the result is always 'true'."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT_PARAMETER",
+      "path": "lib/services/download_service.dart",
+      "line": 4584,
+      "column": 10,
+      "length": 8,
+      "message": "A value for optional parameter 'canceled' isn't ever given."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/services/pikpak_tv_service.dart",
+      "line": 34,
+      "column": 25,
+      "length": 16,
+      "message": "The value of the field '_maxWaitDuration' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/services/reddit_service.dart",
+      "line": 90,
+      "column": 23,
+      "length": 13,
+      "message": "The value of the field '_oauthBaseUrl' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/services/torrent_playback_service.dart",
+      "line": 5210,
+      "column": 25,
+      "length": 14,
+      "message": "The declaration '_orderBySeries' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNNECESSARY_NULL_COMPARISON",
+      "path": "lib/services/video_player_launcher.dart",
+      "line": 4253,
+      "column": 25,
+      "length": 7,
+      "message": "The operand can't be 'null', so the condition is always 'true'."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNNECESSARY_NULL_COMPARISON",
+      "path": "lib/services/video_player_launcher.dart",
+      "line": 4806,
+      "column": 62,
+      "length": 7,
+      "message": "The operand can't be 'null', so the condition is always 'true'."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "INVALID_NULL_AWARE_OPERATOR",
+      "path": "lib/services/video_player_launcher.dart",
+      "line": 4806,
+      "column": 87,
+      "length": 2,
+      "message": "The receiver can't be null, so the null-aware operator '?.' is unnecessary."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/widgets/adaptive_playlist_section.dart",
+      "line": 177,
+      "column": 8,
+      "length": 19,
+      "message": "The declaration '_isHorizontalLayout' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/widgets/adaptive_playlist_section.dart",
+      "line": 359,
+      "column": 10,
+      "length": 10,
+      "message": "The declaration '_buildGrid' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/widgets/catalog_browser.dart",
+      "line": 128,
+      "column": 10,
+      "length": 16,
+      "message": "The value of the field '_lastSearchQuery' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/widgets/catalog_browser.dart",
+      "line": 867,
+      "column": 10,
+      "length": 22,
+      "message": "The declaration '_buildProviderDropdown' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/widgets/detail/showcase_parts.dart",
+      "line": 159,
+      "column": 7,
+      "length": 10,
+      "message": "The declaration '_plateFill' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT_PARAMETER",
+      "path": "lib/widgets/pikpak_folder_picker_dialog.dart",
+      "line": 31,
+      "column": 10,
+      "length": 10,
+      "message": "A value for optional parameter 'isExpanded' isn't ever given."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT_PARAMETER",
+      "path": "lib/widgets/pikpak_folder_picker_dialog.dart",
+      "line": 32,
+      "column": 10,
+      "length": 9,
+      "message": "A value for optional parameter 'isLoading' isn't ever given."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT_PARAMETER",
+      "path": "lib/widgets/pikpak_folder_picker_dialog.dart",
+      "line": 33,
+      "column": 10,
+      "length": 17,
+      "message": "A value for optional parameter 'hasLoadedChildren' isn't ever given."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT_PARAMETER",
+      "path": "lib/widgets/pikpak_folder_picker_dialog.dart",
+      "line": 34,
+      "column": 10,
+      "length": 8,
+      "message": "A value for optional parameter 'children' isn't ever given."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_ELEMENT",
+      "path": "lib/widgets/pikpak_folder_picker_dialog.dart",
+      "line": 852,
+      "column": 10,
+      "length": 19,
+      "message": "The declaration '_truncateFolderName' isn't referenced."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_FIELD",
+      "path": "lib/widgets/reddit/reddit_results_view.dart",
+      "line": 43,
+      "column": 8,
+      "length": 15,
+      "message": "The value of the field '_settingsLoaded' isn't used."
+    },
+    {
+      "severity": "WARNING",
+      "type": "STATIC_WARNING",
+      "code": "UNUSED_LOCAL_VARIABLE",
+      "path": "test/profiles/default_grant_seeding_test.dart",
+      "line": 29,
+      "column": 36,
+      "length": 5,
+      "message": "The value of the local variable 'actor' isn't used."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "EMPTY_CATCHES",
+      "path": "lib/main.dart",
+      "line": 880,
+      "column": 15,
+      "length": 2,
+      "message": "Empty catch block."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/main.dart",
+      "line": 1278,
+      "column": 32,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/main.dart",
+      "line": 1648,
+      "column": 13,
+      "length": 12,
+      "message": "'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/main.dart",
+      "line": 1673,
+      "column": 13,
+      "length": 12,
+      "message": "'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/main.dart",
+      "line": 1698,
+      "column": 13,
+      "length": 12,
+      "message": "'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/main.dart",
+      "line": 1723,
+      "column": 13,
+      "length": 12,
+      "message": "'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/main.dart",
+      "line": 1744,
+      "column": 13,
+      "length": 12,
+      "message": "'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/main.dart",
+      "line": 2145,
+      "column": 30,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/main.dart",
+      "line": 3382,
+      "column": 15,
+      "length": 12,
+      "message": "'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/main.dart",
+      "line": 3551,
+      "column": 13,
+      "length": 12,
+      "message": "'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CAMEL_CASE_TYPES",
+      "path": "lib/models/ios_external_player.dart",
+      "line": 5,
+      "column": 6,
+      "length": 17,
+      "message": "The type name 'iOSExternalPlayer' isn't an UpperCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CAMEL_CASE_EXTENSIONS",
+      "path": "lib/models/ios_external_player.dart",
+      "line": 15,
+      "column": 11,
+      "length": 26,
+      "message": "The extension name 'iOSExternalPlayerExtension' isn't an UpperCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "PREFER_NULL_AWARE_OPERATORS",
+      "path": "lib/models/play_loader_art.dart",
+      "line": 82,
+      "column": 20,
+      "length": 88,
+      "message": "Use the null-aware operator '?.' rather than an explicit 'null' comparison."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "EMPTY_CATCHES",
+      "path": "lib/models/series_playlist.dart",
+      "line": 1004,
+      "column": 17,
+      "length": 2,
+      "message": "Empty catch block."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CURLY_BRACES_IN_FLOW_CONTROL_STRUCTURES",
+      "path": "lib/models/trakt/trakt_calendar_entry.dart",
+      "line": 124,
+      "column": 7,
+      "length": 12,
+      "message": "Statements in an if should be enclosed in a block."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/debrid_downloads_screen.dart",
+      "line": 2748,
+      "column": 11,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/debrid_downloads_screen.dart",
+      "line": 2858,
+      "column": 7,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/debrid_downloads_screen.dart",
+      "line": 3326,
+      "column": 11,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/debrid_downloads_screen.dart",
+      "line": 3612,
+      "column": 11,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/debrid_downloads_screen.dart",
+      "line": 4628,
+      "column": 7,
+      "length": 16,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/debrid_downloads_screen.dart",
+      "line": 4968,
+      "column": 11,
+      "length": 16,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
+      "path": "lib/screens/debrid_downloads_screen.dart",
+      "line": 5473,
+      "column": 10,
+      "length": 14,
+      "message": "The local variable '_currentSeason' starts with an underscore."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
+      "path": "lib/screens/debrid_downloads_screen.dart",
+      "line": 5513,
+      "column": 11,
+      "length": 14,
+      "message": "The local variable '_currentSeason' starts with an underscore."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/debrid_downloads_screen.dart",
+      "line": 5920,
+      "column": 9,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/debrid_downloads_screen.dart",
+      "line": 6023,
+      "column": 9,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/debrify_tv/widgets/random_start_slider.dart",
+      "line": 83,
+      "column": 13,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/downloads_screen.dart",
+      "line": 458,
+      "column": 7,
+      "length": 16,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/downloads_screen.dart",
+      "line": 656,
+      "column": 27,
+      "length": 21,
+      "message": "'MaterialStateProperty' is deprecated and shouldn't be used. Use WidgetStateProperty instead. Moved to the Widgets layer to make code available outside of Material. This feature was deprecated after v3.19.0-0.3.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/downloads_screen.dart",
+      "line": 778,
+      "column": 44,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/downloads_screen.dart",
+      "line": 2096,
+      "column": 52,
+      "length": 14,
+      "message": "'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/downloads_screen.dart",
+      "line": 2157,
+      "column": 54,
+      "length": 14,
+      "message": "'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/downloads_screen.dart",
+      "line": 2398,
+      "column": 44,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "SORT_CHILD_PROPERTIES_LAST",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 2096,
+      "column": 17,
+      "length": 7917,
+      "message": "The 'child' argument should be last in widget constructor invocations."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "SORT_CHILD_PROPERTIES_LAST",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 3198,
+      "column": 15,
+      "length": 1258,
+      "message": "The 'child' argument should be last in widget constructor invocations."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "SORT_CHILD_PROPERTIES_LAST",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 3442,
+      "column": 11,
+      "length": 2003,
+      "message": "The 'child' argument should be last in widget constructor invocations."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "SORT_CHILD_PROPERTIES_LAST",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 3593,
+      "column": 11,
+      "length": 30,
+      "message": "The 'child' argument should be last in widget constructor invocations."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "SORT_CHILD_PROPERTIES_LAST",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 3697,
+      "column": 13,
+      "length": 1576,
+      "message": "The 'child' argument should be last in widget constructor invocations."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 4307,
+      "column": 10,
+      "length": 4,
+      "message": "The local variable '_log' starts with an underscore."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "PREFER_INTERPOLATION_TO_COMPOSE_STRINGS",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 4310,
+      "column": 18,
+      "length": 17,
+      "message": "Use interpolation to compose strings and values."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 4389,
+      "column": 7,
+      "length": 16,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 4447,
+      "column": 14,
+      "length": 18,
+      "message": "The local variable '_inferTitleFromUrl' starts with an underscore."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 4765,
+      "column": 38,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 4889,
+      "column": 12,
+      "length": 18,
+      "message": "The local variable '_inferTitleFromUrl' starts with an underscore."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 5110,
+      "column": 26,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 5498,
+      "column": 28,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 5778,
+      "column": 28,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 5902,
+      "column": 12,
+      "length": 18,
+      "message": "The local variable '_inferTitleFromUrl' starts with an underscore."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 6064,
+      "column": 26,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONTROL_FLOW_IN_FINALLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 6096,
+      "column": 21,
+      "length": 7,
+      "message": "Use of 'return' in a 'finally' clause."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 6177,
+      "column": 12,
+      "length": 18,
+      "message": "The local variable '_inferTitleFromUrl' starts with an underscore."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 6314,
+      "column": 26,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONTROL_FLOW_IN_FINALLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 6347,
+      "column": 21,
+      "length": 7,
+      "message": "Use of 'return' in a 'finally' clause."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 7341,
+      "column": 26,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONTROL_FLOW_IN_FINALLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 7379,
+      "column": 21,
+      "length": 7,
+      "message": "Use of 'return' in a 'finally' clause."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 7510,
+      "column": 26,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONTROL_FLOW_IN_FINALLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 7548,
+      "column": 21,
+      "length": 7,
+      "message": "Use of 'return' in a 'finally' clause."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 7764,
+      "column": 32,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "SORT_CHILD_PROPERTIES_LAST",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 8917,
+      "column": 11,
+      "length": 2194,
+      "message": "The 'child' argument should be last in widget constructor invocations."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "SORT_CHILD_PROPERTIES_LAST",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 9288,
+      "column": 15,
+      "length": 2545,
+      "message": "The 'child' argument should be last in widget constructor invocations."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "SORT_CHILD_PROPERTIES_LAST",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 9417,
+      "column": 15,
+      "length": 221,
+      "message": "The 'child' argument should be last in widget constructor invocations."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 9782,
+      "column": 26,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONTROL_FLOW_IN_FINALLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 9820,
+      "column": 21,
+      "length": 7,
+      "message": "Use of 'return' in a 'finally' clause."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 10075,
+      "column": 28,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 10225,
+      "column": 14,
+      "length": 18,
+      "message": "The local variable '_inferTitleFromUrl' starts with an underscore."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/magic_tv_screen.dart",
+      "line": 10346,
+      "column": 28,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/merged_series_detail_screen.dart",
+      "line": 1339,
+      "column": 7,
+      "length": 12,
+      "message": "'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/pikpak/pikpak_files_screen.dart",
+      "line": 479,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/pikpak/pikpak_files_screen.dart",
+      "line": 556,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/pikpak/pikpak_files_screen.dart",
+      "line": 613,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/pikpak/pikpak_files_screen.dart",
+      "line": 776,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/pikpak/pikpak_files_screen.dart",
+      "line": 848,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/pikpak/pikpak_files_screen.dart",
+      "line": 938,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/pikpak/pikpak_files_screen.dart",
+      "line": 1017,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/pikpak/pikpak_files_screen.dart",
+      "line": 1103,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/pikpak/pikpak_files_screen.dart",
+      "line": 1497,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/pikpak/pikpak_files_screen.dart",
+      "line": 1746,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/pikpak/pikpak_files_screen.dart",
+      "line": 1782,
+      "column": 11,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/pikpak/pikpak_files_screen.dart",
+      "line": 2762,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/pikpak/pikpak_files_screen.dart",
+      "line": 3100,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "PREFER_FINAL_FIELDS",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 61,
+      "column": 16,
+      "length": 16,
+      "message": "The private field _folderPath could be 'final'."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 296,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 330,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 809,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 1187,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 1955,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 1968,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 1976,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2035,
+      "column": 15,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2049,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2073,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2080,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2083,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2090,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2177,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2178,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2182,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2183,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2189,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2229,
+      "column": 15,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2238,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2326,
+      "column": 15,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2378,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2382,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2455,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2459,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2464,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2601,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2613,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2636,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2657,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2660,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2663,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2674,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 2679,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 3302,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 3323,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 3332,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 3362,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/playlist_content_view_screen.dart",
+      "line": 3469,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/playlist_screen.dart",
+      "line": 475,
+      "column": 21,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/premiumize/premiumize_files_screen.dart",
+      "line": 1695,
+      "column": 11,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search/search_sources.dart",
+      "line": 1029,
+      "column": 41,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "UNINTENDED_HTML_IN_DOC_COMMENT",
+      "path": "lib/screens/search_screen.dart",
+      "line": 7496,
+      "column": 46,
+      "length": 10,
+      "message": "Angle brackets will be interpreted as HTML."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "UNINTENDED_HTML_IN_DOC_COMMENT",
+      "path": "lib/screens/search_screen.dart",
+      "line": 7496,
+      "column": 57,
+      "length": 8,
+      "message": "Angle brackets will be interpreted as HTML."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search_screen.dart",
+      "line": 7806,
+      "column": 35,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search_screen.dart",
+      "line": 7836,
+      "column": 35,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search_screen.dart",
+      "line": 8250,
+      "column": 27,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search_screen.dart",
+      "line": 8759,
+      "column": 13,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search_screen.dart",
+      "line": 9030,
+      "column": 23,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search_screen.dart",
+      "line": 9417,
+      "column": 27,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search_screen.dart",
+      "line": 10147,
+      "column": 13,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search_screen.dart",
+      "line": 12831,
+      "column": 33,
+      "length": 9,
+      "message": "'onReorder' is deprecated and shouldn't be used. Use the onReorderItem callback instead. The onReorderItem callback adjusts the newIndex parameter for a removed item at the oldIndex. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/search_screen.dart",
+      "line": 13366,
+      "column": 13,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search_screen.dart",
+      "line": 15386,
+      "column": 13,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search_screen.dart",
+      "line": 15698,
+      "column": 27,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search_screen.dart",
+      "line": 17607,
+      "column": 29,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search_screen.dart",
+      "line": 18525,
+      "column": 19,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search_screen.dart",
+      "line": 18646,
+      "column": 17,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/search_screen.dart",
+      "line": 18821,
+      "column": 13,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/engine_import_page.dart",
+      "line": 1643,
+      "column": 46,
+      "length": 5,
+      "message": "'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/external_player_settings_page.dart",
+      "line": 1477,
+      "column": 7,
+      "length": 10,
+      "message": "'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/external_player_settings_page.dart",
+      "line": 1478,
+      "column": 7,
+      "length": 9,
+      "message": "'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/external_player_settings_page.dart",
+      "line": 1538,
+      "column": 7,
+      "length": 10,
+      "message": "'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/external_player_settings_page.dart",
+      "line": 1539,
+      "column": 7,
+      "length": 9,
+      "message": "'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/external_player_settings_page.dart",
+      "line": 1594,
+      "column": 7,
+      "length": 10,
+      "message": "'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/external_player_settings_page.dart",
+      "line": 1595,
+      "column": 7,
+      "length": 9,
+      "message": "'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/external_player_settings_page.dart",
+      "line": 1650,
+      "column": 7,
+      "length": 10,
+      "message": "'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/external_player_settings_page.dart",
+      "line": 1651,
+      "column": 7,
+      "length": 9,
+      "message": "'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/external_player_settings_page.dart",
+      "line": 1738,
+      "column": 25,
+      "length": 10,
+      "message": "'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/external_player_settings_page.dart",
+      "line": 1739,
+      "column": 25,
+      "length": 9,
+      "message": "'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/external_player_settings_page.dart",
+      "line": 3081,
+      "column": 51,
+      "length": 10,
+      "message": "'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/external_player_settings_page.dart",
+      "line": 3082,
+      "column": 51,
+      "length": 9,
+      "message": "'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/home_page_settings_page.dart",
+      "line": 611,
+      "column": 25,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/home_page_settings_page.dart",
+      "line": 859,
+      "column": 29,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/indexer_managers_settings_page.dart",
+      "line": 611,
+      "column": 25,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/indexer_managers_settings_page.dart",
+      "line": 712,
+      "column": 25,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/iptv_settings_page.dart",
+      "line": 2517,
+      "column": 19,
+      "length": 10,
+      "message": "'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/iptv_settings_page.dart",
+      "line": 2518,
+      "column": 19,
+      "length": 9,
+      "message": "'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/iptv_settings_page.dart",
+      "line": 2524,
+      "column": 19,
+      "length": 10,
+      "message": "'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/iptv_settings_page.dart",
+      "line": 2525,
+      "column": 19,
+      "length": 9,
+      "message": "'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/iptv_settings_two_pane.dart",
+      "line": 1140,
+      "column": 19,
+      "length": 10,
+      "message": "'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/iptv_settings_two_pane.dart",
+      "line": 1141,
+      "column": 19,
+      "length": 9,
+      "message": "'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/iptv_settings_two_pane.dart",
+      "line": 1156,
+      "column": 19,
+      "length": 10,
+      "message": "'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/iptv_settings_two_pane.dart",
+      "line": 1157,
+      "column": 19,
+      "length": 9,
+      "message": "'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/iptv_settings_two_pane.dart",
+      "line": 1279,
+      "column": 11,
+      "length": 10,
+      "message": "'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/iptv_settings_two_pane.dart",
+      "line": 1280,
+      "column": 11,
+      "length": 9,
+      "message": "'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/iptv_settings_two_pane.dart",
+      "line": 1348,
+      "column": 11,
+      "length": 10,
+      "message": "'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/iptv_settings_two_pane.dart",
+      "line": 1349,
+      "column": 11,
+      "length": 9,
+      "message": "'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/settings/pikpak_settings_page.dart",
+      "line": 157,
+      "column": 11,
+      "length": 16,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/settings/pikpak_settings_page.dart",
+      "line": 945,
+      "column": 54,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/stremio_addons_page.dart",
+      "line": 2053,
+      "column": 42,
+      "length": 5,
+      "message": "'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/settings/widgets/dynamic_settings_builder.dart",
+      "line": 48,
+      "column": 5,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/settings_screen.dart",
+      "line": 5050,
+      "column": 9,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/settings_screen.dart",
+      "line": 5917,
+      "column": 7,
+      "length": 16,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/settings_screen.dart",
+      "line": 5947,
+      "column": 9,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/settings_screen.dart",
+      "line": 5953,
+      "column": 9,
+      "length": 16,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/stremio_tv/widgets/stremio_tv_local_catalogs_dialog.dart",
+      "line": 2389,
+      "column": 15,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/stremio_tv/widgets/stremio_tv_local_catalogs_dialog.dart",
+      "line": 2754,
+      "column": 15,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 334,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 335,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 497,
+      "column": 28,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 1401,
+      "column": 25,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 2740,
+      "column": 35,
+      "length": 11,
+      "message": "'activeColor' is deprecated and shouldn't be used. Use activeThumbColor or activeTrackColor instead. This feature was deprecated after v3.31.0-2.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4335,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4340,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4343,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4346,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4351,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4355,
+      "column": 13,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4360,
+      "column": 15,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4365,
+      "column": 13,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4374,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4417,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4418,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4424,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4425,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4426,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4427,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4430,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4447,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4458,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4496,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4526,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4529,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4703,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4708,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4709,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4712,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4713,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4720,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4739,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4750,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4753,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4754,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4755,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4769,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4773,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4778,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4805,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4809,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4819,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4855,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 4858,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 5093,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 5094,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 5095,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 5101,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 5107,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 5109,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/torbox/torbox_downloads_screen.dart",
+      "line": 5666,
+      "column": 11,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/trakt_calendar_screen.dart",
+      "line": 962,
+      "column": 7,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/video_player/widgets/channel_guide.dart",
+      "line": 417,
+      "column": 36,
+      "length": 5,
+      "message": "'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "EMPTY_CATCHES",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 4870,
+      "column": 21,
+      "length": 2,
+      "message": "Empty catch block."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "EMPTY_CATCHES",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 4937,
+      "column": 21,
+      "length": 2,
+      "message": "Empty catch block."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 6922,
+      "column": 44,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 6974,
+      "column": 30,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 6991,
+      "column": 30,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 7000,
+      "column": 42,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "EMPTY_CATCHES",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9441,
+      "column": 17,
+      "length": 2,
+      "message": "Empty catch block."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9570,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9614,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9751,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9759,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9773,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9780,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9787,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9793,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9806,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9812,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9837,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9869,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9882,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9887,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9903,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9910,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9919,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9932,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9944,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9955,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9957,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9962,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9969,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 9981,
+      "column": 15,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10026,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10032,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10038,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10058,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10064,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10069,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10083,
+      "column": 15,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10127,
+      "column": 9,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10133,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10139,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10159,
+      "column": 11,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10329,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10330,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10333,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10342,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10343,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10344,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10350,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10356,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10360,
+      "column": 5,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_PRINT",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10381,
+      "column": 7,
+      "length": 5,
+      "message": "Don't invoke 'print' in production code."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 10687,
+      "column": 26,
+      "length": 21,
+      "message": "'resetScreenBrightness' is deprecated and shouldn't be used. refactored to resetApplicationScreenBrightness (will be remove after version 2.1.0)."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "EMPTY_CATCHES",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 11250,
+      "column": 17,
+      "length": 2,
+      "message": "Empty catch block."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "EMPTY_CATCHES",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 11438,
+      "column": 17,
+      "length": 2,
+      "message": "Empty catch block."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 12152,
+      "column": 58,
+      "length": 7,
+      "message": "'current' is deprecated and shouldn't be used. refactored to application (will be remove after version 2.1.0)."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 12207,
+      "column": 28,
+      "length": 19,
+      "message": "'setScreenBrightness' is deprecated and shouldn't be used. refactored to setApplicationScreenBrightness (will be remove after version 2.1.0)."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 13078,
+      "column": 11,
+      "length": 5,
+      "message": "'onKey' is deprecated and shouldn't be used. Use onKeyEvent instead. This feature was deprecated after v3.18.0-2.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 13079,
+      "column": 27,
+      "length": 15,
+      "message": "'RawKeyDownEvent' is deprecated and shouldn't be used. Use KeyDownEvent instead. This feature was deprecated after v3.18.0-2.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 13370,
+      "column": 34,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "SORT_CHILD_PROPERTIES_LAST",
+      "path": "lib/screens/video_player_screen.dart",
+      "line": 14802,
+      "column": 15,
+      "length": 1858,
+      "message": "The 'child' argument should be last in widget constructor invocations."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/screens/webdav/webdav_files_screen.dart",
+      "line": 786,
+      "column": 15,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "UNNECESSARY_GETTERS_SETTERS",
+      "path": "lib/services/android_tv_player_bridge.dart",
+      "line": 246,
+      "column": 34,
+      "length": 19,
+      "message": "Unnecessary use of getter and setter to wrap a field."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "UNNECESSARY_GETTERS_SETTERS",
+      "path": "lib/services/android_tv_player_bridge.dart",
+      "line": 251,
+      "column": 40,
+      "length": 23,
+      "message": "Unnecessary use of getter and setter to wrap a field."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/download_service.dart",
+      "line": 1286,
+      "column": 15,
+      "length": 16,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/download_service.dart",
+      "line": 1492,
+      "column": 32,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/download_service.dart",
+      "line": 2350,
+      "column": 7,
+      "length": 16,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
+      "path": "lib/services/download_service.dart",
+      "line": 3888,
+      "column": 20,
+      "length": 4,
+      "message": "The local variable '_dir' starts with an underscore."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CAMEL_CASE_TYPES",
+      "path": "lib/services/external_player_service.dart",
+      "line": 602,
+      "column": 7,
+      "length": 29,
+      "message": "The type name 'iOSExternalPlayerLaunchResult' isn't an UpperCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 75,
+      "column": 9,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 84,
+      "column": 9,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 93,
+      "column": 9,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 102,
+      "column": 9,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 111,
+      "column": 9,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 119,
+      "column": 7,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 163,
+      "column": 17,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 416,
+      "column": 34,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 433,
+      "column": 7,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 486,
+      "column": 15,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 647,
+      "column": 7,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 728,
+      "column": 11,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 778,
+      "column": 11,
+      "length": 16,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 1013,
+      "column": 11,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 1340,
+      "column": 9,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/playlist_player_service.dart",
+      "line": 2253,
+      "column": 20,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "PREFER_ITERABLE_WHERETYPE",
+      "path": "lib/services/storage_service.dart",
+      "line": 4152,
+      "column": 12,
+      "length": 5,
+      "message": "Use 'whereType' to select elements of a given type."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/torrent_playback_service.dart",
+      "line": 818,
+      "column": 50,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/torrent_playback_service.dart",
+      "line": 836,
+      "column": 14,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/torrent_playback_service.dart",
+      "line": 848,
+      "column": 14,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/torrent_playback_service.dart",
+      "line": 941,
+      "column": 9,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/torrent_playback_service.dart",
+      "line": 1559,
+      "column": 14,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/torrent_playback_service.dart",
+      "line": 4174,
+      "column": 9,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/torrent_playback_service.dart",
+      "line": 4184,
+      "column": 9,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/services/torrent_playback_service.dart",
+      "line": 4268,
+      "column": 19,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/services/torrent_playback_service.dart",
+      "line": 4298,
+      "column": 19,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "LIBRARY_PRIVATE_TYPES_IN_PUBLIC_API",
+      "path": "lib/services/trakt/trakt_calendar_service.dart",
+      "line": 27,
+      "column": 14,
+      "length": 13,
+      "message": "Invalid use of a private type in a public API."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/video_player_launcher.dart",
+      "line": 1139,
+      "column": 9,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/video_player_launcher.dart",
+      "line": 1164,
+      "column": 47,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/video_player_launcher.dart",
+      "line": 1199,
+      "column": 39,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/video_player_launcher.dart",
+      "line": 1549,
+      "column": 43,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
+      "path": "lib/services/video_player_launcher.dart",
+      "line": 1726,
+      "column": 43,
+      "length": 7,
+      "message": "Don't use 'BuildContext's across async gaps."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/services/video_player_launcher.dart",
+      "line": 1910,
+      "column": 17,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/services/video_player_launcher.dart",
+      "line": 1936,
+      "column": 17,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/theme/app_theme_adapter.dart",
+      "line": 169,
+      "column": 7,
+      "length": 10,
+      "message": "'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/theme/app_theme_adapter.dart",
+      "line": 170,
+      "column": 7,
+      "length": 12,
+      "message": "'onBackground' is deprecated and shouldn't be used. Use onSurface instead. This feature was deprecated after v3.18.0-0.1.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONSTANT_IDENTIFIER_NAMES",
+      "path": "lib/utils/series_parser.dart",
+      "line": 7,
+      "column": 3,
+      "length": 6,
+      "message": "The constant name 'SERIES' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONSTANT_IDENTIFIER_NAMES",
+      "path": "lib/utils/series_parser.dart",
+      "line": 8,
+      "column": 3,
+      "length": 6,
+      "message": "The constant name 'MOVIES' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONSTANT_IDENTIFIER_NAMES",
+      "path": "lib/utils/series_parser.dart",
+      "line": 9,
+      "column": 3,
+      "length": 9,
+      "message": "The constant name 'AMBIGUOUS' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONSTANT_IDENTIFIER_NAMES",
+      "path": "lib/utils/series_parser.dart",
+      "line": 96,
+      "column": 16,
+      "length": 16,
+      "message": "The constant name 'DELETED_KEYWORDS' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONSTANT_IDENTIFIER_NAMES",
+      "path": "lib/utils/series_parser.dart",
+      "line": 102,
+      "column": 16,
+      "length": 15,
+      "message": "The constant name 'BEHIND_KEYWORDS' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONSTANT_IDENTIFIER_NAMES",
+      "path": "lib/utils/series_parser.dart",
+      "line": 113,
+      "column": 16,
+      "length": 15,
+      "message": "The constant name 'EXTRAS_KEYWORDS' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONSTANT_IDENTIFIER_NAMES",
+      "path": "lib/utils/series_parser.dart",
+      "line": 114,
+      "column": 16,
+      "length": 18,
+      "message": "The constant name 'INTERVIEW_KEYWORDS' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONSTANT_IDENTIFIER_NAMES",
+      "path": "lib/utils/series_parser.dart",
+      "line": 115,
+      "column": 16,
+      "length": 16,
+      "message": "The constant name 'BLOOPER_KEYWORDS' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONSTANT_IDENTIFIER_NAMES",
+      "path": "lib/utils/series_parser.dart",
+      "line": 122,
+      "column": 16,
+      "length": 19,
+      "message": "The constant name 'COMMENTARY_KEYWORDS' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONSTANT_IDENTIFIER_NAMES",
+      "path": "lib/utils/series_parser.dart",
+      "line": 127,
+      "column": 16,
+      "length": 15,
+      "message": "The constant name 'SAMPLE_KEYWORDS' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONSTANT_IDENTIFIER_NAMES",
+      "path": "lib/utils/series_parser.dart",
+      "line": 130,
+      "column": 16,
+      "length": 22,
+      "message": "The constant name 'MOVIE_EPISODE_PATTERNS' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CONSTANT_IDENTIFIER_NAMES",
+      "path": "lib/utils/series_parser.dart",
+      "line": 154,
+      "column": 16,
+      "length": 25,
+      "message": "The constant name 'MOVIE_COLLECTION_KEYWORDS' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/adaptive_playlist_section.dart",
+      "line": 338,
+      "column": 11,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/aggregated_search_results.dart",
+      "line": 826,
+      "column": 33,
+      "length": 9,
+      "message": "'onReorder' is deprecated and shouldn't be used. Use the onReorderItem callback instead. The onReorderItem callback adjusts the newIndex parameter for a removed item at the oldIndex. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/auto_launch_overlay.dart",
+      "line": 115,
+      "column": 7,
+      "length": 12,
+      "message": "'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "PREFER_FINAL_FIELDS",
+      "path": "lib/widgets/catalog_browser.dart",
+      "line": 161,
+      "column": 35,
+      "length": 18,
+      "message": "The private field _boundSources could be 'final'."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/catalog_browser.dart",
+      "line": 1468,
+      "column": 33,
+      "length": 9,
+      "message": "'onReorder' is deprecated and shouldn't be used. Use the onReorderItem callback instead. The onReorderItem callback adjusts the newIndex parameter for a removed item at the oldIndex. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/file_selection_dialog.dart",
+      "line": 558,
+      "column": 19,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_RENAMING_METHOD_PARAMETERS",
+      "path": "lib/widgets/hero_trailer_backdrop.dart",
+      "line": 329,
+      "column": 54,
+      "length": 3,
+      "message": "The parameter name 'old' doesn't match the name 'oldWidget' in the overridden method."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_RENAMING_METHOD_PARAMETERS",
+      "path": "lib/widgets/home/spotlight_board.dart",
+      "line": 733,
+      "column": 39,
+      "length": 3,
+      "message": "The parameter name 'old' doesn't match the name 'oldWidget' in the overridden method."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/home/spotlight_board.dart",
+      "line": 1254,
+      "column": 7,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/mobile_floating_nav.dart",
+      "line": 738,
+      "column": 40,
+      "length": 5,
+      "message": "'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/mobile_floating_nav.dart",
+      "line": 974,
+      "column": 40,
+      "length": 5,
+      "message": "'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/pikpak_folder_picker_dialog.dart",
+      "line": 729,
+      "column": 17,
+      "length": 10,
+      "message": "'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/pikpak_folder_picker_dialog.dart",
+      "line": 730,
+      "column": 17,
+      "length": 9,
+      "message": "'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/remote/remote_role_picker_screen.dart",
+      "line": 298,
+      "column": 42,
+      "length": 5,
+      "message": "'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/see_all/see_all_poster_grid.dart",
+      "line": 475,
+      "column": 15,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/see_all/see_all_poster_grid.dart",
+      "line": 567,
+      "column": 7,
+      "length": 11,
+      "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/trakt/trakt_results_view.dart",
+      "line": 1204,
+      "column": 33,
+      "length": 9,
+      "message": "'onReorder' is deprecated and shouldn't be used. Use the onReorderItem callback instead. The onReorderItem callback adjusts the newIndex parameter for a removed item at the oldIndex. This feature was deprecated after v3.41.0-0.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "CURLY_BRACES_IN_FLOW_CONTROL_STRUCTURES",
+      "path": "lib/widgets/tv_sidebar_nav.dart",
+      "line": 333,
+      "column": 9,
+      "length": 7,
+      "message": "Statements in an if should be enclosed in a block."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "lib/widgets/view_mode_dropdown.dart",
+      "line": 69,
+      "column": 9,
+      "length": 5,
+      "message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "PREFER_COLLECTION_LITERALS",
+      "path": "test/db_channel_list_test.dart",
+      "line": 55,
+      "column": 19,
+      "length": 33,
+      "message": "Unnecessary constructor invocation."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "PREFER_COLLECTION_LITERALS",
+      "path": "test/db_channel_list_test.dart",
+      "line": 86,
+      "column": 19,
+      "length": 33,
+      "message": "Unnecessary constructor invocation."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "PREFER_COLLECTION_LITERALS",
+      "path": "test/db_channel_list_test.dart",
+      "line": 93,
+      "column": 19,
+      "length": 33,
+      "message": "Unnecessary constructor invocation."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "PREFER_COLLECTION_LITERALS",
+      "path": "test/db_channel_list_test.dart",
+      "line": 108,
+      "column": 19,
+      "length": 33,
+      "message": "Unnecessary constructor invocation."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "test/dock_metrics_test.dart",
+      "line": 287,
+      "column": 65,
+      "length": 5,
+      "message": "'alpha' is deprecated and shouldn't be used. Use (*.a * 255.0).round().clamp(0, 255)."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "test/dock_metrics_test.dart",
+      "line": 294,
+      "column": 22,
+      "length": 5,
+      "message": "'alpha' is deprecated and shouldn't be used. Use (*.a * 255.0).round().clamp(0, 255)."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "test/dock_metrics_test.dart",
+      "line": 295,
+      "column": 23,
+      "length": 5,
+      "message": "'alpha' is deprecated and shouldn't be used. Use (*.a * 255.0).round().clamp(0, 255)."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "test/dock_metrics_test.dart",
+      "line": 296,
+      "column": 28,
+      "length": 5,
+      "message": "'alpha' is deprecated and shouldn't be used. Use (*.a * 255.0).round().clamp(0, 255)."
+    },
+    {
+      "severity": "INFO",
+      "type": "HINT",
+      "code": "DEPRECATED_MEMBER_USE",
+      "path": "test/dock_metrics_test.dart",
+      "line": 297,
+      "column": 24,
+      "length": 5,
+      "message": "'alpha' is deprecated and shouldn't be used. Use (*.a * 255.0).round().clamp(0, 255)."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "DEPEND_ON_REFERENCED_PACKAGES",
+      "path": "test/iptv_live_recovery_test.dart",
+      "line": 1,
+      "column": 8,
+      "length": 26,
+      "message": "The imported package 'clock' isn't a dependency of the importing package."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "DEPEND_ON_REFERENCED_PACKAGES",
+      "path": "test/iptv_live_recovery_test.dart",
+      "line": 2,
+      "column": 8,
+      "length": 36,
+      "message": "The imported package 'fake_async' isn't a dependency of the importing package."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "NON_CONSTANT_IDENTIFIER_NAMES",
+      "path": "test/season_filter_test.dart",
+      "line": 162,
+      "column": 13,
+      "length": 14,
+      "message": "The variable name 's04e01_format1' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "NON_CONSTANT_IDENTIFIER_NAMES",
+      "path": "test/season_filter_test.dart",
+      "line": 167,
+      "column": 13,
+      "length": 14,
+      "message": "The variable name 's04e01_format2' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "NON_CONSTANT_IDENTIFIER_NAMES",
+      "path": "test/season_filter_test.dart",
+      "line": 172,
+      "column": 13,
+      "length": 14,
+      "message": "The variable name 's04e01_format3' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "NON_CONSTANT_IDENTIFIER_NAMES",
+      "path": "test/season_filter_test.dart",
+      "line": 177,
+      "column": 13,
+      "length": 14,
+      "message": "The variable name 's04e01_format4' isn't a lowerCamelCase identifier."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "AVOID_RELATIVE_LIB_IMPORTS",
+      "path": "test/series_parser_test.dart",
+      "line": 2,
+      "column": 8,
+      "length": 33,
+      "message": "Can't use a relative path to import a library in 'lib'."
+    },
+    {
+      "severity": "INFO",
+      "type": "LINT",
+      "code": "VOID_CHECKS",
+      "path": "test/video_output_lease_test.dart",
+      "line": 75,
+      "column": 49,
+      "length": 104,
+      "message": "Assignment to a variable of type 'void'."
+    }
+  ]
+}
