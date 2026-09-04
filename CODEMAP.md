@@ -32,6 +32,11 @@ Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.
 `title_opener.dart` (`TitleOpener.open` — catalog detail from the board),
 `catalog_search_screen.dart` (Search tab), `discover_screen.dart` (Discover tab),
 `search_screen_shells.dart` (tab/variant/landing/dropdown contracts).
+TV Home stages (parts of `search_screen.dart`, G1 step 5): `lib/screens/search/stages/`
+— `_CanvasBoardStage`, `_AtriumBoardStage`, `_MosaicBoardStage`, `_PromenadeBoardStage`,
+`_DeckBoardStage`, `_TonightBoardStage`, `_SpotlightBoardStage`. Dispatch helper:
+`tv_home_stage_dispatch.dart` (`resolveTvHomeStageLayout`). Empty Spotlight shelves
+fall through to classic. `_buildDiscoverStage` stays on the host (Discover chrome).
 
 🔴 huge: `lib/screens/search_screen.dart` (19 070) · `lib/screens/video_player_screen.dart`
 (16 278) · `lib/screens/magic_tv_screen.dart` (10 716) · `lib/services/storage_service.dart`
@@ -92,6 +97,8 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   so they share `HomeBoardController`, `CatalogSearchController`, and `TitleOpener`. Shell contracts
   live in `lib/screens/search/search_screen_shells.dart`.
   Detail opening is `lib/screens/search/title_opener.dart` (`TitleOpener`; State `_openItem` is a forward).
+  TV Home stage layouts are `lib/screens/search/stages/` (`_CanvasBoardStage` and friends);
+  the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 1:** Home page defaults (`getHomeDefaultSourceType` …

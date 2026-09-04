@@ -171,6 +171,13 @@ void main() {
       );
       expect(chunk, isNot(contains('_buildDiscoverStage')));
       expect(chunk, isNot(contains("case 'classic':")));
+      expect(chunk, contains('return _CanvasBoardStage(host: this);'));
+      expect(chunk, contains('return _AtriumBoardStage(host: this);'));
+      expect(chunk, contains('return _MosaicBoardStage(host: this);'));
+      expect(chunk, contains('return _PromenadeBoardStage(host: this);'));
+      expect(chunk, contains('return _DeckBoardStage(host: this);'));
+      expect(chunk, contains('return _TonightBoardStage(host: this);'));
+      expect(chunk, contains('return _SpotlightBoardStage(host: this);'));
     });
 
     test('classic LayoutBuilder hero/rows stay after the switch', () {
@@ -189,6 +196,25 @@ void main() {
     test('all seven Home stage builders exist', () {
       for (final name in kTvHomeStageBuilderNames) {
         expect(layouts.contains('Widget $name('), isTrue, reason: name);
+      }
+    });
+
+    test('each board is its own widget under search/stages/', () {
+      const widgets = [
+        '_CanvasBoardStage',
+        '_AtriumBoardStage',
+        '_MosaicBoardStage',
+        '_PromenadeBoardStage',
+        '_DeckBoardStage',
+        '_TonightBoardStage',
+        '_SpotlightBoardStage',
+      ];
+      for (final name in widgets) {
+        expect(
+          layouts.contains('class $name extends StatelessWidget'),
+          isTrue,
+          reason: name,
+        );
       }
     });
 
