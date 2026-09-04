@@ -1,4 +1,5 @@
 import '../../models/stremio_addon.dart';
+import '../tracking/tracker_item_transformer.dart';
 
 /// Transforms Simkl API items into [StremioMeta] objects.
 ///
@@ -164,4 +165,22 @@ class SimklItemTransformer {
     }
     return result;
   }
+}
+
+/// Registry-facing instance wrapper. Static helpers above stay the call sites;
+/// parsing is unchanged.
+class SimklTrackerItemTransformer implements TrackerItemTransformer {
+  const SimklTrackerItemTransformer();
+
+  @override
+  StremioMeta? transformItem(
+    Map<String, dynamic> raw, {
+    String? inferredType,
+  }) => SimklItemTransformer.transformItem(raw, inferredType: inferredType);
+
+  @override
+  List<StremioMeta> transformList(
+    List<dynamic> items, {
+    String? inferredType,
+  }) => SimklItemTransformer.transformList(items, inferredType: inferredType);
 }

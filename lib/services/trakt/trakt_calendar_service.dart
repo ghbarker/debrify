@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../models/trakt/trakt_calendar_entry.dart';
+import '../tracking/tracker_calendar.dart';
 import 'trakt_service.dart';
 
 /// Chunk fetcher signature — injected for tests, defaults to the real TraktService.
@@ -14,7 +15,7 @@ typedef _ChunkFetcher = Future<List<TraktCalendarEntry>> Function(
 ///
 /// All chunks are aligned to Monday boundaries so repeated calls for
 /// overlapping date ranges hit the same cache keys deterministically.
-class TraktCalendarService {
+class TraktCalendarService implements TrackerCalendar {
   static final TraktCalendarService instance = TraktCalendarService._(
     fetcher: _defaultFetcher,
   );
@@ -69,6 +70,7 @@ class TraktCalendarService {
   ///
   /// Returned map keys are `DateTime(year, month, day)` in local time.
   /// Empty buckets are not included.
+  @override
   Future<Map<DateTime, List<TraktCalendarEntry>>> getRange(
     DateTime start,
     DateTime end,

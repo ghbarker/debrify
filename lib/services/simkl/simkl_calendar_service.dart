@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../models/trakt/trakt_calendar_entry.dart';
+import '../tracking/tracker_calendar.dart';
 import 'simkl_constants.dart';
 import 'simkl_service.dart';
 
@@ -22,7 +23,7 @@ import 'simkl_service.dart';
 /// serves any month; the intersected result is cached in memory with a 15-min
 /// TTL and reused for every [getRange] call. Never throws — logs and returns
 /// empty on failure.
-class SimklCalendarService {
+class SimklCalendarService implements TrackerCalendar {
   SimklCalendarService._();
   static final SimklCalendarService instance = SimklCalendarService._();
 
@@ -40,6 +41,7 @@ class SimklCalendarService {
   /// midnight. Empty buckets are omitted. Returned map keys are
   /// `DateTime(year, month, day)` in local time — matching
   /// [TraktCalendarService.getRange] so the screen can consume either.
+  @override
   Future<Map<DateTime, List<TraktCalendarEntry>>> getRange(
     DateTime start,
     DateTime end,

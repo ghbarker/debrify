@@ -1,6 +1,7 @@
 import '../../models/advanced_search_selection.dart';
 import 'package:flutter/foundation.dart';
 
+import '../tracking/tracker_continue_watching.dart';
 import 'mdblist_models.dart';
 import 'mdblist_service.dart';
 
@@ -30,7 +31,7 @@ class MdblistContinueWatchingSnapshot {
   });
 }
 
-class MdblistContinueWatchingService {
+class MdblistContinueWatchingService implements TrackerContinueWatching {
   final MdblistService service;
   MdblistContinueWatchingSnapshot? _lastGood;
   DateTime? _lastFetchedAt;
@@ -220,6 +221,17 @@ class MdblistContinueWatchingService {
       _lastFetchedAt = DateTime.now();
     }
     return MdblistResult.success(snapshot);
+  }
+
+  @override
+  Future<TrackerContinueWatchingPage?> fetchContinueWatching() async {
+    final result = await fetch();
+    final data = result.data;
+    if (data == null) return null;
+    return TrackerContinueWatchingPage(
+      movies: data.movies,
+      shows: data.shows,
+    );
   }
 
   MdblistContinueWatchingItem? _fromPlayback(MdblistPlaybackSession session) {

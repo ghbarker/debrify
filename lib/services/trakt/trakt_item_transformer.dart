@@ -1,4 +1,5 @@
 import '../../models/stremio_addon.dart';
+import '../tracking/tracker_item_transformer.dart';
 
 /// Transforms Trakt API items into [StremioMeta] objects.
 ///
@@ -165,4 +166,22 @@ class TraktItemTransformer {
     }
     return result;
   }
+}
+
+/// Registry-facing instance wrapper. Static helpers above stay the call sites;
+/// parsing is unchanged.
+class TraktTrackerItemTransformer implements TrackerItemTransformer {
+  const TraktTrackerItemTransformer();
+
+  @override
+  StremioMeta? transformItem(
+    Map<String, dynamic> raw, {
+    String? inferredType,
+  }) => TraktItemTransformer.transformItem(raw, inferredType: inferredType);
+
+  @override
+  List<StremioMeta> transformList(
+    List<dynamic> items, {
+    String? inferredType,
+  }) => TraktItemTransformer.transformList(items, inferredType: inferredType);
 }
