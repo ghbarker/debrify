@@ -11,6 +11,7 @@ import 'package:debrify/theme/app_theme_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:io';
 
 /// Accept: a new page registered once appears in phone, desktop, TV, and
 /// search. The three layouts all iterate [SettingsPageRegistry]; search
@@ -66,6 +67,43 @@ void main() {
     expect(hit, isNotEmpty);
     expect(hit.first.category, 'Playback');
     expect(hit.first.matches(['fake-lane-keyword']), isTrue);
+  });
+
+  test('extraPlayerKeywords make external-player names searchable', () {
+    final pages = buildSettingsPages(
+      SettingsPageBindings.noop(
+        showSwitchProfile: true,
+        extraPlayerKeywords: () => const ['vlc', 'iina', 'mpv'],
+      ),
+    );
+    final registry = SettingsPageRegistry(pages: pages);
+    final playback = registry.searchIndex().where(
+      (e) => e.title == 'Playback' && e.matches(['vlc']),
+    );
+    expect(playback, isNotEmpty, reason: 'player page keywords must include extraPlayerKeywords');
+
+    // Unbound (default empty) must not match a player name — that was the S1
+    // regression at the settings_screen binding site.
+    final unbound = SettingsPageRegistry(
+      pages: buildSettingsPages(
+        SettingsPageBindings.noop(showSwitchProfile: true),
+      ),
+    );
+    expect(
+      unbound.searchIndex().where(
+        (e) => e.title == 'Playback' && e.matches(['vlc']),
+      ),
+      isEmpty,
+    );
+  });
+
+  test('settings_screen binds extraPlayerKeywords at the production site', () {
+    final src = File('lib/screens/settings_screen.dart').readAsStringSync();
+    expect(src.contains('extraPlayerKeywords:'), isTrue);
+    expect(src.contains('ExternalPlayer.values'), isTrue);
+    expect(src.contains('LinuxExternalPlayer.values'), isTrue);
+    expect(src.contains('WindowsExternalPlayer.values'), isTrue);
+    expect(src.contains('iOSExternalPlayer.values'), isTrue);
   });
 
   testWidgets('phone, desktop and TV renderers all show the new row', (

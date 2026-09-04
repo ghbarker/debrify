@@ -545,6 +545,7 @@ class SettingsPageBindings {
     bool showSupportDonation = false,
     bool iptvAppearanceSearchable = true,
     bool profileCommitted = true,
+    List<String> Function() extraPlayerKeywords = SettingsPageBindings._emptyKeywords,
   }) {
     return SettingsPageBindings(
       openHomePage: _noop,
@@ -603,6 +604,7 @@ class SettingsPageBindings {
       showSupportDonation: showSupportDonation,
       iptvAppearanceSearchable: iptvAppearanceSearchable,
       profileCommitted: profileCommitted,
+      extraPlayerKeywords: extraPlayerKeywords,
     );
   }
 }

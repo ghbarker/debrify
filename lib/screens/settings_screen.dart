@@ -31,6 +31,7 @@ import '../services/profiles/profile_bootstrap.dart';
 import '../services/profiles/profile_device_reset_service.dart';
 import '../services/profiles/profile_reset_service.dart';
 import '../utils/platform_util.dart';
+import '../services/external_player_service.dart';
 
 import '../services/analytics_service.dart';
 import '../services/diagnostic_log.dart';
@@ -1017,6 +1018,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _settingsLabels(kTvPlayerControlsStyleChoices.map((c) => c.label)),
       extraDebrifyTvPlayerKeywords: () =>
           _settingsLabels(kDebrifyTvPlayerStyleChoices.map((c) => c.label)),
+      extraPlayerKeywords: () {
+        if (kIsWeb) return const <String>[];
+        if (Platform.isMacOS) {
+          return _settingsLabels(
+            ExternalPlayer.values.map((player) => player.displayName),
+          );
+        }
+        if (Platform.isLinux) {
+          return _settingsLabels(
+            LinuxExternalPlayer.values.map((player) => player.displayName),
+          );
+        }
+        if (Platform.isWindows) {
+          return _settingsLabels(
+            WindowsExternalPlayer.values.map((player) => player.displayName),
+          );
+        }
+        if (Platform.isIOS) {
+          return _settingsLabels(
+            iOSExternalPlayer.values
+                .where(
+                  (player) => !PlatformUtil.isTvOS || player.availableOnTvos,
+                )
+                .map((player) => player.displayName),
+          );
+        }
+        return const <String>[];
+      },
       extraPlayerDockKeywords: () => [
         ..._settingsLabels(kPlayerDockStyleChoices.map((c) => c.label)),
         ..._settingsLabels(kPlayerDockPaletteChoices.map((c) => c.label)),

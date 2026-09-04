@@ -1002,12 +1002,13 @@ Map<String, List<SettingsLeafSpec>> settingsLeavesByPage(
       leaf(
         'Preferred external player',
         'Choose the external player app',
-        const [
+        [
           'external',
           'player app',
           'system default',
           'custom command',
           'custom url scheme',
+          ...b.extraPlayerKeywords(),
         ],
         visible: () => b.preferredExternalPlayerSupported,
       ),
