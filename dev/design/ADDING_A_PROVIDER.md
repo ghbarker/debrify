@@ -1,841 +1,305 @@
 # Adding a New Debrid/Cloud Provider
 
-Step-by-step checklist for wiring a new provider into Debrify. Use **AllDebrid**
-(newest) and **Premiumize** as the reference implementations.
+The live playback/add/unlock seam is `CloudProviderPort` + `CloudProviderRegistry`
+under `lib/services/cloud/`. This is a **half-migration**: adapters and the
+registry exist, but several screens still string-match provider ids. Do not
+reintroduce a five-way `switch` inside `TorrentPlaybackService._add`. Do not
+“fix” remaining string-match sites here — that is lanes **P1** / **P2**.
 
 Convention: providers are identified by lowercase playback ids
 (`debrid`, `torbox`, `pikpak`, `premiumize`, `alldebrid`). Real-Debrid is stored
 as `rd` on bound sources — map through `CloudProviderId` in
 `lib/services/cloud/cloud_provider_id.dart`.
 
-## 0. Cloud playback port (required)
+Reference implementations: **AllDebrid** (newest) and **Premiumize**, plus the
+existing adapters in `lib/services/cloud/`.
 
-Playback add/resolve no longer lives in a five-way `switch` inside
-`TorrentPlaybackService._add`. Implement `CloudProviderPort` and register it.
+---
 
-- **New adapter:** `lib/services/cloud/<id>_cloud_provider.dart`
-  implementing `isConfigured` + `addMagnet` + `resolveNativeBound`
-  (hashless bound replay; RD/TorBox/AllDebrid web-downloads only; lookup is
-  stored id `rd`, not playback `debrid`) + `resolvePlaylistEntry` (download-
-  picker lazy URL; field presence, not `entry.provider`; TorBox web-download /
-  PikPak / Premiumize stay on `unlockPlaybackEntry`) + `unlockPlaybackEntry`
-  (adapter HTTP; launcher/TV registry dispatch throws; TorBox before RD;
-  web-download counts). The in-app player calls
-  `CloudProviderRegistry.unlockPlayerScreenEntry` (wraps HTTP; incomplete
-  Premiumize does not fall through to RD) + `resolveStremioTorrent`
-  (Stremio TV; `realdebrid` via tryParse; auto order is PikPak before
-  Premiumize; returns null on miss — do not reuse addMagnet or playback
-  precedence) + `prepareMagicTv` (Debrify TV; `real_debrid` via tryParse;
-  magnet has no `dn=`; random unseen file; RD/AllDebrid return null) +
-  `prepareMagicTvLockedLinks` (RD/AllDebrid locked URLs; TorBox/PikPak/
-  Premiumize return null; do not reuse prepareMagicTv).
-- **Register** the adapter in `CloudProviderRegistry.production()`.
+## 0. Cloud port (required) — `CloudProviderPort` / registry / adapters
+
+- **New adapter:** `lib/services/cloud/<id>_cloud_provider.dart` implementing
+  `CloudProviderPort` (`lib/services/cloud/cloud_provider_port.dart`).
+  Production adapters extend `CloudProviderAdapter` and inherit `supports`
+  from `CloudPortFeature.forProvider` (`lib/services/cloud/cloud_port_feature.dart`).
+  The port is one fat interface with `CloudUnsupported` throw-stubs for
+  methods the adapter does not implement (**P1** splits this into
+  `CloudUnlock` / `CloudMagnetAdd` / `CloudPlaylist` / `CloudMagicTv` /
+  `CloudCachedHashes`).
+- **Minimum playback surface today:** `isConfigured` + `addMagnet` +
+  `resolveNativeBound` (hashless bound replay; RD/TorBox/AllDebrid
+  web-downloads only; lookup is stored id `rd`, not playback `debrid`) +
+  `resolvePlaylistEntry` (download-picker lazy URL; field presence, not
+  `entry.provider`; TorBox web-download / PikPak / Premiumize stay on
+  `unlockPlaybackEntry`) + `unlockPlaybackEntry` (adapter HTTP;
+  launcher/TV registry dispatch throws; TorBox before RD; web-download
+  counts).
+- **Register** the adapter in `CloudProviderRegistry.production()`
+  (`lib/services/cloud/cloud_provider_registry.dart`). Tests replace
+  `CloudProviderRegistry.instance` with `FakeCloudProvider`s
+  (`test/adversarial/provider_matrix_test.dart`).
 - **Ids / credential keys / backup field names / display names / chip codes /
   overlay titles / playlist stored ids** go on `CloudProviderId` (keep Flutter
   out of the enum). `displayName` is `TorBox`; `overlayTitle` is `Torbox`.
-- **Credential reads** go through `CloudCredentials` (playback vs magnet
-  configured flags differ: magnets also require the integration-enabled toggle).
+- **Credential reads** go through `CloudCredentials`
+  (`lib/services/cloud/cloud_credentials.dart`):
+  `configured(id, CloudConfiguredCheck)` with dialects `playback` / `magnet` /
+  `stremioPicker`. Magnets also require the integration-enabled toggle.
+  `StremioTvResolveGate.canAttempt` is not a fourth `configured()` flavour.
+- **Registry helpers already used by TPS / player / Stremio TV / Magic TV
+  prepare:** `unlockPlayerScreenEntry` (wraps HTTP; incomplete Premiumize does
+  not fall through to RD), `resolveStremioTorrent` (`realdebrid` via
+  `tryParse`; auto order is PikPak before Premiumize; null on miss — do not
+  reuse `addMagnet` or playback precedence), `prepareMagicTv` (`real_debrid`
+  via `tryParse`; magnet has no `dn=`; random unseen file; RD/AllDebrid
+  return null), `prepareMagicTvLockedLinks` (RD/AllDebrid locked URLs;
+  TorBox/PikPak/Premiumize return null).
 - **Downloads** bind with `DownloadService.enqueueCloudFile` /
   `credentialKeyForCloudProvider`.
 - **Playlist items** go through `CloudPlaylistPayload` (`realdebrid` id, empty
   URL on RD singles).
-- **Pipeline chrome** goes through `CloudProviderChrome`: playback-id
+- **Pipeline chrome** goes through `CloudProviderChrome`
+  (`lib/widgets/cloud_provider_chrome.dart`): playback-id
   `label`/`code`/`gradient`/`icon` (no `rd`/`realdebrid` parse), plus
   `catalogChip` / `catalogTitle` which *do* parse Stremio's `realdebrid` /
   `auto`.
-- **Bind-source cloud browsers** go through `CloudBrowseSelectSource` (playback
-  id only — `rd` does not open Real-Debrid). Catalog / Trakt / aggregated RD vs
-  TorBox pickers use `pushRdOrTorbox`.
+- **Bind-source cloud browsers** go through `CloudBrowseSelectSource`
+  (`lib/screens/cloud/cloud_browse_select_source.dart`) — playback id only;
+  `rd` does not open Real-Debrid. Catalog / Trakt / aggregated RD vs TorBox
+  pickers use `pushRdOrTorbox`.
 - **Backups** pick up API keys from `CloudCredentials.backupSecrets()`.
-- **Tests:** add a `FakeCloudProvider` case in `test/adversarial/provider_matrix_test.dart`.
+- HTTP clients still live in `lib/services/<provider>_service.dart` (Real-Debrid:
+  `lib/services/debrid_service.dart`; PikPak: `lib/services/pikpak_api_service.dart`).
+  Do not rewrite those to add a provider.
 
-HTTP clients still live in `lib/services/<provider>_service.dart`. Do not
-rewrite those to add a provider.
+### Remaining string-match sites (do not “fix” in the adapter PR)
 
-Settings UI, account widgets, and cloud-browse screens are still listed below.
+The port is not done until **P2**. At high level these still compare provider
+strings outside `lib/services/cloud/`:
+
+| Area | Files | Lane |
+|---|---|---|
+| Debrify TV | `lib/screens/magic_tv_screen.dart` | P2a |
+| Stremio TV | `lib/screens/stremio_tv/` | P2b |
+| Launcher + bulk-add | `lib/services/video_player_launcher.dart`, `lib/services/torrent_bulk_add_service.dart` | P2c |
+| Playlist / cloud / default picker | `lib/screens/playlist_content_view_screen.dart`, `lib/services/playlist_player_service.dart`, `lib/screens/cloud_screen.dart`, `lib/screens/settings/provider_settings_page.dart` | P2d |
+| Storage toggles / keys | `lib/services/storage_service.dart` | later G3 / P2d callers |
+| Stremio TV settings picker | `lib/screens/settings/stremio_tv_settings_page.dart` (RD/TB/PikPak only) | P2 |
+
+A new provider that must work on those surfaces still has to be wired there
+until P2 lands. Live search/play is `lib/screens/search_screen.dart` +
+`lib/services/torrent_playback_service.dart` + the registry.
 
 ---
+
+## Planned registries (do not invent them)
+
+From `dev/design/REFACTOR_PLAN.md` §3 — **planned**, with lane ids:
+
+| Registry | Lane | What it will replace |
+|---|---|---|
+| `CloudProviderRegistry` (exists) + capability interfaces | **P1** | remaining provider-string switches; `supports()` → `is`-checks |
+| `HomeRowRegistry` | **H1** | Home row id grammar / manager / board |
+| `TransferCategoryRegistry` | **T1** | backup + remote transfer categories (see checklist below) |
+| `SettingsPageRegistry` | **S1** | settings tree, TV layout, search index |
+| `TrackerRegistry` | **T2** | per-tracker switches in tick/scrobble/CW wiring |
+
+---
+
+## Remote transfer 11-site checklist (until **T1**)
+
+The plan called this “until lane R1”; there is no R1 on the board — **T1** is
+that lane. Until `TransferCategoryRegistry` exists, a new transfer category
+(including a provider API-key category) still needs **11 registrations**:
+backup `build` / `summarize` / `apply`, the `BackupSelection` /
+`BackupSummary` / `RestoreReport` field triplets, and the remote router's
+**five maps**.
+
+Consumer files from the plan table (paths that exist):
+
+| # | Site | File |
+|---|---|---|
+| 1 | `buildBackup` | `lib/services/backup_restore_service.dart` |
+| 2 | `summarize` | `lib/services/backup_restore_service.dart` |
+| 3 | `applyBackup` | `lib/services/backup_restore_service.dart` |
+| 4 | `BackupSelection` field | `lib/services/backup_restore_service.dart` |
+| 5 | `BackupSummary` field | `lib/services/backup_restore_service.dart` |
+| 6 | `RestoreReport` field | `lib/services/backup_restore_service.dart` |
+| 7–11 | remote router’s five maps | `lib/services/remote_control/remote_command_router.dart` |
+
+Same plan table also lists these consumers (tiles / labels / restore
+literals / settings summary):
+
+- `lib/widgets/remote/remote_config_export.dart`
+- `lib/widgets/remote/remote_transfer_all.dart`
+- `lib/widgets/onboarding/onboarding_flow.dart` (`_configLabel`)
+- `lib/services/profiles/profile_restore_coordinator.dart` (`BackupSelection` literals)
+- `lib/screens/settings_screen.dart` (settings summary formatters — **S1**)
+
+Wire `ConfigCommand` **strings** if a new credential travels over remote
+(`lib/services/remote_control/remote_constants.dart`). Those strings are a
+frozen compatibility surface: add a new constant; do not rename existing ones.
 
 ---
 
 ## 1. Account model
+
 Parse the provider's account/user info.
+
 - **New file:** `lib/models/<provider>_user.dart`
 - Reference: `lib/models/torbox_user.dart`, `lib/models/premiumize_user.dart`
 - Include helpers like `hasActivePremium`, `formattedPremiumExpiry`, `subscriptionStatus`.
 
 ## 2. API service
+
 Network calls + validation against the provider API.
+
 - **New file:** `lib/services/<provider>_service.dart`
 - Reference: `lib/services/torbox_service.dart`, `lib/services/premiumize_service.dart`
 - At minimum: `getUserInfo(apiKey)` that throws on bad key / error response.
 
 ## 3. Account service (session state)
+
 Static holder + reactive `ValueNotifier`, validate/persist/refresh/clear.
+
 - **New file:** `lib/services/<provider>_account_service.dart`
 - Reference: `lib/services/torbox_account_service.dart`, `lib/services/premiumize_account_service.dart`
 - Keep the validation-token guard and `persist` flag pattern.
 
 ## 4. Storage (SharedPreferences)
-- **Edit:** `lib/services/storage_service.dart`
-- Add key constants (`_<provider>ApiKey`, `_<provider>IntegrationEnabledKey`, etc.)
-  near the other provider keys (~line 14-26).
+
+- **Edit:** `lib/services/storage_service.dart` (and `CloudSecretPrefs` /
+  `CloudCredentials` so the port can read the key).
+- Add key constants near the other provider keys.
 - Add getters/setters: `get/save/delete<Provider>ApiKey`,
-  `get/set<Provider>IntegrationEnabled` (after the Torbox helpers).
+  `get/set<Provider>IntegrationEnabled`.
+- Preference **key strings** are a frozen compatibility surface.
 
 ## 5. Account status widget
-Card UI shown on the provider's settings page.
+
 - **New file:** `lib/widgets/<provider>_account_status_widget.dart`
 - Reference: `lib/widgets/torbox_account_status_widget.dart`, `lib/widgets/premiumize_account_status_widget.dart`
 
 ## 6. Provider settings page (API key entry)
-Enable toggle + API key add/validate/logout + "how to get key" help.
+
 - **New file:** `lib/screens/settings/<provider>_settings_page.dart`
 - Reference: `lib/screens/settings/torbox_settings_page.dart`, `lib/screens/settings/premiumize_settings_page.dart`
-- Skip hide-from-nav / file-selection / post-action until the provider has a
-  nav tab / add-torrent flow (steps 9+).
 
 ## 7. Settings screen — Connections card
-Add the tappable card in the connections grid (with TV focus wiring).
+
+Until **S1**, adding a page still touches ~6 sites.
+
 - **Edit:** `lib/screens/settings_screen.dart`
   - Import the account service + settings page.
-  - Add `_<provider>Connected/Status/Caption` state fields.
-  - Add `getXApiKey()` to the `_loadSummaries()` `Future.wait` + read its result index.
-  - Add cached-state block + background `refreshUserInfo()` call.
-  - Add `_applyXUserInfo(...)` helper.
-  - Add `_ConnectionInfo` entry + `_openXSettings()` handler.
-  - In `_ConnectionsSummary`: add field/constructor param, focus node
-    (init + dispose), and **re-wire the grid up/down/left/right neighbors**
-    for the new card count (wide 2-col + narrow 1-col).
+  - Connections card + `_loadSummaries()` `Future.wait` index.
+  - `_ConnectionInfo` entry + open handler.
+  - In `_ConnectionsSummary`: field, focus node (init + dispose), and
+    **re-wire the grid neighbors** for the new card count.
+- TV layout: `lib/screens/settings/settings_tv_layout.dart`
+- Search index `leaf()` tables: `lib/screens/settings/widgets/settings_widgets.dart`
 
-## 8. Provider Settings page (default provider picker)
-Let users pick it as the default torrent provider.
-- **Edit:** `lib/screens/settings/provider_settings_page.dart`
-  - Add `_<provider>Available` (gated on key + integration enabled).
-  - Add to provider count, `hasAnyProvider`, and the "no longer available → reset
-    to none" cleanup.
-  - Add the radio `_ProviderOption` (stores id e.g. `'premiumize'`).
-  - Update the no-providers message text.
+## 8. Default provider picker
+
+- **Edit:** `lib/screens/settings/provider_settings_page.dart` (still a
+  string-match site, **P2d**). Gate on key + integration enabled, add the
+  radio `_ProviderOption` (stores playback id e.g. `'premiumize'`).
 
 ---
 
-## 9. Add / Play / Download from torrent search (DONE for Premiumize)
-Wire the provider into `lib/screens/torrent_search_screen.dart`. Premiumize is
-simpler than RD/Torbox: `/transfer/directdl` returns ready-to-use direct links
-for every file in one call (no per-file unrestrict), so playlist entries carry
-real URLs and downloads enqueue those URLs directly.
-- API service methods: `checkCache` (free, gates the flow), `directDownload`
-  (cached → links), `createTransfer` (not-cached → add to cloud).
-  See `lib/services/premiumize_service.dart`, `lib/models/premiumize_file.dart`.
-- Screen entry: `_addToPremiumize` → cache-check → directdl → post-add options
-  (`_showPremiumizePostAddOptions`) → `_playPremiumizeFiles` /
-  `_showPremiumizeDownloadOptions`. Mirror `_addToTorbox` / `_playTorboxTorrent`.
-- Series/movie handling reuses `SeriesParser` + `_findFirstEpisodeIndex` +
-  `_formatTorboxPlaylistTitle` / `_combineSeriesAndEpisodeTitle` (provider-agnostic).
-- Dispatch points wired: default-provider tap, service-selection dialog,
-  per-result-card button (`buildPremiumizeButton`), Quick Play next-retry,
-  post-torrent-action helpers, `_enabledServicesCount`, in-player source
-  switching (`_resolveSourceViaPremiumize`), not-cached "add anyway".
-- Loading overlay: `DebridLoadingOverlay.showForPlaybackId`.
-
-## 10. Cache check during search (DONE for Premiumize)
-Show a provider "cached" badge on search results (mirrors Torbox).
-- **API:** Premiumize `/cache/check` accepts a repeated `items[]` array of
-  infohashes/magnets, is free (no fair-use), and returns a parallel `response[]`
-  of booleans. `PremiumizeService.checkCache(apiKey, items)` is **POST**, with a
-  manually-built urlencoded body (package:http's Map body can't do repeated
-  keys), **chunked** (100/req) with capped concurrency, results reassembled by
-  index. Send **infohashes** (short), not full magnets.
-- **Setting:** `get/setPremiumizeCacheCheckEnabled` (key
-  `premiumize_check_cache_before_search`, default off) + a SwitchListTile on the
-  settings page.
-- **Search wiring (torrent_search_screen.dart):** state
-  `_premiumizeCacheCheckEnabled` + `_premiumizeCacheStatus` (keyed by lowercased
-  infohash), saved/restored in preserved state, cleared per search, loaded in
-  init + the search `Future.wait`; a cache-check block after the Torbox one,
-  request-id stale-guarded.
-- **Badge:** `TorrentResultRow.cacheLabels` (List<String>) renders confirmed
-  providers joined by ` | ` (e.g. `TB | PM`); `_cacheLabelsForResult` builds it.
-  Badge-only — does NOT gate the provider button (cache verified on tap).
-
-## 11. Quick Play (detail-screen "Play" button) (DONE for Premiumize)
-The catalog/detail Play button runs Quick Play: search → auto-pick a cached
-source → play. Two things were needed for a new provider:
-- **`hasDebridProvider`** (torrent_search_screen.dart, in the quick-play
-  handler ~line 5918) must include the provider, else `useTorrents` is false and
-  Quick Play falls back to direct-stream — i.e. a provider-only setup would
-  never use it. Add the provider's availability check there.
-- **Cache pre-filter:** mirror the Torbox block — when the provider is the one
-  Quick Play will use (`_defaultTorrentProvider == '<id>'`, or it's the sole
-  fallback), batch `checkCache` the candidate hashes and narrow
-  `torrentsForQuickPlay` to cached-only (reusing `_<provider>CacheStatus` if the
-  search already populated it). Guard with `cachedOnly.isNotEmpty` so it
-  degrades to the sequential retry when nothing is cached.
-- Dispatch itself already works via the `forcePlay` branches wired in step 9
-  (`_handleTorrentCardActivated`, `_tryNextQuickPlayTorrent`).
-
-## 12. Bound sources / "Edit Source" (DONE for Premiumize)
-Bind a torrent to a movie/series once, then replay instantly ("Edit Source").
-Premiumize is stateless by magnet, so we store only the infohash in
-`SeriesSource.torrentHash` (debridTorrentId empty) and re-resolve via directdl
-on replay — no persistent transfer id needed.
-- **Movie auto-save:** in `_addToPremiumize` (cached path), `setSources` a
-  `SeriesSource(debridService:'premiumize', torrentHash:infohash)` for movies.
-- **Select-source mode:** add the provider to the `_handleSelectSourceTorrentPicked`
-  chain + `_addToPremiumizeAndBindSource` (cache-check → bind via `_saveSource`
-  → exit mode). Movies overwrite (`setSources`), series append (`addSource`).
-- **Replay:** add a `case 'premiumize'` to the `_tryPlayFromBoundSource` switch +
-  `_tryPlayFromBoundSourcePremiumize` (rebuild magnet from `torrentHash` →
-  directdl → find episode via `_findEpisodeInFilenames` / largest for movie →
-  playlist of direct links → `_launchBoundSourcePlayer`). Removes the bound
-  source if it no longer resolves.
-- **Edit Source UI label:** add `displayName` and a bind-source color on
-  `CloudProviderChrome.sourceChip`. Home, catalog, Trakt, and aggregated search
-  all read that. Do not reuse playback `gradient` (bind-source TorBox is blue).
-  The RD/TorBox select-source sheet uses different accents (`rdSheetAccent` /
-  `torboxSheetAccent`) on purpose.
-
-## 13. Bulk add (DONE for Premiumize)
-Multi-select torrents → add all to the provider at once.
-- Add a chooser tile + enabled-gate in `_showBulkAddDialog` and a dispatch
-  branch (`result == 'premiumize' → _bulkAddToPremiumize()`).
-- `_bulkAddToPremiumize` mirrors `_bulkAddToRealDebrid` (progress dialog with
-  live Added/Not-cached/Failed counts, 300ms between adds, cancel, exit selection
-  mode in `finally`). It **batch cache-checks all selected infohashes first**
-  (free) and only `createTransfer`s the cached ones — uncached are skipped (not
-  queued as cloud downloads), matching RD/Torbox semantics.
-- Before running, picking Premiumize shows `_showPremiumizeFairUseDialog` (D-pad
-  friendly, responsive) warning that Premiumize uses fair-use points (~1000 max,
-  ~30/day, ~1pt/GB) so the user adds carefully. See "API limits" note below.
-
-> **Premiumize API limits to know:** `cache/check` is free; `transfer/create`
-> and `directdl` spend fair-use points (~1pt/GB, ~1000 cap, +30/day). No
-> documented request-rate limit (we still pace bulk add 300ms + cap cache-check
-> concurrency). Eager directdl resolves ALL files of a torrent on play — a known
-> point-cost/expiry trade-off; lazy per-file resolution is a future optimization.
-
-## 14. Post-torrent action (DONE for Premiumize)
-What happens after adding a torrent (none / let-me-choose / play / download /
-add-to-channel), settable per provider — same as RD/Torbox.
-- Storage: `get/savePremiumizePostTorrentAction` (default 'choose').
-- Settings page: a "Post-Torrent Action" RadioListTile card (Premiumize excludes
-  'open' — no nav tab; 'playlist' IS supported, see step 19).
-- Helpers: `_get/_savePostTorrentActionForProvider` already route 'premiumize';
-  `_postTorrentActionOptionsForProvider` returns the Premiumize subset
-  (`none`, `choose`, `play`, `download`, `playlist`, `channel`) so the home
-  **quick-controls** dialog shows the right options. `_addToPremiumize`'s
-  `_showPremiumizePostAddOptions` reads the pref and dispatches all of them
-  (the `playlist` action → `_addPremiumizeToPlaylist`, see step 19).
-
-## 15. Backup/restore (DONE for Premiumize)
-Include the provider's API key in the file backup and restore it on import.
-- **Edit:** `lib/services/backup_restore_service.dart`
-  - `buildBackup()`: read `StorageService.get<Provider>ApiKey()`, add
-    `'<provider>ApiKey': key` to the JSON map (guarded by non-empty).
-  - `summarize()`: populate `has<Provider>` from the map key.
-  - `applyBackup()`: add a `if (selection.<provider>)` block that reads the
-    key, saves it, and calls `set<Provider>IntegrationEnabled(true)`.
-  - `BackupSummary`: add `has<Provider>` field + constructor param + include in
-    `isEmpty` getter.
-  - `BackupSelection`: add `<provider>` field, set to `true` in `.all()`,
-    add to constructor + `copyWith`.
-  - `RestoreReport`: add `<provider>` field + count in `totalSuccess`.
-- **Edit:** `lib/screens/settings_screen.dart`
-  - `_backupSummaryLines()`: add `if (s.has<Provider>) lines.add('<Provider>')`.
-  - `_formatRestoreReport()`: add `if (r.<provider>) parts.add('<Provider>')`.
-  - Restore dialog text: add provider name to the credentials-overwrite warning.
-  - Post-restore: `if (report.<provider>) <Provider>AccountService.clearUserInfo()`
-    so the connection card refreshes after restore.
-
-## 16. Remote Control — Transfer Everything + Send Setup to TV (DONE for Premiumize)
-Let the remote sender push credentials to a TV via UDP, just like RD/Torbox.
-- **Edit:** `lib/services/remote_control/remote_constants.dart`
-  - Add `static const String <provider> = '<provider>';` to `ConfigCommand`.
-- **Edit:** `lib/services/remote_control/remote_command_router.dart` (TV receiver)
-  - Import the provider's account service.
-  - Add `case ConfigCommand.<provider>: await _handle<Provider>Config(data);` to
-    the `_handleConfigCommand` switch.
-  - Add `_handle<Provider>Config(String apiKey)` handler: validate via
-    `<Provider>AccountService.validateAndGetUserInfo(apiKey)`, then save key +
-    enable integration. Validation happens here (unlike file restore) because the
-    key crossed a network.
-- **Edit:** `lib/widgets/remote/remote_config_export.dart` (Send Setup to TV)
-  - Add `_ConfigItem? _<provider>` and `String? _<provider>ApiKey` state fields.
-  - In `_loadConfigs()`: read key + enabled flag, build `_ConfigItem`.
-  - Add to `_hasAnyConfigured` and `_hasAnySelected` guards.
-  - In `_sendToTv()`: add a send block for the provider key.
-  - In the build UI: add provider tile inside the "DEBRID PROVIDERS" section
-    (update the section's `isConfigured` guard too).
-  - Add `case ConfigCommand.<provider>` in `_getIcon()` and `_getIconColor()`.
-- **Edit:** `lib/widgets/remote/remote_transfer_all.dart` (Transfer Everything)
-  - Add `String? _<provider>ApiKey` state field.
-  - In `_loadBundle()`: read key + enabled flag, add a `_TransferItem` when
-    configured (icon + brand color).
-  - Add `case ConfigCommand.<provider>` in `_sendConfigItem()` switch.
-
-## 17. Debrify TV / Magic TV (DONE for Premiumize)
-Wire the provider into `lib/screens/magic_tv_screen.dart` so it can stream via
-both the channel-based auto-play flow and the Quick Play keyword flow.
-
-### Provider constant + availability state
-```dart
-static const String _providerPremiumize = 'premiumize';
-bool _premiumizeAvailable = false;
-```
-
-### `_determineDefaultProvider` (5th param)
-Add `bool premiumizeAvailable` after `pikpakAvailable`. Insert Premiumize in
-preferred-provider check and in the fallback order (after Torbox, before PikPak
-is a reasonable placement).
-
-### `_isProviderSelectable`
-```dart
-if (provider == _providerPremiumize) return _premiumizeAvailable;
-```
-
-### `_loadSettings` + `_syncProviderAvailability`
-Load `getPremiumizeIntegrationEnabled()` + `getPremiumizeApiKey()`, compute
-`premiumizeAvailable = enabled && key.isNotEmpty`, pass as 5th arg to
-`_determineDefaultProvider`, and set `_premiumizeAvailable` in `setState`.
-
-### `_providerDisplay`
-```dart
-if (provider == _providerPremiumize) return 'Premiumize';
-```
-
-### Provider chip in `_providerChoiceChips`
-Mirror the Torbox/PikPak `ChoiceChip` block, guarded by `_premiumizeAvailable`.
-Use `Icons.workspace_premium_rounded` and `Color(0xFFFB923C)` (orange) as the
-brand color.
-
-### `providerReady` switch
-```dart
-_providerPremiumize => _premiumizeAvailable,
-```
-
-### `_watchChannel` dispatch
-```dart
-else if (_provider == _providerPremiumize)
-  await _watchPremiumizeWithCachedTorrents(cachedTorrents, ...);
-```
-
-### Quick-play dispatch
-```dart
-if (_quickProvider == _providerPremiumize) {
-  await _watchWithPremiumize(keywords, _log);
-  return;
-}
-```
-
-### `requestNextChannel` conditions (all occurrences)
-Add `|| _quickProvider == _providerPremiumize` and
-`|| _provider == _providerPremiumize` to both guard expressions.
-
-### No-provider snack message
-Add `!_premiumizeAvailable` to the multi-`&&` guard.
-
-### Reset dialog
-Pass `_premiumizeAvailable` as the 5th arg to `_determineDefaultProvider`.
-
----
-
-### New model classes
-- **`lib/models/debrify_tv/prepared_torrents.dart`**: Add
-  `PremiumizePreparedTorrent` (same shape as `TorboxPreparedTorrent` —
-  `streamUrl`, `title`, `hasMore`).
-- **`lib/models/debrify_tv/cache_results.dart`**: Add `PremiumizePlayableEntry`
-  (`file: PremiumizeFile`, `title`, `info: SeriesInfo`).
-
----
-
-### New methods in `magic_tv_screen.dart`
-
-#### `_fetchPremiumizeCacheWindow`
-```dart
-Future<TorboxCacheWindowResult> _fetchPremiumizeCacheWindow({
-  required List<Torrent> candidates,
-  required int startIndex,
-  required String apiKey,
-})
-```
-- Slices `candidates[startIndex..]` into chunks of 100, up to 2 calls.
-- Calls `PremiumizeService.checkCache(apiKey, chunk.map(t => t.magnetLink))`.
-- Returns positional `List<bool>` — iterate by index: `if (i < cached.length && cached[i]) hits.add(chunk[i])`.
-- Returns `TorboxCacheWindowResult(cachedTorrents: hits, nextCursor: ..., exhausted: ...)`.
-
-#### `_preparePremiumizeTorrent`
-```dart
-Future<PremiumizePreparedTorrent?> _preparePremiumizeTorrent({
-  required Torrent candidate,
-  required String apiKey,
-  required List<String> Function() log,
-})
-```
-- Calls `PremiumizeService.directDownload(apiKey, magnet)` → `List<PremiumizeFile>`.
-- Feeds files to `_buildPremiumizePlayableEntries` for filtering/sorting.
-- Tracks seen files via `_seenLinkWithTorrentId` using `'$infohash|${file.path}'` key.
-- Returns first unseen entry's URL (`file.streamLink ?? file.link`).
-- `hasMore = entries.length > 1`.
-
-#### `_buildPremiumizePlayableEntries`
-```dart
-List<PremiumizePlayableEntry> _buildPremiumizePlayableEntries(
-  List<PremiumizeFile> files,
-  String fallbackTitle,
-)
-```
-- Filters: `_premiumizeFileLooksLikeVideo(file)` + min size (reuse Torbox threshold).
-- Parses series info via `SeriesParser`, sorts episodes, random-shuffles movies.
-
-#### `_premiumizeFileLooksLikeVideo`
-```dart
-bool _premiumizeFileLooksLikeVideo(PremiumizeFile file) =>
-    FileUtils.isVideoFile(file.fileName);
-```
-`PremiumizeFile.fileName` is a computed getter derived from `file.path`.
-
-#### `_watchPremiumizeWithCachedTorrents`
-Full channel-based flow mirroring `_watchTorboxWithCachedTorrents`:
-1. `_fetchPremiumizeCacheWindow` — get cached batch.
-2. For each hit: `_preparePremiumizeTorrent`.
-3. Launch via `_launchPikPakOnAndroidTv(streamUrl, title)` — Premiumize returns
-   plain HTTPS URLs, same as PikPak, so the same launcher works.
-4. On `MagicNext`: advance cursor, fetch next window when exhausted.
-
-#### `_watchWithPremiumize`
-Quick Play keyword flow mirroring `_watchWithTorbox`:
-1. DB lookup + network search for candidates.
-2. `_fetchPremiumizeCacheWindow` to narrow to cached.
-3. `_preparePremiumizeTorrent` → `_launchPikPakOnAndroidTv`.
-4. `MagicNext` retry loop.
-
----
-
-### Key differences vs Torbox
-| | Torbox | Premiumize |
-|---|---|---|
-| Cache check | `checkCachedTorrents` → `Set<String>` of hashes | `checkCache` → `List<bool>` positional |
-| Prepare | createTorrent → poll → requestFileDownloadLink (3 steps) | `directDownload` (1 step) |
-| Launch | `_launchTorboxOnAndroidTv` | `_launchPikPakOnAndroidTv` (HTTPS URLs) |
-| Seen-key | `torrentId|fileId` | `infohash|file.path` |
-
-## 18. Stremio TV debrid provider (DONE for Premiumize)
-
-Wire the provider into `lib/screens/stremio_tv/stremio_tv_screen.dart` so it appears
-in the provider picker and is used for cache filtering and stream resolution.
-
-**Imports** — add `premiumize_service.dart` and `premiumize_file.dart`.
-
-**`_loadAvailableProviders`** — check both `getPremiumizeIntegrationEnabled()` AND
-`getPremiumizeApiKey()`. Only add the entry when both pass (Premiumize has a two-flag
-guard; other providers only check the key or a single enabled flag).
-
-**`_providerShortLabel` / `_providerFullLabel`** — add `'premiumize'` cases (`'PM'` /
-`'Premiumize'`). The menu UI is data-driven off `_availableProviders` so no other UI
-changes are needed.
-
-**Cache pre-filter (two locations)** — one inside `_playChannel`, one inside the
-prefetch/next-channel helper. For Premiumize, `checkCache` returns `List<bool>`
-(positional, not a `Set<String>`), so build `cachedSet` via an index loop:
-```dart
-final cachedResults = await PremiumizeService.checkCache(pmKey, torrentHashes);
-final cachedSet = <String>{};
-for (int i = 0; i < torrentHashes.length; i++) {
-  if (i < cachedResults.length && cachedResults[i]) cachedSet.add(torrentHashes[i]);
-}
-```
-Then filter `playableSources` to keep direct streams + only cached torrents.
-
-**`_playTorrentViaDebrid`** — add `'premiumize'` branch (explicit) and auto-fallback
-(last in chain, after RD → Torbox → PikPak). Update the no-provider snackbar to
-mention Premiumize.
-
-**`_playViaPremiumize`** — single `directDownload` call returns ready URLs; no polling.
-Pick largest file for movies, `candidates.first` for others. Prefer `streamLink ?? link`.
-Pattern matches `_playViaPikPak` (HTTPS URLs, no create/poll steps).
-
-**`_resolveTorrentUrl`** — same `'premiumize'` branch + auto-fallback pattern as above.
-
-**`_resolveViaPremiumize`** — like `_playViaPremiumize` but returns URL only (no
-`VideoPlayerLauncher`). Adds episode matching via `StremioEpisodeSelector.findEpisodeFileIndex`
-on `f.path`; falls back to largest file on miss. This is better than the Torbox equivalent.
-
-### Key differences vs Torbox
-| | Torbox | Premiumize |
-|---|---|---|
-| Cache check response | `Set<String>` of hashes | `List<bool>` positional — use index loop |
-| Stream resolution | createTorrent → 3 s delay → getTorrentById → requestFileDownloadLink | `directDownload` (1 step, returns ready URLs) |
-| URL type | HTTPS download link | `streamLink` (HLS) preferred, `link` fallback |
-| Episode selection in `_resolve*` | `findLargestFileIndex` + `findEpisodeFileIndex` | same, but on `f.path` |
-
-## 19. Add to playlist (DONE for Premiumize)
-Save a torrent to a user playlist (single video or whole collection), then replay
-it later from the playlist UI on **all three playback surfaces**: the in-app Dart
-player, the native Android TV player, and the external player. Premiumize stores
-only the infohash + per-file path and **re-resolves direct links via `directdl`**
-at play time (links expire / spend points eagerly), so nothing stale is persisted.
-
-### Data model — what gets saved
-- **Single:** `{provider:'premiumize', kind:'single', title, torrent_hash:<infohash>,
-  premiumizePath:<file path>, sizeBytes}`.
-- **Collection:** `{provider:'premiumize', kind:'collection', title,
-  torrent_hash:<infohash>, count}`.
-- **Lazy-resolution fields** on `PlaylistEntry`
-  (`lib/screens/video_player/models/playlist_entry.dart`): add
-  `premiumizeHash` (infohash) + `premiumizePath` (matched on re-resolve). These
-  must be carried through **every** entry-reconstruction path or playback silently
-  loses the ability to refresh expired links.
-
-### Re-resolution helper
-- **`lib/services/premiumize_service.dart`** — `resolveFilesByHash(apiKey, infohash)`
-  builds `magnet:?xt=urn:btih:$infohash` → `directDownload` → `List<PremiumizeFile>`.
-  Match the saved file by **exact `file.path` string equality** (single play has a
-  `firstWhere(... orElse: first)` fallback; collections fill all URLs eagerly from
-  the one call).
-
-### Save from torrent search (`torrent_search_screen.dart`)
-- `_postTorrentActionOptionsForProvider` includes `'playlist'` (step 14).
-- `_showPremiumizePostAddOptions`: add a `case 'playlist':` auto-action **and** an
-  "Add to playlist" `_DebridActionTile` (`Icons.playlist_add_rounded`,
-  `0xFF818CF8`) → `_addPremiumizeToPlaylist(files, torrentName, infohash:...)`.
-- `_addPremiumizeToPlaylist`: single (filter via `_premiumizeFileLooksLikeVideo` →
-  store `premiumizePath`) vs collection (store `count`); both attach
-  imdb/contentType/poster from `_activeAdvancedSelection`.
-
-### Storage (`storage_service.dart`)
-- `computePlaylistDedupeKey` already keys Premiumize off `torrent_hash`
-  (`premiumize|hash:<hash>`) — **no change needed**.
-- `updatePlaylistItemImdbId` / `updatePlaylistItemPoster`: add a `premiumizeHash`
-  param; match on `provider == 'premiumize'` AND case-insensitive `torrent_hash`.
-- `addPlaylistItemRaw` stores Premiumize items cleanly (no RD hash-fetch — there's
-  no `rdTorrentId`).
-
-### Playback dispatch — wire ALL THREE surfaces
-1. **In-app Dart player** — `lib/screens/video_player_screen.dart`
-   `_resolvePlaylistEntryUrl`: add a Premiumize branch (before the
-   `restrictedLink` branch) → `resolveFilesByHash` → match `f.path == path` →
-   return `match.link`.
-2. **Native Android TV / external player** — `lib/services/video_player_launcher.dart`
-   - `_resolveEntryUrl`: same Premiumize branch (guard
-     `hash != null && hash.isNotEmpty && path != null && path.isNotEmpty`).
-   - `_prepareEntries` reconstruction: carry
-     `premiumizeHash: entry.premiumizeHash, premiumizePath: entry.premiumizePath`
-     (⚠️ easy to miss — drops re-resolution on TV/external).
-3. **Playlist launch service** — `lib/services/playlist_player_service.dart`
-   - `play()`: route `if (provider == 'premiumize') { await _playPremiumizeItem(...); return; }`.
-   - `_playPremiumizeItem`: single (match `premiumizePath`, fallback
-     `videoFiles.first`) + collection (series-aware sort, eager-fill all URLs from
-     one `resolveFilesByHash`, set `premiumizeHash`/`premiumizePath` on every
-     entry). Reuses `_findFirstEpisodeIndex`, `_formatPikPakPlaylistTitle`,
-     `_composePikPakEntryTitle`. Add `_PremiumizePlaylistCandidate` helper.
-
-### Playlist content browsing (`playlist_content_view_screen.dart`)
-- `_loadContent`: add `else if (provider == 'premiumize') _loadPremiumizeContent()`.
-- `_loadPremiumizeContent` + `_buildPremiumizeFileTree`: flat `RDFileNode` tree —
-  `name=fileName`, `path=file.path`, **`relativePath` = path with the first
-  (torrent) folder stripped**, `bytes=size`.
-- `_playFile` / `_playEpisode`: add `else if (provider == 'premiumize')
-  _playPremiumizePlaylist(...)` → re-resolve, build a `linkByPath` map, build
-  entries with `url` + `premiumizeHash` + `premiumizePath`.
-- `_saveImdbIdToPlaylist` / `_updatePlaylistPoster`: pass `premiumizeHash` (the
-  saved `torrent_hash`) to the storage updaters.
-
-### Sorting — no Premiumize-specific branch
-`_applySortedPlaylistOrder` groups folders off `node.relativePath ?? node.path`.
-Because `_buildPremiumizeFileTree` **pre-strips** the torrent folder into
-`relativePath`, the default branch is correct. Do **NOT** copy Torbox's runtime
-first-folder-skip (Torbox needs it only because it doesn't pre-strip).
-
-### Resume keys — RD-tier (filename-hash), by design
-Premiumize has **no** resume-key branch in `video_player_screen._resumeIdForEntry`,
-`video_player_launcher.resumeIdForEntry`, or
-`movie_collection_browser._resumeIdForEntry` — it falls to the shared
-`nameWithoutExt.hashCode` filename-hash, **identical to Real-Debrid**. Only Torbox
-(and PikPak in some paths) use ID-based keys because their file IDs are a stable
-identity Premiumize lacks. Adding ID-based keys here would *diverge* from RD and
-risk inconsistency with the search-playback path — leave it as filename-hash.
-
-### Series enrichment (`lib/widgets/series_browser.dart`)
-imdb update + `_updatePlaylistPoster`: add the `isPremiumize` flag + `premiumizeHash`
-and pass them to the storage updaters (mirror the PikPak/RD calls).
-
-### Provider badges (UI)
-- `home_playlist_section.dart` / `home_favorites_section.dart` `_providerInfo`:
-  `case 'premiumize': return ('PM', Color(0xFFFB923C), 'Premiumize');`.
-- `playlist_grid_card.dart` / `playlist_landscape_card.dart` badge fn:
-  `case 'premiumize': return 'PM';`.
-
-### Key differences vs Real-Debrid
-| | Real-Debrid | Premiumize |
-|---|---|---|
-| Saved link | restrictedLink (lazy unrestrict) | infohash + path (lazy `directdl`) |
-| Re-resolve | `unrestrictLink` per file | `resolveFilesByHash` (1 call, all files) |
-| Match key | restrictedLink string | `file.path` exact equality |
-| Resume key | filename-hash | filename-hash (same) |
-| Dedupe key | `torrent_hash` | `torrent_hash` (same) |
-
-## 20. Navigation tab — cloud library browser (DONE for Premiumize)
-A full-screen tab to browse the provider's cloud and act on items, mirroring the
-Torbox/PikPak pages. Premiumize's cloud is a **server-side folder hierarchy**
-(like PikPak/WebDAV), so the browser navigates folders by id rather than building
-a virtual tree. The closest template is
-`lib/screens/pikpak/pikpak_files_screen.dart`.
-
-### Cloud API (`lib/services/premiumize_service.dart`)
-Added: `listFolder(apiKey, {folderId})` (GET `/folder/list`, omit `id` for root),
-`listFolderRecursive` (depth-guarded, stamps `relativePath`), `resolveItemById`
-(GET `/item/details` → fresh `PremiumizeFile` for playlist re-resolution),
-`deleteFolder`/`deleteItem` (POST `/folder/delete` · `/item/delete`),
-`listTransfers` (GET `/transfer/list`), `deleteTransfer` (POST `/transfer/delete`),
-`clearFinishedTransfers` (POST `/transfer/clearfinished`),
-`generateFolderZip`/`generateItemZip`; and `createTransfer` gained an optional
-`folderId` (so "Add link" lands in the current folder).
-
-### Models
-- **`lib/models/premiumize_folder_item.dart`** — `PremiumizeFolderItem`
-  (id, name, type folder/file, size, `link`, `streamLink`, mimeType, createdAt,
-  `relativePath`; `isVideo`, `playableUrl` link-first) + `PremiumizeFolderListing`.
-  Note: `/folder/list` already returns `link`/`stream_link` for files, so play
-  and download need **no** extra resolve call.
-- **`lib/models/premiumize_transfer.dart`** — `PremiumizeTransfer`
-  (id, name, status, progress 0–1, message, folderId/fileId; `isFinished`,
-  `isError`, `isRunning`, `progressPercent`).
-
-### Screen (`lib/screens/premiumize/premiumize_files_screen.dart`)
-Two views (a root toggle): **My Files** (folder browser) + **Transfers**
-(queued/running/finished, with per-transfer delete + "Clear finished").
-Per-item actions match PikPak: Open (folder), Play (file/folder, series-aware),
-Download (file direct / folder via `FileSelectionDialog`), Add to Playlist
-(file/folder), Delete; plus multi-select bulk delete, in-folder Search, Raw /
-Sort(A-Z) view modes, "Add to Premiumize" (magnet/link), pull-to-refresh, and
-full TV/D-pad focus (`TvFocusScrollWrapper`, `registerTvContentFocusHandler(11)`).
-
-### Add-to-Playlist needs cloud item ids (no infohash!)
-Cloud items have no torrent hash, so they're saved/resolved by **cloud item id**
-(`premiumizeItemId`), mirroring PikPak's `pikpakFileId` — a path **parallel** to
-the search-added hash+path path, not a replacement.
-- `PlaylistEntry.premiumizeItemId` added; carried through `_prepareEntries`.
-- Both player resolvers (`video_player_screen._resolvePlaylistEntryUrl`,
-  `video_player_launcher._resolveEntryUrl`) gained an item-id branch **before**
-  the hash branch (`resolveItemById` → fresh link).
-- `playlist_player_service`: `_playPremiumizeItem` routes to a new
-  `_playPremiumizeCloudItem` when there's no hash but cloud ids exist
-  (single via `premiumizeFile`, collection via `premiumizeFiles`/`premiumizeItemIds`).
-- `playlist_content_view_screen`: `_loadPremiumizeContent` builds the tree from
-  stored file metadata (item id in `RDFileNode.path`); `_playPremiumizePlaylist`
-  has a cloud branch resolving the start item via `resolveItemById`.
-- `storage_service.computePlaylistDedupeKey`: `premiumize:item:<id>` /
-  `premiumize:items:<joined>` cases; `updatePlaylistItemImdbId`/`Poster` gained a
-  `premiumizeItemId` match (content-view + series_browser pass it).
-- Saved shapes — single: `{provider, kind:'single', premiumizeItemId,
-  premiumizeFile:{id,name,size}}`; collection: `{provider, kind:'collection',
-  premiumizeItemId:<folderId>, premiumizeFiles:[{id,name,size}],
-  premiumizeItemIds:[…], count}`.
-
-### Hide-from-nav + main wiring
-- Storage: `premiumize_hidden_from_nav` key + `get/set/clearPremiumizeHiddenFromNav`.
-- Settings page: a "Hide from Navigation" `SwitchListTile` (confirm-to-hide,
-  logout-to-unhide); `_deleteKey` clears the flag.
-- `main.dart`: `_pages`/`_titles`/`_icons` index **11**
-  (`Icons.workspace_premium_rounded`); `_premiumizeEnabled` +
-  `_premiumizeHiddenFromNav` state; loaded in `_loadIntegrationState`; threaded
-  through `_applyIntegrationState` + `_computeVisibleNavIndices` (both TV and
-  non-TV branches, and the no-provider early-return); `_navSectionForIndex`
-  case 11 → 'Library'; `_onItemTapped` tab-key `case 11 → 'premiumize'` (⚠️
-  required or the global/TV back button is dead on the tab); switchTab
-  hidden-vs-missing snackbar branch for index 11.
-
-### Key differences vs PikPak
-| | PikPak | Premiumize |
-|---|---|---|
-| Play/download URL | `getFileDetails` per file (links expire fast) | `link`/`stream_link` already in `folder/list` (no extra call) |
-| Playlist re-resolve | `pikpakFileId` → `getFileDetails` | `premiumizeItemId` → `item/details` |
-| Pagination | page tokens | none (`folder/list` returns all) |
-| Second view | — | **Transfers** (`/transfer/list`) |
-
----
-
-## 21. Onboarding setup flow (DONE for Premiumize)
-
-Add the provider as a selectable chip on the welcome screen of
-`lib/widgets/initial_setup_flow.dart`.
-
-- **Enum:** add `premiumize` to `_IntegrationType`.
-- **Meta:** add an `_IntegrationMeta` entry in `_integrationMeta` with
-  `title`, `url` (API-key page), `linkLabel`, `steps`, `inputLabel`, `hint`,
-  `gradient` (brand colours), `icon`.
-- **Controller:** `_premiumizeController = TextEditingController()` — dispose
-  it in `dispose()`.
-- **Focus node:** `_premiumizeChipFocusNode` — add to `_addFocusListeners()`
-  list and dispose in `dispose()`.
-- **Welcome chip:** extend the focus-node and traversal-order ternary chains
-  in `_buildWelcomeStep`. Bump the Skip/Continue button traversal orders if
-  needed (with 4 chips: Skip=5, Continue=6).
-- **`_buildIntegrationStep` controller lookup:** add a `premiumize` branch
-  before the PikPak fallback; Premiumize is API-key (not email/password), so
-  it must resolve to `_premiumizeController` and take the non-PikPak path.
-- **`_startIntegrationFlow`:** add `premiumize` to the `ordered` list.
-- **`_submitCurrent`:** route `premiumize` to
-  `PremiumizeAccountService.validateAndGetUserInfo(value)` (key is saved
-  automatically; `getPremiumizeIntegrationEnabled` defaults to `true` so no
-  separate enable call is required). Add `premiumize` to the `nonav:` prefix
-  block → `StorageService.setPremiumizeHiddenFromNav(true)`. Update analytics
-  ternary to emit `'premiumize'`.
-- **`_requestFocusForCurrentStep`:** Premiumize falls through to the shared
-  `_textFieldFocusNode` (same as RD/Torbox).
-- **D-pad:** fully compatible — Premiumize reuses `_TvFriendlyTextField` with
-  `_textFieldFocusNode`, which already handles arrow-key escape and hardware
-  back.
-
----
-
-## 22. Deeplink / share intent handler (DONE for Premiumize)
-
-Wire the provider into `lib/services/deep_link_service.dart` and
-`lib/services/magnet_link_handler.dart` so incoming magnet links and
-shared HTTP URLs can be sent to the provider.
-
-**`deep_link_service.dart` — `ConfiguredServices`:**
-- `getConfiguredServices()`: read `getPremiumizeApiKey()` +
-  `getPremiumizeIntegrationEnabled()`; compute `hasPremiumize`.
-- `ConfiguredServices`: add `hasPremiumize` field (default `false` for
-  backward compat); update `hasAny`, `hasMultiple`, all `hasOnlyXxx`
-  getters to include it; add `hasOnlyPremiumize`.
-
-**`magnet_link_handler.dart`:**
-- Import `premiumize_service.dart`.
-- Add `onPremiumizeAdded: Function()?` callback to class + constructor.
-- `handleMagnetLink` / `handleSharedUrl`: update the "no service" error
-  string; add `else if (services.hasOnlyPremiumize)` auto-select branch.
-- Both selection dialogs (magnet + URL): add a Premiumize
-  `TextButton.icon` guarded by `if (services.hasPremiumize)`, using
-  `Icons.workspace_premium_rounded`.
-- Add `_addToPremiumize(magnetUri, torrentName)`: get API key, show
-  loading dialog, call `PremiumizeService.createTransfer(apiKey, magnetUri)`,
-  pop dialog, show success snackbar, call `onPremiumizeAdded?.call()`.
-- Add `_addUrlToPremiumize(url, displayName)`: identical pattern —
-  `createTransfer` accepts both magnets and HTTP URLs via the same `src`
-  param so no separate unrestrict call is needed.
-
-**`main.dart`:**
-- Both `MagnetLinkHandler` instantiations (magnet handler + URL handler):
-  add `onPremiumizeAdded: () => MainPageBridge.switchTab?.call(11)` to
-  navigate to the Premiumize cloud library tab after a successful add.
+## 9–14. Search, cache badges, Quick Play, bound sources, bulk add, post-torrent
+
+Live search/play paths:
+
+- Play/add/bind: `lib/services/torrent_playback_service.dart` → registry
+  (`addMagnet`, `resolveNativeBound`, `queueUncachedMagnet`, …).
+- Home/Search UI: `lib/screens/search_screen.dart` (+ `lib/screens/search/`
+  parts).
+- Cache badges: Home/Sources still call registry cache methods with their
+  own key-null gates (`CloudPortFeature.cachedHashes` vs `checkCache`).
+- Bulk add: `lib/services/torrent_bulk_add_service.dart` (**P2c**, still
+  string-matches).
+- Post-torrent action prefs: still per-provider keys on `StorageService`;
+  helpers live with the search/settings UI.
+
+Implement provider-specific HTTP in `lib/services/<provider>_service.dart`,
+then expose it on the adapter. Loading overlay:
+`DebridLoadingOverlay.showForPlaybackId`. Bind-source chip colours:
+`CloudProviderChrome.sourceChip` (do not reuse playback `gradient`).
+
+## 15–16. Backup / remote
+
+Follow the **11-site checklist** above. Do not skip export/transfer-all tiles
+or onboarding `_configLabel`. Receiver handlers still live as
+`_handle<Provider>Config` on `lib/services/remote_control/remote_command_router.dart`
+until T1 derives them from the registry. Validate keys on the wire (unlike
+file restore).
+
+## 17. Debrify TV / Magic TV
+
+`prepareMagicTv` / `prepareMagicTvLockedLinks` on the adapter cover the
+registry-owned prepare path. The screen
+(`lib/screens/magic_tv_screen.dart`) still string-matches for chips,
+availability, and `_watch*` dispatch (**P2a**). Overlay strings:
+`lib/services/cloud/magic_tv_provider.dart`.
+
+## 18. Stremio TV
+
+Picker rows: `CloudCredentials.stremioPickerChoices`. Resolve:
+`CloudProviderRegistry.resolveStremioTorrent`. Cache filter:
+`StremioTvCacheFilter` / `StremioTvTorboxCache`. The screen
+(`lib/screens/stremio_tv/stremio_tv_screen.dart`) and
+`lib/screens/settings/stremio_tv_settings_page.dart` still string-match
+(**P2b**). Settings picker is RD/TB/PikPak only today.
+
+## 19. Playlists
+
+`CloudPlaylistPayload` + `resolvePlaylistEntry` / `unlockPlaybackEntry` /
+`unlockPlayerScreenEntry`. Remaining provider branches:
+`lib/screens/playlist_content_view_screen.dart`,
+`lib/services/playlist_player_service.dart`, player/launcher reconstruct
+paths (**P2d**). Carry every lazy-resolution field through `_prepareEntries`
+or TV/external replay silently drops refresh.
+
+## 20. Cloud library tab
+
+Per-provider files screens still exist (G4 will unify them):
+
+- `lib/screens/debrid_downloads_screen.dart`
+- `lib/screens/torbox/torbox_downloads_screen.dart`
+- `lib/screens/pikpak/pikpak_files_screen.dart`
+- `lib/screens/premiumize/premiumize_files_screen.dart`
+- `lib/screens/alldebrid/alldebrid_files_screen.dart`
+
+`MainTab` **indices** are a frozen compatibility surface. Hide-from-nav flags
+stay on `StorageService`. `lib/main.dart` still lists sidebar labels.
+
+## 21. Onboarding
+
+`lib/widgets/initial_setup_flow.dart` re-exports
+`lib/widgets/onboarding/onboarding_flow.dart`. Add the chip / controller /
+validate path there. `_configLabel` is one of the T1 consumers.
+
+## 22. Deeplink / share intent
+
+`lib/services/deep_link_service.dart` (`ConfiguredServices`) and
+`lib/services/magnet_link_handler.dart`. Magnet “configured” is
+`CloudCredentials.isMagnetConfigured`, not playback `isConfigured`.
 
 ---
 
 ### Quick verify
+
 ```
-flutter analyze lib/screens/settings_screen.dart \
+flutter analyze lib/services/cloud/<id>_cloud_provider.dart \
+  lib/services/cloud/cloud_provider_registry.dart \
+  lib/services/cloud/cloud_provider_id.dart \
+  lib/services/cloud/cloud_credentials.dart \
   lib/screens/settings/<provider>_settings_page.dart \
   lib/services/<provider>_service.dart \
   lib/services/<provider>_account_service.dart \
-  lib/services/storage_service.dart \
   lib/models/<provider>_user.dart \
   lib/widgets/<provider>_account_status_widget.dart
 ```
 
----
-
-## 23. Parity gap fixes (DONE for Premiumize)
-
-After the core integration is complete, audit every surface where other providers appear and ensure the new provider is wired in consistently.
-
-### Reset Debrify (`lib/screens/settings_screen.dart`)
-
-`_resetAppData()` deletes provider credentials when the user taps **Settings → Reset Debrify**. Add the new provider's API key deletion alongside the others:
-```dart
-await StorageService.deleteNewProviderApiKey();
-```
-
-### Storage resets (`lib/services/storage_service.dart`)
-
-`clearAllIntegrationStates()` removes all provider keys on factory-reset. Add:
-```dart
-await prefs.remove(_premiumizeIntegrationEnabledKey);
-await prefs.remove(_premiumizeHiddenFromNavKey);
-```
-
-`clearAllPostTorrentActions()` removes all post-action preferences. Add:
-```dart
-await prefs.remove(_premiumizePostTorrentActionKey);
-```
-
-### "Open in Provider" bridge (`lib/services/main_page_bridge.dart`)
-
-Every provider with a dedicated tab gets a `static void Function()?` callback so `torrent_search_screen.dart` can navigate to it after adding a torrent:
-```dart
-static void Function()? openPremiumizeFolder;
-```
-
-Premiumize takes no arguments (unlike `openTorboxFolder(TorboxTorrent)`) because transfers take time to appear so there is no specific item to highlight.
-
-### Wiring the bridge callback (`lib/main.dart`)
-
-In `initState` (alongside the other `MainPageBridge.openXxxFolder` assignments):
-```dart
-MainPageBridge.openPremiumizeFolder = () {
-  if (!mounted) return;
-  if (!_premiumizeEnabled) {
-    _showMissingApiKeySnack('Premiumize');
-    return;
-  }
-  Navigator.of(context).push(MaterialPageRoute(
-    builder: (ctx) => PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) {
-        if (didPop) return;
-        if (!MainPageBridge.handleBackNavigation()) Navigator.of(ctx).pop();
-      },
-      child: const PremiumizeFilesScreen(isPushedRoute: true),
-    ),
-  ));
-};
-```
-
-In `dispose()`:
-```dart
-MainPageBridge.openPremiumizeFolder = null;
-```
-
-### Post-torrent action — search screen (`lib/screens/torrent_search_screen.dart`)
-
-In `_postTorrentActionOptionsForProvider('premiumize')`, add `'open'` to the options list:
-```dart
-return const ['none', 'choose', 'open', 'play', 'download', 'playlist', 'channel'];
-```
-
-In `_showPremiumizePostAddOptions`, add the `'open'` case:
-```dart
-case 'open':
-  MainPageBridge.openPremiumizeFolder?.call();
-  return;
-```
-
-### Post-torrent action — settings page (`lib/screens/settings/premiumize_settings_page.dart`)
-
-Add a `RadioListTile` for `'open'` between `'choose'` and `'play'`:
-```dart
-RadioListTile<String>(
-  title: const Text('Open in Premiumize'),
-  subtitle: const Text('Navigate to your Premiumize cloud library'),
-  value: 'open',
-  groupValue: _postTorrentAction,
-  onChanged: (v) => v == null ? null : _savePostAction(v),
-  contentPadding: EdgeInsets.zero,
-),
-```
-
-### UI text — provider lists
-
-Any hardcoded provider list in UI strings must include the new provider:
-
-- **`lib/main.dart`** snackbar: `'Connect Real Debrid, Torbox, Premiumize, PikPak, or WebDAV in Settings to unlock more tabs.'`
-- **`lib/widgets/provider_status_cards.dart`** empty-state text: `'Add Real-Debrid, Torbox, Premiumize, or PikPak in Settings'`
-
-### Deferred gaps
-
-Two gaps identified during the Premiumize audit that require model changes before they can be implemented:
-
-1. **`AddSourcePickerDialog`** — `SeriesSource` uses `torrentHash`; Premiumize cloud items have no infohash. Requires a `premiumizeItemId` field on `SeriesSource`.
-2. **"Add to Debrify TV" in `PremiumizeFilesScreen`** — `DebrifyTvChannelAddService` requires an infohash which `PremiumizeFolderItem` doesn't carry.
+Do not rename prefs keys, backup payload keys, `ConfigCommand` strings,
+`MainTab` indices, or Home row id grammar.
