@@ -334,4 +334,7 @@ class PremiumizeCloudProvider extends CloudProviderAdapter {
     }
     return PremiumizeService.createTransferAndGenerateZip(apiKey, magnet);
   }
+
+  @override
+  Future<void> queueUncachedMagnet(String magnet) => createCloudTransfer(magnet);
 }

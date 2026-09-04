@@ -49,7 +49,6 @@ import 'local_bound_source_service.dart';
 import 'local_playback_resume_resolver.dart';
 import 'pikpak_api_service.dart';
 import 'play_loader_style.dart';
-import 'premiumize_service.dart';
 import 'profiles/profile_policy_guard.dart';
 import 'series_source_fetcher.dart';
 import 'source_priority.dart';
@@ -58,7 +57,6 @@ import 'series_source_service.dart';
 import 'storage_service.dart';
 import 'stream_url_validator.dart';
 import 'startup_stream_policy.dart';
-import 'torbox_service.dart';
 import 'torrent_file_service.dart';
 import 'torrent_service.dart';
 import 'video_player_launcher.dart';
@@ -5143,21 +5141,12 @@ class TorrentPlaybackService {
       return;
     }
     // "Add anyway": queue the download on the provider.
-    if (provider == 'torbox') {
-      final apiKey = (await StorageService.getTorboxApiKey()) ?? '';
-      try {
-        await TorboxService.createTorrent(
-          apiKey: apiKey,
-          magnet: magnet,
-          addOnlyIfCached: false,
-        );
-      } catch (_) {}
-    } else if (provider == 'premiumize') {
-      final apiKey = (await StorageService.getPremiumizeApiKey()) ?? '';
-      try {
-        await PremiumizeService.createTransfer(apiKey, magnet);
-      } catch (_) {}
-    }
+    try {
+      await CloudProviderRegistry.instance.queueUncachedMagnet(
+        provider,
+        magnet,
+      );
+    } catch (_) {}
     // RD/AllDebrid already added the torrent while resolving; nothing more.
     if (context.mounted) {
       _snack(

@@ -510,6 +510,19 @@ class TorboxCloudProvider extends CloudProviderAdapter {
     return TorboxService.createZipPermalink(apiKey, torrentId);
   }
 
+  @override
+  Future<void> queueUncachedMagnet(String magnet) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const CloudMissingApiKey('Missing TorBox API key');
+    }
+    await TorboxService.createTorrent(
+      apiKey: apiKey,
+      magnet: magnet,
+      addOnlyIfCached: false,
+    );
+  }
+
   static int? _asIntMapValue(dynamic data, String key) {
     if (data is Map<String, dynamic>) {
       final value = data[key];

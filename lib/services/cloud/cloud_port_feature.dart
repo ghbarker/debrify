@@ -13,7 +13,8 @@ enum CloudPortFeature {
   checkCache,
   zipPermalink,
   cloudTransfer,
-  transferZip;
+  transferZip,
+  queueUncached;
 
   static Set<CloudPortFeature> forProvider(CloudProviderId id) => switch (id) {
     CloudProviderId.debrid => {
@@ -25,12 +26,14 @@ enum CloudPortFeature {
       magicTvPrepare,
       cachedHashes,
       zipPermalink,
+      queueUncached,
     },
     CloudProviderId.premiumize => {
       magicTvPrepare,
       checkCache,
       cloudTransfer,
       transferZip,
+      queueUncached,
     },
     CloudProviderId.alldebrid => {playlistEntry, magicTvLockedLinks},
     CloudProviderId.pikpak => {magicTvPrepare},

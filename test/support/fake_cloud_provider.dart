@@ -182,4 +182,16 @@ class FakeCloudProvider implements CloudProviderPort {
     if (transferZipUrl != null) return transferZipUrl!;
     throw CloudUnsupported(id, CloudPortFeature.transferZip);
   }
+
+  int queueUncachedCount = 0;
+
+  @override
+  Future<void> queueUncachedMagnet(String magnet) async {
+    queueUncachedCount++;
+    lastTransferMagnet = magnet;
+    if (error != null) throw error!;
+    if (!supports(CloudPortFeature.queueUncached)) {
+      throw CloudUnsupported(id, CloudPortFeature.queueUncached);
+    }
+  }
 }
