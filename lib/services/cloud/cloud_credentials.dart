@@ -58,6 +58,48 @@ class CloudCredentials {
     }
   }
 
+  /// Stremio TV *picker* on the Stremio TV screen. Not [isPlaybackConfigured]
+  /// (PM/AD skip the integration toggle there) and not [isMagnetConfigured]
+  /// (RD/TB require the integration toggle there). PikPak is enabled-only.
+  /// Settings (`stremio_tv_settings_page`) is a different list: no PM/AD.
+  static Future<bool> isStremioAvailable(CloudProviderId id) async {
+    switch (id) {
+      case CloudProviderId.debrid:
+      case CloudProviderId.torbox:
+        final key = await apiKey(id);
+        return key != null && key.isNotEmpty;
+      case CloudProviderId.pikpak:
+        return StorageService.getPikPakEnabled();
+      case CloudProviderId.premiumize:
+        final key = await StorageService.getPremiumizeApiKey();
+        final enabled = await StorageService.getPremiumizeIntegrationEnabled();
+        return enabled && key != null && key.isNotEmpty;
+      case CloudProviderId.alldebrid:
+        final key = await StorageService.getAllDebridApiKey();
+        final enabled = await StorageService.getAllDebridIntegrationEnabled();
+        return enabled && key != null && key.isNotEmpty;
+    }
+  }
+
+  /// Picker rows for the Stremio TV screen. Order is RD → TB → PikPak → PM → AD
+  /// (PikPak before Premiumize — not [CloudProviderId.playbackPrecedence]).
+  /// Labels are [CloudProviderId.catalogChoice] (`realdebrid` / `Real-Debrid`),
+  /// not Magic TV `Real Debrid`.
+  static Future<List<MapEntry<String, String>>> stremioPickerChoices() async {
+    const order = [
+      CloudProviderId.debrid,
+      CloudProviderId.torbox,
+      CloudProviderId.pikpak,
+      CloudProviderId.premiumize,
+      CloudProviderId.alldebrid,
+    ];
+    final out = <MapEntry<String, String>>[];
+    for (final id in order) {
+      if (await isStremioAvailable(id)) out.add(id.catalogChoice);
+    }
+    return out;
+  }
+
   /// Secrets included in a credentialed backup (same JSON keys as today).
   static Future<Map<String, dynamic>> backupSecrets() async {
     final out = <String, dynamic>{};

@@ -23,7 +23,10 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   unlock, in-app player unlock, and Stremio TV torrent resolve go through
   `services/cloud/` (`CloudProviderPort` + `CloudProviderRegistry`).
   Stremio TV uses `resolveStremioTorrent` (`realdebrid` + auto order with
-  PikPak before Premiumize; null on miss). Debrify TV file prepare is
+  PikPak before Premiumize; null on miss). Stremio TV *picker* rows are
+  `CloudCredentials.stremioPickerChoices` (RD/TB key-only, PikPak
+  enabled-only, PM/AD toggle+key — not `isConfigured()`). Settings page
+  still lists RD/TB/PikPak only. Debrify TV file prepare is
   `prepareMagicTv` (`real_debrid`; infohash-only magnet; random unseen file;
   RD/AllDebrid `supports(magicTvPrepare)` is false). Locked-link queues are
   `prepareMagicTvLockedLinks` (still-locked URLs; RD re-queues the torrent,
@@ -74,12 +77,12 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   (`CloudMetadataMissing` / `CloudMissingApiKey` rethrow; other errors
   become `$brand link failed`) — not substring matching.
 
-  **Still on string switches** (not this extract): Stremio TV *availability*
-  gates (`stremio_tv_screen` `_loadAvailableProviders`: RD/TB key-only,
-  PikPak enabled-only, PM/AD toggle+key — not `isConfigured()`), Debrify TV
-  RD/AllDebrid `downloadLink` PreferVideos on `magic_tv_screen`, launcher
-  Real-Debrid spellings, bulk-add, `storage_service` provider toggles,
-  magnet deep-link `isMagnetConfigured` vs playback `isConfigured`.
+  **Still on string switches** (not this extract): Stremio TV settings
+  picker (RD/TB/PikPak only, `has*Credential`), resolve `canAttempt` on
+  `stremio_tv_screen`, Debrify TV RD/AllDebrid `downloadLink` PreferVideos
+  on `magic_tv_screen`, launcher Real-Debrid spellings, bulk-add,
+  `storage_service` provider toggles, magnet deep-link
+  `isMagnetConfigured` vs playback `isConfigured`.
   Playback still exposes one-line delegates onto the registry so god-file
   call sites do not change.
 - File-tree browse (per provider, post-add): `debrid_service.getTorrentFolderTree`,
@@ -117,6 +120,8 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 - `screens/stremio_tv/stremio_tv_screen.dart`, `stremio_tv/widgets/stremio_tv_tuner.dart` (dial,
   left/right surf), `screens/video_player/widgets/stremio_tv_guide_sheet.dart` (in-player channel list
   — `isCurrent` vs `isFocused` styling), `screens/stremio_tv/stremio_tv_filter_page.dart`.
+  Picker availability: `CloudCredentials.stremioPickerChoices` / `isStremioAvailable`.
+  Resolve `canAttempt` (blocked RD, auto TorBox cache, PM/AD toggle-only) stays on the screen.
 
 ## Trackers & continue-watching
 - Trakt: `services/trakt/*` (service, continue_watching, list_source, transformer, calendar).
