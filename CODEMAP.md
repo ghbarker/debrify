@@ -16,7 +16,7 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 | `lib/screens/search/` parts (4 files) | 8 321 |
 | `lib/screens/video_player_screen.dart` | 16 278 |
 | `lib/screens/magic_tv_screen.dart` | 10 716 |
-| `lib/services/storage_service.dart` | 9 963 |
+| `lib/services/storage_service.dart` | 9 634 |
 | `lib/screens/settings_screen.dart` | 3 107 |
 | `lib/screens/torbox/torbox_downloads_screen.dart` | 7 069 |
 | `lib/screens/debrid_downloads_screen.dart` | 6 444 |
@@ -35,7 +35,7 @@ Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.
 
 🔴 huge: `lib/screens/search_screen.dart` (19 070) · `lib/screens/video_player_screen.dart`
 (16 278) · `lib/screens/magic_tv_screen.dart` (10 716) · `lib/services/storage_service.dart`
-(9 963) · `lib/screens/settings_screen.dart` (3 107) ·
+(9 634) · `lib/screens/settings_screen.dart` (3 107) ·
 `lib/screens/torbox/torbox_downloads_screen.dart` (7 069) ·
 `lib/screens/debrid_downloads_screen.dart` (6 444) ·
 `lib/services/video_player_launcher.dart` (5 769) ·
