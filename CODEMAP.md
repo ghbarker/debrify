@@ -82,8 +82,13 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
 ## Cross-cutting hubs (touched by many features)
 - **`lib/screens/search_screen.dart`** 🔴 — the Home/Discover board: continue-watching rows, catalog rows,
   favourites rows, the D-pad `_BoardCell` focus grid, poster sizing (`_railPosterW`), bind-sources entry.
-- **`lib/services/storage_service.dart`** 🔴 — all SharedPreferences/persisted state (settings, continue
-  watching (cap 50), playback state, favourites, provider toggles, home disabled-sections).
+- **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
+  state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
+  home disabled-sections). **G3 slice 1:** Home page defaults (`getHomeDefaultSourceType` …
+  `clearAllHomePageSettings`) and `HomeCardOrientation` live in
+  `lib/services/storage/home_prefs.dart` (`HomePrefs`); StorageService forwards and re-exports
+  the enum. Key ownership pin: `lib/services/storage/storage_key_ownership.dart`.
+  Remaining domains stay on StorageService until a later G3 slice.
 - **`lib/services/torrent_playback_service.dart`** 🔴 — provider-agnostic play/add/bind pipeline.
   Magnet add, hashless bound replay, download-picker lazy URLs, launcher/TV
   unlock, in-app player unlock, and Stremio TV torrent resolve go through
@@ -278,6 +283,10 @@ is an editor mirror, not the source of truth. How to add a provider:
   `lib/screens/settings/backup_restore_page.dart` = Data & Backup create/restore UI,
   `lib/screens/settings/profiles_settings_page.dart` `ProfileSettingsRailActions` = Profiles card switch/add/edit). Metrics/format helpers: `lib/utils/`.
   Adding a settings page still touches ~6 sites until **S1**.
+- Storage split (**G3**, first slice): `lib/services/storage/home_prefs.dart` (`HomePrefs`,
+  `HomeCardOrientation`) owns Home page-default keys; `lib/services/storage/cloud_secret_prefs.dart`
+  owns credential keys; `lib/services/storage/storage_key_ownership.dart` asserts each declared
+  prefs name has exactly one owner. Callers still import `StorageService`.
 - Collections (imported Nuvio/Xperience-style folder groups → Home rows of folder tiles):
   `lib/models/home_collection.dart` (schema + parser + `collection:<id>` row ids),
   `lib/services/home_collections_store.dart` (`home_collections_v1`, file/URL/paste import, addon

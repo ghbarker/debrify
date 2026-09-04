@@ -11,6 +11,9 @@ enum StorageKeyStore {
 
   /// [CloudSecretPrefs] credential keys.
   cloudSecretPrefs,
+
+  /// Home page defaults ([HomePrefs]).
+  homePrefs,
 }
 
 class StorageKeyOwnership {
@@ -68,19 +71,19 @@ class StorageKeyOwnership {
     'debrify_tv_filter_qualities': StorageKeyStore.storageService,
     'debrify_tv_filter_sizes': StorageKeyStore.storageService,
     'debrify_tv_external_notice_dismissed': StorageKeyStore.storageService,
-    'home_default_source_type': StorageKeyStore.storageService,
-    'home_default_addon_url': StorageKeyStore.storageService,
-    'home_default_catalog_id': StorageKeyStore.storageService,
-    'home_default_trakt_list_type': StorageKeyStore.storageService,
-    'home_default_trakt_content_type': StorageKeyStore.storageService,
-    'home_hide_provider_cards': StorageKeyStore.storageService,
-    'home_continue_watching_enabled': StorageKeyStore.storageService,
-    'home_cw_hold_to_quick_play': StorageKeyStore.storageService,
-    'home_cw_merge_': StorageKeyStore.storageService,
-    'home_favorites_open_folder': StorageKeyStore.storageService,
-    'home_card_orientation': StorageKeyStore.storageService,
-    'home_hide_card_titles_and_ratings': StorageKeyStore.storageService,
-    'home_hide_catalog_addon_names': StorageKeyStore.storageService,
+    'home_default_source_type': StorageKeyStore.homePrefs,
+    'home_default_addon_url': StorageKeyStore.homePrefs,
+    'home_default_catalog_id': StorageKeyStore.homePrefs,
+    'home_default_trakt_list_type': StorageKeyStore.homePrefs,
+    'home_default_trakt_content_type': StorageKeyStore.homePrefs,
+    'home_hide_provider_cards': StorageKeyStore.homePrefs,
+    'home_continue_watching_enabled': StorageKeyStore.homePrefs,
+    'home_cw_hold_to_quick_play': StorageKeyStore.homePrefs,
+    'home_cw_merge_': StorageKeyStore.homePrefs,
+    'home_favorites_open_folder': StorageKeyStore.homePrefs,
+    'home_card_orientation': StorageKeyStore.homePrefs,
+    'home_hide_card_titles_and_ratings': StorageKeyStore.homePrefs,
+    'home_hide_catalog_addon_names': StorageKeyStore.homePrefs,
     'support_remote_config_cache_v1': StorageKeyStore.storageService,
     'dismissed_donation_campaign_ids_v1': StorageKeyStore.storageService,
     'startup_auto_launch_enabled': StorageKeyStore.storageService,

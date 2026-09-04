@@ -32,6 +32,9 @@ import '../utils/json_isolate.dart';
 import '../utils/platform_util.dart';
 import 'tracking_scrobble_preferences.dart';
 import 'storage/cloud_secret_prefs.dart';
+import 'storage/home_prefs.dart';
+
+export 'storage/home_prefs.dart' show HomeCardOrientation;
 
 /// Which ambient-trailer surface a sound/volume preference belongs to.
 ///
@@ -39,12 +42,6 @@ import 'storage/cloud_secret_prefs.dart';
 /// page. They are separate preferences because they are separate experiences —
 /// a muted Home hero should not mute a detail page you opened deliberately.
 enum AmbientTrailerSurface { homeHero, detail }
-
-/// Artwork orientation for TITLE cards on the Home layouts: portrait 2:3
-/// posters or landscape 16:9 backdrops. Favourites, channel, and playlist
-/// rows keep their own geometry — a station logo or folder is not a title.
-/// Promenade is landscape by design and ignores the portrait setting.
-enum HomeCardOrientation { portrait, landscape }
 
 /// How the Android TV UI is rastered — see
 /// [StorageService.getTvRenderQuality]. Three states, not a switch: the
@@ -280,26 +277,6 @@ class StorageService {
   static const String _debrifyTvExternalNoticeDismissedKey =
       'debrify_tv_external_notice_dismissed';
 
-  // Home page default keys
-  static const String _homeDefaultSourceTypeKey = 'home_default_source_type';
-  static const String _homeDefaultAddonUrlKey = 'home_default_addon_url';
-  static const String _homeDefaultCatalogIdKey = 'home_default_catalog_id';
-  static const String _homeDefaultTraktListTypeKey =
-      'home_default_trakt_list_type';
-  static const String _homeDefaultTraktContentTypeKey =
-      'home_default_trakt_content_type';
-  static const String _homeHideProviderCardsKey = 'home_hide_provider_cards';
-  static const String _homeContinueWatchingEnabledKey =
-      'home_continue_watching_enabled';
-  static const String _homeCwHoldToQuickPlayKey = 'home_cw_hold_to_quick_play';
-  static const String _homeCwMergedRowsKeyPrefix = 'home_cw_merge_';
-  static const String _homeFavoritesOpenFolderKey =
-      'home_favorites_open_folder';
-  static const String _homeCardOrientationKey = 'home_card_orientation';
-  static const String _homeHideCardTitlesAndRatingsKey =
-      'home_hide_card_titles_and_ratings';
-  static const String _homeHideCatalogAddonNamesKey =
-      'home_hide_catalog_addon_names';
   static const String _supportRemoteConfigCacheKey =
       'support_remote_config_cache_v1';
   static const String _dismissedDonationCampaignIdsKey =
@@ -5858,193 +5835,88 @@ class StorageService {
   // Startup auto-launch was removed; only [clearAllStartupSettings] remains
   // (used by Reset) to wipe the old persisted keys.
 
-  // Home Page Default Settings
-  static Future<String?> getHomeDefaultSourceType() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_homeDefaultSourceTypeKey);
-  }
+  // Home Page Default Settings — forwarding façade; bodies live on HomePrefs.
+  static Future<String?> getHomeDefaultSourceType() =>
+      HomePrefs.getHomeDefaultSourceType();
 
-  static Future<void> setHomeDefaultSourceType(String? value) async {
-    final prefs = await ProfilePreferences.instance();
-    if (value == null) {
-      await prefs.remove(_homeDefaultSourceTypeKey);
-    } else {
-      await prefs.setString(_homeDefaultSourceTypeKey, value);
-    }
-  }
+  static Future<void> setHomeDefaultSourceType(String? value) =>
+      HomePrefs.setHomeDefaultSourceType(value);
 
-  static Future<String?> getHomeDefaultAddonUrl() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_homeDefaultAddonUrlKey);
-  }
+  static Future<String?> getHomeDefaultAddonUrl() =>
+      HomePrefs.getHomeDefaultAddonUrl();
 
-  static Future<void> setHomeDefaultAddonUrl(String? value) async {
-    final prefs = await ProfilePreferences.instance();
-    if (value == null) {
-      await prefs.remove(_homeDefaultAddonUrlKey);
-    } else {
-      await prefs.setString(_homeDefaultAddonUrlKey, value);
-    }
-  }
+  static Future<void> setHomeDefaultAddonUrl(String? value) =>
+      HomePrefs.setHomeDefaultAddonUrl(value);
 
-  static Future<String?> getHomeDefaultCatalogId() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_homeDefaultCatalogIdKey);
-  }
+  static Future<String?> getHomeDefaultCatalogId() =>
+      HomePrefs.getHomeDefaultCatalogId();
 
-  static Future<void> setHomeDefaultCatalogId(String? value) async {
-    final prefs = await ProfilePreferences.instance();
-    if (value == null) {
-      await prefs.remove(_homeDefaultCatalogIdKey);
-    } else {
-      await prefs.setString(_homeDefaultCatalogIdKey, value);
-    }
-  }
+  static Future<void> setHomeDefaultCatalogId(String? value) =>
+      HomePrefs.setHomeDefaultCatalogId(value);
 
-  static Future<String?> getHomeDefaultTraktListType() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_homeDefaultTraktListTypeKey);
-  }
+  static Future<String?> getHomeDefaultTraktListType() =>
+      HomePrefs.getHomeDefaultTraktListType();
 
-  static Future<void> setHomeDefaultTraktListType(String? value) async {
-    final prefs = await ProfilePreferences.instance();
-    if (value == null) {
-      await prefs.remove(_homeDefaultTraktListTypeKey);
-    } else {
-      await prefs.setString(_homeDefaultTraktListTypeKey, value);
-    }
-  }
+  static Future<void> setHomeDefaultTraktListType(String? value) =>
+      HomePrefs.setHomeDefaultTraktListType(value);
 
-  static Future<String?> getHomeDefaultTraktContentType() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_homeDefaultTraktContentTypeKey);
-  }
+  static Future<String?> getHomeDefaultTraktContentType() =>
+      HomePrefs.getHomeDefaultTraktContentType();
 
-  static Future<void> setHomeDefaultTraktContentType(String? value) async {
-    final prefs = await ProfilePreferences.instance();
-    if (value == null) {
-      await prefs.remove(_homeDefaultTraktContentTypeKey);
-    } else {
-      await prefs.setString(_homeDefaultTraktContentTypeKey, value);
-    }
-  }
+  static Future<void> setHomeDefaultTraktContentType(String? value) =>
+      HomePrefs.setHomeDefaultTraktContentType(value);
 
-  static Future<bool> getHomeHideProviderCards() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_homeHideProviderCardsKey) ?? true;
-  }
+  static Future<bool> getHomeHideProviderCards() =>
+      HomePrefs.getHomeHideProviderCards();
 
-  static Future<void> setHomeHideProviderCards(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_homeHideProviderCardsKey, value);
-  }
+  static Future<void> setHomeHideProviderCards(bool value) =>
+      HomePrefs.setHomeHideProviderCards(value);
 
-  static Future<bool> getHomeContinueWatchingEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_homeContinueWatchingEnabledKey) ?? true;
-  }
+  static Future<bool> getHomeContinueWatchingEnabled() =>
+      HomePrefs.getHomeContinueWatchingEnabled();
 
-  static Future<void> setHomeContinueWatchingEnabled(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_homeContinueWatchingEnabledKey, value);
-  }
+  static Future<void> setHomeContinueWatchingEnabled(bool value) =>
+      HomePrefs.setHomeContinueWatchingEnabled(value);
 
-  /// Whether holding a Continue Watching card should immediately Quick Play
-  /// instead of opening the Play / Remove action menu. Off by default so the
-  /// removal action remains discoverable until the user opts into the faster
-  /// gesture.
-  static Future<bool> getHomeCwHoldToQuickPlay() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_homeCwHoldToQuickPlayKey) ?? false;
-  }
+  static Future<bool> getHomeCwHoldToQuickPlay() =>
+      HomePrefs.getHomeCwHoldToQuickPlay();
 
-  static Future<void> setHomeCwHoldToQuickPlay(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_homeCwHoldToQuickPlayKey, value);
-  }
+  static Future<void> setHomeCwHoldToQuickPlay(bool value) =>
+      HomePrefs.setHomeCwHoldToQuickPlay(value);
 
-  /// Whether [provider]'s home Continue Watching shelf combines Movies and
-  /// Shows into ONE recency-ordered row instead of two. [provider] is one of
-  /// 'local', 'trakt', 'simkl', 'mdblist'. Off by default (two rows, the
-  /// original layout).
-  static Future<bool> getHomeCwMergedRows(String provider) async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool('$_homeCwMergedRowsKeyPrefix$provider') ?? false;
-  }
+  static Future<bool> getHomeCwMergedRows(String provider) =>
+      HomePrefs.getHomeCwMergedRows(provider);
 
-  static Future<void> setHomeCwMergedRows(String provider, bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool('$_homeCwMergedRowsKeyPrefix$provider', value);
-  }
+  static Future<void> setHomeCwMergedRows(String provider, bool value) =>
+      HomePrefs.setHomeCwMergedRows(provider, value);
 
-  static Future<String> getHomeFavoritesTapAction() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_homeFavoritesOpenFolderKey) ?? 'choose';
-  }
+  static Future<String> getHomeFavoritesTapAction() =>
+      HomePrefs.getHomeFavoritesTapAction();
 
-  static Future<void> setHomeFavoritesTapAction(String value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_homeFavoritesOpenFolderKey, value);
-  }
+  static Future<void> setHomeFavoritesTapAction(String value) =>
+      HomePrefs.setHomeFavoritesTapAction(value);
 
-  /// Landscape is the DEFAULT (since 0.8.4): the absence of the key means
-  /// landscape, so only an explicit 'portrait' choice reads as portrait.
-  static Future<HomeCardOrientation> getHomeCardOrientation() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_homeCardOrientationKey) == 'portrait'
-        ? HomeCardOrientation.portrait
-        : HomeCardOrientation.landscape;
-  }
+  static Future<HomeCardOrientation> getHomeCardOrientation() =>
+      HomePrefs.getHomeCardOrientation();
 
   static Future<void> setHomeCardOrientation(
     HomeCardOrientation orientation,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_homeCardOrientationKey, orientation.name);
-  }
+  ) => HomePrefs.setHomeCardOrientation(orientation);
 
-  /// Keeps Home artwork clean by suppressing the title and rating painted on
-  /// content cards. Row headings, hero identity, progress and context metadata
-  /// are separate presentation and remain visible.
-  static Future<bool> getHomeHideCardTitlesAndRatings() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_homeHideCardTitlesAndRatingsKey) ?? false;
-  }
+  static Future<bool> getHomeHideCardTitlesAndRatings() =>
+      HomePrefs.getHomeHideCardTitlesAndRatings();
 
-  static Future<void> setHomeHideCardTitlesAndRatings(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_homeHideCardTitlesAndRatingsKey, value);
-  }
+  static Future<void> setHomeHideCardTitlesAndRatings(bool value) =>
+      HomePrefs.setHomeHideCardTitlesAndRatings(value);
 
-  /// Suppresses the source/add-on pill beside Home catalog row headings.
-  /// The catalog title itself remains visible so the row keeps its identity.
-  static Future<bool> getHomeHideCatalogAddonNames() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_homeHideCatalogAddonNamesKey) ?? false;
-  }
+  static Future<bool> getHomeHideCatalogAddonNames() =>
+      HomePrefs.getHomeHideCatalogAddonNames();
 
-  static Future<void> setHomeHideCatalogAddonNames(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_homeHideCatalogAddonNamesKey, value);
-  }
+  static Future<void> setHomeHideCatalogAddonNames(bool value) =>
+      HomePrefs.setHomeHideCatalogAddonNames(value);
 
-  static Future<void> clearAllHomePageSettings() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_homeDefaultSourceTypeKey);
-    await prefs.remove(_homeDefaultAddonUrlKey);
-    await prefs.remove(_homeDefaultCatalogIdKey);
-    await prefs.remove(_homeHideProviderCardsKey);
-    await prefs.remove(_homeContinueWatchingEnabledKey);
-    await prefs.remove(_homeCwHoldToQuickPlayKey);
-    await prefs.remove('${_homeCwMergedRowsKeyPrefix}local');
-    await prefs.remove('${_homeCwMergedRowsKeyPrefix}trakt');
-    await prefs.remove('${_homeCwMergedRowsKeyPrefix}simkl');
-    await prefs.remove('${_homeCwMergedRowsKeyPrefix}mdblist');
-    await prefs.remove(_homeFavoritesOpenFolderKey);
-    await prefs.remove(_homeCardOrientationKey);
-    await prefs.remove(_homeHideCardTitlesAndRatingsKey);
-    await prefs.remove(_homeHideCatalogAddonNamesKey);
-  }
+  static Future<void> clearAllHomePageSettings() =>
+      HomePrefs.clearAllHomePageSettings();
 
   // Reddit Settings
   static Future<String?> getRedditAccessToken() async {

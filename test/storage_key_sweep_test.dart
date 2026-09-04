@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:debrify/services/storage/cloud_secret_prefs.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage/storage_key_ownership.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -68,6 +69,7 @@ void main() {
   test('every declared persisted key is owned by exactly one store', () {
     final fromGodFile = _declaredOnStorageService();
     final fromCloud = _declaredOnCloudSecretPrefs();
+    final fromHome = HomePrefs.ownedKeys;
     expect(fromCloud, {
       CloudSecretPrefs.realDebridApiKey,
       CloudSecretPrefs.torboxApiKey,
@@ -77,13 +79,13 @@ void main() {
       CloudSecretPrefs.pikpakPassword,
     });
 
-    final declared = {...fromGodFile, ...fromCloud};
+    final declared = {...fromGodFile, ...fromCloud, ...fromHome};
     expect(
       StorageKeyOwnership.byKey.keys.toSet(),
       declared,
       reason:
           'StorageKeyOwnership.byKey must pin every StorageService '
-          '`const _…Key` / CloudSecretPrefs alias plus CloudSecretPrefs keys',
+          '`const _…Key` / CloudSecretPrefs alias plus store-owned keys',
     );
 
     final claimed = <String, StorageKeyStore>{};
@@ -104,7 +106,21 @@ void main() {
       );
     }
 
-    final residual = declared.difference(fromCloud);
+    expect(fromHome, StorageKeyOwnership.keysFor(StorageKeyStore.homePrefs));
+    for (final key in fromHome) {
+      expect(
+        claimed[key],
+        StorageKeyStore.homePrefs,
+        reason: '$key must be owned by HomePrefs',
+      );
+      expect(
+        fromGodFile.contains(key),
+        isFalse,
+        reason: '$key must not remain declared on StorageService',
+      );
+    }
+
+    final residual = declared.difference(fromCloud).difference(fromHome);
     for (final key in residual) {
       expect(
         claimed[key],
