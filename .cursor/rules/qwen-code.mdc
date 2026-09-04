@@ -1,0 +1,14 @@
+---
+description: Optional Qwen Code helper — use when the CLI is available.
+alwaysApply: true
+---
+
+# Qwen Code (optional)
+
+Once per session, if you are about to do a bounded grep/review/mechanical
+extract, run `python3 tool/qwen_assist.py --probe`. If `"available"` is true,
+follow `.cursor/skills/qwen-code/SKILL.md`. If it is false, continue without
+Qwen — do not block, install, or wait on secrets.
+
+Never let Qwen rewrite god files, rename persisted strings, push, or merge.
+Cursor owns the PR; Qwen is a helper.

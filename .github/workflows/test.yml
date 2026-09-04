@@ -22,7 +22,7 @@ jobs:
           sudo apt-get install -y libsqlite3-dev libsqlite3-0
 
       - name: Test CI allowlist and analyze-baseline matchers
-        run: python3 -m unittest ci_test_allowlist_test.py analyze_baseline_test.py
+        run: python3 -m unittest ci_test_allowlist_test.py analyze_baseline_test.py qwen_assist_test.py
         working-directory: tool
 
       - name: Setup Flutter

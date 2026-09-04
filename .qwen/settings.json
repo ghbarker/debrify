@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git push *)",
+      "Bash(git merge *)",
+      "Bash(gh pr *)",
+      "Read(.env)",
+      "Read(.qwen/.env)",
+      "Read(~/.qwen/.env)",
+      "Edit(/lib/screens/search_screen.dart)",
+      "Edit(/lib/screens/settings_screen.dart)",
+      "Edit(/lib/services/storage_service.dart)",
+      "Edit(/lib/screens/video_player_screen.dart)",
+      "Edit(/lib/screens/magic_tv_screen.dart)",
+      "Edit(/lib/services/torrent_playback_service.dart)",
+      "Edit(/lib/services/remote_control/remote_command_router.dart)",
+      "Edit(/lib/services/video_player_launcher.dart)"
+    ]
+  }
+}

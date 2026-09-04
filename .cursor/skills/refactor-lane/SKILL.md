@@ -19,6 +19,13 @@ Procedure per moved function: pin with a test → commit → move verbatim → c
 
 Acceptance for this lane: `<acceptance criteria from §4>`.
 
+## Optional: Qwen Code
+
+If `python3 tool/qwen_assist.py --probe` reports available, you may use it
+for locating symbols or a second-opinion review of a hunk. Follow
+`.cursor/skills/qwen-code/SKILL.md`. Do not let Qwen move code, format god
+files, or edit a file you do not own. Skip Qwen if probe fails.
+
 ## Worker loop (plan §6)
 
 1. Confirm owned files overlap no other `in-progress` / `assigned` lane on the board.
