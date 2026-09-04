@@ -39,6 +39,9 @@ import '../services/home_row_order.dart';
 import 'search/home_board_controller.dart';
 import 'search/catalog_search_controller.dart';
 import 'search/title_opener.dart';
+import 'search/search_screen_shells.dart';
+import 'search/catalog_search_screen.dart';
+import 'search/discover_screen.dart';
 import '../services/filtered_catalog_pager.dart';
 import '../services/hide_watched_prefs.dart';
 import '../services/watched_filter.dart';
@@ -176,7 +179,11 @@ String? _seLabel(int? season, int? episode) {
 ///
 /// All playback (catalog auto-best, sources list, keyword) runs in-tab through
 /// the isolated [TorrentPlaybackService]; the Home engine is never invoked.
-class SearchScreen extends StatefulWidget {
+///
+/// Public constructors stay on this type so `main.dart` is unchanged (G4-style
+/// wrapper). Search/Discover delegate to [CatalogSearchScreen] /
+/// [DiscoverScreen]; Home stays [SearchScreenHost] in this file.
+class SearchScreen extends StatelessWidget {
   final bool isTelevision;
 
   /// Dedicated-search-tab mode (TV only). When true the screen is *only* the
@@ -197,8 +204,52 @@ class SearchScreen extends StatefulWidget {
     this.discoverMode = false,
   });
 
+  /// Same `?:` order as the old State flags — [searchMode] wins if both are true.
+  static Widget forFlags({
+    bool isTelevision = false,
+    bool searchMode = false,
+    bool discoverMode = false,
+  }) {
+    if (searchMode) {
+      return CatalogSearchScreen(
+        isTelevision: isTelevision,
+        host: SearchScreenHost(isTelevision: isTelevision, searchMode: true),
+      );
+    }
+    if (discoverMode) {
+      return DiscoverScreen(
+        isTelevision: isTelevision,
+        host: SearchScreenHost(isTelevision: isTelevision, discoverMode: true),
+      );
+    }
+    return SearchScreenHost(isTelevision: isTelevision);
+  }
+
   @override
-  State<SearchScreen> createState() => _SearchScreenState();
+  Widget build(BuildContext context) => forFlags(
+        isTelevision: isTelevision,
+        searchMode: searchMode,
+        discoverMode: discoverMode,
+      );
+}
+
+/// Shared host for Home / Search / Discover. Constructs [HomeBoardController],
+/// [CatalogSearchController], and [TitleOpener] for every variant (Search
+/// still builds the board controller; Discover still builds catalog search).
+class SearchScreenHost extends StatefulWidget {
+  final bool isTelevision;
+  final bool searchMode;
+  final bool discoverMode;
+
+  const SearchScreenHost({
+    super.key,
+    this.isTelevision = false,
+    this.searchMode = false,
+    this.discoverMode = false,
+  });
+
+  @override
+  State<SearchScreenHost> createState() => _SearchScreenState();
 }
 
 enum _Mode { catalog, keyword, lists }
@@ -245,12 +296,12 @@ class _KwPreservedState {
 }
 
 /// Fixed Discover sources; installed addons are appended dynamically (key
-/// 'a:{addonId}').
-const String _discCw = 'cw';
-const String _discTrakt = 'trakt';
-const String _discSimkl = 'simkl';
-const String _discMdblist = 'mdblist';
-const String _discAddonPrefix = 'a:';
+/// 'a:{addonId}'). Aliases of [kDiscoverSourceCw] etc. so call sites stay put.
+const String _discCw = kDiscoverSourceCw;
+const String _discTrakt = kDiscoverSourceTrakt;
+const String _discSimkl = kDiscoverSourceSimkl;
+const String _discMdblist = kDiscoverSourceMdblist;
+const String _discAddonPrefix = kDiscoverSourceAddonPrefix;
 
 /// Whether an asynchronously loaded Discover landing source may still update
 /// the screen. Public only so the lifecycle contract has a focused regression
@@ -450,11 +501,14 @@ class _EmptyFieldLeftAction extends Action<_SearchLeftIntent> {
   }
 }
 
-class _SearchScreenState extends State<SearchScreen>
+class _SearchScreenState extends State<SearchScreenHost>
     with RouteAware, WidgetsBindingObserver {
   // Which nav tab this instance backs, for the TV content-focus handler: the
   // dedicated Search tab (17) or the Home-New board (15).
-  int get _tabIndex => widget.searchMode ? 17 : (widget.discoverMode ? 18 : 15);
+  int get _tabIndex => searchScreenTabIndex(
+        searchMode: widget.searchMode,
+        discoverMode: widget.discoverMode,
+      );
 
   final StremioService _stremio = StremioService.instance;
 
@@ -660,11 +714,10 @@ class _SearchScreenState extends State<SearchScreen>
 
   /// Discriminates the three [SearchScreen] variants so a preserved keyword
   /// search only restores into the same kind of tab it came from.
-  String get _variantKey => widget.searchMode
-      ? 'search'
-      : widget.discoverMode
-      ? 'discover'
-      : 'board';
+  String get _variantKey => searchScreenVariantKey(
+        searchMode: widget.searchMode,
+        discoverMode: widget.discoverMode,
+      );
 
   /// True when PikPak is the ONLY configured provider. PikPak can't quick-play
   /// (it queues a cloud download), so catalog "Play" is hidden — matching Home.
@@ -1676,11 +1729,10 @@ class _SearchScreenState extends State<SearchScreen>
     _profileSessionOwner = ProfileSessionMemory.captureOwner();
     // This one widget backs three tabs (Home board / dedicated Search / Discover).
     AnalyticsService.screenView(
-      widget.searchMode
-          ? 'search'
-          : widget.discoverMode
-          ? 'discover'
-          : 'home',
+      searchScreenAnalyticsName(
+        searchMode: widget.searchMode,
+        discoverMode: widget.discoverMode,
+      ),
     );
     MainPageBridge.registerTvContentFocusHandler(_tabIndex, _focusContent);
     if (!widget.searchMode && !widget.discoverMode) {
@@ -16201,10 +16253,12 @@ class _SearchScreenState extends State<SearchScreen>
       for (final a in addons)
         if (a.catalogs.any((c) => c.isBrowsable)) a,
     ];
-    final addonAvailable =
-        landing.startsWith(_discAddonPrefix) &&
-        browsable.any((addon) => '$_discAddonPrefix${addon.id}' == landing);
-    if (!fixedSource && !addonAvailable) landing = _discCw;
+    landing = resolveDiscoverLandingSource(
+      defaultSource: defaultSource,
+      lastSource: lastSource,
+      mdblistEnabled: kMdblistEnabled,
+      browsableAddonIds: browsable.map((a) => a.id),
+    );
     setState(() {
       _discAddons = browsable;
       for (final a in addons) {
@@ -16654,17 +16708,15 @@ class _SearchScreenState extends State<SearchScreen>
       quietAccent: true,
       focusNode: _discSourceNode,
       options: [
-        const StremioDropdownOption(_discCw, 'Continue Watching'),
-        const StremioDropdownOption(_discTrakt, 'Trakt'),
-        const StremioDropdownOption(_discSimkl, 'Simkl'),
-        // MDBList is hidden for the alpha (kMdblistEnabled) AND only when
-        // connected — kept if it's somehow already the active source so the
-        // dropdown's value always has a matching option.
-        if (kMdblistEnabled &&
-            (_isMdblistAuthenticated || _discSource == _discMdblist))
-          const StremioDropdownOption(_discMdblist, 'MDBList'),
-        for (final a in _discAddons)
-          StremioDropdownOption('$_discAddonPrefix${a.id}', a.name),
+        for (final o in discoverSourceDropdownOptions(
+          mdblistEnabled: kMdblistEnabled,
+          mdblistAuthenticated: _isMdblistAuthenticated,
+          currentSource: _discSource,
+          addons: [
+            for (final a in _discAddons) (id: a.id, name: a.name),
+          ],
+        ))
+          StremioDropdownOption(o.value, o.label),
       ],
       onSelected: (s) {
         if (s == _discSource) return;

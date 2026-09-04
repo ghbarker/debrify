@@ -2,7 +2,7 @@
 
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 
-Baseline: `main` @ G5 merged · Phase: **2** (G1 step 4 review; G3 step 2 next) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
+Baseline: `main` @ G1 step 4 merged · Phase: **2** (G1 step 5 + G3 step 2 assigned) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -28,8 +28,8 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | G1 · step 1 HomeBoardController | merged | `refactor/g1-home-board-controller` | worker | `lib/screens/search/home_board_controller.dart`, `test/home_board_controller_test.dart`, `search_screen.dart` [board data layer] | — | **#61.** Pin + origin-diff. H1-fix section-band order preserved. `search_screen.dart` 19 089 → 18 890. |
 | G1 · step 2 CatalogSearchController | merged | `refactor/g1-catalog-search-controller` | worker | `lib/screens/search_screen.dart` [catalog search hunks], `lib/screens/search/**`, new catalog search controller + tests | G1 step 1 | **#65.** Pin + origin-diff. `search_screen.dart` 18 890 → 18 814. `_restoreHome` does not zero catalog-search failures (NOTES). Steps 3–5 next. |
 | G1 · step 3 TitleOpener | merged | `refactor/g1-title-opener` | worker | `lib/screens/search_screen.dart` [`_openItem` + menu building], `lib/screens/search/title_opener.dart`, tests | G1 step 2 | **#66.** Pin + origin-diff. `search_screen.dart` 18 814 → 18 528. Merged path sends movies to `MergedDetailScreen` when the flag is on (NOTES). Steps 4–5 next. |
-| G1 · step 4 Search/Discover screens | review | `refactor/g1-search-discover-screens` | worker | `lib/screens/search_screen.dart` [Search + Discover shells], new screens sharing HomeBoardController / CatalogSearchController / TitleOpener | G1 step 3 | **#69.** Pin + origin-diff. Wrapper keeps `SearchScreen` constructors. `searchMode` wins if both flags true (NOTES). Rebase after G5 if needed (CODEMAP/BOARD only). |
-| G1 · step 5 TV stages | queued | — | — | `lib/screens/search_screen.dart` [six TV stage layouts], `lib/screens/search/stages/**` | G1 step 4 | One widget each under `search/stages/`. Gate (c). |
+| G1 · step 4 Search/Discover screens | merged | `refactor/g1-search-discover-screens` | worker | `lib/screens/search_screen.dart` [Search + Discover shells], new screens sharing HomeBoardController / CatalogSearchController / TitleOpener | G1 step 3 | **#69.** Pin + origin-diff. Wrapper keeps `SearchScreen` constructors. `search_screen.dart` 18 528 → 18 580. `searchMode` wins if both flags true (NOTES). |
+| G1 · step 5 TV stages | assigned | `refactor/g1-tv-stages` | worker | `lib/screens/search_screen.dart` [six TV stage layouts], `lib/screens/search/search_stage_widgets.dart`, new `lib/screens/search/stages/**` | G1 step 4 | One widget each under `search/stages/`. No dart format on god files. Gate (c). Rebase after this merge if branched earlier (CODEMAP/BOARD only). |
 | G2 · settings_screen split | merged | `refactor/g2-backup-restore-page` | worker | `settings_screen.dart` [backup/restore + profile-switch hunks], new `lib/screens/settings/backup_restore_page.dart`, `profiles_settings_page.dart` `ProfileSettingsRailActions`, tests | — | **#63.** Pin + origin-diff. `settings_screen.dart` 3 923 → 3 107. `extraPlayerKeywords` still bound. Restore-report omits `homeCollectionsFailed` / `streamBadgeSourcesFailed` from the snackbar list (NOTES). |
 | G3 · storage split | merged | `refactor/g3-storage-split` | worker | `storage_service.dart`, `lib/services/storage/**`, storage key-sweep tests | — | **#67.** HomePrefs first slice. `storage_service.dart` 9 963 → 9 835. Remaining Home keys next, then PlayerPrefs. `@Deprecated` in Q2. `clearAllHomePageSettings` skips Trakt default keys (NOTES). |
 | G3 · step 2 remaining Home keys | assigned | `refactor/g3-home-prefs-rest` | worker | `storage_service.dart`, `lib/services/storage/home_prefs.dart`, key-sweep tests | G3 slice 1 | Move remaining Home keys (`home_disabled_sections_v1`, extra/order/hero/ticks, `tv_home_style`) into HomePrefs. Callers stay on StorageService. Gate (c). |
@@ -69,4 +69,4 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
-Phase 1 merged. P2a–**P2e** merged (#60). **G1 steps 1–3 merged (#61, #65, #66).** **T2 #62 · G2 #63 · G4 #64 · G3 #67 merged.** G5 + G1 step 4 assigned (rebase onto this `main` if they branched earlier — CODEMAP/BOARD only). Gate 1 Windows pass; Android not run. PR #56 held. #36–#43 closed (G4).
+Phase 1 merged. P2a–**P2e** merged (#60). **G1 steps 1–4 merged (#61, #65, #66, #69).** **T2 #62 · G2 #63 · G4 #64 · G3 #67 · G5 #68 merged.** G1 step 5 + G3 step 2 assigned. Gate 1 Windows pass; Android not run. PR #56 held. #36–#43 closed (G4).

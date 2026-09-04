@@ -100,6 +100,15 @@ See `dev/design/REFACTOR_PLAN.md` §2 rule 1.
 - **Premiumize / AllDebrid / PikPak not routed** onto `CloudFilesScreen`.
   Follow-up lane; public types and sidebar ids stay frozen.
 
+### G1 · step 4 Search/Discover screens
+
+- **`searchMode` wins if both flags are true.** Tab index, variant key, and
+  analytics name all use `searchMode ? … : (discoverMode ? … : home)`.
+  Keep: origin `?:` order, pinned in `test/search_discover_shells_test.dart`.
+- **God file stayed in place.** `SearchScreenHost` is still the 18k State;
+  this step only split public types and shell contracts. TV stages remain
+  for step 5.
+
 ### G1 · step 3 TitleOpener
 
 - **Merged path includes movies.** When `_mergedSeriesPage` is on, both
