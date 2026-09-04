@@ -73,7 +73,9 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   empty; explicit `torbox` / `premiumize` filtering is
   `StremioTvCacheFilter.apply` (skip the call when there is no key; keep
   directs). Playback cache-first is `PlaybackCacheFirst.reorder` (hits first,
-  catch-all, empty key still reaches the adapter). Chunk HTTP is swallowed by `TorboxService.checkCachedTorrents`
+  catch-all, empty key still reaches the adapter). Home/Sources search badges
+  call the same registry methods but keep their own key-null gates, try/catch
+  memoization, and cached-only TorBox narrowing. Chunk HTTP is swallowed by `TorboxService.checkCachedTorrents`
   (partial or empty set) and by `PremiumizeService.checkCache` (slots stay
   `false`); those calls do not throw.
   HTTP clients remain in
