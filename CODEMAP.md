@@ -3,219 +3,311 @@
 An **area → owning-files** index so triage/estimate tooling (and humans) can jump straight to the
 right code instead of re-discovering it. Flutter app; code under `lib/{screens,services,widgets,models,utils}`.
 
-> ⚠️ **Grep, don't read whole.** The files flagged 🔴 are huge (8k–26k lines). Always `grep` for the
+> ⚠️ **Grep, don't read whole.** The files flagged 🔴 are huge. Always `grep` for the
 > symbol and Read only the surrounding ±40 lines — never read them end-to-end.
 >
-> 🔴 huge: `screens/deprecated/torrent_search_screen.dart` (26k, legacy — usually ignore) ·
-> `screens/search_screen.dart` (16k) · `screens/magic_tv_screen.dart` (11k) ·
-> `screens/video_player_screen.dart` (8k) · `screens/torbox/torbox_downloads_screen.dart` (6.8k) ·
-> `screens/debrid_downloads_screen.dart` (6.2k) · `services/storage_service.dart` (5.8k) ·
-> `services/torrent_playback_service.dart` (4.7k) · `services/video_player_launcher.dart` (4k) ·
-> `widgets/initial_setup_flow.dart` (4.9k).
+> Line counts below are `wc -l` on this checkout (`main` @ `cdad318a`). D0 may delete
+> `lib/screens/deprecated/` and `lib/widgets/catalog_browser.dart`; they still exist
+> here, so they stay in this map until that merge.
+
+## Line counts (`wc -l`)
+
+| File | Lines |
+|---|---:|
+| `lib/screens/deprecated/torrent_search_screen.dart` | 26 413 |
+| `lib/screens/search_screen.dart` | 19 071 |
+| `lib/screens/search/` parts (4 files) | 8 364 |
+| `lib/screens/video_player_screen.dart` | 16 278 |
+| `lib/screens/magic_tv_screen.dart` | 10 716 |
+| `lib/services/storage_service.dart` | 9 963 |
+| `lib/screens/settings_screen.dart` | 7 905 |
+| `lib/screens/torbox/torbox_downloads_screen.dart` | 7 069 |
+| `lib/screens/debrid_downloads_screen.dart` | 6 444 |
+| `lib/services/video_player_launcher.dart` | 5 769 |
+| `lib/services/torrent_playback_service.dart` | 5 340 |
+| `lib/services/remote_control/remote_command_router.dart` | 5 100 |
+| `lib/widgets/catalog_browser.dart` | 2 062 |
+
+Search `part` files: `lib/screens/search/search_sources.dart` (3 206),
+`lib/screens/search/search_hero_widgets.dart` (2 261),
+`lib/screens/search/search_stage_widgets.dart` (1 699),
+`lib/screens/search/search_card_widgets.dart` (1 198).
+
+🔴 huge: `lib/screens/deprecated/torrent_search_screen.dart` (26 413, legacy — usually
+ignore) · `lib/screens/search_screen.dart` (19 071) · `lib/screens/video_player_screen.dart`
+(16 278) · `lib/screens/magic_tv_screen.dart` (10 716) · `lib/services/storage_service.dart`
+(9 963) · `lib/screens/settings_screen.dart` (7 905) ·
+`lib/screens/torbox/torbox_downloads_screen.dart` (7 069) ·
+`lib/screens/debrid_downloads_screen.dart` (6 444) ·
+`lib/services/video_player_launcher.dart` (5 769) ·
+`lib/services/torrent_playback_service.dart` (5 340) ·
+`lib/services/remote_control/remote_command_router.dart` (5 100).
+
+`lib/widgets/initial_setup_flow.dart` is a 4-line export of
+`lib/widgets/onboarding/onboarding_flow.dart` (1 047), not a 4.9k dialog.
+
+## Planned registries (refactor plan §3)
+
+These replace hand-maintained switches. **None of the new registries exist yet**
+except `CloudProviderRegistry` (half-migrated; capability split is **P1**).
+
+| Registry | Lane | Replaces today |
+|---|---|---|
+| `CloudProviderRegistry` (exists) + capability interfaces | **P1** | remaining provider-string switches (playback, launcher, bulk-add, Magic TV, Stremio TV, storage, settings) |
+| `HomeRowRegistry` | **H1** | `_sectionRowId`, `_canonicalOrderIds`, group builders, id-prefix checks in `lib/screens/search_screen.dart`, `lib/screens/settings/home_sections_filter_page.dart`, `lib/services/home_list_rows.dart` |
+| `TransferCategoryRegistry` | **T1** | backup build/summarize/apply, `BackupSelection` / `BackupSummary` / `RestoreReport` field triplets, remote router's five maps, export/transfer-all tiles, onboarding labels |
+| `SettingsPageRegistry` | **S1** | the 6-site registration in `lib/screens/settings_screen.dart` + `lib/screens/settings/settings_tv_layout.dart`, the search index `leaf()` tables |
+| `TrackerRegistry` (light) | **T2** | per-tracker `switch` in tick policy, scrobble targets, CW row wiring |
+
+Until **T1** lands, adding a remote/backup transfer category still needs the
+**11-site checklist** (plan §0: “11 registrations”; §3 maps that to the three
+backup switches, the three Backup* field triplets, and the router’s five maps).
+Consumer files from the plan table (paths that exist on this checkout):
+
+1. `lib/services/backup_restore_service.dart` — `buildBackup` / `summarize` / `applyBackup`
+2. `lib/services/backup_restore_service.dart` — `BackupSelection` field
+3. `lib/services/backup_restore_service.dart` — `BackupSummary` field
+4. `lib/services/backup_restore_service.dart` — `RestoreReport` field
+5. `lib/services/remote_control/remote_command_router.dart` — map 1 of 5
+6. `lib/services/remote_control/remote_command_router.dart` — map 2 of 5
+7. `lib/services/remote_control/remote_command_router.dart` — map 3 of 5
+8. `lib/services/remote_control/remote_command_router.dart` — map 4 of 5
+9. `lib/services/remote_control/remote_command_router.dart` — map 5 of 5
+10. `lib/widgets/remote/remote_config_export.dart` — Send Setup tiles (plan: export)
+11. `lib/widgets/remote/remote_transfer_all.dart` — Transfer Everything tiles (plan: transfer-all)
+
+Same plan table also lists (not extra “sites”, but still consumers until T1/S1):
+
+- `lib/widgets/onboarding/onboarding_flow.dart` — `_configLabel`
+- `lib/services/profiles/profile_restore_coordinator.dart` — `BackupSelection` literals
+- `lib/screens/settings_screen.dart` — settings summary (`_formatBackupSummary` / `_formatRestoreReport`; S1 hunk)
+
+`ConfigCommand` **strings** are a frozen compatibility surface. Do not rename them.
 
 ## Cross-cutting hubs (touched by many features)
-- **`screens/search_screen.dart`** 🔴 — the Home/Discover board: continue-watching rows, catalog rows,
+- **`lib/screens/search_screen.dart`** 🔴 — the Home/Discover board: continue-watching rows, catalog rows,
   favourites rows, the D-pad `_BoardCell` focus grid, poster sizing (`_railPosterW`), bind-sources entry.
-- **`services/storage_service.dart`** 🔴 — all SharedPreferences/persisted state (settings, continue
+- **`lib/services/storage_service.dart`** 🔴 — all SharedPreferences/persisted state (settings, continue
   watching (cap 50), playback state, favourites, provider toggles, home disabled-sections).
-- **`services/torrent_playback_service.dart`** 🔴 — provider-agnostic play/add/bind pipeline.
+- **`lib/services/torrent_playback_service.dart`** 🔴 — provider-agnostic play/add/bind pipeline.
   Magnet add, hashless bound replay, download-picker lazy URLs, launcher/TV
   unlock, in-app player unlock, and Stremio TV torrent resolve go through
-  `services/cloud/` (`CloudProviderPort` + `CloudProviderRegistry`).
-  Stremio TV uses `resolveStremioTorrent` (`realdebrid` + auto order with
-  PikPak before Premiumize; null on miss). Stremio TV *picker* rows are
-  `CloudCredentials.stremioPickerChoices` (RD/TB key-only, PikPak
-  enabled-only, PM/AD toggle+key — not `isConfigured()`). Settings page
-  still lists RD/TB/PikPak only. Debrify TV file prepare is
-  `prepareMagicTv` (`real_debrid`; infohash-only magnet; random unseen file;
-  RD/AllDebrid `supports(magicTvPrepare)` is false). Locked-link queues are
-  `prepareMagicTvLockedLinks` (still-locked URLs; RD re-queues the torrent,
-  AllDebrid expands leftover files). Player-screen unlock is
-  `unlockPlayerScreenEntry` (wraps HTTP as `Torbox link failed`; incomplete
-  Premiumize throws). Playlist JSON, labels,
-  and download credential keys live there too. Bind-source PM/AD/PP browsers:
-  `screens/cloud/cloud_browse_select_source.dart`.
-  Cloud credential keys live in `CloudSecretPrefs` (must match
-  `CloudProviderId.credentialKey`); `StorageService` remains the public
-  static API. Display names / chips / overlay titles live on
-  `CloudProviderId`; `CloudProviderChrome` (`widgets/cloud_provider_chrome.dart`)
-  is Flutter colors/icons plus non-cloud loader ids. Strangler policy is
-  documented here; `.cursor/rules/debrify-refactor.mdc` is an editor
-  mirror, not the source of truth.
-- **`main.dart`** — app shell + nav branch (TV rail / desktop rail / `MobileFloatingNav`), tab indices.
+  `lib/services/cloud/` (`CloudProviderPort` + `CloudProviderRegistry`).
+  See **Debrid providers & cloud** below. Playback still exposes one-line
+  delegates onto the registry so god-file call sites do not change.
+- **`lib/main.dart`** — app shell + nav branch (TV rail / desktop rail / `MobileFloatingNav`), tab indices.
 
 ## Search, sources & addons
-- Aggregation/sort/dedup: `services/torrent_service.dart` (`searchAllEngines`, `_deduplicateAndSort`,
+- Aggregation/sort/dedup: `lib/services/torrent_service.dart` (`searchAllEngines`, `_deduplicateAndSort`,
   keyword-search engines).
-- Stremio addons: `services/stremio_service.dart` (`_fetchStreamsFromAddon`, `_convertToTorrents` —
-  where addon order + labels get overwritten), `models/stremio_addon.dart` (`StremioStream.fromJson`,
-  `sizeFromTitle`), `services/stremio_marketplace_service.dart`, `screens/addons/addon_hub_screen.dart`.
-- Indexer managers (Prowlarr/Jackett): `services/indexer_manager_service.dart`
-  (`_searchProwlarr*`, Torznab), `models/indexer_manager_config.dart`,
-  `screens/settings/indexer_managers_settings_page.dart`.
-- Scraper "engine" system (YAML-config, **not** a code-plugin runtime): `services/engine/*`.
-- **Filters**: `models/torrent_filter_state.dart` (QualityTier/RipSource/AudioLanguage/SizeBucket dims),
-  format/HDR tag detection already exists in `utils/format_tag_detector.dart` +
-  `utils/torrent_coverage_detector.dart` + `utils/{movie,series}_parser.dart`. Result row UI:
-  `widgets/torrent_result_row.dart`; source picker: `screens/video_player/widgets/source_sheet.dart`.
+- Stremio addons: `lib/services/stremio_service.dart` (`_fetchStreamsFromAddon`, `_convertToTorrents` —
+  where addon order + labels get overwritten), `lib/models/stremio_addon.dart` (`StremioStream.fromJson`,
+  `sizeFromTitle`), `lib/services/stremio_marketplace_service.dart`, `lib/screens/addons/addon_hub_screen.dart`.
+- Indexer managers (Prowlarr/Jackett): `lib/services/indexer_manager_service.dart`
+  (`_searchProwlarr*`, Torznab), `lib/models/indexer_manager_config.dart`,
+  `lib/screens/settings/indexer_managers_settings_page.dart`.
+- Scraper "engine" system (YAML-config, **not** a code-plugin runtime): `lib/services/engine/`.
+- **Filters**: `lib/models/torrent_filter_state.dart` (QualityTier/RipSource/AudioLanguage/SizeBucket dims),
+  format/HDR tag detection already exists in `lib/utils/format_tag_detector.dart` +
+  `lib/utils/torrent_coverage_detector.dart` + `lib/utils/{movie,series}_parser.dart`. Result row UI:
+  `lib/widgets/torrent_result_row.dart`; source picker: `lib/screens/video_player/widgets/source_sheet.dart`.
 
 ## Debrid providers & cloud
-- Playback adapters: `services/cloud/cloud_provider_port.dart` (`CloudProviderPort`)
-  plus `rd_cloud_provider.dart` / `torbox_cloud_provider.dart` /
-  `premiumize_cloud_provider.dart` / `alldebrid_cloud_provider.dart` /
-  `pikpak_cloud_provider.dart`, dispatched by `cloud_provider_registry.dart`.
-  Lookup dialects stay split: `tryParse` vs `fromStoredId` vs `fromPlaybackId`.
-  `CloudPortFeature.forProvider` / `CloudProviderPort.supports` is "this adapter
-  implements that method"; a null return from a supported method is a miss.
-  `CloudPortFeature.cachedHashes` is TorBox `checkcached` only — not Premiumize
-  `checkCache` (positional bools). `CloudPortFeature.checkCache` is Premiumize
-  only. Stremio auto-play (`StremioTvTorboxCache.load`) maps missing key to
-  empty; explicit `torbox` / `premiumize` filtering is
-  `StremioTvCacheFilter.apply` (skip the call when there is no key; keep
-  directs). Playback cache-first is `PlaybackCacheFirst.reorder` (hits first,
-  catch-all, empty key still reaches the adapter). Home/Sources search badges
-  call the same registry methods but keep their own key-null gates, try/catch
-  memoization, and cached-only TorBox narrowing. Magic TV cache windows keep
-  90/100 chunking and two-call budgets; empty `apiKey` skips HTTP.
-  TorBox whole-torrent ZIP permalink is `zipPermalink` (not web-download ZIP,
-  not Premiumize transfer+zip). TorBox web-download ZIP is `webZipPermalink`
-  (`web_id`, not `torrent_id`). Download-service web ZIP refresh / enqueue /
-  retry uses that method with the same empty-key gates as torrent ZIP. Download-service torrent ZIP refresh / enqueue /
-  retry uses that method but keeps its own empty-key gates (refresh → `null`,
-  enqueue → throw, retry → skip). TPS still skips empty key before the call.
-  TorBox torrent file `requestdl` is `fileDownloadLink` (not ZIP, not
-  web-download file, not playlist/player unlock dialects). Download-service
-  torrent file refresh / enqueue / retry uses that method with the same
-  empty-key gates as ZIP (refresh → `null` / empty URL → `null`; enqueue
-  throws missing ids; retry skips). Playlist content view start-file
-  streaming uses `fileDownloadLink` and still catch-to-empty-url. Playlist
-  player single-item play snacks on failure; collection start-file logs and
-  leaves the URL empty. Premiumize `transfer/create` is
-  `createCloudTransfer` (not ZIP generate, not TorBox createTorrent).
-  Premiumize transfer+zip URL is `createTransferZip` (not TorBox zipPermalink).
-  Not-cached keep-downloading is `queueUncachedMagnet` (TorBox
-  `addOnlyIfCached: false`, Premiumize `createCloudTransfer`) — not
-  playback `addMagnet`. Magnet share-sheet TorBox `createtorrent` is
-  `createMagnetTorrent` (raw payload, cached then uncached dialog) — not
-  `addMagnet` / not `queueUncachedMagnet`. Playlist-player hash recovery
-  uses the same method cached-only and keeps its snack-on-error dialect. Share-sheet Premiumize add uses
-  `createCloudTransfer`; `isCachedStrict` and the not-cached dialog stay.
-  Chunk HTTP is swallowed by `TorboxService.checkCachedTorrents`
-  (partial or empty set) and by `PremiumizeService.checkCache` (slots stay
-  `false`); those calls do not throw.
-  HTTP clients remain in
-  `services/debrid_service.dart` (Real-Debrid), `services/torbox_service.dart`,
-  `services/premiumize_service.dart`, `services/alldebrid_service.dart`,
-  `services/pikpak_api_service.dart`.
-  Playlist unlock classification is `CloudUnlockPlan` on `CloudProviderId`
-  (`fromPlaybackId` for `entry.provider` — playlist `realdebrid` is not RD;
-  RD is `restrictedLink`). Launcher vs player differ only at incomplete
-  Premiumize and empty `restrictedLink`. Player wrap brand is
-  `CloudProviderId.playerWrapBrand` (`Real Debrid` / `Torbox`). Registry
-  unlock uses `requireId`, not `tryParse(plan.playbackId)`.
-  Player-screen HTTP wrap is typed
-  (`CloudMetadataMissing` / `CloudMissingApiKey` rethrow; other errors
-  become `$brand link failed`) — not substring matching.
-  Credential presence is `CloudCredentials.configured(id, CloudConfiguredCheck)`
-  (`playback` / `magnet` / `stremioPicker`) — three credential dialects, one
-  entry. `StremioTvResolveGate.canAttempt` is per-torrent skip, not a fourth
-  `configured()` flavour.
 
-  **Still on string switches** (not this extract): Stremio TV settings
-  picker (RD/TB/PikPak only, `has*Credential`), Debrify TV RD/AllDebrid
-  `downloadLink` PreferVideos on `magic_tv_screen`, launcher Real-Debrid
-  spellings, bulk-add, `storage_service` provider toggles, magnet
-  deep-link `isMagnetConfigured` vs playback `isConfigured`.
-  Playback still exposes one-line delegates onto the registry so god-file
-  call sites do not change.
+The cloud port is a **half-migration**. New playback/add/unlock work belongs on
+`CloudProviderPort` adapters under `lib/services/cloud/`. Many feature screens
+still string-match provider ids (P2). Do not “fix” those switches in a docs
+lane; list them.
+
+**Port, registry, adapters**
+
+- Contract: `lib/services/cloud/cloud_provider_port.dart` (`CloudProviderPort`).
+  One fat interface; unsupported methods throw `CloudUnsupported` (P1 splits
+  this into capabilities).
+- Features: `lib/services/cloud/cloud_port_feature.dart` —
+  `CloudPortFeature.forProvider` / `supports`. False means do not call; a
+  supported method may still return null on a miss.
+- Registry: `lib/services/cloud/cloud_provider_registry.dart`
+  (`CloudProviderRegistry.production()`). Lookup dialects stay split:
+  `tryParse` vs `fromStoredId` vs `fromPlaybackId`. Magnets / TPS picker
+  strings use `require` (`tryParse` so `realdebrid` still hits RD). Playlist
+  unlock uses `requireId`, not `tryParse(plan.playbackId)`.
+- Adapters: `lib/services/cloud/rd_cloud_provider.dart`,
+  `lib/services/cloud/torbox_cloud_provider.dart`,
+  `lib/services/cloud/premiumize_cloud_provider.dart`,
+  `lib/services/cloud/alldebrid_cloud_provider.dart`,
+  `lib/services/cloud/pikpak_cloud_provider.dart`.
+- Ids / display names / chips / overlay titles / credential keys:
+  `lib/services/cloud/cloud_provider_id.dart`. Flutter chrome:
+  `lib/widgets/cloud_provider_chrome.dart`.
+- Credentials: `lib/services/cloud/cloud_credentials.dart` —
+  `configured(id, CloudConfiguredCheck)` with three dialects (`playback` /
+  `magnet` / `stremioPicker`). P1 will add a fourth surface wrapper later;
+  `StremioTvResolveGate.canAttempt` is per-torrent skip, not a fourth
+  `configured()` flavour. Keys themselves live in
+  `lib/services/storage/cloud_secret_prefs.dart` (`CloudSecretPrefs`, must
+  match `CloudProviderId.credentialKey`); `StorageService` remains the public
+  static API.
+- Unlock plan: `lib/services/cloud/cloud_unlock_plan.dart` (`CloudUnlockPlan`
+  on `CloudProviderId`; `fromPlaybackId` for `entry.provider` — playlist
+  `realdebrid` is not RD; RD is `restrictedLink`). Launcher vs player differ
+  only at incomplete Premiumize and empty `restrictedLink`. Player wrap brand
+  is `CloudProviderId.playerWrapBrand`. Player-screen HTTP wrap is typed
+  (`CloudMetadataMissing` / `CloudMissingApiKey` rethrow; other errors become
+  `$brand link failed`).
+- HTTP clients remain in `lib/services/debrid_service.dart` (Real-Debrid),
+  `lib/services/torbox_service.dart`, `lib/services/premiumize_service.dart`,
+  `lib/services/alldebrid_service.dart`, `lib/services/pikpak_api_service.dart`.
+
+**What already goes through the registry** (do not reimplement as switches)
+
+- TPS magnet add / bound replay / lazy playlist URL.
+- Stremio TV `resolveStremioTorrent` (`realdebrid` + auto order with PikPak
+  before Premiumize; null on miss). Stremio TV *picker* rows are
+  `CloudCredentials.stremioPickerChoices` (RD/TB key-only, PikPak
+  enabled-only, PM/AD toggle+key — not `isConfigured()`). Settings page
+  still lists RD/TB/PikPak only (`lib/screens/settings/stremio_tv_settings_page.dart`).
+- Debrify TV file prepare is `prepareMagicTv` (`real_debrid`; infohash-only
+  magnet; random unseen file; RD/AllDebrid `supports(magicTvPrepare)` is
+  false). Locked-link queues are `prepareMagicTvLockedLinks`.
+- Player-screen unlock is `unlockPlayerScreenEntry` (wraps HTTP as
+  `Torbox link failed`; incomplete Premiumize throws).
+- `CloudPortFeature.cachedHashes` is TorBox `checkcached` only — not
+  Premiumize `checkCache` (positional bools). `CloudPortFeature.checkCache`
+  is Premiumize only. Stremio auto-play (`StremioTvTorboxCache.load`) maps
+  missing key to empty; explicit `torbox` / `premiumize` filtering is
+  `StremioTvCacheFilter.apply`. Playback cache-first is
+  `PlaybackCacheFirst.reorder`.
+- TorBox whole-torrent ZIP permalink is `zipPermalink` (not web-download ZIP,
+  not Premiumize transfer+zip). TorBox web-download ZIP is `webZipPermalink`
+  (`web_id`, not `torrent_id`). Torrent file `requestdl` is `fileDownloadLink`.
+- Premiumize transfer create is `createCloudTransfer`. Transfer+zip URL is
+  `createTransferZip`. Not-cached keep-downloading is `queueUncachedMagnet`.
+  Magnet share-sheet TorBox `createtorrent` is `createMagnetTorrent`.
+- Bind-source PM/AD/PP browsers: `lib/screens/cloud/cloud_browse_select_source.dart`.
+
+**Still on string matches** (high level; P2 owns the migration, not this lane)
+
+- Magic TV / Debrify TV: `lib/screens/magic_tv_screen.dart` (**P2a**) — provider
+  constants, chips, `_watch*` dispatch, RD/AllDebrid `downloadLink` PreferVideos.
+- Stremio TV screen + picker: `lib/screens/stremio_tv/` (**P2b**).
+- Launcher Real-Debrid spellings + bulk-add: `lib/services/video_player_launcher.dart`,
+  `lib/services/torrent_bulk_add_service.dart` (**P2c**).
+- Playlist / cloud / default-provider picker: `lib/screens/playlist_content_view_screen.dart`,
+  `lib/services/playlist_player_service.dart`, `lib/screens/cloud_screen.dart`,
+  `lib/screens/settings/provider_settings_page.dart` (**P2d**).
+- Storage provider toggles: `lib/services/storage_service.dart` (still ~15
+  provider-string sites). Magnet deep-link `isMagnetConfigured` vs playback
+  `isConfigured` stay different dialects on `CloudCredentials`.
+- Dead legacy screen: `lib/screens/deprecated/torrent_search_screen.dart`
+  (142 provider-string sites). Only reachable behind a hard-coded flag; D0
+  deletes it together with `lib/widgets/catalog_browser.dart`.
+
+Strangler policy lives in `dev/design/REFACTOR_PLAN.md`; `.cursor/rules/debrify-refactor.mdc`
+is an editor mirror, not the source of truth. How to add a provider:
+`dev/design/ADDING_A_PROVIDER.md`.
+
 - File-tree browse (per provider, post-add): `debrid_service.getTorrentFolderTree`,
-  `utils/{rd,torbox}_folder_tree_builder.dart`, `screens/playlist_content_view_screen.dart`.
-- Cloud/downloads screens: `screens/{debrid_downloads,torbox/torbox_downloads,pikpak/pikpak_files,`
-  `premiumize/premiumize_files,alldebrid/alldebrid_files}_screen.dart`, `screens/cloud_screen.dart`.
-- WebDAV: `services/webdav_service.dart` (read/browse only — no upload yet).
+  `lib/utils/{rd,torbox}_folder_tree_builder.dart`, `lib/screens/playlist_content_view_screen.dart`.
+- Cloud/downloads screens: `lib/screens/debrid_downloads_screen.dart`,
+  `lib/screens/torbox/torbox_downloads_screen.dart`,
+  `lib/screens/pikpak/pikpak_files_screen.dart`,
+  `lib/screens/premiumize/premiumize_files_screen.dart`,
+  `lib/screens/alldebrid/alldebrid_files_screen.dart`,
+  `lib/screens/cloud_screen.dart`.
+- WebDAV: `lib/services/webdav_service.dart` (read/browse only — no upload yet).
 
 ## Players
-- In-app player: `screens/video_player_screen.dart` 🔴 (subtitles via media_kit
+- In-app player: `lib/screens/video_player_screen.dart` 🔴 (subtitles via media_kit
   `subtitleViewConfiguration`; `_restoreTrackPreferences`/`_applyDefault*Language`; per-key D-pad
   handlers arrowUp/Down/Left/Right; duplicated Trakt+Simkl scrobble state machines). Controls overlay:
-  `screens/video_player/widgets/controls.dart`. Track/source sheets: `screens/video_player/widgets/*`.
-- Launch + native TV: `services/video_player_launcher.dart` 🔴 (`_launchOnAndroidTv`, `_push`),
-  `services/android_tv_player_bridge.dart`, native Kotlin
-  `android/app/src/main/kotlin/com/debrify/app/{MainActivity.kt,tv/AndroidTvTorrentPlayerActivity.kt}`.
-- External players: `services/external_player_service.dart`, `models/*_external_player.dart`.
+  `lib/screens/video_player/widgets/controls.dart`. Track/source sheets: `lib/screens/video_player/widgets/`.
+- Launch + native TV: `lib/services/video_player_launcher.dart` 🔴 (`_launchOnAndroidTv`, `_push`),
+  `lib/services/android_tv_player_bridge.dart`, native Kotlin
+  `android/app/src/main/kotlin/com/debrify/app/MainActivity.kt`,
+  `android/app/src/main/kotlin/com/debrify/app/tv/AndroidTvTorrentPlayerActivity.kt`.
+- External players: `lib/services/external_player_service.dart`, `lib/models/*_external_player.dart`.
 
 ## IPTV
-- Playlist/M3U/Xtream: `services/iptv_service.dart` (`parseContent`), `utils/m3u_parser.dart`
-  (tvg-id + EPG url), `services/xtream_codes_service.dart`, `models/iptv_playlist.dart`.
-- EPG: `services/iptv_epg_service.dart`, `services/xmltv_epg_source.dart`.
-- Stremio-addon-as-IPTV bridge: `services/stremio_iptv_service.dart` (treats each catalog meta as one
-  channel). UI: `widgets/iptv/*`, `screens/settings/iptv_settings_page.dart`.
+- Playlist/M3U/Xtream: `lib/services/iptv_service.dart` (`parseContent`), `lib/utils/m3u_parser.dart`
+  (tvg-id + EPG url), `lib/services/xtream_codes_service.dart`, `lib/models/iptv_playlist.dart`.
+- EPG: `lib/services/iptv_epg_service.dart`, `lib/services/xmltv_epg_source.dart`.
+- Stremio-addon-as-IPTV bridge: `lib/services/stremio_iptv_service.dart` (treats each catalog meta as one
+  channel). UI: `lib/widgets/iptv/`, `lib/screens/settings/iptv_settings_page.dart`.
 
 ## Debrify TV (keyword channels)
-- `screens/magic_tv_screen.dart` 🔴 (favourites are an unordered `Set`; literal keyword match
+- `lib/screens/magic_tv_screen.dart` 🔴 (favourites are an unordered `Set`; literal keyword match
   `_parseKeywords`; per-provider native launch `_launch{RealDebrid,Torbox}OnAndroidTv`).
-  Default pick / overlay strings: `services/cloud/magic_tv_provider.dart`
+  Default pick / overlay strings: `lib/services/cloud/magic_tv_provider.dart`
   (`playbackPrecedence` mapped to `real_debrid`; display stays `Torbox` / `Real Debrid`).
-- Data: `models/debrify_tv/*`, `services/debrify_tv_{repository,database,cache_service,channel_add_service}.dart`,
-  `services/debrify_tv_zip_importer.dart`. Dialogs: `screens/debrify_tv/*`.
+- Data: `lib/models/debrify_tv/`, `lib/services/debrify_tv_repository.dart`,
+  `lib/services/debrify_tv_database.dart`, `lib/services/debrify_tv_cache_service.dart`,
+  `lib/services/debrify_tv_channel_add_service.dart`,
+  `lib/services/debrify_tv_zip_importer.dart`. Dialogs: `lib/screens/debrify_tv/`.
 
 ## Stremio TV (random-play channels)
-- `screens/stremio_tv/stremio_tv_screen.dart`, `stremio_tv/widgets/stremio_tv_tuner.dart` (dial,
-  left/right surf), `screens/video_player/widgets/stremio_tv_guide_sheet.dart` (in-player channel list
-  — `isCurrent` vs `isFocused` styling), `screens/stremio_tv/stremio_tv_filter_page.dart`.
+- `lib/screens/stremio_tv/stremio_tv_screen.dart`, `lib/screens/stremio_tv/widgets/stremio_tv_tuner.dart` (dial,
+  left/right surf), `lib/screens/video_player/widgets/stremio_tv_guide_sheet.dart` (in-player channel list
+  — `isCurrent` vs `isFocused` styling), `lib/screens/stremio_tv/stremio_tv_filter_page.dart`.
   Picker availability: `CloudCredentials.stremioPickerChoices` / `isStremioAvailable`.
   Resolve skip: `StremioTvResolveGate.canAttempt` (blocked RD, auto TorBox
   cache, PM/AD toggle-only — not `isStremioAvailable`). Auto TorBox hashes
   go through `StremioTvTorboxCache` / `CloudPortFeature.cachedHashes`.
 
 ## Trackers & continue-watching
-- Trakt: `services/trakt/*` (service, continue_watching, list_source, transformer, calendar).
-  Simkl: `services/simkl/*` (incl. `simkl_menu_helpers.dart` remove/On-Hold, `simkl_continue_watching_service.dart`).
-  MDBList: `services/mdblist/*`. **Trackers share no abstraction — fully parallel by design.**
-- Settings: `screens/settings/{trakt,simkl}_settings_page.dart`. Home rows + scrobble wiring live in
-  `search_screen.dart` + both players. Discover source dropdown: `widgets/search_source_dropdown.dart`,
-  `widgets/trakt/trakt_results_view.dart`.
+- Trakt: `lib/services/trakt/` (service, continue_watching, list_source, transformer, calendar).
+  Simkl: `lib/services/simkl/` (incl. `lib/services/simkl/simkl_menu_helpers.dart` remove/On-Hold, `lib/services/simkl/simkl_continue_watching_service.dart`).
+  MDBList: `lib/services/mdblist/`. **Trackers share no abstraction — fully parallel by design**
+  until **T2** (`TrackerRegistry`).
+- Settings: `lib/screens/settings/trakt_settings_page.dart`, `lib/screens/settings/simkl_settings_page.dart`.
+  Home rows + scrobble wiring live in `lib/screens/search_screen.dart` + both players. Discover source dropdown:
+  `lib/widgets/search_source_dropdown.dart`,
+  `lib/widgets/trakt/trakt_results_view.dart`.
 
 ## Detail screens & trailers
-- `screens/merged_series_detail_screen.dart` (default-on), legacy `screens/catalog_item_detail_screen.dart`
-  (no trailer), `widgets/episodes_panel.dart`, `widgets/series_browser.dart`.
-- Trailer: `widgets/hero_trailer_backdrop.dart` (`buildVideo(fit:)` — crop lives here),
-  `widgets/trailer_engine.dart`.
+- `lib/screens/merged_series_detail_screen.dart` (default-on), legacy `lib/screens/catalog_item_detail_screen.dart`
+  (no trailer), `lib/widgets/episodes_panel.dart`, `lib/widgets/series_browser.dart`.
+- Trailer: `lib/widgets/hero_trailer_backdrop.dart` (`buildVideo(fit:)` — crop lives here),
+  `lib/widgets/trailer_engine.dart`.
 
 ## Other video sources
-- YouTube: `services/youtube_service.dart`, `widgets/youtube/*`. Reddit: `services/reddit_service.dart`,
-  `widgets/reddit/*`. Lemmy: `services/lemmy_service.dart`, `widgets/lemmy/*`.
+- YouTube: `lib/services/youtube_service.dart`, `lib/widgets/youtube/`. Reddit: `lib/services/reddit_service.dart`,
+  `lib/widgets/reddit/`. Lemmy: `lib/services/lemmy_service.dart`, `lib/widgets/lemmy/`.
 
 ## Settings · storage · misc infra
-- Settings: `screens/settings/*` (+ `home_sections_filter_page.dart` = show/hide home rows,
-  `home_page_settings_page.dart`). Metrics/format helpers: `utils/*`.
+- Settings: `lib/screens/settings/` (+ `lib/screens/settings/home_sections_filter_page.dart` = show/hide home rows,
+  `lib/screens/settings/home_page_settings_page.dart`). Metrics/format helpers: `lib/utils/`.
+  Adding a settings page still touches ~6 sites until **S1**.
 - Collections (imported Nuvio/Xperience-style folder groups → Home rows of folder tiles):
-  `models/home_collection.dart` (schema + parser + `collection:<id>` row ids),
-  `services/home_collections_store.dart` (`home_collections_v1`, file/URL/paste import, addon
-  resolution), `services/collection_folder_loader.dart` (merged multi-catalog paging),
-  `services/home_collection_rows.dart` (`HomeCollectionSection`), browser
-  `screens/collections/collection_folder_screen.dart` (+ `widgets/collections/rail_see_all_pill.dart`),
-  settings `screens/settings/collections_settings_page.dart` (+ `widgets/text_prompt_dialog.dart`).
-  Board wiring lives in `search_screen.dart` (`_buildCollectionSections`, `_openCollectionFolder`,
+  `lib/models/home_collection.dart` (schema + parser + `collection:<id>` row ids),
+  `lib/services/home_collections_store.dart` (`home_collections_v1`, file/URL/paste import, addon
+  resolution), `lib/services/collection_folder_loader.dart` (merged multi-catalog paging),
+  `lib/services/home_collection_rows.dart` (`HomeCollectionSection`), browser
+  `lib/screens/collections/collection_folder_screen.dart` (+ `lib/widgets/collections/rail_see_all_pill.dart`),
+  settings `lib/screens/settings/collections_settings_page.dart` (+ `lib/widgets/text_prompt_dialog.dart`).
+  Board wiring lives in `lib/screens/search_screen.dart` (`_buildCollectionSections`, `_openCollectionFolder`,
   `_openCollectionScreen`). Docs: `docs/collections.md`.
-- Hide watched (Settings › Tracking): `services/hide_watched_prefs.dart` (sync flag),
-  `services/watched_filter.dart` (predicate over `WatchedStatusService`),
-  `services/filtered_catalog_pager.dart` (`fetchFilteredPage` top-up paging). Wired in
-  `search_screen.dart` (`_fetchBoardBatch`, `_loadMoreRow`, catalog search, hero source),
-  `see_all/catalog_see_all_screen.dart`, `services/home_list_rows.dart`, Trakt/MDBList See-All.
-- Stream badges (Nuvio `badges.json` rulesets → chips on source rows): `models/stream_badge_rules.dart`,
-  `services/{stream_badge_matcher,stream_badges_service}.dart`, `widgets/stream_badge_strip.dart`,
-  `screens/settings/stream_badges_settings_page.dart` (from the Play Loader page). Rendered by
-  `widgets/source_row.dart` and the in-player `video_player/widgets/source_sheet.dart`; the addon's
-  label/description ride `Torrent.streamLabel`/`streamDescription` (set in `stremio_service.dart`).
-- Backup/transfer/sync: `services/backup_restore_service.dart` (full config snapshot),
-  `widgets/remote/*` + `services/remote_control/*` (device-to-device over LAN, no server).
-- Onboarding: `widgets/initial_setup_flow.dart` 🔴. Migration: `services/app_migration_service.dart`.
+- Hide watched (Settings › Tracking): `lib/services/hide_watched_prefs.dart` (sync flag),
+  `lib/services/watched_filter.dart` (predicate over `WatchedStatusService`),
+  `lib/services/filtered_catalog_pager.dart` (`fetchFilteredPage` top-up paging). Wired in
+  `lib/screens/search_screen.dart` (`_fetchBoardBatch`, `_loadMoreRow`, catalog search, hero source),
+  `lib/screens/see_all/catalog_see_all_screen.dart`, `lib/services/home_list_rows.dart`, Trakt/MDBList See-All.
+- Stream badges (Nuvio `badges.json` rulesets → chips on source rows): `lib/models/stream_badge_rules.dart`,
+  `lib/services/stream_badge_matcher.dart`, `lib/services/stream_badges_service.dart`, `lib/widgets/stream_badge_strip.dart`,
+  `lib/screens/settings/stream_badges_settings_page.dart` (from the Play Loader page). Rendered by
+  `lib/widgets/source_row.dart` and the in-player `lib/screens/video_player/widgets/source_sheet.dart`; the addon's
+  label/description ride `Torrent.streamLabel`/`streamDescription` (set in `lib/services/stremio_service.dart`).
+- Backup/transfer/sync: `lib/services/backup_restore_service.dart` (full config snapshot),
+  `lib/widgets/remote/` + `lib/services/remote_control/` (device-to-device over LAN, no server).
+  See the 11-site checklist above until **T1**.
+- Onboarding: `lib/widgets/initial_setup_flow.dart` (export) → `lib/widgets/onboarding/onboarding_flow.dart`.
+  Migration: `lib/services/app_migration_service.dart`.
 
 ## Metadata
-- `services/{tvmaze_service,movie_metadata_service,imdb_enrichment_service,episode_info_service}.dart`,
-  `services/catalog_repo_service.dart`.
+- `lib/services/tvmaze_service.dart`, `lib/services/movie_metadata_service.dart`,
+  `lib/services/imdb_enrichment_service.dart`, `lib/services/episode_info_service.dart`,
+  `lib/services/catalog_repo_service.dart`.
 
 ---
-_Maintenance: this is a routing hint, not a spec — paths drift. If `/estimate` finds a file has moved,
-update the line here. Regenerate the hub/line-count list when files grow past ~8k lines._
+_Maintenance: this is a routing hint, not a spec. If a lane moves a path named here,
+update this file in the same PR. Line counts come from `wc -l`, not estimates._
