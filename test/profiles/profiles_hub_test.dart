@@ -117,10 +117,20 @@ void main() {
     expect(find.text('Delete profile'), findsOneWidget);
 
     await tester.tap(find.text('Disable profile'));
-    await settle(tester);
 
-    // The hub keeps showing the disabled profile (managers must see it to
-    // re-enable or delete), badged accordingly.
+    // Disable is capture → sqflite → reload. A fixed settle loses under
+    // a busy CI shard; poll the badge. Cursor blink still forbids
+    // pumpAndSettle.
+    for (
+      var i = 0;
+      i < 40 && find.text('Kid · disabled').evaluate().isEmpty;
+      i++
+    ) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+    }
     expect(find.text('Kid · disabled'), findsOneWidget);
   });
 
