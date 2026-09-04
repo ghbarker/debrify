@@ -6,7 +6,7 @@ import '../theme/app_surface.dart';
 import '../theme/widgets/glass_surface.dart';
 import '../theme/widgets/themed_artwork.dart';
 import '../utils/tv_keys.dart';
-import '../services/cloud/cloud_provider_chrome.dart';
+import 'cloud_provider_chrome.dart';
 
 /// Landscape playlist card optimized for Android TV horizontal scrolling.
 ///

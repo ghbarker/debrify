@@ -17,7 +17,7 @@ import '../../services/mdblist/mdblist_service.dart';
 import '../../services/stream_url_validator.dart';
 import '../../services/main_page_bridge.dart';
 import '../../services/storage_service.dart';
-import '../../services/cloud/cloud_provider_chrome.dart';
+import '../../widgets/cloud_provider_chrome.dart';
 import '../../services/cloud/cloud_credentials.dart';
 import '../../services/cloud/cloud_provider_id.dart';
 import '../../services/cloud/cloud_provider_registry.dart';

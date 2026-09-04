@@ -5,6 +5,9 @@ alwaysApply: true
 
 # Debrify refactor
 
+Source of truth: `CODEMAP.md` (Debrid providers & cloud). This file is an
+editor mirror.
+
 - Strangler-fig only: keep public static APIs; move internals behind
   `lib/services/cloud/` ports and facades.
 - Never skip `flutter test` on the touched subtree (`test/adversarial/` for

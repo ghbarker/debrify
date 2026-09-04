@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:debrify/models/alldebrid_file.dart';
 import 'package:debrify/models/torrent.dart';
+import 'package:debrify/services/cloud/cloud_port_feature.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
 import 'package:debrify/services/cloud/cloud_provider_registry.dart';
 import 'package:debrify/services/cloud/magic_tv_playable.dart';
@@ -105,7 +106,8 @@ void main() {
       ),
       isNull,
     );
-    expect(debrid.magicTvCount, 1);
+    expect(debrid.magicTvCount, 0);
+    expect(debrid.supports(CloudPortFeature.magicTvPrepare), isFalse);
   });
 
   test('AllDebrid locked links do not use prepareMagicTv', () async {
@@ -127,7 +129,8 @@ void main() {
       ),
       isNull,
     );
-    expect(torbox.lockedLinksCount, 1);
+    expect(torbox.lockedLinksCount, 0);
+    expect(torbox.supports(CloudPortFeature.magicTvLockedLinks), isFalse);
     expect(
       await CloudProviderRegistry.instance.prepareMagicTv(
         provider: 'torbox',

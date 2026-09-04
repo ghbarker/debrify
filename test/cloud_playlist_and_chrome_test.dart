@@ -6,11 +6,11 @@ import 'package:debrify/screens/torbox/torbox_downloads_screen.dart';
 import 'package:debrify/screens/video_player/models/playlist_entry.dart';
 import 'package:debrify/services/cloud/cloud_playback_result.dart';
 import 'package:debrify/services/cloud/cloud_playlist_payload.dart';
-import 'package:debrify/services/cloud/cloud_provider_chrome.dart';
+import 'package:debrify/widgets/cloud_provider_chrome.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
 import 'package:debrify/services/series_source_service.dart';
 import 'package:debrify/services/storage/cloud_secret_prefs.dart';
-import 'package:debrify/widgets/cloud_browse_select_source.dart';
+import 'package:debrify/screens/cloud/cloud_browse_select_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

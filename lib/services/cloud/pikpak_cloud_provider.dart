@@ -21,7 +21,7 @@ import 'cloud_provider_port.dart';
 import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
-class PikPakCloudProvider implements CloudProviderPort {
+class PikPakCloudProvider extends CloudProviderAdapter {
   const PikPakCloudProvider();
 
   @override
@@ -212,13 +212,18 @@ class PikPakCloudProvider implements CloudProviderPort {
   }
 
   @override
-  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async => null;
+  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) {
+    throw const CloudUnsupported(
+      CloudProviderId.pikpak,
+      CloudPortFeature.playlistEntry,
+    );
+  }
 
   @override
   Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
     final fileId = entry.pikpakFileId;
     if (fileId == null) {
-      throw Exception('PikPak file metadata missing');
+      throw const CloudMetadataMissing('PikPak file metadata missing');
     }
     final pikpak = PikPakApiService.instance;
     final fileData = await pikpak.getFileDetails(fileId);
@@ -463,7 +468,12 @@ class PikPakCloudProvider implements CloudProviderPort {
   @override
   Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
     MagicTvPrepareRequest request,
-  ) async => null;
+  ) {
+    throw const CloudUnsupported(
+      CloudProviderId.pikpak,
+      CloudPortFeature.magicTvLockedLinks,
+    );
+  }
 
   static Future<List<Map<String, dynamic>>> extractPikPakVideos(
     PikPakApiService pikpak,

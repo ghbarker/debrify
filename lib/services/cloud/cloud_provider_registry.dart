@@ -4,8 +4,10 @@ import '../../models/torrent.dart';
 import '../../screens/video_player/models/playlist_entry.dart';
 import '../series_source_service.dart';
 import 'alldebrid_cloud_provider.dart';
+import 'cloud_exceptions.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
+import 'cloud_unlock_plan.dart';
 import 'stremio_torrent_resolve_args.dart';
 import 'magic_tv_prepare_args.dart';
 import 'cloud_provider_port.dart';
@@ -104,49 +106,12 @@ class CloudProviderRegistry {
     PlaylistEntry entry, {
     String fallbackUrl = '',
   }) async {
-    final provider = entry.provider?.toLowerCase();
-    final hasTorboxMetadata =
-        entry.torboxTorrentId != null && entry.torboxFileId != null;
-    final hasTorboxWebDownloadMetadata =
-        entry.torboxWebDownloadId != null && entry.torboxFileId != null;
-
-    if (provider == 'torbox' ||
-        hasTorboxMetadata ||
-        hasTorboxWebDownloadMetadata) {
-      return require('torbox').unlockPlaybackEntry(entry);
+    final plan = CloudUnlockPlan.choose(entry, playerScreen: false);
+    if (plan.lane == null) {
+      if (fallbackUrl.isNotEmpty) return fallbackUrl;
+      throw Exception('No URL metadata available for this entry');
     }
-
-    final hasPikPakMetadata = entry.pikpakFileId != null;
-    if (provider == 'pikpak' || hasPikPakMetadata) {
-      return require('pikpak').unlockPlaybackEntry(entry);
-    }
-
-    if (entry.premiumizeItemId != null && entry.premiumizeItemId!.isNotEmpty) {
-      return require('premiumize').unlockPlaybackEntry(entry);
-    }
-
-    final hasPremiumizeMetadata =
-        entry.premiumizeHash != null && entry.premiumizePath != null;
-    if (provider == 'premiumize' || hasPremiumizeMetadata) {
-      final hash = entry.premiumizeHash;
-      final path = entry.premiumizePath;
-      if (hash != null && hash.isNotEmpty && path != null && path.isNotEmpty) {
-        return require('premiumize').unlockPlaybackEntry(entry);
-      }
-    }
-
-    if (entry.restrictedLink != null && entry.restrictedLink!.isNotEmpty) {
-      return require('debrid').unlockPlaybackEntry(entry);
-    }
-
-    if (provider == 'alldebrid' ||
-        (entry.allDebridLink != null && entry.allDebridLink!.isNotEmpty)) {
-      return require('alldebrid').unlockPlaybackEntry(entry);
-    }
-
-    if (fallbackUrl.isNotEmpty) return fallbackUrl;
-
-    throw Exception('No URL metadata available for this entry');
+    return require(plan.playbackId).unlockPlaybackEntry(entry);
   }
 
   /// In-app player (`video_player_screen._resolvePlaylistEntryUrl`). Same
@@ -154,48 +119,14 @@ class CloudProviderRegistry {
   /// throws (no RD fallthrough); empty `restrictedLink` still hits RD;
   /// HTTP/empty-URL errors wrap as `$brand link failed`; no [fallbackUrl].
   Future<String> unlockPlayerScreenEntry(PlaylistEntry entry) async {
-    final provider = entry.provider?.toLowerCase();
-    final hasTorboxMetadata =
-        entry.torboxTorrentId != null && entry.torboxFileId != null;
-    final hasTorboxWebDownloadMetadata =
-        entry.torboxWebDownloadId != null && entry.torboxFileId != null;
-
-    if (provider == 'torbox' ||
-        hasTorboxMetadata ||
-        hasTorboxWebDownloadMetadata) {
-      return _playerWrappedUnlock('Torbox', 'torbox', entry);
+    final plan = CloudUnlockPlan.choose(entry, playerScreen: true);
+    if (plan.incompletePremiumize) {
+      throw const CloudMetadataMissing('Premiumize file metadata missing');
     }
-
-    final hasPikPakMetadata = entry.pikpakFileId != null;
-    if (provider == 'pikpak' || hasPikPakMetadata) {
-      return _playerWrappedUnlock('PikPak', 'pikpak', entry);
+    if (plan.lane == null) {
+      throw Exception('No URL metadata available for this entry');
     }
-
-    if (entry.premiumizeItemId != null && entry.premiumizeItemId!.isNotEmpty) {
-      return _playerWrappedUnlock('Premiumize', 'premiumize', entry);
-    }
-
-    final hasPremiumizeMetadata =
-        entry.premiumizeHash != null && entry.premiumizePath != null;
-    if (provider == 'premiumize' || hasPremiumizeMetadata) {
-      final hash = entry.premiumizeHash;
-      final path = entry.premiumizePath;
-      if (hash == null || hash.isEmpty || path == null || path.isEmpty) {
-        throw Exception('Premiumize file metadata missing');
-      }
-      return _playerWrappedUnlock('Premiumize', 'premiumize', entry);
-    }
-
-    if (entry.restrictedLink != null) {
-      return _playerWrappedUnlock('Real Debrid', 'debrid', entry);
-    }
-
-    if (provider == 'alldebrid' ||
-        (entry.allDebridLink != null && entry.allDebridLink!.isNotEmpty)) {
-      return _playerWrappedUnlock('AllDebrid', 'alldebrid', entry);
-    }
-
-    throw Exception('No URL metadata available for this entry');
+    return _playerWrappedUnlock(plan.playerBrand, plan.playbackId, entry);
   }
 
   Future<String> _playerWrappedUnlock(
@@ -205,15 +136,11 @@ class CloudProviderRegistry {
   ) async {
     try {
       return await require(provider).unlockPlaybackEntry(entry);
+    } on CloudMetadataMissing {
+      rethrow;
+    } on CloudMissingApiKey {
+      rethrow;
     } catch (e) {
-      final text = e.toString();
-      if (text.contains('metadata missing') ||
-          text.contains('Missing Torbox API key') ||
-          text.contains('Missing Premiumize API key') ||
-          text.contains('Missing Real Debrid API key') ||
-          text.contains('Missing AllDebrid API key')) {
-        rethrow;
-      }
       throw Exception('$brand link failed: $e');
     }
   }
@@ -261,7 +188,12 @@ class CloudProviderRegistry {
     final id = CloudProviderId.tryParse(provider);
     final port = id == null ? null : _byId[id];
     if (port == null) return null;
-    return port.prepareMagicTv(request);
+    if (!port.supports(CloudPortFeature.magicTvPrepare)) return null;
+    try {
+      return await port.prepareMagicTv(request);
+    } on CloudUnsupported {
+      return null;
+    }
   }
 
   /// Locked-link queue fill. Same [CloudProviderId.tryParse] as
@@ -273,7 +205,12 @@ class CloudProviderRegistry {
     final id = CloudProviderId.tryParse(provider);
     final port = id == null ? null : _byId[id];
     if (port == null) return null;
-    return port.prepareMagicTvLockedLinks(request);
+    if (!port.supports(CloudPortFeature.magicTvLockedLinks)) return null;
+    try {
+      return await port.prepareMagicTvLockedLinks(request);
+    } on CloudUnsupported {
+      return null;
+    }
   }
 
   static String? credentialKeyFor(String provider) =>

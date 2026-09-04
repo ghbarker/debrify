@@ -1,7 +1,7 @@
-# Known-failing tests on GitHub ubuntu + Flutter 3.44.8 (not caused by the
-# cloud-port refactor). Format: <path relative to repo> :: <test name>
-# CI fails if any additional test fails. Shrink this list; do not grow it
-# without a reason.
+# Known-failing tests on GitHub ubuntu + Flutter 3.44.8.
+# Format: <path relative to repo> :: <test name>  (exact pair; name-only
+# matching is forbidden). Unused entries fail CI so this list cannot rot.
+# Shrink it; do not grow it without a reproduced failure.
 
 test/menu_dpad_repro_test.dart :: subtitles pane roundtrip keeps rail DPAD alive
 test/theme/shape_manifest_test.dart :: no swept file grows a new bare radius
@@ -15,5 +15,3 @@ test/series_parser_test.dart :: cleanCollectionTitle Tests PHASE 2: should handl
 test/detail_theme_test.dart :: no raw colour literals survive in the themed files detail_episode_cells.dart
 test/xmltv_legacy_guide_retention_test.dart :: a guide with nothing to import is still dropped
 test/profiles/edit_profile_screen_test.dart :: rendering no control goes missing in a regrouping
-test/profiles/profile_source_guard_test.dart :: Debrify TV access stays behind the profile-switch scope gate
-test/widget_test.dart :: Debrify app smoke test

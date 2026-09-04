@@ -20,7 +20,7 @@ import 'magic_tv_playable.dart';
 import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
-class PremiumizeCloudProvider implements CloudProviderPort {
+class PremiumizeCloudProvider extends CloudProviderAdapter {
   const PremiumizeCloudProvider();
 
   @override
@@ -159,13 +159,18 @@ class PremiumizeCloudProvider implements CloudProviderPort {
   }
 
   @override
-  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async => null;
+  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) {
+    throw const CloudUnsupported(
+      CloudProviderId.premiumize,
+      CloudPortFeature.playlistEntry,
+    );
+  }
 
   @override
   Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
     final apiKey = await CloudCredentials.apiKey(id);
     if (apiKey == null || apiKey.isEmpty) {
-      throw Exception('Missing Premiumize API key');
+      throw const CloudMissingApiKey('Missing Premiumize API key');
     }
     if (entry.premiumizeItemId != null && entry.premiumizeItemId!.isNotEmpty) {
       final file = await PremiumizeService.resolveItemById(
@@ -296,5 +301,10 @@ class PremiumizeCloudProvider implements CloudProviderPort {
   @override
   Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
     MagicTvPrepareRequest request,
-  ) async => null;
+  ) {
+    throw const CloudUnsupported(
+      CloudProviderId.premiumize,
+      CloudPortFeature.magicTvLockedLinks,
+    );
+  }
 }

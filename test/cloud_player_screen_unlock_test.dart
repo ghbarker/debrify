@@ -1,4 +1,5 @@
 import 'package:debrify/screens/video_player/models/playlist_entry.dart';
+import 'package:debrify/services/cloud/cloud_exceptions.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
 import 'package:debrify/services/cloud/cloud_provider_registry.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -56,13 +57,7 @@ void main() {
       );
       await expectLater(
         CloudProviderRegistry.instance.unlockPlayerScreenEntry(entry),
-        throwsA(
-          isA<Exception>().having(
-            (e) => e.toString(),
-            'message',
-            contains('Premiumize file metadata missing'),
-          ),
-        ),
+        throwsA(isA<CloudMetadataMissing>()),
       );
       expect(debrid.unlockCount, 0);
       expect(
@@ -139,16 +134,7 @@ void main() {
       CloudProviderRegistry.instance.unlockPlayerScreenEntry(
         const PlaylistEntry(url: '', title: 'a', provider: 'torbox'),
       ),
-      throwsA(
-        isA<Exception>().having(
-          (e) => e.toString(),
-          'message',
-          allOf(
-            contains('Torbox file metadata missing'),
-            isNot(contains('link failed')),
-          ),
-        ),
-      ),
+        throwsA(isA<CloudMetadataMissing>()),
     );
   });
 

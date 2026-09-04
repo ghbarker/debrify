@@ -8,6 +8,7 @@ import '../alldebrid_service.dart';
 import '../main_page_bridge.dart';
 import '../series_source_service.dart';
 import 'cloud_credentials.dart';
+import 'cloud_exceptions.dart';
 import 'cloud_playback_helpers.dart';
 import 'cloud_playback_result.dart';
 import 'cloud_provider_id.dart';
@@ -16,7 +17,7 @@ import 'magic_tv_playable.dart';
 import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
-class AllDebridCloudProvider implements CloudProviderPort {
+class AllDebridCloudProvider extends CloudProviderAdapter {
   const AllDebridCloudProvider();
 
   @override
@@ -127,11 +128,11 @@ class AllDebridCloudProvider implements CloudProviderPort {
   Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
     final lockedLink = entry.allDebridLink;
     if (lockedLink == null || lockedLink.isEmpty) {
-      throw Exception('AllDebrid link metadata missing');
+      throw const CloudMetadataMissing('AllDebrid link metadata missing');
     }
     final apiKey = await CloudCredentials.apiKey(id);
     if (apiKey == null || apiKey.isEmpty) {
-      throw Exception('Missing AllDebrid API key');
+      throw const CloudMissingApiKey('Missing AllDebrid API key');
     }
     final url = await AllDebridService.unlockLink(apiKey, lockedLink);
     if (url.isEmpty) {
@@ -203,9 +204,12 @@ class AllDebridCloudProvider implements CloudProviderPort {
   }
 
   @override
-  Future<MagicTvPrepared?> prepareMagicTv(
-    MagicTvPrepareRequest request,
-  ) async => null;
+  Future<MagicTvPrepared?> prepareMagicTv(MagicTvPrepareRequest request) {
+    throw const CloudUnsupported(
+      CloudProviderId.alldebrid,
+      CloudPortFeature.magicTvPrepare,
+    );
+  }
 
   @override
   Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(

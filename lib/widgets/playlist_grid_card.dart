@@ -7,7 +7,7 @@ import '../theme/app_theme_scope.dart';
 import '../theme/widgets/glass_surface.dart';
 import '../theme/widgets/themed_artwork.dart';
 import '../utils/tv_keys.dart';
-import '../services/cloud/cloud_provider_chrome.dart';
+import 'cloud_provider_chrome.dart';
 
 /// Portrait playlist card optimized for grid layouts on desktop/tablet/mobile.
 ///

@@ -41,7 +41,7 @@ import '../services/watched_status_service.dart';
 import '../services/iptv_cw_router.dart';
 import '../services/iptv_media_store.dart';
 import '../services/local_bound_source_service.dart';
-import '../services/cloud/cloud_provider_chrome.dart';
+import '../widgets/cloud_provider_chrome.dart';
 import '../services/main_page_bridge.dart';
 import '../models/profiles/profile_policy.dart';
 import '../services/profiles/profile_policy_guard.dart';

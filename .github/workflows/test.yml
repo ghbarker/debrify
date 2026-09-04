@@ -21,6 +21,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libsqlite3-dev libsqlite3-0
 
+      - name: Test CI allowlist matcher
+        run: python3 -m unittest ci_test_allowlist_test.py
+        working-directory: tool
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -37,8 +41,9 @@ jobs:
         run: flutter analyze
           lib/services/cloud
           lib/services/storage
-          lib/widgets/cloud_browse_select_source.dart
           lib/widgets/debrid_loading_overlay.dart
+          lib/widgets/cloud_provider_chrome.dart
+          lib/screens/cloud/cloud_browse_select_source.dart
           test/adversarial
           test/support
           test/cloud_playback_characterization_test.dart
@@ -50,6 +55,10 @@ jobs:
           test/cloud_stremio_resolve_test.dart
           test/cloud_stremio_available_test.dart
           test/cloud_magic_tv_prepare_test.dart
+          test/cloud_magic_tv_locked_links_test.dart
+          test/cloud_magic_tv_provider_test.dart
+          test/cloud_unlock_plan_test.dart
+          test/cloud_port_feature_test.dart
           test/download_cloud_credential_key_test.dart
 
       - name: Run refactor contract tests
@@ -64,6 +73,10 @@ jobs:
           test/cloud_stremio_resolve_test.dart
           test/cloud_stremio_available_test.dart
           test/cloud_magic_tv_prepare_test.dart
+          test/cloud_magic_tv_locked_links_test.dart
+          test/cloud_magic_tv_provider_test.dart
+          test/cloud_unlock_plan_test.dart
+          test/cloud_port_feature_test.dart
           test/download_cloud_credential_key_test.dart
           --reporter compact
 

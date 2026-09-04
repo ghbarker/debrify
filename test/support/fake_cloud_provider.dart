@@ -24,6 +24,10 @@ class FakeCloudProvider implements CloudProviderPort {
 
   @override
   final CloudProviderId id;
+
+  @override
+  bool supports(CloudPortFeature feature) =>
+      CloudPortFeature.forProvider(id).contains(feature);
   bool configured;
   CloudPlaybackResult? result;
   CloudPlaybackResult? boundResult;

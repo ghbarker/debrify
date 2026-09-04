@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../screens/alldebrid/alldebrid_files_screen.dart';
-import '../screens/debrid_downloads_screen.dart';
-import '../screens/pikpak/pikpak_files_screen.dart';
-import '../screens/premiumize/premiumize_files_screen.dart';
-import '../screens/torbox/torbox_downloads_screen.dart';
-import '../services/cloud/cloud_provider_id.dart';
-import '../services/series_source_service.dart';
+import '../../services/cloud/cloud_provider_id.dart';
+import '../../services/series_source_service.dart';
+import '../alldebrid/alldebrid_files_screen.dart';
+import '../debrid_downloads_screen.dart';
+import '../pikpak/pikpak_files_screen.dart';
+import '../premiumize/premiumize_files_screen.dart';
+import '../torbox/torbox_downloads_screen.dart';
 
 /// Bind-source cloud browsers for catalog, Trakt, and aggregated search.
 /// [fromPlaybackId] only — `rd` does not open Real-Debrid.
