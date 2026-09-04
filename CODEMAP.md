@@ -84,11 +84,10 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   (`playback` / `magnet` / `stremioPicker`) — three dialects, one entry.
 
   **Still on string switches** (not this extract): Stremio TV settings
-  picker (RD/TB/PikPak only, `has*Credential`), resolve `canAttempt` on
-  `stremio_tv_screen`, Debrify TV RD/AllDebrid `downloadLink` PreferVideos
-  on `magic_tv_screen`, launcher Real-Debrid spellings, bulk-add,
-  `storage_service` provider toggles, magnet deep-link
-  `isMagnetConfigured` vs playback `isConfigured`.
+  picker (RD/TB/PikPak only, `has*Credential`), Debrify TV RD/AllDebrid
+  `downloadLink` PreferVideos on `magic_tv_screen`, launcher Real-Debrid
+  spellings, bulk-add, `storage_service` provider toggles, magnet
+  deep-link `isMagnetConfigured` vs playback `isConfigured`.
   Playback still exposes one-line delegates onto the registry so god-file
   call sites do not change.
 - File-tree browse (per provider, post-add): `debrid_service.getTorrentFolderTree`,
@@ -127,7 +126,9 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   left/right surf), `screens/video_player/widgets/stremio_tv_guide_sheet.dart` (in-player channel list
   — `isCurrent` vs `isFocused` styling), `screens/stremio_tv/stremio_tv_filter_page.dart`.
   Picker availability: `CloudCredentials.stremioPickerChoices` / `isStremioAvailable`.
-  Resolve `canAttempt` (blocked RD, auto TorBox cache, PM/AD toggle-only) stays on the screen.
+  Resolve skip: `StremioTvResolveGate.canAttempt` (blocked RD, auto TorBox
+  cache, PM/AD toggle-only — not `isStremioAvailable`). `_loadTorboxCachedHashes`
+  stays on the screen.
 
 ## Trackers & continue-watching
 - Trakt: `services/trakt/*` (service, continue_watching, list_source, transformer, calendar).
