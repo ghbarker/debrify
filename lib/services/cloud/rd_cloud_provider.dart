@@ -23,7 +23,8 @@ class RealDebridCloudProvider extends CloudProviderAdapter
         CloudUnlock,
         CloudMagnetAdd,
         CloudPlaylist,
-        CloudMagicTvLockedLinks {
+        CloudMagicTvLockedLinks,
+        CloudMagicTvRdUnlock {
   const RealDebridCloudProvider();
 
   @override
@@ -359,5 +360,27 @@ class RealDebridCloudProvider extends CloudProviderAdapter
       name: request.torrent.name,
       lockedLinks: links,
     );
+  }
+
+  /// Same Map as [DebridService.unrestrictLink]. Looks up the API key;
+  /// Magic TV currently passes it.
+  @override
+  Future<Map<String, dynamic>> unrestrictLink(String link) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const CloudMissingApiKey('Missing Real Debrid API key');
+    }
+    return DebridService.unrestrictLink(apiKey, link);
+  }
+
+  /// Same Map as [DebridService.addTorrentToDebridPreferVideos]. Looks up
+  /// the API key; Magic TV currently passes it.
+  @override
+  Future<Map<String, dynamic>> addTorrentPreferVideos(String magnet) async {
+    final apiKey = await CloudCredentials.apiKey(id);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const CloudMissingApiKey('Missing Real Debrid API key');
+    }
+    return DebridService.addTorrentToDebridPreferVideos(apiKey, magnet);
   }
 }

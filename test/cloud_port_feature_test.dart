@@ -1,5 +1,6 @@
 import 'package:debrify/services/cloud/alldebrid_cloud_provider.dart';
 import 'package:debrify/services/cloud/cloud_capabilities.dart';
+import 'package:debrify/services/cloud/cloud_magic_tv_unlock.dart';
 import 'package:debrify/services/cloud/cloud_port_feature.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
 import 'package:debrify/services/cloud/pikpak_cloud_provider.dart';
@@ -19,6 +20,34 @@ void main() {
         CloudPortFeature.magicTvLockedLinks,
       ),
       isTrue,
+    );
+    expect(
+      const RealDebridCloudProvider().supports(
+        CloudPortFeature.magicTvRdUnlock,
+      ),
+      isTrue,
+    );
+    expect(
+      const RealDebridCloudProvider().supports(
+        CloudPortFeature.magicTvAdUnlock,
+      ),
+      isFalse,
+    );
+    expect(
+      const AllDebridCloudProvider().supports(
+        CloudPortFeature.magicTvAdUnlock,
+      ),
+      isTrue,
+    );
+    expect(
+      const AllDebridCloudProvider().supports(
+        CloudPortFeature.magicTvRdUnlock,
+      ),
+      isFalse,
+    );
+    expect(
+      const TorboxCloudProvider().supports(CloudPortFeature.magicTvRdUnlock),
+      isFalse,
     );
     expect(
       const AllDebridCloudProvider().supports(CloudPortFeature.magicTvPrepare),
@@ -104,6 +133,16 @@ void main() {
       const PremiumizeCloudProvider().supports(CloudPortFeature.magnetTorrent),
       isFalse,
     );
+    expect(CloudPortFeature.forProvider(CloudProviderId.debrid), {
+      CloudPortFeature.playlistEntry,
+      CloudPortFeature.magicTvLockedLinks,
+      CloudPortFeature.magicTvRdUnlock,
+    });
+    expect(CloudPortFeature.forProvider(CloudProviderId.alldebrid), {
+      CloudPortFeature.playlistEntry,
+      CloudPortFeature.magicTvLockedLinks,
+      CloudPortFeature.magicTvAdUnlock,
+    });
     expect(CloudPortFeature.forProvider(CloudProviderId.torbox), {
       CloudPortFeature.playlistEntry,
       CloudPortFeature.magicTvPrepare,
@@ -140,14 +179,22 @@ void main() {
     }
     expect(const RealDebridCloudProvider(), isA<CloudPlaylist>());
     expect(const RealDebridCloudProvider(), isA<CloudMagicTvLockedLinks>());
+    expect(const RealDebridCloudProvider(), isA<CloudMagicTvRdUnlock>());
+    expect(const RealDebridCloudProvider(), isNot(isA<CloudMagicTvAdUnlock>()));
     expect(const RealDebridCloudProvider(), isNot(isA<CloudMagicTvPrepare>()));
     expect(const RealDebridCloudProvider(), isNot(isA<CloudCachedHashes>()));
     expect(const TorboxCloudProvider(), isA<CloudCachedHashes>());
     expect(const TorboxCloudProvider(), isA<CloudMagicTvPrepare>());
     expect(const TorboxCloudProvider(), isNot(isA<CloudMagicTvLockedLinks>()));
+    expect(const TorboxCloudProvider(), isNot(isA<CloudMagicTvRdUnlock>()));
+    expect(const TorboxCloudProvider(), isNot(isA<CloudMagicTvAdUnlock>()));
+    expect(const AllDebridCloudProvider(), isA<CloudMagicTvAdUnlock>());
+    expect(const AllDebridCloudProvider(), isNot(isA<CloudMagicTvRdUnlock>()));
     expect(const PremiumizeCloudProvider(), isA<CloudCheckCache>());
     expect(const PremiumizeCloudProvider(), isNot(isA<CloudPlaylist>()));
+    expect(const PremiumizeCloudProvider(), isNot(isA<CloudMagicTvRdUnlock>()));
     expect(const PikPakCloudProvider(), isA<CloudMagicTvPrepare>());
     expect(const PikPakCloudProvider(), isNot(isA<CloudPlaylist>()));
+    expect(const PikPakCloudProvider(), isNot(isA<CloudMagicTvAdUnlock>()));
   });
 }

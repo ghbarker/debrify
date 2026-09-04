@@ -6,7 +6,7 @@ Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 apply; this phase also requires (f) Leaves, (g) no host-private members / no new
 `part of` / `extension on` the host State, (h) pin commit predates the move.
 
-Baseline: `main` @ #72 · Phase: **2 correction** (P1b + G1'-0 + V1-0 + S2-0 assigned) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
+Baseline: `main` @ #73 #74 #75 · Phase: **2 correction** (P1b review; G1'-1 + V1-1 + S2-1 assigned) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -42,15 +42,17 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | G4 · step 2 remaining hosts | queued | `refactor/g4-cloud-files-rest` | — | `premiumize/**`, `alldebrid/**`, `pikpak/**` files screens, `CloudFilesScreen` | **P1b** | Route PM/AD/PikPak onto shared `CloudFilesScreen`. After P1b it can use RD/AD ports. Selection bar stays on hosts (shape-manifest). Public types and sidebar ids frozen. |
 | G5 · scrobble coordinator | closed | `refactor/g5-scrobble-coordinator` | — | — | — | **#68** extracted scrobble. Remaining triplication is **V1-9**. Do not open a G5 follow-up. |
 | T2 · tracker commons | merged | `refactor/t2-tracker-commons` | worker | `services/trakt/**`, `services/simkl/**`, `services/mdblist/**`, `tracking_source_policy.dart`, new `lib/services/tracking/**` | — | **#62.** Shared shapes only; HTTP unchanged. Local progress not dedicated; MDBList adapter ignores `inferredType` (NOTES). Out-of-lane callers not chased. |
-| P1b · RD/AD Magic-TV port | assigned | `refactor/p1b-magic-tv-unlock` | worker | `lib/services/cloud/**`, `test/cloud_*` | — | Expose Magic TV's RD `unrestrictLink` / `addTorrentToDebridPreferVideos` and AD `unlockLink` on `CloudUnlock`/`CloudMagnetAdd` (or a thin Magic-TV capability) with existing quirk pins. **Do not edit `magic_tv_screen.dart`.** Unblocks M1. |
-| G1'-0 · public types | review | `refactor/g1p-0-public-types` | worker | `search_screen.dart`, `lib/screens/search/**` (rename only) | — | `_Mode`→`SearchBoardMode` (bare `Mode` collides as a public name); `_CwKind`→`CwKind`; `_CwRow`→`CwRow`; `_FavKind`→`FavKind`; `_FavRowRef`→`FavRowRef`; `_ArtPoster`→`ArtPoster`; `_FavArtCell`→`FavArtCell`. `_ArtPosterState` stays private. Leaves 0. No new `part`/`extension on` State. |
-| G1'-1 … G1'-9 | queued | — | — | `search_screen.dart` | G1'-0 | Sequential after G1'-0. See PHASE2 §3. Target ≤ 7 500; no `extension on _SearchScreenState`. |
-| V1-0 · PlayerLaunchConfig | review | `refactor/v1-0-launch-config` | worker | `video_player_screen.dart` [ctor + `widget.*` reads], new `lib/screens/video_player/player_launch_config.dart` | — | Value object replacing ~60 ctor params / 64 `widget.*` reads. Leaves ≈ 0. No host-State privates in the new file. Unblocks V1-1…10. |
-| V1-1 … V1-10 | queued | — | — | `video_player_screen.dart` | V1-0 | Sequential. Target ≤ 9 500. V1-9 folds episode-progress into ScrobbleCoordinator. |
+| P1b · RD/AD Magic-TV port | merged | `refactor/p1b-magic-tv-unlock` | worker | `lib/services/cloud/**`, `test/cloud_*` | — | **#76.** Thin `CloudMagicTvRdUnlock` / `CloudMagicTvAdUnlock`. `magic_tv_screen.dart` untouched. Unblocks M1. |
+| G1'-0 · public types | merged | `refactor/g1p-0-public-types` | worker | `search_screen.dart`, `lib/screens/search/**` (rename only) | — | **#74.** `_Mode`→`SearchBoardMode`; `_CwKind`→`CwKind`; `_CwRow`→`CwRow`; `_FavKind`→`FavKind`; `_FavRowRef`→`FavRowRef`; `_ArtPoster`→`ArtPoster`; `_FavArtCell`→`FavArtCell`. `_ArtPosterState` stays private. Leaves 0. |
+| G1'-1 · catalog play resolver | review | `refactor/g1p-1-catalog-play-resolver` | worker | `search_screen.dart` [play/resume hunks], `lib/services/playback/catalog_play_resolver.dart` | G1'-0 | **#78.** Leaves −1 069. No new `part`/`extension on` State. |
+| G1'-2 … G1'-9 | queued | — | — | `search_screen.dart` | G1'-1 | Sequential. Target ≤ 7 500; no `extension on _SearchScreenState`. |
+| V1-0 · PlayerLaunchConfig | merged | `refactor/v1-0-launch-config` | worker | `video_player_screen.dart` [ctor + `widget.*` reads], `lib/screens/video_player/player_launch_config.dart` | — | **#75.** Value object. Leaves +3 ≈ 0. Unblocks V1-1…10. |
+| V1-1 · resume controller | review | `refactor/v1-1-resume-controller` | worker | `video_player_screen.dart` [resume hunks], `lib/services/playback/resume_controller.dart` | V1-0 | **#79.** Leaves 666. Pin predates move. |
+| V1-2 … V1-10 | queued | — | — | `video_player_screen.dart` | V1-1 | Sequential. Target ≤ 9 500. V1-9 folds episode-progress into ScrobbleCoordinator. |
 | M1-0 … M1-6 | queued | — | — | `magic_tv_screen.dart` | **P1b** then M1-0 | Sequential. Target ≤ 4 500. WatchSession first. |
-| S2-0 · key registry + façade | review | `refactor/s2-0-key-registry` | worker | `storage_key_ownership.dart`, maybe `storage_service.dart` (no domain extract) | — | `byKey` completed (259 consts + 15 inline/interpolated). Façade rule documented. Leaves 0. `storage_service.dart` untouched. **Did not extract PlayerPrefs.** |
-| S2-1 · stremio/social/Debrify TV prefs | review | `refactor/s2-1-stremio-social-tv-prefs` | worker | `storage_service.dart` [those hunks], `lib/services/storage/**`, key-sweep tests | S2-0 | Pin + origin-diff. `StremioTvPrefs` / `SocialPrefs` / `DebrifyTvPrefs`. No revision notifiers. Prefix families `engine_tv_` etc. declared in `byKey`. `debrify_tv_style` left for S2-4. Leaves: see PR wc -l. |
-| S2-2 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-1 | Sequential. Replaces remaining G3. Target ≤ 2 800. S2-3 = `player_prefs` + `iptv_prefs`. |
+| S2-0 · key registry + façade | merged | `refactor/s2-0-key-registry` | worker | `storage_key_ownership.dart` | — | **#73.** `byKey` completed (274). Façade rule documented. Leaves 0. **Did not extract PlayerPrefs.** |
+| S2-1 · stremio/social/TV prefs | review | `refactor/s2-1-stremio-social-tv-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-0 | **#77.** `StremioTvPrefs` / `SocialPrefs` / `DebrifyTvPrefs`. Leaves −531 (named stores only). Prefixes `engine_tv_` in `byKey`. `debrify_tv_style` left for S2-4. |
+| S2-2 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-1 | Sequential. Target ≤ 2 800. S2-3 = `player_prefs` + `iptv_prefs`. |
 | G2 · under 3 000 | queued | — | — | `settings_screen.dart` | when free | #63 left the file at 3 107; PHASE2 target ≤ 3 000. |
 | Q1 · layering enforcement | queued | — | — | `tool/check_layering.dart`, `test.yml` | gate 2 | — |
 | Q2 · shim + comment sweep | queued | — | — | per area, assigned at gate 2 | gate 2 | — |
@@ -85,4 +87,4 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
-Phase 1 merged. Old Phase 2 G1–G5/T2/G3-HomePrefs **closed as insufficient** (audit in PHASE2 §1). Binding is **#72** `REFACTOR_PLAN_PHASE2.md`. **G3 PlayerPrefs parked** (`refactor/g3-player-prefs` — do not merge; S2-3 later). **G5 closed** (remainder is V1-9). First wave assigned: **P1b · G1'-0 · V1-0 · S2-0**. G4 remaining hosts after P1b. Mini-gate after every three merged extractions per lane. PR #56 held for Q3. #36–#43 closed (G4).
+Phase 1 merged. Old Phase 2 G1–G5/T2/G3-HomePrefs **closed as insufficient** (audit in PHASE2 §1). Binding is **#72** `REFACTOR_PLAN_PHASE2.md`. **G3 PlayerPrefs parked** (`refactor/g3-player-prefs` — do not merge; S2-3 later). **G5 closed** (remainder is V1-9). **#73 S2-0, #74 G1'-0, #75 V1-0 merged.** P1b is **#76** (this PR). Next slices assigned: **G1'-1 · V1-1 · S2-1**. G4 remaining hosts after P1b. Mini-gate after every three merged extractions per lane. PR #56 held for Q3. #36–#43 closed (G4).
