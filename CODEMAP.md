@@ -98,6 +98,9 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   so they share `HomeBoardController`, `CatalogSearchController`, and `TitleOpener`. Shell contracts
   live in `lib/screens/search/search_screen_shells.dart`.
   Detail opening is `lib/screens/search/title_opener.dart` (`TitleOpener`; State `_openItem` is a forward).
+  Catalog play/resume resolve is `lib/services/playback/catalog_play_resolver.dart`
+  (`CatalogPlayResolver` — meta + tracker snapshots → `PlaySelection`/`ResumeInfo`;
+  host `_onCatalogPlay` keeps overlay, `_activeAddonId`, and launch).
   TV Home stage layouts are `lib/screens/search/stages/` (`_CanvasBoardStage` and friends);
   the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
@@ -260,7 +263,10 @@ is an editor mirror, not the source of truth. How to add a provider:
   handlers arrowUp/Down/Left/Right; scrobble via `ScrobbleCoordinator` +
   `ScrobbleTarget`s in `lib/services/scrobble/`). Launch ctor fields:
   `lib/screens/video_player/player_launch_config.dart` (`PlayerLaunchConfig`;
-  `VideoPlayerScreen` public constructor stays). Controls overlay:
+  `VideoPlayerScreen` public constructor stays). Resume:
+  `lib/services/playback/resume_controller.dart` (`ResumeController` +
+  `ResumeContext` / `ResumeSession`; host keeps `_ResumeSession` adapter).
+  Controls overlay:
   `lib/screens/video_player/widgets/controls.dart`. Track/source sheets: `lib/screens/video_player/widgets/`.
 - Launch + native TV: `lib/services/video_player_launcher.dart` 🔴 (`_launchOnAndroidTv`, `_push`),
   `lib/services/android_tv_player_bridge.dart`, native Kotlin
