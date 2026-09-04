@@ -74,43 +74,38 @@ void main() {
     if (await root.exists()) await root.delete(recursive: true);
   });
 
+  Future<void> yieldFrame(WidgetTester tester) async {
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pump();
+  }
+
   Future<void> settle(WidgetTester tester, {int rounds = 6}) async {
     for (var i = 0; i < rounds; i++) {
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 30)),
-      );
-      await tester.pump(const Duration(milliseconds: 80));
+      await yieldFrame(tester);
     }
   }
 
   Future<void> waitFor(WidgetTester tester, bool Function() condition) async {
     for (var i = 0; i < 100 && !condition(); i++) {
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 50)),
-      );
-      await tester.pump(const Duration(milliseconds: 50));
+      await yieldFrame(tester);
     }
     expect(condition(), isTrue, reason: 'Async checkpoint did not complete');
   }
 
-  /// Identity save is a sqflite write. A fixed settle loses under a busy
-  /// CI shard; poll the registry instead. Cursor blink still forbids
-  /// pumpAndSettle.
+  /// Identity save is a sqflite write. Poll the registry; do not sleep 50 ms
+  /// per attempt. Cursor blink still forbids pumpAndSettle.
   Future<UserProfile> waitForSavedProfile(
     WidgetTester tester,
     bool Function(UserProfile) match,
   ) async {
     UserProfile? last;
-    for (var i = 0; i < 40; i++) {
+    for (var i = 0; i < 100; i++) {
       await tester.runAsync(() async {
         last = await registry.getProfile(memberId);
       });
       final profile = last;
       if (profile != null && match(profile)) return profile;
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 50)),
-      );
-      await tester.pump(const Duration(milliseconds: 50));
+      await yieldFrame(tester);
     }
     fail('profile write did not land: ${last?.name}');
   }

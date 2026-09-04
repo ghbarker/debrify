@@ -61,6 +61,20 @@ def unused_allowlist(
     return sorted(allow - set(failed))
 
 
+def format_allowlist_verdict(
+    unused: list[tuple[str, str]], unexpected: list[tuple[str, str]]
+) -> list[str]:
+    """Report unused entries and new failures together; caller decides exit."""
+    lines: list[str] = []
+    if unused:
+        lines.append("UNUSED allowlist entries (must still fail, or delete them):")
+        lines.extend(f"  {path} :: {name}" for path, name in unused)
+    if unexpected:
+        lines.append("NEW failures (not in test/BASELINE_ALLOWLIST.txt):")
+        lines.extend(f"  {path} :: {name}" for path, name in unexpected)
+    return lines
+
+
 def parse_report(text: str) -> list[tuple[str, str]]:
     tests: dict[int, tuple[str, str]] = {}
     failed: list[tuple[str, str]] = []
@@ -113,15 +127,10 @@ def main() -> int:
     unused = unused_allowlist(allow, failed)
 
     print(f"Allowlisted failures: {len(matched)}/{len(allow)}")
-    if unused:
-        print("UNUSED allowlist entries (must still fail, or delete them):")
-        for path, name in unused:
-            print(f"  {path} :: {name}")
-        return 1
-    if unexpected:
-        print("NEW failures (not in test/BASELINE_ALLOWLIST.txt):")
-        for path, name in unexpected:
-            print(f"  {path} :: {name}")
+    verdict = format_allowlist_verdict(unused, unexpected)
+    for line in verdict:
+        print(line)
+    if unused or unexpected:
         return 1
     if proc.returncode not in (0, 1):
         print(f"flutter test exited {proc.returncode}")

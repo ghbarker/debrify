@@ -60,6 +60,11 @@ enum CloudProviderId {
   /// Playback loader title. Distinct from [displayName] only for TorBox.
   String get overlayTitle => this == torbox ? 'Torbox' : displayName;
 
+  /// In-app player wrap (`$brand link failed`). Real-Debrid is `Real Debrid`
+  /// (space), not [displayName] `Real-Debrid`. TorBox is [overlayTitle]
+  /// `Torbox`, not [displayName] `TorBox`.
+  String get playerWrapBrand => this == debrid ? 'Real Debrid' : overlayTitle;
+
   /// Two-letter pipeline / catalog chip.
   String get chipCode => switch (this) {
     debrid => 'RD',

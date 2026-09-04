@@ -71,11 +71,17 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   `services/debrid_service.dart` (Real-Debrid), `services/torbox_service.dart`,
   `services/premiumize_service.dart`, `services/alldebrid_service.dart`,
   `services/pikpak_api_service.dart`.
-  Playlist unlock classification is `CloudUnlockPlan` (one lane order;
-  launcher vs player differ only at incomplete Premiumize and empty
-  `restrictedLink`). Player-screen HTTP wrap is typed
+  Playlist unlock classification is `CloudUnlockPlan` on `CloudProviderId`
+  (`fromPlaybackId` for `entry.provider` — playlist `realdebrid` is not RD;
+  RD is `restrictedLink`). Launcher vs player differ only at incomplete
+  Premiumize and empty `restrictedLink`. Player wrap brand is
+  `CloudProviderId.playerWrapBrand` (`Real Debrid` / `Torbox`). Registry
+  unlock uses `requireId`, not `tryParse(plan.playbackId)`.
+  Player-screen HTTP wrap is typed
   (`CloudMetadataMissing` / `CloudMissingApiKey` rethrow; other errors
   become `$brand link failed`) — not substring matching.
+  Credential presence is `CloudCredentials.configured(id, CloudConfiguredCheck)`
+  (`playback` / `magnet` / `stremioPicker`) — three dialects, one entry.
 
   **Still on string switches** (not this extract): Stremio TV settings
   picker (RD/TB/PikPak only, `has*Credential`), resolve `canAttempt` on
