@@ -85,7 +85,8 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   web-download file, not playlist/player unlock dialects). Download-service
   torrent file refresh / enqueue / retry uses that method with the same
   empty-key gates as ZIP (refresh → `null` / empty URL → `null`; enqueue
-  throws missing ids; retry skips). Premiumize `transfer/create` is
+  throws missing ids; retry skips). Playlist content view start-file
+  streaming uses `fileDownloadLink` and still catch-to-empty-url. Premiumize `transfer/create` is
   `createCloudTransfer` (not ZIP generate, not TorBox createTorrent).
   Premiumize transfer+zip URL is `createTransferZip` (not TorBox zipPermalink).
   Not-cached keep-downloading is `queueUncachedMagnet` (TorBox
