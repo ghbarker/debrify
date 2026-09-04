@@ -12,6 +12,7 @@ enum CloudPortFeature {
   cachedHashes,
   checkCache,
   zipPermalink,
+  fileDownloadLink,
   cloudTransfer,
   transferZip,
   queueUncached;
@@ -26,6 +27,7 @@ enum CloudPortFeature {
       magicTvPrepare,
       cachedHashes,
       zipPermalink,
+      fileDownloadLink,
       queueUncached,
     },
     CloudProviderId.premiumize => {

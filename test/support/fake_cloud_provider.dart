@@ -23,6 +23,7 @@ class FakeCloudProvider implements CloudProviderPort {
     this.cachedHashes = const <String>{},
     this.cacheFlags = const <bool>[],
     this.zipPermalinkUrl,
+    this.fileDownloadUrl,
     this.transferZipUrl,
     this.error,
   });
@@ -44,6 +45,7 @@ class FakeCloudProvider implements CloudProviderPort {
   Set<String> cachedHashes;
   List<bool> cacheFlags;
   String? zipPermalinkUrl;
+  String? fileDownloadUrl;
   Object? error;
 
   int addCount = 0;
@@ -56,6 +58,9 @@ class FakeCloudProvider implements CloudProviderPort {
   int cachedHashesCount = 0;
   int checkCacheCount = 0;
   int zipPermalinkCount = 0;
+  int fileDownloadLinkCount = 0;
+  int? lastFileDownloadTorrentId;
+  int? lastFileDownloadFileId;
   String? lastMagnet;
   SeriesSource? lastBoundSource;
   PlaylistEntry? lastPlaylistEntry;
@@ -156,6 +161,16 @@ class FakeCloudProvider implements CloudProviderPort {
     if (error != null) throw error!;
     if (zipPermalinkUrl != null) return zipPermalinkUrl!;
     throw CloudUnsupported(id, CloudPortFeature.zipPermalink);
+  }
+
+  @override
+  Future<String> fileDownloadLink(int torrentId, int fileId) async {
+    fileDownloadLinkCount++;
+    lastFileDownloadTorrentId = torrentId;
+    lastFileDownloadFileId = fileId;
+    if (error != null) throw error!;
+    if (fileDownloadUrl != null) return fileDownloadUrl!;
+    throw CloudUnsupported(id, CloudPortFeature.fileDownloadLink);
   }
 
   int createCloudTransferCount = 0;
