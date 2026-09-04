@@ -49,10 +49,12 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | V1-0 · PlayerLaunchConfig | merged | `refactor/v1-0-launch-config` | worker | `video_player_screen.dart` [ctor + `widget.*` reads], `lib/screens/video_player/player_launch_config.dart` | — | **#75.** Value object. Leaves +3 ≈ 0. Unblocks V1-1…10. |
 | V1-1 · resume controller | review | `refactor/v1-1-resume-controller` | worker | `video_player_screen.dart` [resume hunks], `lib/services/playback/resume_controller.dart` | V1-0 | **#79.** Leaves 666. Pin predates move. Adapter still `widget.*`. |
 | V1-2 … V1-10 | queued | — | — | `video_player_screen.dart` | V1-1 | Sequential. Target ≤ 9 500. V1-9 folds episode-progress into ScrobbleCoordinator. |
-| M1-0 … M1-6 | queued | — | — | `magic_tv_screen.dart` | **P1b** then M1-0 | Sequential. Target ≤ 4 500. WatchSession first. |
+| M1-0 · WatchSession | review | `refactor/m1-0-watch-session` | worker | `magic_tv_screen.dart` [session fields], `lib/screens/debrify_tv/watch_session.dart` | P1b | **#81.** Leaves +12 ≈ 0. |
+| M1-1 … M1-6 | queued | — | — | `magic_tv_screen.dart` | M1-0 | Sequential. Target ≤ 4 500. |
 | S2-0 · key registry + façade | merged | `refactor/s2-0-key-registry` | worker | `storage_key_ownership.dart` | — | **#73.** `byKey` completed (274). Façade rule documented. Leaves 0. **Did not extract PlayerPrefs.** |
-| S2-1 · stremio/social/TV prefs | assigned | `refactor/s2-1-stremio-social-tv-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-0 | Leaves ~1 400. No revision notifiers. No PlayerPrefs. |
-| S2-2 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-1 | Sequential. Target ≤ 2 800. S2-3 = `player_prefs` + `iptv_prefs`. |
+| S2-1 · stremio/social/TV prefs | merged | `refactor/s2-1-stremio-social-tv-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-0 | **#77.** Leaves −531. Prefixes `engine_tv_` in `byKey`. |
+| S2-2 · provider credential prefs | assigned | `refactor/s2-2-provider-credential-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-1 | Leaves ~900. No PlayerPrefs. |
+| S2-3 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-2 | Sequential. Target ≤ 2 800. S2-3 = `player_prefs` + `iptv_prefs`. |
 | G2 · under 3 000 | queued | — | — | `settings_screen.dart` | when free | #63 left the file at 3 107; PHASE2 target ≤ 3 000. |
 | Q1 · layering enforcement | queued | — | — | `tool/check_layering.dart`, `test.yml` | gate 2 | — |
 | Q2 · shim + comment sweep | queued | — | — | per area, assigned at gate 2 | gate 2 | — |

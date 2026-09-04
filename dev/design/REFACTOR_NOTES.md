@@ -190,6 +190,27 @@ behaviour and must be restored, not kept as quirks.
 | T1 | `_readPikpakWire` returned null when `pikpakPassword` was empty. Both old senders (Send Setup to TV + Transfer Everything) encoded `{email}` (password omitted when empty). | **merged** `refactor/t1-pikpak-empty-password` (#58) |
 | S1 | `settings_screen.dart` never passed `extraPlayerKeywords`, so VLC / mpv / Infuse / … names dropped out of Settings search. | **merged** `refactor/s1-extra-player-keywords` (#59) |
 
+### S2-1 · Stremio / social / Debrify TV prefs
+
+- **`debrify_tv_show_watermark` is the show-channel-name key.** The Dart
+  symbol is `getDebrifyTvShowChannelName`. Keep: persisted name is frozen.
+- **Debrify TV filter getters have no try/catch.** Corrupt JSON throws
+  `FormatException`. Stremio catalogs / favorites catch and return empty.
+  Keep: origin.
+- **`clearAllDebrifyTvSettings` leaves provider, channels, favorites, and
+  the external-player notice.** Only display/filter keys and the `engine_tv_`
+  / `debrify_tv_use_` / channel-size / quick-play prefixes plus the two
+  keyword literals. Keep: origin clearer.
+- **YouTube setter writes any int;** only the getter coerces `<= 0` to 1080.
+- **Empty Lemmy instance reads as `https://lemmy.world`.** Setter still
+  stores the empty string.
+- **Adult-content helper is copied** onto `SocialPrefs` and `DebrifyTvPrefs`
+  (same body as `StorageService.profileAllowsAdultContent`) so the stores do
+  not import the god file. Call sites use `_profileAllowsAdultContent()`.
+- **Callers still import `StorageService`.** `@Deprecated` waits for Q2.
+- **`debrify_tv_style` / `debrify_tv_player_style` stay on StorageService**
+  (S2-4). Player/IPTV prefs are S2-3.
+
 ## Process
 
 Gate check **(c)** is tightened (plan §6): the pinning test must be committed

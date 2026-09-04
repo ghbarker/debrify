@@ -1,8 +1,11 @@
 import 'dart:io';
 
 import 'package:debrify/services/storage/cloud_secret_prefs.dart';
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
+import 'package:debrify/services/storage/social_prefs.dart';
 import 'package:debrify/services/storage/storage_key_ownership.dart';
+import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Value-only consts on StorageService that are not persisted key names.
@@ -20,11 +23,7 @@ const notPersistedValueConsts = {
 };
 
 /// JSON object field names inside persisted blobs — not SharedPreferences keys.
-const jsonPayloadFields = {
-  'finishedEpisodes',
-  'seasons',
-  'trackPreferences',
-};
+const jsonPayloadFields = {'finishedEpisodes', 'seasons', 'trackPreferences'};
 
 /// Interpolated names from `_ambientTrailerKeyFor` (detail surface). The
 /// Home-hero pair is already a HomePrefs const; these two have no `_…Key`.
@@ -104,6 +103,9 @@ Set<String> allDiscoveredPrefsKeys() => {
   ...declaredOnStorageService(),
   ...declaredOnCloudSecretPrefs(),
   ...HomePrefs.ownedKeys,
+  ...StremioTvPrefs.ownedKeys,
+  ...SocialPrefs.ownedKeys,
+  ...DebrifyTvPrefs.ownedKeys,
   ...inlinePrefsKeysOnStorageService(),
   ...interpolatedPrefsKeys,
 };
@@ -117,6 +119,9 @@ void main() {
     final fromGodFile = declaredOnStorageService();
     final fromCloud = declaredOnCloudSecretPrefs();
     final fromHome = HomePrefs.ownedKeys;
+    final fromStremio = StremioTvPrefs.ownedKeys;
+    final fromSocial = SocialPrefs.ownedKeys;
+    final fromDebrify = DebrifyTvPrefs.ownedKeys;
     final fromInline = {
       ...inlinePrefsKeysOnStorageService(),
       ...interpolatedPrefsKeys,
@@ -172,12 +177,36 @@ void main() {
       );
     }
 
-    final residual = declared.difference(fromCloud).difference(fromHome);
+    void expectStore(Set<String> keys, StorageKeyStore store, String label) {
+      expect(keys, StorageKeyOwnership.keysFor(store));
+      for (final key in keys) {
+        expect(claimed[key], store, reason: '$key must be owned by $label');
+        expect(
+          fromGodFile.contains(key),
+          isFalse,
+          reason: '$key must not remain declared on StorageService',
+        );
+      }
+    }
+
+    expectStore(fromStremio, StorageKeyStore.stremioTvPrefs, 'StremioTvPrefs');
+    expectStore(fromSocial, StorageKeyStore.socialPrefs, 'SocialPrefs');
+    expectStore(fromDebrify, StorageKeyStore.debrifyTvPrefs, 'DebrifyTvPrefs');
+
+    final extracted = {
+      ...fromCloud,
+      ...fromHome,
+      ...fromStremio,
+      ...fromSocial,
+      ...fromDebrify,
+    };
+    final residual = declared.difference(extracted);
     for (final key in residual) {
       expect(
         claimed[key],
         StorageKeyStore.storageService,
-        reason: '$key is still declared or inlined on StorageService this slice',
+        reason:
+            '$key is still declared or inlined on StorageService this slice',
       );
     }
 
