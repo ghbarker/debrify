@@ -35,7 +35,6 @@ import '../services/video_player_launcher.dart';
 import '../services/debrify_tv_channel_archive_service.dart';
 import '../services/debrify_tv_cache_service.dart';
 import '../services/debrify_tv_repository.dart';
-import '../services/premiumize_service.dart';
 import '../services/alldebrid_service.dart';
 import '../services/torbox_service.dart';
 import '../services/torrent_service.dart';
@@ -1482,6 +1481,13 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     required int startIndex,
     required String apiKey,
   }) async {
+    if (apiKey.isEmpty) {
+      return TorboxCacheWindowResult(
+        cachedTorrents: const <Torrent>[],
+        nextCursor: startIndex,
+        exhausted: startIndex >= candidates.length,
+      );
+    }
     const int chunkSize = 90;
     const int maxCalls = 2;
 
@@ -1504,11 +1510,8 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
       }
 
       calls += 1;
-      final Set<String> cachedHashes = await TorboxService.checkCachedTorrents(
-        apiKey: apiKey,
-        infoHashes: hashes,
-        listFiles: false,
-      );
+      final Set<String> cachedHashes =
+          await CloudProviderRegistry.instance.checkCachedHashes(hashes);
 
       if (cachedHashes.isEmpty) {
         continue;
@@ -9502,6 +9505,13 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
     required int startIndex,
     required String apiKey,
   }) async {
+    if (apiKey.isEmpty) {
+      return TorboxCacheWindowResult(
+        cachedTorrents: const [],
+        nextCursor: startIndex,
+        exhausted: startIndex >= candidates.length,
+      );
+    }
     const int chunkSize = 100;
     const int maxCalls = 2;
 
@@ -9524,8 +9534,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen> {
       if (hashes.isEmpty) continue;
 
       calls++;
-      final List<bool> cached = await PremiumizeService.checkCache(
-        apiKey,
+      final List<bool> cached = await CloudProviderRegistry.instance.checkCache(
         hashes,
       );
 

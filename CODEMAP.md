@@ -75,7 +75,9 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
   directs). Playback cache-first is `PlaybackCacheFirst.reorder` (hits first,
   catch-all, empty key still reaches the adapter). Home/Sources search badges
   call the same registry methods but keep their own key-null gates, try/catch
-  memoization, and cached-only TorBox narrowing. Chunk HTTP is swallowed by `TorboxService.checkCachedTorrents`
+  memoization, and cached-only TorBox narrowing. Magic TV cache windows keep
+  90/100 chunking and two-call budgets; empty `apiKey` skips HTTP.
+  Chunk HTTP is swallowed by `TorboxService.checkCachedTorrents`
   (partial or empty set) and by `PremiumizeService.checkCache` (slots stay
   `false`); those calls do not throw.
   HTTP clients remain in
