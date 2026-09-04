@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:debrify/services/storage/cloud_secret_prefs.dart';
 import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:debrify/services/storage/social_prefs.dart';
 import 'package:debrify/services/storage/storage_key_ownership.dart';
 import 'package:debrify/services/storage/stremio_tv_prefs.dart';
@@ -106,6 +107,7 @@ Set<String> allDiscoveredPrefsKeys() => {
   ...StremioTvPrefs.ownedKeys,
   ...SocialPrefs.ownedKeys,
   ...DebrifyTvPrefs.ownedKeys,
+  ...ProviderCredentialPrefs.ownedKeys,
   ...inlinePrefsKeysOnStorageService(),
   ...interpolatedPrefsKeys,
 };
@@ -122,6 +124,7 @@ void main() {
     final fromStremio = StremioTvPrefs.ownedKeys;
     final fromSocial = SocialPrefs.ownedKeys;
     final fromDebrify = DebrifyTvPrefs.ownedKeys;
+    final fromProvider = ProviderCredentialPrefs.ownedKeys;
     final fromInline = {
       ...inlinePrefsKeysOnStorageService(),
       ...interpolatedPrefsKeys,
@@ -192,6 +195,11 @@ void main() {
     expectStore(fromStremio, StorageKeyStore.stremioTvPrefs, 'StremioTvPrefs');
     expectStore(fromSocial, StorageKeyStore.socialPrefs, 'SocialPrefs');
     expectStore(fromDebrify, StorageKeyStore.debrifyTvPrefs, 'DebrifyTvPrefs');
+    expectStore(
+      fromProvider,
+      StorageKeyStore.providerCredentialPrefs,
+      'ProviderCredentialPrefs',
+    );
 
     final extracted = {
       ...fromCloud,
@@ -199,6 +207,7 @@ void main() {
       ...fromStremio,
       ...fromSocial,
       ...fromDebrify,
+      ...fromProvider,
     };
     final residual = declared.difference(extracted);
     for (final key in residual) {

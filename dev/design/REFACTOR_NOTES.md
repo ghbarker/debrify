@@ -231,6 +231,30 @@ behaviour and must be restored, not kept as quirks.
 - **`debrify_tv_style` / `debrify_tv_player_style` stay on StorageService**
   (S2-4). Player/IPTV prefs are S2-3.
 
+### S2-2 · Provider credential prefs
+
+- **CloudSecretPrefs hunks skipped.** Origin ~516–529 / ~549–565 / PM+AD
+  API-key helpers / PikPak email+password were already CloudSecretPrefs
+  forwards. Not re-extracted. Secret key strings stay `real_debrid_api_key`,
+  `torbox_api_key`, `premiumize_api_key`, `alldebrid_api_key`, `pikpak_email`,
+  `pikpak_password`.
+- **`clearAllIntegrationStates` does not touch PikPak.** It clears RD/TB/PM/AD
+  integration+hidden and WebDAV enabled+hidden only. PikPak enabled/hidden
+  survive. Keep: origin clearer.
+- **`setPikPakRestrictedFolder(null)` leaves subfolder caches.** Only
+  `clearPikPakRestrictedFolder` also wipes torrents/tv folder ids.
+- **RD endpoint default** is `https://api.real-debrid.com/rest/1.0`. Delete
+  restores that default by removing the key.
+- **Integration enabled defaults true** (RD/TB/PM/AD). PikPak and WebDAV
+  enabled default false.
+- **Post-torrent actions default `choose`.** File selection defaults `smart`.
+- **WebDAV legacy single-server keys promote** into `webdav_servers_v1` on
+  first `getWebDavServers` and write through SecretVault.
+- **`clearAllFilterSettings` still clears `default_torrent_provider_v1`**
+  via the store's `clearDefaultTorrentProvider` (same key, same remove).
+- **Callers still import `StorageService`.** `@Deprecated` waits for Q2.
+- **PlayerPrefs / IptvPrefs / tracking** were not extracted (S2-3 / S2-5).
+
 ## Process
 
 Gate check **(c)** is tightened (plan §6): the pinning test must be committed

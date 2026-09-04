@@ -35,6 +35,7 @@ import 'storage/cloud_secret_prefs.dart';
 import 'storage/debrify_tv_prefs.dart';
 import 'storage/home_prefs.dart';
 import 'storage/social_prefs.dart';
+import 'storage/provider_credential_prefs.dart';
 import 'storage/stremio_tv_prefs.dart';
 
 export 'storage/home_prefs.dart'
@@ -210,40 +211,9 @@ class StorageService {
     await prefs.setInt(_defaultsGenerationKey, _currentDefaultsGeneration);
   }
 
-  static const String _rdEndpointKey = 'real_debrid_endpoint';
-  static const String _fileSelectionKey = 'real_debrid_file_selection';
   static const String _torboxApiKey = CloudSecretPrefs.torboxApiKey;
-  static const String _torboxCacheCheckPref =
-      'torbox_check_cache_before_search';
-  static const String _realDebridIntegrationEnabledKey =
-      'real_debrid_integration_enabled';
-  static const String _realDebridHiddenFromNavKey =
-      'real_debrid_hidden_from_nav';
-  static const String _rdSkipBlockedTorrentsKey = 'rd_skip_blocked_torrents';
-  static const String _torboxIntegrationEnabledKey =
-      'torbox_integration_enabled';
-  static const String _torboxHiddenFromNavKey = 'torbox_hidden_from_nav';
   static const String _premiumizeApiKey = CloudSecretPrefs.premiumizeApiKey;
-  static const String _premiumizeIntegrationEnabledKey =
-      'premiumize_integration_enabled';
-  static const String _premiumizePostTorrentActionKey =
-      'premiumize_post_torrent_action';
-  static const String _premiumizeCacheCheckPref =
-      'premiumize_check_cache_before_search';
-  static const String _premiumizeHiddenFromNavKey =
-      'premiumize_hidden_from_nav';
   static const String _allDebridApiKey = CloudSecretPrefs.allDebridApiKey;
-  static const String _allDebridIntegrationEnabledKey =
-      'alldebrid_integration_enabled';
-  static const String _allDebridPostTorrentActionKey =
-      'alldebrid_post_torrent_action';
-  static const String _allDebridHiddenFromNavKey = 'alldebrid_hidden_from_nav';
-  static const String _pikpakHiddenFromNavKey = 'pikpak_hidden_from_nav';
-  static const String _postTorrentActionKey = 'post_torrent_action';
-  static const String _torboxPostTorrentActionKey =
-      'torbox_post_torrent_action';
-  static const String _pikpakPostTorrentActionKey =
-      'pikpak_post_torrent_action';
   static const String _batteryOptStatusKey =
       'battery_opt_status_v1'; // granted|denied|never|unknown
   static const String _videoResumeKey = 'video_resume_v1';
@@ -385,33 +355,9 @@ class StorageService {
   static const String _iptvDefaultsInitializedKey = 'iptv_defaults_initialized';
   static const String _iptvLastLiveChannelKey = 'iptv_last_live_channel';
 
-  // PikPak API settings
-  static const String _pikpakEnabledKey = 'pikpak_enabled';
+  // PikPak secret key aliases — CloudSecretPrefs owns the strings.
   static const String _pikpakEmailKey = CloudSecretPrefs.pikpakEmail;
   static const String _pikpakPasswordKey = CloudSecretPrefs.pikpakPassword;
-  static const String _pikpakAccessTokenKey = 'pikpak_access_token';
-  static const String _pikpakRefreshTokenKey = 'pikpak_refresh_token';
-  static const String _pikpakDeviceIdKey = 'pikpak_device_id';
-  static const String _pikpakCaptchaTokenKey = 'pikpak_captcha_token';
-  static const String _pikpakUserIdKey = 'pikpak_user_id';
-  static const String _pikpakShowVideosOnlyKey = 'pikpak_show_videos_only';
-  static const String _pikpakIgnoreSmallVideosKey =
-      'pikpak_ignore_small_videos';
-  static const String _pikpakRestrictedFolderIdKey =
-      'pikpak_restricted_folder_id';
-  static const String _pikpakRestrictedFolderNameKey =
-      'pikpak_restricted_folder_name';
-  static const String _pikpakTorrentsFolderIdKey = 'pikpak_torrents_folder_id';
-  static const String _pikpakTvFolderIdKey = 'pikpak_tv_folder_id';
-  static const String _webDavEnabledKey = 'webdav_enabled';
-  static const String _webDavHiddenFromNavKey = 'webdav_hidden_from_nav';
-  static const String _webDavBaseUrlKey = 'webdav_base_url';
-  static const String _webDavUsernameKey = 'webdav_username';
-  static const String _webDavPasswordKey = 'webdav_password';
-  static const String _webDavShowVideosOnlyKey = 'webdav_show_videos_only';
-  static const String _webDavServersKey = 'webdav_servers_v1';
-  static const String _webDavSelectedServerIdKey =
-      'webdav_selected_server_id_v1';
 
   // TVMaze series mapping keys
   static const String _tvMazeSeriesMappingKey = 'tvmaze_series_mappings';
@@ -446,10 +392,8 @@ class StorageService {
   static const String _quickPlayHonorsFiltersKey =
       'quick_play_honors_filters_v1';
 
-  // Default Torrent Provider Settings
+  // Default Torrent Provider Settings — key lives on ProviderCredentialPrefs.
   // Values: 'none' (ask every time), 'torbox', 'debrid', 'pikpak'
-  static const String _defaultTorrentProviderKey =
-      'default_torrent_provider_v1';
   static const String _indexerManagerConfigsKey = 'indexer_manager_configs_v1';
 
   // Quick Play VR Settings
@@ -529,22 +473,14 @@ class StorageService {
       CloudSecretPrefs.delete(CloudSecretPrefs.realDebridApiKey);
 
   // Real-Debrid endpoint preference (for fallback to backup endpoint)
-  static Future<String> getRdEndpoint() async {
-    final prefs = await ProfilePreferences.instance();
-    // Default to primary endpoint
-    return prefs.getString(_rdEndpointKey) ??
-        'https://api.real-debrid.com/rest/1.0';
-  }
+  static Future<String> getRdEndpoint() =>
+      ProviderCredentialPrefs.getRdEndpoint();
 
-  static Future<void> saveRdEndpoint(String endpoint) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_rdEndpointKey, endpoint);
-  }
+  static Future<void> saveRdEndpoint(String endpoint) =>
+      ProviderCredentialPrefs.saveRdEndpoint(endpoint);
 
-  static Future<void> deleteRdEndpoint() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_rdEndpointKey);
-  }
+  static Future<void> deleteRdEndpoint() =>
+      ProviderCredentialPrefs.deleteRdEndpoint();
 
   // Torbox API key helpers
   static Future<String?> getTorboxApiKey({
@@ -916,25 +852,17 @@ class StorageService {
     _tvTrailerUnderlaySession = null;
   }
 
-  static Future<bool> getTorboxCacheCheckEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_torboxCacheCheckPref) ?? false;
-  }
+  static Future<bool> getTorboxCacheCheckEnabled() =>
+      ProviderCredentialPrefs.getTorboxCacheCheckEnabled();
 
-  static Future<void> setTorboxCacheCheckEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_torboxCacheCheckPref, enabled);
-  }
+  static Future<void> setTorboxCacheCheckEnabled(bool enabled) =>
+      ProviderCredentialPrefs.setTorboxCacheCheckEnabled(enabled);
 
-  static Future<bool> getRealDebridIntegrationEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_realDebridIntegrationEnabledKey) ?? true;
-  }
+  static Future<bool> getRealDebridIntegrationEnabled() =>
+      ProviderCredentialPrefs.getRealDebridIntegrationEnabled();
 
-  static Future<void> setRealDebridIntegrationEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_realDebridIntegrationEnabledKey, enabled);
-  }
+  static Future<void> setRealDebridIntegrationEnabled(bool enabled) =>
+      ProviderCredentialPrefs.setRealDebridIntegrationEnabled(enabled);
 
   static const String _phoneNavStyleKey = 'phone_nav_style';
   static const String _phoneNavBarIndicesKey = 'phone_nav_bar_indices';
@@ -1806,55 +1734,35 @@ class StorageService {
     ]);
   }
 
-  static Future<bool> getRealDebridHiddenFromNav() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_realDebridHiddenFromNavKey) ?? false;
-  }
+  static Future<bool> getRealDebridHiddenFromNav() =>
+      ProviderCredentialPrefs.getRealDebridHiddenFromNav();
 
-  static Future<void> setRealDebridHiddenFromNav(bool hidden) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_realDebridHiddenFromNavKey, hidden);
-  }
+  static Future<void> setRealDebridHiddenFromNav(bool hidden) =>
+      ProviderCredentialPrefs.setRealDebridHiddenFromNav(hidden);
 
-  static Future<void> clearRealDebridHiddenFromNav() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_realDebridHiddenFromNavKey);
-  }
+  static Future<void> clearRealDebridHiddenFromNav() =>
+      ProviderCredentialPrefs.clearRealDebridHiddenFromNav();
 
-  static Future<bool> getRdSkipBlockedTorrents() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_rdSkipBlockedTorrentsKey) ?? true;
-  }
+  static Future<bool> getRdSkipBlockedTorrents() =>
+      ProviderCredentialPrefs.getRdSkipBlockedTorrents();
 
-  static Future<void> setRdSkipBlockedTorrents(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_rdSkipBlockedTorrentsKey, enabled);
-  }
+  static Future<void> setRdSkipBlockedTorrents(bool enabled) =>
+      ProviderCredentialPrefs.setRdSkipBlockedTorrents(enabled);
 
-  static Future<bool> getTorboxIntegrationEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_torboxIntegrationEnabledKey) ?? true;
-  }
+  static Future<bool> getTorboxIntegrationEnabled() =>
+      ProviderCredentialPrefs.getTorboxIntegrationEnabled();
 
-  static Future<void> setTorboxIntegrationEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_torboxIntegrationEnabledKey, enabled);
-  }
+  static Future<void> setTorboxIntegrationEnabled(bool enabled) =>
+      ProviderCredentialPrefs.setTorboxIntegrationEnabled(enabled);
 
-  static Future<bool> getTorboxHiddenFromNav() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_torboxHiddenFromNavKey) ?? false;
-  }
+  static Future<bool> getTorboxHiddenFromNav() =>
+      ProviderCredentialPrefs.getTorboxHiddenFromNav();
 
-  static Future<void> setTorboxHiddenFromNav(bool hidden) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_torboxHiddenFromNavKey, hidden);
-  }
+  static Future<void> setTorboxHiddenFromNav(bool hidden) =>
+      ProviderCredentialPrefs.setTorboxHiddenFromNav(hidden);
 
-  static Future<void> clearTorboxHiddenFromNav() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_torboxHiddenFromNavKey);
-  }
+  static Future<void> clearTorboxHiddenFromNav() =>
+      ProviderCredentialPrefs.clearTorboxHiddenFromNav();
 
   // Premiumize API key helpers
   static Future<String?> getPremiumizeApiKey({
@@ -1874,30 +1782,20 @@ class StorageService {
   static Future<void> deletePremiumizeApiKey() =>
       CloudSecretPrefs.delete(_premiumizeApiKey);
 
-  static Future<bool> getPremiumizeIntegrationEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_premiumizeIntegrationEnabledKey) ?? true;
-  }
+  static Future<bool> getPremiumizeIntegrationEnabled() =>
+      ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
 
-  static Future<void> setPremiumizeIntegrationEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_premiumizeIntegrationEnabledKey, enabled);
-  }
+  static Future<void> setPremiumizeIntegrationEnabled(bool enabled) =>
+      ProviderCredentialPrefs.setPremiumizeIntegrationEnabled(enabled);
 
-  static Future<bool> getPremiumizeHiddenFromNav() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_premiumizeHiddenFromNavKey) ?? false;
-  }
+  static Future<bool> getPremiumizeHiddenFromNav() =>
+      ProviderCredentialPrefs.getPremiumizeHiddenFromNav();
 
-  static Future<void> setPremiumizeHiddenFromNav(bool hidden) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_premiumizeHiddenFromNavKey, hidden);
-  }
+  static Future<void> setPremiumizeHiddenFromNav(bool hidden) =>
+      ProviderCredentialPrefs.setPremiumizeHiddenFromNav(hidden);
 
-  static Future<void> clearPremiumizeHiddenFromNav() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_premiumizeHiddenFromNavKey);
-  }
+  static Future<void> clearPremiumizeHiddenFromNav() =>
+      ProviderCredentialPrefs.clearPremiumizeHiddenFromNav();
 
   // AllDebrid API key helpers
   static Future<String?> getAllDebridApiKey({
@@ -2052,42 +1950,28 @@ class StorageService {
     }
   }
 
-  static Future<bool> getAllDebridIntegrationEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_allDebridIntegrationEnabledKey) ?? true;
-  }
+  static Future<bool> getAllDebridIntegrationEnabled() =>
+      ProviderCredentialPrefs.getAllDebridIntegrationEnabled();
 
-  static Future<void> setAllDebridIntegrationEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_allDebridIntegrationEnabledKey, enabled);
-  }
+  static Future<void> setAllDebridIntegrationEnabled(bool enabled) =>
+      ProviderCredentialPrefs.setAllDebridIntegrationEnabled(enabled);
 
   // AllDebrid post-torrent action methods
-  static Future<String> getAllDebridPostTorrentAction() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_allDebridPostTorrentActionKey) ?? 'choose';
-  }
+  static Future<String> getAllDebridPostTorrentAction() =>
+      ProviderCredentialPrefs.getAllDebridPostTorrentAction();
 
-  static Future<void> saveAllDebridPostTorrentAction(String action) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_allDebridPostTorrentActionKey, action);
-  }
+  static Future<void> saveAllDebridPostTorrentAction(String action) =>
+      ProviderCredentialPrefs.saveAllDebridPostTorrentAction(action);
 
   // AllDebrid hide-from-navigation
-  static Future<bool> getAllDebridHiddenFromNav() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_allDebridHiddenFromNavKey) ?? false;
-  }
+  static Future<bool> getAllDebridHiddenFromNav() =>
+      ProviderCredentialPrefs.getAllDebridHiddenFromNav();
 
-  static Future<void> setAllDebridHiddenFromNav(bool hidden) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_allDebridHiddenFromNavKey, hidden);
-  }
+  static Future<void> setAllDebridHiddenFromNav(bool hidden) =>
+      ProviderCredentialPrefs.setAllDebridHiddenFromNav(hidden);
 
-  static Future<void> clearAllDebridHiddenFromNav() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_allDebridHiddenFromNavKey);
-  }
+  static Future<void> clearAllDebridHiddenFromNav() =>
+      ProviderCredentialPrefs.clearAllDebridHiddenFromNav();
 
   static Future<bool> isInitialSetupComplete() async {
     final prefs = await ProfilePreferences.instance();
@@ -2164,70 +2048,45 @@ class StorageService {
   }
 
   // File Selection methods
-  static Future<String> getFileSelection() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_fileSelectionKey) ??
-        'smart'; // Default to smart selection
-  }
+  static Future<String> getFileSelection() =>
+      ProviderCredentialPrefs.getFileSelection();
 
-  static Future<void> saveFileSelection(String selection) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_fileSelectionKey, selection);
-  }
+  static Future<void> saveFileSelection(String selection) =>
+      ProviderCredentialPrefs.saveFileSelection(selection);
 
   // Post-torrent action methods
-  static Future<String> getPostTorrentAction() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_postTorrentActionKey) ?? 'choose';
-  }
+  static Future<String> getPostTorrentAction() =>
+      ProviderCredentialPrefs.getPostTorrentAction();
 
-  static Future<void> savePostTorrentAction(String action) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_postTorrentActionKey, action);
-  }
+  static Future<void> savePostTorrentAction(String action) =>
+      ProviderCredentialPrefs.savePostTorrentAction(action);
 
   // TorBox post-torrent action methods
-  static Future<String> getTorboxPostTorrentAction() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_torboxPostTorrentActionKey) ?? 'choose';
-  }
+  static Future<String> getTorboxPostTorrentAction() =>
+      ProviderCredentialPrefs.getTorboxPostTorrentAction();
 
-  static Future<void> saveTorboxPostTorrentAction(String action) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_torboxPostTorrentActionKey, action);
-  }
+  static Future<void> saveTorboxPostTorrentAction(String action) =>
+      ProviderCredentialPrefs.saveTorboxPostTorrentAction(action);
 
   // PikPak post-torrent action methods
-  static Future<String> getPikPakPostTorrentAction() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_pikpakPostTorrentActionKey) ?? 'choose';
-  }
+  static Future<String> getPikPakPostTorrentAction() =>
+      ProviderCredentialPrefs.getPikPakPostTorrentAction();
 
-  static Future<void> savePikPakPostTorrentAction(String action) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_pikpakPostTorrentActionKey, action);
-  }
+  static Future<void> savePikPakPostTorrentAction(String action) =>
+      ProviderCredentialPrefs.savePikPakPostTorrentAction(action);
 
   // Premiumize post-torrent action methods
-  static Future<String> getPremiumizePostTorrentAction() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_premiumizePostTorrentActionKey) ?? 'choose';
-  }
+  static Future<String> getPremiumizePostTorrentAction() =>
+      ProviderCredentialPrefs.getPremiumizePostTorrentAction();
 
-  static Future<void> savePremiumizePostTorrentAction(String action) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_premiumizePostTorrentActionKey, action);
-  }
+  static Future<void> savePremiumizePostTorrentAction(String action) =>
+      ProviderCredentialPrefs.savePremiumizePostTorrentAction(action);
 
-  static Future<bool> getPremiumizeCacheCheckEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_premiumizeCacheCheckPref) ?? false;
-  }
+  static Future<bool> getPremiumizeCacheCheckEnabled() =>
+      ProviderCredentialPrefs.getPremiumizeCacheCheckEnabled();
 
-  static Future<void> setPremiumizeCacheCheckEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_premiumizeCacheCheckPref, enabled);
-  }
+  static Future<void> setPremiumizeCacheCheckEnabled(bool enabled) =>
+      ProviderCredentialPrefs.setPremiumizeCacheCheckEnabled(enabled);
 
   // Battery optimization status
   static Future<String> getBatteryOptimizationStatus() async {
@@ -4235,19 +4094,8 @@ class StorageService {
   }
 
   /// Clear integration enabled states (RD, TorBox)
-  static Future<void> clearAllIntegrationStates() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_realDebridIntegrationEnabledKey);
-    await prefs.remove(_realDebridHiddenFromNavKey);
-    await prefs.remove(_torboxIntegrationEnabledKey);
-    await prefs.remove(_torboxHiddenFromNavKey);
-    await prefs.remove(_premiumizeIntegrationEnabledKey);
-    await prefs.remove(_premiumizeHiddenFromNavKey);
-    await prefs.remove(_allDebridIntegrationEnabledKey);
-    await prefs.remove(_allDebridHiddenFromNavKey);
-    await prefs.remove(_webDavEnabledKey);
-    await prefs.remove(_webDavHiddenFromNavKey);
-  }
+  static Future<void> clearAllIntegrationStates() =>
+      ProviderCredentialPrefs.clearAllIntegrationStates();
 
   /// Clear Debrify TV provider and legacy channels key
   static Future<void> clearDebrifyTvProviderAndLegacy() =>
@@ -4262,7 +4110,7 @@ class StorageService {
     await prefs.remove(_defaultFilterLanguagesKey);
     await prefs.remove(_defaultFilterSizesKey);
     await prefs.remove(_defaultFilterDynamicRangesKey);
-    await prefs.remove(_defaultTorrentProviderKey);
+    await ProviderCredentialPrefs.clearDefaultTorrentProvider();
   }
 
   /// Clear torrent engine toggles and limits
@@ -4280,14 +4128,8 @@ class StorageService {
   }
 
   /// Clear post-torrent action preferences
-  static Future<void> clearAllPostTorrentActions() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_postTorrentActionKey);
-    await prefs.remove(_torboxPostTorrentActionKey);
-    await prefs.remove(_pikpakPostTorrentActionKey);
-    await prefs.remove(_premiumizePostTorrentActionKey);
-    await prefs.remove(_allDebridPostTorrentActionKey);
-  }
+  static Future<void> clearAllPostTorrentActions() =>
+      ProviderCredentialPrefs.clearAllPostTorrentActions();
 
   /// Clear all Debrify TV display and engine settings
   static Future<void> clearAllDebrifyTvSettings() =>
@@ -6396,15 +6238,11 @@ class StorageService {
   }
 
   // PikPak API Settings
-  static Future<bool> getPikPakEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_pikpakEnabledKey) ?? false;
-  }
+  static Future<bool> getPikPakEnabled() =>
+      ProviderCredentialPrefs.getPikPakEnabled();
 
-  static Future<void> setPikPakEnabled(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_pikpakEnabledKey, value);
-  }
+  static Future<void> setPikPakEnabled(bool value) =>
+      ProviderCredentialPrefs.setPikPakEnabled(value);
 
   static Future<String?> getPikPakEmail({
     bool forRemoteTransfer = false,
@@ -6423,579 +6261,172 @@ class StorageService {
   static Future<void> setPikPakPassword(String password) =>
       CloudSecretPrefs.write(_pikpakPasswordKey, password);
 
-  static Future<String?> getPikPakAccessToken() async {
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _pikpakAccessTokenKey);
-  }
+  static Future<String?> getPikPakAccessToken() =>
+      ProviderCredentialPrefs.getPikPakAccessToken();
 
-  static Future<void> setPikPakAccessToken(String token) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _pikpakAccessTokenKey, token);
-  }
+  static Future<void> setPikPakAccessToken(String token) =>
+      ProviderCredentialPrefs.setPikPakAccessToken(token);
 
-  static Future<String?> getPikPakRefreshToken() async {
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _pikpakRefreshTokenKey);
-  }
+  static Future<String?> getPikPakRefreshToken() =>
+      ProviderCredentialPrefs.getPikPakRefreshToken();
 
-  static Future<void> setPikPakRefreshToken(String token) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _pikpakRefreshTokenKey, token);
-  }
+  static Future<void> setPikPakRefreshToken(String token) =>
+      ProviderCredentialPrefs.setPikPakRefreshToken(token);
 
-  static Future<void> clearPikPakAuth() async {
-    final prefs = await ProfilePreferences.instance();
-    if (!await ProfileCredentialFacade.disconnect(_pikpakEmailKey)) {
-      await prefs.remove(_pikpakEmailKey);
-      await prefs.remove(_pikpakPasswordKey);
-      await prefs.remove(_pikpakAccessTokenKey);
-      await prefs.remove(_pikpakRefreshTokenKey);
-      await prefs.remove(_pikpakDeviceIdKey);
-      await prefs.remove(_pikpakCaptchaTokenKey);
-      await prefs.remove(_pikpakUserIdKey);
-    }
-    await prefs.setBool(_pikpakEnabledKey, false);
-
-    // Also clear restricted folder settings and cached subfolder IDs
-    await clearPikPakRestrictedFolder();
-    await clearPikPakSubfolderCaches();
-    await clearPikPakHiddenFromNav();
-  }
+  static Future<void> clearPikPakAuth() =>
+      ProviderCredentialPrefs.clearPikPakAuth();
 
   // PikPak Device ID and Captcha Token
-  static Future<void> setPikPakDeviceId(String deviceId) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _pikpakDeviceIdKey, deviceId);
-  }
+  static Future<void> setPikPakDeviceId(String deviceId) =>
+      ProviderCredentialPrefs.setPikPakDeviceId(deviceId);
 
-  static Future<String?> getPikPakDeviceId() async {
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _pikpakDeviceIdKey);
-  }
+  static Future<String?> getPikPakDeviceId() =>
+      ProviderCredentialPrefs.getPikPakDeviceId();
 
-  static Future<void> deletePikPakDeviceId() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_pikpakDeviceIdKey);
-  }
+  static Future<void> deletePikPakDeviceId() =>
+      ProviderCredentialPrefs.deletePikPakDeviceId();
 
-  static Future<void> setPikPakCaptchaToken(String token) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _pikpakCaptchaTokenKey, token);
-  }
+  static Future<void> setPikPakCaptchaToken(String token) =>
+      ProviderCredentialPrefs.setPikPakCaptchaToken(token);
 
-  static Future<String?> getPikPakCaptchaToken() async {
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _pikpakCaptchaTokenKey);
-  }
+  static Future<String?> getPikPakCaptchaToken() =>
+      ProviderCredentialPrefs.getPikPakCaptchaToken();
 
-  static Future<void> clearPikPakCaptchaToken() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_pikpakCaptchaTokenKey);
-  }
+  static Future<void> clearPikPakCaptchaToken() =>
+      ProviderCredentialPrefs.clearPikPakCaptchaToken();
 
-  static Future<void> setPikPakUserId(String userId) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _pikpakUserIdKey, userId);
-  }
+  static Future<void> setPikPakUserId(String userId) =>
+      ProviderCredentialPrefs.setPikPakUserId(userId);
 
-  static Future<String?> getPikPakUserId() async {
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _pikpakUserIdKey);
-  }
+  static Future<String?> getPikPakUserId() =>
+      ProviderCredentialPrefs.getPikPakUserId();
 
   // PikPak Show Videos Only
-  static Future<bool> getPikPakShowVideosOnly() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_pikpakShowVideosOnlyKey) ?? true; // Default to true
-  }
+  static Future<bool> getPikPakShowVideosOnly() =>
+      ProviderCredentialPrefs.getPikPakShowVideosOnly();
 
-  static Future<void> setPikPakShowVideosOnly(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_pikpakShowVideosOnlyKey, value);
-  }
+  static Future<void> setPikPakShowVideosOnly(bool value) =>
+      ProviderCredentialPrefs.setPikPakShowVideosOnly(value);
 
   // PikPak Ignore Small Videos (under 100MB)
-  static Future<bool> getPikPakIgnoreSmallVideos() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_pikpakIgnoreSmallVideosKey) ??
-        true; // Default to true
-  }
+  static Future<bool> getPikPakIgnoreSmallVideos() =>
+      ProviderCredentialPrefs.getPikPakIgnoreSmallVideos();
 
-  static Future<void> setPikPakIgnoreSmallVideos(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_pikpakIgnoreSmallVideosKey, value);
-  }
+  static Future<void> setPikPakIgnoreSmallVideos(bool value) =>
+      ProviderCredentialPrefs.setPikPakIgnoreSmallVideos(value);
 
   // PikPak Restricted Folder
-  static Future<String?> getPikPakRestrictedFolderId() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_pikpakRestrictedFolderIdKey);
-  }
+  static Future<String?> getPikPakRestrictedFolderId() =>
+      ProviderCredentialPrefs.getPikPakRestrictedFolderId();
 
-  static Future<String?> getPikPakRestrictedFolderName() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_pikpakRestrictedFolderNameKey);
-  }
+  static Future<String?> getPikPakRestrictedFolderName() =>
+      ProviderCredentialPrefs.getPikPakRestrictedFolderName();
 
   static Future<void> setPikPakRestrictedFolder(
     String? folderId,
     String? folderName,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    if (folderId == null) {
-      await prefs.remove(_pikpakRestrictedFolderIdKey);
-      await prefs.remove(_pikpakRestrictedFolderNameKey);
-    } else {
-      await prefs.setString(_pikpakRestrictedFolderIdKey, folderId);
-      if (folderName != null) {
-        await prefs.setString(_pikpakRestrictedFolderNameKey, folderName);
-      }
-    }
-  }
+  ) => ProviderCredentialPrefs.setPikPakRestrictedFolder(folderId, folderName);
 
-  static Future<void> clearPikPakRestrictedFolder() async {
-    await setPikPakRestrictedFolder(null, null);
-    // Also clear subfolder caches when restriction changes
-    await clearPikPakSubfolderCaches();
-  }
+  static Future<void> clearPikPakRestrictedFolder() =>
+      ProviderCredentialPrefs.clearPikPakRestrictedFolder();
 
   // PikPak Subfolder ID caching (for debrify-torrents and debrify-tv folders)
-  static Future<String?> getPikPakTorrentsFolderId() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_pikpakTorrentsFolderIdKey);
-  }
+  static Future<String?> getPikPakTorrentsFolderId() =>
+      ProviderCredentialPrefs.getPikPakTorrentsFolderId();
 
-  static Future<void> setPikPakTorrentsFolderId(String folderId) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_pikpakTorrentsFolderIdKey, folderId);
-  }
+  static Future<void> setPikPakTorrentsFolderId(String folderId) =>
+      ProviderCredentialPrefs.setPikPakTorrentsFolderId(folderId);
 
-  static Future<String?> getPikPakTvFolderId() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_pikpakTvFolderIdKey);
-  }
+  static Future<String?> getPikPakTvFolderId() =>
+      ProviderCredentialPrefs.getPikPakTvFolderId();
 
-  static Future<void> setPikPakTvFolderId(String folderId) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_pikpakTvFolderIdKey, folderId);
-  }
+  static Future<void> setPikPakTvFolderId(String folderId) =>
+      ProviderCredentialPrefs.setPikPakTvFolderId(folderId);
 
-  static Future<void> clearPikPakSubfolderCaches() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_pikpakTorrentsFolderIdKey);
-    await prefs.remove(_pikpakTvFolderIdKey);
-  }
+  static Future<void> clearPikPakSubfolderCaches() =>
+      ProviderCredentialPrefs.clearPikPakSubfolderCaches();
 
   // PikPak Hidden from Navigation
-  static Future<bool> getPikPakHiddenFromNav() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_pikpakHiddenFromNavKey) ?? false;
-  }
+  static Future<bool> getPikPakHiddenFromNav() =>
+      ProviderCredentialPrefs.getPikPakHiddenFromNav();
 
-  static Future<void> setPikPakHiddenFromNav(bool hidden) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_pikpakHiddenFromNavKey, hidden);
-  }
+  static Future<void> setPikPakHiddenFromNav(bool hidden) =>
+      ProviderCredentialPrefs.setPikPakHiddenFromNav(hidden);
 
-  static Future<void> clearPikPakHiddenFromNav() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_pikpakHiddenFromNavKey);
-  }
+  static Future<void> clearPikPakHiddenFromNav() =>
+      ProviderCredentialPrefs.clearPikPakHiddenFromNav();
 
   // WebDAV Settings
-  static Future<bool> getWebDavEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_webDavEnabledKey) ?? false;
-  }
+  static Future<bool> getWebDavEnabled() =>
+      ProviderCredentialPrefs.getWebDavEnabled();
 
-  static Future<void> setWebDavEnabled(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_webDavEnabledKey, value);
-  }
+  static Future<void> setWebDavEnabled(bool value) =>
+      ProviderCredentialPrefs.setWebDavEnabled(value);
 
-  static Future<bool> getWebDavHiddenFromNav() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_webDavHiddenFromNavKey) ?? false;
-  }
+  static Future<bool> getWebDavHiddenFromNav() =>
+      ProviderCredentialPrefs.getWebDavHiddenFromNav();
 
-  static Future<void> setWebDavHiddenFromNav(bool hidden) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_webDavHiddenFromNavKey, hidden);
-  }
+  static Future<void> setWebDavHiddenFromNav(bool hidden) =>
+      ProviderCredentialPrefs.setWebDavHiddenFromNav(hidden);
 
-  static Future<void> clearWebDavHiddenFromNav() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_webDavHiddenFromNavKey);
-  }
+  static Future<void> clearWebDavHiddenFromNav() =>
+      ProviderCredentialPrefs.clearWebDavHiddenFromNav();
 
-  static Future<String?> getWebDavBaseUrl() async {
-    final prefs = await ProfilePreferences.instance();
-    final selected = await getSelectedWebDavServer();
-    return selected?.baseUrl ??
-        await SecretVault.getString(prefs, _webDavBaseUrlKey);
-  }
+  static Future<String?> getWebDavBaseUrl() =>
+      ProviderCredentialPrefs.getWebDavBaseUrl();
 
-  static Future<void> setWebDavBaseUrl(String value) async {
-    if (ProfileCollectionResourceFacade.active) {
-      final selected = await getSelectedWebDavServer(forSettings: false);
-      if (selected != null) {
-        if (selected.connectionReadOnly) {
-          throw const ResourceAuthorizationException(
-            'Shared WebDAV connections cannot be edited',
-          );
-        }
-        final all = await getWebDavServers(forSettings: false);
-        await saveWebDavServers([
-          for (final item in all)
-            item.id == selected.id
-                ? WebDavConfig(
-                    id: item.id,
-                    name: item.name,
-                    baseUrl: value,
-                    username: item.username,
-                    password: item.password,
-                    connectionResourceId: item.connectionResourceId,
-                    connectionResourceRevision: item.connectionResourceRevision,
-                    connectionReadOnly: item.connectionReadOnly,
-                    credentialsRedacted: item.credentialsRedacted,
-                  )
-                : item,
-        ]);
-      }
-      return;
-    }
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _webDavBaseUrlKey, value);
-  }
+  static Future<void> setWebDavBaseUrl(String value) =>
+      ProviderCredentialPrefs.setWebDavBaseUrl(value);
 
-  static Future<String?> getWebDavUsername() async {
-    final prefs = await ProfilePreferences.instance();
-    final selected = await getSelectedWebDavServer();
-    return selected?.username ??
-        await SecretVault.getString(prefs, _webDavUsernameKey);
-  }
+  static Future<String?> getWebDavUsername() =>
+      ProviderCredentialPrefs.getWebDavUsername();
 
-  static Future<void> setWebDavUsername(String value) async {
-    if (ProfileCollectionResourceFacade.active) {
-      final selected = await getSelectedWebDavServer(forSettings: false);
-      if (selected != null) {
-        if (selected.connectionReadOnly) {
-          throw const ResourceAuthorizationException(
-            'Shared WebDAV connections cannot be edited',
-          );
-        }
-        final all = await getWebDavServers(forSettings: false);
-        await saveWebDavServers([
-          for (final item in all)
-            item.id == selected.id
-                ? WebDavConfig(
-                    id: item.id,
-                    name: item.name,
-                    baseUrl: item.baseUrl,
-                    username: value,
-                    password: item.password,
-                    connectionResourceId: item.connectionResourceId,
-                    connectionResourceRevision: item.connectionResourceRevision,
-                    connectionReadOnly: item.connectionReadOnly,
-                    credentialsRedacted: item.credentialsRedacted,
-                  )
-                : item,
-        ]);
-      }
-      return;
-    }
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _webDavUsernameKey, value);
-  }
+  static Future<void> setWebDavUsername(String value) =>
+      ProviderCredentialPrefs.setWebDavUsername(value);
 
-  static Future<String?> getWebDavPassword() async {
-    final prefs = await ProfilePreferences.instance();
-    final selected = await getSelectedWebDavServer();
-    return selected?.password ??
-        await SecretVault.getString(prefs, _webDavPasswordKey);
-  }
+  static Future<String?> getWebDavPassword() =>
+      ProviderCredentialPrefs.getWebDavPassword();
 
-  static Future<void> setWebDavPassword(String value) async {
-    if (ProfileCollectionResourceFacade.active) {
-      final selected = await getSelectedWebDavServer(forSettings: false);
-      if (selected != null) {
-        if (selected.connectionReadOnly) {
-          throw const ResourceAuthorizationException(
-            'Shared WebDAV connections cannot be edited',
-          );
-        }
-        final all = await getWebDavServers(forSettings: false);
-        await saveWebDavServers([
-          for (final item in all)
-            item.id == selected.id
-                ? WebDavConfig(
-                    id: item.id,
-                    name: item.name,
-                    baseUrl: item.baseUrl,
-                    username: item.username,
-                    password: value,
-                    connectionResourceId: item.connectionResourceId,
-                    connectionResourceRevision: item.connectionResourceRevision,
-                    connectionReadOnly: item.connectionReadOnly,
-                    credentialsRedacted: item.credentialsRedacted,
-                  )
-                : item,
-        ]);
-      }
-      return;
-    }
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _webDavPasswordKey, value);
-  }
+  static Future<void> setWebDavPassword(String value) =>
+      ProviderCredentialPrefs.setWebDavPassword(value);
 
-  static Future<bool> getWebDavShowVideosOnly() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_webDavShowVideosOnlyKey) ?? true;
-  }
+  static Future<bool> getWebDavShowVideosOnly() =>
+      ProviderCredentialPrefs.getWebDavShowVideosOnly();
 
-  static Future<void> setWebDavShowVideosOnly(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_webDavShowVideosOnlyKey, value);
-  }
+  static Future<void> setWebDavShowVideosOnly(bool value) =>
+      ProviderCredentialPrefs.setWebDavShowVideosOnly(value);
 
-  static Future<void> clearWebDav() async {
-    if (ProfileCollectionResourceFacade.active) {
-      await ProfileCollectionResourceFacade.replace(
-        types: const <ConnectionResourceType>{ConnectionResourceType.webDav},
-        feature: ProfileFeature.cloud,
-        items: const <ResourceCollectionItem>[],
-      );
-    }
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_webDavBaseUrlKey);
-    await prefs.remove(_webDavUsernameKey);
-    await prefs.remove(_webDavPasswordKey);
-    await prefs.remove(_webDavHiddenFromNavKey);
-    await prefs.remove(_webDavServersKey);
-    await prefs.remove(_webDavSelectedServerIdKey);
-    await prefs.setBool(_webDavEnabledKey, false);
-  }
+  static Future<void> clearWebDav() => ProviderCredentialPrefs.clearWebDav();
 
   static Future<List<WebDavConfig>> getWebDavServers({
     bool forSettings = true,
     bool forRemoteTransfer = false,
-  }) async {
-    if (ProfileCollectionResourceFacade.active) {
-      final rows = await ProfileCollectionResourceFacade.read(
-        types: const <ConnectionResourceType>{ConnectionResourceType.webDav},
-        feature: ProfileFeature.cloud,
-        forSettings: forSettings,
-        forRemoteTransfer: forRemoteTransfer,
-      );
-      return rows
-          .map(WebDavConfig.fromJson)
-          .where(
-            (config) =>
-                config.baseUrl.trim().isNotEmpty || config.credentialsRedacted,
-          )
-          .toList(growable: false);
-    }
-    final prefs = await ProfilePreferences.instance();
-    final raw = await SecretVault.getString(prefs, _webDavServersKey);
-    final servers = <WebDavConfig>[];
-    if (raw != null && raw.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(raw);
-        if (decoded is List) {
-          for (final item in decoded) {
-            if (item is Map) {
-              final config = WebDavConfig.fromJson(
-                item.cast<String, dynamic>(),
-              );
-              if (config.baseUrl.trim().isNotEmpty) servers.add(config);
-            }
-          }
-        }
-      } catch (_) {}
-    }
-
-    if (servers.isEmpty) {
-      final legacyUrl = await SecretVault.getString(prefs, _webDavBaseUrlKey);
-      if (legacyUrl != null && legacyUrl.trim().isNotEmpty) {
-        final config = WebDavConfig(
-          id: 'legacy-${legacyUrl.hashCode}',
-          name: Uri.tryParse(legacyUrl)?.host ?? 'WebDAV',
-          baseUrl: legacyUrl,
-          username:
-              await SecretVault.getString(prefs, _webDavUsernameKey) ?? '',
-          password:
-              await SecretVault.getString(prefs, _webDavPasswordKey) ?? '',
-        );
-        servers.add(config);
-        await saveWebDavServers(servers);
-        await setSelectedWebDavServerId(config.id);
-      }
-    }
-
-    return servers;
-  }
+  }) => ProviderCredentialPrefs.getWebDavServers(
+    forSettings: forSettings,
+    forRemoteTransfer: forRemoteTransfer,
+  );
 
   static Future<List<WebDavConfig>> saveWebDavServers(
     List<WebDavConfig> servers,
-  ) async {
-    if (ProfileCollectionResourceFacade.active) {
-      final expectedScope = ProfileRuntime.scope.value;
-      if (expectedScope == null) throw StateError('No visible profile scope');
-      // Capture the preference namespace before the registry mutation. If a
-      // profile switch races this operation, this handle can only write the
-      // initiating namespace (or fail); it can never write the new profile.
-      final prefs = await ProfilePreferences.instance();
-      final rows = await ProfileCollectionResourceFacade.replaceAndRead(
-        types: const <ConnectionResourceType>{ConnectionResourceType.webDav},
-        feature: ProfileFeature.cloud,
-        items: <ResourceCollectionItem>[
-          for (final server in servers)
-            ResourceCollectionItem(
-              type: ConnectionResourceType.webDav,
-              label: server.name,
-              publicConfig: <String, dynamic>{'accountLabel': server.name},
-              secretConfig: server.toJson(),
-              sourceResourceId: server.connectionResourceId,
-            ),
-        ],
-        forSettings: true,
-      );
-      final saved = rows.map(WebDavConfig.fromJson).toList(growable: false);
-      if (ProfileRuntime.scope.value != expectedScope) {
-        throw StateError('Profile changed while saving WebDAV connections');
-      }
-      await prefs.setBool(_webDavEnabledKey, saved.isNotEmpty);
-      if (ProfileRuntime.scope.value != expectedScope) {
-        throw StateError('Profile changed while saving WebDAV settings');
-      }
-      return saved;
-    }
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(
-      prefs,
-      _webDavServersKey,
-      jsonEncode(servers.map((server) => server.toJson()).toList()),
-    );
-    await prefs.setBool(_webDavEnabledKey, servers.isNotEmpty);
-    return List<WebDavConfig>.unmodifiable(servers);
-  }
+  ) => ProviderCredentialPrefs.saveWebDavServers(servers);
 
-  static Future<String?> getSelectedWebDavServerId() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_webDavSelectedServerIdKey);
-  }
+  static Future<String?> getSelectedWebDavServerId() =>
+      ProviderCredentialPrefs.getSelectedWebDavServerId();
 
-  static Future<void> setSelectedWebDavServerId(String? id) async {
-    final prefs = await ProfilePreferences.instance();
-    if (id == null || id.isEmpty) {
-      await prefs.remove(_webDavSelectedServerIdKey);
-    } else {
-      await prefs.setString(_webDavSelectedServerIdKey, id);
-    }
-  }
+  static Future<void> setSelectedWebDavServerId(String? id) =>
+      ProviderCredentialPrefs.setSelectedWebDavServerId(id);
 
   static Future<WebDavConfig?> getSelectedWebDavServer({
     bool forSettings = true,
-  }) async {
-    final servers = await getWebDavServers(forSettings: forSettings);
-    if (servers.isEmpty) return null;
-    final selectedId = await getSelectedWebDavServerId();
-    if (selectedId != null && selectedId.isNotEmpty) {
-      for (final server in servers) {
-        if (server.id == selectedId) return server;
-      }
-    }
-    await setSelectedWebDavServerId(servers.first.id);
-    return servers.first;
-  }
+  }) => ProviderCredentialPrefs.getSelectedWebDavServer(
+    forSettings: forSettings,
+  );
 
-  static Future<WebDavConfig> upsertWebDavServer(WebDavConfig config) async {
-    final expectedScope = ProfileCollectionResourceFacade.active
-        ? ProfileRuntime.scope.value
-        : null;
-    final selectionPrefs = await ProfilePreferences.instance();
-    final servers = (await getWebDavServers()).toList();
-    final priorResourceIds = <String>{
-      for (final server in servers)
-        if (server.connectionResourceId != null) server.connectionResourceId!,
-    };
-    final index = servers.indexWhere((server) => server.id == config.id);
-    var persisted = config;
-    if (index == -1) {
-      servers.add(persisted);
-    } else {
-      final source = servers[index];
-      if (source.connectionReadOnly) {
-        throw const ResourceAuthorizationException(
-          'Shared WebDAV connections cannot be edited',
-        );
-      }
-      persisted = WebDavConfig(
-        id: config.id,
-        name: config.name,
-        baseUrl: config.baseUrl,
-        username: config.username,
-        password: config.password,
-        connectionResourceId: source.connectionResourceId,
-        connectionResourceRevision: source.connectionResourceRevision,
-      );
-      servers[index] = persisted;
-    }
-    final saved = await saveWebDavServers(servers);
-    final WebDavConfig canonical;
-    final sourceResourceId = persisted.connectionResourceId;
-    if (sourceResourceId != null) {
-      canonical = saved.singleWhere(
-        (server) => server.connectionResourceId == sourceResourceId,
-      );
-    } else if (ProfileCollectionResourceFacade.active) {
-      canonical = saved.singleWhere(
-        (server) =>
-            server.connectionResourceId != null &&
-            !priorResourceIds.contains(server.connectionResourceId),
-      );
-    } else {
-      canonical = saved.singleWhere((server) => server.id == persisted.id);
-    }
-    if (expectedScope != null && ProfileRuntime.scope.value != expectedScope) {
-      throw StateError('Profile changed while selecting a WebDAV connection');
-    }
-    await selectionPrefs.setString(_webDavSelectedServerIdKey, canonical.id);
-    if (expectedScope != null && ProfileRuntime.scope.value != expectedScope) {
-      throw StateError('Profile changed while selecting a WebDAV connection');
-    }
-    return canonical;
-  }
+  static Future<WebDavConfig> upsertWebDavServer(WebDavConfig config) =>
+      ProviderCredentialPrefs.upsertWebDavServer(config);
 
-  static Future<void> deleteWebDavServer(String id) async {
-    final expectedScope = ProfileCollectionResourceFacade.active
-        ? ProfileRuntime.scope.value
-        : null;
-    final selectionPrefs = await ProfilePreferences.instance();
-    final servers = (await getWebDavServers()).toList();
-    if (expectedScope != null && ProfileRuntime.scope.value != expectedScope) {
-      throw StateError('Profile changed while deleting a WebDAV connection');
-    }
-    servers.removeWhere((server) => server.id == id);
-    final saved = await saveWebDavServers(servers);
-    final selected = selectionPrefs.getString(_webDavSelectedServerIdKey);
-    if (selected == id) {
-      if (saved.isEmpty) {
-        await selectionPrefs.remove(_webDavSelectedServerIdKey);
-      } else {
-        await selectionPrefs.setString(
-          _webDavSelectedServerIdKey,
-          saved.first.id,
-        );
-      }
-    }
-    if (saved.isEmpty) {
-      await selectionPrefs.setBool(_webDavHiddenFromNavKey, false);
-    }
-    if (expectedScope != null && ProfileRuntime.scope.value != expectedScope) {
-      throw StateError('Profile changed while deleting a WebDAV connection');
-    }
-  }
+  static Future<void> deleteWebDavServer(String id) =>
+      ProviderCredentialPrefs.deleteWebDavServer(id);
 
   // TVMaze Series Mapping Methods
 
@@ -7411,20 +6842,14 @@ class StorageService {
 
   // Default Torrent Provider methods
   // Returns: 'none' (ask every time), 'torbox', 'debrid', or 'pikpak'
-  static Future<String> getDefaultTorrentProvider() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_defaultTorrentProviderKey) ?? 'none';
-  }
+  static Future<String> getDefaultTorrentProvider() =>
+      ProviderCredentialPrefs.getDefaultTorrentProvider();
 
-  static Future<void> setDefaultTorrentProvider(String provider) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_defaultTorrentProviderKey, provider);
-  }
+  static Future<void> setDefaultTorrentProvider(String provider) =>
+      ProviderCredentialPrefs.setDefaultTorrentProvider(provider);
 
-  static Future<void> clearDefaultTorrentProvider() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_defaultTorrentProviderKey);
-  }
+  static Future<void> clearDefaultTorrentProvider() =>
+      ProviderCredentialPrefs.clearDefaultTorrentProvider();
 
   static Future<List<IndexerManagerConfig>> getIndexerManagerConfigs({
     bool forSettings = true,
