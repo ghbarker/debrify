@@ -2,7 +2,7 @@
 
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 
-Baseline: `main` @ H1/T1/S1-fix merged · Phase: **2 hold** · Last gate: 1 (Linux only; Windows blocked — no Flutter SDK on `C:\Users\hunth`)
+Baseline: `main` @ H1/T1/S1-fix merged · Phase: **2** (P2e assigned) · Last gate: 1 (Linux done; Windows Flutter found at `C:\Users\hunth\flutter\bin\flutter.bat`, build log not pasted)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -18,7 +18,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | P2b · Stremio TV strings | merged | `refactor/p2b-stremio-tv-strings` | — | `lib/screens/stremio_tv/**` | — | Pin-before-move present; **fails tightened (c)** (no origin-diff table). Keep on main; not a template. `StremioTvCacheFilter` strings in cloud/ stay. |
 | P2c · launcher + bulk-add | merged | `refactor/p2c-launcher-bulk-add` | — | `lib/services/video_player_launcher.dart`, `lib/services/torrent_bulk_add_service.dart` | — | Pin-before-move present; **fails tightened (c)** (no origin-diff table). Keep on main; not a template. |
 | P2d · playlist/cloud/settings strings | merged | `refactor/p2d-playlist-cloud-settings` | — | `lib/screens/playlist_content_view_screen.dart`, `lib/services/playlist_player_service.dart`, `lib/screens/cloud_screen.dart`, `lib/screens/settings/provider_settings_page.dart` | — | Pin-before-move present; **fails tightened (c)** (no origin-diff table). Keep on main; not a template. |
-| P2e · playback-service strings | queued | — | — | `lib/services/torrent_playback_service.dart` | gate 1 (Windows) | H1/T1/S1-fix merged. `lib/main.dart` sidebar/hub labels explicitly exempt. Forbidden: `lib/services/cloud/**`. |
+| P2e · playback-service strings | assigned | `refactor/p2e-playback-service-strings` | worker | `lib/services/torrent_playback_service.dart`, `test/torrent_playback_service_strings_test.dart` | — | Route remaining provider-string sites through registry / `CloudProviderId`. Forbidden: `lib/services/cloud/**`. `lib/main.dart` sidebar/hub labels exempt. Gate (c): pin green before move + origin-diff table. |
 | H1 · Home row registry | merged | `refactor/h1-home-row-registry` | — | new `lib/services/home/**`, `search_screen.dart` [row-id hunks only], `lib/screens/settings/home_sections_filter_page.dart`, `lib/services/home_list_rows.dart`, `lib/services/home_row_order.dart` | — | Frozen row-id grammar. Undeclared: rail de-dup, wider stray leaves, addon-group merge (NOTES). **Regression:** pinned collections must lead the board — follow-up `h1-fix`. |
 | H1-fix · pinned collections lead | merged | `refactor/h1-pinned-collections-lead` | orchestrator | `lib/services/home/home_row_registry.dart`, `test/home_row_registry_test.dart` | — | Preserve `_sections` order in the section band so pinned collections lead tracker lists. CI green then `--no-ff` merge. |
 | T1 · transfer category registry | merged | `refactor/t1-transfer-category-registry` | — | new `lib/services/transfer/**`, `lib/services/backup_restore_service.dart`, `remote_command_router.dart` [config hunks], `lib/widgets/remote/remote_config_export.dart`, `lib/widgets/remote/remote_transfer_all.dart`, `lib/widgets/onboarding/onboarding_flow.dart` [`_configLabel`], `lib/services/profiles/profile_restore_coordinator.dart` [selection literals] | — | Frozen: ConfigCommand, backup keys. Undeclared deltas in NOTES. **Regression:** empty PikPak password — follow-up `t1-fix`. |
@@ -40,7 +40,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | Gate | Date | Analyzer (all lib+test) | Full test suite | Windows build | Android build | Manual smoke | Result |
 |---|---|---|---|---|---|---|---|
 | 0 | 2026-09-04 | 466 (0 error · 83 warning · 383 info); analyze_baseline.py exit 0 (4 unused from deleted catalog_browser) | 4320 passed · 33 failed (same 33 as Phase 0 baseline; +4 vs 4316 from D0 pin + C0 layering) | not run (Linux host) | not run (no Android SDK) | Linux desktop: Home, Search, Keyword/Sources UI, play attempt → no sources (no debrid), Settings → Data & Backup export wrote `~/Documents/downloads/debrify-profile-2026-09-04.json` | **partial** — smoke + analyzer/tests ok; Windows/Android builds still outstanding. Phase 1 not assigned. |
-| 1 | 2026-09-04 | 466 issues (`flutter analyze lib test` exit 1; same count as gate 0) | 4405 passed · 33 failed (same 33 allowlisted failures; +85 vs gate 0 from Phase 1/2 pins) | **blocked** — `win-build` connected at `C:\Users\hunth\debrify`; no `flutter.bat` on the host (searched `C:\Users\hunth`, `C:\src`, `C:\dev`, `C:\flutter`) | not run (no Android SDK) | not re-run this pass (Linux smoke still from gate 0) | **partial** — G1–G5/T2/P2e stay queued until Windows Flutter install + `flutter build windows` + smoke. |
+| 1 | 2026-09-04 | 466 issues (`flutter analyze lib test` exit 1; same count as gate 0) | 4405 passed · 33 failed (same 33 allowlisted failures; +85 vs gate 0 from Phase 1/2 pins) | **outstanding** — Flutter found at `C:\Users\hunth\flutter\bin\flutter.bat`; clone `C:\Users\hunth\debrify`; build/smoke log not yet pasted | not run (no Android SDK) | not re-run this pass (Linux smoke still from gate 0) | **partial** — P2e assigned (follow-ups merged). G1–G5/T2 wait on Windows build + smoke. |
 
 ## Notes
 
@@ -64,4 +64,4 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
-Phase 1 merged. P2a–P2d merged. **H1-fix / T1-fix / S1-fix merged** (#57–#59). P2e and G1–G5/T2 wait on **gate 1 Windows** (host has no Flutter on PATH; commands must run from the debrify clone, not system32). Gate (c) tightened. PR #56 held to Phase 3. PRs #36–#43 closed (G4).
+Phase 1 merged. P2a–P2d merged. H1/T1/S1-fix merged (#57–#59). **P2e assigned.** G1–G5/T2 still wait on a pasted `flutter build windows` + smoke (Flutter exists at `C:\Users\hunth\flutter`; clone `C:\Users\hunth\debrify`). Gate (c) tightened. PR #56 held to Phase 3. PRs #36–#43 closed (G4).
