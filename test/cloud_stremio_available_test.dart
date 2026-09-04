@@ -26,6 +26,13 @@ void main() {
       isTrue,
     );
     expect(
+      await CloudCredentials.configured(
+        CloudProviderId.debrid,
+        CloudConfiguredCheck.stremioPicker,
+      ),
+      isTrue,
+    );
+    expect(
       await CloudCredentials.isPlaybackConfigured(CloudProviderId.debrid),
       isTrue,
     );
