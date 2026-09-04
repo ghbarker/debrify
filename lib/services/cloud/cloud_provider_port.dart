@@ -93,6 +93,12 @@ abstract class CloudProviderPort {
   /// Unsupported adapters throw [CloudUnsupported].
   Future<String> fileDownloadLink(int torrentId, int fileId);
 
+  /// TorBox web-download ZIP permalink (`webdl/requestdl`, `zip_link=true`).
+  /// Sync URL builder behind a Future. Missing key throws [CloudMissingApiKey].
+  /// Not torrent [zipPermalink]. Not web-download file link.
+  /// Unsupported adapters throw [CloudUnsupported].
+  Future<String> webZipPermalink(int webId);
+
   /// Premiumize `transfer/create`. Missing key throws [CloudMissingApiKey].
   /// Not [createTransferZip] (wait + zip URL). Not TorBox `createTorrent`.
   /// Unsupported adapters throw [CloudUnsupported].
@@ -146,6 +152,11 @@ abstract class CloudProviderAdapter implements CloudProviderPort {
   @override
   Future<String> fileDownloadLink(int torrentId, int fileId) {
     throw CloudUnsupported(id, CloudPortFeature.fileDownloadLink);
+  }
+
+  @override
+  Future<String> webZipPermalink(int webId) {
+    throw CloudUnsupported(id, CloudPortFeature.webZipPermalink);
   }
 
   @override

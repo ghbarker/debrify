@@ -70,6 +70,14 @@ void main() {
       isFalse,
     );
     expect(
+      const TorboxCloudProvider().supports(CloudPortFeature.webZipPermalink),
+      isTrue,
+    );
+    expect(
+      const PremiumizeCloudProvider().supports(CloudPortFeature.webZipPermalink),
+      isFalse,
+    );
+    expect(
       const PremiumizeCloudProvider().supports(CloudPortFeature.cloudTransfer),
       isTrue,
     );
@@ -101,6 +109,7 @@ void main() {
         CloudPortFeature.cachedHashes,
         CloudPortFeature.zipPermalink,
         CloudPortFeature.fileDownloadLink,
+        CloudPortFeature.webZipPermalink,
         CloudPortFeature.queueUncached,
         CloudPortFeature.magnetTorrent,
       },

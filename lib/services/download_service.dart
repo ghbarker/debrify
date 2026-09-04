@@ -3092,8 +3092,7 @@ class DownloadService {
         if (apiKey.isEmpty) return null;
         if (meta['torboxZip'] == true && webDownloadId != null) {
           return (
-            url: TorboxService.createWebDownloadZipPermalink(
-              apiKey,
+            url: await CloudProviderRegistry.instance.webZipPermalink(
               webDownloadId,
             ),
             fileName: null,
@@ -3728,10 +3727,8 @@ class DownloadService {
                       'Torbox web download ZIP missing webDownloadId',
                     );
                   }
-                  finalUrl = TorboxService.createWebDownloadZipPermalink(
-                    apiKey,
-                    webDownloadId,
-                  );
+                  finalUrl = await CloudProviderRegistry.instance
+                      .webZipPermalink(webDownloadId);
                   debugPrint('DL TORBOX WEB ZIP: generated signed link');
                 } else {
                   // Regular file download
@@ -4223,10 +4220,8 @@ class DownloadService {
 
                   if (isZip && webDownloadId != null) {
                     // Regenerate ZIP permalink
-                    freshUrl = TorboxService.createWebDownloadZipPermalink(
-                      apiKey,
-                      webDownloadId,
-                    );
+                    freshUrl = await CloudProviderRegistry.instance
+                        .webZipPermalink(webDownloadId);
                     debugPrint(
                       'DL RETRY TORBOX WEB ZIP: Regenerated permalink',
                     );
