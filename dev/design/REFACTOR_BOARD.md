@@ -11,8 +11,8 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | Lane | Status | Branch | Worker | Owns | Blocked on | Decisions |
 |---|---|---|---|---|---|---|
 | C0 · CI truth | assigned | `refactor/c0-ci-truth` | worker-c0 | `.github/workflows/test.yml`, `tool/ci_test_allowlist.py`, `tool/ci_test_allowlist_test.py`, `test/BASELINE_ALLOWLIST.txt`, `test/BASELINE_FAILURES.md`, `dart_test.yaml`, new `tool/check_layering.dart`, new `tool/analyze_baseline.json`, plus a new layering test file if needed | — | Prove analyze-all fails on a new diagnostic without committing an error into `search_screen.dart`. Goldens: Linux tolerance job, do not delete goldens. |
-| D0 · delete dead code | review | `refactor/d0-delete-dead-code` | worker-d0 | `lib/screens/deprecated/**`, `lib/widgets/catalog_browser.dart`, `lib/screens/search/search_sources.dart` (`_redesign == false` branch only) | — | Do **not** edit `CODEMAP.md` (M0 owns it). List deleted paths in the PR for M0. |
-| M0 · CODEMAP refresh | assigned | `refactor/m0-codemap-refresh` | worker-m0 | `CODEMAP.md`, `dev/design/ADDING_A_PROVIDER.md` | — | If D0 has not merged, paths under `lib/screens/deprecated/` and `catalog_browser.dart` still exist — keep them until D0 lands, then rebase and drop. Accept: every remaining path exists. |
+| D0 · delete dead code | merged | `refactor/d0-delete-dead-code` | — | `lib/screens/deprecated/**`, `lib/widgets/catalog_browser.dart`, `lib/screens/search/search_sources.dart` (`_redesign == false` branch only) | — | Unused `search_screen.dart` import dropped. CODEMAP left to M0. |
+| M0 · CODEMAP refresh | assigned | `refactor/m0-codemap-refresh` | worker-m0 | `CODEMAP.md`, `dev/design/ADDING_A_PROVIDER.md` | rebase on main (D0 merged) | D0 landed: drop `lib/screens/deprecated/` and `catalog_browser.dart` from CODEMAP. Accept: every remaining path exists. |
 | P1 · capability interfaces | queued | — | — | `lib/services/cloud/**`, `test/cloud_*` | gate 0 | — |
 | P2a · Magic TV strings | queued | — | — | `lib/screens/magic_tv_screen.dart` | P1 | — |
 | P2b · Stremio TV strings | queued | — | — | `lib/screens/stremio_tv/**` | P1 | — |
@@ -43,8 +43,8 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 | File | Lines |
 |---|---:|
-| `lib/screens/deprecated/torrent_search_screen.dart` | 26 413 |
-| `lib/screens/search_screen.dart` | 19 071 |
+| `lib/screens/deprecated/torrent_search_screen.dart` | deleted (D0) |
+| `lib/screens/search_screen.dart` | 19 070 |
 | `lib/screens/search/` parts (4 files) | 8 364 |
 | `lib/screens/video_player_screen.dart` | 16 278 |
 | `lib/screens/magic_tv_screen.dart` | 10 716 |
@@ -55,7 +55,7 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 | `lib/services/video_player_launcher.dart` | 5 769 |
 | `lib/services/torrent_playback_service.dart` | 5 340 |
 | `lib/services/remote_control/remote_command_router.dart` | 5 100 |
-| `lib/widgets/catalog_browser.dart` | 2 062 |
+| `lib/widgets/catalog_browser.dart` | deleted (D0) |
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
