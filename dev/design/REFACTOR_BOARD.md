@@ -6,7 +6,7 @@ Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 apply; this phase also requires (f) Leaves, (g) no host-private members / no new
 `part of` / `extension on` the host State, (h) pin commit predates the move.
 
-Baseline: `main` @ #73–#81 · Phase: **2 correction** (S2-2 review; G1'-2 + V1-2 review) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
+Baseline: `main` @ #73–#82 · Phase: **2 correction** (V1-2 + G1'-2 review; S2-3 next) · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -49,13 +49,13 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | G1'-3 … G1'-9 | queued | — | — | `search_screen.dart` | G1'-2 | Sequential. Target ≤ 7 500; no `extension on _SearchScreenState`. |
 | V1-0 · PlayerLaunchConfig | merged | `refactor/v1-0-launch-config` | worker | `video_player_screen.dart` [ctor + `widget.*` reads], `lib/screens/video_player/player_launch_config.dart` | — | **#75.** Value object. Leaves +3 ≈ 0. Unblocks V1-1…10. |
 | V1-1 · resume controller | merged | `refactor/v1-1-resume-controller` | worker | `video_player_screen.dart` [resume hunks], `lib/services/playback/resume_controller.dart` | V1-0 | **#79.** Leaves 666. Pin predates move. Adapter still `widget.*`. |
-| V1-2 · identify-title sheet | review | `refactor/v1-2-identify-title-sheet` | worker | `video_player_screen.dart` [identify hunks], `lib/widgets/player/identify_title_sheet.dart` | V1-1 | **#83.** Leaves 527. |
+| V1-2 · identify-title sheet | review | `refactor/v1-2-identify-title-sheet` | worker | `video_player_screen.dart` [identify-title hunks], `lib/widgets/player/identify_title_sheet.dart` | V1-1 | **#83.** Leaves 527. Sheet + season dialog. Subtitle fetch stays for V1-3. Pin predates move. |
 | V1-3 … V1-10 | queued | — | — | `video_player_screen.dart` | V1-2 | Sequential. Target ≤ 9 500. V1-9 folds episode-progress into ScrobbleCoordinator. |
 | M1-0 · WatchSession | merged | `refactor/m1-0-watch-session` | worker | `magic_tv_screen.dart` [WatchSession field/sink hunks], `lib/screens/debrify_tv/watch_session.dart`, tests | P1b merged (#76) | **#81.** Leaves +12 ≈ 0. `ProgressSink` seam. Pin predates move. |
 | M1-1 … M1-6 | queued | — | — | `magic_tv_screen.dart` | M1-0 | Sequential after M1-0. See PHASE2 §3. Target ≤ 4 500. |
 | S2-0 · key registry + façade | merged | `refactor/s2-0-key-registry` | worker | `storage_key_ownership.dart` | — | **#73.** `byKey` completed (274). Façade rule documented. Leaves 0. **Did not extract PlayerPrefs.** |
 | S2-1 · stremio/social/TV prefs | merged | `refactor/s2-1-stremio-social-tv-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-0 | **#77.** Leaves −531. Prefixes `engine_tv_` in `byKey`. |
-| S2-2 · provider credential prefs | review | `refactor/s2-2-provider-credential-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-1 | **#82.** Leaves −575. Named store 971. CloudSecretPrefs/MDBList skipped. |
+| S2-2 · provider credential prefs | merged | `refactor/s2-2-provider-credential-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-1 | **#82.** Leaves −575. Named store 971. CloudSecretPrefs/MDBList skipped. |
 | S2-3 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-2 | Sequential. Target ≤ 2 800. S2-3 = `player_prefs` + `iptv_prefs`. |
 | G2 · under 3 000 | queued | — | — | `settings_screen.dart` | when free | #63 left the file at 3 107; PHASE2 target ≤ 3 000. |
 | Q1 · layering enforcement | queued | — | — | `tool/check_layering.dart`, `test.yml` | gate 2 | — |
@@ -91,4 +91,4 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
-Phase 1 merged. Old Phase 2 G1–G5/T2/G3-HomePrefs **closed as insufficient** (audit in PHASE2 §1). Binding is **#72** `REFACTOR_PLAN_PHASE2.md`. **G3 PlayerPrefs parked** (`refactor/g3-player-prefs` — do not merge; S2-3 later). **G5 closed** (remainder is V1-9). **#76–#81 merged.** Open: **#82 S2-2**, **#83 V1-2**, **#84 G1'-2**. Mini-gate after every three merged extractions per lane. PR #56 held for Q3. #36–#43 closed (G4).
+Phase 1 merged. Old Phase 2 G1–G5/T2/G3-HomePrefs **closed as insufficient** (audit in PHASE2 §1). Binding is **#72** `REFACTOR_PLAN_PHASE2.md`. **G3 PlayerPrefs parked** (`refactor/g3-player-prefs` — do not merge; S2-3 later). **G5 closed** (remainder is V1-9). **#76–#82 merged.** Open: **#83 V1-2**, **#84 G1'-2**. Mini-gate after every three merged extractions per lane. PR #56 held for Q3. #36–#43 closed (G4).
