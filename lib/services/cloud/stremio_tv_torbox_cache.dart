@@ -7,9 +7,10 @@ import 'cloud_provider_registry.dart';
 
 /// Stremio TV *auto* TorBox cache membership.
 ///
-/// Missing key, cancel, empty hashes, and HTTP errors all become `{}` so
-/// auto-play skips TorBox. Explicit `torbox` provider filtering is different:
-/// no key means skip the filter (keep uncached torrents); HTTP may throw.
+/// Missing key, cancel, and empty hashes become `{}` so auto-play skips
+/// TorBox. Explicit `torbox` provider filtering is different: no key means
+/// skip the filter (keep uncached torrents). Chunk HTTP does not throw;
+/// the try/catch is for unexpected adapter errors (e.g. missing key).
 class StremioTvTorboxCache {
   StremioTvTorboxCache._();
 

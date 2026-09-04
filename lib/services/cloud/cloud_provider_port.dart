@@ -67,9 +67,10 @@ abstract class CloudProviderPort {
     MagicTvPrepareRequest request,
   );
 
-  /// TorBox `checkcached` hashes. Throws on missing key / HTTP.
-  /// Stremio auto-play catches and treats that as empty; explicit-provider
-  /// filtering lets it throw. Not Premiumize `checkCache` (positional bools).
+  /// TorBox `checkcached` hashes. Missing key throws [CloudMissingApiKey].
+  /// Per-chunk HTTP failures are swallowed by [TorboxService.checkCachedTorrents]
+  /// (partial or empty set). Explicit Stremio filter skips the call when there
+  /// is no key. Not Premiumize `checkCache` (positional bools).
   /// Unsupported adapters throw [CloudUnsupported].
   Future<Set<String>> checkCachedHashes(List<String> infoHashes);
 }

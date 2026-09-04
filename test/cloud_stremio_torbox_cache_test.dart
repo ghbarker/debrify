@@ -113,18 +113,14 @@ void main() {
     expect(torbox.lastCachedHashQuery, ['abc']);
   });
 
-  test('auto load maps HTTP errors to empty, unlike explicit-provider filter', () async {
+  test('auto load maps unexpected adapter errors to empty', () async {
     await StorageService.saveTorboxApiKey('tb-key');
     final torbox = FakeCloudProvider(
       id: CloudProviderId.torbox,
-      error: Exception('torbox down'),
+      error: Exception('unexpected'),
     );
     CloudProviderRegistry.instance = CloudProviderRegistry([torbox]);
     expect(await StremioTvTorboxCache.load([_t()]), isEmpty);
     expect(torbox.cachedHashesCount, 1);
-    await expectLater(
-      CloudProviderRegistry.instance.checkCachedHashes(const ['abc']),
-      throwsA(isA<Exception>()),
-    );
   });
 }
