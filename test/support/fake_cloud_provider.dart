@@ -23,6 +23,7 @@ class FakeCloudProvider implements CloudProviderPort {
     this.cachedHashes = const <String>{},
     this.cacheFlags = const <bool>[],
     this.zipPermalinkUrl,
+    this.transferZipUrl,
     this.error,
   });
 
@@ -168,5 +169,17 @@ class FakeCloudProvider implements CloudProviderPort {
     if (!supports(CloudPortFeature.cloudTransfer)) {
       throw CloudUnsupported(id, CloudPortFeature.cloudTransfer);
     }
+  }
+
+  String? transferZipUrl;
+  int createTransferZipCount = 0;
+
+  @override
+  Future<String> createTransferZip(String magnet) async {
+    createTransferZipCount++;
+    lastTransferMagnet = magnet;
+    if (error != null) throw error!;
+    if (transferZipUrl != null) return transferZipUrl!;
+    throw CloudUnsupported(id, CloudPortFeature.transferZip);
   }
 }

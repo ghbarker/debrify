@@ -5073,10 +5073,7 @@ class TorrentPlaybackService {
     // guard so a failure there can NEVER pop a second (underlying) route.
     final String zipUrl;
     try {
-      zipUrl = await PremiumizeService.createTransferAndGenerateZip(
-        apiKey,
-        magnet,
-      );
+      zipUrl = await CloudProviderRegistry.instance.createTransferZip(magnet);
     } catch (_) {
       if (rootNav.canPop()) rootNav.pop();
       if (context.mounted) {

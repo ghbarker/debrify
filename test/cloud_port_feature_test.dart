@@ -68,6 +68,14 @@ void main() {
       isFalse,
     );
     expect(
+      const PremiumizeCloudProvider().supports(CloudPortFeature.transferZip),
+      isTrue,
+    );
+    expect(
+      const TorboxCloudProvider().supports(CloudPortFeature.transferZip),
+      isFalse,
+    );
+    expect(
       CloudPortFeature.forProvider(CloudProviderId.torbox),
       {
         CloudPortFeature.playlistEntry,
@@ -78,7 +86,12 @@ void main() {
     );
     expect(
       CloudPortFeature.forProvider(CloudProviderId.premiumize),
-      {CloudPortFeature.magicTvPrepare, CloudPortFeature.checkCache, CloudPortFeature.cloudTransfer},
+      {
+        CloudPortFeature.magicTvPrepare,
+        CloudPortFeature.checkCache,
+        CloudPortFeature.cloudTransfer,
+        CloudPortFeature.transferZip,
+      },
     );
   });
 }
