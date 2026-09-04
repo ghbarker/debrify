@@ -3,13 +3,63 @@ import 'cloud_provider_id.dart';
 
 /// Which "is this provider set up?" question to ask.
 ///
-/// These are three different StorageService combinations, not aliases:
-/// playback key/enabled, magnet key+toggle, Stremio TV picker.
-/// Per-torrent Stremio resolve (`canAttempt`) is not a credentials check.
-enum CloudConfiguredCheck {
-  playback,
-  magnet,
-  stremioPicker,
+/// One `(needsKey, needsToggle)` row per surface — not aliases:
+/// playback key/enabled, magnet key+toggle, Stremio TV picker, Stremio
+/// resolve (PM/AD toggle-only). Per-torrent skip (blocked RD, auto TorBox
+/// cache) stays on [StremioTvResolveGate].
+enum CloudSurface { playback, magnet, stremioPicker, stremioResolve }
+
+/// Old name for [CloudSurface]. Kept one release for existing call sites.
+@Deprecated('Use CloudSurface')
+typedef CloudConfiguredCheck = CloudSurface;
+
+/// Key/toggle pair for [CloudCredentials.configured].
+class CloudSurfaceNeeds {
+  const CloudSurfaceNeeds({required this.needsKey, required this.needsToggle});
+
+  final bool needsKey;
+  final bool needsToggle;
+
+  /// One table per surface. PikPak's "toggle" is [StorageService.getPikPakEnabled]
+  /// (not an integration-enabled flag and not the email).
+  static CloudSurfaceNeeds forId(CloudProviderId id, CloudSurface surface) {
+    return switch ((surface, id)) {
+      (CloudSurface.playback, CloudProviderId.pikpak) =>
+        const CloudSurfaceNeeds(needsKey: false, needsToggle: true),
+      (CloudSurface.playback, _) => const CloudSurfaceNeeds(
+        needsKey: true,
+        needsToggle: false,
+      ),
+      (CloudSurface.magnet, CloudProviderId.pikpak) => const CloudSurfaceNeeds(
+        needsKey: false,
+        needsToggle: true,
+      ),
+      (CloudSurface.magnet, _) => const CloudSurfaceNeeds(
+        needsKey: true,
+        needsToggle: true,
+      ),
+      (CloudSurface.stremioPicker, CloudProviderId.debrid) ||
+      (
+        CloudSurface.stremioPicker,
+        CloudProviderId.torbox,
+      ) => const CloudSurfaceNeeds(needsKey: true, needsToggle: false),
+      (CloudSurface.stremioPicker, CloudProviderId.pikpak) =>
+        const CloudSurfaceNeeds(needsKey: false, needsToggle: true),
+      (CloudSurface.stremioPicker, _) => const CloudSurfaceNeeds(
+        needsKey: true,
+        needsToggle: true,
+      ),
+      (CloudSurface.stremioResolve, CloudProviderId.premiumize) ||
+      (
+        CloudSurface.stremioResolve,
+        CloudProviderId.alldebrid,
+      ) => const CloudSurfaceNeeds(needsKey: false, needsToggle: true),
+      (CloudSurface.stremioResolve, _) => const CloudSurfaceNeeds(
+        needsKey: false,
+        needsToggle: false,
+      ),
+    };
+  }
 }
 
 /// Facade over [StorageService] cloud-provider credentials.
@@ -35,87 +85,61 @@ class CloudCredentials {
     }
   }
 
-  /// Dispatch for the three credential dialects. Wrappers below stay for
-  /// existing call sites; do not fold Stremio resolve-skip into this.
+  /// Dispatch for the four credential dialects.
   static Future<bool> configured(
     CloudProviderId id,
-    CloudConfiguredCheck check,
-  ) {
-    switch (check) {
-      case CloudConfiguredCheck.playback:
-        return _playbackConfigured(id);
-      case CloudConfiguredCheck.magnet:
-        return _magnetConfigured(id);
-      case CloudConfiguredCheck.stremioPicker:
-        return _stremioPickerConfigured(id);
+    CloudSurface surface,
+  ) async {
+    final spec = CloudSurfaceNeeds.forId(id, surface);
+    if (spec.needsKey) {
+      final key = await apiKey(id);
+      if (key == null || key.isEmpty) return false;
+    }
+    if (spec.needsToggle) {
+      if (!await _toggleEnabled(id)) return false;
+    }
+    return true;
+  }
+
+  static Future<bool> _toggleEnabled(CloudProviderId id) {
+    switch (id) {
+      case CloudProviderId.debrid:
+        return StorageService.getRealDebridIntegrationEnabled();
+      case CloudProviderId.torbox:
+        return StorageService.getTorboxIntegrationEnabled();
+      case CloudProviderId.premiumize:
+        return StorageService.getPremiumizeIntegrationEnabled();
+      case CloudProviderId.alldebrid:
+        return StorageService.getAllDebridIntegrationEnabled();
+      case CloudProviderId.pikpak:
+        return StorageService.getPikPakEnabled();
     }
   }
 
   /// Playback [TorrentPlaybackService] definition: key non-empty, PikPak uses
   /// [StorageService.getPikPakEnabled] (not the email).
+  @Deprecated('Use configured(id, CloudSurface.playback)')
   static Future<bool> isPlaybackConfigured(CloudProviderId id) =>
-      configured(id, CloudConfiguredCheck.playback);
+      configured(id, CloudSurface.playback);
 
   /// Magnet / share-sheet definition: API key plus integration enabled.
+  @Deprecated('Use configured(id, CloudSurface.magnet)')
   static Future<bool> isMagnetConfigured(CloudProviderId id) =>
-      configured(id, CloudConfiguredCheck.magnet);
+      configured(id, CloudSurface.magnet);
 
   /// Stremio TV *picker* on the Stremio TV screen. Not playback
   /// (PM/AD skip the integration toggle there) and not magnet
   /// (RD/TB require the integration toggle there). PikPak is enabled-only.
   /// Settings (`stremio_tv_settings_page`) is a different list: no PM/AD.
+  @Deprecated('Use configured(id, CloudSurface.stremioPicker)')
   static Future<bool> isStremioAvailable(CloudProviderId id) =>
-      configured(id, CloudConfiguredCheck.stremioPicker);
+      configured(id, CloudSurface.stremioPicker);
 
-  static Future<bool> _playbackConfigured(CloudProviderId id) async {
-    if (id == CloudProviderId.pikpak) {
-      return StorageService.getPikPakEnabled();
-    }
-    final key = await apiKey(id);
-    return key != null && key.isNotEmpty;
-  }
-
-  static Future<bool> _magnetConfigured(CloudProviderId id) async {
-    switch (id) {
-      case CloudProviderId.debrid:
-        final key = await StorageService.getApiKey();
-        final enabled = await StorageService.getRealDebridIntegrationEnabled();
-        return key != null && key.isNotEmpty && enabled;
-      case CloudProviderId.torbox:
-        final key = await StorageService.getTorboxApiKey();
-        final enabled = await StorageService.getTorboxIntegrationEnabled();
-        return key != null && key.isNotEmpty && enabled;
-      case CloudProviderId.premiumize:
-        final key = await StorageService.getPremiumizeApiKey();
-        final enabled = await StorageService.getPremiumizeIntegrationEnabled();
-        return key != null && key.isNotEmpty && enabled;
-      case CloudProviderId.alldebrid:
-        final key = await StorageService.getAllDebridApiKey();
-        final enabled = await StorageService.getAllDebridIntegrationEnabled();
-        return key != null && key.isNotEmpty && enabled;
-      case CloudProviderId.pikpak:
-        return StorageService.getPikPakEnabled();
-    }
-  }
-
-  static Future<bool> _stremioPickerConfigured(CloudProviderId id) async {
-    switch (id) {
-      case CloudProviderId.debrid:
-      case CloudProviderId.torbox:
-        final key = await apiKey(id);
-        return key != null && key.isNotEmpty;
-      case CloudProviderId.pikpak:
-        return StorageService.getPikPakEnabled();
-      case CloudProviderId.premiumize:
-        final key = await StorageService.getPremiumizeApiKey();
-        final enabled = await StorageService.getPremiumizeIntegrationEnabled();
-        return enabled && key != null && key.isNotEmpty;
-      case CloudProviderId.alldebrid:
-        final key = await StorageService.getAllDebridApiKey();
-        final enabled = await StorageService.getAllDebridIntegrationEnabled();
-        return enabled && key != null && key.isNotEmpty;
-    }
-  }
+  /// Stremio TV resolve gate for PM/AD (toggle-only). Not picker (key+toggle)
+  /// and not per-torrent skip (blocked RD / auto TorBox cache).
+  @Deprecated('Use configured(id, CloudSurface.stremioResolve)')
+  static Future<bool> isStremioResolveConfigured(CloudProviderId id) =>
+      configured(id, CloudSurface.stremioResolve);
 
   /// Picker rows for the Stremio TV screen. Order is RD → TB → PikPak → PM → AD
   /// (PikPak before Premiumize — not [CloudProviderId.playbackPrecedence]).
@@ -131,7 +155,7 @@ class CloudCredentials {
     ];
     final out = <MapEntry<String, String>>[];
     for (final id in order) {
-      if (await configured(id, CloudConfiguredCheck.stremioPicker)) {
+      if (await configured(id, CloudSurface.stremioPicker)) {
         out.add(id.catalogChoice);
       }
     }

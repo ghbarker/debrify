@@ -1,12 +1,12 @@
 import '../../models/torrent.dart';
 import '../../utils/rd_blocked_filter.dart';
-import '../storage_service.dart';
+import 'cloud_credentials.dart';
+import 'cloud_provider_id.dart';
 
-/// Per-torrent Stremio TV resolve skip. Not a CloudCredentials check
-/// and not a fourth CloudConfiguredCheck.
+/// Per-torrent Stremio TV resolve skip, plus PM/AD [CloudSurface.stremioResolve].
 ///
-/// Not [CloudCredentials.isStremioAvailable] (picker: RD/TB key, PikPak
-/// enabled, PM/AD toggle+key). Not playback [isConfigured].
+/// Not [CloudSurface.stremioPicker] (picker: RD/TB key, PikPak enabled,
+/// PM/AD toggle+key). Not playback [CloudSurface.playback].
 /// Provider strings are Stremio ids (`realdebrid`), not `debrid`.
 class StremioTvResolveGate {
   StremioTvResolveGate._();
@@ -26,9 +26,15 @@ class StremioTvResolveGate {
         final cachedHashes = await torboxCachedHashes();
         return cachedHashes.contains(torrent.infohash.trim().toLowerCase());
       case 'premiumize':
-        return StorageService.getPremiumizeIntegrationEnabled();
+        return CloudCredentials.configured(
+          CloudProviderId.premiumize,
+          CloudSurface.stremioResolve,
+        );
       case 'alldebrid':
-        return StorageService.getAllDebridIntegrationEnabled();
+        return CloudCredentials.configured(
+          CloudProviderId.alldebrid,
+          CloudSurface.stremioResolve,
+        );
       default:
         return true;
     }

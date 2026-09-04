@@ -23,14 +23,26 @@ import 'magic_tv_playable.dart';
 import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
-class TorboxCloudProvider extends CloudProviderAdapter {
+class TorboxCloudProvider extends CloudProviderAdapter
+    implements
+        CloudUnlock,
+        CloudMagnetAdd,
+        CloudPlaylist,
+        CloudMagicTvPrepare,
+        CloudCachedHashes,
+        CloudZipPermalink,
+        CloudFileDownloadLink,
+        CloudWebZipPermalink,
+        CloudQueueUncached,
+        CloudMagnetTorrent {
   const TorboxCloudProvider();
 
   @override
   CloudProviderId get id => CloudProviderId.torbox;
 
   @override
-  Future<bool> isConfigured() => CloudCredentials.isPlaybackConfigured(id);
+  Future<bool> isConfigured() =>
+      CloudCredentials.configured(id, CloudSurface.playback);
 
   @override
   Future<CloudPlaybackResult> addMagnet(String magnet, Torrent torrent) async {
@@ -217,17 +229,23 @@ class TorboxCloudProvider extends CloudProviderAdapter {
   }
 
   @override
-  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async {
+  Future<CloudPlaylistResolve> resolvePlaylist(PlaylistEntry entry) async {
     final torrentId = entry.torboxTorrentId;
     final fileId = entry.torboxFileId;
-    if (torrentId == null || fileId == null) return null;
+    if (torrentId == null || fileId == null) return const CloudPlaylistMiss();
     final apiKey = (await CloudCredentials.apiKey(id)) ?? '';
-    return TorboxService.requestFileDownloadLink(
+    final url = await TorboxService.requestFileDownloadLink(
       apiKey: apiKey,
       torrentId: torrentId,
       fileId: fileId,
     );
+    if (url.isEmpty) return const CloudPlaylistMiss();
+    return CloudPlaylistResolved(url);
   }
+
+  @override
+  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async =>
+      (await resolvePlaylist(entry)).urlOrNull;
 
   @override
   Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
@@ -473,16 +491,6 @@ class TorboxCloudProvider extends CloudProviderAdapter {
       request.log('❌ Torbox requestdl failed: $e');
       return null;
     }
-  }
-
-  @override
-  Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
-    MagicTvPrepareRequest request,
-  ) {
-    throw const CloudUnsupported(
-      CloudProviderId.torbox,
-      CloudPortFeature.magicTvLockedLinks,
-    );
   }
 
   @override

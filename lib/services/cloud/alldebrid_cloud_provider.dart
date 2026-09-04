@@ -17,14 +17,20 @@ import 'magic_tv_playable.dart';
 import 'magic_tv_prepare_args.dart';
 import 'stremio_torrent_resolve_args.dart';
 
-class AllDebridCloudProvider extends CloudProviderAdapter {
+class AllDebridCloudProvider extends CloudProviderAdapter
+    implements
+        CloudUnlock,
+        CloudMagnetAdd,
+        CloudPlaylist,
+        CloudMagicTvLockedLinks {
   const AllDebridCloudProvider();
 
   @override
   CloudProviderId get id => CloudProviderId.alldebrid;
 
   @override
-  Future<bool> isConfigured() => CloudCredentials.isPlaybackConfigured(id);
+  Future<bool> isConfigured() =>
+      CloudCredentials.configured(id, CloudSurface.playback);
 
   @override
   Future<CloudPlaybackResult> addMagnet(String magnet, Torrent torrent) async {
@@ -117,12 +123,18 @@ class AllDebridCloudProvider extends CloudProviderAdapter {
   }
 
   @override
-  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async {
+  Future<CloudPlaylistResolve> resolvePlaylist(PlaylistEntry entry) async {
     final link = entry.allDebridLink;
-    if (link == null || link.isEmpty) return null;
+    if (link == null || link.isEmpty) return const CloudPlaylistMiss();
     final apiKey = (await CloudCredentials.apiKey(id)) ?? '';
-    return AllDebridService.unlockLink(apiKey, link);
+    final url = await AllDebridService.unlockLink(apiKey, link);
+    if (url.isEmpty) return const CloudPlaylistMiss();
+    return CloudPlaylistResolved(url);
   }
+
+  @override
+  Future<String?> resolvePlaylistEntry(PlaylistEntry entry) async =>
+      (await resolvePlaylist(entry)).urlOrNull;
 
   @override
   Future<String> unlockPlaybackEntry(PlaylistEntry entry) async {
@@ -201,14 +213,6 @@ class AllDebridCloudProvider extends CloudProviderAdapter {
       debugPrint('StremioTV: AllDebrid resolve error: $e');
       return null;
     }
-  }
-
-  @override
-  Future<MagicTvPrepared?> prepareMagicTv(MagicTvPrepareRequest request) {
-    throw const CloudUnsupported(
-      CloudProviderId.alldebrid,
-      CloudPortFeature.magicTvPrepare,
-    );
   }
 
   @override
