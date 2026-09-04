@@ -18,6 +18,8 @@ import 'remote_pairing_dialog.dart';
 import '../../services/storage_service.dart';
 import '../../services/mdblist/mdblist_service.dart';
 import '../../services/stremio_service.dart';
+import '../../services/transfer/transfer_category.dart';
+import '../../services/transfer/transfer_category_registry.dart';
 import '../../services/profiles/profile_async_authorization.dart';
 import '../../services/profiles/profile_authorization.dart';
 import '../../services/profiles/profile_bootstrap.dart';
@@ -254,128 +256,84 @@ class _RemoteTransferAllState extends State<RemoteTransferAll> {
       final hasWebDav = _webDavCount > 0;
       final hasIndexers = _indexerManagerCount > 0;
 
+      _TransferItem wired(String command, {String? label}) {
+        final cat = TransferCategoryRegistry.instance.byWireCommand(command)!;
+        return _TransferItem(
+          key: cat.wireCommand!,
+          label: label ?? cat.label,
+          icon: cat.icon,
+          color: cat.color,
+        );
+      }
+
       final items = <_TransferItem>[];
       if (hasRd) {
-        items.add(
-          _TransferItem(
-            key: ConfigCommand.realDebrid,
-            label: 'Real-Debrid',
-            icon: Icons.speed,
-            color: const Color(0xFF10B981),
-          ),
-        );
+        items.add(wired(ConfigCommand.realDebrid));
       }
       if (hasTb) {
-        items.add(
-          _TransferItem(
-            key: ConfigCommand.torbox,
-            label: 'Torbox',
-            icon: Icons.inventory_2,
-            color: const Color(0xFFF59E0B),
-          ),
-        );
+        items.add(wired(ConfigCommand.torbox));
       }
       if (hasPm) {
-        items.add(
-          _TransferItem(
-            key: ConfigCommand.premiumize,
-            label: 'Premiumize',
-            icon: Icons.workspace_premium_rounded,
-            color: const Color(0xFFFB923C),
-          ),
-        );
+        items.add(wired(ConfigCommand.premiumize));
       }
       if (hasAd) {
-        items.add(
-          _TransferItem(
-            key: ConfigCommand.allDebrid,
-            label: 'AllDebrid',
-            icon: Icons.all_inclusive_rounded,
-            color: const Color(0xFF26A69A),
-          ),
-        );
+        items.add(wired(ConfigCommand.allDebrid));
       }
       if (hasPp) {
-        items.add(
-          _TransferItem(
-            key: ConfigCommand.pikpak,
-            label: 'PikPak',
-            icon: Icons.cloud,
-            color: const Color(0xFF3B82F6),
-          ),
-        );
+        items.add(wired(ConfigCommand.pikpak));
       }
       if (hasTrakt) {
         items.add(
-          _TransferItem(
-            key: ConfigCommand.trakt,
+          wired(
+            ConfigCommand.trakt,
             label: _traktUsername != null
                 ? 'Trakt (${_traktUsername!})'
                 : 'Trakt',
-            icon: Icons.history_rounded,
-            color: const Color(0xFFED1C24),
           ),
         );
       }
       if (hasSimkl) {
         items.add(
-          _TransferItem(
-            key: ConfigCommand.simkl,
+          wired(
+            ConfigCommand.simkl,
             label: _simklUsername != null
                 ? 'Simkl (${_simklUsername!})'
                 : 'Simkl',
-            icon: Icons.movie_filter_rounded,
-            color: const Color(0xFF22D3EE),
           ),
         );
       }
       if (hasMdblist) {
         items.add(
-          _TransferItem(
-            key: ConfigCommand.mdblist,
+          wired(
+            ConfigCommand.mdblist,
             label: _mdblistUsername != null
                 ? 'MDBList (${_mdblistUsername!})'
                 : 'MDBList',
-            icon: Icons.list_alt_rounded,
-            color: const Color(0xFF8B5CF6),
           ),
         );
       }
-      items.add(
-        _TransferItem(
-          key: ConfigCommand.trackingPreferences,
-          label: 'Tracking preferences',
-          icon: Icons.sync_alt_rounded,
-          color: const Color(0xFF38BDF8),
-        ),
-      );
+      items.add(wired(ConfigCommand.trackingPreferences));
       if (hasEngines) {
         items.add(
-          _TransferItem(
-            key: ConfigCommand.searchEngines,
+          wired(
+            ConfigCommand.searchEngines,
             label: 'Search Engines ($_engineCount)',
-            icon: Icons.search,
-            color: const Color(0xFF8B5CF6),
           ),
         );
       }
       if (hasWebDav) {
         items.add(
-          _TransferItem(
-            key: ConfigCommand.webDav,
+          wired(
+            ConfigCommand.webDav,
             label: 'WebDAV ($_webDavCount)',
-            icon: Icons.dns_rounded,
-            color: const Color(0xFF0EA5E9),
           ),
         );
       }
       if (hasIndexers) {
         items.add(
-          _TransferItem(
-            key: ConfigCommand.indexerManagers,
+          wired(
+            ConfigCommand.indexerManagers,
             label: 'Jackett/Prowlarr ($_indexerManagerCount)',
-            icon: Icons.manage_search_rounded,
-            color: const Color(0xFFEAB308),
           ),
         );
       }
@@ -383,45 +341,37 @@ class _RemoteTransferAllState extends State<RemoteTransferAll> {
       // from, so the provider has to land first.
       if (_iptvPlaylistCount > 0) {
         items.add(
-          _TransferItem(
-            key: ConfigCommand.iptvPlaylists,
+          wired(
+            ConfigCommand.iptvPlaylists,
             label: 'IPTV providers ($_iptvPlaylistCount)',
-            icon: Icons.live_tv_rounded,
-            color: const Color(0xFF14B8A6),
           ),
         );
       }
       if (_iptvFavoriteCount > 0) {
         items.add(
-          _TransferItem(
-            key: ConfigCommand.iptvFavorites,
+          wired(
+            ConfigCommand.iptvFavorites,
             label: 'IPTV favorites ($_iptvFavoriteCount)',
-            icon: Icons.star_rounded,
-            color: const Color(0xFFF472B6),
           ),
         );
       }
       if (_iptvListCount > 0) {
         items.add(
-          _TransferItem(
-            key: ConfigCommand.iptvLists,
+          wired(
+            ConfigCommand.iptvLists,
             label:
                 'IPTV lists ($_iptvListCount, '
                 '$_iptvListChannelCount channels)',
-            icon: Icons.playlist_play_rounded,
-            color: const Color(0xFFA78BFA),
           ),
         );
       }
       if (_streamBadgeCount > 0) {
         items.add(
-          _TransferItem(
-            key: ConfigCommand.streamBadges,
+          wired(
+            ConfigCommand.streamBadges,
             label:
                 'Stream badges ($_streamBadgeCount '
                 'ruleset${_streamBadgeCount == 1 ? '' : 's'})',
-            icon: Icons.sell_rounded,
-            color: const Color(0xFFFBBF24),
           ),
         );
       }
@@ -1112,216 +1062,40 @@ class _RemoteTransferAllState extends State<RemoteTransferAll> {
         ? value
         : remoteTransferItemBody(requestId: transferRequestId, payload: value);
 
-    Future<bool> sendScalar(
-      String command,
-      Future<String?> Function() read,
-    ) async {
-      final value = await read();
-      return value != null &&
-          value.isNotEmpty &&
+    final category = TransferCategoryRegistry.instance.byWireCommand(key);
+    final readWire = category?.readWire;
+    if (category == null || readWire == null) return false;
+    final body = await readWire(
+      TransferSendContext(
+        pikpakPassword: _pikpakPasswordController.text,
+      ),
+    );
+    if (body == null) return false;
+    if (category.wireEncoding == TransferWireEncoding.rawString) {
+      final value = body as String;
+      return value.isNotEmpty &&
           await state.sendConfigCommandToDevice(
-            command,
+            key,
             targetIp,
             configData: transferData(value),
           );
     }
-
-    switch (key) {
-      case ConfigCommand.realDebrid:
-        return sendScalar(
-          ConfigCommand.realDebrid,
-          () => StorageService.getApiKey(forRemoteTransfer: true),
-        );
-      case ConfigCommand.torbox:
-        return sendScalar(
-          ConfigCommand.torbox,
-          () => StorageService.getTorboxApiKey(forRemoteTransfer: true),
-        );
-      case ConfigCommand.premiumize:
-        return sendScalar(
-          ConfigCommand.premiumize,
-          () => StorageService.getPremiumizeApiKey(forRemoteTransfer: true),
-        );
-      case ConfigCommand.allDebrid:
-        return sendScalar(
-          ConfigCommand.allDebrid,
-          () => StorageService.getAllDebridApiKey(forRemoteTransfer: true),
-        );
-      case ConfigCommand.pikpak:
-        final email = await StorageService.getPikPakEmail(
-          forRemoteTransfer: true,
-        );
-        if (email == null || email.isEmpty) return false;
-        return state.sendConfigCommandToDevice(
-          ConfigCommand.pikpak,
-          targetIp,
-          configData: transferData(
-            jsonEncode({
-              'email': email,
-              'password': _pikpakPasswordController.text,
-            }),
-          ),
-        );
-      case ConfigCommand.trakt:
-        final access = await StorageService.getTraktAccessToken(
-          forRemoteTransfer: true,
-        );
-        final refresh = await StorageService.getTraktRefreshToken(
-          forRemoteTransfer: true,
-        );
-        if (access == null ||
-            access.isEmpty ||
-            refresh == null ||
-            refresh.isEmpty) {
-          return false;
-        }
-        final expiry = await StorageService.getTraktTokenExpiry();
-        final username = await StorageService.getTraktUsername();
-        return state.sendConfigCommandToDevice(
-          ConfigCommand.trakt,
-          targetIp,
-          configData: transferData(
-            jsonEncode({
-              'access_token': access,
-              'refresh_token': refresh,
-              if (expiry != null) 'expiry_ms': expiry,
-              if (username != null) 'username': username,
-            }),
-          ),
-        );
-      case ConfigCommand.simkl:
-        final access = await StorageService.getSimklAccessToken(
-          forRemoteTransfer: true,
-        );
-        if (access == null || access.isEmpty) return false;
-        final username = await StorageService.getSimklUsername();
-        return state.sendConfigCommandToDevice(
-          ConfigCommand.simkl,
-          targetIp,
-          configData: transferData(
-            jsonEncode({
-              'access_token': access,
-              if (username != null) 'username': username,
-            }),
-          ),
-        );
-      case ConfigCommand.mdblist:
-        final apiKey = await StorageService.getMdblistApiKey(
-          forRemoteTransfer: true,
-        );
-        if (apiKey == null || apiKey.isEmpty) return false;
-        final username = await StorageService.getMdblistUsername();
-        return state.sendConfigCommandToDevice(
-          ConfigCommand.mdblist,
-          targetIp,
-          configData: transferData(
-            jsonEncode({
-              'api_key': apiKey,
-              if (username != null) 'username': username,
-            }),
-          ),
-        );
-      case ConfigCommand.trackingPreferences:
-        return state.sendConfigCommandToDevice(
-          ConfigCommand.trackingPreferences,
-          targetIp,
-          configData: transferData(
-            jsonEncode(await StorageService.buildTrackingPreferencesPayload()),
-          ),
-        );
-      case ConfigCommand.searchEngines:
-        await LocalEngineStorage.instance.initialize();
-        final engineIds = await LocalEngineStorage.instance
-            .getImportedEngineIds();
-        if (engineIds.isEmpty) return false;
-        return state.sendConfigCommandToDevice(
-          ConfigCommand.searchEngines,
-          targetIp,
-          configData: transferData(jsonEncode(engineIds)),
-        );
-      case ConfigCommand.webDav:
-        final servers = await StorageService.getWebDavServers(
-          forSettings: false,
-          forRemoteTransfer: true,
-        );
-        if (servers.isEmpty) return false;
-        return state.sendConfigCommandToDevice(
-          ConfigCommand.webDav,
-          targetIp,
-          configData: transferData(
-            jsonEncode([for (final server in servers) server.toTransferJson()]),
-          ),
-        );
-      case ConfigCommand.indexerManagers:
-        final managers = await StorageService.getIndexerManagerConfigs(
-          forSettings: false,
-          forRemoteTransfer: true,
-        );
-        if (managers.isEmpty) return false;
-        return state.sendConfigCommandToDevice(
-          ConfigCommand.indexerManagers,
-          targetIp,
-          configData: transferData(
-            jsonEncode([
-              for (final manager in managers) manager.toTransferJson(),
-            ]),
-          ),
-        );
-      // The IPTV payloads routinely outgrow a single datagram — a few hundred
-      // starred channels is tens of kilobytes — so they take the chunked path.
-      case ConfigCommand.iptvPlaylists:
-        final payload = await IptvTransferPayload.buildPlaylists(
-          forRemoteTransfer: true,
-        );
-        if (payload.isEmpty) return false;
-        return sendConfigPayloadToDevice(
-          state,
-          ConfigCommand.iptvPlaylists,
-          targetIp,
-          jsonEncode(payload),
-          label: 'IPTV providers',
-          transferRequestId: transferRequestId,
-        );
-      case ConfigCommand.iptvFavorites:
-        final payload = await IptvTransferPayload.buildFavorites(
-          forRemoteTransfer: true,
-        );
-        if (payload.isEmpty) return false;
-        return sendConfigPayloadToDevice(
-          state,
-          ConfigCommand.iptvFavorites,
-          targetIp,
-          jsonEncode(payload),
-          label: 'IPTV favorites',
-          transferRequestId: transferRequestId,
-        );
-      case ConfigCommand.iptvLists:
-        final payload = await IptvTransferPayload.buildCustomLists(
-          forRemoteTransfer: true,
-        );
-        if (payload.isEmpty) return false;
-        return sendConfigPayloadToDevice(
-          state,
-          ConfigCommand.iptvLists,
-          targetIp,
-          jsonEncode(payload),
-          label: 'IPTV lists',
-          transferRequestId: transferRequestId,
-        );
-      case ConfigCommand.streamBadges:
-        final payload = await StreamBadgesService.instance.exportJson();
-        if (payload.isEmpty) return false;
-        return sendConfigPayloadToDevice(
-          state,
-          ConfigCommand.streamBadges,
-          targetIp,
-          jsonEncode(payload),
-          label: 'Stream badges',
-          transferRequestId: transferRequestId,
-        );
-      default:
-        return false;
+    final encoded = jsonEncode(body);
+    if (category.chunkedSend) {
+      return sendConfigPayloadToDevice(
+        state,
+        key,
+        targetIp,
+        encoded,
+        label: category.summarizeLabel ?? category.label,
+        transferRequestId: transferRequestId,
+      );
     }
+    return state.sendConfigCommandToDevice(
+      key,
+      targetIp,
+      configData: transferData(encoded),
+    );
   }
 
   void _toast(String msg, {bool error = false, bool warning = false}) {

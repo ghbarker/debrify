@@ -48,6 +48,8 @@ import '../../models/profiles/profile_policy.dart';
 import '../../models/profiles/user_profile.dart';
 import '../profiles/profile_remote_lease.dart';
 import '../profiles/profile_runtime.dart';
+import '../transfer/transfer_category.dart';
+import '../transfer/transfer_category_registry.dart';
 import '../profiles/profile_scope.dart';
 import '../profiles/profile_authorization.dart';
 import '../profiles/profile_bootstrap.dart';
@@ -119,23 +121,9 @@ class RemoteCommandRouter {
   String? _activeRemoteTransferRequestId;
   String? _activeRemoteTransferPeer;
   final Map<String, int> _activeRemoteTransferReceived = {};
-  static const Set<String> _remoteBatchCommands = <String>{
+  static Set<String> get _remoteBatchCommands => <String>{
     RemoteAction.addon,
-    ConfigCommand.realDebrid,
-    ConfigCommand.torbox,
-    ConfigCommand.premiumize,
-    ConfigCommand.allDebrid,
-    ConfigCommand.pikpak,
-    ConfigCommand.trakt,
-    ConfigCommand.simkl,
-    ConfigCommand.mdblist,
-    ConfigCommand.searchEngines,
-    ConfigCommand.webDav,
-    ConfigCommand.indexerManagers,
-    ConfigCommand.iptvPlaylists,
-    ConfigCommand.iptvFavorites,
-    ConfigCommand.iptvLists,
-    ConfigCommand.streamBadges,
+    ...TransferCategoryRegistry.instance.remoteBatchCommands,
   };
   static const Duration _remoteTransferOutcomeLifetime = Duration(minutes: 5);
 
@@ -2413,58 +2401,14 @@ class RemoteCommandRouter {
   ) {
     final payload = _profilePayload(context, binding);
     if (payload == null) return false;
-    dynamic decoded() => jsonDecode(data);
-    switch (command) {
-      case ConfigCommand.realDebrid:
-        payload['realDebridApiKey'] = data;
-        break;
-      case ConfigCommand.torbox:
-        payload['torboxApiKey'] = data;
-        break;
-      case ConfigCommand.premiumize:
-        payload['premiumizeApiKey'] = data;
-        break;
-      case ConfigCommand.allDebrid:
-        payload['allDebridApiKey'] = data;
-        break;
-      case ConfigCommand.pikpak:
-        payload['pikpak'] = decoded();
-        break;
-      case ConfigCommand.trakt:
-        payload['trakt'] = decoded();
-        break;
-      case ConfigCommand.simkl:
-        payload['simkl'] = decoded();
-        break;
-      case ConfigCommand.mdblist:
-        payload['mdblist'] = decoded();
-        break;
-      case ConfigCommand.trackingPreferences:
-        payload['trackingPreferences'] = decoded();
-        break;
-      case ConfigCommand.searchEngines:
-        payload['searchEngineIds'] = decoded();
-        break;
-      case ConfigCommand.webDav:
-        payload['webDavServers'] = decoded();
-        break;
-      case ConfigCommand.indexerManagers:
-        payload['indexerManagers'] = decoded();
-        break;
-      case ConfigCommand.iptvPlaylists:
-        payload['iptvPlaylists'] = decoded();
-        break;
-      case ConfigCommand.iptvFavorites:
-        payload['iptvFavorites'] = decoded();
-        break;
-      case ConfigCommand.iptvLists:
-        payload['iptvLists'] = decoded();
-        break;
-      case ConfigCommand.streamBadges:
-        payload['streamBadges'] = decoded();
-        break;
-      default:
-        throw FormatException('Unsupported profile transfer category $command');
+    final category = TransferCategoryRegistry.instance.byWireCommand(command);
+    if (category == null || category.wireCommand == null) {
+      throw FormatException('Unsupported profile transfer category $command');
+    }
+    if (category.wireEncoding == TransferWireEncoding.rawString) {
+      payload[category.payloadKey] = data;
+    } else {
+      payload[category.payloadKey] = jsonDecode(data);
     }
     return _profilePayloadWithinLimit(payload);
   }
@@ -2483,23 +2427,8 @@ class RemoteCommandRouter {
     if (expected.isEmpty) return true;
     final payload = _profileRemotePayload;
     if (payload == null) return false;
-    const payloadKeys = <String, String>{
-      ConfigCommand.realDebrid: 'realDebridApiKey',
-      ConfigCommand.torbox: 'torboxApiKey',
-      ConfigCommand.premiumize: 'premiumizeApiKey',
-      ConfigCommand.allDebrid: 'allDebridApiKey',
-      ConfigCommand.pikpak: 'pikpak',
-      ConfigCommand.trakt: 'trakt',
-      ConfigCommand.simkl: 'simkl',
-      ConfigCommand.mdblist: 'mdblist',
-      ConfigCommand.searchEngines: 'searchEngineIds',
-      ConfigCommand.webDav: 'webDavServers',
-      ConfigCommand.indexerManagers: 'indexerManagers',
-      ConfigCommand.iptvPlaylists: 'iptvPlaylists',
-      ConfigCommand.iptvFavorites: 'iptvFavorites',
-      ConfigCommand.iptvLists: 'iptvLists',
-      ConfigCommand.streamBadges: 'streamBadges',
-    };
+    final payloadKeys =
+        TransferCategoryRegistry.instance.expectedPayloadKeys;
     for (final entry in expected.entries) {
       if (entry.key == RemoteAction.addon) {
         final addons = payload['addonManifestUrls'];
@@ -2888,27 +2817,12 @@ class RemoteCommandRouter {
     }
 
     try {
-      const rawStringCategories = <String, String>{
-        'realDebridApiKey': ConfigCommand.realDebrid,
-        'torboxApiKey': ConfigCommand.torbox,
-        'premiumizeApiKey': ConfigCommand.premiumize,
-        'allDebridApiKey': ConfigCommand.allDebrid,
-      };
+      final rawStringCategories =
+          TransferCategoryRegistry.instance.rawStringPayloadToWire;
       // Wire order: memberships resolve against playlists — playlists first.
-      const encodedCategories = <String, String>{
-        'pikpak': ConfigCommand.pikpak,
-        'trakt': ConfigCommand.trakt,
-        'simkl': ConfigCommand.simkl,
-        'mdblist': ConfigCommand.mdblist,
-        'trackingPreferences': ConfigCommand.trackingPreferences,
-        'searchEngineIds': ConfigCommand.searchEngines,
-        'webDavServers': ConfigCommand.webDav,
-        'indexerManagers': ConfigCommand.indexerManagers,
-        'iptvPlaylists': ConfigCommand.iptvPlaylists,
-        'iptvFavorites': ConfigCommand.iptvFavorites,
-        'iptvLists': ConfigCommand.iptvLists,
-        'streamBadges': ConfigCommand.streamBadges,
-      };
+      // Order is [TransferCategoryRegistry] data (today's applyBackup order).
+      final encodedCategories =
+          TransferCategoryRegistry.instance.encodedPayloadToWire;
       for (final entry in rawStringCategories.entries) {
         final value = payload[entry.key];
         if (value is! String || value.isEmpty) continue;

@@ -8,6 +8,8 @@ import '../../services/storage_service.dart';
 import '../../services/mdblist/mdblist_service.dart';
 import '../../services/iptv_transfer_payload.dart';
 import '../../services/stream_badges_service.dart';
+import '../../services/transfer/transfer_category.dart';
+import '../../services/transfer/transfer_category_registry.dart';
 import '../../services/remote_control/remote_chunked_send.dart';
 import '../../services/remote_control/remote_control_state.dart';
 import 'remote_pairing_dialog.dart';
@@ -488,298 +490,56 @@ class _RemoteConfigExportState extends State<RemoteConfigExport> {
         }
       }
 
-      Future<bool> sendScalar(
-        String command,
-        Future<String?> Function() read,
-      ) async {
-        final value = await read();
-        return value != null &&
-            value.isNotEmpty &&
-            await state.sendConfigCommandToDevice(
+      final sendCtx = TransferSendContext(
+        pikpakPassword: _pikpakPasswordController.text,
+      );
+      for (final category in TransferCategoryRegistry.instance.all) {
+        final command = category.wireCommand;
+        final readWire = category.readWire;
+        if (command == null || readWire == null) continue;
+        _ConfigItem? item;
+        for (final candidate in _allItems) {
+          if (candidate.id == command) {
+            item = candidate;
+            break;
+          }
+        }
+        await sendSelected(
+          item?.selected == true,
+          category.label,
+          command,
+          () async {
+            final body = await readWire(sendCtx);
+            if (body == null) return false;
+            if (category.wireEncoding == TransferWireEncoding.rawString) {
+              final value = body as String;
+              return value.isNotEmpty &&
+                  await state.sendConfigCommandToDevice(
+                    command,
+                    targetIp,
+                    configData: transferData(value),
+                  );
+            }
+            final encoded = jsonEncode(body);
+            if (category.chunkedSend) {
+              return sendConfigPayloadToDevice(
+                state,
+                command,
+                targetIp,
+                encoded,
+                label: category.summarizeLabel ?? category.label,
+                transferRequestId:
+                    supportsApplicationResult ? requestId : null,
+              );
+            }
+            return state.sendConfigCommandToDevice(
               command,
               targetIp,
-              configData: transferData(value),
+              configData: transferData(encoded),
             );
+          },
+        );
       }
-
-      await sendSelected(
-        _realDebrid?.selected == true,
-        'Real-Debrid',
-        ConfigCommand.realDebrid,
-        () => sendScalar(
-          ConfigCommand.realDebrid,
-          () => StorageService.getApiKey(forRemoteTransfer: true),
-        ),
-      );
-      await sendSelected(
-        _torbox?.selected == true,
-        'Torbox',
-        ConfigCommand.torbox,
-        () => sendScalar(
-          ConfigCommand.torbox,
-          () => StorageService.getTorboxApiKey(forRemoteTransfer: true),
-        ),
-      );
-      await sendSelected(
-        _premiumize?.selected == true,
-        'Premiumize',
-        ConfigCommand.premiumize,
-        () => sendScalar(
-          ConfigCommand.premiumize,
-          () => StorageService.getPremiumizeApiKey(forRemoteTransfer: true),
-        ),
-      );
-      await sendSelected(
-        _allDebrid?.selected == true,
-        'AllDebrid',
-        ConfigCommand.allDebrid,
-        () => sendScalar(
-          ConfigCommand.allDebrid,
-          () => StorageService.getAllDebridApiKey(forRemoteTransfer: true),
-        ),
-      );
-      await sendSelected(
-        _pikpak?.selected == true,
-        'PikPak',
-        ConfigCommand.pikpak,
-        () async {
-          final email = await StorageService.getPikPakEmail(
-            forRemoteTransfer: true,
-          );
-          if (email == null || email.isEmpty) return false;
-          return state.sendConfigCommandToDevice(
-            ConfigCommand.pikpak,
-            targetIp,
-            configData: transferData(
-              jsonEncode(<String, Object?>{
-                'email': email,
-                'password': _pikpakPasswordController.text,
-              }),
-            ),
-          );
-        },
-      );
-      await sendSelected(
-        _trakt?.selected == true,
-        'Trakt',
-        ConfigCommand.trakt,
-        () async {
-          final access = await StorageService.getTraktAccessToken(
-            forRemoteTransfer: true,
-          );
-          final refresh = await StorageService.getTraktRefreshToken(
-            forRemoteTransfer: true,
-          );
-          if (access == null ||
-              access.isEmpty ||
-              refresh == null ||
-              refresh.isEmpty) {
-            return false;
-          }
-          final expiry = await StorageService.getTraktTokenExpiry();
-          final username = await StorageService.getTraktUsername();
-          return state.sendConfigCommandToDevice(
-            ConfigCommand.trakt,
-            targetIp,
-            configData: transferData(
-              jsonEncode(<String, Object?>{
-                'access_token': access,
-                'refresh_token': refresh,
-                if (expiry != null) 'expiry_ms': expiry,
-                if (username != null) 'username': username,
-              }),
-            ),
-          );
-        },
-      );
-      await sendSelected(
-        _simkl?.selected == true,
-        'Simkl',
-        ConfigCommand.simkl,
-        () async {
-          final access = await StorageService.getSimklAccessToken(
-            forRemoteTransfer: true,
-          );
-          if (access == null || access.isEmpty) return false;
-          final username = await StorageService.getSimklUsername();
-          return state.sendConfigCommandToDevice(
-            ConfigCommand.simkl,
-            targetIp,
-            configData: transferData(
-              jsonEncode(<String, Object?>{
-                'access_token': access,
-                if (username != null) 'username': username,
-              }),
-            ),
-          );
-        },
-      );
-      await sendSelected(
-        _mdblist?.selected == true,
-        'MDBList',
-        ConfigCommand.mdblist,
-        () async {
-          final apiKey = await StorageService.getMdblistApiKey(
-            forRemoteTransfer: true,
-          );
-          if (apiKey == null || apiKey.isEmpty) return false;
-          final username = await StorageService.getMdblistUsername();
-          return state.sendConfigCommandToDevice(
-            ConfigCommand.mdblist,
-            targetIp,
-            configData: transferData(
-              jsonEncode(<String, Object?>{
-                'api_key': apiKey,
-                if (username != null) 'username': username,
-              }),
-            ),
-          );
-        },
-      );
-      await sendSelected(
-        _trackingPreferences?.selected == true,
-        'Tracking preferences',
-        ConfigCommand.trackingPreferences,
-        () async => state.sendConfigCommandToDevice(
-          ConfigCommand.trackingPreferences,
-          targetIp,
-          configData: transferData(
-            jsonEncode(await StorageService.buildTrackingPreferencesPayload()),
-          ),
-        ),
-      );
-      await sendSelected(
-        _searchEngines?.selected == true,
-        'Search Engines',
-        ConfigCommand.searchEngines,
-        () async {
-          await LocalEngineStorage.instance.initialize();
-          final engineIds = await LocalEngineStorage.instance
-              .getImportedEngineIds();
-          return engineIds.isNotEmpty &&
-              await state.sendConfigCommandToDevice(
-                ConfigCommand.searchEngines,
-                targetIp,
-                configData: transferData(jsonEncode(engineIds)),
-              );
-        },
-      );
-      await sendSelected(
-        _webDav?.selected == true,
-        'WebDAV',
-        ConfigCommand.webDav,
-        () async {
-          final servers = await StorageService.getWebDavServers(
-            forSettings: false,
-            forRemoteTransfer: true,
-          );
-          if (servers.isEmpty) return false;
-          return state.sendConfigCommandToDevice(
-            ConfigCommand.webDav,
-            targetIp,
-            configData: transferData(
-              jsonEncode([
-                for (final server in servers) server.toTransferJson(),
-              ]),
-            ),
-          );
-        },
-      );
-      await sendSelected(
-        _indexerManagers?.selected == true,
-        'Jackett/Prowlarr',
-        ConfigCommand.indexerManagers,
-        () async {
-          final managers = await StorageService.getIndexerManagerConfigs(
-            forSettings: false,
-            forRemoteTransfer: true,
-          );
-          if (managers.isEmpty) return false;
-          return state.sendConfigCommandToDevice(
-            ConfigCommand.indexerManagers,
-            targetIp,
-            configData: transferData(
-              jsonEncode([
-                for (final manager in managers) manager.toTransferJson(),
-              ]),
-            ),
-          );
-        },
-      );
-      await sendSelected(
-        _iptvPlaylists?.selected == true,
-        'IPTV Providers',
-        ConfigCommand.iptvPlaylists,
-        () async {
-          final payload = await IptvTransferPayload.buildPlaylists(
-            forRemoteTransfer: true,
-          );
-          return payload.isNotEmpty &&
-              await sendConfigPayloadToDevice(
-                state,
-                ConfigCommand.iptvPlaylists,
-                targetIp,
-                jsonEncode(payload),
-                label: 'IPTV providers',
-                transferRequestId: supportsApplicationResult ? requestId : null,
-              );
-        },
-      );
-      await sendSelected(
-        _iptvFavorites?.selected == true,
-        'IPTV Favorites',
-        ConfigCommand.iptvFavorites,
-        () async {
-          final payload = await IptvTransferPayload.buildFavorites(
-            forRemoteTransfer: true,
-          );
-          return payload.isNotEmpty &&
-              await sendConfigPayloadToDevice(
-                state,
-                ConfigCommand.iptvFavorites,
-                targetIp,
-                jsonEncode(payload),
-                label: 'IPTV favorites',
-                transferRequestId: supportsApplicationResult ? requestId : null,
-              );
-        },
-      );
-      await sendSelected(
-        _iptvLists?.selected == true,
-        'IPTV Lists',
-        ConfigCommand.iptvLists,
-        () async {
-          final payload = await IptvTransferPayload.buildCustomLists(
-            forRemoteTransfer: true,
-          );
-          return payload.isNotEmpty &&
-              await sendConfigPayloadToDevice(
-                state,
-                ConfigCommand.iptvLists,
-                targetIp,
-                jsonEncode(payload),
-                label: 'IPTV lists',
-                transferRequestId: supportsApplicationResult ? requestId : null,
-              );
-        },
-      );
-      await sendSelected(
-        _streamBadges?.selected == true,
-        'Stream Badges',
-        ConfigCommand.streamBadges,
-        () async {
-          final payload = await StreamBadgesService.instance.exportJson();
-          return payload.isNotEmpty &&
-              await sendConfigPayloadToDevice(
-                state,
-                ConfigCommand.streamBadges,
-                targetIp,
-                jsonEncode(payload),
-                label: 'Stream badges',
-                transferRequestId: supportsApplicationResult ? requestId : null,
-              );
-        },
-      );
 
       // Send complete signal to trigger TV restart (only if at least one succeeded)
       if (successCount > 0) {
@@ -1395,76 +1155,12 @@ class _RemoteConfigExportState extends State<RemoteConfigExport> {
   }
 
   IconData _getIcon(String id) {
-    switch (id) {
-      case ConfigCommand.realDebrid:
-        return Icons.speed;
-      case ConfigCommand.torbox:
-        return Icons.inventory_2;
-      case ConfigCommand.premiumize:
-        return Icons.workspace_premium_rounded;
-      case ConfigCommand.allDebrid:
-        return Icons.all_inclusive_rounded;
-      case ConfigCommand.pikpak:
-        return Icons.cloud;
-      case ConfigCommand.trakt:
-        return Icons.history_rounded;
-      case ConfigCommand.simkl:
-        return Icons.movie_filter_rounded;
-      case ConfigCommand.mdblist:
-        return Icons.list_alt_rounded;
-      case ConfigCommand.searchEngines:
-        return Icons.search;
-      case ConfigCommand.webDav:
-        return Icons.dns_rounded;
-      case ConfigCommand.indexerManagers:
-        return Icons.manage_search_rounded;
-      case ConfigCommand.iptvPlaylists:
-        return Icons.live_tv_rounded;
-      case ConfigCommand.iptvFavorites:
-        return Icons.star_rounded;
-      case ConfigCommand.iptvLists:
-        return Icons.playlist_play_rounded;
-      case ConfigCommand.streamBadges:
-        return Icons.sell_rounded;
-      default:
-        return Icons.settings;
-    }
+    return TransferCategoryRegistry.instance.byWireCommand(id)?.icon ??
+        Icons.settings;
   }
 
   Color _getIconColor(String id) {
-    switch (id) {
-      case ConfigCommand.realDebrid:
-        return const Color(0xFF10B981); // Green
-      case ConfigCommand.torbox:
-        return const Color(0xFFF59E0B); // Amber
-      case ConfigCommand.premiumize:
-        return const Color(0xFFFB923C); // Orange
-      case ConfigCommand.allDebrid:
-        return const Color(0xFF26A69A); // Teal
-      case ConfigCommand.pikpak:
-        return const Color(0xFF3B82F6); // Blue
-      case ConfigCommand.trakt:
-        return const Color(0xFFED1C24); // Trakt red
-      case ConfigCommand.simkl:
-        return const Color(0xFF22D3EE); // Simkl cyan
-      case ConfigCommand.mdblist:
-        return const Color(0xFF8B5CF6);
-      case ConfigCommand.searchEngines:
-        return const Color(0xFF8B5CF6); // Purple
-      case ConfigCommand.webDav:
-        return const Color(0xFF0EA5E9); // Sky
-      case ConfigCommand.indexerManagers:
-        return const Color(0xFFEAB308); // Yellow
-      case ConfigCommand.iptvPlaylists:
-        return const Color(0xFF14B8A6); // Teal
-      case ConfigCommand.iptvFavorites:
-        return const Color(0xFFF472B6); // Pink
-      case ConfigCommand.iptvLists:
-        return const Color(0xFFA78BFA); // Violet
-      case ConfigCommand.streamBadges:
-        return const Color(0xFFFBBF24); // Amber
-      default:
-        return Colors.white;
-    }
+    return TransferCategoryRegistry.instance.byWireCommand(id)?.color ??
+        Colors.white;
   }
 }
