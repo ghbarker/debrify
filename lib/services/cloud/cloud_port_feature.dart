@@ -1,4 +1,5 @@
 import 'cloud_capabilities.dart';
+import 'cloud_magic_tv_unlock.dart';
 import 'cloud_provider_id.dart';
 
 /// Features a production adapter actually implements.
@@ -13,6 +14,8 @@ enum CloudPortFeature {
   playlistEntry,
   magicTvPrepare,
   magicTvLockedLinks,
+  magicTvRdUnlock,
+  magicTvAdUnlock,
   cachedHashes,
   checkCache,
   zipPermalink,
@@ -28,6 +31,8 @@ enum CloudPortFeature {
     if (adapter is CloudPlaylist) playlistEntry,
     if (adapter is CloudMagicTvPrepare) magicTvPrepare,
     if (adapter is CloudMagicTvLockedLinks) magicTvLockedLinks,
+    if (adapter is CloudMagicTvRdUnlock) magicTvRdUnlock,
+    if (adapter is CloudMagicTvAdUnlock) magicTvAdUnlock,
     if (adapter is CloudCachedHashes) cachedHashes,
     if (adapter is CloudCheckCache) checkCache,
     if (adapter is CloudZipPermalink) zipPermalink,
@@ -43,7 +48,11 @@ enum CloudPortFeature {
   /// because the fake implements the fat port, not the capability types.
   /// Production adapters use [of] / `is` checks.
   static Set<CloudPortFeature> forProvider(CloudProviderId id) => switch (id) {
-    CloudProviderId.debrid => {playlistEntry, magicTvLockedLinks},
+    CloudProviderId.debrid => {
+      playlistEntry,
+      magicTvLockedLinks,
+      magicTvRdUnlock,
+    },
     CloudProviderId.torbox => {
       playlistEntry,
       magicTvPrepare,
@@ -61,7 +70,11 @@ enum CloudPortFeature {
       transferZip,
       queueUncached,
     },
-    CloudProviderId.alldebrid => {playlistEntry, magicTvLockedLinks},
+    CloudProviderId.alldebrid => {
+      playlistEntry,
+      magicTvLockedLinks,
+      magicTvAdUnlock,
+    },
     CloudProviderId.pikpak => {magicTvPrepare},
   };
 }

@@ -32,7 +32,8 @@ abstract class CloudPlaylist {
 }
 
 /// Debrify TV. Adapters implement [CloudMagicTvPrepare] and/or
-/// [CloudMagicTvLockedLinks] — not both methods on one type.
+/// [CloudMagicTvLockedLinks] — not both prepare methods on one type.
+/// Live RD/AD unlock is a separate capability file (not this one).
 abstract class CloudMagicTv {}
 
 abstract class CloudMagicTvPrepare implements CloudMagicTv {
