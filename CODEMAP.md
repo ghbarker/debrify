@@ -101,6 +101,9 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   Catalog play/resume resolve is `lib/services/playback/catalog_play_resolver.dart`
   (`CatalogPlayResolver` — meta + tracker snapshots → `PlaySelection`/`ResumeInfo`;
   host `_onCatalogPlay` keeps overlay, `_activeAddonId`, and launch).
+  Source edit/add dialogs are `lib/widgets/sources/source_binding_dialogs.dart`
+  (`SourceBindingDialogs` — meta + configured cloud/local options → persist /
+  torrent+keyword bind callbacks; host `_handleEditOrSelectSource` stays the entry).
   TV Home stage layouts are `lib/screens/search/stages/` (`_CanvasBoardStage` and friends);
   the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
@@ -142,6 +145,8 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   format/HDR tag detection already exists in `lib/utils/format_tag_detector.dart` +
   `lib/utils/torrent_coverage_detector.dart` + `lib/utils/{movie,series}_parser.dart`. Result row UI:
   `lib/widgets/torrent_result_row.dart`; source picker: `lib/screens/video_player/widgets/source_sheet.dart`.
+  Home/catalog bound-source edit/add dialogs: `lib/widgets/sources/source_binding_dialogs.dart`
+  (`SourceBindingDialogs`).
 
 ## Debrid providers & cloud
 
