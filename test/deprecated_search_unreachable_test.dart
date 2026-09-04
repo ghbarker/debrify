@@ -38,6 +38,19 @@ void main() {
           'lib/: $offenders',
     );
   });
+
+  test('lib/screens/deprecated/ no longer exists', () {
+    expect(
+      Directory('lib/screens/deprecated').existsSync(),
+      isFalse,
+      reason: 'dead TorrentSearchScreen tree was deleted in D0',
+    );
+    expect(
+      File('lib/widgets/catalog_browser.dart').existsSync(),
+      isFalse,
+      reason: 'dead CatalogBrowser was deleted in D0',
+    );
+  });
 }
 
 final String _root = Directory.current.path;
