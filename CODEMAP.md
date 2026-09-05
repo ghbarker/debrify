@@ -128,6 +128,9 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   `FavRowsController.loadMyWatchlist` delegates read/partition to
   `lib/services/home/my_watchlist_loader.dart` (`MyWatchlistLoader.load`);
   the adapter retains mounted/commit, node synchronization and autofocus.
+  Bound-source data and sequential reads live in
+  `lib/screens/search/search_content_data.dart` (`SearchContentData`);
+  the host retains snapshot capture, mounted checks and stable-map UI commits.
   Hero state, focus-rest/enrichment timers, ambient trailers/live IPTV and shell
   art/tint/chrome relays live in `lib/screens/search/hero_presenter.dart`
   (`HeroPresenter`, `HeroEnvironment`). This remains screen/UI presentation,
