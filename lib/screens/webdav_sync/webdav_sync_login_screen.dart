@@ -121,6 +121,7 @@ final class _WebDavSyncLoginScreenState extends State<WebDavSyncLoginScreen> {
       await runWebDavForegroundSync<void>(
         context,
         stage: 'Verifying WebDAV account…',
+        progressLimit: null,
         operation: (_) async {
           if (widget.inspect case final inspect?) {
             await inspect(result);

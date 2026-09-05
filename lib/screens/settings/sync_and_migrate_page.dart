@@ -232,6 +232,7 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
       final outcome = await runWebDavForegroundSync(
         context,
         stage: 'Preparing WebDAV sync…',
+        progressLimit: null,
         operation: (updateStage) => _syncConnectController.connect(
           credentials: credentials,
           reconnectActive: reconnectBinding != null,

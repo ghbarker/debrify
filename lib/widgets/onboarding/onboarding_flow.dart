@@ -317,6 +317,7 @@ class _InitialSetupFlowState extends State<InitialSetupFlow> {
       final outcome = await runWebDavForegroundSync(
         context,
         stage: 'Preparing WebDAV sync…',
+        progressLimit: null,
         operation: (updateStage) => _webDavSyncConnectController.connect(
           credentials: credentials,
           completeOnboarding: true,

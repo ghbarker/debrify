@@ -12,7 +12,8 @@ Future<T> runWebDavForegroundSync<T>(
   String title = 'Syncing with WebDAV',
   required Future<T> Function(ValueChanged<String> updateStage) operation,
   PlayerDisplayControls? displayControls,
-  Duration progressLimit = const Duration(seconds: 60),
+  // Setup can legitimately take several minutes; null keeps progress visible.
+  Duration? progressLimit = const Duration(seconds: 60),
 }) async {
   final progress = ValueNotifier(stage);
   var finished = false;
@@ -51,7 +52,7 @@ class _ForegroundSyncDialog extends StatefulWidget {
   final ValueNotifier<String> progress;
   final String title;
   final PlayerDisplayControls controls;
-  final Duration progressLimit;
+  final Duration? progressLimit;
 
   @override
   State<_ForegroundSyncDialog> createState() => _ForegroundSyncDialogState();
@@ -72,9 +73,12 @@ class _ForegroundSyncDialogState extends State<_ForegroundSyncDialog>
     final lifecycle = WidgetsBinding.instance.lifecycleState;
     _backgrounded = lifecycle != null && lifecycle != AppLifecycleState.resumed;
     _updateWake();
-    _timer = Timer(widget.progressLimit, () {
-      setState(() => _takingLonger = true);
-    });
+    final progressLimit = widget.progressLimit;
+    if (progressLimit != null) {
+      _timer = Timer(progressLimit, () {
+        setState(() => _takingLonger = true);
+      });
+    }
   }
 
   void _updateWake() =>

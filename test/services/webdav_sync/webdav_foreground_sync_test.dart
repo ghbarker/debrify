@@ -188,6 +188,66 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final failure in [false, true]) {
+    testWidgets('setup keeps progress until completion (failure=$failure)', (
+      tester,
+    ) async {
+      final done = Completer<void>();
+      final wake = <bool>[];
+      Object? caught;
+      late ValueChanged<String> updateStage;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                try {
+                  await runWebDavForegroundSync(
+                    context,
+                    stage: 'Preparing WebDAV sync…',
+                    progressLimit: null,
+                    displayControls: PlayerDisplayControls(
+                      toggleWakelock: (value) async => wake.add(value),
+                    ),
+                    operation: (update) {
+                      updateStage = update;
+                      return done.future;
+                    },
+                  );
+                } catch (error) {
+                  caught = error;
+                }
+              },
+              child: const Text('Start'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Start'));
+      await tester.pump();
+      await tester.pump(const Duration(minutes: 5));
+      updateStage('Uploading sync data…');
+      await tester.pump();
+      expect(find.text('Syncing with WebDAV'), findsOneWidget);
+      expect(find.text('Uploading sync data…'), findsOneWidget);
+      expect(find.text('Sync is taking longer'), findsNothing);
+      expect(find.text('Taking longer than expected'), findsNothing);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(wake.last, isTrue);
+      final error = StateError('offline');
+      if (failure) {
+        done.completeError(error);
+      } else {
+        done.complete();
+      }
+      await tester.pumpAndSettle();
+      expect(caught, failure ? same(error) : isNull);
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(wake.last, isFalse);
+    });
+  }
+
   testWidgets('background releases wake and return explains interruption', (
     tester,
   ) async {
