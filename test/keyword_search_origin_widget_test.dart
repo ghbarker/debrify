@@ -1,0 +1,80 @@
+import 'dart:io';
+
+import 'package:debrify/screens/search_screen.dart';
+import 'package:debrify/services/engine/engine_registry.dart';
+import 'package:debrify/services/engine/local_engine_storage.dart';
+import 'package:debrify/services/profiles/profile_runtime.dart';
+import 'package:debrify/services/profiles/profile_session_memory.dart';
+import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/utils/app_storage.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// Characterization follow-up to #90, NOT a pre-extraction commit.
+// Run unchanged on ee33b3cba678ab914ed242e484cc9e5aed15e3c0, the direct
+// parent of move 65b970026561cc768da9241abb101e9c0dd2b893, and current main.
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late Directory root;
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    ProfileRuntime.debugReset();
+    ProfileRuntime.initializeLegacy();
+    ProfileSessionMemory.clearAll();
+    StorageService.resetProfileCaches();
+    root = await Directory.systemTemp.createTemp('keyword-origin-');
+    AppStorage.debugOverride(documents: root, support: root, cache: root);
+    LocalEngineStorage.instance.resetProfileScope();
+    EngineRegistry.instance.invalidateProfileScope();
+    await EngineRegistry.instance.initialize();
+  });
+
+  tearDown(() async {
+    ProfileSessionMemory.clearAll();
+    EngineRegistry.instance.invalidateProfileScope();
+    LocalEngineStorage.instance.resetProfileScope();
+    AppStorage.debugReset();
+    ProfileRuntime.debugReset();
+    await root.delete(recursive: true);
+  });
+
+  testWidgets('keyword entry is submit-based and clearing dismisses failure', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: SearchScreen(searchMode: true)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Keyword'));
+    await tester.pumpAndSettle();
+    expect(find.text('Keyword torrent search'), findsOneWidget);
+    expect(find.text('Search torrents by keyword'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), '  origin fixture  ');
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Keyword torrent search'), findsOneWidget);
+    expect(find.text('Search failed'), findsNothing);
+
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(find.text('Search failed'), findsOneWidget);
+    expect(
+      find.text(
+        'No sources enabled. Turn on at least one source in '
+        'Sources, then try again.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pumpAndSettle();
+    expect(find.text('Search failed'), findsNothing);
+    expect(find.text('Keyword torrent search'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+  });
+
+}
