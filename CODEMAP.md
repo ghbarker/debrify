@@ -185,6 +185,13 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   MDBList credentials live in `lib/services/storage/tracking_prefs.dart`
   (`TrackingPrefs`, owns `trackingSourceRevision`). `home_tick_sources` stays
   on HomePrefs; TrackingPrefs bumps the revision after that write.
+  **Residual filters:** `lib/services/storage/default_torrent_filter_prefs.dart`
+  owns five default-filter JSON String keys and ten get/set bodies. Its
+  `clearDefaults(ProfilePreferences)` removes five keys in order on captured
+  preferences; StorageService retains capture and the separate provider reset
+  phase (including the profile-switch quirk and accepted helper-await boundary).
+  Ten public facades expire with Q2 caller migration; this slice removes44 host
+  lines, adds57 production lines overall, and leaves783 explicit S2-6/S2-7 debt.
   Key ownership pin: `lib/services/storage/storage_key_ownership.dart`
   (`byKey` — every declared / inline / interpolated prefs name, one store).
   **Façade rule (S2-0):** `StorageService.x` stays a forwarding façade until callers
@@ -410,7 +417,11 @@ is an editor mirror, not the source of truth. How to add a provider:
   quick-card coverage claim). M1-3 watch flows: `ProviderWatchFlow` owns Quick
   Play orchestration; `TorboxWatchFlow`, `PikpakWatchFlow`, `PremiumizeWatchFlow`,
   `AlldebridWatchFlow`, and `RealDebridWatchFlow` own per-provider/cached paths
-  under `lib/screens/debrify_tv/watch/`. `WatchFlowBindings` keeps live host
+  under `lib/screens/debrify_tv/watch/`. `QuickWatchSearchAccumulator` in
+  `provider_watch_flow.dart` synchronously shares TorBox/PikPak result accumulation;
+  each invocation keeps its own dedup map, while leaves retain awaits, cancellation
+  and terminal fallback. Live pins: `test/magic_tv_watch_dedup_origin_test.dart`.
+  This first phase does not complete the five-flow dedup target. `WatchFlowBindings` keeps live host
   state, navigation, existing preparation/prefetch/launcher callbacks and
   captured-key service calls. Six entry wrappers and five dead cached binding slots
   are removed. Four provider-specific quick-dispatch dependencies now belong to

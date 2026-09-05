@@ -7,7 +7,6 @@ import '../../../services/pikpak_tv_service.dart';
 import '../../../services/torrent_service.dart';
 import '../../../services/main_page_bridge.dart';
 import '../../../theme/app_surfaces.dart';
-import '../../../utils/nsfw_filter.dart';
 import '../../video_player_screen.dart';
 import '../../magic_tv_screen.dart'
     show MagicTvDispatch, MagicTvNextChannelQuirk;
@@ -38,7 +37,11 @@ class PikpakWatchFlow {
     }
 
     log('🌐 PikPak: searching for torrents...');
-    final Map<String, Torrent> dedup = <String, Torrent>{};
+    final search = QuickWatchSearchAccumulator(
+      host,
+      providerLabel: 'PikPak',
+      queueStatus: 'Preparing PikPak stream...',
+    );
     final engineStates = await host.cacheWarmer.tvEngineSearchStates();
     final maxResultsOverrides = host.cacheWarmer.quickPlayMaxResultsOverrides();
 
@@ -54,68 +57,11 @@ class PikpakWatchFlow {
           .toList();
 
       await for (final result in Stream.fromFutures(futures)) {
-        final torrents =
-            (result['torrents'] as List<Torrent>? ?? const <Torrent>[]);
-        final Map<String, String> engineErrors = {};
-        final rawErrors = result['engineErrors'];
-        if (rawErrors is Map) {
-          rawErrors.forEach((key, value) {
-            engineErrors[key.toString()] = value?.toString() ?? '';
-          });
-        }
-        if (engineErrors.isNotEmpty) {
-          engineErrors.forEach((engine, message) {
-            debugPrint('PikPak: Search engine "$engine" failed: $message');
-          });
-        }
-
-        // Apply NSFW filter if enabled
-        List<Torrent> torrentsToProcess = torrents;
-        if (host.quickAvoidNsfw || host.viewerForcesNsfw) {
-          final beforeCount = torrents.length;
-          torrentsToProcess = torrents.where((torrent) {
-            if (NsfwFilter.shouldFilter(torrent.category, torrent.name)) {
-              debugPrint('PikPak: Filtered NSFW torrent: ${torrent.name}');
-              return false;
-            }
-            return true;
-          }).toList();
-          if (beforeCount != torrentsToProcess.length) {
-            debugPrint(
-              'PikPak: NSFW filter: $beforeCount → ${torrentsToProcess.length} torrents',
-            );
-          }
-        }
-
-        int added = 0;
-        for (final torrent in torrentsToProcess) {
-          final normalizedHash = host.normalizeInfohash(torrent.infohash);
-          if (normalizedHash.isEmpty) continue;
-          if (!dedup.containsKey(normalizedHash)) {
-            dedup[normalizedHash] = torrent;
-            added++;
-          }
-        }
-        if (added > 0) {
-          final combined = host.cacheWarmer.applyQualityFilterToTorrents(
-            dedup.values.toList(),
-          );
-          combined.shuffle(Random());
-          host.queue
-            ..clear()
-            ..addAll(combined);
-          host.lastQueueSize = host.queue.length;
-          host.lastSearchAt = DateTime.now();
-          if (host.mounted) {
-            host.setState(() {
-              host.status = 'Preparing PikPak stream...';
-            });
-          }
-        }
+        search.accept(result);
       }
 
       final combinedList = host.cacheWarmer.applyQualityFilterToTorrents(
-        dedup.values.toList(),
+        search.snapshot(),
         // Search is complete here — an empty match means this search really
         // has nothing at the requested quality, so degrade rather than fail.
         allowFallback: true,

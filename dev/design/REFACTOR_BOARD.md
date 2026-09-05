@@ -1,20 +1,40 @@
 # Refactor board
 
-## Current checkpoint — 2026-09-05 17:45 UTC (supersedes historical rows below)
-- Merged: #129 settings owner, #130 lifecycle, #131 guard hardening, #132 playback pins, #133 prefetch, #134 selection owner (75564bbb). Exact-head independent reviews and all CI checks passed for each.
-- Ampere: #135 merged f75fa016; now read-only M1/Q2 composition and remaining boundary review (30-minute bounded assignment).
-- Wegener: next meaningful Discover session/data ownership proposal; Locke: storage residual owner/fixture readiness; both read-only 45-minute assignments. Cicero: full actual f75fa016 gate running. No overlapping production edits.
-- Latest full automated gate passed f75fa016: 5413 passing generic tests, 12 exact known failures, two skips; 21 exact known golden errors after configured retries; no unexpected/unused entries. Native pair, Windows/ARM64 builds, Python55 passed; analyzer436/452, layering77.
-- Full f75fa016 gate passed; eligible next production work still requires origin pins and scoped design approval. Manual smoke PASSED by user acceptance for verified f75fa016 build: phone tested successfully and TV accepted by user; no direct TV hardware test claimed.
-- Current god lines: search9033, player11926, MagicTV3317, storage4365, settings2899. Originals19070/16278/10716/9963/7905. Selection93host lines but production+90; zero standalone750credit. Prefetch228code-net remains2short230.
-- CODEMAP unlocked. Latest verified f75fa016 APK installed successfully on Samsung SM_S948U1 via ADB, preserving data. Manual smoke PASSED by user acceptance for f75fa016; phone success and TV acceptance reported.
-- Temporary keep-awake expired16:43UTC and remains off; no power/disk changes or extension.
+## Current roadmap — September 5 (read this section first)
+Overall completion is approximately 65%, an engineering estimate, not a measured acceptance score. File shrinkage is approximately 51%; relocation does not equal finished architecture.
+
+### Completed and merged
+- Stronger safety net: real origin tests, independent reviews, unchanged-key legacy restore fixtures, adversarial checks, full automated gates and required native CI. Missing native configuration now skips ordinary tests without weakening required CI.
+- Settings split into smaller units; provider identity/capability work and several storage owners established.
+- Search/Home: favourites, continue-watching, hero, Discover lifecycle and selection responsibilities extracted. Discover still depends on the old host.
+- Magic TV: watch session, cache/import/export, channel switching, settings, queue prefetch ownership and expired wrapper cleanup landed. Provider-flow duplication remains.
+- Verified f75fa016 APK installed on the phone; manual smoke PASSED by user acceptance for phone and TV behavior, without claiming direct TV hardware execution.
+
+### Awaiting merge (reviewed; exact-head CI still required)
+- [ ] #140 held after CI test failure; owner diagnosing. Proposed419 fewer host lines not counted as merged.
+- [x] #141 merged: five-filter preference owner,44 fewer host lines; physical JSON/reset quirks pinned.
+- [x] #142 merged: first watch-flow deduplication,30 fewer lines overall; five-provider total2448, targetbelow800 still outstanding.
+
+### Major work remaining
+1. Finish Discover content/action ownership and real standalone dispatch; preserve hidden watchlist/focus effects. Then TV stage layouts and final Search cleanup.
+2. Finish player work: decoder fallback proof remains blocked by native-fixture limitations; timer/speed/aspect, TV guide, tracker progress and overlay separation remain in the plan.
+3. Continue storage ownership and migrate callers away from temporary forwarding APIs. Current host is 1521 lines above target after #141.
+4. M1-7: consolidate provider watch flows below 800 combined lines, while tracking growth in shared code. Current merged five-file total2448; original2556. Magic TV size remains provisional.
+5. Q-phase cleanup: remove expired adapters, enforce dependency boundaries, consolidate engineering rules, complete upstream contribution preparation.
+6. Final integrated verification and user acceptance of the final build. Earlier smoke acceptance is not automatically a test of later builds.
+
+### Current evidence and coordination
+- Latest full gate f75fa016: 5413 pass,12 exact known failures,2skip; goldens21 exact known errors after configured retries; no unexpected/unused. Native pair, Windows/ARM64 builds, Python55 passed; analyzer436/452,layer77.
+- God-file lines (merged): Search9033,Player11926,MagicTV3317,Storage4321,Settings2899; original total63932. Pending PR savings are not counted.
+- Ampere: M1-7 follow-on readiness; Locke: filter PR final review complete; Wegener: presentation PR final review complete; Cicero: verification/review coordination. Completed reviewers receive next scoped work as dependencies clear.
+- CODEMAP locks serialized; parent alone edits this board/notes. Keep-awake expired; no disk work. Parked #112 backup feature, #109 test kit and #56 helper are outside active refactor.
+- Every future gate includes exact-source forwarder counts under the ledger criterion below. Historic entries below are evidence only, not current assignments.
 ## Prior checkpoints and retained evidence
 
 
 Updated 2026-09-05 after main `d5f8dc4b` (CW merge `e478635e`). Orchestrator owns this board and NOTES. Binding contracts: [original plan](REFACTOR_PLAN.md), [Phase 2 correction](REFACTOR_PLAN_PHASE2.md), and latest explicit user decisions below. Historical snapshots remain in Git history; they are not current assignments.
 
-## Live roadmap
+## Historical roadmap (superseded by current roadmap above)
 
 ### Working now
 - User authorized continued extraction without manual smoke. Temporary automatic-sleep prevention verified: helper PID3412, expires 2026-09-05 16:43 UTC; permanent power settings unchanged.
@@ -226,3 +246,5 @@ Physical single-line declaration subset at current: storage147/search83/player11
 
 138merged7e6cf5c5 exact18356 afterindependent144/validrestoremutations/provenance+all3CIgreen: separatefivefilterJSON compatibility domain,0Leaves.139mergedfb5ccc4f exact465ef1 afterindependentunset/invalid/strictness/source+exactLinuxnative/test/goldensPASS: plainmissing-env nativecase skipswithreason, invalid/requiredrunnerstillfails. Windows configuredpair AV remainsNOTgreen/no claimfixed. Both test-only source changes; production countsincef75 remainsone(#137).
 Locke filterstore production RELEASED exact3prod+keysweep; helperasyncboundary documented, capturedfilterprefs/providerseparatephase preserved. Ampere M17 firstshared58lineTB/PP accumulator production authorized afterindependent6origin/mutations; exactcommon/TB/PP scope, no newasync/guards/cancelpolicy. Wegener presentation move+exactunusedaliases/shapeinventoryupdates authorized;136 integratesnewmain139 forfreshstrictCI, oldorigin600shangnotfixed/overridden. C0 availableindependentreview. No overlappingfiles exceptserializedCODEMAP.
+
+141mergedf24c5a2c/142merged7f00f969 afterindependentreviews+exactall3CI. Difference:5filterownerrawencoding/resetpreserved(-44host,+57production),2quicksearchduplicateshared(-30total,five2448/common1341). More:10newfaçadesQ2/783explicitstoragedebtunchanged/M17targetnotclosed. Fullactual7f00gateC0active afterthreeprod137141142, includeexactforwarderledger.140CItestfailedheldWegenerdiagnosis. Currentgod9033/11926/3317/4321/2899. No userblocker.

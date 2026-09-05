@@ -1,4 +1,6 @@
 import 'package:debrify/services/main_page_bridge.dart';
+import 'package:debrify/models/stremio_addon.dart';
+import 'package:debrify/screens/see_all/continue_watching_see_all_screen.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/services/stremio_service.dart';
 import 'package:debrify/services/series_source_service.dart';
@@ -81,49 +83,82 @@ void main() {
     await closeFavourites(tester);
     expect(tester.takeException(), isNull);
   });
-  testWidgets('origin Discover bound badge refresh retains source focus', (
-    tester,
-  ) async {
-    await prepareFavourites(tester);
-    StremioService.instance.invalidateCache();
-    addTearDown(StremioService.instance.invalidateCache);
-    await StorageService.setDiscoverDefaultSource('cw');
-    await StorageService.setHomeContinueWatchingEnabled(true);
-    await StorageService.saveContinueWatchingItem(
-      imdbId: 'tt1234567',
-      title: 'Bound origin',
-      contentType: 'movie',
-    );
-    await mountDiscover(tester, tv: true);
-    final sourceFocus = discoverSource(tester).focusNode!;
-    sourceFocus.requestFocus();
-    await tester.pump();
-    CatalogItemTile tile() =>
-        tester.widget<CatalogItemTile>(find.byType(CatalogItemTile));
-    expect(tile().hasBoundSource, isFalse);
-    await SeriesSourceService.addSource(
-      'tt1234567',
-      const SeriesSource(
-        torrentHash: 'origin',
-        torrentName: 'Origin',
-        debridService: 'real_debrid',
-        debridTorrentId: 'origin',
-        boundAt: 1,
-      ),
-    );
-    MainPageBridge.notifyPlaybackReturned();
-    await pumpFavourites(tester);
-    expect(tile().hasBoundSource, isTrue);
-    expect(identical(discoverSource(tester).focusNode, sourceFocus), isTrue);
-    expect(sourceFocus.hasFocus, isTrue);
-    await SeriesSourceService.removeSourceByHash('tt1234567', 'origin');
-    MainPageBridge.notifyPlaybackReturned();
-    await pumpFavourites(tester);
-    expect(tile().hasBoundSource, isFalse);
-    expect(sourceFocus.hasFocus, isTrue);
-    await closeFavourites(tester);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'origin Discover watchlist refresh retains focus and live bound reader',
+    (tester) async {
+      await prepareFavourites(tester);
+      StremioService.instance.invalidateCache();
+      addTearDown(StremioService.instance.invalidateCache);
+      await StorageService.setDiscoverDefaultSource('cw');
+      await StorageService.setHomeContinueWatchingEnabled(true);
+      await StorageService.saveContinueWatchingItem(
+        imdbId: 'tt1234567',
+        title: 'Bound origin',
+        contentType: 'movie',
+      );
+      await mountDiscover(tester, tv: true);
+      final sourceFocus = discoverSource(tester).focusNode!;
+      sourceFocus.requestFocus();
+      await tester.pump();
+      CatalogItemTile tile() =>
+          tester.widget<CatalogItemTile>(find.byType(CatalogItemTile));
+      final item = tile().item;
+      final retainedIsBound = tester
+          .widget<ContinueWatchingSeeAllScreen>(
+            find.byType(ContinueWatchingSeeAllScreen),
+          )
+          .isBound!;
+      expect(tile().hasBoundSource, isFalse);
+      expect(retainedIsBound(item), isFalse);
+      // The real return listener executes the favourites adapter while Discover
+      // stays mounted. Seed both partitions after startup; do not substitute the
+      // loader or manufacture a controller with copied host callbacks.
+      const savedMovie = StremioMeta(
+        id: 'saved-movie',
+        type: 'movie',
+        name: 'Saved movie',
+      );
+      const savedSeries = StremioMeta(
+        id: 'saved-series',
+        type: 'series',
+        name: 'Saved series',
+      );
+      await StorageService.setMyWatchlistItem(savedMovie, true);
+      await StorageService.setMyWatchlistItem(savedSeries, true);
+      await SeriesSourceService.addSource(
+        'tt1234567',
+        const SeriesSource(
+          torrentHash: 'origin',
+          torrentName: 'Origin',
+          debridService: 'real_debrid',
+          debridTorrentId: 'origin',
+          boundAt: 1,
+        ),
+      );
+      MainPageBridge.notifyPlaybackReturned();
+      await pumpFavourites(tester);
+      expect(tile().hasBoundSource, isTrue);
+      expect(retainedIsBound(item), isTrue);
+      expect(identical(discoverSource(tester).focusNode, sourceFocus), isTrue);
+      expect(sourceFocus.hasFocus, isTrue);
+      await StorageService.setMyWatchlistItem(savedMovie, false);
+      await StorageService.setMyWatchlistItem(savedSeries, false);
+      await SeriesSourceService.removeSourceByHash('tt1234567', 'origin');
+      MainPageBridge.notifyPlaybackReturned();
+      await pumpFavourites(tester);
+      expect(tile().hasBoundSource, isFalse);
+      expect(retainedIsBound(item), isFalse);
+      expect(sourceFocus.hasFocus, isTrue);
+      // Finite observation: populated then emptied persisted watchlist does not
+      // steal Source focus during return refresh, and a pre-refresh bound callback
+      // remains live in both directions. Hidden Fav list commits/unattached nodes
+      // and the independent watchlist-await order are NOT observable here. This
+      // cannot justify replacing the adapter with a bare loader or prove physical
+      // bound-map identity (a callback could read a replacement map).
+      await closeFavourites(tester);
+      expect(tester.takeException(), isNull);
+    },
+  );
   for (final layout in ['grid', 'stage']) {
     testWidgets(
       'origin Discover $layout walks Source filters and items then refocuses source on swap',
