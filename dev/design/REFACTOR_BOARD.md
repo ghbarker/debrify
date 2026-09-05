@@ -1,15 +1,15 @@
 # Refactor board
 
-## Current checkpoint — 2026-09-05 10:39 UTC (supersedes historical rows below)
-- Merged:114,117,118,116,120. Latest120merge a46fa879.
-- G1'-5 Wegener: origin6pins green5d72af7a; type relocation7lines from search_card_widgets.dart approved; extraction active refactor/g1-5-favourites-rows.
-- M1-3 Ampere: PR119 ee79d4fe testCI FAILED; native/goldens pass. Lane fix assigned; no merge.
-- C0 Cicero: independent119failure triage/review; next full mergedmain automated mini-gate after correction.
-- S2 Locke:120merged, read-only remainingstorage/debt audit assigned; no new extraction.
+## Current checkpoint — 2026-09-05 11:40 UTC (supersedes historical rows below)
+- Merged:114,117,118,116,120,119. Latest119merge9958dd1e.
+- G1'-5 Wegener: move6e64191c complete1363net; CODEMAP granted, draft pending; independent Locke review refactor/g1-5-favourites-rows.
+- M1-3 Ampere: 119merged; M1-4origin characterization/readiness assigned; productmove waits automatedgate.
+- C0 Cicero: fullactualmain9958dd1e automatedmini-gate assigned now: suites/analyzer/native/Windows+Android.
+- S2 Locke:G1'-5 independent review and solebaseline locationmapping assigned; storageresidual audit complete.
 - Manual smoke explicitly deferred, not blocking; automated gates mandatory. Keepawake PID3412 alive until16:43UTC.
-- Current main godlines: search11376/player11926/magic8369/storage4365/settings2899. Original19070/16278/10716/9963/7905.
+- Current main godlines: search11376/player11926/magic5299/storage4365/settings2899. Original19070/16278/10716/9963/7905.
 - Storage debt:433S26+350S27=783uncredited; storage still1565 above2800target. Native proof limited audio/cancel/disposal.
-- CODEMAP unlocked; exactworkerlocks required beforeedits.
+- CODEMAP favourites rows lockedWegener; baselineG1exactlocationmapping ownedLocke.
 
 ## Prior checkpoints and retained evidence
 
@@ -131,4 +131,7 @@ S2-7 Locke owns exact app_style_prefs.dart and home_prefs.dart phasedhooks pluss
 
 
 119 corrected headf8bd6ce44 independent review inprogress; exact newCI required.20guard adversarialcases plus62lane passed worker, no production/baseline relaxation. Locke residual audit complete1565above storage target=783explicit+782other; proposed followons recordedNOTES, not assigned before automatedmini-gate. C0 will run actualmergedmain fullgate after119merge. CODEMAPfree.
+
+
+119merged9958dd1e afterexactf8bd6ce4 all3CIgreen+independent82pass. Difference:3070hostlines removed into typedproviderwatchflows; capturedkey/cancel quirks pinned. More:thinbindings+wrappers retained expiryM1-6, contextdiagnosticvisibility notasyncsafety proof. Godmagic8369to5299 vsoriginal10716; othercurrentcounts unchanged. Fullautomatedgate nowactive, manualdeferred.
 
