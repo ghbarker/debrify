@@ -359,3 +359,7 @@ Watchlistownerreleased3prod+keysweep,161162prerequisite; debugannotationonly mov
 161exact74d independent40/scoped/provenance/all3CIpassed. Did we make a difference?17actualWatchlistcases protectduplicates/cap/errorquirks; more remains162fixture/164owner. ZeroLeaves/gods8614/11926/3317/3666/2899 vs19070/16278/10716/9963/7905 unchanged.
 163C0independentlyverified436diagnosticmultisetidentical. AuthorizedONLY tool/analyze_baseline.json diagnostics[5] path/line/column oldTBmetadata572:46(actual466) toWindowed192:44;452entries/allotherfieldsunchanged. Ampere separate10329297/final63889 appliesrelocation, no extraallowance/castfix; freshCIpending/fullreview.164Watchlistownerreviewpending/e006+docs2dda;allCODEMAPlocksreleased. No user blocker.
 
+
+### #162 merged / products reviewed
+162exact819 independent105/scoped/actualpackagekeytype mutants/all3CIpassed. Did we make a difference?OldWatchlistStringrestore/readcanonicalizationwithoutpersist verified; more remains164owner/Q2callers,zeroLeaves. Gods8614/11926/3317/3666/2899 vs19070/16278/10716/9963/7905 unchanged.163final638 independentPASS withexact1baselineentryrelocation/no extraallowance,readyfreshCI;164product/docsWegenerPASS latestunionpending. Nextfullgate after163164(158alreadyone). No user blocker,allCODEMAPlocksreleased.
+
