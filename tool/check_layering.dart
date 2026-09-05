@@ -1,5 +1,8 @@
-// Import-layering check for plan §3. Default is warn-only (exit 0) so Phase 0
-// can land while models still import Flutter. Pass --strict to fail (lane Q1).
+// Import-layering check for plan §3.
+//
+// Default (gate i): exit 1 only if the violation count exceeds the committed
+// ceiling in tool/layering_baseline.txt. Pass --strict to fail on any
+// violation (lane Q1). --over-ceiling probes the growth gate (ceiling-1).
 //
 // models:     no Flutter, no services
 // services:   no Flutter widgets, no lib/widgets
@@ -241,11 +244,114 @@ List<Violation> checkRepo({String? root}) {
   return violations;
 }
 
-void report(List<Violation> violations, {required bool strict}) {
-  stdout.writeln(
-    'Import layering (plan §3): ${violations.length} violation(s). '
-    '${strict ? 'strict' : 'warn-only (Q1 turns this into failure)'}.',
+const ceilingRelPath = 'tool/layering_baseline.txt';
+
+/// First integer line in [text] (comments and blanks skipped).
+int? parseCeilingText(String text) {
+  for (final raw in text.split('\n')) {
+    final line = raw.trim();
+    if (line.isEmpty || line.startsWith('#')) continue;
+    return int.tryParse(line);
+  }
+  return null;
+}
+
+File? resolveCeilingFile({String? explicitPath, String? root}) {
+  if (explicitPath != null && explicitPath.isNotEmpty) {
+    return File(explicitPath);
+  }
+  final candidates = <String>[];
+  if (root != null && root.isNotEmpty) {
+    candidates.add('$root/$ceilingRelPath');
+  }
+  candidates.add(ceilingRelPath);
+  candidates.add('${Directory.current.path}/$ceilingRelPath');
+  try {
+    if (Platform.script.isScheme('file')) {
+      final scriptDir = File.fromUri(Platform.script).parent.path;
+      candidates.add('$scriptDir/layering_baseline.txt');
+    }
+  } catch (_) {}
+  for (final path in candidates) {
+    final file = File(path);
+    if (file.existsSync()) return file;
+  }
+  return null;
+}
+
+int readCeiling({String? explicitPath, String? root}) {
+  final file = resolveCeilingFile(explicitPath: explicitPath, root: root);
+  if (file == null) {
+    stderr.writeln(
+      'Missing $ceilingRelPath — commit a layering violation ceiling (gate i).',
+    );
+    exit(2);
+  }
+  final parsed = parseCeilingText(file.readAsStringSync());
+  if (parsed == null) {
+    stderr.writeln(
+      'Invalid ceiling in ${posix(file.path)} — expected a single integer.',
+    );
+    exit(2);
+  }
+  return parsed;
+}
+
+int effectiveCeiling({
+  required int ceiling,
+  required int count,
+  required bool overCeiling,
+}) {
+  if (!overCeiling) return ceiling;
+  final lower = ceiling < count ? ceiling : count;
+  return lower - 1;
+}
+
+int layeringExitCode({
+  required int count,
+  required int ceiling,
+  required bool strict,
+  required bool overCeiling,
+}) {
+  if (strict && count > 0) return 1;
+  final cap = effectiveCeiling(
+    ceiling: ceiling,
+    count: count,
+    overCeiling: overCeiling,
   );
+  if (count > cap) return 1;
+  return 0;
+}
+
+String modeLabel({
+  required bool strict,
+  required bool overCeiling,
+  required int effective,
+}) {
+  if (strict) return 'strict (any violation fails; Q1)';
+  if (overCeiling) {
+    return 'over-ceiling probe (effective ceiling $effective)';
+  }
+  return 'fail-on-growth (gate i; Q1 is --strict)';
+}
+
+void report(
+  List<Violation> violations, {
+  required bool strict,
+  required int ceiling,
+  required int effective,
+  required bool overCeiling,
+}) {
+  final count = violations.length;
+  stdout.writeln(
+    'Import layering (plan §3): $count violation(s) (ceiling $ceiling). '
+    '${modeLabel(strict: strict, overCeiling: overCeiling, effective: effective)}.',
+  );
+  stdout.writeln('  count:    $count');
+  stdout.writeln('  ceiling:  $ceiling');
+  if (overCeiling) {
+    stdout.writeln('  effective:$effective (--over-ceiling)');
+  }
   final byRule = <String, int>{};
   for (final v in violations) {
     byRule[v.rule] = (byRule[v.rule] ?? 0) + 1;
@@ -261,13 +367,45 @@ void report(List<Violation> violations, {required bool strict}) {
   if (violations.length > cap) {
     stdout.writeln('  … ${violations.length - cap} more');
   }
+  if (!strict && count > effective) {
+    stdout.writeln(
+      'GROWTH: $count > ceiling $effective. A G1\' / V1 extract that adds '
+      'services → Flutter-widgets / widgets / screens imports is a reject '
+      'until V1-fix.',
+    );
+  }
 }
 
 void main(List<String> args) {
   final strict = args.contains('--strict');
-  final violations = checkRepo();
-  report(violations, strict: strict);
-  if (strict && violations.isNotEmpty) {
-    exit(1);
+  final overCeiling = args.contains('--over-ceiling');
+  String? ceilingFile;
+  for (var i = 0; i < args.length; i++) {
+    if (args[i] == '--ceiling-file' && i + 1 < args.length) {
+      ceilingFile = args[i + 1];
+    }
   }
+  final violations = checkRepo();
+  final ceiling = readCeiling(explicitPath: ceilingFile);
+  final count = violations.length;
+  final effective = effectiveCeiling(
+    ceiling: ceiling,
+    count: count,
+    overCeiling: overCeiling,
+  );
+  report(
+    violations,
+    strict: strict,
+    ceiling: ceiling,
+    effective: effective,
+    overCeiling: overCeiling,
+  );
+  exit(
+    layeringExitCode(
+      count: count,
+      ceiling: ceiling,
+      strict: strict,
+      overCeiling: overCeiling,
+    ),
+  );
 }

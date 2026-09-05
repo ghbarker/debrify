@@ -177,7 +177,8 @@ To the five checks in `REFACTOR_PLAN.md` §6 add:
 - (g) the new unit compiles with the god file's private members removed (grep for `_`
   members of the host inside the new file: zero), and no new `part of` / `extension on`
   the host State;
-- (h) the pin commit predates the move commit and passes on the parent of the move.
+- (h) the pin commit predates the move commit and passes on the parent of the move;
+- (i) `dart tool/check_layering.dart` violation count must not grow vs the committed ceiling. A G1' / V1 extract that adds services → Flutter-widgets / widgets / screens imports is a reject until V1-fix. Full `--strict` remains Q1.
 
 ## 6. Definition of done (revised)
 

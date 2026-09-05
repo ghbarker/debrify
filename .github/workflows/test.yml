@@ -40,7 +40,7 @@ jobs:
       - name: Analyze lib and test vs baseline
         run: python3 tool/analyze_baseline.py
 
-      - name: Import layering check (warn-only until Q1)
+      - name: Import layering check (fail on growth (gate i))
         run: dart run tool/check_layering.dart
 
       - name: Run refactor contract tests

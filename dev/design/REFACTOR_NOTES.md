@@ -14,6 +14,11 @@ Phase 2 extractions also follow `dev/design/REFACTOR_PLAN_PHASE2.md` (binding as
 - **`refactor/g3-player-prefs` is parked.** Pin+move already exist on that branch
   under the old G3 contract. PlayerPrefs is **S2-3** (with `iptv_prefs`) after
   S2-0…S2-2. Do not merge the parked branch.
+- **C0-gate2 · gate (i).** Layering violation ceiling is **106**
+  (`tool/layering_baseline.txt`, measured on `origin/main` after #95/#98).
+  Historical: #72 (`48db8f1e`) = 77; just before #95 = 99 (+22 vs #72).
+  Default `dart tool/check_layering.dart` fails only if the count grows.
+  `--strict` remains Q1.
 
 ## Quirks kept, not fixed
 
