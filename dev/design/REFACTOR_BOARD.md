@@ -213,3 +213,11 @@ User reports "the apk worked great" after successful ADB installation of verifie
 
 ## Manual smoke acceptance — f75fa016
 PASSED by explicit user instruction, based on successful phone testing of the installed verified APK and user acceptance of TV behavior. This supersedes earlier pending/deferred manual-smoke entries for this build. Direct SHIELD/TV hardware testing was not performed; no such execution is claimed.
+
+## Forwarder ledger — required in subsequent gate rows
+Criterion: AST single-operation delegation to another owner; methods/getters/setters counted separately, including multiline declarations and player reverse-host bridges. Excludes computed arguments, constructed callbacks, guards and lifecycle logic. One-line formatting alone is not the debt definition. Exact symbol inventory/reproducer: C:/Users/hunth/debrify/forwarder-ledger/REPORT.md, ledger.csv and scan.dart. No automatic deletion of live compatibility surfaces is authorized.
+| Gate / source | Storage M/G/S | Search M/G/S | Player M/G/S | MagicTV M/G/S | Settings M/G/S |
+|---|---|---|---|---|---|
+| Gate4 c86ea5f2 |540/23/18=581|19/72/5=96|27/111/23=161|19/24/24=67|0/0/0=0|
+| Current e3ee9b7c, same five-file blobs as f75fa016 gate |540/23/18=581|19/72/5=96|27/111/23=161|13/8/6=27|0/0/0=0|
+Physical single-line declaration subset at current: storage147/search83/player112/Magic12/settings0. User preliminary148/31 not reproduced; original counting command unavailable. Historical unmeasured gate counts must remain unmeasured, never retroactively guessed. Q2 targets must account for stable public API/caller migration, not indiscriminate removal. Every new gate report includes this inventory at its exact source.
