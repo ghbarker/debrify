@@ -177,3 +177,6 @@ G17d scope decision: Wegener exclusively owns two terminal testing hooks in vide
 
 M16 move authorized after independent ac667f9d fourteen-test origin proof: exact host/new queue_prefetcher service/provider_watch_flow interface import only. Two source-inventory tests may add exact destination path without weaker assertions. Real queue/set/settings identity, request timing, late completion and failure rotation preserved. No alias/dead-slot cleanup in this move. Estimate228 code/declaration net vs230 target, physical255 includes27oldcomments/separators; actual audit required. CODEMAP not yet locked. Third production merge since04264596 triggers full integrated gate. G17d terminal proof3b36abd4 under Locke independent review; no selection move yet.
 
+
+131mergedc6a3de16 exacte767b980 all3CIgreen+independent8effectiveorigin/currentmutationcases. Difference: per-file shape failures and separateexisting-sidebar cap stopnewviolations beingmasked byhistoricalaggregateallowance. Oneallowanceidentity migrated, no growth/floorchange/productLeaves. C0availableM16review/nextfullgate. Currentgod9126/11926/3659/4365/2899 vsoriginal19070/16278/10716/9963/7905. G17d55independentPASS, fixturefinallyhardening+latestmainintegration beforedraft; no selectionmove. Nextproductionmerge triggersfullgate, includingtestingseams iftheymergefirst.
+
