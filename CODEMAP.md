@@ -12,7 +12,7 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 
 | File | Lines |
 |---|---:|
-| `lib/screens/search_screen.dart` | 17 039 |
+| `lib/screens/search_screen.dart` | 13 105 |
 | `lib/screens/search/` parts (4 files) | 8 321 |
 | `lib/screens/video_player_screen.dart` | 16 278 |
 | `lib/screens/magic_tv_screen.dart` | 10 716 |
@@ -32,14 +32,16 @@ TV Home stage parts (7 files, 1 661): `lib/screens/search/stages/*_board_stage.d
 Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.dart`,
 `title_opener.dart` (`TitleOpener.open` — catalog detail from the board),
 `catalog_search_screen.dart` (Search tab), `discover_screen.dart` (Discover tab),
-`search_screen_shells.dart` (tab/variant/landing/dropdown contracts).
+`search_screen_shells.dart` (tab/variant/landing/dropdown contracts),
+`keyword_search_controller.dart` + `keyword_search_screen.dart` (in-tab keyword
+torrent search; G1'-3).
 TV Home stages (parts of `search_screen.dart`, G1 step 5): `lib/screens/search/stages/`
 — `_CanvasBoardStage`, `_AtriumBoardStage`, `_MosaicBoardStage`, `_PromenadeBoardStage`,
 `_DeckBoardStage`, `_TonightBoardStage`, `_SpotlightBoardStage`. Dispatch helper:
 `tv_home_stage_dispatch.dart` (`resolveTvHomeStageLayout`). Empty Spotlight shelves
 fall through to classic. `_buildDiscoverStage` stays on the host (Discover chrome).
 
-🔴 huge: `lib/screens/search_screen.dart` (17 039) · `lib/screens/video_player_screen.dart`
+🔴 huge: `lib/screens/search_screen.dart` (13 105) · `lib/screens/video_player_screen.dart`
 (16 278) · `lib/screens/magic_tv_screen.dart` (10 716) · `lib/services/storage_service.dart`
 (8 528) · `lib/screens/settings_screen.dart` (2 899) ·
 `lib/screens/torbox/torbox_downloads_screen.dart` (7 069) ·
@@ -105,6 +107,11 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   Source edit/add dialogs are `lib/widgets/sources/source_binding_dialogs.dart`
   (`SourceBindingDialogs` — meta + configured cloud/local options → persist /
   torrent+keyword bind callbacks; host `_handleEditOrSelectSource` stays the entry).
+  In-tab keyword torrent search is `lib/services/search/keyword_search_controller.dart`
+  (`KeywordSearchController`, `KwPreservedState`) +
+  `lib/screens/search/keyword_search_screen.dart` (`KeywordSearchScreen`).
+  Host `_switchMode` is the thin launcher (policy + query handoff);
+  `_openKeywordBind` still pushes `_SourcesScreen` with `keywordSeed`.
   TV Home stage layouts are `lib/screens/search/stages/` (`_CanvasBoardStage` and friends);
   the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
@@ -153,7 +160,9 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   `lib/utils/torrent_coverage_detector.dart` + `lib/utils/{movie,series}_parser.dart`. Result row UI:
   `lib/widgets/torrent_result_row.dart`; source picker: `lib/screens/video_player/widgets/source_sheet.dart`.
   Home/catalog bound-source edit/add dialogs: `lib/widgets/sources/source_binding_dialogs.dart`
-  (`SourceBindingDialogs`).
+  (`SourceBindingDialogs`). In-tab keyword torrent search:
+  `lib/services/search/keyword_search_controller.dart` +
+  `lib/screens/search/keyword_search_screen.dart`.
 
 ## Debrid providers & cloud
 

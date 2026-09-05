@@ -347,7 +347,6 @@ class _KeywordSearchScreenState extends State<KeywordSearchScreen> {
         }
         if (key == LogicalKeyboardKey.arrowLeft) {
           MainPageBridge.focusTvSidebar?.call();
-          widget.onFocusSidebar?.call();
           return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
@@ -573,7 +572,6 @@ class _KeywordSearchScreenState extends State<KeywordSearchScreen> {
         c.focusTab(index - 1);
       } else {
         MainPageBridge.focusTvSidebar?.call();
-        widget.onFocusSidebar?.call();
       }
       return KeyEventResult.handled;
     }
@@ -938,7 +936,6 @@ class _KeywordSearchScreenState extends State<KeywordSearchScreen> {
         c.kwToolbarNodes[index - 1].requestFocus();
       } else {
         MainPageBridge.focusTvSidebar?.call();
-        widget.onFocusSidebar?.call();
       }
       return KeyEventResult.handled;
     }

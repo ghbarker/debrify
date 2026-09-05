@@ -124,6 +124,35 @@ Phase 2 extractions also follow `dev/design/REFACTOR_PLAN_PHASE2.md` (binding as
   async (`Future<void> Function`); `CloudFilesSource.onSourceSelected`
   remains the RD/TorBox sync type.
 
+### G1'-3 · keyword search
+
+- **Streamed batches merge through `TorrentService.mergeSearchResults`.** A late
+  batch after `!kwSearching` is dropped (timed-out engine futures must not
+  mutate the authoritative set). Keep: origin `_runKeyword` stream.
+- **Freeze on first real interaction.** Pending count is a **set difference**,
+  not a length delta. Adopt is identity-preserving; a vanished source tab
+  clears. Empty `Torrent.source` buckets as `'unknown'`.
+- **Provider ticks are additive** (`d:src` / `t:src`). Vanished sources prune
+  from both the ticks and the seen set.
+- **Cached-only:** no-real-hash + `torrentUrl` stays; cache key is
+  `infohash.toLowerCase()` with no trim; settle only after the completion
+  sweep when `kwTbRan && !kwOtherProviderActive`.
+- **Relevance keeps engine order.** Name A→Z natural asc, case-insensitive.
+- **Selectable rows exclude direct/external.** Dismissing bulk-add stays in
+  selection mode.
+- **Snapshot only a completed keyword search** (query + results, not
+  mid-stream). Pending is folded into the snapshot in dispose. Home TV skips
+  restore (`searchScreenRestoresKeyword`).
+- **`_handleKwTabKey`:** activate/space; up → search field; down → toolbar;
+  left edge → `MainPageBridge.focusTvSidebar`. Distinct no-engine-ran vs
+  all-engines-errored copy.
+- **`friendlyKeywordError` `replaceAll('Exception: ', '')`** also strips the
+  suffix of `"SocketException: "`. Network bucket survives via
+  `"Failed host lookup"`.
+- **Host keeps** `_switchMode` (policy + query handoff), `_modeKeywordNode`,
+  `_openKeywordBind`, and the catalog Sources bar. Leftover wrappers listed
+  as G1'-9 debt.
+
 ### G1'-2 · source edit/add dialogs
 
 - **Movie chrome is `item.type == 'movie'` only.** Any other type (series,

@@ -690,7 +690,7 @@ class KeywordSearchController extends ChangeNotifier {
     return null;
   }
 
-  /// Post-frame counterpart of [focusedKwTabSource]: refocus the tab that
+  /// Post-frame twin of [focusedKwTabSource]: refocus the tab that
   /// carries [source] at its NEW index (All when it vanished).
   void reanchorKwTab(String? source) {
     if (source == null) return;
