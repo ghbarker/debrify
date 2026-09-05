@@ -112,3 +112,6 @@ M1-3 decision: Ampere owns narrow cloud_magic_tv_unlock_pin_test.dart host+sixfl
 
 MERGED1188ecc6323 and116532fd360: exactheadCIgreen; S2 independent104/120/9/12checks+analysis/bodycomparison passed.116origin/current Linuxnative1each no skips, parent runner5tests passed. Difference: playbackstorage logic extracted with frozenkeys, mandatorynative origin/current gate added. More:433storageLeavesdebt, fullvideo readiness/manualsmoke unproven. Current godcounts search11376,player11926,magic8369,storage4415,settings2899 versus original19070/16278/10716/9963/7905. S2-7 readiness/originpins assignedLocke; exactstorelocks beforeedits. M1/G1 active branches must integrate newnativeCI beforefinalgate. C0 owns M1baseline mapping. Remaining extraction slices15 (S2-6merged).
 
+
+S2-7 Locke owns exact app_style_prefs.dart and home_prefs.dart phasedhooks plusstoragehost/neworigin test; preserve interleaving/capturedprefs. Productmove waits concrete API/net review: actualmigration~72lines cannot meet400; no scopepadding or433debt doublecredit. M1-3 C0 baseline decision approved470to454:13exactseverity/code/message locationmatches,16observeddisappeared. Fullanalyzer454to438.12asynccontext warnings hidden through bindings are NOT asyncsafety improvement. C0 baselineonly commit then119integration/nativeCI.
+
