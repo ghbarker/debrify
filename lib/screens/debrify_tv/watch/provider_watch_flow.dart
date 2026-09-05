@@ -380,6 +380,84 @@ class WatchFlowBindings {
   final Future<String> Function(String apiKey, String link) unlockLink;
 }
 
+/// Synchronous per-search result accumulation shared by TorBox and PikPak.
+/// Leaves retain their awaits, cancellation and terminal fallback boundaries.
+class QuickWatchSearchAccumulator {
+  QuickWatchSearchAccumulator(
+    this.host, {
+    required this.providerLabel,
+    required this.queueStatus,
+  });
+
+  final WatchFlowBindings host;
+  final String providerLabel;
+  final String queueStatus;
+  final Map<String, Torrent> _dedup = <String, Torrent>{};
+
+  List<Torrent> snapshot() => _dedup.values.toList();
+
+  void accept(Map<String, dynamic> result) {
+    final torrents =
+        (result['torrents'] as List<Torrent>? ?? const <Torrent>[]);
+    final Map<String, String> engineErrors = {};
+    final rawErrors = result['engineErrors'];
+    if (rawErrors is Map) {
+      rawErrors.forEach((key, value) {
+        engineErrors[key.toString()] = value?.toString() ?? '';
+      });
+    }
+    if (engineErrors.isNotEmpty) {
+      engineErrors.forEach((engine, message) {
+        debugPrint('$providerLabel: Search engine "$engine" failed: $message');
+      });
+    }
+
+    // Apply NSFW filter if enabled
+    List<Torrent> torrentsToProcess = torrents;
+    if (host.quickAvoidNsfw || host.viewerForcesNsfw) {
+      final beforeCount = torrents.length;
+      torrentsToProcess = torrents.where((torrent) {
+        if (NsfwFilter.shouldFilter(torrent.category, torrent.name)) {
+          debugPrint('$providerLabel: Filtered NSFW torrent: ${torrent.name}');
+          return false;
+        }
+        return true;
+      }).toList();
+      if (beforeCount != torrentsToProcess.length) {
+        debugPrint(
+          '$providerLabel: NSFW filter: $beforeCount → ${torrentsToProcess.length} torrents',
+        );
+      }
+    }
+
+    int added = 0;
+    for (final torrent in torrentsToProcess) {
+      final normalizedHash = host.normalizeInfohash(torrent.infohash);
+      if (normalizedHash.isEmpty) continue;
+      if (!_dedup.containsKey(normalizedHash)) {
+        _dedup[normalizedHash] = torrent;
+        added++;
+      }
+    }
+    if (added > 0) {
+      final combined = host.cacheWarmer.applyQualityFilterToTorrents(
+        _dedup.values.toList(),
+      );
+      combined.shuffle(Random());
+      host.queue
+        ..clear()
+        ..addAll(combined);
+      host.lastQueueSize = host.queue.length;
+      host.lastSearchAt = DateTime.now();
+      if (host.mounted) {
+        host.setState(() {
+          host.status = queueStatus;
+        });
+      }
+    }
+  }
+}
+
 class ProviderWatchFlow {
   const ProviderWatchFlow(
     this.host, {

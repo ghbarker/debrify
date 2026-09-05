@@ -408,7 +408,11 @@ is an editor mirror, not the source of truth. How to add a provider:
   quick-card coverage claim). M1-3 watch flows: `ProviderWatchFlow` owns Quick
   Play orchestration; `TorboxWatchFlow`, `PikpakWatchFlow`, `PremiumizeWatchFlow`,
   `AlldebridWatchFlow`, and `RealDebridWatchFlow` own per-provider/cached paths
-  under `lib/screens/debrify_tv/watch/`. `WatchFlowBindings` keeps live host
+  under `lib/screens/debrify_tv/watch/`. `QuickWatchSearchAccumulator` in
+  `provider_watch_flow.dart` synchronously shares TorBox/PikPak result accumulation;
+  each invocation keeps its own dedup map, while leaves retain awaits, cancellation
+  and terminal fallback. Live pins: `test/magic_tv_watch_dedup_origin_test.dart`.
+  This first phase does not complete the five-flow dedup target. `WatchFlowBindings` keeps live host
   state, navigation, existing preparation/prefetch/launcher callbacks and
   captured-key service calls. Six entry wrappers and five dead cached binding slots
   are removed. Four provider-specific quick-dispatch dependencies now belong to
