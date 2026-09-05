@@ -9,6 +9,9 @@
 /// [StorageKeyStore] ownership when a domain store is extracted; they must
 /// not change the string.
 enum StorageKeyStore {
+  /// Playback history and playlist persistence ([PlaybackProgressStore]).
+  playbackProgressStore,
+
   /// Residual keys still declared or inlined on StorageService.
   ///
   /// [StorageService] `x` stays a forwarding façade for these until callers
@@ -58,7 +61,7 @@ class StorageKeyOwnership {
 
   /// Persisted name → owning store. The key set is the pin.
   static const Map<String, StorageKeyStore> byKey = {
-    'explicitly_watched_series_v1': StorageKeyStore.storageService,
+    'explicitly_watched_series_v1': StorageKeyStore.playbackProgressStore,
     'tracking_scrobble_targets': StorageKeyStore.trackingPrefs,
     'watch_progress_source': StorageKeyStore.trackingPrefs,
     'home_tick_sources': StorageKeyStore.homePrefs,
@@ -87,15 +90,15 @@ class StorageKeyOwnership {
     'torbox_post_torrent_action': StorageKeyStore.providerCredentialPrefs,
     'pikpak_post_torrent_action': StorageKeyStore.providerCredentialPrefs,
     'battery_opt_status_v1': StorageKeyStore.storageService,
-    'video_resume_v1': StorageKeyStore.storageService,
-    'playback_state_v1': StorageKeyStore.storageService,
-    'continue_watching_v1': StorageKeyStore.storageService,
-    'local_series_completion_v1': StorageKeyStore.storageService,
+    'video_resume_v1': StorageKeyStore.playbackProgressStore,
+    'playback_state_v1': StorageKeyStore.playbackProgressStore,
+    'continue_watching_v1': StorageKeyStore.playbackProgressStore,
+    'local_series_completion_v1': StorageKeyStore.playbackProgressStore,
     'local_series_completion_calendar_checked_at_v1':
-        StorageKeyStore.storageService,
+        StorageKeyStore.playbackProgressStore,
     'local_series_completion_calendar_attempted_at_v1':
-        StorageKeyStore.storageService,
-    'finished_movies_v1': StorageKeyStore.storageService,
+        StorageKeyStore.playbackProgressStore,
+    'finished_movies_v1': StorageKeyStore.playbackProgressStore,
     'debrify_tv_start_random': StorageKeyStore.debrifyTvPrefs,
     'debrify_tv_hide_seekbar': StorageKeyStore.debrifyTvPrefs,
     'debrify_tv_show_watermark': StorageKeyStore.debrifyTvPrefs,
@@ -212,8 +215,8 @@ class StorageKeyOwnership {
     'webdav_show_videos_only': StorageKeyStore.providerCredentialPrefs,
     'webdav_servers_v1': StorageKeyStore.providerCredentialPrefs,
     'webdav_selected_server_id_v1': StorageKeyStore.providerCredentialPrefs,
-    'tvmaze_series_mappings': StorageKeyStore.storageService,
-    'playlist_poster_overrides_v1': StorageKeyStore.storageService,
+    'tvmaze_series_mappings': StorageKeyStore.playbackProgressStore,
+    'playlist_poster_overrides_v1': StorageKeyStore.playbackProgressStore,
     'debrify_tv_favorite_channels_v1': StorageKeyStore.debrifyTvPrefs,
     'stremio_tv_rotation_minutes': StorageKeyStore.stremioTvPrefs,
     'stremio_tv_series_rotation_minutes': StorageKeyStore.stremioTvPrefs,
@@ -227,9 +230,9 @@ class StorageKeyOwnership {
     'stremio_tv_catalog_repo_urls_v1': StorageKeyStore.stremioTvPrefs,
     'stremio_tv_hide_now_playing': StorageKeyStore.stremioTvPrefs,
     'stremio_tv_torrents_first': StorageKeyStore.stremioTvPrefs,
-    'user_playlist_v1': StorageKeyStore.storageService,
-    'playlist_view_modes_v1': StorageKeyStore.storageService,
-    'playlist_favorites_v1': StorageKeyStore.storageService,
+    'user_playlist_v1': StorageKeyStore.playbackProgressStore,
+    'playlist_view_modes_v1': StorageKeyStore.playbackProgressStore,
+    'playlist_favorites_v1': StorageKeyStore.playbackProgressStore,
     'my_watchlist_v1': StorageKeyStore.storageService,
     'initial_setup_complete_v1': StorageKeyStore.storageService,
     'torrent_search_history_v1': StorageKeyStore.storageService,
@@ -301,9 +304,9 @@ class StorageKeyOwnership {
     'download_tree_uri_v1': StorageKeyStore.storageService,
     'download_tree_display_name_v1': StorageKeyStore.storageService,
     'download_dir_path_v1': StorageKeyStore.storageService,
-    'episode_trakt_progress_v2': StorageKeyStore.storageService,
-    'episode_simkl_progress_v1': StorageKeyStore.storageService,
-    'episode_mdblist_progress_v1': StorageKeyStore.storageService,
+    'episode_trakt_progress_v2': StorageKeyStore.playbackProgressStore,
+    'episode_simkl_progress_v1': StorageKeyStore.playbackProgressStore,
+    'episode_mdblist_progress_v1': StorageKeyStore.playbackProgressStore,
     'iptv_track_continue_watching': StorageKeyStore.iptvPrefs,
     'quick_play_search_timeout': StorageKeyStore.storageService,
     'stremio_sources_timeout': StorageKeyStore.storageService,
