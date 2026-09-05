@@ -23,17 +23,23 @@ String _host() => File('lib/screens/search_screen.dart').readAsStringSync();
 String _stageWidgets() =>
     File('lib/screens/search/search_stage_widgets.dart').readAsStringSync();
 
+/// G1'-4 moved `CwKind` / `CwRow` onto the controller. Fall back to the
+/// stage part so the G1'-0 pin commit still reads.
+String _cwTypes() {
+  final controller = File('lib/services/home/continue_watching_controller.dart');
+  if (controller.existsSync()) return controller.readAsStringSync();
+  return _stageWidgets();
+}
+
 String _cardWidgets() =>
     File('lib/screens/search/search_card_widgets.dart').readAsStringSync();
 
 void main() {
   late String host;
-  late String stages;
   late String cards;
 
   setUpAll(() {
     host = _host();
-    stages = _stageWidgets();
     cards = _cardWidgets();
   });
 
@@ -51,7 +57,7 @@ void main() {
 
     test('continue-watching kinds stay local / trakt / simkl / mdblist / iptv', () {
       expect(
-        stages,
+        _cwTypes(),
         contains(
           RegExp(
             r'enum _?CwKind \{ local, trakt, simkl, mdblist, iptv \}',
@@ -61,16 +67,17 @@ void main() {
     });
 
     test('CwRow carries kind, items, nodes, progress and remove', () {
-      expect(stages, contains(RegExp(r'class _?CwRow \{')));
-      expect(stages, contains(RegExp(r'final _?CwKind kind;')));
-      expect(stages, contains('final List<StremioMeta> items;'));
-      expect(stages, contains('final List<FocusNode> nodes;'));
+      final cw = _cwTypes();
+      expect(cw, contains(RegExp(r'class _?CwRow \{')));
+      expect(cw, contains(RegExp(r'final _?CwKind kind;')));
+      expect(cw, contains('final List<StremioMeta> items;'));
+      expect(cw, contains('final List<FocusNode> nodes;'));
       expect(
-        stages,
+        cw,
         contains('final double? Function(StremioMeta) progressOf;'),
       );
       expect(
-        stages,
+        cw,
         contains('final Future<void> Function(StremioMeta) onRemove;'),
       );
     });

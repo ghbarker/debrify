@@ -195,6 +195,11 @@ then. Same class of debt on S2-1 (869) and S2-2 (325) — also S2-7.
 - **Host keeps** Home board chrome, favourites, hero, Discover CW landing,
   `_addonForContinue`, `_openItem` / `_onCatalogPlay` / `_playSelection`,
   and thin loader wrappers. Leftover wrappers listed as G1'-9 debt.
+- **Source-scan pins follow the types.** `search_public_types_pin_test` and
+  the G1'-2 Mode/CwKind check read `continue_watching_controller.dart`.
+  `home_expanded_card_settings_test` counts host builders plus the two
+  row `wrap(` see-all routes (still five; wrap is
+  `_withHomeExpandedCardSettings`).
 
 ### G1'-3 · keyword search
 
