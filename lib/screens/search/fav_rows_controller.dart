@@ -10,6 +10,7 @@ import '../../models/stremio_tv/stremio_tv_now_playing.dart';
 import '../../models/profiles/profile_policy.dart';
 import '../../services/debrify_tv_repository.dart';
 import '../../services/home/home_row_ids.dart';
+import '../../services/home/my_watchlist_loader.dart';
 import '../../services/iptv_media_store.dart';
 import '../../services/main_page_bridge.dart';
 import '../../services/playlist_player_service.dart';
@@ -724,17 +725,11 @@ class FavRowsController {
 
   Future<void> loadMyWatchlist() async {
     try {
-      final items = await StorageService.getMyWatchlistItems();
+      final items = await MyWatchlistLoader.load();
       if (!mounted) return;
       commit(() {
-        watchlistMovieItems = [
-          for (final item in items)
-            if (item.type.toLowerCase() != 'series') item,
-        ];
-        watchlistSeriesItems = [
-          for (final item in items)
-            if (item.type.toLowerCase() == 'series') item,
-        ];
+        watchlistMovieItems = items.movies;
+        watchlistSeriesItems = items.series;
       });
       syncMyWatchlistNodes();
       maybeAutoFocusBoard();
