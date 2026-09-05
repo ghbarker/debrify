@@ -92,14 +92,11 @@ void main() {
                     throw StateError('host commit failed');
                   }
                 },
-                homeRowIds: () => [],
                 addonForContinue: (_) => throw UnimplementedError(),
                 readCatalogQuery: () => '',
                 readCatalogSearching: () => false,
                 focusContent: () {},
-                focusHomeRailAt: (_, __) => false,
                 focusRelativeHomeRail: (_, __, ___) {},
-                focusRow: (_, __) => false,
                 readHomeDisabled: () => {},
                 maybeAutoFocusBoard: () {
                   observations.add(controller.watchlistMovieNodes.length);
