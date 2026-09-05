@@ -311,15 +311,30 @@ void main() {
     );
 
     test('_buildDiscoverStage is Discover chrome, not a Home stage', () {
+      final discover = File(
+        'lib/screens/search/discover_view.dart',
+      ).readAsStringSync();
       expect(
-        host,
-        contains('Widget _buildDiscoverStage(BoxConstraints c, Widget panel)'),
+        _methodBody(discover, '_buildDiscoverStage'),
+        matches(RegExp(
+          r'^Widget _buildDiscoverStage\(\s*BuildContext context,\s*'
+          r'BoxConstraints c,\s*Widget panel,?\s*\)\s*\{',
+        )),
       );
       expect(
-        host,
+        discover,
         contains("The Discover STAGE layout (`discover_layout` = 'stage'"),
       );
+      final handoff = RegExp(
+        r'Widget _buildDiscover\(\)\s*=>\s*DiscoverView\(([\s\S]*?)\);',
+      ).firstMatch(host);
+      expect(handoff, isNotNull, reason: 'host must hand off to DiscoverView');
+      final arguments = handoff!.group(1)!;
+      expect(arguments, matches(RegExp(r'panel:\s*_buildDiscoverPanel\(\),')));
+      expect(RegExp(r'_buildDiscoverPanel\(').allMatches(arguments), hasLength(1));
+      expect(host, isNot(contains('Widget _buildDiscoverStage(')));
       expect(_homeSwitchChunk(host), isNot(contains('_buildDiscoverStage')));
+      expect(_homeSwitchChunk(host), isNot(contains('DiscoverView')));
     });
   });
 }
