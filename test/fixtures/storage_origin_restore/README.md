@@ -451,3 +451,64 @@ Git's clean filter); no prior artifact was written. Loader, recipe and two exist
 helper tests were byte-identical between origin/current generation checkouts.
 Flutter.bat SHA256 `f83bfed7ecd10fd1afd8ce19c0b0119d2c80e24fbf26f4ff4f63c1cc5f75dcd5`;
 Dart.exe SHA256 `4daa3455f8844ff2a907dffd68ba511f112ba67f5f6635d69a122e5b60bf91ff`.
+
+### Residual My Watchlist: one physical String JSON key
+
+Current fixture origin `b1d075dd3e28107438075402500b6c6468c73fd0`;
+actual pre-S2 exporter `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`.
+New artifacts are ONLY `my-watchlist.encrypted.json` and `my-watchlist.manifest.json`.
+This is separately counted `my_watchlist_v1`, one physical String holding a JSON
+list, not an increase to a blanket S2 inventory claim. Both old export and current
+restore preserve exact JSON whitespace/order, obsolete row keys, integer/String
+addedAt values, full represented metadata and a malformed item row.
+
+The five synthetic stored rows contain four valid movie/series items, including
+an IMDb duplicate across two sources, addon-local identities and one malformed
+item. Actual public getMyWatchlistItems returns four items sorted by timestamps;
+myWatchlistItemKey and isInMyWatchlist observe canonical identities. Every
+represented presentation/source field in the valid reader output is compared to
+independent expectations. Duplicate IMDb rows remain two returned items. Reads
+must NOT persist canonical keys: both captured and underlying raw preferences
+still contain the exact obsolete-key JSON afterwards. Re-export remains exact.
+No mutating watchlist API or cap change is folded into the fixture success path.
+
+Real ProfileRestoreCoordinator publishes generation2 before raw type/value
+checks and readers; old generation, other profile and destination
+watchlist_restore_sentinel remain intact. The artifact has no resources or extra
+exported markers. All data is synthetic, with example.invalid artwork; no user
+profile/secrets/native grants are copied or uploaded. This is portable encrypted
+profile proof, NOT tvOS recovery/cap/native or all-interleavings/profile-safety
+proof. PR161's separate current-origin pins cover finite held-read/failure cases.
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# Own detached exact pre-S2 tree; identical loader/recipe/two existing helpers:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --plain-name 'my-watchlist: generate' --reporter json
+# Copy ONLY the new my-watchlist pair to current checkout:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart test/playlist_progress_map_origin_test.dart test/playback_progress_store_test.dart test/playback_progress_store_origin_compatibility_test.dart test/local_watch_completion_storage_test.dart test/episode_local_progress_storage_test.dart test/my_watchlist_storage_test.dart --reporter json
+& $flutter analyze --no-pub test/storage_origin_restore_fixture_test.dart
+# These valid-package mutations MUST fail AFTER actual restore:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'my-watchlist: restore' --dart-define=STORAGE_FIXTURE_MUTATION=watchlist-key --reporter json
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'my-watchlist: restore' --dart-define=STORAGE_FIXTURE_MUTATION=watchlist-type --reporter json
+```
+
+Actual origin generation1PASS. Current combined105PASS (91 prior fixture/progress
+cases +2 new export/restore +12 existing watchlist storage cases), zero fail/skip;
+scoped analysis0. Both valid section-hashed/encrypted mutants exit1 at post-restore
+raw assertions (loader909): renamed key leaves old destination value; physical
+String replaced by int7 restores int7. Codec rejection is not the failure proof.
+Final105 passed again AFTER both mutations. No production source mutations.
+
+Ciphertext SHA256 `d8e5baa9d89ad93aa199b5ea66477921332ad55ea6eb2291dbb74721a51716eb`.
+All26 prior artifact Git blobs and all prior recipe sections unchanged; none were
+written. Git clean-filter comparison accounts for Windows checkout CRLF. Origin
+and current copied loader/recipe/two existing helpers are byte-identical; generator
+checks HEAD/cleanlib/own package resolution. Both use identical pinned Flutter3.44.8:
+Flutter.bat SHA256 `f83bfed7ecd10fd1afd8ce19c0b0119d2c80e24fbf26f4ff4f63c1cc5f75dcd5`;
+Dart.exe SHA256 `4daa3455f8844ff2a907dffd68ba511f112ba67f5f6635d69a122e5b60bf91ff`.
+
+Did we make a difference? One previously unrepresented watchlist key now has
+actual old-export/current-restore and read-only canonicalization evidence.
+Is there more we could do? Independent review and explicit product scope remain
+required. Zero Leaves/debt credit; no complete-sync claim. Forwarder inventory
+unchanged; expiry not applicable to this test-only fixture checkpoint.
