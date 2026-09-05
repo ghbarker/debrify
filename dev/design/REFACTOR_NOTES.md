@@ -712,3 +712,9 @@ Independent review of 4ab8e1c confirms only moved-renderer inventory repair, flo
 
 PR131 resolved aggregate shape-guard masking via per-file identities and separate sidebar debt cap, with independent actual-parser mutations. PR134 retains32/24line lifecycle adapters and legal owner/legacy library cycle untilrealG17/Q2;93host reduction is not independent Discover closure. No native or escaping-listener runtime proof claimed.
 
+
+User requested per-god-file forwarder counts in every gate row; ledger inventory assigned, historical unmeasured entries must stay unmeasured rather than fabricate counts. Gate4 reported native unset-env failure is developer usability debt; skipping that ordinary run must not relax mandatory native CI evidence.
+
+
+PR139 Windows exact-pair exit79 diagnosed read-only as native flutter_tester.exe access violation0xc0000005, corroboratedApplicationError1000/WER1001 for both origin/current failures. Selector/noTestsRan message is secondary after process crash. Faulting component remains unknown; no dump available, no attribution to skip change/libmpv/driver established. Linux exact-head native pair passed; unset/invalid/strict-runner semantics independently verified. Preserve failed evidence; no blind retries or Windows-green claim.
+

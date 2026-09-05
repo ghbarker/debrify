@@ -621,5 +621,20 @@
       ],
       "finiteSampleOnly": true
     }
+  },
+  "residualDomains": {
+    "filter-defaults": {
+      "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+      "values": {
+        "default_filter_qualities_v1": "[\"fullHd\",\"unknown quality\",\"fullHd\"]",
+        "default_filter_rip_sources_v1": "[\"web\",\"bluray\",\"web\"]",
+        "default_filter_languages_v1": "[\"english\",\"日本語\",\"english\"]",
+        "default_filter_sizes_v1": "[\"large\",\"\",\"large\"]",
+        "default_filter_dynamic_ranges_v1": "[\"hdr10\",\"unknown range\",\"hdr10\"]"
+      },
+      "namedKeyCount": 5,
+      "physicalType": "String",
+      "excludedKeys": []
+    }
   }
 }
