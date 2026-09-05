@@ -229,11 +229,15 @@ class SearchScreenHost extends StatefulWidget {
   final bool searchMode;
   final bool discoverMode;
 
+  /// Merge-preference IO captured by this host's Continue Watching session.
+  final Future<bool> Function(String provider) readCwMergedRows;
+
   const SearchScreenHost({
     super.key,
     this.isTelevision = false,
     this.searchMode = false,
     this.discoverMode = false,
+    this.readCwMergedRows = StorageService.getHomeCwMergedRows,
   });
 
   @override
@@ -1109,6 +1113,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     _cw = ContinueWatchingController(
       nodes: _cwNodes,
       isLive: () => mounted,
+      readMergedRows: widget.readCwMergedRows,
       onMaybeAutoFocusBoard: _maybeAutoFocusBoard,
       onRefreshBoundSources: _refreshBoundSources,
       onSnack: _snack,

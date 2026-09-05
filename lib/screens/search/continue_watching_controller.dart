@@ -179,16 +179,20 @@ class ContinueWatchingController extends ChangeNotifier {
   ContinueWatchingController({
     required this.nodes,
     bool Function()? isLive,
+    Future<bool> Function(String provider) readMergedRows =
+        StorageService.getHomeCwMergedRows,
     this.onMaybeAutoFocusBoard,
     this.onRefreshBoundSources,
     this.onSnack,
     this.onAnnounceTrakt,
     this.onAnnounceSimkl,
     this.onAnnounceMdblist,
-  }) : _isLive = isLive;
+  }) : _isLive = isLive,
+       _readMergedRows = readMergedRows;
 
   final CwNodeBank nodes;
   final bool Function()? _isLive;
+  final Future<bool> Function(String provider) _readMergedRows;
   final VoidCallback? onMaybeAutoFocusBoard;
   final Future<void> Function()? onRefreshBoundSources;
   final void Function(String message)? onSnack;
@@ -243,10 +247,10 @@ class ContinueWatchingController extends ChangeNotifier {
   Future<void> ensureCwMergeFlags() => cwMergeFlagsLoad ??= () async {
     try {
       final flags = await Future.wait([
-        StorageService.getHomeCwMergedRows('local'),
-        StorageService.getHomeCwMergedRows('trakt'),
-        StorageService.getHomeCwMergedRows('simkl'),
-        StorageService.getHomeCwMergedRows('mdblist'),
+        _readMergedRows('local'),
+        _readMergedRows('trakt'),
+        _readMergedRows('simkl'),
+        _readMergedRows('mdblist'),
       ]);
       // Plain assignments: every caller is a CW loader that setStates right
       // after its node sync, so the flags never render stale.
@@ -1404,10 +1408,10 @@ class ContinueWatchingController extends ChangeNotifier {
 
   Future<void> reloadMergeFlags() async {
     final mergeFlags = await Future.wait([
-      StorageService.getHomeCwMergedRows('local'),
-      StorageService.getHomeCwMergedRows('trakt'),
-      StorageService.getHomeCwMergedRows('simkl'),
-      StorageService.getHomeCwMergedRows('mdblist'),
+      _readMergedRows('local'),
+      _readMergedRows('trakt'),
+      _readMergedRows('simkl'),
+      _readMergedRows('mdblist'),
     ]);
     if (!_live) return;
     if (mergeFlags[0] != cwMergeLocal ||
