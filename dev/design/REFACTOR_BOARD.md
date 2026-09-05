@@ -94,3 +94,6 @@ S2-6 functional scope retained, forecast1750–1950 net against original2300:350
 
 ### Merge114 — 2026-09-05
 Exact head3e30de17 verified CI test/goldens SUCCESS; independent19case reproduction passed. Merged c5f022de. Difference: real pre-refactor export/current restore compatibility pins for141 named keys,28 exclusions and finite5family samples. More: conditional/dynamic domains remain finite and each new storage slice must pin its own behavior. S2-6 unblocked; other active lanes share no changed production files with114. God counts unchanged from current table (test/fixture-only merge).
+
+S2-6 ownership extension: Locke exclusively owns test/storage_key_sweep_test.dart import/store-discovery/exact-alias additions; assertions must not weaken. CODEMAP storage-routing rows exclusively locked to Locke until commit/release. Current extraction reports1867 net Leaves,433 uncredited deficit. Independent review still required. C0 authorized fast-forward PR116 to24dc0dcb; native Linux execution required before merge.
+
