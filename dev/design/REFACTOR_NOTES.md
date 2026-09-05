@@ -699,3 +699,6 @@ G1'-7 readiness: actualDiscover uses20hostcollaborators, not plannedboardRefs se
 ## Evidence correction: M1-4 Android-TV host coverage
 MagicTV_loadSettings uses AndroidNativeDownloader.isTelevision, which returnsfalse ondesktop beforechannel; PlatformUtil debugTVoverride does not set host_isAndroidTv. PR122 tests named androidHost=true do NOT exercise hosttrue launcherbranch or Androidbridge-level rejection. Valid coverage remains realdesktop channel switching/capturedkey/nextwrap and hostearlyrejection/Flutterroutecontinuation. Hosttrue/nativepositive/onFinished all unproven. This supersedes earlier stronger coverage wording; no productbug identified. M15mustnotclaim TVfocus from thisoverride; desktopfocus/disposal only. Worker authorized precise merged122PRbody correction.
 
+
+G17a PR125 current-caller contract accepted after independent76current/8origin tests: soleproduction commit callback synchronous once; loader partition moves before mounted/commit with extraasyncboundary. Disposedpath mayallocate discardedlists; arbitrary delayed/multiapplycallbackequivalence and exactmicrotasktiming NOTproven. No currentcallerfailure found. HostrefreshIO order unchanged; sharedprefshold cannotkill removedwatchlistawait. Zero750Leavescredit. M15a editor/chip only approved; rejectedlarge20fieldsettingscallbackbag, remainingsettings requiresactualownershipdesign.
+
