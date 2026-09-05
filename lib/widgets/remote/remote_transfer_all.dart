@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -135,31 +136,31 @@ class _RemoteTransferAllState extends State<RemoteTransferAll> {
       final realDebridApiKey = await StorageService.getApiKey(
         forRemoteTransfer: true,
       );
-      final rdEnabled = await StorageService.getRealDebridIntegrationEnabled();
+      final rdEnabled = await ProviderCredentialPrefs.getRealDebridIntegrationEnabled();
       final hasRd = (realDebridApiKey?.isNotEmpty ?? false) && rdEnabled;
 
       final torboxApiKey = await StorageService.getTorboxApiKey(
         forRemoteTransfer: true,
       );
-      final tbEnabled = await StorageService.getTorboxIntegrationEnabled();
+      final tbEnabled = await ProviderCredentialPrefs.getTorboxIntegrationEnabled();
       final hasTb = (torboxApiKey?.isNotEmpty ?? false) && tbEnabled;
 
       final premiumizeApiKey = await StorageService.getPremiumizeApiKey(
         forRemoteTransfer: true,
       );
-      final pmEnabled = await StorageService.getPremiumizeIntegrationEnabled();
+      final pmEnabled = await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
       final hasPm = (premiumizeApiKey?.isNotEmpty ?? false) && pmEnabled;
 
       final allDebridApiKey = await StorageService.getAllDebridApiKey(
         forRemoteTransfer: true,
       );
-      final adEnabled = await StorageService.getAllDebridIntegrationEnabled();
+      final adEnabled = await ProviderCredentialPrefs.getAllDebridIntegrationEnabled();
       final hasAd = (allDebridApiKey?.isNotEmpty ?? false) && adEnabled;
 
       final pikpakEmail = await StorageService.getPikPakEmail(
         forRemoteTransfer: true,
       );
-      final ppEnabled = await StorageService.getPikPakEnabled();
+      final ppEnabled = await ProviderCredentialPrefs.getPikPakEnabled();
       final hasPp = (pikpakEmail?.isNotEmpty ?? false) && ppEnabled;
 
       final traktAccessToken = await StorageService.getTraktAccessToken(
@@ -201,7 +202,7 @@ class _RemoteTransferAllState extends State<RemoteTransferAll> {
       }
 
       try {
-        final servers = await StorageService.getWebDavServers(
+        final servers = await ProviderCredentialPrefs.getWebDavServers(
           forSettings: false,
           forRemoteTransfer: true,
         );

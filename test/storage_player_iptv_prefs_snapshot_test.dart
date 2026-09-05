@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'dart:convert';
 
 import 'package:debrify/models/android_video_renderer_mode.dart';
@@ -90,19 +91,19 @@ void main() {
     test('decoder, playlists, last-live, startup, series audio', () async {
       expect(await StorageService.getIptvDecoderMode(), 'auto');
       expect(StorageService.iptvDecoderModes, ['auto', 'hardware', 'software']);
-      expect(await StorageService.getIptvPlaylists(), isEmpty);
-      expect(await StorageService.getIptvDefaultPlaylist(), isNull);
-      expect(await StorageService.getIptvDefaultsInitialized(), isFalse);
-      expect(await StorageService.getIptvLastLiveChannel(), isNull);
-      expect(await StorageService.getStartupIptvEnabled(), isFalse);
+      expect(await IptvPrefs.getIptvPlaylists(), isEmpty);
+      expect(await IptvPrefs.getIptvDefaultPlaylist(), isNull);
+      expect(await IptvPrefs.getIptvDefaultsInitialized(), isFalse);
+      expect(await IptvPrefs.getIptvLastLiveChannel(), isNull);
+      expect(await IptvPrefs.getStartupIptvEnabled(), isFalse);
       expect(
-        await StorageService.getStartupIptvMode(),
+        await IptvPrefs.getStartupIptvMode(),
         StorageService.startupIptvModeLast,
       );
-      expect(await StorageService.getStartupIptvChannel(), isNull);
+      expect(await IptvPrefs.getStartupIptvChannel(), isNull);
       expect(StorageService.startupIptvChannelCached, isNull);
-      expect(await StorageService.getIptvSeriesAudioLanguage('any'), isNull);
-      expect(await StorageService.getIptvTrackContinueWatching(), isTrue);
+      expect(await IptvPrefs.getIptvSeriesAudioLanguage('any'), isNull);
+      expect(await IptvPrefs.getIptvTrackContinueWatching(), isTrue);
       expect(StorageService.iptvWatchFinishedFraction, 0.95);
     });
   });
@@ -175,13 +176,13 @@ void main() {
   });
 
   test('StorageService writes the historical IPTV key bytes', () async {
-    await StorageService.setIptvDecoderMode('software');
-    await StorageService.setIptvDefaultPlaylist('pl-1');
-    await StorageService.setIptvDefaultsInitialized(true);
-    await StorageService.setIptvTrackContinueWatching(false);
+    await IptvPrefs.setIptvDecoderMode('software');
+    await IptvPrefs.setIptvDefaultPlaylist('pl-1');
+    await IptvPrefs.setIptvDefaultsInitialized(true);
+    await IptvPrefs.setIptvTrackContinueWatching(false);
     await StorageService.setIptvSeriesAudioLanguage('show::1', 'deu');
-    await StorageService.setStartupIptvEnabled(true);
-    await StorageService.setStartupIptvMode(StorageService.startupIptvModePinned);
+    await IptvPrefs.setStartupIptvEnabled(true);
+    await IptvPrefs.setStartupIptvMode(StorageService.startupIptvModePinned);
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('iptv_decoder_mode'), 'software');
@@ -341,14 +342,14 @@ void main() {
   });
 
   test('unknown IPTV decoder and startup mode coerce on write', () async {
-    await StorageService.setIptvDecoderMode('vulkan');
-    await StorageService.setStartupIptvMode('random');
+    await IptvPrefs.setIptvDecoderMode('vulkan');
+    await IptvPrefs.setStartupIptvMode('random');
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('iptv_decoder_mode'), 'auto');
     expect(prefs.getString('startup_iptv_mode'), 'last');
     expect(await StorageService.getIptvDecoderMode(), 'auto');
     expect(
-      await StorageService.getStartupIptvMode(),
+      await IptvPrefs.getStartupIptvMode(),
       StorageService.startupIptvModeLast,
     );
   });
@@ -371,12 +372,12 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'iptv_series_audio_lang': 'not-json',
     });
-    expect(await StorageService.getIptvSeriesAudioLanguage('show'), isNull);
+    expect(await IptvPrefs.getIptvSeriesAudioLanguage('show'), isNull);
   });
 
   test('virtual IPTV playlists are dropped; secrets are sealed', () async {
     final addedAt = DateTime.utc(2024, 6, 1, 12);
-    await StorageService.setIptvPlaylists([
+    await IptvPrefs.setIptvPlaylists([
       IptvPlaylist(
         id: 'fav',
         name: 'Favorites',
@@ -391,7 +392,7 @@ void main() {
       ),
     ]);
 
-    final stored = await StorageService.getIptvPlaylists();
+    final stored = await IptvPrefs.getIptvPlaylists();
     expect(stored, hasLength(1));
     expect(stored.single.id, 'real');
     expect(stored.single.url, 'https://user:pass@example.com/list.m3u');
@@ -405,8 +406,8 @@ void main() {
   });
 
   test('empty default playlist id removes the key', () async {
-    await StorageService.setIptvDefaultPlaylist('pl');
-    await StorageService.setIptvDefaultPlaylist('');
+    await IptvPrefs.setIptvDefaultPlaylist('pl');
+    await IptvPrefs.setIptvDefaultPlaylist('');
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.containsKey('iptv_default_playlist'), isFalse);
   });
@@ -430,15 +431,15 @@ void main() {
       prefs.getString('iptv_last_live_channel'),
       startsWith(SecretVault.prefix),
     );
-    final blob = await StorageService.getIptvLastLiveChannel();
+    final blob = await IptvPrefs.getIptvLastLiveChannel();
     expect(blob!['url'], 'http://live.example/1');
     expect(blob['name'], 'One');
     expect(blob['playlistId'], 'pl');
     expect(blob['channelNumber'], 7);
     expect(blob['playedAt'], isA<int>());
 
-    await StorageService.clearIptvLastLiveChannel();
-    expect(await StorageService.getIptvLastLiveChannel(), isNull);
+    await IptvPrefs.clearIptvLastLiveChannel();
+    expect(await IptvPrefs.getIptvLastLiveChannel(), isNull);
   });
 
   test('malformed last-live and startup channel blobs read as null', () async {
@@ -446,38 +447,38 @@ void main() {
       'iptv_last_live_channel': 'not-json',
       'startup_iptv_channel': 'not-json',
     });
-    expect(await StorageService.getIptvLastLiveChannel(), isNull);
-    expect(await StorageService.getStartupIptvChannel(), isNull);
+    expect(await IptvPrefs.getIptvLastLiveChannel(), isNull);
+    expect(await IptvPrefs.getStartupIptvChannel(), isNull);
   });
 
   test(
     'setStartupIptvEnabled(false) clears startup_mode despite the comment',
     () async {
-      await StorageService.setStartupIptvEnabled(true);
-      await StorageService.setStartupIptvEnabled(false);
+      await IptvPrefs.setStartupIptvEnabled(true);
+      await IptvPrefs.setStartupIptvEnabled(false);
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getBool('startup_auto_launch_enabled'), isFalse);
       // Comment says "leave the mode behind"; the body removes it.
       expect(prefs.containsKey('startup_mode'), isFalse);
-      expect(await StorageService.getStartupIptvEnabled(), isFalse);
+      expect(await IptvPrefs.getStartupIptvEnabled(), isFalse);
     },
   );
 
   test('warmStartupIptv last-with-no-channel sets firstAvailable', () async {
-    await StorageService.setStartupIptvEnabled(true);
-    await StorageService.setStartupIptvMode(StorageService.startupIptvModeLast);
-    await StorageService.warmStartupIptv();
+    await IptvPrefs.setStartupIptvEnabled(true);
+    await IptvPrefs.setStartupIptvMode(StorageService.startupIptvModeLast);
+    await IptvPrefs.warmStartupIptv();
     expect(StorageService.startupIptvChannelCached, {
       StorageService.startupIptvFirstAvailable: true,
     });
   });
 
   test('warmStartupIptv pinned-with-no-channel leaves cache null', () async {
-    await StorageService.setStartupIptvEnabled(true);
-    await StorageService.setStartupIptvMode(
+    await IptvPrefs.setStartupIptvEnabled(true);
+    await IptvPrefs.setStartupIptvMode(
       StorageService.startupIptvModePinned,
     );
-    await StorageService.warmStartupIptv();
+    await IptvPrefs.warmStartupIptv();
     expect(StorageService.startupIptvChannelCached, isNull);
   });
 
@@ -486,7 +487,7 @@ void main() {
       'http://live.example/1',
       name: 'One',
     );
-    await StorageService.warmStartupIptv();
+    await IptvPrefs.warmStartupIptv();
     expect(StorageService.startupIptvChannelCached, isNull);
   });
 
@@ -497,11 +498,11 @@ void main() {
         'http://live.example/1',
         name: 'One',
       );
-      await StorageService.setStartupIptvEnabled(true);
-      await StorageService.setStartupIptvMode(
+      await IptvPrefs.setStartupIptvEnabled(true);
+      await IptvPrefs.setStartupIptvMode(
         StorageService.startupIptvModePinned,
       );
-      await StorageService.setStartupIptvChannel(
+      await IptvPrefs.setStartupIptvChannel(
         'http://live.example/2',
         name: 'Two',
       );
@@ -519,13 +520,13 @@ void main() {
   test(
     'IPTV track-continue-watching off makes recordIptvWatch a no-op',
     () async {
-      await StorageService.setIptvTrackContinueWatching(false);
+      await IptvPrefs.setIptvTrackContinueWatching(false);
       await StorageService.recordIptvWatch(
         'http://vod.example/1',
         channelName: 'Movie',
       );
       // Tracking-off gates getIptvContinueWatching before the media store.
-      expect(await StorageService.getIptvContinueWatching(), isEmpty);
+      expect(await IptvPrefs.getIptvContinueWatching(), isEmpty);
     },
   );
 }

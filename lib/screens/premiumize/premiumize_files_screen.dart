@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -246,7 +248,7 @@ class _PremiumizeFilesScreenState extends State<PremiumizeCloudFilesHost> {
   }
 
   Future<void> _loadSettings() async {
-    final enabled = await StorageService.getPremiumizeIntegrationEnabled();
+    final enabled = await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
     final apiKey = await StorageService.getPremiumizeApiKey();
 
     if (!mounted) return;
@@ -975,7 +977,7 @@ class _PremiumizeFilesScreenState extends State<PremiumizeCloudFilesHost> {
       _showSnackBar('Only video files can be added to playlist', isError: true);
       return;
     }
-    final added = await StorageService.addPlaylistItemRaw({
+    final added = await PlaybackProgressStore.addPlaylistItemRaw({
       'provider': 'premiumize',
       'title': FileUtils.cleanPlaylistTitle(file.name),
       'kind': 'single',
@@ -1010,7 +1012,7 @@ class _PremiumizeFilesScreenState extends State<PremiumizeCloudFilesHost> {
 
       if (videos.length == 1) {
         final v = videos.first;
-        final added = await StorageService.addPlaylistItemRaw({
+        final added = await PlaybackProgressStore.addPlaylistItemRaw({
           'provider': 'premiumize',
           'title': FileUtils.cleanPlaylistTitle(v.name),
           'kind': 'single',
@@ -1029,7 +1031,7 @@ class _PremiumizeFilesScreenState extends State<PremiumizeCloudFilesHost> {
       final filesMeta = videos
           .map((v) => {'id': v.id, 'name': v.name, 'size': v.size})
           .toList();
-      final added = await StorageService.addPlaylistItemRaw({
+      final added = await PlaybackProgressStore.addPlaylistItemRaw({
         'provider': 'premiumize',
         'title': FileUtils.cleanPlaylistTitle(folder.name),
         'kind': 'collection',

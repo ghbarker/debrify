@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:flutter/material.dart';
 
 import '../models/iptv_playlist.dart';
@@ -66,7 +67,7 @@ class IptvCwRouter {
   /// most-recent-first; a series is collapsed here to a single row (its
   /// most-recent watched episode wins, matching the IPTV page's shelf).
   static Future<IptvCwRows> load() async {
-    final items = await StorageService.getIptvContinueWatching();
+    final items = await IptvPrefs.getIptvContinueWatching();
     if (items.isEmpty) return const IptvCwRows(movies: [], series: []);
 
     final movies = <IptvCwEntry>[];
@@ -151,7 +152,7 @@ class IptvCwRouter {
     // Resolve the series' real Xtream provider from the stored origin id — the
     // shelf entry is provider-agnostic, so we can't assume any "selected"
     // playlist like the IPTV page can.
-    final playlists = await StorageService.getIptvPlaylists(forSettings: false);
+    final playlists = await IptvPrefs.getIptvPlaylists(forSettings: false);
     if (!context.mounted) return;
     IptvPlaylist? origin;
     for (final p in playlists) {

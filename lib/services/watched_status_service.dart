@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -208,9 +209,9 @@ class WatchedStatusService extends ChangeNotifier {
     final generation = ++_localGeneration;
     unawaited(() async {
       final results = await Future.wait([
-        StorageService.getFinishedMovieIds(),
+        PlaybackProgressStore.getFinishedMovieIds(),
         LocalSeriesCompletionService.instance.caughtUpIds(),
-        StorageService.getExplicitlyWatchedSeriesIds(),
+        PlaybackProgressStore.getExplicitlyWatchedSeriesIds(),
       ]);
       if (generation != _localGeneration) return;
       _localMovies = results[0];
@@ -223,7 +224,7 @@ class WatchedStatusService extends ChangeNotifier {
       final calendarSeries = await LocalSeriesCompletionService.instance
           .refreshCalendarIfDue();
       final explicitSeries =
-          await StorageService.getExplicitlyWatchedSeriesIds();
+          await PlaybackProgressStore.getExplicitlyWatchedSeriesIds();
       final combinedSeries = <String>{...calendarSeries, ...explicitSeries};
       if (generation != _localGeneration ||
           setEquals(_localSeries, combinedSeries)) {
@@ -264,11 +265,11 @@ class WatchedStatusService extends ChangeNotifier {
     final mdblistFuture = MdblistService.instance.fetchCompletedTitleIds();
     final localSeriesFuture = LocalSeriesCompletionService.instance
         .caughtUpIds();
-    final explicitSeriesFuture = StorageService.getExplicitlyWatchedSeriesIds();
+    final explicitSeriesFuture = PlaybackProgressStore.getExplicitlyWatchedSeriesIds();
     final calendarFuture = LocalSeriesCompletionService.instance
         .refreshCalendarIfDue();
 
-    final localMovies = await StorageService.getFinishedMovieIds();
+    final localMovies = await PlaybackProgressStore.getFinishedMovieIds();
     final localSeries = <String>{
       ...await localSeriesFuture,
       ...await explicitSeriesFuture,
@@ -306,7 +307,7 @@ class WatchedStatusService extends ChangeNotifier {
     if (localGeneration == _localGeneration) {
       _localSeries = <String>{
         ...results[2] as Set<String>,
-        ...await StorageService.getExplicitlyWatchedSeriesIds(),
+        ...await PlaybackProgressStore.getExplicitlyWatchedSeriesIds(),
       };
     }
     final mdblist = results[3] as ({Set<String> movies, Set<String> series})?;

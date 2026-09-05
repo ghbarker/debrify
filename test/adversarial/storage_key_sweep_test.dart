@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:debrify/services/cloud/cloud_credentials.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
 import 'package:debrify/services/profiles/profile_preferences.dart';
@@ -72,7 +73,7 @@ void main() {
     () async {
       ProfileRuntime.initializeLegacy();
       await StorageService.saveApiKey('rd-key');
-      await StorageService.setRealDebridIntegrationEnabled(false);
+      await ProviderCredentialPrefs.setRealDebridIntegrationEnabled(false);
       expect(
         await CloudCredentials.isPlaybackConfigured(CloudProviderId.debrid),
         isTrue,

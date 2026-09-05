@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -550,9 +552,9 @@ class _ExternalPlayerSettingsPageState
       final subtitleAutoSync =
           await StorageService.getSubtitleAutoSyncEnabled();
       final movieCompletionThreshold =
-          await StorageService.getMovieCompletionThreshold();
+          await PlaybackProgressStore.getMovieCompletionThreshold();
       final episodeCompletionThreshold =
-          await StorageService.getEpisodeCompletionThreshold();
+          await PlaybackProgressStore.getEpisodeCompletionThreshold();
       final skipSegmentsEnabled = await StorageService.getSkipSegmentsEnabled();
       final storedSkipSegmentProvider =
           await StorageService.getSkipSegmentProvider();
@@ -1114,7 +1116,7 @@ class _ExternalPlayerSettingsPageState
 
   Future<void> _setIptvDecoderMode(String value) async {
     setState(() => _iptvDecoderMode = value);
-    await StorageService.setIptvDecoderMode(value);
+    await IptvPrefs.setIptvDecoderMode(value);
   }
 
   Future<void> _setStartPortrait(bool enabled) async {
@@ -1142,13 +1144,13 @@ class _ExternalPlayerSettingsPageState
   Future<void> _setMovieCompletionThresholdIndex(int index) async {
     final value = _completionThresholdOptions[index];
     setState(() => _movieCompletionThreshold = value);
-    await StorageService.setMovieCompletionThreshold(value);
+    await PlaybackProgressStore.setMovieCompletionThreshold(value);
   }
 
   Future<void> _setEpisodeCompletionThresholdIndex(int index) async {
     final value = _completionThresholdOptions[index];
     setState(() => _episodeCompletionThreshold = value);
-    await StorageService.setEpisodeCompletionThreshold(value);
+    await PlaybackProgressStore.setEpisodeCompletionThreshold(value);
   }
 
   Future<void> _setSkipSegmentsEnabled(bool enabled) async {

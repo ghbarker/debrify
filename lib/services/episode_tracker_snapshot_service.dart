@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -294,7 +295,7 @@ class EpisodeTrackerSnapshotService {
           storeWriteKey,
           () => _runBound(
             authorization,
-            () => StorageService.saveEpisodeTraktProgress(
+            () => PlaybackProgressStore.saveEpisodeTraktProgress(
               imdbId: imdbId,
               percents: const {},
             ),
@@ -343,7 +344,7 @@ class EpisodeTrackerSnapshotService {
         ),
         save: (snapshot) => _runBound(
           authorization,
-          () => StorageService.saveEpisodeTraktProgress(
+          () => PlaybackProgressStore.saveEpisodeTraktProgress(
             imdbId: imdbId,
             percents: snapshot,
           ),
@@ -448,7 +449,7 @@ class EpisodeTrackerSnapshotService {
           storeWriteKey,
           () => _runBound(
             authorization,
-            () => StorageService.saveEpisodeSimklProgress(
+            () => PlaybackProgressStore.saveEpisodeSimklProgress(
               imdbId: imdbId,
               percents: const {},
             ),
@@ -497,7 +498,7 @@ class EpisodeTrackerSnapshotService {
             storeWriteKey!,
             () => _runBound(
               authorization,
-              () => StorageService.saveEpisodeSimklProgress(
+              () => PlaybackProgressStore.saveEpisodeSimklProgress(
                 imdbId: imdbId,
                 percents: snapshot,
               ),
@@ -528,7 +529,7 @@ class EpisodeTrackerSnapshotService {
             storeWriteKey!,
             () => _runBound(
               authorization,
-              () => StorageService.saveEpisodeSimklProgress(
+              () => PlaybackProgressStore.saveEpisodeSimklProgress(
                 imdbId: imdbId,
                 percents: const {},
               ),
@@ -579,7 +580,7 @@ class EpisodeTrackerSnapshotService {
             storeWriteKey,
             () => _runBound(
               authorization,
-              () => StorageService.saveEpisodeMdblistProgress(
+              () => PlaybackProgressStore.saveEpisodeMdblistProgress(
                 imdbId: imdbId,
                 percents: const {},
               ),
@@ -621,7 +622,7 @@ class EpisodeTrackerSnapshotService {
           if (!result.isSuccess) return null;
           final previous = await _runBound(
             authorization,
-            () => StorageService.getEpisodeMdblistProgress(imdbId: imdbId),
+            () => PlaybackProgressStore.getEpisodeMdblistProgress(imdbId: imdbId),
           );
           final snapshot = <String, double>{
             for (final entry in previous.entries)
@@ -647,7 +648,7 @@ class EpisodeTrackerSnapshotService {
             storeWriteKey,
             () => _runBound(
               authorization,
-              () => StorageService.saveEpisodeMdblistProgress(
+              () => PlaybackProgressStore.saveEpisodeMdblistProgress(
                 imdbId: imdbId,
                 percents: snapshot,
               ),
@@ -703,7 +704,7 @@ class EpisodeTrackerSnapshotService {
             storeWriteKey,
             () => _runBound(
               authorization,
-              () => StorageService.saveEpisodeMdblistProgress(
+              () => PlaybackProgressStore.saveEpisodeMdblistProgress(
                 imdbId: imdbId,
                 percents: const {},
               ),
@@ -747,7 +748,7 @@ class EpisodeTrackerSnapshotService {
             storeWriteKey,
             () => _runBound(
               authorization,
-              () => StorageService.saveEpisodeMdblistProgress(
+              () => PlaybackProgressStore.saveEpisodeMdblistProgress(
                 imdbId: imdbId,
                 percents: snapshot,
               ),

@@ -1,7 +1,7 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'tvmaze_service.dart';
-import 'storage_service.dart';
 
 class EpisodeInfoService {
   static final Map<String, dynamic> _cache = {};
@@ -195,7 +195,7 @@ class EpisodeInfoService {
 
   /// Get TVMaze mapping for a playlist item
   static Future<Map<String, dynamic>?> getTVMazeMapping(Map<String, dynamic> playlistItem) async {
-    return await StorageService.getTVMazeSeriesMapping(playlistItem);
+    return await PlaybackProgressStore.getTVMazeSeriesMapping(playlistItem);
   }
 
   /// Get show info by ID from TVMaze

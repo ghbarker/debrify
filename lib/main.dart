@@ -1,3 +1,6 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
+import 'package:debrify/services/storage/playback_progress_store.dart';
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:io' show Platform, exit;
 import 'dart:ui' show AppExitResponse, PointerDeviceKind;
@@ -589,7 +592,7 @@ Future<void> _continueApplicationStartup() async {
   // drifted must cost the user a watched badge, not the whole app.
   await _bestEffortStartupStep(
     'playback-completion-migration',
-    StorageService.migrateExistingPlaybackCompletionThresholds,
+    PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds,
   );
   // Drop the zero-position rows older builds left behind when unwatching an
   // episode; they outrank real progress and pin Continue Watching to an
@@ -597,7 +600,7 @@ Future<void> _continueApplicationStartup() async {
   // one-shot, and best-effort for the same reason as the step above.
   await _bestEffortStartupStep(
     'resume-ghost-purge',
-    StorageService.purgeUnwatchedResumeGhosts,
+    PlaybackProgressStore.purgeUnwatchedResumeGhosts,
   );
   // Warm the layout prefs the shell reads through field initializers —
   // without this the first frame paints canvas/ghost/rail and then snaps
@@ -786,10 +789,10 @@ Future<void> _resolveStartupChannel() async {
     // channel round trips, and this runs before the first frame on every cold
     // start — making every user pay that so the small minority with a startup
     // channel can have one would be a plain boot regression.
-    if (!await StorageService.getStartupIptvEnabled()) return;
+    if (!await IptvPrefs.getStartupIptvEnabled()) return;
     await DeepLinkService.preflightLaunchIntent();
     if (DeepLinkService.launchedByIntent) return;
-    await StorageService.warmStartupIptv();
+    await IptvPrefs.warmStartupIptv();
     final channel = StorageService.startupIptvChannelCached;
     if (channel != null) {
       MainPageBridge.setIptvStartupChannel(channel);
@@ -806,7 +809,7 @@ Future<void> _prewarmIptvCatalogDb() async {
     // Most users never configure IPTV. Do not create a database or compete
     // with Home startup IO unless a stored source could actually use the
     // paged catalog.
-    if ((await StorageService.getIptvPlaylists()).isEmpty) return;
+    if ((await IptvPrefs.getIptvPlaylists()).isEmpty) return;
     await IptvCatalogDb.open();
   } catch (_) {
     // Prewarming is an optimization. The IPTV page retries through the same
@@ -876,7 +879,7 @@ void _updateFocusHighlightStrategy(bool isTv) {
 
 Future<void> _cleanupPlaybackState() async {
   try {
-    await StorageService.cleanupOldPlaybackState();
+    await PlaybackProgressStore.cleanupOldPlaybackState();
   } catch (e) {}
 }
 
@@ -2629,8 +2632,8 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
     String fileId,
     String fileName,
   ) async {
-    final postAction = await StorageService.getPikPakPostTorrentAction();
-    final pikpakHidden = await StorageService.getPikPakHiddenFromNav();
+    final postAction = await ProviderCredentialPrefs.getPikPakPostTorrentAction();
+    final pikpakHidden = await ProviderCredentialPrefs.getPikPakHiddenFromNav();
 
     // For 'none' action, just show success
     if (postAction == 'none') {
@@ -2825,23 +2828,23 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
   Future<void> _loadIntegrationStateForCurrentProfile() async {
     final rdKey = await StorageService.getApiKey();
     final torboxKey = await StorageService.getTorboxApiKey();
-    final rdEnabled = await StorageService.getRealDebridIntegrationEnabled();
-    final torboxEnabled = await StorageService.getTorboxIntegrationEnabled();
-    final rdHidden = await StorageService.getRealDebridHiddenFromNav();
-    final tbHidden = await StorageService.getTorboxHiddenFromNav();
-    final pikpakEnabled = await StorageService.getPikPakEnabled();
-    final pikpakHidden = await StorageService.getPikPakHiddenFromNav();
-    final webDavEnabled = await StorageService.getWebDavEnabled();
-    final webDavServers = await StorageService.getWebDavServers();
-    final webDavHidden = await StorageService.getWebDavHiddenFromNav();
+    final rdEnabled = await ProviderCredentialPrefs.getRealDebridIntegrationEnabled();
+    final torboxEnabled = await ProviderCredentialPrefs.getTorboxIntegrationEnabled();
+    final rdHidden = await ProviderCredentialPrefs.getRealDebridHiddenFromNav();
+    final tbHidden = await ProviderCredentialPrefs.getTorboxHiddenFromNav();
+    final pikpakEnabled = await ProviderCredentialPrefs.getPikPakEnabled();
+    final pikpakHidden = await ProviderCredentialPrefs.getPikPakHiddenFromNav();
+    final webDavEnabled = await ProviderCredentialPrefs.getWebDavEnabled();
+    final webDavServers = await ProviderCredentialPrefs.getWebDavServers();
+    final webDavHidden = await ProviderCredentialPrefs.getWebDavHiddenFromNav();
     final premiumizeKey = await StorageService.getPremiumizeApiKey();
     final premiumizeEnabledPref =
-        await StorageService.getPremiumizeIntegrationEnabled();
-    final premiumizeHidden = await StorageService.getPremiumizeHiddenFromNav();
+        await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
+    final premiumizeHidden = await ProviderCredentialPrefs.getPremiumizeHiddenFromNav();
     final allDebridKey = await StorageService.getAllDebridApiKey();
     final allDebridEnabledPref =
-        await StorageService.getAllDebridIntegrationEnabled();
-    final allDebridHidden = await StorageService.getAllDebridHiddenFromNav();
+        await ProviderCredentialPrefs.getAllDebridIntegrationEnabled();
+    final allDebridHidden = await ProviderCredentialPrefs.getAllDebridHiddenFromNav();
     // Trakt/Simkl connection gates the Calendar tab. Login/logout of either
     // fires notifyIntegrationChanged(), so this re-reads on those events too.
     final traktAuthed = await TraktService.instance.isAuthenticated();

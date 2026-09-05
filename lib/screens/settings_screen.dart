@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:io' show Platform, exit;
 
@@ -351,8 +353,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       StorageService.hasRealDebridCredential(),
       StorageService.hasTorboxCredential(),
       PikPakApiService.instance.isAuthenticated(),
-      StorageService.getWebDavEnabled(),
-      StorageService.getWebDavServers(forSettings: true),
+      ProviderCredentialPrefs.getWebDavEnabled(),
+      ProviderCredentialPrefs.getWebDavServers(forSettings: true),
       StorageService.hasTraktCredential(),
       StorageService.getTraktTokenExpiry(),
       StorageService.getTraktUsername(),
@@ -1776,7 +1778,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirmed == true) {
-      await StorageService.clearAllPlaybackData();
+      await PlaybackProgressStore.clearAllPlaybackData();
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -1919,27 +1921,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await StorageService.deletePremiumizeApiKey();
     await StorageService.deleteAllDebridApiKey();
     AllDebridAccountService.clearUserInfo();
-    await StorageService.clearPikPakAuth();
-    await StorageService.clearWebDav();
+    await ProviderCredentialPrefs.clearPikPakAuth();
+    await ProviderCredentialPrefs.clearWebDav();
     await StorageService.clearTraktAuth();
     // Clears the token + username AND the in-memory library cache.
     await SimklService.instance.logout();
     // Clears the key + username AND the in-memory list/items cache.
     await MdblistService.instance.logout();
     await DownloadService.instance.clearDownloadDatabase();
-    await StorageService.clearAllPlaybackData();
-    await StorageService.clearContinueWatching();
-    await StorageService.clearPlaylist();
-    await StorageService.clearAllPlaylistMetadata();
+    await PlaybackProgressStore.clearAllPlaybackData();
+    await PlaybackProgressStore.clearContinueWatching();
+    await PlaybackProgressStore.clearPlaylist();
+    await PlaybackProgressStore.clearAllPlaylistMetadata();
     await StorageService.clearMyWatchlist();
     await StorageService.clearTorrentSearchHistory();
     await StorageService.clearAllStartupSettings();
     await StorageService.clearAllHomePageSettings();
-    await StorageService.clearAllIntegrationStates();
+    await ProviderCredentialPrefs.clearAllIntegrationStates();
     await StorageService.clearDebrifyTvProviderAndLegacy();
     await StorageService.clearAllFilterSettings();
     await StorageService.clearAllTorrentEngineSettings();
-    await StorageService.clearAllPostTorrentActions();
+    await ProviderCredentialPrefs.clearAllPostTorrentActions();
     await StorageService.clearAllDebrifyTvSettings();
     await DebrifyTvRepository.instance.clearAll();
     await StremioService.instance.clearAllAddons();

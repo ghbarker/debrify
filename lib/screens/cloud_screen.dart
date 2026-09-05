@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -6,7 +7,6 @@ import '../services/cloud/cloud_credentials.dart';
 import '../services/cloud/cloud_provider_id.dart';
 import '../services/cloud/cloud_provider_registry.dart';
 import '../services/main_page_bridge.dart';
-import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_theme_scope.dart';
 
@@ -213,13 +213,13 @@ class _CloudScreenState extends State<CloudScreen> {
   /// `_computeVisibleNavIndices` per-provider conditions exactly.
   Future<List<_CloudProviderInfo>> _computeAvailableProviders() async {
     final hidden = <CloudProviderId, bool>{
-      CloudProviderId.debrid: await StorageService.getRealDebridHiddenFromNav(),
-      CloudProviderId.torbox: await StorageService.getTorboxHiddenFromNav(),
-      CloudProviderId.pikpak: await StorageService.getPikPakHiddenFromNav(),
+      CloudProviderId.debrid: await ProviderCredentialPrefs.getRealDebridHiddenFromNav(),
+      CloudProviderId.torbox: await ProviderCredentialPrefs.getTorboxHiddenFromNav(),
+      CloudProviderId.pikpak: await ProviderCredentialPrefs.getPikPakHiddenFromNav(),
       CloudProviderId.premiumize:
-          await StorageService.getPremiumizeHiddenFromNav(),
+          await ProviderCredentialPrefs.getPremiumizeHiddenFromNav(),
       CloudProviderId.alldebrid:
-          await StorageService.getAllDebridHiddenFromNav(),
+          await ProviderCredentialPrefs.getAllDebridHiddenFromNav(),
     };
 
     final keys = <String>{};
@@ -230,11 +230,11 @@ class _CloudScreenState extends State<CloudScreen> {
       keys.add(CloudHubDispatch.hubKey(id));
     }
 
-    final webDavEnabled = await StorageService.getWebDavEnabled();
-    final webDavServers = await StorageService.getWebDavServers(
+    final webDavEnabled = await ProviderCredentialPrefs.getWebDavEnabled();
+    final webDavServers = await ProviderCredentialPrefs.getWebDavServers(
       forSettings: false,
     );
-    final wdHidden = await StorageService.getWebDavHiddenFromNav();
+    final wdHidden = await ProviderCredentialPrefs.getWebDavHiddenFromNav();
     if (webDavEnabled && webDavServers.isNotEmpty && !wdHidden) {
       keys.add(CloudHubDispatch.webDavKey);
     }

@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui show ImageFilter;
@@ -1866,7 +1867,7 @@ class _SearchScreenState extends State<SearchScreenHost>
 
   /// PikPak is "only" when it's enabled and no add/resolve provider has a key.
   Future<void> _refreshPikpakOnly() async {
-    final pikpak = await StorageService.getPikPakEnabled();
+    final pikpak = await ProviderCredentialPrefs.getPikPakEnabled();
     final rd = await StorageService.getApiKey();
     final tb = await StorageService.getTorboxApiKey();
     final pm = await StorageService.getPremiumizeApiKey();

@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 import '../utils/media_kit_init.dart';
 import 'dart:io';
@@ -1313,8 +1315,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
   Future<void> _loadLocalCompletionThresholds() async {
     final values = await Future.wait<int>([
-      StorageService.getMovieCompletionThreshold(),
-      StorageService.getEpisodeCompletionThreshold(),
+      PlaybackProgressStore.getMovieCompletionThreshold(),
+      PlaybackProgressStore.getEpisodeCompletionThreshold(),
     ]);
     if (!mounted) return;
     _movieCompletionThreshold = values[0];
@@ -1623,7 +1625,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     // user advances to a different episode while this is in flight, we key
     // off the episode that's actually current when the fetch resolves.
     if (_traktEpisodeProgress == null) {
-      final loaded = await StorageService.getEpisodeTraktProgress(
+      final loaded = await PlaybackProgressStore.getEpisodeTraktProgress(
         imdbId: imdbId,
       );
       if (_episodeTrackerProgressImdbId != imdbId) return null;
@@ -1680,7 +1682,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     // Await before resolving the episode identity for the same race-safety as
     // [_currentEpisodeTraktPercent].
     if (_simklEpisodeProgress == null) {
-      final loaded = await StorageService.getEpisodeSimklProgress(
+      final loaded = await PlaybackProgressStore.getEpisodeSimklProgress(
         imdbId: imdbId,
       );
       if (_episodeTrackerProgressImdbId != imdbId) return null;
@@ -1726,7 +1728,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     if (imdbId == null) return null;
     _bindEpisodeTrackerProgressIdentity(imdbId);
     if (_mdblistEpisodeProgress == null) {
-      final loaded = await StorageService.getEpisodeMdblistProgress(
+      final loaded = await PlaybackProgressStore.getEpisodeMdblistProgress(
         imdbId: imdbId,
       );
       if (_episodeTrackerProgressImdbId != imdbId) return null;
@@ -3613,7 +3615,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     SeriesPlaylist seriesPlaylist,
   ) async {
     try {
-      final lastEpisode = await StorageService.getLastPlayedEpisode(
+      final lastEpisode = await PlaybackProgressStore.getLastPlayedEpisode(
         seriesTitle: seriesPlaylist.seriesTitle ?? 'Unknown Series',
       );
 
@@ -5092,7 +5094,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       if (lang == null) {
         final key = _iptvSeriesAudioKey();
         if (key != null) {
-          lang = await StorageService.getIptvSeriesAudioLanguage(key);
+          lang = await IptvPrefs.getIptvSeriesAudioLanguage(key);
         }
       }
       lang ??= await StorageService.getDefaultAudioLanguage();
@@ -7123,7 +7125,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         widget.contentImdbId != null) {
       _currentEpisodeMarkedAsFinished = true;
       try {
-        await StorageService.markEpisodeAsFinished(
+        await PlaybackProgressStore.markEpisodeAsFinished(
           seriesTitle: widget.contentTitle ?? widget.title,
           season: widget.contentSeason!,
           episode: widget.contentEpisode!,
@@ -7148,7 +7150,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
         if (currentEpisode.seriesInfo.season != null &&
             currentEpisode.seriesInfo.episode != null) {
-          await StorageService.markEpisodeAsFinished(
+          await PlaybackProgressStore.markEpisodeAsFinished(
             seriesTitle: seriesPlaylist.seriesTitle!,
             season: currentEpisode.seriesInfo.season!,
             episode: currentEpisode.seriesInfo.episode!,
@@ -7171,7 +7173,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     _currentMovieMarkedAsFinished = true;
     try {
       await Future.wait([
-        StorageService.markMovieAsFinished(imdbId),
+        PlaybackProgressStore.markMovieAsFinished(imdbId),
         StorageService.removeVideoResume(_resume.key),
       ]);
     } catch (_) {
@@ -7198,7 +7200,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         // below its threshold is a rewatch, so restore it to normal local
         // Continue Watching behavior before the next resume save.
         _currentMovieRewatchStarted = true;
-        unawaited(StorageService.unmarkMovieAsFinished(movieImdbId));
+        unawaited(PlaybackProgressStore.unmarkMovieAsFinished(movieImdbId));
       }
       if (!_currentMovieMarkedAsFinished &&
           percent >= _movieCompletionThreshold) {
@@ -8028,7 +8030,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     if (imdbId == null || !imdbId.startsWith('tt')) return;
     if (widget.contentImdbId != null) return;
 
-    await StorageService.updatePlaylistItemImdbId(
+    await PlaybackProgressStore.updatePlaylistItemImdbId(
       imdbId,
       rdTorrentId: widget.rdTorrentId,
       torboxTorrentId: widget.torboxTorrentId,
@@ -8074,19 +8076,19 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     print('  Poster URL: $posterUrl');
     try {
       if (rdTorrentId != null && rdTorrentId.isNotEmpty) {
-        await StorageService.updatePlaylistItemPoster(
+        await PlaybackProgressStore.updatePlaylistItemPoster(
           posterUrl,
           rdTorrentId: rdTorrentId,
         );
       }
       if (torboxTorrentId != null && torboxTorrentId.isNotEmpty) {
-        await StorageService.updatePlaylistItemPoster(
+        await PlaybackProgressStore.updatePlaylistItemPoster(
           posterUrl,
           torboxTorrentId: torboxTorrentId,
         );
       }
       if (pikpakCollectionId != null && pikpakCollectionId.isNotEmpty) {
-        await StorageService.updatePlaylistItemPoster(
+        await PlaybackProgressStore.updatePlaylistItemPoster(
           posterUrl,
           pikpakCollectionId: pikpakCollectionId,
         );

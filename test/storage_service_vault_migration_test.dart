@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -43,7 +45,7 @@ void main() {
       'iptv_playlists': [legacy],
     });
 
-    final playlists = await StorageService.getIptvPlaylists();
+    final playlists = await IptvPrefs.getIptvPlaylists();
     expect(playlists, hasLength(1));
     expect(playlists.first.username, 'u1');
     expect(playlists.first.password, 'p1');
@@ -59,7 +61,7 @@ void main() {
     expect(stored['content'], startsWith('#EXTM3U'));
 
     // Round-trips through the sealed form.
-    final again = await StorageService.getIptvPlaylists();
+    final again = await IptvPrefs.getIptvPlaylists();
     expect(again.single.password, 'p1');
   });
 
@@ -75,14 +77,14 @@ void main() {
     ]);
     SharedPreferences.setMockInitialValues({'webdav_servers_v1': legacy});
 
-    final servers = await StorageService.getWebDavServers();
+    final servers = await ProviderCredentialPrefs.getWebDavServers();
     expect(servers, hasLength(1));
     expect(servers.first.password, 'hunter2');
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('webdav_servers_v1'),
         startsWith(SecretVault.prefix));
-    expect((await StorageService.getWebDavServers()).single.password,
+    expect((await ProviderCredentialPrefs.getWebDavServers()).single.password,
         'hunter2');
   });
 

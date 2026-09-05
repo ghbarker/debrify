@@ -340,8 +340,8 @@ void main() {
     test('legacy resume store is StorageService.upsertVideoResume', () {
       expect(origin, contains('StorageService.upsertVideoResume('));
       expect(origin, contains('StorageService.getVideoResume('));
-      expect(origin, contains('StorageService.saveVideoPlaybackState('));
-      expect(origin, contains('StorageService.saveSeriesPlaybackState('));
+      expect(origin, contains('PlaybackProgressStore.saveVideoPlaybackState('));
+      expect(origin, contains('PlaybackProgressStore.saveSeriesPlaybackState('));
     });
   });
 

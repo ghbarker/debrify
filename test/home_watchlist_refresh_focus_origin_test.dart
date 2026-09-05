@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:convert';
 
 import 'package:debrify/models/stremio_addon.dart';
@@ -49,7 +50,7 @@ void main() {
 
     await StorageService.setMyWatchlistItem(series, true);
     await StorageService.setHomeContinueWatchingEnabled(true);
-    await StorageService.saveContinueWatchingItem(
+    await PlaybackProgressStore.saveContinueWatchingItem(
       imdbId: 'tt1234567',
       title: 'Returned CW',
       contentType: 'movie',

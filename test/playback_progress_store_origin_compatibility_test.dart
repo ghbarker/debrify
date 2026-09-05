@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:convert';
 
 import 'package:debrify/services/storage_service.dart';
@@ -64,7 +65,7 @@ void main() {
     ];
     for (final (input, expected) in cases) {
       expect(
-        StorageService.computePlaylistDedupeKey(input),
+        PlaybackProgressStore.computePlaylistDedupeKey(input),
         expected,
         reason: '$input',
       );
@@ -84,18 +85,18 @@ void main() {
           'ids': ['2', '1'],
         },
       ];
-      await StorageService.savePlaylistItemsRaw(rows);
+      await PlaybackProgressStore.savePlaylistItemsRaw(rows);
       expect(prefs.getString('user_playlist_v1'), jsonEncode(rows));
-      expect(await StorageService.getPlaylistItemsRaw(), rows);
+      expect(await PlaybackProgressStore.getPlaylistItemsRaw(), rows);
       await prefs.setString('user_playlist_v1', '[false,{"title":"External"}]');
-      expect(await StorageService.getPlaylistItemsRaw(), [
+      expect(await PlaybackProgressStore.getPlaylistItemsRaw(), [
         {'title': 'External'},
       ]);
       for (final raw in ['{', '{}', 'null']) {
         await prefs.setString('user_playlist_v1', raw);
-        expect(await StorageService.getPlaylistItemsRaw(), isEmpty);
+        expect(await PlaybackProgressStore.getPlaylistItemsRaw(), isEmpty);
       }
-      await StorageService.clearPlaylist();
+      await PlaybackProgressStore.clearPlaylist();
       expect(prefs.containsKey('user_playlist_v1'), isFalse);
     },
   );
@@ -108,24 +109,24 @@ void main() {
         'torboxTorrentId': 7,
         'title': 'Synthetic',
       };
-      expect(await StorageService.addPlaylistItemRaw(item), isTrue);
+      expect(await PlaybackProgressStore.addPlaylistItemRaw(item), isTrue);
       expect(
-        await StorageService.addPlaylistItemRaw({...item, 'title': 'Renamed'}),
+        await PlaybackProgressStore.addPlaylistItemRaw({...item, 'title': 'Renamed'}),
         isFalse,
       );
       expect(item.containsKey('addedAt'), isFalse);
-      final saved = (await StorageService.getPlaylistItemsRaw()).single;
+      final saved = (await PlaybackProgressStore.getPlaylistItemsRaw()).single;
       expect(saved['addedAt'], isA<int>());
-      expect(StorageService.getPlaylistItemLastPlayed(saved), isNull);
-      await StorageService.updatePlaylistItemLastPlayed(item);
+      expect(PlaybackProgressStore.getPlaylistItemLastPlayed(saved), isNull);
+      await PlaybackProgressStore.updatePlaylistItemLastPlayed(item);
       expect(
-        StorageService.getPlaylistItemLastPlayed(
-          (await StorageService.getPlaylistItemsRaw()).single,
+        PlaybackProgressStore.getPlaylistItemLastPlayed(
+          (await PlaybackProgressStore.getPlaylistItemsRaw()).single,
         ),
         isA<int>(),
       );
-      await StorageService.removePlaylistItemByKey('torbox|torbox:7');
-      expect(await StorageService.getPlaylistItemsRaw(), isEmpty);
+      await PlaybackProgressStore.removePlaylistItemByKey('torbox|torbox:7');
+      expect(await PlaybackProgressStore.getPlaylistItemsRaw(), isEmpty);
     },
   );
 
@@ -138,20 +139,20 @@ void main() {
         'playlist_favorites_v1',
         '{"realdebrid|hash:abc":false}',
       );
-      expect(await StorageService.isPlaylistItemFavorited(item), isFalse);
-      expect(await StorageService.getPlaylistFavoriteKeys(), {
+      expect(await PlaybackProgressStore.isPlaylistItemFavorited(item), isFalse);
+      expect(await PlaybackProgressStore.getPlaylistFavoriteKeys(), {
         'realdebrid|hash:abc',
       });
-      await StorageService.setPlaylistItemFavorited(item, true);
+      await PlaybackProgressStore.setPlaylistItemFavorited(item, true);
       expect(
         prefs.getString('playlist_favorites_v1'),
         '{"realdebrid|hash:abc":true}',
       );
-      await StorageService.setPlaylistItemFavorited(item, false);
+      await PlaybackProgressStore.setPlaylistItemFavorited(item, false);
       expect(prefs.getString('playlist_favorites_v1'), '{}');
       await prefs.setString('playlist_view_modes_v1', '{');
-      expect(await StorageService.getPlaylistItemViewMode(item), isNull);
-      await StorageService.savePlaylistItemViewMode(
+      expect(await PlaybackProgressStore.getPlaylistItemViewMode(item), isNull);
+      await PlaybackProgressStore.savePlaylistItemViewMode(
         item,
         'custom-unvalidated-mode',
       );
@@ -160,7 +161,7 @@ void main() {
         '{"realdebrid|hash:abc":"custom-unvalidated-mode"}',
       );
       expect(
-        await StorageService.getPlaylistItemViewMode(item),
+        await PlaybackProgressStore.getPlaylistItemViewMode(item),
         'custom-unvalidated-mode',
       );
       for (final key in [
@@ -170,7 +171,7 @@ void main() {
         await prefs.setString(key, '{}');
       }
       await prefs.setString('unrelated', 'keep');
-      await StorageService.clearAllPlaylistMetadata();
+      await PlaybackProgressStore.clearAllPlaylistMetadata();
       expect(prefs.getKeys(), {'unrelated'});
     },
   );
@@ -179,12 +180,12 @@ void main() {
     'series and video track preferences preserve nested keys and fresh reads',
     () async {
       final prefs = await SharedPreferences.getInstance();
-      await StorageService.saveSeriesTrackPreferences(
+      await PlaybackProgressStore.saveSeriesTrackPreferences(
         seriesTitle: 'A.B',
         audioTrackId: 'auto',
         subtitleTrackId: 'no',
       );
-      await StorageService.saveVideoTrackPreferences(
+      await PlaybackProgressStore.saveVideoTrackPreferences(
         videoTitle: 'A.B',
         audioTrackId: '2',
         subtitleTrackId: '3',
@@ -193,24 +194,24 @@ void main() {
           jsonDecode(prefs.getString('playback_state_v1')!)
               as Map<String, dynamic>;
       expect(map.keys.toSet(), {'series_a_b', 'video_a_b'});
-      final series = await StorageService.getSeriesTrackPreferences(
+      final series = await PlaybackProgressStore.getSeriesTrackPreferences(
         seriesTitle: 'A.B',
       );
       expect(series!['audioTrackId'], 'auto');
       expect(series['subtitleTrackId'], 'no');
       expect(series['updatedAt'], isA<int>());
-      final video = await StorageService.getVideoTrackPreferences(
+      final video = await PlaybackProgressStore.getVideoTrackPreferences(
         videoTitle: 'A.B',
       );
       expect(video!['audioTrackId'], '2');
       expect(video['subtitleTrackId'], '3');
       await prefs.setString('playback_state_v1', '{}');
       expect(
-        await StorageService.getSeriesTrackPreferences(seriesTitle: 'A.B'),
+        await PlaybackProgressStore.getSeriesTrackPreferences(seriesTitle: 'A.B'),
         isNull,
       );
       expect(
-        await StorageService.getVideoTrackPreferences(videoTitle: 'A.B'),
+        await PlaybackProgressStore.getVideoTrackPreferences(videoTitle: 'A.B'),
         isNull,
       );
     },
@@ -230,38 +231,38 @@ void main() {
     'continue watching insert is case-sensitive but removal is normalized',
     () async {
       final prefs = await SharedPreferences.getInstance();
-      await StorageService.saveContinueWatchingItem(
+      await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'TT1',
         title: 'Upper',
         contentType: 'movie',
       );
-      await StorageService.saveContinueWatchingItem(
+      await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'tt1',
         title: 'Lower',
         contentType: 'movie',
       );
-      expect((await StorageService.getContinueWatchingItems()).length, 2);
+      expect((await PlaybackProgressStore.getContinueWatchingItems()).length, 2);
       final raw = jsonDecode(prefs.getString('continue_watching_v1')!) as List;
       expect(raw.first, containsPair('posterUrl', null));
       expect(raw.first['updatedAt'], isA<int>());
-      await StorageService.removeContinueWatchingItem(' TT1 ');
-      expect(await StorageService.getContinueWatchingItems(), isEmpty);
+      await PlaybackProgressStore.removeContinueWatchingItem(' TT1 ');
+      expect(await PlaybackProgressStore.getContinueWatchingItems(), isEmpty);
       await prefs.setString(
         'continue_watching_v1',
         jsonEncode([
           for (var i = 0; i < 51; i++) {'imdbId': 'tt$i', 'updatedAt': i},
         ]),
       );
-      await StorageService.saveContinueWatchingItem(
+      await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'new',
         title: 'New',
         contentType: 'series',
       );
-      final items = await StorageService.getContinueWatchingItems();
+      final items = await PlaybackProgressStore.getContinueWatchingItems();
       expect(items.length, 50);
       expect(items.first['imdbId'], 'new');
       expect(items.any((row) => row['imdbId'] == 'tt50'), isFalse);
-      await StorageService.clearContinueWatching();
+      await PlaybackProgressStore.clearContinueWatching();
       expect(prefs.containsKey('continue_watching_v1'), isFalse);
     },
   );
@@ -272,21 +273,21 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final revision = StorageService.localCompletionRevision;
       final start = revision.value;
-      await StorageService.setSeriesExplicitlyWatched(' TT2 ', watched: true);
-      await StorageService.setSeriesExplicitlyWatched('tt1', watched: true);
-      await StorageService.setSeriesExplicitlyWatched('TT2', watched: true);
-      await StorageService.setSeriesExplicitlyWatched(' ', watched: true);
+      await PlaybackProgressStore.setSeriesExplicitlyWatched(' TT2 ', watched: true);
+      await PlaybackProgressStore.setSeriesExplicitlyWatched('tt1', watched: true);
+      await PlaybackProgressStore.setSeriesExplicitlyWatched('TT2', watched: true);
+      await PlaybackProgressStore.setSeriesExplicitlyWatched(' ', watched: true);
       expect(prefs.getStringList('explicitly_watched_series_v1'), [
         'tt1',
         'tt2',
       ]);
-      expect(await StorageService.getExplicitlyWatchedSeriesIds(), {
+      expect(await PlaybackProgressStore.getExplicitlyWatchedSeriesIds(), {
         'tt1',
         'tt2',
       });
       expect(revision.value - start, 2);
-      await StorageService.setSeriesExplicitlyWatched('tt1', watched: false);
-      await StorageService.setSeriesExplicitlyWatched('tt2', watched: false);
+      await PlaybackProgressStore.setSeriesExplicitlyWatched('tt1', watched: false);
+      await PlaybackProgressStore.setSeriesExplicitlyWatched('tt2', watched: false);
       expect(prefs.containsKey('explicitly_watched_series_v1'), isFalse);
       expect(revision.value - start, 4);
     },
@@ -295,7 +296,7 @@ void main() {
   test(
     'poster and IMDb use different provider precedence and preserve existing IMDb',
     () async {
-      await StorageService.savePlaylistItemsRaw([
+      await PlaybackProgressStore.savePlaylistItemsRaw([
         {
           'provider': 'torbox',
           'torboxTorrentId': 7,
@@ -318,7 +319,7 @@ void main() {
         },
       ]);
       expect(
-        await StorageService.updatePlaylistItemPoster(
+        await PlaybackProgressStore.updatePlaylistItemPoster(
           'synthetic-poster',
           torboxTorrentId: '7',
           premiumizeHash: 'abc',
@@ -326,30 +327,30 @@ void main() {
         isTrue,
       );
       expect(
-        await StorageService.updatePlaylistItemImdbId(
+        await PlaybackProgressStore.updatePlaylistItemImdbId(
           'tt-new',
           torboxTorrentId: '7',
           premiumizeHash: 'abc',
         ),
         isTrue,
       );
-      var rows = await StorageService.getPlaylistItemsRaw();
+      var rows = await PlaybackProgressStore.getPlaylistItemsRaw();
       expect(rows[0]['posterUrl'], 'synthetic-poster');
       expect(rows[0]['imdbId'], 'tt-old');
       expect(rows[1]['imdbId'], 'tt-new');
       expect(
-        await StorageService.updatePlaylistItemImdbId(
+        await PlaybackProgressStore.updatePlaylistItemImdbId(
           'tt-replacement',
           torboxTorrentId: '7',
         ),
         isTrue,
       );
       expect(
-        (await StorageService.getPlaylistItemsRaw())[0]['imdbId'],
+        (await PlaybackProgressStore.getPlaylistItemsRaw())[0]['imdbId'],
         'tt-old',
       );
       expect(
-        await StorageService.updatePlaylistItemImdbId(
+        await PlaybackProgressStore.updatePlaylistItemImdbId(
           'tt-replacement',
           torboxTorrentId: '7',
           force: true,
@@ -357,21 +358,21 @@ void main() {
         isTrue,
       );
       expect(
-        await StorageService.updatePlaylistItemPoster(
+        await PlaybackProgressStore.updatePlaylistItemPoster(
           'miss',
           pikpakCollectionId: 'second',
         ),
         isFalse,
       );
       expect(
-        await StorageService.updatePlaylistItemPoster(
+        await PlaybackProgressStore.updatePlaylistItemPoster(
           'hit',
           pikpakCollectionId: 'first',
         ),
         isTrue,
       );
       expect(
-        await StorageService.updatePlaylistItemPoster(
+        await PlaybackProgressStore.updatePlaylistItemPoster(
           'web',
           webDavServerId: 'server',
           webDavPath: '/Case',
@@ -379,14 +380,14 @@ void main() {
         isTrue,
       );
       expect(
-        await StorageService.updatePlaylistItemPoster(
+        await PlaybackProgressStore.updatePlaylistItemPoster(
           'miss',
           webDavServerId: 'server',
           webDavPath: '/case',
         ),
         isFalse,
       );
-      rows = await StorageService.getPlaylistItemsRaw();
+      rows = await PlaybackProgressStore.getPlaylistItemsRaw();
       expect(rows[0]['imdbId'], 'tt-replacement');
       expect(rows[2]['posterUrl'], 'hit');
       expect(rows[3]['posterUrl'], 'web');

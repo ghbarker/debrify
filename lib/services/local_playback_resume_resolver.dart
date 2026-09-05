@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'storage_service.dart';
 
 /// Determines which local bookmark owns resume for the current playback.
@@ -25,10 +26,10 @@ class LocalPlaybackResumeResolver {
     if (policy == PlaybackResumePolicy.catalogCanonical && wanted.isNotEmpty) {
       // Completion is canonical too. In particular, do not resurrect a legacy
       // exact-source row that predates IMDb being written into playback state.
-      if (await StorageService.isMovieFinished(wanted)) return null;
+      if (await PlaybackProgressStore.isMovieFinished(wanted)) return null;
 
       final reads = await Future.wait<Map<String, dynamic>?>([
-        StorageService.getVideoPlaybackStateByImdbId(wanted),
+        PlaybackProgressStore.getVideoPlaybackStateByImdbId(wanted),
         StorageService.getVideoPlaybackState(videoTitle: resumeId),
       ]);
       final canonical = reads[0];
@@ -47,7 +48,7 @@ class LocalPlaybackResumeResolver {
     );
     if (exact != null) return exact;
     if (wanted.isEmpty) return null;
-    return StorageService.getVideoPlaybackStateByImdbId(wanted);
+    return PlaybackProgressStore.getVideoPlaybackStateByImdbId(wanted);
   }
 
   static Future<Map<String, dynamic>?> episode({
@@ -59,7 +60,7 @@ class LocalPlaybackResumeResolver {
   }) async {
     if (policy != PlaybackResumePolicy.catalogCanonical ||
         imdbId?.trim().isNotEmpty != true) {
-      return StorageService.getSeriesPlaybackState(
+      return PlaybackProgressStore.getSeriesPlaybackState(
         seriesTitle: seriesTitle,
         season: season,
         episode: episode,
@@ -67,11 +68,11 @@ class LocalPlaybackResumeResolver {
     }
 
     final reads = await Future.wait<dynamic>([
-      StorageService.getMergedEpisodeProgress(
+      PlaybackProgressStore.getMergedEpisodeProgress(
         seriesTitle: seriesTitle,
         imdbId: imdbId!.trim(),
       ),
-      StorageService.getSeriesPlaybackState(
+      PlaybackProgressStore.getSeriesPlaybackState(
         seriesTitle: seriesTitle,
         season: season,
         episode: episode,

@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -435,7 +437,7 @@ class FavRowsController {
   /// [IptvChannel] objects from it in the store's user-defined order.
   Future<void> loadIptvFavorites() async {
     try {
-      final map = await StorageService.getIptvFavoriteChannels();
+      final map = await IptvPrefs.getIptvFavoriteChannels();
       if (map.isEmpty) {
         if (!mounted) return;
         commit(() => iptvFavChannels = const []);
@@ -451,7 +453,7 @@ class FavRowsController {
           group: meta['group'] as String?,
           duration: -1, // live stream
           attributes: const {},
-          httpHeaders: StorageService.iptvFavoriteHeaders(meta),
+          httpHeaders: IptvPrefs.iptvFavoriteHeaders(meta),
         );
       }).toList();
       if (!mounted) return;
@@ -506,12 +508,12 @@ class FavRowsController {
       }..remove(StorageService.iptvFavoritesListId);
       List<FavouritesIptvListRow> next = const [];
       if (wanted.isNotEmpty) {
-        final metas = await StorageService.getIptvLists();
+        final metas = await IptvPrefs.getIptvLists();
         final rows = <FavouritesIptvListRow>[];
         final prevById = {for (final r in iptvListRows) r.listId: r};
         for (final meta in metas) {
           if (!wanted.contains(meta.id) || meta.isFavorites) continue;
-          final map = await StorageService.getIptvListChannels(meta.id);
+          final map = await IptvPrefs.getIptvListChannels(meta.id);
           if (token != iptvListRowsLoadToken || !mounted) return;
           final channels = <IptvChannel>[];
           map.forEach((url, m) {
@@ -531,7 +533,7 @@ class FavRowsController {
                   if ((m['playlistId'] as String?)?.isNotEmpty ?? false)
                     'list_playlist_id': m['playlistId'] as String,
                 },
-                httpHeaders: StorageService.iptvFavoriteHeaders(m),
+                httpHeaders: IptvPrefs.iptvFavoriteHeaders(m),
               ),
             );
           });
@@ -627,7 +629,7 @@ class FavRowsController {
         : rest.substring(0, slash);
     final seriesId = slash < 0 ? rest : rest.substring(slash + 1);
     if (seriesId.isEmpty) return;
-    final playlists = await StorageService.getIptvPlaylists(forSettings: false);
+    final playlists = await IptvPrefs.getIptvPlaylists(forSettings: false);
     if (!mounted) return;
     IptvPlaylist? origin;
     for (final p in playlists) {
@@ -830,7 +832,7 @@ class FavRowsController {
         return;
       }
 
-      final playlists = await StorageService.getIptvPlaylists(
+      final playlists = await IptvPrefs.getIptvPlaylists(
         forSettings: false,
       );
       if (!mounted) return;
@@ -886,9 +888,9 @@ class FavRowsController {
   Future<void> loadPlaylistFavorites() async {
     try {
       final results = await Future.wait([
-        StorageService.getPlaylistItemsRaw(),
-        StorageService.getPlaylistFavoriteKeys(),
-        StorageService.getAllPlaylistPosterOverrides(),
+        PlaybackProgressStore.getPlaylistItemsRaw(),
+        PlaybackProgressStore.getPlaylistFavoriteKeys(),
+        PlaybackProgressStore.getAllPlaylistPosterOverrides(),
       ]);
       final items = results[0] as List<Map<String, dynamic>>;
       final favKeys = results[1] as Set<String>;
@@ -902,12 +904,12 @@ class FavRowsController {
       });
       // Apply any per-item poster override in a single pass.
       for (final item in items) {
-        final key = StorageService.getPlaylistItemUniqueKey(item);
+        final key = PlaybackProgressStore.getPlaylistItemUniqueKey(item);
         final ov = overrides[key];
         if (ov != null && ov.isNotEmpty) item['posterUrl'] = ov;
       }
 
-      final progress = await StorageService.buildPlaylistProgressMap(items);
+      final progress = await PlaybackProgressStore.buildPlaylistProgressMap(items);
       if (!mounted) return;
       commit(() {
         playlistItems = items;
@@ -947,7 +949,7 @@ class FavRowsController {
   /// (the Home section reads `position`/`duration`, which are never present — so
   /// its bar silently never draws; read the real keys here so ours works).
   double? playlistProgressFor(Map<String, dynamic> item) {
-    final key = StorageService.computePlaylistDedupeKey(item);
+    final key = PlaybackProgressStore.computePlaylistDedupeKey(item);
     final p = playlistProgress[key];
     if (p == null) return null;
     final position = (p['positionMs'] as num?)?.toInt();
@@ -963,7 +965,7 @@ class FavRowsController {
   /// first three actions as primary pills.
   Future<void> onPlaylistItemTap(Map<String, dynamic> item) async {
     if (!mounted) return;
-    final dedupeKey = StorageService.computePlaylistDedupeKey(item);
+    final dedupeKey = PlaybackProgressStore.computePlaylistDedupeKey(item);
     final isFavorited = playlistFavKeys.contains(dedupeKey);
     final hasProgress = playlistProgress.containsKey(dedupeKey);
     final isCollection = (item['kind'] as String?) != 'single';
@@ -1065,7 +1067,7 @@ class FavRowsController {
         loadPlaylistFavorites();
         break;
       case 'favorite':
-        await StorageService.setPlaylistItemFavorited(item, !isFavorited);
+        await PlaybackProgressStore.setPlaylistItemFavorited(item, !isFavorited);
         HapticFeedback.mediumImpact();
         loadPlaylistFavorites();
         break;
@@ -1073,7 +1075,7 @@ class FavRowsController {
         // Empty (not 'Unknown') fallback so a null-titled item clears nothing
         // instead of fuzzy-matching the literal word 'unknown' and wiping an
         // unrelated item's resume point — matches the Home section.
-        await StorageService.clearPlaylistProgress(
+        await PlaybackProgressStore.clearPlaylistProgress(
           title: (item['title'] as String?) ?? '',
         );
         HapticFeedback.mediumImpact();
@@ -1130,8 +1132,8 @@ class FavRowsController {
       ),
     );
     if (confirmed == true && mounted) {
-      final dedupeKey = StorageService.computePlaylistDedupeKey(item);
-      await StorageService.removePlaylistItemByKey(dedupeKey);
+      final dedupeKey = PlaybackProgressStore.computePlaylistDedupeKey(item);
+      await PlaybackProgressStore.removePlaylistItemByKey(dedupeKey);
       HapticFeedback.mediumImpact();
       loadPlaylistFavorites();
     }

@@ -1,10 +1,10 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/debrid_download.dart';
 import '../models/rd_torrent.dart';
 import '../models/rd_user.dart';
 import '../models/rd_file_node.dart';
-import '../services/storage_service.dart';
 import '../utils/concurrency.dart';
 import '../utils/file_utils.dart';
 import '../utils/json_isolate.dart';
@@ -27,7 +27,7 @@ class DebridService {
 
   // Get the saved endpoint preference (defaults to primary)
   static Future<String> _getBaseUrl() async {
-    return await StorageService.getRdEndpoint();
+    return await ProviderCredentialPrefs.getRdEndpoint();
   }
 
   // Validate API key with automatic fallback to backup endpoint
@@ -49,7 +49,7 @@ class DebridService {
 
       if (response.statusCode == 200) {
         // Primary endpoint works - save it
-        await StorageService.saveRdEndpoint(_primaryEndpoint);
+        await ProviderCredentialPrefs.saveRdEndpoint(_primaryEndpoint);
         final data = await decodeJsonAsync(response.body);
         return {
           'success': true,
@@ -89,7 +89,7 @@ class DebridService {
 
         if (response.statusCode == 200) {
           // Backup endpoint works - save it
-          await StorageService.saveRdEndpoint(_backupEndpoint);
+          await ProviderCredentialPrefs.saveRdEndpoint(_backupEndpoint);
           final data = await decodeJsonAsync(response.body);
           return {
             'success': true,
@@ -566,7 +566,7 @@ class DebridService {
 
       // Step 3: Get file selection preference (use temp selection if provided, otherwise use saved preference)
       final fileSelection =
-          tempFileSelection ?? await StorageService.getFileSelection();
+          tempFileSelection ?? await ProviderCredentialPrefs.getFileSelection();
       List<int> fileIdsToSelect = [];
 
       if (fileSelection == 'all') {
@@ -681,7 +681,7 @@ class DebridService {
       List<dynamic> links = updatedInfo['links'] as List<dynamic>? ?? const [];
 
       // Smart media fallback chain if initial 'smart' video selection yielded no links
-      if ((tempFileSelection ?? await StorageService.getFileSelection()) ==
+      if ((tempFileSelection ?? await ProviderCredentialPrefs.getFileSelection()) ==
           'smart') {
         // If we selected videos in smart mode and there are no links, try largest video then all files
         // Determine whether we selected videos by checking if fileIdsToSelect is not 'all' and all are videos

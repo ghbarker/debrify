@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -11,7 +13,6 @@ import '../../services/analytics_service.dart';
 import '../../services/download_service.dart';
 import '../../services/main_page_bridge.dart';
 import '../../widgets/tv_text_field.dart';
-import '../../services/storage_service.dart';
 import '../../services/video_player_launcher.dart';
 import '../../services/webdav_service.dart';
 import '../../theme/app_theme.dart';
@@ -114,7 +115,7 @@ class _WebDavFilesScreenState extends State<WebDavFilesScreen> {
   Future<void> _loadSettingsAndRoot() async {
     final configs = await WebDavService.getConfigs();
     final config = await WebDavService.getConfig();
-    final showVideosOnly = await StorageService.getWebDavShowVideosOnly();
+    final showVideosOnly = await ProviderCredentialPrefs.getWebDavShowVideosOnly();
     if (!mounted) return;
     setState(() {
       _configs = configs;
@@ -281,7 +282,7 @@ class _WebDavFilesScreenState extends State<WebDavFilesScreen> {
   }
 
   Future<void> _selectConfig(String id) async {
-    await StorageService.setSelectedWebDavServerId(id);
+    await ProviderCredentialPrefs.setSelectedWebDavServerId(id);
     WebDavConfig? selected;
     for (final config in _configs) {
       if (config.id == id) {
@@ -414,7 +415,7 @@ class _WebDavFilesScreenState extends State<WebDavFilesScreen> {
     }
 
     try {
-      final added = await StorageService.addPlaylistItemRaw({
+      final added = await PlaybackProgressStore.addPlaylistItemRaw({
         'provider': 'webdav',
         'title': FileUtils.cleanPlaylistTitle(file.name),
         'kind': 'single',
@@ -463,7 +464,7 @@ class _WebDavFilesScreenState extends State<WebDavFilesScreen> {
         0,
         (sum, file) => sum + (file.sizeBytes ?? 0),
       );
-      final added = await StorageService.addPlaylistItemRaw({
+      final added = await PlaybackProgressStore.addPlaylistItemRaw({
         'provider': 'webdav',
         'title': FileUtils.cleanPlaylistTitle(folder.name),
         'kind': 'collection',

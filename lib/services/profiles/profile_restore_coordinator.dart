@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:convert';
 import 'dart:math';
 
@@ -7,7 +8,6 @@ import '../../models/profiles/profile_policy.dart';
 import '../../models/profiles/user_profile.dart';
 import '../../services/backup_restore_service.dart';
 import '../../services/iptv_transfer_payload.dart';
-import '../../services/storage_service.dart';
 import '../../utils/stremio_url.dart';
 import 'connection_resource_service.dart';
 import 'device_key_provider.dart';
@@ -135,7 +135,7 @@ class ProfileRestoreCoordinator {
             package.sourceVersion >= PortableProfilePackage.version,
       );
       _validatePreferenceOverlay(values, includeCredentialEngineSettings: true);
-      StorageService.rearmGhostPurgeForImportedPlayback(values);
+      PlaybackProgressStore.rearmGhostPurgeForImportedPlayback(values);
       final id = _newId('profile');
       if (profileIds.putIfAbsent(backupId, () => id) != id) {
         throw const FormatException('Duplicate imported profile ID');
@@ -617,7 +617,7 @@ class ProfileRestoreCoordinator {
     // Merge-mode restore keeps destination keys the package omits, so imported
     // playback must re-arm the purge or its ghosts are stranded behind an
     // already-satisfied generation marker.
-    StorageService.rearmGhostPurgeForImportedPlayback(values);
+    PlaybackProgressStore.rearmGhostPurgeForImportedPlayback(values);
 
     final operationId = _newId('restore');
     final current = ProfileRuntime.capture();

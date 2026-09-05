@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -152,7 +153,7 @@ void main() {
 
     late Map<String, Map<String, dynamic>> favorites;
     await tester.runAsync(() async {
-      favorites = await StorageService.getIptvFavoriteChannels();
+      favorites = await IptvPrefs.getIptvFavoriteChannels();
     });
     expect(favorites.keys, ['http://h/b', 'http://h/a', 'http://h/c']);
     expect(tester.takeException(), isNull);
@@ -227,7 +228,7 @@ void main() {
     await tester.pump();
     late Map<String, Map<String, dynamic>> favorites;
     await tester.runAsync(() async {
-      favorites = await StorageService.getIptvFavoriteChannels();
+      favorites = await IptvPrefs.getIptvFavoriteChannels();
     });
     expect(favorites.keys.first, 'http://h/g');
     expect(favorites.keys.elementAt(1), 'http://h/a');
@@ -251,7 +252,7 @@ void main() {
     await tester.pump();
     late Map<String, Map<String, dynamic>> favorites;
     await tester.runAsync(() async {
-      favorites = await StorageService.getIptvFavoriteChannels();
+      favorites = await IptvPrefs.getIptvFavoriteChannels();
     });
     expect(favorites.keys.last, 'http://h/a');
     expect(tester.takeException(), isNull);

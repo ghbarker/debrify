@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:flutter/material.dart';
 import '../../utils/tv_reveal.dart';
 import 'package:flutter/services.dart';
@@ -7,7 +8,6 @@ import '../../models/profiles/profile_policy.dart';
 import '../../services/analytics_service.dart';
 import '../../services/main_page_bridge.dart';
 import '../../services/profiles/profile_async_authorization.dart';
-import '../../services/storage_service.dart';
 import '../../services/webdav_service.dart';
 import '../../utils/platform_util.dart';
 import '../../utils/tv_keys.dart';
@@ -84,13 +84,13 @@ class _WebDavSettingsPageState extends State<WebDavSettingsPage> {
   }
 
   Future<void> _load() async {
-    final servers = await StorageService.getWebDavServers(forSettings: true);
-    final selected = await StorageService.getSelectedWebDavServer(
+    final servers = await ProviderCredentialPrefs.getWebDavServers(forSettings: true);
+    final selected = await ProviderCredentialPrefs.getSelectedWebDavServer(
       forSettings: true,
     );
-    final enabled = await StorageService.getWebDavEnabled();
-    final hidden = await StorageService.getWebDavHiddenFromNav();
-    final showVideosOnly = await StorageService.getWebDavShowVideosOnly();
+    final enabled = await ProviderCredentialPrefs.getWebDavEnabled();
+    final hidden = await ProviderCredentialPrefs.getWebDavHiddenFromNav();
+    final showVideosOnly = await ProviderCredentialPrefs.getWebDavShowVideosOnly();
     if (!mounted) return;
     setState(() {
       _servers = servers;
@@ -156,7 +156,7 @@ class _WebDavSettingsPageState extends State<WebDavSettingsPage> {
       final WebDavConfig savedConfig;
       if (authorization == null) {
         await WebDavService.testConnection(config);
-        savedConfig = await StorageService.upsertWebDavServer(config);
+        savedConfig = await ProviderCredentialPrefs.upsertWebDavServer(config);
       } else {
         await authorization.runIfCurrent(
           () => WebDavService.testConnection(config),
@@ -165,10 +165,10 @@ class _WebDavSettingsPageState extends State<WebDavSettingsPage> {
         // initiating profile scope. A profile switch/revocation cannot redirect
         // this credential into the newly visible profile.
         savedConfig = await authorization.runIfCurrent(
-          () => StorageService.upsertWebDavServer(config),
+          () => ProviderCredentialPrefs.upsertWebDavServer(config),
         );
       }
-      final servers = await StorageService.getWebDavServers(forSettings: true);
+      final servers = await ProviderCredentialPrefs.getWebDavServers(forSettings: true);
       if (!mounted) return;
       setState(() {
         _servers = servers;
@@ -189,10 +189,10 @@ class _WebDavSettingsPageState extends State<WebDavSettingsPage> {
   Future<void> _disconnect() async {
     if (_editingReadOnly) return;
     if (_editingId != null) {
-      await StorageService.deleteWebDavServer(_editingId!);
+      await ProviderCredentialPrefs.deleteWebDavServer(_editingId!);
     }
-    final servers = await StorageService.getWebDavServers(forSettings: true);
-    final selected = await StorageService.getSelectedWebDavServer(
+    final servers = await ProviderCredentialPrefs.getWebDavServers(forSettings: true);
+    final selected = await ProviderCredentialPrefs.getSelectedWebDavServer(
       forSettings: true,
     );
     if (!mounted) return;
@@ -249,19 +249,19 @@ class _WebDavSettingsPageState extends State<WebDavSettingsPage> {
 
   Future<void> _setEnabled(bool value) async {
     setState(() => _enabled = value);
-    await StorageService.setWebDavEnabled(value);
+    await ProviderCredentialPrefs.setWebDavEnabled(value);
     MainPageBridge.notifyIntegrationChanged();
   }
 
   Future<void> _setHidden(bool value) async {
     setState(() => _hiddenFromNav = value);
-    await StorageService.setWebDavHiddenFromNav(value);
+    await ProviderCredentialPrefs.setWebDavHiddenFromNav(value);
     MainPageBridge.notifyIntegrationChanged();
   }
 
   Future<void> _setShowVideosOnly(bool value) async {
     setState(() => _showVideosOnly = value);
-    await StorageService.setWebDavShowVideosOnly(value);
+    await ProviderCredentialPrefs.setWebDavShowVideosOnly(value);
   }
 
   @override
@@ -416,7 +416,7 @@ class _WebDavSettingsPageState extends State<WebDavSettingsPage> {
                               ),
                             ),
                             onTap: () async {
-                              await StorageService.setSelectedWebDavServerId(
+                              await ProviderCredentialPrefs.setSelectedWebDavServerId(
                                 server.id,
                               );
                               _editServer(server);

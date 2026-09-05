@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -11,7 +12,6 @@ import '../services/stremio_service.dart';
 import '../services/trakt/trakt_episode_model.dart';
 import '../services/trakt/trakt_service.dart';
 import '../services/tvmaze_service.dart';
-import '../services/storage_service.dart';
 import '../services/local_series_completion_service.dart';
 import '../utils/platform_util.dart';
 import '../utils/episode_progress_merge.dart';
@@ -429,7 +429,7 @@ class EpisodesPanelState extends State<EpisodesPanel> {
     // policy admits it, so one map serves rendering and resume arbitration.
     final merged = <String, double>{
       if (policy.progressFrom(TrackingSource.local))
-        ...await StorageService.getEpisodeWatchProgressByImdbId(imdbId),
+        ...await PlaybackProgressStore.getEpisodeWatchProgressByImdbId(imdbId),
     };
     if (!mounted || generation != _episodeModeGeneration) return;
 
@@ -1168,7 +1168,7 @@ class EpisodesPanelState extends State<EpisodesPanel> {
           effectiveEpisode == null) {
         final imdbId = show.effectiveImdbId;
         if (imdbId != null) {
-          final lastPlayed = await StorageService.getLastPlayedEpisodeByImdbId(
+          final lastPlayed = await PlaybackProgressStore.getLastPlayedEpisodeByImdbId(
             imdbId,
           );
           if (!mounted || generation != _episodeModeGeneration) return;
@@ -1178,7 +1178,7 @@ class EpisodesPanelState extends State<EpisodesPanel> {
           }
         }
         if (effectiveSeason == null && effectiveEpisode == null) {
-          final byTitle = await StorageService.getLastPlayedEpisode(
+          final byTitle = await PlaybackProgressStore.getLastPlayedEpisode(
             seriesTitle: show.name,
           );
           if (!mounted || generation != _episodeModeGeneration) return;

@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -38,7 +39,7 @@ void main() {
 
   group('list CRUD', () {
     test('a fresh store has only the built-in Favorites list', () async {
-      final lists = await StorageService.getIptvLists();
+      final lists = await IptvPrefs.getIptvLists();
       expect(lists, hasLength(1));
       expect(lists.single.id, StorageService.iptvFavoritesListId);
       expect(lists.single.isBuiltin, isTrue);
@@ -48,16 +49,16 @@ void main() {
     });
 
     test('created lists keep creation order after Favorites', () async {
-      await StorageService.createIptvList('Kids');
-      await StorageService.createIptvList('Sports');
+      await IptvPrefs.createIptvList('Kids');
+      await IptvPrefs.createIptvList('Sports');
 
-      final lists = await StorageService.getIptvLists();
+      final lists = await IptvPrefs.getIptvLists();
       expect(lists.map((l) => l.name), ['Favorites', 'Kids', 'Sports']);
       expect(lists.map((l) => l.isBuiltin), [true, false, false]);
     });
 
     test('names are trimmed and the count reflects membership', () async {
-      final id = await StorageService.createIptvList('  Kids  ');
+      final id = await IptvPrefs.createIptvList('  Kids  ');
       await StorageService.setIptvChannelInList(
         id,
         'http://h/live/u/p/1.ts',
@@ -65,7 +66,7 @@ void main() {
         channelName: 'Cartoons',
       );
 
-      final kids = (await StorageService.getIptvLists()).firstWhere(
+      final kids = (await IptvPrefs.getIptvLists()).firstWhere(
         (l) => l.id == id,
       );
       expect(kids.name, 'Kids');
@@ -73,16 +74,16 @@ void main() {
     });
 
     test('renaming and deleting a custom list works', () async {
-      final id = await StorageService.createIptvList('Kids');
+      final id = await IptvPrefs.createIptvList('Kids');
 
-      await StorageService.renameIptvList(id, 'Family');
-      expect((await StorageService.getIptvLists()).map((l) => l.name), [
+      await IptvPrefs.renameIptvList(id, 'Family');
+      expect((await IptvPrefs.getIptvLists()).map((l) => l.name), [
         'Favorites',
         'Family',
       ]);
 
-      await StorageService.deleteIptvList(id);
-      expect((await StorageService.getIptvLists()).map((l) => l.name), [
+      await IptvPrefs.deleteIptvList(id);
+      expect((await IptvPrefs.getIptvLists()).map((l) => l.name), [
         'Favorites',
       ]);
     });
@@ -90,16 +91,16 @@ void main() {
     test(
       'deleting a list drops its memberships but not the other lists',
       () async {
-        final kids = await StorageService.createIptvList('Kids');
+        final kids = await IptvPrefs.createIptvList('Kids');
         const url = 'http://h/live/u/p/1.ts';
         await StorageService.setIptvChannelInList(kids, url, true);
         await StorageService.setIptvChannelFavorited(url, true);
 
-        await StorageService.deleteIptvList(kids);
+        await IptvPrefs.deleteIptvList(kids);
 
-        expect(await StorageService.getIptvListChannels(kids), isEmpty);
+        expect(await IptvPrefs.getIptvListChannels(kids), isEmpty);
         expect(
-          (await StorageService.getIptvFavoriteChannels()).keys,
+          (await IptvPrefs.getIptvFavoriteChannels()).keys,
           [url],
           reason: 'the channel stays in every other list it belongs to',
         );
@@ -109,10 +110,10 @@ void main() {
     test('the built-in list cannot be renamed or deleted', () async {
       const favorites = StorageService.iptvFavoritesListId;
 
-      await StorageService.renameIptvList(favorites, 'Starred');
-      await StorageService.deleteIptvList(favorites);
+      await IptvPrefs.renameIptvList(favorites, 'Starred');
+      await IptvPrefs.deleteIptvList(favorites);
 
-      final lists = await StorageService.getIptvLists();
+      final lists = await IptvPrefs.getIptvLists();
       expect(
         lists.map((l) => l.name),
         ['Favorites'],
@@ -123,27 +124,27 @@ void main() {
     });
 
     test('reorder assigns 1..n and leaves Favorites pinned first', () async {
-      final kids = await StorageService.createIptvList('Kids');
-      final sports = await StorageService.createIptvList('Sports');
-      final news = await StorageService.createIptvList('News');
+      final kids = await IptvPrefs.createIptvList('Kids');
+      final sports = await IptvPrefs.createIptvList('Sports');
+      final news = await IptvPrefs.createIptvList('News');
 
-      await StorageService.reorderIptvLists([news, kids, sports]);
+      await IptvPrefs.reorderIptvLists([news, kids, sports]);
 
-      final lists = await StorageService.getIptvLists();
+      final lists = await IptvPrefs.getIptvLists();
       expect(lists.map((l) => l.name), ['Favorites', 'News', 'Kids', 'Sports']);
       expect(lists.first.position, 0);
       expect(lists.map((l) => l.position), [0, 1, 2, 3]);
     });
 
     test('reorder ignores the built-in list even when it is named', () async {
-      final kids = await StorageService.createIptvList('Kids');
+      final kids = await IptvPrefs.createIptvList('Kids');
 
-      await StorageService.reorderIptvLists([
+      await IptvPrefs.reorderIptvLists([
         kids,
         StorageService.iptvFavoritesListId,
       ]);
 
-      final lists = await StorageService.getIptvLists();
+      final lists = await IptvPrefs.getIptvLists();
       expect(lists.first.isFavorites, isTrue);
       expect(lists.first.position, 0);
     });
@@ -153,8 +154,8 @@ void main() {
     const url = 'http://h/live/u/p/7.ts';
 
     test('one channel can belong to several lists at once', () async {
-      final kids = await StorageService.createIptvList('Kids');
-      final sports = await StorageService.createIptvList('Sports');
+      final kids = await IptvPrefs.createIptvList('Kids');
+      final sports = await IptvPrefs.createIptvList('Sports');
 
       await StorageService.setIptvChannelFavorited(
         url,
@@ -174,7 +175,7 @@ void main() {
         channelName: 'News',
       );
 
-      final membership = await StorageService.getIptvChannelMembership();
+      final membership = await IptvPrefs.getIptvChannelMembership();
       expect(membership[url], {
         StorageService.iptvFavoritesListId,
         kids,
@@ -183,7 +184,7 @@ void main() {
 
       await StorageService.setIptvChannelInList(kids, url, false);
       expect(
-        (await StorageService.getIptvChannelMembership())[url],
+        (await IptvPrefs.getIptvChannelMembership())[url],
         {StorageService.iptvFavoritesListId, sports},
         reason: 'removing from one list leaves the others alone',
       );
@@ -192,7 +193,7 @@ void main() {
     test(
       'metadata round-trips per list, including presentation fields',
       () async {
-        final kids = await StorageService.createIptvList('Kids');
+        final kids = await IptvPrefs.createIptvList('Kids');
         await StorageService.setIptvChannelInList(
           kids,
           'http://h/movie/u/p/9.mp4',
@@ -207,7 +208,7 @@ void main() {
           httpHeaders: {'Referer': 'http://h/'},
         );
 
-        final meta = (await StorageService.getIptvListChannels(
+        final meta = (await IptvPrefs.getIptvListChannels(
           kids,
         ))['http://h/movie/u/p/9.mp4']!;
         expect(meta['name'], 'A Movie');
@@ -227,7 +228,7 @@ void main() {
       () async {
         await StorageService.setIptvChannelFavorited(url, true);
 
-        final meta = (await StorageService.getIptvFavoriteChannels())[url]!;
+        final meta = (await IptvPrefs.getIptvFavoriteChannels())[url]!;
         expect(meta.containsKey('contentType'), isFalse);
         expect(meta.containsKey('duration'), isFalse);
       },
@@ -236,7 +237,7 @@ void main() {
     test(
       'canonical duplicates collapse within a list but not across lists',
       () async {
-        final kids = await StorageService.createIptvList('Kids');
+        final kids = await IptvPrefs.createIptvList('Kids');
 
         // Same channel, two URL forms the panel has served over time.
         await StorageService.setIptvChannelInList(
@@ -257,7 +258,7 @@ void main() {
           channelName: 'HLS form',
         );
 
-        final kidsChannels = await StorageService.getIptvListChannels(kids);
+        final kidsChannels = await IptvPrefs.getIptvListChannels(kids);
         expect(
           kidsChannels.keys,
           ['http://h/live/u/p/7.ts'],
@@ -265,7 +266,7 @@ void main() {
         );
 
         expect(
-          (await StorageService.getIptvFavoriteChannels()).keys,
+          (await IptvPrefs.getIptvFavoriteChannels()).keys,
           ['http://h/live/u/p/7.m3u8'],
           reason: 'the de-dup is scoped to the list being written',
         );
@@ -273,7 +274,7 @@ void main() {
     );
 
     test('listsForChannel matches older URL forms canonically', () async {
-      final kids = await StorageService.createIptvList('Kids');
+      final kids = await IptvPrefs.createIptvList('Kids');
       await StorageService.setIptvChannelInList(
         kids,
         'http://h/u/p/7.ts',
@@ -294,7 +295,7 @@ void main() {
       // two different providers. Collapsing the origins would replay one
       // membership under the other's credentials, and hand it to the wrong
       // provider-deletion sweep.
-      final kids = await StorageService.createIptvList('Kids');
+      final kids = await IptvPrefs.createIptvList('Kids');
       await StorageService.setIptvChannelFavorited(url, true, playlistId: 'p1');
       await StorageService.setIptvChannelInList(
         kids,
@@ -303,22 +304,22 @@ void main() {
         playlistId: 'p2',
       );
 
-      final snapshot = await StorageService.getIptvMembershipSnapshot();
+      final snapshot = await IptvPrefs.getIptvMembershipSnapshot();
       expect(snapshot.origins[(StorageService.iptvFavoritesListId, url)], 'p1');
       expect(snapshot.origins[(kids, url)], 'p2');
 
       // And the sweep is row-based, so it takes only the matching membership.
-      await StorageService.removeIptvListChannelsByPlaylistId('p1');
-      expect(await StorageService.getIptvFavoriteChannels(), isEmpty);
+      await IptvPrefs.removeIptvListChannelsByPlaylistId('p1');
+      expect(await IptvPrefs.getIptvFavoriteChannels(), isEmpty);
       expect(
-        (await StorageService.getIptvListChannels(kids)).keys,
+        (await IptvPrefs.getIptvListChannels(kids)).keys,
         [url],
         reason: 'the other provider\'s membership survives',
       );
     });
 
     test('deleting a provider sweeps its channels out of every list', () async {
-      final kids = await StorageService.createIptvList('Kids');
+      final kids = await IptvPrefs.createIptvList('Kids');
       await StorageService.setIptvChannelInList(
         kids,
         'http://h/live/u/p/1.ts',
@@ -337,18 +338,18 @@ void main() {
         playlistId: 'p2',
       );
 
-      await StorageService.removeIptvListChannelsByPlaylistId('p1');
+      await IptvPrefs.removeIptvListChannelsByPlaylistId('p1');
 
-      expect((await StorageService.getIptvListChannels(kids)).keys, [
+      expect((await IptvPrefs.getIptvListChannels(kids)).keys, [
         'http://h/live/u/p/2.ts',
       ]);
       expect(
-        await StorageService.getIptvFavoriteChannels(),
+        await IptvPrefs.getIptvFavoriteChannels(),
         isEmpty,
         reason: 'a deleted provider leaves nothing playable behind',
       );
       expect(
-        (await StorageService.getIptvLists()).map((l) => l.name),
+        (await IptvPrefs.getIptvLists()).map((l) => l.name),
         ['Favorites', 'Kids'],
         reason: 'the list itself survives, possibly empty',
       );
@@ -359,7 +360,7 @@ void main() {
     test(
       'list order persists and metadata refresh keeps the saved rank',
       () async {
-        final list = await StorageService.createIptvList('Sports');
+        final list = await IptvPrefs.createIptvList('Sports');
         for (final entry in const [
           ('a', 'Alpha'),
           ('b', 'Bravo'),
@@ -373,12 +374,12 @@ void main() {
           );
         }
 
-        await StorageService.reorderIptvListChannels(list, const [
+        await IptvPrefs.reorderIptvListChannels(list, const [
           'http://h/c',
           'http://h/a',
           'http://h/b',
         ]);
-        expect((await StorageService.getIptvListChannels(list)).keys, [
+        expect((await IptvPrefs.getIptvListChannels(list)).keys, [
           'http://h/c',
           'http://h/a',
           'http://h/b',
@@ -390,7 +391,7 @@ void main() {
           true,
           channelName: 'Alpha HD',
         );
-        final refreshed = await StorageService.getIptvListChannels(list);
+        final refreshed = await IptvPrefs.getIptvListChannels(list);
         expect(refreshed.keys, ['http://h/c', 'http://h/a', 'http://h/b']);
         expect(refreshed['http://h/a']!['name'], 'Alpha HD');
       },
@@ -399,7 +400,7 @@ void main() {
     test(
       'stale editor save cannot resurrect removals and appends new rows',
       () async {
-        final list = await StorageService.createIptvList('News');
+        final list = await IptvPrefs.createIptvList('News');
         for (final id in const ['a', 'b', 'c']) {
           await StorageService.setIptvChannelInList(list, 'http://h/$id', true);
         }
@@ -407,9 +408,9 @@ void main() {
 
         await StorageService.setIptvChannelInList(list, 'http://h/b', false);
         await StorageService.setIptvChannelInList(list, 'http://h/d', true);
-        await StorageService.reorderIptvListChannels(list, staleEditorOrder);
+        await IptvPrefs.reorderIptvListChannels(list, staleEditorOrder);
 
-        expect((await StorageService.getIptvListChannels(list)).keys, [
+        expect((await IptvPrefs.getIptvListChannels(list)).keys, [
           'http://h/c',
           'http://h/a',
           'http://h/d',
@@ -420,7 +421,7 @@ void main() {
     test(
       'order notifications run outside the database operation Zone',
       () async {
-        final list = await StorageService.createIptvList('News');
+        final list = await IptvPrefs.createIptvList('News');
         await StorageService.setIptvChannelInList(list, 'http://h/a', true);
 
         bool? listRevisionInOperationZone;
@@ -442,14 +443,14 @@ void main() {
           IptvChannelOrderSignal.revision.removeListener(onOrderRevision);
         });
 
-        await StorageService.reorderIptvListChannels(list, const [
+        await IptvPrefs.reorderIptvListChannels(list, const [
           'http://h/a',
         ]);
         expect(listRevisionInOperationZone, isFalse);
         expect(orderRevisionInOperationZone, isFalse);
 
         orderRevisionInOperationZone = null;
-        await StorageService.setIptvCategoryChannelOrder('source', 'News', [
+        await IptvPrefs.setIptvCategoryChannelOrder('source', 'News', [
           const IptvChannelOrderIdentity(
             url: 'http://h/a',
             name: 'Alpha',
@@ -472,14 +473,14 @@ void main() {
           channel('Bravo', 'http://h/b', 'Sports'),
           channel('Duplicate', 'http://h/same', 'Sports'),
         ];
-        final initial = await StorageService.getIptvCategoryOrderEntries(
+        final initial = await IptvPrefs.getIptvCategoryOrderEntries(
           'local-1',
           provider,
           'Sports',
         );
         expect(initial.map((entry) => entry.identity.occurrence), [0, 0, 1]);
 
-        await StorageService.setIptvCategoryChannelOrder('local-1', 'Sports', [
+        await IptvPrefs.setIptvCategoryChannelOrder('local-1', 'Sports', [
           initial[1].identity,
           initial[2].identity,
           initial[0].identity,
@@ -488,7 +489,7 @@ void main() {
           ...provider,
           channel('Delta', 'http://h/d', 'Sports'),
         ];
-        final ordered = await StorageService.getIptvCategoryOrderEntries(
+        final ordered = await IptvPrefs.getIptvCategoryOrderEntries(
           'local-1',
           withNewRow,
           'Sports',
@@ -500,7 +501,7 @@ void main() {
           [('Bravo', 0), ('Duplicate', 1), ('Duplicate', 0), ('Delta', 0)],
         );
 
-        final applied = await StorageService.applyIptvCategoryChannelOrders(
+        final applied = await IptvPrefs.applyIptvCategoryChannelOrders(
           'local-1',
           withNewRow,
         );
@@ -523,15 +524,15 @@ void main() {
       );
 
       expect(
-        (await StorageService.getIptvListChannels(
+        (await IptvPrefs.getIptvListChannels(
           StorageService.iptvFavoritesListId,
         ))[url]!['name'],
         'News',
       );
-      expect(await StorageService.getIptvFavoriteChannelUrls(), {url});
+      expect(await IptvPrefs.getIptvFavoriteChannelUrls(), {url});
 
       await StorageService.setIptvChannelFavorited(url, false);
-      expect(await StorageService.getIptvFavoriteChannels(), isEmpty);
+      expect(await IptvPrefs.getIptvFavoriteChannels(), isEmpty);
     });
   });
 }

@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:flutter/material.dart';
 import 'deep_link_service.dart';
 import 'debrid_service.dart';
@@ -307,7 +308,7 @@ class MagnetLinkHandler {
 
     try {
       // Get parent folder ID
-      final parentFolderId = await StorageService.getPikPakRestrictedFolderId();
+      final parentFolderId = await ProviderCredentialPrefs.getPikPakRestrictedFolderId();
 
       // Find or create subfolder (reuse torrents folder for shared URLs)
       String? subFolderId;
@@ -315,8 +316,8 @@ class MagnetLinkHandler {
         subFolderId = await PikPakApiService.instance.findOrCreateSubfolder(
           folderName: 'debrify-torrents',
           parentFolderId: parentFolderId,
-          getCachedId: StorageService.getPikPakTorrentsFolderId,
-          setCachedId: StorageService.setPikPakTorrentsFolderId,
+          getCachedId: ProviderCredentialPrefs.getPikPakTorrentsFolderId,
+          setCachedId: ProviderCredentialPrefs.setPikPakTorrentsFolderId,
         );
       } catch (e) {
         if (e.toString().contains('RESTRICTED_FOLDER_DELETED')) {
@@ -630,7 +631,7 @@ class MagnetLinkHandler {
 
     try {
       // Get parent folder ID (restricted folder or root)
-      final parentFolderId = await StorageService.getPikPakRestrictedFolderId();
+      final parentFolderId = await ProviderCredentialPrefs.getPikPakRestrictedFolderId();
 
       // Find or create "debrify-torrents" subfolder (same as search)
       String? subFolderId;
@@ -638,8 +639,8 @@ class MagnetLinkHandler {
         subFolderId = await PikPakApiService.instance.findOrCreateSubfolder(
           folderName: 'debrify-torrents',
           parentFolderId: parentFolderId,
-          getCachedId: StorageService.getPikPakTorrentsFolderId,
-          setCachedId: StorageService.setPikPakTorrentsFolderId,
+          getCachedId: ProviderCredentialPrefs.getPikPakTorrentsFolderId,
+          setCachedId: ProviderCredentialPrefs.setPikPakTorrentsFolderId,
         );
         debugPrint('PikPak: Using subfolder ID: $subFolderId');
       } catch (e) {

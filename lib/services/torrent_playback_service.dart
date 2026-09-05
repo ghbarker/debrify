@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -2543,7 +2545,7 @@ class TorrentPlaybackService {
 
     // 3. RD blocked-keyword filter (RD provider + setting enabled).
     if (PlaybackServiceDispatch.isDebrid(provider) &&
-        await StorageService.getRdSkipBlockedTorrents()) {
+        await ProviderCredentialPrefs.getRdSkipBlockedTorrents()) {
       final unblocked = out.where((t) => !isRdBlockedTorrent(t.name)).toList();
       if (unblocked.isNotEmpty) out = unblocked;
     }
@@ -2596,7 +2598,7 @@ class TorrentPlaybackService {
     out = out.where(coversSeason).toList();
 
     if (PlaybackServiceDispatch.isDebrid(provider) &&
-        await StorageService.getRdSkipBlockedTorrents()) {
+        await ProviderCredentialPrefs.getRdSkipBlockedTorrents()) {
       out = out.where((t) => !isRdBlockedTorrent(t.name)).toList();
     }
 
@@ -3855,7 +3857,7 @@ class TorrentPlaybackService {
       if (await _isConfigured(p.playbackId)) configured.add(p.playbackId);
     }
     if (configured.isEmpty) return (configured, null);
-    final def = await StorageService.getDefaultTorrentProvider();
+    final def = await ProviderCredentialPrefs.getDefaultTorrentProvider();
     final defaultProvider = (def != 'none' && configured.contains(def))
         ? def
         : null;
@@ -4827,7 +4829,7 @@ class TorrentPlaybackService {
       contentType: meta?.contentType,
       posterUrl: meta?.posterUrl,
     );
-    final ok = await StorageService.addPlaylistItemRaw(item);
+    final ok = await PlaybackProgressStore.addPlaylistItemRaw(item);
     if (context.mounted) {
       _snack(context, ok ? 'Added to playlist.' : 'Already in playlist.');
     }
@@ -5172,7 +5174,7 @@ class TorrentPlaybackService {
     if (result == null) return _cancelled; // dismissed
     // "Remember my choice" persists the default so we never ask again.
     if (result.remember) {
-      await StorageService.setDefaultTorrentProvider(result.provider);
+      await ProviderCredentialPrefs.setDefaultTorrentProvider(result.provider);
     }
     return result.provider;
   }
@@ -5182,7 +5184,7 @@ class TorrentPlaybackService {
 
   static Future<String> _postAction(String provider) async {
     final id = CloudProviderId.tryParse(provider);
-    if (id == null) return StorageService.getPostTorrentAction();
+    if (id == null) return ProviderCredentialPrefs.getPostTorrentAction();
     return CloudCredentials.postTorrentAction(id);
   }
 

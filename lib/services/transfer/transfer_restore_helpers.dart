@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../models/indexer_manager_config.dart';
@@ -27,7 +28,7 @@ Future<void> restoreWebDavServers(
   RestoreReport report,
 ) async {
   try {
-    final existing = await StorageService.getWebDavServers();
+    final existing = await ProviderCredentialPrefs.getWebDavServers();
     final existingUrls = <String>{
       for (final s in existing) transferNormalizeUrl(s.baseUrl),
     };
@@ -59,7 +60,7 @@ Future<void> restoreWebDavServers(
       }
     }
     if (report.webDavServersImported > 0) {
-      await StorageService.saveWebDavServers(merged);
+      await ProviderCredentialPrefs.saveWebDavServers(merged);
       // setWebDavEnabled is handled inside saveWebDavServers.
     }
   } catch (_) {

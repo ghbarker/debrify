@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
@@ -341,7 +342,7 @@ class IptvChannelSheetState extends State<IptvChannelSheet>
   }
 
   Future<void> _loadFavorites() async {
-    final favorites = await StorageService.getIptvFavoriteChannels();
+    final favorites = await IptvPrefs.getIptvFavoriteChannels();
     if (!mounted) return;
     setState(() => _favoriteUrls = favorites.keys.toSet());
   }
@@ -360,7 +361,7 @@ class IptvChannelSheetState extends State<IptvChannelSheet>
     // and every sources save bumps every source's revision — a schedule
     // seeded from the stale copy would be refused when it fires.
     try {
-      final playlists = await StorageService.getIptvPlaylists(
+      final playlists = await IptvPrefs.getIptvPlaylists(
         forSettings: false,
       );
       for (final playlist in playlists) {

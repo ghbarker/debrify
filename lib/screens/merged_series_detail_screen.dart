@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -796,7 +797,7 @@ class _MergedDetailScreenState extends State<MergedDetailScreen>
     final imdbId =
         _item.effectiveImdbId ?? (_item.id.startsWith('tt') ? _item.id : null);
     if (imdbId == null || imdbId.isEmpty) return;
-    final finished = await StorageService.isMovieFinished(imdbId);
+    final finished = await PlaybackProgressStore.isMovieFinished(imdbId);
     if (mounted && finished != _localMovieFinished) {
       setState(() => _localMovieFinished = finished);
     }

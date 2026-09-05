@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -23,7 +24,7 @@ class PremiumizeWatchFlow {
     void Function(String message) log,
   ) async {
     final integrationEnabled =
-        await StorageService.getPremiumizeIntegrationEnabled();
+        await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
     if (!integrationEnabled) {
       host.closeProgressDialog();
       if (!host.mounted) return;
@@ -278,7 +279,7 @@ class PremiumizeWatchFlow {
     void log(String message) => debugPrint('DebrifyTV/PM: $message');
 
     final integrationEnabled =
-        await StorageService.getPremiumizeIntegrationEnabled();
+        await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
     if (!integrationEnabled) {
       host.showSnack(
         'Enable Premiumize in Settings to use this provider.',

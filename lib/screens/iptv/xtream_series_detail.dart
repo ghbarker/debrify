@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/iptv_playlist.dart';
@@ -97,7 +98,7 @@ Future<void> openXtreamSeries(
     return progressFuture = () async {
       final eps = (await info())?.episodes ?? const <XtreamSeriesEpisode>[];
       if (eps.isEmpty) return <String, double>{};
-      final byUrl = await StorageService.getIptvProgressForUrls([
+      final byUrl = await IptvPrefs.getIptvProgressForUrls([
         for (final e in eps) e.url,
       ]);
       final map = <String, double>{};

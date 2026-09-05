@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -22,7 +23,7 @@ class TorboxWatchFlow {
     void Function(String message) log,
   ) async {
     final integrationEnabled =
-        await StorageService.getTorboxIntegrationEnabled();
+        await ProviderCredentialPrefs.getTorboxIntegrationEnabled();
     if (!integrationEnabled) {
       host.closeProgressDialog();
       if (!host.mounted) return;
@@ -277,7 +278,7 @@ class TorboxWatchFlow {
     }
 
     final integrationEnabled =
-        await StorageService.getTorboxIntegrationEnabled();
+        await ProviderCredentialPrefs.getTorboxIntegrationEnabled();
     if (!integrationEnabled) {
       host.showSnack(
         'Enable Torbox in Settings to use this provider.',

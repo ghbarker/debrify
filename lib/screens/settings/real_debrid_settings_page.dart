@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:flutter/material.dart';
 import '../../services/storage_service.dart';
 import '../../services/account_service.dart';
@@ -49,12 +50,12 @@ class _RealDebridSettingsPageState extends State<RealDebridSettingsPage> {
 
   Future<void> _load() async {
     final configured = await StorageService.hasRealDebridCredential();
-    final selection = await StorageService.getFileSelection();
-    final postAction = await StorageService.getPostTorrentAction();
+    final selection = await ProviderCredentialPrefs.getFileSelection();
+    final postAction = await ProviderCredentialPrefs.getPostTorrentAction();
     final integrationEnabled =
-        await StorageService.getRealDebridIntegrationEnabled();
-    final hiddenFromNav = await StorageService.getRealDebridHiddenFromNav();
-    final skipBlocked = await StorageService.getRdSkipBlockedTorrents();
+        await ProviderCredentialPrefs.getRealDebridIntegrationEnabled();
+    final hiddenFromNav = await ProviderCredentialPrefs.getRealDebridHiddenFromNav();
+    final skipBlocked = await ProviderCredentialPrefs.getRdSkipBlockedTorrents();
     setState(() {
       _savedApiKey = configured ? '' : null;
       _fileSelection = selection;
@@ -162,7 +163,7 @@ class _RealDebridSettingsPageState extends State<RealDebridSettingsPage> {
     }
 
     if (hideNavOnSave && !_hiddenFromNav) {
-      await StorageService.setRealDebridHiddenFromNav(true);
+      await ProviderCredentialPrefs.setRealDebridHiddenFromNav(true);
     }
     if (!mounted) return;
 
@@ -194,7 +195,7 @@ class _RealDebridSettingsPageState extends State<RealDebridSettingsPage> {
     }
     AccountService.clearUserInfo();
     // Clear the hidden from nav flag on logout
-    await StorageService.clearRealDebridHiddenFromNav();
+    await ProviderCredentialPrefs.clearRealDebridHiddenFromNav();
     _snack('Logged out successfully', err: false);
     MainPageBridge.notifyIntegrationChanged();
     // Pop back to settings page with logout flag for TV navigation
@@ -204,13 +205,13 @@ class _RealDebridSettingsPageState extends State<RealDebridSettingsPage> {
   }
 
   Future<void> _saveSelection(String v) async {
-    await StorageService.saveFileSelection(v);
+    await ProviderCredentialPrefs.saveFileSelection(v);
     setState(() => _fileSelection = v);
     _snack('Preference saved');
   }
 
   Future<void> _savePostAction(String v) async {
-    await StorageService.savePostTorrentAction(v);
+    await ProviderCredentialPrefs.savePostTorrentAction(v);
     setState(() => _postTorrentAction = v);
     _snack('Preference saved');
   }
@@ -222,7 +223,7 @@ class _RealDebridSettingsPageState extends State<RealDebridSettingsPage> {
         _isEditing = false;
       }
     });
-    await StorageService.setRealDebridIntegrationEnabled(value);
+    await ProviderCredentialPrefs.setRealDebridIntegrationEnabled(value);
     MainPageBridge.notifyIntegrationChanged();
     if (!mounted) return;
     if (value && _savedApiKey != null) {
@@ -283,7 +284,7 @@ class _RealDebridSettingsPageState extends State<RealDebridSettingsPage> {
       }
 
       // Enable hiding
-      await StorageService.setRealDebridHiddenFromNav(true);
+      await ProviderCredentialPrefs.setRealDebridHiddenFromNav(true);
       setState(() {
         _hiddenFromNav = true;
       });
@@ -867,7 +868,7 @@ class _RealDebridSettingsPageState extends State<RealDebridSettingsPage> {
                                         setState(
                                           () => _skipBlockedTorrents = v,
                                         );
-                                        await StorageService.setRdSkipBlockedTorrents(
+                                        await ProviderCredentialPrefs.setRdSkipBlockedTorrents(
                                           v,
                                         );
                                       },

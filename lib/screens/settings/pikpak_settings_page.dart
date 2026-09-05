@@ -1,6 +1,6 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../services/storage_service.dart';
 import '../../services/pikpak_api_service.dart';
 import '../../services/analytics_service.dart';
 import '../../services/main_page_bridge.dart';
@@ -75,14 +75,14 @@ class _PikPakSettingsPageState extends State<PikPakSettingsPage> {
   }
 
   Future<void> _loadSettings() async {
-    final enabled = await StorageService.getPikPakEnabled();
-    final showVideosOnly = await StorageService.getPikPakShowVideosOnly();
-    final ignoreSmallVideos = await StorageService.getPikPakIgnoreSmallVideos();
+    final enabled = await ProviderCredentialPrefs.getPikPakEnabled();
+    final showVideosOnly = await ProviderCredentialPrefs.getPikPakShowVideosOnly();
+    final ignoreSmallVideos = await ProviderCredentialPrefs.getPikPakIgnoreSmallVideos();
     final isAuth = await PikPakApiService.instance.isAuthenticated();
-    final restrictedId = await StorageService.getPikPakRestrictedFolderId();
-    final restrictedName = await StorageService.getPikPakRestrictedFolderName();
-    final hiddenFromNav = await StorageService.getPikPakHiddenFromNav();
-    final postAction = await StorageService.getPikPakPostTorrentAction();
+    final restrictedId = await ProviderCredentialPrefs.getPikPakRestrictedFolderId();
+    final restrictedName = await ProviderCredentialPrefs.getPikPakRestrictedFolderName();
+    final hiddenFromNav = await ProviderCredentialPrefs.getPikPakHiddenFromNav();
+    final postAction = await ProviderCredentialPrefs.getPikPakPostTorrentAction();
 
     if (!mounted) return;
 
@@ -139,7 +139,7 @@ class _PikPakSettingsPageState extends State<PikPakSettingsPage> {
           _isConnected = true;
           _pikpakEnabled = true;
         });
-        await StorageService.setPikPakEnabled(true);
+        await ProviderCredentialPrefs.setPikPakEnabled(true);
         AnalyticsService.integrationConnected('pikpak', {
           'surface': 'settings',
         });
@@ -227,12 +227,12 @@ class _PikPakSettingsPageState extends State<PikPakSettingsPage> {
           if (folderResult != null) {
             final folderId = folderResult['folderId'] as String?;
             final folderName = folderResult['folderName'] as String?;
-            await StorageService.setPikPakRestrictedFolder(
+            await ProviderCredentialPrefs.setPikPakRestrictedFolder(
               folderId,
               folderName,
             );
             // Clear subfolder caches when restriction changes
-            await StorageService.clearPikPakSubfolderCaches();
+            await ProviderCredentialPrefs.clearPikPakSubfolderCaches();
             setState(() {
               _restrictedFolderId = folderId;
               _restrictedFolderName = folderName;
@@ -275,10 +275,10 @@ class _PikPakSettingsPageState extends State<PikPakSettingsPage> {
       await PikPakApiService.instance.logout();
 
       // Clear folder restriction on logout
-      await StorageService.clearPikPakRestrictedFolder();
+      await ProviderCredentialPrefs.clearPikPakRestrictedFolder();
 
       // Clear the hidden from nav flag on logout
-      await StorageService.clearPikPakHiddenFromNav();
+      await ProviderCredentialPrefs.clearPikPakHiddenFromNav();
 
       if (!mounted) return;
 
@@ -337,9 +337,9 @@ class _PikPakSettingsPageState extends State<PikPakSettingsPage> {
       final folderId = result['folderId'] as String?;
       final folderName = result['folderName'] as String?;
 
-      await StorageService.setPikPakRestrictedFolder(folderId, folderName);
+      await ProviderCredentialPrefs.setPikPakRestrictedFolder(folderId, folderName);
       // Clear subfolder caches when restriction changes
-      await StorageService.clearPikPakSubfolderCaches();
+      await ProviderCredentialPrefs.clearPikPakSubfolderCaches();
       setState(() {
         _restrictedFolderId = folderId;
         _restrictedFolderName = folderName;
@@ -372,7 +372,7 @@ class _PikPakSettingsPageState extends State<PikPakSettingsPage> {
 
   Future<void> _savePostAction(String action) async {
     setState(() => _postTorrentAction = action);
-    await StorageService.savePikPakPostTorrentAction(action);
+    await ProviderCredentialPrefs.savePikPakPostTorrentAction(action);
     _showSnackBar('Preference saved', isError: false);
   }
 
@@ -440,7 +440,7 @@ class _PikPakSettingsPageState extends State<PikPakSettingsPage> {
       }
 
       // Enable hiding
-      await StorageService.setPikPakHiddenFromNav(true);
+      await ProviderCredentialPrefs.setPikPakHiddenFromNav(true);
       setState(() {
         _hiddenFromNav = true;
       });
@@ -526,7 +526,7 @@ class _PikPakSettingsPageState extends State<PikPakSettingsPage> {
                   ),
                   value: _pikpakEnabled,
                   onChanged: (value) async {
-                    await StorageService.setPikPakEnabled(value);
+                    await ProviderCredentialPrefs.setPikPakEnabled(value);
                     setState(() {
                       _pikpakEnabled = value;
                     });
@@ -618,7 +618,7 @@ class _PikPakSettingsPageState extends State<PikPakSettingsPage> {
                             ),
                             value: _showVideosOnly,
                             onChanged: (value) async {
-                              await StorageService.setPikPakShowVideosOnly(
+                              await ProviderCredentialPrefs.setPikPakShowVideosOnly(
                                 value,
                               );
                               setState(() {
@@ -652,7 +652,7 @@ class _PikPakSettingsPageState extends State<PikPakSettingsPage> {
                             ),
                             value: _ignoreSmallVideos,
                             onChanged: (value) async {
-                              await StorageService.setPikPakIgnoreSmallVideos(
+                              await ProviderCredentialPrefs.setPikPakIgnoreSmallVideos(
                                 value,
                               );
                               setState(() {
@@ -934,12 +934,12 @@ class _PikPakSettingsPageState extends State<PikPakSettingsPage> {
                             focusNode: _resetDeviceIdButtonFocusNode,
                             onPressed: () async {
                               final currentDeviceId =
-                                  await StorageService.getPikPakDeviceId();
+                                  await ProviderCredentialPrefs.getPikPakDeviceId();
                               debugPrint(
                                 'PikPak: Current device ID: $currentDeviceId',
                               );
-                              await StorageService.deletePikPakDeviceId();
-                              await StorageService.clearPikPakCaptchaToken();
+                              await ProviderCredentialPrefs.deletePikPakDeviceId();
+                              await ProviderCredentialPrefs.clearPikPakCaptchaToken();
                               debugPrint('PikPak: Device ID cleared');
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(

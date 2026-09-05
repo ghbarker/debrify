@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:debrify/services/local_series_completion_service.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/services/tracking_source_policy.dart';
@@ -27,13 +28,13 @@ void main() {
     'series is caught up when every aired regular episode is finished',
     () async {
       final now = DateTime.now();
-      await StorageService.saveContinueWatchingItem(
+      await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'tt-local-show',
         title: 'Local Show',
         contentType: 'series',
         posterUrl: 'https://example.com/poster.jpg',
       );
-      await StorageService.markEpisodeAsFinished(
+      await PlaybackProgressStore.markEpisodeAsFinished(
         seriesTitle: 'Local Show',
         season: 1,
         episode: 1,
@@ -55,9 +56,9 @@ void main() {
         await LocalSeriesCompletionService.instance.caughtUpIds(),
         contains('tt-local-show'),
       );
-      expect(await StorageService.getContinueWatchingItems(), isEmpty);
+      expect(await PlaybackProgressStore.getContinueWatchingItems(), isEmpty);
 
-      await StorageService.unmarkEpisodeAsFinished(
+      await PlaybackProgressStore.unmarkEpisodeAsFinished(
         seriesTitle: 'Local Show',
         season: 1,
         episode: 1,
@@ -67,7 +68,7 @@ void main() {
         isNot(contains('tt-local-show')),
       );
       expect(
-        await StorageService.getContinueWatchingItems(),
+        await PlaybackProgressStore.getContinueWatchingItems(),
         contains(
           predicate<Map<String, dynamic>>((item) {
             return item['imdbId'] == 'tt-local-show' &&
@@ -80,7 +81,7 @@ void main() {
 
   test('newly aired unwatched episode clears local caught-up status', () async {
     final now = DateTime.now();
-    await StorageService.markEpisodeAsFinished(
+    await PlaybackProgressStore.markEpisodeAsFinished(
       seriesTitle: 'Returning Show',
       season: 1,
       episode: 1,
@@ -109,7 +110,7 @@ void main() {
     await StorageService.setTrackingScrobbleTargets(<TrackingSource>{
       TrackingSource.local,
     });
-    await StorageService.markEpisodeAsFinished(
+    await PlaybackProgressStore.markEpisodeAsFinished(
       seriesTitle: 'Unwatched Show',
       season: 1,
       episode: 1,
@@ -121,7 +122,7 @@ void main() {
         season([episode(1, now.subtract(const Duration(days: 1)))]),
       ],
     );
-    await StorageService.setSeriesExplicitlyWatched(
+    await PlaybackProgressStore.setSeriesExplicitlyWatched(
       'tt-unwatched-show',
       watched: true,
     );
@@ -130,7 +131,7 @@ void main() {
       contains('tt-unwatched-show'),
     );
     expect(
-      await StorageService.getFinishedEpisodes(seriesTitle: 'Unwatched Show'),
+      await PlaybackProgressStore.getFinishedEpisodes(seriesTitle: 'Unwatched Show'),
       isNotEmpty,
     );
 
@@ -142,11 +143,11 @@ void main() {
 
     expect(result.success, isTrue);
     expect(
-      await StorageService.getExplicitlyWatchedSeriesIds(),
+      await PlaybackProgressStore.getExplicitlyWatchedSeriesIds(),
       isNot(contains('tt-unwatched-show')),
     );
     expect(
-      await StorageService.getFinishedEpisodes(seriesTitle: 'Unwatched Show'),
+      await PlaybackProgressStore.getFinishedEpisodes(seriesTitle: 'Unwatched Show'),
       isEmpty,
     );
     expect(
@@ -159,7 +160,7 @@ void main() {
     'Simkl calendar keeps future episode pending then clears at air time',
     () async {
       final now = DateTime.now();
-      await StorageService.markEpisodeAsFinished(
+      await PlaybackProgressStore.markEpisodeAsFinished(
         seriesTitle: 'Calendar Show',
         season: 1,
         episode: 1,
@@ -203,7 +204,7 @@ void main() {
 
   test('specials do not block local series completion', () async {
     final now = DateTime.now();
-    await StorageService.markEpisodeAsFinished(
+    await PlaybackProgressStore.markEpisodeAsFinished(
       seriesTitle: 'Special Show',
       season: 1,
       episode: 1,

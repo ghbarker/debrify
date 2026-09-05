@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -111,7 +112,7 @@ class _RemoteConfigExportState extends State<RemoteConfigExport> {
       final realDebridApiKey = await StorageService.getApiKey(
         forRemoteTransfer: true,
       );
-      final rdEnabled = await StorageService.getRealDebridIntegrationEnabled();
+      final rdEnabled = await ProviderCredentialPrefs.getRealDebridIntegrationEnabled();
       final hasRd =
           realDebridApiKey != null && realDebridApiKey.isNotEmpty && rdEnabled;
 
@@ -119,7 +120,7 @@ class _RemoteConfigExportState extends State<RemoteConfigExport> {
       final torboxApiKey = await StorageService.getTorboxApiKey(
         forRemoteTransfer: true,
       );
-      final tbEnabled = await StorageService.getTorboxIntegrationEnabled();
+      final tbEnabled = await ProviderCredentialPrefs.getTorboxIntegrationEnabled();
       final hasTb =
           torboxApiKey != null && torboxApiKey.isNotEmpty && tbEnabled;
 
@@ -127,7 +128,7 @@ class _RemoteConfigExportState extends State<RemoteConfigExport> {
       final premiumizeApiKey = await StorageService.getPremiumizeApiKey(
         forRemoteTransfer: true,
       );
-      final pmEnabled = await StorageService.getPremiumizeIntegrationEnabled();
+      final pmEnabled = await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
       final hasPm =
           premiumizeApiKey != null && premiumizeApiKey.isNotEmpty && pmEnabled;
 
@@ -135,7 +136,7 @@ class _RemoteConfigExportState extends State<RemoteConfigExport> {
       final allDebridApiKey = await StorageService.getAllDebridApiKey(
         forRemoteTransfer: true,
       );
-      final adEnabled = await StorageService.getAllDebridIntegrationEnabled();
+      final adEnabled = await ProviderCredentialPrefs.getAllDebridIntegrationEnabled();
       final hasAd =
           allDebridApiKey != null && allDebridApiKey.isNotEmpty && adEnabled;
 
@@ -143,7 +144,7 @@ class _RemoteConfigExportState extends State<RemoteConfigExport> {
       final pikpakEmail = await StorageService.getPikPakEmail(
         forRemoteTransfer: true,
       );
-      final ppEnabled = await StorageService.getPikPakEnabled();
+      final ppEnabled = await ProviderCredentialPrefs.getPikPakEnabled();
       final hasPp = pikpakEmail != null && pikpakEmail.isNotEmpty && ppEnabled;
 
       // Load Trakt session
@@ -184,7 +185,7 @@ class _RemoteConfigExportState extends State<RemoteConfigExport> {
       // since they were added to "Transfer Everything" — this screen just
       // never offered them.
       try {
-        final servers = await StorageService.getWebDavServers(
+        final servers = await ProviderCredentialPrefs.getWebDavServers(
           forSettings: false,
           forRemoteTransfer: true,
         );

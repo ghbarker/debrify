@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:debrify/models/webdav_item.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/secret_vault.dart';
@@ -25,94 +26,94 @@ void main() {
 
   group('defaults when no keys are stored', () {
     test('integration toggles, hidden-from-nav, cache, skip-blocked', () async {
-      expect(await StorageService.getRealDebridIntegrationEnabled(), isTrue);
-      expect(await StorageService.getTorboxIntegrationEnabled(), isTrue);
-      expect(await StorageService.getPremiumizeIntegrationEnabled(), isTrue);
-      expect(await StorageService.getAllDebridIntegrationEnabled(), isTrue);
-      expect(await StorageService.getPikPakEnabled(), isFalse);
-      expect(await StorageService.getWebDavEnabled(), isFalse);
+      expect(await ProviderCredentialPrefs.getRealDebridIntegrationEnabled(), isTrue);
+      expect(await ProviderCredentialPrefs.getTorboxIntegrationEnabled(), isTrue);
+      expect(await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled(), isTrue);
+      expect(await ProviderCredentialPrefs.getAllDebridIntegrationEnabled(), isTrue);
+      expect(await ProviderCredentialPrefs.getPikPakEnabled(), isFalse);
+      expect(await ProviderCredentialPrefs.getWebDavEnabled(), isFalse);
 
-      expect(await StorageService.getRealDebridHiddenFromNav(), isFalse);
-      expect(await StorageService.getTorboxHiddenFromNav(), isFalse);
-      expect(await StorageService.getPremiumizeHiddenFromNav(), isFalse);
-      expect(await StorageService.getAllDebridHiddenFromNav(), isFalse);
-      expect(await StorageService.getPikPakHiddenFromNav(), isFalse);
-      expect(await StorageService.getWebDavHiddenFromNav(), isFalse);
+      expect(await ProviderCredentialPrefs.getRealDebridHiddenFromNav(), isFalse);
+      expect(await ProviderCredentialPrefs.getTorboxHiddenFromNav(), isFalse);
+      expect(await ProviderCredentialPrefs.getPremiumizeHiddenFromNav(), isFalse);
+      expect(await ProviderCredentialPrefs.getAllDebridHiddenFromNav(), isFalse);
+      expect(await ProviderCredentialPrefs.getPikPakHiddenFromNav(), isFalse);
+      expect(await ProviderCredentialPrefs.getWebDavHiddenFromNav(), isFalse);
 
-      expect(await StorageService.getTorboxCacheCheckEnabled(), isFalse);
-      expect(await StorageService.getPremiumizeCacheCheckEnabled(), isFalse);
-      expect(await StorageService.getRdSkipBlockedTorrents(), isTrue);
+      expect(await ProviderCredentialPrefs.getTorboxCacheCheckEnabled(), isFalse);
+      expect(await ProviderCredentialPrefs.getPremiumizeCacheCheckEnabled(), isFalse);
+      expect(await ProviderCredentialPrefs.getRdSkipBlockedTorrents(), isTrue);
     });
 
     test('endpoint, file selection, post-torrent, default provider', () async {
       expect(
-        await StorageService.getRdEndpoint(),
+        await ProviderCredentialPrefs.getRdEndpoint(),
         'https://api.real-debrid.com/rest/1.0',
       );
-      expect(await StorageService.getFileSelection(), 'smart');
-      expect(await StorageService.getPostTorrentAction(), 'choose');
-      expect(await StorageService.getTorboxPostTorrentAction(), 'choose');
-      expect(await StorageService.getPikPakPostTorrentAction(), 'choose');
-      expect(await StorageService.getPremiumizePostTorrentAction(), 'choose');
-      expect(await StorageService.getAllDebridPostTorrentAction(), 'choose');
-      expect(await StorageService.getDefaultTorrentProvider(), 'none');
+      expect(await ProviderCredentialPrefs.getFileSelection(), 'smart');
+      expect(await ProviderCredentialPrefs.getPostTorrentAction(), 'choose');
+      expect(await ProviderCredentialPrefs.getTorboxPostTorrentAction(), 'choose');
+      expect(await ProviderCredentialPrefs.getPikPakPostTorrentAction(), 'choose');
+      expect(await ProviderCredentialPrefs.getPremiumizePostTorrentAction(), 'choose');
+      expect(await ProviderCredentialPrefs.getAllDebridPostTorrentAction(), 'choose');
+      expect(await ProviderCredentialPrefs.getDefaultTorrentProvider(), 'none');
     });
 
     test('PikPak session and folder prefs', () async {
-      expect(await StorageService.getPikPakAccessToken(), isNull);
-      expect(await StorageService.getPikPakRefreshToken(), isNull);
-      expect(await StorageService.getPikPakDeviceId(), isNull);
-      expect(await StorageService.getPikPakCaptchaToken(), isNull);
-      expect(await StorageService.getPikPakUserId(), isNull);
-      expect(await StorageService.getPikPakShowVideosOnly(), isTrue);
-      expect(await StorageService.getPikPakIgnoreSmallVideos(), isTrue);
-      expect(await StorageService.getPikPakRestrictedFolderId(), isNull);
-      expect(await StorageService.getPikPakRestrictedFolderName(), isNull);
-      expect(await StorageService.getPikPakTorrentsFolderId(), isNull);
-      expect(await StorageService.getPikPakTvFolderId(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakAccessToken(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakRefreshToken(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakDeviceId(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakCaptchaToken(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakUserId(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakShowVideosOnly(), isTrue);
+      expect(await ProviderCredentialPrefs.getPikPakIgnoreSmallVideos(), isTrue);
+      expect(await ProviderCredentialPrefs.getPikPakRestrictedFolderId(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakRestrictedFolderName(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakTorrentsFolderId(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakTvFolderId(), isNull);
     });
 
     test('WebDAV prefs', () async {
-      expect(await StorageService.getWebDavBaseUrl(), isNull);
-      expect(await StorageService.getWebDavUsername(), isNull);
-      expect(await StorageService.getWebDavPassword(), isNull);
-      expect(await StorageService.getWebDavShowVideosOnly(), isTrue);
-      expect(await StorageService.getWebDavServers(), isEmpty);
-      expect(await StorageService.getSelectedWebDavServerId(), isNull);
-      expect(await StorageService.getSelectedWebDavServer(), isNull);
+      expect(await ProviderCredentialPrefs.getWebDavBaseUrl(), isNull);
+      expect(await ProviderCredentialPrefs.getWebDavUsername(), isNull);
+      expect(await ProviderCredentialPrefs.getWebDavPassword(), isNull);
+      expect(await ProviderCredentialPrefs.getWebDavShowVideosOnly(), isTrue);
+      expect(await ProviderCredentialPrefs.getWebDavServers(), isEmpty);
+      expect(await ProviderCredentialPrefs.getSelectedWebDavServerId(), isNull);
+      expect(await ProviderCredentialPrefs.getSelectedWebDavServer(), isNull);
     });
   });
 
   test('StorageService writes the historical settings key bytes', () async {
-    await StorageService.saveRdEndpoint('https://app.real-debrid.com/rest/1.0');
-    await StorageService.saveFileSelection('all');
-    await StorageService.setTorboxCacheCheckEnabled(true);
-    await StorageService.setRealDebridIntegrationEnabled(false);
-    await StorageService.setRealDebridHiddenFromNav(true);
-    await StorageService.setRdSkipBlockedTorrents(false);
-    await StorageService.setTorboxIntegrationEnabled(false);
-    await StorageService.setTorboxHiddenFromNav(true);
-    await StorageService.setPremiumizeIntegrationEnabled(false);
-    await StorageService.setPremiumizeHiddenFromNav(true);
-    await StorageService.setPremiumizeCacheCheckEnabled(true);
-    await StorageService.savePremiumizePostTorrentAction('delete');
-    await StorageService.setAllDebridIntegrationEnabled(false);
-    await StorageService.setAllDebridHiddenFromNav(true);
-    await StorageService.saveAllDebridPostTorrentAction('keep');
-    await StorageService.savePostTorrentAction('delete');
-    await StorageService.saveTorboxPostTorrentAction('keep');
-    await StorageService.savePikPakPostTorrentAction('delete');
-    await StorageService.setPikPakEnabled(true);
-    await StorageService.setPikPakHiddenFromNav(true);
-    await StorageService.setPikPakShowVideosOnly(false);
-    await StorageService.setPikPakIgnoreSmallVideos(false);
-    await StorageService.setPikPakRestrictedFolder('fid', 'Restricted');
-    await StorageService.setPikPakTorrentsFolderId('torrents-id');
-    await StorageService.setPikPakTvFolderId('tv-id');
-    await StorageService.setWebDavEnabled(true);
-    await StorageService.setWebDavHiddenFromNav(true);
-    await StorageService.setWebDavShowVideosOnly(false);
-    await StorageService.setDefaultTorrentProvider('torbox');
+    await ProviderCredentialPrefs.saveRdEndpoint('https://app.real-debrid.com/rest/1.0');
+    await ProviderCredentialPrefs.saveFileSelection('all');
+    await ProviderCredentialPrefs.setTorboxCacheCheckEnabled(true);
+    await ProviderCredentialPrefs.setRealDebridIntegrationEnabled(false);
+    await ProviderCredentialPrefs.setRealDebridHiddenFromNav(true);
+    await ProviderCredentialPrefs.setRdSkipBlockedTorrents(false);
+    await ProviderCredentialPrefs.setTorboxIntegrationEnabled(false);
+    await ProviderCredentialPrefs.setTorboxHiddenFromNav(true);
+    await ProviderCredentialPrefs.setPremiumizeIntegrationEnabled(false);
+    await ProviderCredentialPrefs.setPremiumizeHiddenFromNav(true);
+    await ProviderCredentialPrefs.setPremiumizeCacheCheckEnabled(true);
+    await ProviderCredentialPrefs.savePremiumizePostTorrentAction('delete');
+    await ProviderCredentialPrefs.setAllDebridIntegrationEnabled(false);
+    await ProviderCredentialPrefs.setAllDebridHiddenFromNav(true);
+    await ProviderCredentialPrefs.saveAllDebridPostTorrentAction('keep');
+    await ProviderCredentialPrefs.savePostTorrentAction('delete');
+    await ProviderCredentialPrefs.saveTorboxPostTorrentAction('keep');
+    await ProviderCredentialPrefs.savePikPakPostTorrentAction('delete');
+    await ProviderCredentialPrefs.setPikPakEnabled(true);
+    await ProviderCredentialPrefs.setPikPakHiddenFromNav(true);
+    await ProviderCredentialPrefs.setPikPakShowVideosOnly(false);
+    await ProviderCredentialPrefs.setPikPakIgnoreSmallVideos(false);
+    await ProviderCredentialPrefs.setPikPakRestrictedFolder('fid', 'Restricted');
+    await ProviderCredentialPrefs.setPikPakTorrentsFolderId('torrents-id');
+    await ProviderCredentialPrefs.setPikPakTvFolderId('tv-id');
+    await ProviderCredentialPrefs.setWebDavEnabled(true);
+    await ProviderCredentialPrefs.setWebDavHiddenFromNav(true);
+    await ProviderCredentialPrefs.setWebDavShowVideosOnly(false);
+    await ProviderCredentialPrefs.setDefaultTorrentProvider('torbox');
 
     final prefs = await SharedPreferences.getInstance();
     expect(
@@ -186,45 +187,45 @@ void main() {
         'default_torrent_provider_v1': 'debrid',
       });
 
-      expect(await StorageService.getRdEndpoint(), 'https://backup.example/rd');
-      expect(await StorageService.getFileSelection(), 'largest');
-      expect(await StorageService.getTorboxCacheCheckEnabled(), isTrue);
-      expect(await StorageService.getRealDebridIntegrationEnabled(), isFalse);
-      expect(await StorageService.getRealDebridHiddenFromNav(), isTrue);
-      expect(await StorageService.getRdSkipBlockedTorrents(), isFalse);
-      expect(await StorageService.getTorboxIntegrationEnabled(), isFalse);
-      expect(await StorageService.getTorboxHiddenFromNav(), isTrue);
-      expect(await StorageService.getPremiumizeIntegrationEnabled(), isFalse);
-      expect(await StorageService.getPremiumizeHiddenFromNav(), isTrue);
-      expect(await StorageService.getPremiumizeCacheCheckEnabled(), isTrue);
-      expect(await StorageService.getPremiumizePostTorrentAction(), 'delete');
-      expect(await StorageService.getAllDebridIntegrationEnabled(), isFalse);
-      expect(await StorageService.getAllDebridHiddenFromNav(), isTrue);
-      expect(await StorageService.getAllDebridPostTorrentAction(), 'keep');
-      expect(await StorageService.getPostTorrentAction(), 'delete');
-      expect(await StorageService.getTorboxPostTorrentAction(), 'keep');
-      expect(await StorageService.getPikPakPostTorrentAction(), 'delete');
-      expect(await StorageService.getPikPakEnabled(), isTrue);
-      expect(await StorageService.getPikPakHiddenFromNav(), isTrue);
-      expect(await StorageService.getPikPakShowVideosOnly(), isFalse);
-      expect(await StorageService.getPikPakIgnoreSmallVideos(), isFalse);
-      expect(await StorageService.getPikPakRestrictedFolderId(), 'r1');
-      expect(await StorageService.getPikPakRestrictedFolderName(), 'R');
-      expect(await StorageService.getPikPakTorrentsFolderId(), 't1');
-      expect(await StorageService.getPikPakTvFolderId(), 'v1');
-      expect(await StorageService.getWebDavEnabled(), isTrue);
-      expect(await StorageService.getWebDavHiddenFromNav(), isTrue);
-      expect(await StorageService.getWebDavShowVideosOnly(), isFalse);
-      expect(await StorageService.getDefaultTorrentProvider(), 'debrid');
+      expect(await ProviderCredentialPrefs.getRdEndpoint(), 'https://backup.example/rd');
+      expect(await ProviderCredentialPrefs.getFileSelection(), 'largest');
+      expect(await ProviderCredentialPrefs.getTorboxCacheCheckEnabled(), isTrue);
+      expect(await ProviderCredentialPrefs.getRealDebridIntegrationEnabled(), isFalse);
+      expect(await ProviderCredentialPrefs.getRealDebridHiddenFromNav(), isTrue);
+      expect(await ProviderCredentialPrefs.getRdSkipBlockedTorrents(), isFalse);
+      expect(await ProviderCredentialPrefs.getTorboxIntegrationEnabled(), isFalse);
+      expect(await ProviderCredentialPrefs.getTorboxHiddenFromNav(), isTrue);
+      expect(await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled(), isFalse);
+      expect(await ProviderCredentialPrefs.getPremiumizeHiddenFromNav(), isTrue);
+      expect(await ProviderCredentialPrefs.getPremiumizeCacheCheckEnabled(), isTrue);
+      expect(await ProviderCredentialPrefs.getPremiumizePostTorrentAction(), 'delete');
+      expect(await ProviderCredentialPrefs.getAllDebridIntegrationEnabled(), isFalse);
+      expect(await ProviderCredentialPrefs.getAllDebridHiddenFromNav(), isTrue);
+      expect(await ProviderCredentialPrefs.getAllDebridPostTorrentAction(), 'keep');
+      expect(await ProviderCredentialPrefs.getPostTorrentAction(), 'delete');
+      expect(await ProviderCredentialPrefs.getTorboxPostTorrentAction(), 'keep');
+      expect(await ProviderCredentialPrefs.getPikPakPostTorrentAction(), 'delete');
+      expect(await ProviderCredentialPrefs.getPikPakEnabled(), isTrue);
+      expect(await ProviderCredentialPrefs.getPikPakHiddenFromNav(), isTrue);
+      expect(await ProviderCredentialPrefs.getPikPakShowVideosOnly(), isFalse);
+      expect(await ProviderCredentialPrefs.getPikPakIgnoreSmallVideos(), isFalse);
+      expect(await ProviderCredentialPrefs.getPikPakRestrictedFolderId(), 'r1');
+      expect(await ProviderCredentialPrefs.getPikPakRestrictedFolderName(), 'R');
+      expect(await ProviderCredentialPrefs.getPikPakTorrentsFolderId(), 't1');
+      expect(await ProviderCredentialPrefs.getPikPakTvFolderId(), 'v1');
+      expect(await ProviderCredentialPrefs.getWebDavEnabled(), isTrue);
+      expect(await ProviderCredentialPrefs.getWebDavHiddenFromNav(), isTrue);
+      expect(await ProviderCredentialPrefs.getWebDavShowVideosOnly(), isFalse);
+      expect(await ProviderCredentialPrefs.getDefaultTorrentProvider(), 'debrid');
     },
   );
 
   test('PikPak session tokens write through SecretVault', () async {
-    await StorageService.setPikPakAccessToken('access-token');
-    await StorageService.setPikPakRefreshToken('refresh-token');
-    await StorageService.setPikPakDeviceId('device-1');
-    await StorageService.setPikPakCaptchaToken('captcha-1');
-    await StorageService.setPikPakUserId('user-1');
+    await ProviderCredentialPrefs.setPikPakAccessToken('access-token');
+    await ProviderCredentialPrefs.setPikPakRefreshToken('refresh-token');
+    await ProviderCredentialPrefs.setPikPakDeviceId('device-1');
+    await ProviderCredentialPrefs.setPikPakCaptchaToken('captcha-1');
+    await ProviderCredentialPrefs.setPikPakUserId('user-1');
 
     final prefs = await SharedPreferences.getInstance();
     expect(
@@ -242,36 +243,36 @@ void main() {
     );
     expect(prefs.getString('pikpak_user_id'), startsWith(SecretVault.prefix));
 
-    expect(await StorageService.getPikPakAccessToken(), 'access-token');
-    expect(await StorageService.getPikPakRefreshToken(), 'refresh-token');
-    expect(await StorageService.getPikPakDeviceId(), 'device-1');
-    expect(await StorageService.getPikPakCaptchaToken(), 'captcha-1');
-    expect(await StorageService.getPikPakUserId(), 'user-1');
+    expect(await ProviderCredentialPrefs.getPikPakAccessToken(), 'access-token');
+    expect(await ProviderCredentialPrefs.getPikPakRefreshToken(), 'refresh-token');
+    expect(await ProviderCredentialPrefs.getPikPakDeviceId(), 'device-1');
+    expect(await ProviderCredentialPrefs.getPikPakCaptchaToken(), 'captcha-1');
+    expect(await ProviderCredentialPrefs.getPikPakUserId(), 'user-1');
   });
 
   test(
     'clear helpers remove historical keys and keep PikPak out of integration clear',
     () async {
-      await StorageService.setRealDebridIntegrationEnabled(false);
-      await StorageService.setRealDebridHiddenFromNav(true);
-      await StorageService.setTorboxIntegrationEnabled(false);
-      await StorageService.setTorboxHiddenFromNav(true);
-      await StorageService.setPremiumizeIntegrationEnabled(false);
-      await StorageService.setPremiumizeHiddenFromNav(true);
-      await StorageService.setAllDebridIntegrationEnabled(false);
-      await StorageService.setAllDebridHiddenFromNav(true);
-      await StorageService.setWebDavEnabled(true);
-      await StorageService.setWebDavHiddenFromNav(true);
-      await StorageService.setPikPakEnabled(true);
-      await StorageService.setPikPakHiddenFromNav(true);
-      await StorageService.savePostTorrentAction('delete');
-      await StorageService.saveTorboxPostTorrentAction('keep');
-      await StorageService.savePikPakPostTorrentAction('delete');
-      await StorageService.savePremiumizePostTorrentAction('delete');
-      await StorageService.saveAllDebridPostTorrentAction('keep');
+      await ProviderCredentialPrefs.setRealDebridIntegrationEnabled(false);
+      await ProviderCredentialPrefs.setRealDebridHiddenFromNav(true);
+      await ProviderCredentialPrefs.setTorboxIntegrationEnabled(false);
+      await ProviderCredentialPrefs.setTorboxHiddenFromNav(true);
+      await ProviderCredentialPrefs.setPremiumizeIntegrationEnabled(false);
+      await ProviderCredentialPrefs.setPremiumizeHiddenFromNav(true);
+      await ProviderCredentialPrefs.setAllDebridIntegrationEnabled(false);
+      await ProviderCredentialPrefs.setAllDebridHiddenFromNav(true);
+      await ProviderCredentialPrefs.setWebDavEnabled(true);
+      await ProviderCredentialPrefs.setWebDavHiddenFromNav(true);
+      await ProviderCredentialPrefs.setPikPakEnabled(true);
+      await ProviderCredentialPrefs.setPikPakHiddenFromNav(true);
+      await ProviderCredentialPrefs.savePostTorrentAction('delete');
+      await ProviderCredentialPrefs.saveTorboxPostTorrentAction('keep');
+      await ProviderCredentialPrefs.savePikPakPostTorrentAction('delete');
+      await ProviderCredentialPrefs.savePremiumizePostTorrentAction('delete');
+      await ProviderCredentialPrefs.saveAllDebridPostTorrentAction('keep');
 
-      await StorageService.clearAllIntegrationStates();
-      await StorageService.clearAllPostTorrentActions();
+      await ProviderCredentialPrefs.clearAllIntegrationStates();
+      await ProviderCredentialPrefs.clearAllPostTorrentActions();
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey('real_debrid_integration_enabled'), isFalse);
@@ -298,19 +299,19 @@ void main() {
   test(
     'hidden-from-nav clear removes the key; getters then default false',
     () async {
-      await StorageService.setRealDebridHiddenFromNav(true);
-      await StorageService.setTorboxHiddenFromNav(true);
-      await StorageService.setPremiumizeHiddenFromNav(true);
-      await StorageService.setAllDebridHiddenFromNav(true);
-      await StorageService.setPikPakHiddenFromNav(true);
-      await StorageService.setWebDavHiddenFromNav(true);
+      await ProviderCredentialPrefs.setRealDebridHiddenFromNav(true);
+      await ProviderCredentialPrefs.setTorboxHiddenFromNav(true);
+      await ProviderCredentialPrefs.setPremiumizeHiddenFromNav(true);
+      await ProviderCredentialPrefs.setAllDebridHiddenFromNav(true);
+      await ProviderCredentialPrefs.setPikPakHiddenFromNav(true);
+      await ProviderCredentialPrefs.setWebDavHiddenFromNav(true);
 
-      await StorageService.clearRealDebridHiddenFromNav();
-      await StorageService.clearTorboxHiddenFromNav();
-      await StorageService.clearPremiumizeHiddenFromNav();
-      await StorageService.clearAllDebridHiddenFromNav();
-      await StorageService.clearPikPakHiddenFromNav();
-      await StorageService.clearWebDavHiddenFromNav();
+      await ProviderCredentialPrefs.clearRealDebridHiddenFromNav();
+      await ProviderCredentialPrefs.clearTorboxHiddenFromNav();
+      await ProviderCredentialPrefs.clearPremiumizeHiddenFromNav();
+      await ProviderCredentialPrefs.clearAllDebridHiddenFromNav();
+      await ProviderCredentialPrefs.clearPikPakHiddenFromNav();
+      await ProviderCredentialPrefs.clearWebDavHiddenFromNav();
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey('real_debrid_hidden_from_nav'), isFalse);
@@ -319,15 +320,15 @@ void main() {
       expect(prefs.containsKey('alldebrid_hidden_from_nav'), isFalse);
       expect(prefs.containsKey('pikpak_hidden_from_nav'), isFalse);
       expect(prefs.containsKey('webdav_hidden_from_nav'), isFalse);
-      expect(await StorageService.getRealDebridHiddenFromNav(), isFalse);
+      expect(await ProviderCredentialPrefs.getRealDebridHiddenFromNav(), isFalse);
     },
   );
 
   test('RD endpoint delete restores the primary default', () async {
-    await StorageService.saveRdEndpoint('https://app.real-debrid.com/rest/1.0');
-    await StorageService.deleteRdEndpoint();
+    await ProviderCredentialPrefs.saveRdEndpoint('https://app.real-debrid.com/rest/1.0');
+    await ProviderCredentialPrefs.deleteRdEndpoint();
     expect(
-      await StorageService.getRdEndpoint(),
+      await ProviderCredentialPrefs.getRdEndpoint(),
       'https://api.real-debrid.com/rest/1.0',
     );
     final prefs = await SharedPreferences.getInstance();
@@ -337,12 +338,12 @@ void main() {
   test(
     'PikPak restricted folder null removes both keys; caches stay until clear',
     () async {
-      await StorageService.setPikPakRestrictedFolder('fid', 'Name');
-      await StorageService.setPikPakTorrentsFolderId('t');
-      await StorageService.setPikPakTvFolderId('v');
+      await ProviderCredentialPrefs.setPikPakRestrictedFolder('fid', 'Name');
+      await ProviderCredentialPrefs.setPikPakTorrentsFolderId('t');
+      await ProviderCredentialPrefs.setPikPakTvFolderId('v');
       // Quirk: set(null) drops restriction keys only. Subfolder caches
       // leave until clearPikPakRestrictedFolder (which also clears caches).
-      await StorageService.setPikPakRestrictedFolder(null, null);
+      await ProviderCredentialPrefs.setPikPakRestrictedFolder(null, null);
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey('pikpak_restricted_folder_id'), isFalse);
@@ -350,7 +351,7 @@ void main() {
       expect(prefs.getString('pikpak_torrents_folder_id'), 't');
       expect(prefs.getString('pikpak_tv_folder_id'), 'v');
 
-      await StorageService.clearPikPakRestrictedFolder();
+      await ProviderCredentialPrefs.clearPikPakRestrictedFolder();
       expect(prefs.containsKey('pikpak_torrents_folder_id'), isFalse);
       expect(prefs.containsKey('pikpak_tv_folder_id'), isFalse);
     },
@@ -359,40 +360,40 @@ void main() {
   test(
     'clearPikPakAuth disables PikPak and drops session + folder keys',
     () async {
-      await StorageService.setPikPakEnabled(true);
-      await StorageService.setPikPakAccessToken('access-token');
-      await StorageService.setPikPakRefreshToken('refresh-token');
-      await StorageService.setPikPakDeviceId('device-1');
-      await StorageService.setPikPakCaptchaToken('captcha-1');
-      await StorageService.setPikPakUserId('user-1');
-      await StorageService.setPikPakRestrictedFolder('fid', 'Name');
-      await StorageService.setPikPakHiddenFromNav(true);
+      await ProviderCredentialPrefs.setPikPakEnabled(true);
+      await ProviderCredentialPrefs.setPikPakAccessToken('access-token');
+      await ProviderCredentialPrefs.setPikPakRefreshToken('refresh-token');
+      await ProviderCredentialPrefs.setPikPakDeviceId('device-1');
+      await ProviderCredentialPrefs.setPikPakCaptchaToken('captcha-1');
+      await ProviderCredentialPrefs.setPikPakUserId('user-1');
+      await ProviderCredentialPrefs.setPikPakRestrictedFolder('fid', 'Name');
+      await ProviderCredentialPrefs.setPikPakHiddenFromNav(true);
 
-      await StorageService.clearPikPakAuth();
+      await ProviderCredentialPrefs.clearPikPakAuth();
 
-      expect(await StorageService.getPikPakEnabled(), isFalse);
-      expect(await StorageService.getPikPakAccessToken(), isNull);
-      expect(await StorageService.getPikPakRefreshToken(), isNull);
-      expect(await StorageService.getPikPakDeviceId(), isNull);
-      expect(await StorageService.getPikPakCaptchaToken(), isNull);
-      expect(await StorageService.getPikPakUserId(), isNull);
-      expect(await StorageService.getPikPakRestrictedFolderId(), isNull);
-      expect(await StorageService.getPikPakHiddenFromNav(), isFalse);
+      expect(await ProviderCredentialPrefs.getPikPakEnabled(), isFalse);
+      expect(await ProviderCredentialPrefs.getPikPakAccessToken(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakRefreshToken(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakDeviceId(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakCaptchaToken(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakUserId(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakRestrictedFolderId(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakHiddenFromNav(), isFalse);
     },
   );
 
   test('WebDAV legacy single-server keys promote into servers_v1', () async {
-    await StorageService.setWebDavBaseUrl('https://dav.example/');
-    await StorageService.setWebDavUsername('alice');
-    await StorageService.setWebDavPassword('s3cret');
+    await ProviderCredentialPrefs.setWebDavBaseUrl('https://dav.example/');
+    await ProviderCredentialPrefs.setWebDavUsername('alice');
+    await ProviderCredentialPrefs.setWebDavPassword('s3cret');
 
-    final servers = await StorageService.getWebDavServers();
+    final servers = await ProviderCredentialPrefs.getWebDavServers();
     expect(servers, hasLength(1));
     expect(servers.first.baseUrl, 'https://dav.example/');
     expect(servers.first.username, 'alice');
     expect(servers.first.password, 's3cret');
     expect(servers.first.name, 'dav.example');
-    expect(await StorageService.getSelectedWebDavServerId(), servers.first.id);
+    expect(await ProviderCredentialPrefs.getSelectedWebDavServerId(), servers.first.id);
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('webdav_base_url'), startsWith(SecretVault.prefix));
@@ -406,7 +407,7 @@ void main() {
   });
 
   test('saveWebDavServers writes enabled from list emptiness', () async {
-    final saved = await StorageService.saveWebDavServers(const [
+    final saved = await ProviderCredentialPrefs.saveWebDavServers(const [
       WebDavConfig(
         id: 's1',
         name: 'Home',
@@ -416,16 +417,16 @@ void main() {
       ),
     ]);
     expect(saved, hasLength(1));
-    expect(await StorageService.getWebDavEnabled(), isTrue);
+    expect(await ProviderCredentialPrefs.getWebDavEnabled(), isTrue);
 
-    await StorageService.saveWebDavServers(const []);
-    expect(await StorageService.getWebDavEnabled(), isFalse);
+    await ProviderCredentialPrefs.saveWebDavServers(const []);
+    expect(await ProviderCredentialPrefs.getWebDavEnabled(), isFalse);
   });
 
   test(
     'deleteWebDavServer of the last server clears hidden-from-nav',
     () async {
-      final created = await StorageService.upsertWebDavServer(
+      final created = await ProviderCredentialPrefs.upsertWebDavServer(
         const WebDavConfig(
           id: 'gone',
           name: 'Temp',
@@ -434,33 +435,33 @@ void main() {
           password: 'p',
         ),
       );
-      await StorageService.setWebDavHiddenFromNav(true);
-      await StorageService.deleteWebDavServer(created.id);
+      await ProviderCredentialPrefs.setWebDavHiddenFromNav(true);
+      await ProviderCredentialPrefs.deleteWebDavServer(created.id);
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey('webdav_selected_server_id_v1'), isFalse);
       expect(prefs.getBool('webdav_hidden_from_nav'), isFalse);
-      expect(await StorageService.getWebDavServers(), isEmpty);
+      expect(await ProviderCredentialPrefs.getWebDavServers(), isEmpty);
     },
   );
 
   test('setSelectedWebDavServerId null or empty removes the key', () async {
-    await StorageService.setSelectedWebDavServerId('abc');
-    await StorageService.setSelectedWebDavServerId(null);
+    await ProviderCredentialPrefs.setSelectedWebDavServerId('abc');
+    await ProviderCredentialPrefs.setSelectedWebDavServerId(null);
     var prefs = await SharedPreferences.getInstance();
     expect(prefs.containsKey('webdav_selected_server_id_v1'), isFalse);
 
-    await StorageService.setSelectedWebDavServerId('abc');
-    await StorageService.setSelectedWebDavServerId('');
+    await ProviderCredentialPrefs.setSelectedWebDavServerId('abc');
+    await ProviderCredentialPrefs.setSelectedWebDavServerId('');
     prefs = await SharedPreferences.getInstance();
     expect(prefs.containsKey('webdav_selected_server_id_v1'), isFalse);
   });
 
   test('clearWebDav drops connection keys and disables the provider', () async {
-    await StorageService.setWebDavBaseUrl('https://dav.example/');
-    await StorageService.setWebDavEnabled(true);
-    await StorageService.setWebDavHiddenFromNav(true);
-    await StorageService.clearWebDav();
+    await ProviderCredentialPrefs.setWebDavBaseUrl('https://dav.example/');
+    await ProviderCredentialPrefs.setWebDavEnabled(true);
+    await ProviderCredentialPrefs.setWebDavHiddenFromNav(true);
+    await ProviderCredentialPrefs.clearWebDav();
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.containsKey('webdav_base_url'), isFalse);
@@ -475,9 +476,9 @@ void main() {
   test(
     'clearDefaultTorrentProvider removes the key; getter reads none',
     () async {
-      await StorageService.setDefaultTorrentProvider('pikpak');
-      await StorageService.clearDefaultTorrentProvider();
-      expect(await StorageService.getDefaultTorrentProvider(), 'none');
+      await ProviderCredentialPrefs.setDefaultTorrentProvider('pikpak');
+      await ProviderCredentialPrefs.clearDefaultTorrentProvider();
+      expect(await ProviderCredentialPrefs.getDefaultTorrentProvider(), 'none');
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey('default_torrent_provider_v1'), isFalse);
     },
@@ -486,12 +487,12 @@ void main() {
   test(
     'clearPikPakCaptchaToken and deletePikPakDeviceId remove those keys',
     () async {
-      await StorageService.setPikPakCaptchaToken('c');
-      await StorageService.setPikPakDeviceId('d');
-      await StorageService.clearPikPakCaptchaToken();
-      await StorageService.deletePikPakDeviceId();
-      expect(await StorageService.getPikPakCaptchaToken(), isNull);
-      expect(await StorageService.getPikPakDeviceId(), isNull);
+      await ProviderCredentialPrefs.setPikPakCaptchaToken('c');
+      await ProviderCredentialPrefs.setPikPakDeviceId('d');
+      await ProviderCredentialPrefs.clearPikPakCaptchaToken();
+      await ProviderCredentialPrefs.deletePikPakDeviceId();
+      expect(await ProviderCredentialPrefs.getPikPakCaptchaToken(), isNull);
+      expect(await ProviderCredentialPrefs.getPikPakDeviceId(), isNull);
     },
   );
 }

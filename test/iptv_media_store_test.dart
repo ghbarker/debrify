@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -79,7 +81,7 @@ void main() {
         }),
       });
 
-      final favorites = await StorageService.getIptvFavoriteChannels();
+      final favorites = await IptvPrefs.getIptvFavoriteChannels();
       final meta = favorites['http://h/live/u/p/1.ts']!;
       expect(meta['name'], 'Спорт ᴴᴰ');
       expect(meta['group'], 'Sports');
@@ -87,7 +89,7 @@ void main() {
       expect(meta['httpHeaders'], {'User-Agent': 'TiviMate'});
       expect(meta['addedAt'], 111);
 
-      final history = await StorageService.getIptvWatchHistory();
+      final history = await IptvPrefs.getIptvWatchHistory();
       final watched = history['http://h/movie/u/p/9.mp4']!;
       expect(watched['name'], 'A Movie');
       expect(watched['seriesId'], 's1');
@@ -117,7 +119,7 @@ void main() {
         () async {
       SharedPreferences.setMockInitialValues({favoritesKey: 'not json {'});
 
-      expect(await StorageService.getIptvFavoriteChannels(), isEmpty);
+      expect(await IptvPrefs.getIptvFavoriteChannels(), isEmpty);
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString(favoritesKey), isNull);
     });
@@ -136,7 +138,7 @@ void main() {
         httpHeaders: {'Referer': 'http://h/'},
       );
 
-      var favorites = await StorageService.getIptvFavoriteChannels();
+      var favorites = await IptvPrefs.getIptvFavoriteChannels();
       final meta = favorites['http://h/live/u/p/7.ts']!;
       expect(meta['name'], 'News');
       expect(meta['channelNumber'], 407);
@@ -147,7 +149,7 @@ void main() {
         'http://h/live/u/p/7.ts',
         false,
       );
-      favorites = await StorageService.getIptvFavoriteChannels();
+      favorites = await IptvPrefs.getIptvFavoriteChannels();
       expect(favorites, isEmpty);
     });
 
@@ -164,7 +166,7 @@ void main() {
         channelName: 'TS form',
       );
 
-      final favorites = await StorageService.getIptvFavoriteChannels();
+      final favorites = await IptvPrefs.getIptvFavoriteChannels();
       expect(favorites.keys, ['http://h/live/u/p/7.ts'],
           reason: 'canonically-equal duplicates must collapse to one row');
     });
@@ -181,9 +183,9 @@ void main() {
         playlistId: 'p2',
       );
 
-      await StorageService.removeIptvFavoritesByPlaylistId('p1');
+      await IptvPrefs.removeIptvFavoritesByPlaylistId('p1');
 
-      final favorites = await StorageService.getIptvFavoriteChannels();
+      final favorites = await IptvPrefs.getIptvFavoriteChannels();
       expect(favorites.keys, ['http://h/live/u/p/2.ts']);
     });
   });
@@ -202,7 +204,7 @@ void main() {
         hasNextEpisode: true,
       );
 
-      final history = await StorageService.getIptvWatchHistory();
+      final history = await IptvPrefs.getIptvWatchHistory();
       final meta = history['http://h/series/u/p/55.mp4']!;
       expect(meta['name'], 'S02E05');
       expect(meta['httpHeaders'], {'User-Agent': 'X'});
@@ -219,7 +221,7 @@ void main() {
       );
 
       final meta =
-          (await StorageService.getIptvWatchHistory())['http://h/movie/u/p/9.mp4']!;
+          (await IptvPrefs.getIptvWatchHistory())['http://h/movie/u/p/9.mp4']!;
       expect(meta.containsKey('seriesId'), isFalse);
       expect(meta.containsKey('season'), isFalse);
       expect(meta.containsKey('hasNext'), isFalse);
@@ -240,7 +242,7 @@ void main() {
         channelName: 'Newest',
       );
 
-      final history = await StorageService.getIptvWatchHistory();
+      final history = await IptvPrefs.getIptvWatchHistory();
       expect(history.length, 100);
       expect(history.keys, contains('http://h/movie/u/p/new.mp4'));
       expect(history.keys, isNot(contains('http://h/movie/u/p/0.mp4')),
@@ -257,9 +259,9 @@ void main() {
         playlistId: 'p2',
       );
 
-      await StorageService.removeIptvWatchHistoryByPlaylistId('p1');
+      await IptvPrefs.removeIptvWatchHistoryByPlaylistId('p1');
 
-      expect((await StorageService.getIptvWatchHistory()).keys,
+      expect((await IptvPrefs.getIptvWatchHistory()).keys,
           ['http://h/movie/u/p/2.mp4']);
     });
   });
@@ -300,7 +302,7 @@ void main() {
       await watchAndResume('http://h/done.mp4',
           positionMs: 99000, durationMs: 100000, updatedAt: 10);
 
-      final shelf = await StorageService.getIptvContinueWatching();
+      final shelf = await IptvPrefs.getIptvContinueWatching();
       expect(shelf.map((e) => e['url']), ['http://h/mid.mp4']);
       expect(shelf.single['progress'], closeTo(0.5, 0.001));
       expect(shelf.single['positionMs'], 50000);
@@ -315,7 +317,7 @@ void main() {
           seriesId: 's1',
           hasNext: true);
 
-      final shelf = await StorageService.getIptvContinueWatching();
+      final shelf = await IptvPrefs.getIptvContinueWatching();
       expect(shelf.map((e) => e['url']), ['http://h/s1e1.mp4'],
           reason: 'a finished middle episode keeps the series visible');
     });
@@ -325,19 +327,19 @@ void main() {
       await watchAndResume('http://h/before.mp4',
           positionMs: 50000, durationMs: 100000, updatedAt: 30);
 
-      await StorageService.setIptvTrackContinueWatching(false);
+      await IptvPrefs.setIptvTrackContinueWatching(false);
       await watchAndResume('http://h/after.mp4',
           positionMs: 50000, durationMs: 100000, updatedAt: 40);
 
-      expect(await StorageService.getIptvContinueWatching(), isEmpty,
+      expect(await IptvPrefs.getIptvContinueWatching(), isEmpty,
           reason: 'the shelf is hidden wholesale while tracking is off');
       // Resume positions are a separate store and deliberately survive, so
       // both items still play from where they were left.
       expect(await StorageService.getVideoResume('http://h/after.mp4'),
           isNotNull);
 
-      await StorageService.setIptvTrackContinueWatching(true);
-      final shelf = await StorageService.getIptvContinueWatching();
+      await IptvPrefs.setIptvTrackContinueWatching(true);
+      final shelf = await IptvPrefs.getIptvContinueWatching();
       expect(shelf.map((e) => e['url']), ['http://h/before.mp4'],
           reason: 'nothing was deleted, but nothing new was recorded either');
     });
@@ -348,7 +350,7 @@ void main() {
       await watchAndResume('http://h/newer.mp4',
           positionMs: 50000, durationMs: 100000, updatedAt: 200);
 
-      final shelf = await StorageService.getIptvContinueWatching();
+      final shelf = await IptvPrefs.getIptvContinueWatching();
       expect(shelf.map((e) => e['url']),
           ['http://h/newer.mp4', 'http://h/older.mp4']);
     });
@@ -366,7 +368,7 @@ void main() {
         // no updatedAt — the shape very old legacy entries had
       });
 
-      final shelf = await StorageService.getIptvContinueWatching();
+      final shelf = await IptvPrefs.getIptvContinueWatching();
       expect(shelf.first['url'], 'http://h/untimed.mp4',
           reason: 'recordIptvWatch stamped it now, far newer than updatedAt=5');
     });
@@ -389,7 +391,7 @@ void main() {
       expect(positions, {'http://h/mid.mp4': 50000},
           reason: 'a finished item restarts from the beginning');
 
-      final progress = await StorageService.getIptvProgressForUrls(
+      final progress = await IptvPrefs.getIptvProgressForUrls(
         ['http://h/mid.mp4', 'http://h/done.mp4'],
       );
       expect(progress['http://h/mid.mp4'], closeTo(0.5, 0.001));
@@ -412,7 +414,7 @@ void main() {
       }
       await batch.commit(noResult: true);
 
-      final progress = await StorageService.getIptvProgressForUrls(urls);
+      final progress = await IptvPrefs.getIptvProgressForUrls(urls);
       expect(progress.length, 1200);
     });
 
@@ -423,7 +425,7 @@ void main() {
         'updatedAt': 1,
       });
 
-      await StorageService.clearAllPlaybackData();
+      await PlaybackProgressStore.clearAllPlaybackData();
 
       expect(await StorageService.getVideoResume('http://h/v.mp4'), isNull);
     });
@@ -436,9 +438,9 @@ void main() {
       await watchAndResume('http://h/drop.mp4',
           positionMs: 50000, durationMs: 100000, updatedAt: 20);
 
-      await StorageService.removeIptvContinueWatchingItem('http://h/drop.mp4');
+      await IptvPrefs.removeIptvContinueWatchingItem('http://h/drop.mp4');
 
-      final shelf = await StorageService.getIptvContinueWatching();
+      final shelf = await IptvPrefs.getIptvContinueWatching();
       expect(shelf.map((e) => e['url']), ['http://h/keep.mp4']);
       expect(await StorageService.getVideoResume('http://h/drop.mp4'), isNull,
           reason: 'the position must go too, or a replay resumes mid-item');
@@ -464,12 +466,12 @@ void main() {
           seriesId: 's2',
           hasNext: true);
 
-      await StorageService.removeIptvContinueWatchingSeries(
+      await IptvPrefs.removeIptvContinueWatchingSeries(
         playlistId: 'p1',
         seriesId: 's1',
       );
 
-      final shelf = await StorageService.getIptvContinueWatching();
+      final shelf = await IptvPrefs.getIptvContinueWatching();
       expect(shelf.map((e) => e['url']), ['http://h/s2e1.mp4'],
           reason: 'only the removed series leaves the shelf');
       for (var i = 1; i <= 3; i++) {
@@ -497,12 +499,12 @@ void main() {
           hasNext: true,
           playlistId: 'p2');
 
-      await StorageService.removeIptvContinueWatchingSeries(
+      await IptvPrefs.removeIptvContinueWatchingSeries(
         playlistId: 'p1',
         seriesId: 's1',
       );
 
-      final shelf = await StorageService.getIptvContinueWatching();
+      final shelf = await IptvPrefs.getIptvContinueWatching();
       expect(shelf.map((e) => e['url']), ['http://h/b/s1e1.mp4']);
       expect(await StorageService.getVideoResume('http://h/b/s1e1.mp4'),
           isNotNull);

@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -9,17 +10,16 @@ import '../models/profiles/connection_resource.dart';
 import '../models/profiles/profile_policy.dart';
 import '../utils/file_utils.dart';
 import 'profiles/profile_collection_resource_facade.dart';
-import 'storage_service.dart';
 
 class WebDavService {
   WebDavService._();
 
   static Future<WebDavConfig?> getConfig() async {
-    return StorageService.getSelectedWebDavServer(forSettings: false);
+    return ProviderCredentialPrefs.getSelectedWebDavServer(forSettings: false);
   }
 
   static Future<List<WebDavConfig>> getConfigs() {
-    return StorageService.getWebDavServers(forSettings: false);
+    return ProviderCredentialPrefs.getWebDavServers(forSettings: false);
   }
 
   static Future<bool> testConnection(WebDavConfig config) async {

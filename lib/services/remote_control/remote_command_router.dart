@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -3235,7 +3236,7 @@ class RemoteCommandRouter {
 
       // Save the API key
       await StorageService.saveApiKey(apiKey);
-      await StorageService.setRealDebridIntegrationEnabled(true);
+      await ProviderCredentialPrefs.setRealDebridIntegrationEnabled(true);
 
       debugPrint('RemoteCommandRouter: Real-Debrid configured successfully');
       _showSnackBar('Real-Debrid configured successfully');
@@ -3259,7 +3260,7 @@ class RemoteCommandRouter {
 
       // Save the API key
       await StorageService.saveTorboxApiKey(apiKey);
-      await StorageService.setTorboxIntegrationEnabled(true);
+      await ProviderCredentialPrefs.setTorboxIntegrationEnabled(true);
 
       debugPrint('RemoteCommandRouter: Torbox configured successfully');
       _showSnackBar('Torbox configured successfully');
@@ -3283,7 +3284,7 @@ class RemoteCommandRouter {
       }
 
       await StorageService.savePremiumizeApiKey(apiKey);
-      await StorageService.setPremiumizeIntegrationEnabled(true);
+      await ProviderCredentialPrefs.setPremiumizeIntegrationEnabled(true);
 
       debugPrint('RemoteCommandRouter: Premiumize configured successfully');
       _showSnackBar('Premiumize configured successfully');
@@ -3307,7 +3308,7 @@ class RemoteCommandRouter {
       }
 
       await StorageService.saveAllDebridApiKey(apiKey);
-      await StorageService.setAllDebridIntegrationEnabled(true);
+      await ProviderCredentialPrefs.setAllDebridIntegrationEnabled(true);
 
       debugPrint('RemoteCommandRouter: AllDebrid configured successfully');
       _showSnackBar('AllDebrid configured successfully');
@@ -3339,7 +3340,7 @@ class RemoteCommandRouter {
       }
 
       // Enable PikPak integration
-      await StorageService.setPikPakEnabled(true);
+      await ProviderCredentialPrefs.setPikPakEnabled(true);
 
       debugPrint('RemoteCommandRouter: PikPak configured successfully');
       _showSnackBar('PikPak configured successfully');
@@ -3613,7 +3614,7 @@ class RemoteCommandRouter {
       String normalize(String url) =>
           url.trim().toLowerCase().replaceFirst(RegExp(r'/+$'), '');
 
-      final existing = await StorageService.getWebDavServers();
+      final existing = await ProviderCredentialPrefs.getWebDavServers();
       final existingKeys = <String>{
         for (final s in existing) normalize(s.baseUrl),
       };
@@ -3648,7 +3649,7 @@ class RemoteCommandRouter {
       }
 
       if (imported > 0) {
-        await StorageService.saveWebDavServers(merged);
+        await ProviderCredentialPrefs.saveWebDavServers(merged);
       }
 
       if (imported > 0 && skipped == 0) {

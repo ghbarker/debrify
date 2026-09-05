@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'debrid_service.dart';
-import 'iptv_channel_order.dart';
 import 'iptv_media_store.dart';
 import 'profiles/profile_preferences.dart';
 import 'profiles/profile_collection_resource_facade.dart';
@@ -15,12 +14,10 @@ import 'storage/my_watchlist_store.dart';
 import '../models/profiles/connection_resource.dart';
 import '../models/profiles/profile_policy.dart';
 import 'secret_vault.dart';
-import '../models/iptv_playlist.dart';
 import '../models/indexer_manager_config.dart';
 import '../models/quick_play_rules.dart';
 import '../models/sidebar_configuration.dart';
 import '../models/stremio_addon.dart';
-import '../models/webdav_item.dart';
 import '../models/android_video_renderer_mode.dart';
 import '../models/tv_hero_artwork_quality.dart';
 import '../models/tracking_source.dart';
@@ -294,14 +291,8 @@ class StorageService {
       CloudSecretPrefs.delete(CloudSecretPrefs.realDebridApiKey);
 
   // Real-Debrid endpoint preference (for fallback to backup endpoint)
-  static Future<String> getRdEndpoint() =>
-      ProviderCredentialPrefs.getRdEndpoint();
 
-  static Future<void> saveRdEndpoint(String endpoint) =>
-      ProviderCredentialPrefs.saveRdEndpoint(endpoint);
 
-  static Future<void> deleteRdEndpoint() =>
-      ProviderCredentialPrefs.deleteRdEndpoint();
 
   // Torbox API key helpers
   static Future<String?> getTorboxApiKey({
@@ -623,17 +614,9 @@ class StorageService {
     _tvTrailerUnderlaySession = null;
   }
 
-  static Future<bool> getTorboxCacheCheckEnabled() =>
-      ProviderCredentialPrefs.getTorboxCacheCheckEnabled();
 
-  static Future<void> setTorboxCacheCheckEnabled(bool enabled) =>
-      ProviderCredentialPrefs.setTorboxCacheCheckEnabled(enabled);
 
-  static Future<bool> getRealDebridIntegrationEnabled() =>
-      ProviderCredentialPrefs.getRealDebridIntegrationEnabled();
 
-  static Future<void> setRealDebridIntegrationEnabled(bool enabled) =>
-      ProviderCredentialPrefs.setRealDebridIntegrationEnabled(enabled);
 
 
   static const Set<String> kTvHomeStyles = HomePrefs.kTvHomeStyles;
@@ -747,35 +730,15 @@ class StorageService {
   static Future<bool> setSidebarConfiguration(SidebarConfiguration configuration) => AppStylePrefs.setSidebarConfiguration(configuration);
   static Future<bool> resetSidebarConfiguration() => AppStylePrefs.resetSidebarConfiguration();
 
-  static Future<bool> getRealDebridHiddenFromNav() =>
-      ProviderCredentialPrefs.getRealDebridHiddenFromNav();
 
-  static Future<void> setRealDebridHiddenFromNav(bool hidden) =>
-      ProviderCredentialPrefs.setRealDebridHiddenFromNav(hidden);
 
-  static Future<void> clearRealDebridHiddenFromNav() =>
-      ProviderCredentialPrefs.clearRealDebridHiddenFromNav();
 
-  static Future<bool> getRdSkipBlockedTorrents() =>
-      ProviderCredentialPrefs.getRdSkipBlockedTorrents();
 
-  static Future<void> setRdSkipBlockedTorrents(bool enabled) =>
-      ProviderCredentialPrefs.setRdSkipBlockedTorrents(enabled);
 
-  static Future<bool> getTorboxIntegrationEnabled() =>
-      ProviderCredentialPrefs.getTorboxIntegrationEnabled();
 
-  static Future<void> setTorboxIntegrationEnabled(bool enabled) =>
-      ProviderCredentialPrefs.setTorboxIntegrationEnabled(enabled);
 
-  static Future<bool> getTorboxHiddenFromNav() =>
-      ProviderCredentialPrefs.getTorboxHiddenFromNav();
 
-  static Future<void> setTorboxHiddenFromNav(bool hidden) =>
-      ProviderCredentialPrefs.setTorboxHiddenFromNav(hidden);
 
-  static Future<void> clearTorboxHiddenFromNav() =>
-      ProviderCredentialPrefs.clearTorboxHiddenFromNav();
 
   // Premiumize API key helpers
   static Future<String?> getPremiumizeApiKey({
@@ -795,20 +758,10 @@ class StorageService {
   static Future<void> deletePremiumizeApiKey() =>
       CloudSecretPrefs.delete(_premiumizeApiKey);
 
-  static Future<bool> getPremiumizeIntegrationEnabled() =>
-      ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
 
-  static Future<void> setPremiumizeIntegrationEnabled(bool enabled) =>
-      ProviderCredentialPrefs.setPremiumizeIntegrationEnabled(enabled);
 
-  static Future<bool> getPremiumizeHiddenFromNav() =>
-      ProviderCredentialPrefs.getPremiumizeHiddenFromNav();
 
-  static Future<void> setPremiumizeHiddenFromNav(bool hidden) =>
-      ProviderCredentialPrefs.setPremiumizeHiddenFromNav(hidden);
 
-  static Future<void> clearPremiumizeHiddenFromNav() =>
-      ProviderCredentialPrefs.clearPremiumizeHiddenFromNav();
 
   // AllDebrid API key helpers
   static Future<String?> getAllDebridApiKey({
@@ -843,28 +796,14 @@ class StorageService {
   static Future<Map<String, dynamic>?> getMdblistSyncCheckpoint() => TrackingPrefs.getMdblistSyncCheckpoint();
   static Future<void> setMdblistSyncCheckpoint(Map<String, dynamic>? value) => TrackingPrefs.setMdblistSyncCheckpoint(value);
 
-  static Future<bool> getAllDebridIntegrationEnabled() =>
-      ProviderCredentialPrefs.getAllDebridIntegrationEnabled();
 
-  static Future<void> setAllDebridIntegrationEnabled(bool enabled) =>
-      ProviderCredentialPrefs.setAllDebridIntegrationEnabled(enabled);
 
   // AllDebrid post-torrent action methods
-  static Future<String> getAllDebridPostTorrentAction() =>
-      ProviderCredentialPrefs.getAllDebridPostTorrentAction();
 
-  static Future<void> saveAllDebridPostTorrentAction(String action) =>
-      ProviderCredentialPrefs.saveAllDebridPostTorrentAction(action);
 
   // AllDebrid hide-from-navigation
-  static Future<bool> getAllDebridHiddenFromNav() =>
-      ProviderCredentialPrefs.getAllDebridHiddenFromNav();
 
-  static Future<void> setAllDebridHiddenFromNav(bool hidden) =>
-      ProviderCredentialPrefs.setAllDebridHiddenFromNav(hidden);
 
-  static Future<void> clearAllDebridHiddenFromNav() =>
-      ProviderCredentialPrefs.clearAllDebridHiddenFromNav();
 
   static Future<bool> isInitialSetupComplete() async {
     final prefs = await ProfilePreferences.instance();
@@ -941,45 +880,21 @@ class StorageService {
   }
 
   // File Selection methods
-  static Future<String> getFileSelection() =>
-      ProviderCredentialPrefs.getFileSelection();
 
-  static Future<void> saveFileSelection(String selection) =>
-      ProviderCredentialPrefs.saveFileSelection(selection);
 
   // Post-torrent action methods
-  static Future<String> getPostTorrentAction() =>
-      ProviderCredentialPrefs.getPostTorrentAction();
 
-  static Future<void> savePostTorrentAction(String action) =>
-      ProviderCredentialPrefs.savePostTorrentAction(action);
 
   // TorBox post-torrent action methods
-  static Future<String> getTorboxPostTorrentAction() =>
-      ProviderCredentialPrefs.getTorboxPostTorrentAction();
 
-  static Future<void> saveTorboxPostTorrentAction(String action) =>
-      ProviderCredentialPrefs.saveTorboxPostTorrentAction(action);
 
   // PikPak post-torrent action methods
-  static Future<String> getPikPakPostTorrentAction() =>
-      ProviderCredentialPrefs.getPikPakPostTorrentAction();
 
-  static Future<void> savePikPakPostTorrentAction(String action) =>
-      ProviderCredentialPrefs.savePikPakPostTorrentAction(action);
 
   // Premiumize post-torrent action methods
-  static Future<String> getPremiumizePostTorrentAction() =>
-      ProviderCredentialPrefs.getPremiumizePostTorrentAction();
 
-  static Future<void> savePremiumizePostTorrentAction(String action) =>
-      ProviderCredentialPrefs.savePremiumizePostTorrentAction(action);
 
-  static Future<bool> getPremiumizeCacheCheckEnabled() =>
-      ProviderCredentialPrefs.getPremiumizeCacheCheckEnabled();
 
-  static Future<void> setPremiumizeCacheCheckEnabled(bool enabled) =>
-      ProviderCredentialPrefs.setPremiumizeCacheCheckEnabled(enabled);
 
   // Battery optimization status
   static Future<String> getBatteryOptimizationStatus() async {
@@ -1058,221 +973,52 @@ class StorageService {
     await prefs.remove(_downloadDirPathKey);
   }
 
-  static Future<List<Map<String, dynamic>>> getContinueWatchingItems() =>
-      PlaybackProgressStore.getContinueWatchingItems();
-
-  static Future<void> saveContinueWatchingItem({
-    required String imdbId,
-    required String title,
-    required String contentType,
-    String? posterUrl,
-    String? addonId,
-    String? year,
-  }) =>
-      PlaybackProgressStore.saveContinueWatchingItem(imdbId: imdbId, title: title, contentType: contentType, posterUrl: posterUrl, addonId: addonId, year: year);
-
-  static Future<void> removeContinueWatchingItem(String imdbId) =>
-      PlaybackProgressStore.removeContinueWatchingItem(imdbId);
-
-  static Future<void> clearContinueWatching() =>
-      PlaybackProgressStore.clearContinueWatching();
 
 
-  static Future<Set<String>> getFinishedMovieIds() =>
-      PlaybackProgressStore.getFinishedMovieIds();
-
-  static Future<bool> isMovieFinished(String imdbId) =>
-      PlaybackProgressStore.isMovieFinished(imdbId);
-
-  static Future<void> markMovieAsFinished(String imdbId) =>
-      PlaybackProgressStore.markMovieAsFinished(imdbId);
-
-  static Future<void> unmarkMovieAsFinished(String imdbId) =>
-      PlaybackProgressStore.unmarkMovieAsFinished(imdbId);
-
-  static Future<Set<String>> getExplicitlyWatchedSeriesIds() =>
-      PlaybackProgressStore.getExplicitlyWatchedSeriesIds();
-
-  static Future<void> setSeriesExplicitlyWatched(
-    String imdbId, {
-    required bool watched,
-  }) =>
-      PlaybackProgressStore.setSeriesExplicitlyWatched(imdbId, watched: watched);
 
 
-  static Future<void> clearPlaybackStateByImdbId(String imdbId) =>
-      PlaybackProgressStore.clearPlaybackStateByImdbId(imdbId);
 
 
-  static Future<void> saveSeriesPlaybackState({
-    required String seriesTitle,
-    required int season,
-    required int episode,
-    required int positionMs,
-    required int durationMs,
-    double speed = 1.0,
-    String aspect = 'contain',
-    String? imdbId,
-  }) =>
-      PlaybackProgressStore.saveSeriesPlaybackState(seriesTitle: seriesTitle, season: season, episode: episode, positionMs: positionMs, durationMs: durationMs, speed: speed, aspect: aspect, imdbId: imdbId);
 
-  static Future<void> markEpisodeAsFinished({
-    required String seriesTitle,
-    required int season,
-    required int episode,
-    String? imdbId,
-  }) =>
-      PlaybackProgressStore.markEpisodeAsFinished(seriesTitle: seriesTitle, season: season, episode: episode, imdbId: imdbId);
 
-  static Future<void> unmarkEpisodeAsFinished({
-    required String seriesTitle,
-    required int season,
-    required int episode,
-    String? imdbId,
-  }) =>
-      PlaybackProgressStore.unmarkEpisodeAsFinished(seriesTitle: seriesTitle, season: season, episode: episode, imdbId: imdbId);
 
-  static Future<void> unmarkSeriesAsFinished(
-    String imdbId, {
-    String? seriesTitle,
-  }) =>
-      PlaybackProgressStore.unmarkSeriesAsFinished(imdbId, seriesTitle: seriesTitle);
 
-  static Future<bool> isEpisodeFinished({
-    required String seriesTitle,
-    required int season,
-    required int episode,
-    String? imdbId,
-  }) =>
-      PlaybackProgressStore.isEpisodeFinished(seriesTitle: seriesTitle, season: season, episode: episode, imdbId: imdbId);
 
-  static Future<Map<String, Set<int>>> getFinishedEpisodes({
-    required String seriesTitle,
-  }) =>
-      PlaybackProgressStore.getFinishedEpisodes(seriesTitle: seriesTitle);
 
-  static Future<Map<String, Set<int>>> getFinishedEpisodesByImdbId({
-    required String imdbId,
-    String? seriesTitle,
-  }) =>
-      PlaybackProgressStore.getFinishedEpisodesByImdbId(imdbId: imdbId, seriesTitle: seriesTitle);
 
-  static Future<Map<String, Map<String, Set<int>>>>
-  getFinishedSeriesEpisodeIndex() =>
-      PlaybackProgressStore.getFinishedSeriesEpisodeIndex();
 
-  static Future<Map<String, Map<String, dynamic>>> getEpisodeProgress({
-    required String seriesTitle,
-  }) =>
-      PlaybackProgressStore.getEpisodeProgress(seriesTitle: seriesTitle);
 
-  static Future<Map<String, double>> getEpisodeTraktProgress({
-    required String imdbId,
-  }) =>
-      PlaybackProgressStore.getEpisodeTraktProgress(imdbId: imdbId);
 
-  static Future<void> saveEpisodeTraktProgress({
-    required String imdbId,
-    required Map<String, double> percents,
-  }) =>
-      PlaybackProgressStore.saveEpisodeTraktProgress(imdbId: imdbId, percents: percents);
 
-  static Future<Map<String, double>> getEpisodeSimklProgress({
-    required String imdbId,
-  }) =>
-      PlaybackProgressStore.getEpisodeSimklProgress(imdbId: imdbId);
 
-  static Future<void> saveEpisodeSimklProgress({
-    required String imdbId,
-    required Map<String, double> percents,
-  }) =>
-      PlaybackProgressStore.saveEpisodeSimklProgress(imdbId: imdbId, percents: percents);
 
-  static Future<Map<String, double>> getEpisodeMdblistProgress({
-    required String imdbId,
-  }) =>
-      PlaybackProgressStore.getEpisodeMdblistProgress(imdbId: imdbId);
 
-  static Future<void> saveEpisodeMdblistProgress({
-    required String imdbId,
-    required Map<String, double> percents,
-  }) =>
-      PlaybackProgressStore.saveEpisodeMdblistProgress(imdbId: imdbId, percents: percents);
 
-  static Future<Map<String, Map<String, dynamic>>> getEpisodeProgressByImdbId(
-    String imdbId,
-  ) =>
-      PlaybackProgressStore.getEpisodeProgressByImdbId(imdbId);
 
-  static Future<Map<String, Map<String, dynamic>>> getMergedEpisodeProgress({
-    required String seriesTitle,
-    String? imdbId,
-  }) =>
-      PlaybackProgressStore.getMergedEpisodeProgress(seriesTitle: seriesTitle, imdbId: imdbId);
 
-  static Future<Map<String, Set<int>>> getMergedFinishedEpisodes({
-    required String seriesTitle,
-    String? imdbId,
-  }) =>
-      PlaybackProgressStore.getMergedFinishedEpisodes(seriesTitle: seriesTitle, imdbId: imdbId);
 
-  static Future<Set<int>> getFinishedEpisodesForSeason({
-    required String seriesTitle,
-    required int season,
-  }) =>
-      PlaybackProgressStore.getFinishedEpisodesForSeason(seriesTitle: seriesTitle, season: season);
 
-  static Future<Map<String, dynamic>?> getSeriesPlaybackState({
-    required String seriesTitle,
-    required int season,
-    required int episode,
-  }) =>
-      PlaybackProgressStore.getSeriesPlaybackState(seriesTitle: seriesTitle, season: season, episode: episode);
 
-  static Future<void> saveVideoPlaybackState({
-    required String videoTitle,
-    required String videoUrl,
-    required int positionMs,
-    required int durationMs,
-    double speed = 1.0,
-    String aspect = 'contain',
-    String? imdbId,
-  }) =>
-      PlaybackProgressStore.saveVideoPlaybackState(videoTitle: videoTitle, videoUrl: videoUrl, positionMs: positionMs, durationMs: durationMs, speed: speed, aspect: aspect, imdbId: imdbId);
+
+
+
+
+
+
+
+
 
   static Future<Map<String, dynamic>?> getVideoPlaybackState({
     required String videoTitle,
   }) =>
       PlaybackProgressStore.getVideoPlaybackState(videoTitle: videoTitle);
 
-  static Future<Map<String, dynamic>?> getVideoPlaybackStateByImdbId(
-    String imdbId,
-  ) =>
-      PlaybackProgressStore.getVideoPlaybackStateByImdbId(imdbId);
 
-  static Future<Map<String, dynamic>?> getLastPlayedEpisode({
-    required String seriesTitle,
-  }) =>
-      PlaybackProgressStore.getLastPlayedEpisode(seriesTitle: seriesTitle);
 
-  static Future<Map<String, double>> getEpisodeWatchProgressByImdbId(
-    String imdbId,
-  ) =>
-      PlaybackProgressStore.getEpisodeWatchProgressByImdbId(imdbId);
 
-  static Future<Map<String, dynamic>?> getLastPlayedEpisodeByImdbId(
-    String imdbId,
-  ) =>
-      PlaybackProgressStore.getLastPlayedEpisodeByImdbId(imdbId);
 
-  static Future<void> cleanupOldPlaybackState() =>
-      PlaybackProgressStore.cleanupOldPlaybackState();
 
-  static Future<void> clearAllPlaybackData() =>
-      PlaybackProgressStore.clearAllPlaybackData();
 
-  static Future<void> clearPlaylistProgress({required String title}) =>
-      PlaybackProgressStore.clearPlaylistProgress(title: title);
 
   static Future<Map<String, dynamic>?> getVideoResume(String key) {
     return IptvMediaStore.videoResume(key);
@@ -1289,29 +1035,9 @@ class StorageService {
     return IptvMediaStore.removeVideoResume(key);
   }
 
-  static Future<void> saveSeriesTrackPreferences({
-    required String seriesTitle,
-    required String audioTrackId,
-    required String subtitleTrackId,
-  }) =>
-      PlaybackProgressStore.saveSeriesTrackPreferences(seriesTitle: seriesTitle, audioTrackId: audioTrackId, subtitleTrackId: subtitleTrackId);
 
-  static Future<Map<String, dynamic>?> getSeriesTrackPreferences({
-    required String seriesTitle,
-  }) =>
-      PlaybackProgressStore.getSeriesTrackPreferences(seriesTitle: seriesTitle);
 
-  static Future<void> saveVideoTrackPreferences({
-    required String videoTitle,
-    required String audioTrackId,
-    required String subtitleTrackId,
-  }) =>
-      PlaybackProgressStore.saveVideoTrackPreferences(videoTitle: videoTitle, audioTrackId: audioTrackId, subtitleTrackId: subtitleTrackId);
 
-  static Future<Map<String, dynamic>?> getVideoTrackPreferences({
-    required String videoTitle,
-  }) =>
-      PlaybackProgressStore.getVideoTrackPreferences(videoTitle: videoTitle);
   // Debrify TV settings — forwarding façade; bodies live on DebrifyTvPrefs.
   static Future<String> getDebrifyTvProvider() =>
       DebrifyTvPrefs.getDebrifyTvProvider();
@@ -1378,36 +1104,14 @@ class StorageService {
   ) => DebrifyTvPrefs.saveDebrifyTvChannels(channels);
 
 
-  static Future<List<Map<String, dynamic>>> getPlaylistItemsRaw() =>
-      PlaybackProgressStore.getPlaylistItemsRaw();
 
-  static Future<void> savePlaylistItemsRaw(
-    List<Map<String, dynamic>> items,
-  ) =>
-      PlaybackProgressStore.savePlaylistItemsRaw(items);
 
-  static String computePlaylistDedupeKey(Map<String, dynamic> item) =>
-      PlaybackProgressStore.computePlaylistDedupeKey(item);
 
-  static Future<bool> addPlaylistItemRaw(Map<String, dynamic> item) =>
-      PlaybackProgressStore.addPlaylistItemRaw(item);
 
-  static Future<void> removePlaylistItemByKey(String dedupeKey) =>
-      PlaybackProgressStore.removePlaylistItemByKey(dedupeKey);
 
-  static Future<void> updatePlaylistItemLastPlayed(
-    Map<String, dynamic> item,
-  ) =>
-      PlaybackProgressStore.updatePlaylistItemLastPlayed(item);
 
-  static int? getPlaylistItemLastPlayed(Map<String, dynamic> item) =>
-      PlaybackProgressStore.getPlaylistItemLastPlayed(item);
 
-  static Future<void> clearPlaylist() =>
-      PlaybackProgressStore.clearPlaylist();
 
-  static Future<void> clearAllPlaylistMetadata() =>
-      PlaybackProgressStore.clearAllPlaylistMetadata();
   static Future<void> clearAllStartupSettings() async {
     final prefs = await ProfilePreferences.instance();
     await prefs.remove(_startupAutoLaunchEnabledKey);
@@ -1424,8 +1128,6 @@ class StorageService {
   }
 
   /// Clear integration enabled states (RD, TorBox)
-  static Future<void> clearAllIntegrationStates() =>
-      ProviderCredentialPrefs.clearAllIntegrationStates();
 
   /// Clear Debrify TV provider and legacy channels key
   static Future<void> clearDebrifyTvProviderAndLegacy() =>
@@ -1454,8 +1156,6 @@ class StorageService {
   }
 
   /// Clear post-torrent action preferences
-  static Future<void> clearAllPostTorrentActions() =>
-      ProviderCredentialPrefs.clearAllPostTorrentActions();
 
   /// Clear all Debrify TV display and engine settings
   static Future<void> clearAllDebrifyTvSettings() =>
@@ -1463,54 +1163,12 @@ class StorageService {
 
 
   /// Update an existing playlist item with poster URL
-  static Future<bool> updatePlaylistItemPoster(
-    String posterUrl, {
-    String? rdTorrentId,
-    String? torboxTorrentId,
-    String? pikpakCollectionId,
-    String? premiumizeHash,
-    String? premiumizeItemId,
-    String? allDebridHash,
-    String? webDavServerId,
-    String? webDavBaseUrl,
-    String? webDavPath,
-  }) =>
-      PlaybackProgressStore.updatePlaylistItemPoster(posterUrl, rdTorrentId: rdTorrentId, torboxTorrentId: torboxTorrentId, pikpakCollectionId: pikpakCollectionId, premiumizeHash: premiumizeHash, premiumizeItemId: premiumizeItemId, allDebridHash: allDebridHash, webDavServerId: webDavServerId, webDavBaseUrl: webDavBaseUrl, webDavPath: webDavPath);
 
-  static Future<bool> updatePlaylistItemImdbId(
-    String imdbId, {
-    String? rdTorrentId,
-    String? torboxTorrentId,
-    String? pikpakCollectionId,
-    String? premiumizeHash,
-    String? premiumizeItemId,
-    String? allDebridHash,
-    bool force = false,
-  }) =>
-      PlaybackProgressStore.updatePlaylistItemImdbId(imdbId, rdTorrentId: rdTorrentId, torboxTorrentId: torboxTorrentId, pikpakCollectionId: pikpakCollectionId, premiumizeHash: premiumizeHash, premiumizeItemId: premiumizeItemId, allDebridHash: allDebridHash, force: force);
 
-  static Future<String?> getPlaylistItemViewMode(
-    Map<String, dynamic> item,
-  ) =>
-      PlaybackProgressStore.getPlaylistItemViewMode(item);
 
-  static Future<void> savePlaylistItemViewMode(
-    Map<String, dynamic> item,
-    String viewMode,
-  ) =>
-      PlaybackProgressStore.savePlaylistItemViewMode(item, viewMode);
 
-  static Future<bool> isPlaylistItemFavorited(Map<String, dynamic> item) =>
-      PlaybackProgressStore.isPlaylistItemFavorited(item);
 
-  static Future<void> setPlaylistItemFavorited(
-    Map<String, dynamic> item,
-    bool isFavorited,
-  ) =>
-      PlaybackProgressStore.setPlaylistItemFavorited(item, isFavorited);
 
-  static Future<Set<String>> getPlaylistFavoriteKeys() =>
-      PlaybackProgressStore.getPlaylistFavoriteKeys();
   // My Watchlist (movies + series)
   // ========================================================================
 
@@ -1601,14 +1259,8 @@ class StorageService {
   // IPTV Channel Favorites — forwarding façade; bodies live on IptvPrefs.
   // ==========================================================================
 
-  static String canonicalIptvChannelKey(String url) =>
-      IptvPrefs.canonicalIptvChannelKey(url);
 
-  static Future<void> reconcileIptvFavoriteUrls(List<IptvChannel> channels) =>
-      IptvPrefs.reconcileIptvFavoriteUrls(channels);
 
-  static Future<void> reconcileIptvFavoriteUrlsForCatalog(String catalogKey) =>
-      IptvPrefs.reconcileIptvFavoriteUrlsForCatalog(catalogKey);
 
   static Future<void> setIptvChannelFavorited(
     String channelUrl,
@@ -1634,19 +1286,10 @@ class StorageService {
     httpHeaders: httpHeaders,
   );
 
-  static Future<List<IptvListMeta>> getIptvLists() => IptvPrefs.getIptvLists();
 
-  static Future<String> createIptvList(String name) =>
-      IptvPrefs.createIptvList(name);
 
-  static Future<void> renameIptvList(String listId, String name) =>
-      IptvPrefs.renameIptvList(listId, name);
 
-  static Future<void> deleteIptvList(String listId) =>
-      IptvPrefs.deleteIptvList(listId);
 
-  static Future<void> reorderIptvLists(List<String> orderedIds) =>
-      IptvPrefs.reorderIptvLists(orderedIds);
 
   static Future<void> setIptvChannelInList(
     String listId,
@@ -1674,69 +1317,23 @@ class StorageService {
     httpHeaders: httpHeaders,
   );
 
-  static Future<Map<String, Map<String, dynamic>>> getIptvListChannels(
-    String listId,
-  ) => IptvPrefs.getIptvListChannels(listId);
 
-  static Future<void> reorderIptvListChannels(
-    String listId,
-    Iterable<String> orderedUrls,
-  ) => IptvPrefs.reorderIptvListChannels(listId, orderedUrls);
 
-  static Future<List<IptvChannelOrderEntry>> getIptvCategoryOrderEntries(
-    String sourceId,
-    Iterable<IptvChannel> channels,
-    String group,
-  ) => IptvPrefs.getIptvCategoryOrderEntries(sourceId, channels, group);
 
-  static Future<void> setIptvCategoryChannelOrder(
-    String sourceId,
-    String group,
-    Iterable<IptvChannelOrderIdentity> ordered,
-  ) => IptvPrefs.setIptvCategoryChannelOrder(sourceId, group, ordered);
 
-  static Future<List<IptvChannel>> applyIptvCategoryChannelOrders(
-    String sourceId,
-    List<IptvChannel> channels,
-  ) => IptvPrefs.applyIptvCategoryChannelOrders(sourceId, channels);
 
-  static Future<void> removeIptvCategoryOrdersForSource(String sourceId) =>
-      IptvPrefs.removeIptvCategoryOrdersForSource(sourceId);
 
-  static Future<Map<String, Set<String>>> getIptvChannelMembership() =>
-      IptvPrefs.getIptvChannelMembership();
 
-  static Future<
-    ({
-      Map<String, Set<String>> membership,
-      Map<(String, String), String> origins,
-    })
-  >
-  getIptvMembershipSnapshot() => IptvPrefs.getIptvMembershipSnapshot();
 
   static Future<Set<String>> getIptvListsForChannel(String channelUrl) =>
       IptvPrefs.getIptvListsForChannel(channelUrl);
 
-  static Future<void> removeIptvListChannelsByPlaylistId(String playlistId) =>
-      IptvPrefs.removeIptvListChannelsByPlaylistId(playlistId);
 
-  static Map<String, String> iptvFavoriteHeaders(Map<String, dynamic> meta) =>
-      IptvPrefs.iptvFavoriteHeaders(meta);
 
-  static Future<void> removeIptvFavoritesByPlaylistId(String playlistId) =>
-      IptvPrefs.removeIptvFavoritesByPlaylistId(playlistId);
 
-  static Future<Map<String, Map<String, dynamic>>> getIptvFavoriteChannels() =>
-      IptvPrefs.getIptvFavoriteChannels();
 
-  static Future<Set<String>> getIptvFavoriteChannelUrls() =>
-      IptvPrefs.getIptvFavoriteChannelUrls();
 
-  static Future<bool> getIptvTrackContinueWatching() =>
-      IptvPrefs.getIptvTrackContinueWatching();
 
-  static Future<void> setIptvTrackContinueWatching(bool value) =>
-      IptvPrefs.setIptvTrackContinueWatching(value);
 
   static Future<void> recordIptvWatch(
     String channelUrl, {
@@ -1764,40 +1361,18 @@ class StorageService {
     hasNextEpisode: hasNextEpisode,
   );
 
-  static Future<Map<String, Map<String, dynamic>>> getIptvWatchHistory() =>
-      IptvPrefs.getIptvWatchHistory();
 
-  static Future<List<Map<String, dynamic>>> getIptvContinueWatching() =>
-      IptvPrefs.getIptvContinueWatching();
 
-  static Future<Map<String, double>> getIptvProgressForUrls(
-    Iterable<String> urls,
-  ) => IptvPrefs.getIptvProgressForUrls(urls);
 
   static Future<Map<String, int>> getIptvResumePositions(
     Iterable<String> urls,
   ) => IptvPrefs.getIptvResumePositions(urls);
 
-  static Future<void> removeIptvWatchHistoryByPlaylistId(String playlistId) =>
-      IptvPrefs.removeIptvWatchHistoryByPlaylistId(playlistId);
 
-  static Future<void> removeIptvContinueWatchingItem(String url) =>
-      IptvPrefs.removeIptvContinueWatchingItem(url);
 
-  static Future<void> removeIptvContinueWatchingSeries({
-    required String playlistId,
-    required String seriesId,
-  }) => IptvPrefs.removeIptvContinueWatchingSeries(
-    playlistId: playlistId,
-    seriesId: seriesId,
-  );
 
   /// Build progress map for playlist items
   /// Maps playlist dedupe keys to their playback progress data
-  static Future<Map<String, Map<String, dynamic>>> buildPlaylistProgressMap(
-    List<Map<String, dynamic>> playlistItems,
-  ) =>
-      PlaybackProgressStore.buildPlaylistProgressMap(playlistItems);
 
   // Startup auto-launch was removed; only [clearAllStartupSettings] remains
   // (used by Reset) to wipe the old persisted keys.
@@ -2023,8 +1598,6 @@ class StorageService {
   /// Android TV IPTV video decoder: 'auto' | 'hardware' | 'software'.
   static Future<String> getIptvDecoderMode() => IptvPrefs.getIptvDecoderMode();
 
-  static Future<void> setIptvDecoderMode(String value) =>
-      IptvPrefs.setIptvDecoderMode(value);
 
   // Network tuning (Debrify player) — forwarding façade; bodies live on PlayerPrefs.
   static Future<String> getNetworkConnectPatience() =>
@@ -2042,20 +1615,12 @@ class StorageService {
 
   /// Percentage of a movie that must be watched before the local player marks
   /// it complete. Tracker-backed sessions retain Trakt/Simkl's own semantics.
-  static Future<int> getMovieCompletionThreshold() =>
-      PlaybackProgressStore.getMovieCompletionThreshold();
 
-  static Future<void> setMovieCompletionThreshold(int value) =>
-      PlaybackProgressStore.setMovieCompletionThreshold(value);
 
   /// Percentage of an episode that must be watched before the local player
   /// marks it complete. Kept separate from movies because users commonly want
   /// a different rule for episode credits.
-  static Future<int> getEpisodeCompletionThreshold() =>
-      PlaybackProgressStore.getEpisodeCompletionThreshold();
 
-  static Future<void> setEpisodeCompletionThreshold(int value) =>
-      PlaybackProgressStore.setEpisodeCompletionThreshold(value);
 
   /// Re-arms the resume-ghost purge for a restore/transfer preference overlay.
   ///
@@ -2070,10 +1635,6 @@ class StorageService {
   ///
   /// A package that DOES carry a marker came from a build that already purged
   /// at the source, so its value is honoured untouched.
-  static void rearmGhostPurgeForImportedPlayback(
-    Map<String, Object?> preferences,
-  ) =>
-      PlaybackProgressStore.rearmGhostPurgeForImportedPlayback(preferences);
 
   /// One-time, per-profile purge of the resume "ghosts" older builds minted
   /// when an episode was unwatched.
@@ -2096,8 +1657,6 @@ class StorageService {
   ///
   /// Rows marked in `finishedEpisodes` are kept: a mark-only watch stores the
   /// dummy 0ms/1ms shape and still means "watched".
-  static Future<void> purgeUnwatchedResumeGhosts() =>
-      PlaybackProgressStore.purgeUnwatchedResumeGhosts();
 
   /// One-time, per-profile adoption of the local completion thresholds for
   /// playback recorded before threshold-based watched status existed.
@@ -2107,15 +1666,9 @@ class StorageService {
   /// into the existing `finishedEpisodes` structure used by episode ticks.
   /// Tracker data is deliberately untouched; this migration only rewrites the
   /// app's local playback state.
-  static Future<void> migrateExistingPlaybackCompletionThresholds() =>
-      PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds();
 
   // PikPak API Settings
-  static Future<bool> getPikPakEnabled() =>
-      ProviderCredentialPrefs.getPikPakEnabled();
 
-  static Future<void> setPikPakEnabled(bool value) =>
-      ProviderCredentialPrefs.setPikPakEnabled(value);
 
   static Future<String?> getPikPakEmail({
     bool forRemoteTransfer = false,
@@ -2134,236 +1687,90 @@ class StorageService {
   static Future<void> setPikPakPassword(String password) =>
       CloudSecretPrefs.write(_pikpakPasswordKey, password);
 
-  static Future<String?> getPikPakAccessToken() =>
-      ProviderCredentialPrefs.getPikPakAccessToken();
 
-  static Future<void> setPikPakAccessToken(String token) =>
-      ProviderCredentialPrefs.setPikPakAccessToken(token);
 
-  static Future<String?> getPikPakRefreshToken() =>
-      ProviderCredentialPrefs.getPikPakRefreshToken();
 
-  static Future<void> setPikPakRefreshToken(String token) =>
-      ProviderCredentialPrefs.setPikPakRefreshToken(token);
 
-  static Future<void> clearPikPakAuth() =>
-      ProviderCredentialPrefs.clearPikPakAuth();
 
   // PikPak Device ID and Captcha Token
-  static Future<void> setPikPakDeviceId(String deviceId) =>
-      ProviderCredentialPrefs.setPikPakDeviceId(deviceId);
 
-  static Future<String?> getPikPakDeviceId() =>
-      ProviderCredentialPrefs.getPikPakDeviceId();
 
-  static Future<void> deletePikPakDeviceId() =>
-      ProviderCredentialPrefs.deletePikPakDeviceId();
 
-  static Future<void> setPikPakCaptchaToken(String token) =>
-      ProviderCredentialPrefs.setPikPakCaptchaToken(token);
 
-  static Future<String?> getPikPakCaptchaToken() =>
-      ProviderCredentialPrefs.getPikPakCaptchaToken();
 
-  static Future<void> clearPikPakCaptchaToken() =>
-      ProviderCredentialPrefs.clearPikPakCaptchaToken();
 
-  static Future<void> setPikPakUserId(String userId) =>
-      ProviderCredentialPrefs.setPikPakUserId(userId);
 
-  static Future<String?> getPikPakUserId() =>
-      ProviderCredentialPrefs.getPikPakUserId();
 
   // PikPak Show Videos Only
-  static Future<bool> getPikPakShowVideosOnly() =>
-      ProviderCredentialPrefs.getPikPakShowVideosOnly();
 
-  static Future<void> setPikPakShowVideosOnly(bool value) =>
-      ProviderCredentialPrefs.setPikPakShowVideosOnly(value);
 
   // PikPak Ignore Small Videos (under 100MB)
-  static Future<bool> getPikPakIgnoreSmallVideos() =>
-      ProviderCredentialPrefs.getPikPakIgnoreSmallVideos();
 
-  static Future<void> setPikPakIgnoreSmallVideos(bool value) =>
-      ProviderCredentialPrefs.setPikPakIgnoreSmallVideos(value);
 
   // PikPak Restricted Folder
-  static Future<String?> getPikPakRestrictedFolderId() =>
-      ProviderCredentialPrefs.getPikPakRestrictedFolderId();
 
-  static Future<String?> getPikPakRestrictedFolderName() =>
-      ProviderCredentialPrefs.getPikPakRestrictedFolderName();
 
-  static Future<void> setPikPakRestrictedFolder(
-    String? folderId,
-    String? folderName,
-  ) => ProviderCredentialPrefs.setPikPakRestrictedFolder(folderId, folderName);
 
-  static Future<void> clearPikPakRestrictedFolder() =>
-      ProviderCredentialPrefs.clearPikPakRestrictedFolder();
 
   // PikPak Subfolder ID caching (for debrify-torrents and debrify-tv folders)
-  static Future<String?> getPikPakTorrentsFolderId() =>
-      ProviderCredentialPrefs.getPikPakTorrentsFolderId();
 
-  static Future<void> setPikPakTorrentsFolderId(String folderId) =>
-      ProviderCredentialPrefs.setPikPakTorrentsFolderId(folderId);
 
-  static Future<String?> getPikPakTvFolderId() =>
-      ProviderCredentialPrefs.getPikPakTvFolderId();
 
-  static Future<void> setPikPakTvFolderId(String folderId) =>
-      ProviderCredentialPrefs.setPikPakTvFolderId(folderId);
 
-  static Future<void> clearPikPakSubfolderCaches() =>
-      ProviderCredentialPrefs.clearPikPakSubfolderCaches();
 
   // PikPak Hidden from Navigation
-  static Future<bool> getPikPakHiddenFromNav() =>
-      ProviderCredentialPrefs.getPikPakHiddenFromNav();
 
-  static Future<void> setPikPakHiddenFromNav(bool hidden) =>
-      ProviderCredentialPrefs.setPikPakHiddenFromNav(hidden);
 
-  static Future<void> clearPikPakHiddenFromNav() =>
-      ProviderCredentialPrefs.clearPikPakHiddenFromNav();
 
   // WebDAV Settings
-  static Future<bool> getWebDavEnabled() =>
-      ProviderCredentialPrefs.getWebDavEnabled();
 
-  static Future<void> setWebDavEnabled(bool value) =>
-      ProviderCredentialPrefs.setWebDavEnabled(value);
 
-  static Future<bool> getWebDavHiddenFromNav() =>
-      ProviderCredentialPrefs.getWebDavHiddenFromNav();
 
-  static Future<void> setWebDavHiddenFromNav(bool hidden) =>
-      ProviderCredentialPrefs.setWebDavHiddenFromNav(hidden);
 
-  static Future<void> clearWebDavHiddenFromNav() =>
-      ProviderCredentialPrefs.clearWebDavHiddenFromNav();
 
-  static Future<String?> getWebDavBaseUrl() =>
-      ProviderCredentialPrefs.getWebDavBaseUrl();
 
-  static Future<void> setWebDavBaseUrl(String value) =>
-      ProviderCredentialPrefs.setWebDavBaseUrl(value);
 
-  static Future<String?> getWebDavUsername() =>
-      ProviderCredentialPrefs.getWebDavUsername();
 
-  static Future<void> setWebDavUsername(String value) =>
-      ProviderCredentialPrefs.setWebDavUsername(value);
 
-  static Future<String?> getWebDavPassword() =>
-      ProviderCredentialPrefs.getWebDavPassword();
 
-  static Future<void> setWebDavPassword(String value) =>
-      ProviderCredentialPrefs.setWebDavPassword(value);
 
-  static Future<bool> getWebDavShowVideosOnly() =>
-      ProviderCredentialPrefs.getWebDavShowVideosOnly();
 
-  static Future<void> setWebDavShowVideosOnly(bool value) =>
-      ProviderCredentialPrefs.setWebDavShowVideosOnly(value);
 
-  static Future<void> clearWebDav() => ProviderCredentialPrefs.clearWebDav();
 
-  static Future<List<WebDavConfig>> getWebDavServers({
-    bool forSettings = true,
-    bool forRemoteTransfer = false,
-  }) => ProviderCredentialPrefs.getWebDavServers(
-    forSettings: forSettings,
-    forRemoteTransfer: forRemoteTransfer,
-  );
 
-  static Future<List<WebDavConfig>> saveWebDavServers(
-    List<WebDavConfig> servers,
-  ) => ProviderCredentialPrefs.saveWebDavServers(servers);
 
-  static Future<String?> getSelectedWebDavServerId() =>
-      ProviderCredentialPrefs.getSelectedWebDavServerId();
 
-  static Future<void> setSelectedWebDavServerId(String? id) =>
-      ProviderCredentialPrefs.setSelectedWebDavServerId(id);
 
-  static Future<WebDavConfig?> getSelectedWebDavServer({
-    bool forSettings = true,
-  }) => ProviderCredentialPrefs.getSelectedWebDavServer(
-    forSettings: forSettings,
-  );
 
-  static Future<WebDavConfig> upsertWebDavServer(WebDavConfig config) =>
-      ProviderCredentialPrefs.upsertWebDavServer(config);
 
-  static Future<void> deleteWebDavServer(String id) =>
-      ProviderCredentialPrefs.deleteWebDavServer(id);
 
   // TVMaze Series Mapping Methods
 
 
   /// Save a TVMaze series mapping for a playlist item
-  static Future<void> saveTVMazeSeriesMapping({
-    required Map<String, dynamic> playlistItem,
-    required int tvmazeShowId,
-    required String showName,
-  }) => PlaybackProgressStore.saveTVMazeSeriesMapping(
-    playlistItem: playlistItem,
-    tvmazeShowId: tvmazeShowId,
-    showName: showName,
-  );
 
   /// Get TVMaze series mapping for a playlist item
-  static Future<Map<String, dynamic>?> getTVMazeSeriesMapping(
-    Map<String, dynamic> playlistItem,
-  ) => PlaybackProgressStore.getTVMazeSeriesMapping(playlistItem);
 
   /// Clear TVMaze series mapping for a playlist item
-  static Future<void> clearTVMazeSeriesMapping(
-    Map<String, dynamic> playlistItem,
-  ) => PlaybackProgressStore.clearTVMazeSeriesMapping(playlistItem);
 
   /// Clear all TVMaze series mappings
-  static Future<void> clearAllTVMazeSeriesMappings() =>
-      PlaybackProgressStore.clearAllTVMazeSeriesMappings();
 
   // Playlist Poster Override Methods
 
   /// Save a poster URL override for a playlist item
   /// This ensures the poster persists across app restarts
-  static Future<void> savePlaylistPosterOverride({
-    required Map<String, dynamic> playlistItem,
-    required String posterUrl,
-  }) => PlaybackProgressStore.savePlaylistPosterOverride(
-    playlistItem: playlistItem,
-    posterUrl: posterUrl,
-  );
 
   /// Get poster URL override for a playlist item
   /// Returns null if no override exists
-  static Future<String?> getPlaylistPosterOverride(
-    Map<String, dynamic> playlistItem,
-  ) => PlaybackProgressStore.getPlaylistPosterOverride(playlistItem);
 
   /// Get all poster overrides as a map of item unique key → poster URL.
   /// Reads and parses the overrides blob once for batch lookups.
-  static Future<Map<String, String>> getAllPlaylistPosterOverrides() =>
-      PlaybackProgressStore.getAllPlaylistPosterOverrides();
 
   /// Get the unique key for a playlist item (public accessor for batch lookups)
-  static String getPlaylistItemUniqueKey(Map<String, dynamic> item) =>
-      PlaybackProgressStore.getPlaylistItemUniqueKey(item);
 
   /// Clear poster URL override for a playlist item
-  static Future<void> clearPlaylistPosterOverride(
-    Map<String, dynamic> playlistItem,
-  ) => PlaybackProgressStore.clearPlaylistPosterOverride(playlistItem);
 
   /// Clear all playlist poster overrides
-  static Future<void> clearAllPlaylistPosterOverrides() =>
-      PlaybackProgressStore.clearAllPlaylistPosterOverrides();
 
   // ============================================================================
   // Torrent Search History Methods
@@ -2504,14 +1911,8 @@ class StorageService {
 
   // Default Torrent Provider methods
   // Returns: 'none' (ask every time), 'torbox', 'debrid', or 'pikpak'
-  static Future<String> getDefaultTorrentProvider() =>
-      ProviderCredentialPrefs.getDefaultTorrentProvider();
 
-  static Future<void> setDefaultTorrentProvider(String provider) =>
-      ProviderCredentialPrefs.setDefaultTorrentProvider(provider);
 
-  static Future<void> clearDefaultTorrentProvider() =>
-      ProviderCredentialPrefs.clearDefaultTorrentProvider();
 
   static Future<List<IndexerManagerConfig>> getIndexerManagerConfigs({
     bool forSettings = true,
@@ -3097,51 +2498,18 @@ class StorageService {
   static set startupIptvChannelCached(Map<String, dynamic>? value) =>
       IptvPrefs.startupIptvChannelCached = value;
 
-  static Future<String?> getIptvSeriesAudioLanguage(String seriesKey) =>
-      IptvPrefs.getIptvSeriesAudioLanguage(seriesKey);
 
   static Future<void> setIptvSeriesAudioLanguage(
     String seriesKey,
     String languageCode,
   ) => IptvPrefs.setIptvSeriesAudioLanguage(seriesKey, languageCode);
 
-  static Future<List<IptvPlaylist>> getIptvPlaylists({
-    bool forSettings = true,
-    bool forRemoteTransfer = false,
-  }) => IptvPrefs.getIptvPlaylists(
-    forSettings: forSettings,
-    forRemoteTransfer: forRemoteTransfer,
-  );
 
-  static Future<void> setIptvPlaylists(
-    List<IptvPlaylist> playlists, {
-    bool revokeBorrowers = false,
-  }) => IptvPrefs.setIptvPlaylists(
-    playlists,
-    revokeBorrowers: revokeBorrowers,
-  );
 
-  static Future<List<IptvPlaylist>> setIptvPlaylistsAndReload(
-    List<IptvPlaylist> playlists, {
-    required bool forSettings,
-    bool revokeBorrowers = false,
-  }) => IptvPrefs.setIptvPlaylistsAndReload(
-    playlists,
-    forSettings: forSettings,
-    revokeBorrowers: revokeBorrowers,
-  );
 
-  static Future<String?> getIptvDefaultPlaylist() =>
-      IptvPrefs.getIptvDefaultPlaylist();
 
-  static Future<void> setIptvDefaultPlaylist(String? playlistId) =>
-      IptvPrefs.setIptvDefaultPlaylist(playlistId);
 
-  static Future<bool> getIptvDefaultsInitialized() =>
-      IptvPrefs.getIptvDefaultsInitialized();
 
-  static Future<void> setIptvDefaultsInitialized(bool initialized) =>
-      IptvPrefs.setIptvDefaultsInitialized(initialized);
 
   static Future<void> setIptvLastLiveChannel(
     String url, {
@@ -3161,48 +2529,15 @@ class StorageService {
     httpHeaders: httpHeaders,
   );
 
-  static Future<Map<String, dynamic>?> getIptvLastLiveChannel() =>
-      IptvPrefs.getIptvLastLiveChannel();
 
-  static Future<void> clearIptvLastLiveChannel() =>
-      IptvPrefs.clearIptvLastLiveChannel();
 
-  static Future<bool> getStartupIptvEnabled() =>
-      IptvPrefs.getStartupIptvEnabled();
 
-  static Future<void> setStartupIptvEnabled(bool enabled) =>
-      IptvPrefs.setStartupIptvEnabled(enabled);
 
-  static Future<String> getStartupIptvMode() => IptvPrefs.getStartupIptvMode();
 
-  static Future<void> setStartupIptvMode(String mode) =>
-      IptvPrefs.setStartupIptvMode(mode);
 
-  static Future<Map<String, dynamic>?> getStartupIptvChannel() =>
-      IptvPrefs.getStartupIptvChannel();
 
-  static Future<void> setStartupIptvChannel(
-    String url, {
-    required String name,
-    String? playlistId,
-    int? channelNumber,
-    String? group,
-    String? logoUrl,
-    Map<String, String>? httpHeaders,
-  }) => IptvPrefs.setStartupIptvChannel(
-    url,
-    name: name,
-    playlistId: playlistId,
-    channelNumber: channelNumber,
-    group: group,
-    logoUrl: logoUrl,
-    httpHeaders: httpHeaders,
-  );
 
-  static Future<void> clearStartupIptvChannel() =>
-      IptvPrefs.clearStartupIptvChannel();
 
-  static Future<void> warmStartupIptv() => IptvPrefs.warmStartupIptv();
 
   // ============================================================================
   // Remote Control Settings

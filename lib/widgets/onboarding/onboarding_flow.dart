@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -423,20 +424,20 @@ class _InitialSetupFlowState extends State<InitialSetupFlow> {
 
   Future<bool> _loginPikPak(String email, String password) async {
     final success = await PikPakApiService.instance.login(email, password);
-    if (success) await StorageService.setPikPakEnabled(true);
+    if (success) await ProviderCredentialPrefs.setPikPakEnabled(true);
     return success;
   }
 
   Future<void> _hideProviderFromNavigation(IntegrationType type) async {
     switch (type) {
       case IntegrationType.realDebrid:
-        await StorageService.setRealDebridHiddenFromNav(true);
+        await ProviderCredentialPrefs.setRealDebridHiddenFromNav(true);
       case IntegrationType.torbox:
-        await StorageService.setTorboxHiddenFromNav(true);
+        await ProviderCredentialPrefs.setTorboxHiddenFromNav(true);
       case IntegrationType.premiumize:
-        await StorageService.setPremiumizeHiddenFromNav(true);
+        await ProviderCredentialPrefs.setPremiumizeHiddenFromNav(true);
       case IntegrationType.allDebrid:
-        await StorageService.setAllDebridHiddenFromNav(true);
+        await ProviderCredentialPrefs.setAllDebridHiddenFromNav(true);
       case IntegrationType.pikpak:
         return;
     }
@@ -469,7 +470,7 @@ class _InitialSetupFlowState extends State<InitialSetupFlow> {
       builder: (_) => const PikPakFolderPickerDialog(),
     );
     if (result == null) return;
-    await StorageService.setPikPakRestrictedFolder(
+    await ProviderCredentialPrefs.setPikPakRestrictedFolder(
       result['folderId'] as String?,
       result['folderName'] as String?,
     );

@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import '../storage_service.dart';
 import 'cloud_provider_id.dart';
 
@@ -104,15 +105,15 @@ class CloudCredentials {
   static Future<bool> _toggleEnabled(CloudProviderId id) {
     switch (id) {
       case CloudProviderId.debrid:
-        return StorageService.getRealDebridIntegrationEnabled();
+        return ProviderCredentialPrefs.getRealDebridIntegrationEnabled();
       case CloudProviderId.torbox:
-        return StorageService.getTorboxIntegrationEnabled();
+        return ProviderCredentialPrefs.getTorboxIntegrationEnabled();
       case CloudProviderId.premiumize:
-        return StorageService.getPremiumizeIntegrationEnabled();
+        return ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
       case CloudProviderId.alldebrid:
-        return StorageService.getAllDebridIntegrationEnabled();
+        return ProviderCredentialPrefs.getAllDebridIntegrationEnabled();
       case CloudProviderId.pikpak:
-        return StorageService.getPikPakEnabled();
+        return ProviderCredentialPrefs.getPikPakEnabled();
     }
   }
 
@@ -189,15 +190,15 @@ class CloudCredentials {
   static Future<String> postTorrentAction(CloudProviderId id) {
     switch (id) {
       case CloudProviderId.torbox:
-        return StorageService.getTorboxPostTorrentAction();
+        return ProviderCredentialPrefs.getTorboxPostTorrentAction();
       case CloudProviderId.premiumize:
-        return StorageService.getPremiumizePostTorrentAction();
+        return ProviderCredentialPrefs.getPremiumizePostTorrentAction();
       case CloudProviderId.alldebrid:
-        return StorageService.getAllDebridPostTorrentAction();
+        return ProviderCredentialPrefs.getAllDebridPostTorrentAction();
       case CloudProviderId.pikpak:
-        return StorageService.getPikPakPostTorrentAction();
+        return ProviderCredentialPrefs.getPikPakPostTorrentAction();
       case CloudProviderId.debrid:
-        return StorageService.getPostTorrentAction();
+        return ProviderCredentialPrefs.getPostTorrentAction();
     }
   }
 }

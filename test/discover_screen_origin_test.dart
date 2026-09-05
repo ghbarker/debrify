@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -171,8 +173,8 @@ void main() {
       addTearDown(StremioService.instance.invalidateCache);
       await StorageService.setDiscoverDefaultSource('cw');
       await StorageService.setHomeContinueWatchingEnabled(true);
-      await StorageService.setPikPakEnabled(false);
-      await StorageService.saveContinueWatchingItem(
+      await ProviderCredentialPrefs.setPikPakEnabled(false);
+      await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'origin-before-integration',
         title: 'Before integration',
         contentType: 'movie',
@@ -191,12 +193,12 @@ void main() {
 
       // Change real persisted CW after startup. A forbidden integration reload
       // would expose this title; the eligibility change proves the listener ran.
-      await StorageService.saveContinueWatchingItem(
+      await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'origin-after-integration',
         title: 'After integration',
         contentType: 'movie',
       );
-      await StorageService.setPikPakEnabled(true);
+      await ProviderCredentialPrefs.setPikPakEnabled(true);
       MainPageBridge.notifyIntegrationChanged();
       await pumpFavourites(tester);
       expect(
@@ -207,7 +209,7 @@ void main() {
       expect(panel().items.map((m) => m.id), ['origin-before-integration']);
       expect(sourceNode.hasFocus, isTrue);
 
-      await StorageService.setPikPakEnabled(false);
+      await ProviderCredentialPrefs.setPikPakEnabled(false);
       MainPageBridge.notifyIntegrationChanged();
       await pumpFavourites(tester);
       expect(panel().onQuickPlay, isNotNull);
@@ -417,7 +419,7 @@ void main() {
         addTearDown(StremioService.instance.invalidateCache);
         await StorageService.setDiscoverDefaultSource('cw');
         await StorageService.setHomeContinueWatchingEnabled(true);
-        await StorageService.saveContinueWatchingItem(
+        await PlaybackProgressStore.saveContinueWatchingItem(
           imdbId: 'tt1234567',
           title: 'Bound origin',
           contentType: 'movie',

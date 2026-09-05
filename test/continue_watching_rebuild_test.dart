@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -92,7 +93,7 @@ void main() {
     await StorageService.setHomeHeroTrailerEnabled(false);
     await StorageService.setHomeContinueWatchingEnabled(true);
     Future<void> save(String id, String title) =>
-        StorageService.saveContinueWatchingItem(
+        PlaybackProgressStore.saveContinueWatchingItem(
           imdbId: id,
           title: title,
           contentType: 'movie',
