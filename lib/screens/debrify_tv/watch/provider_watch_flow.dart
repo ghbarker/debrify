@@ -39,6 +39,8 @@ class WatchFlowBindings {
     required WatchValue<bool> allDebridAvailable,
     required WatchValue<bool> hideOptions,
     required WatchValue<bool> hideSeekbar,
+    required WatchValue<bool> isAndroidTv,
+    required this.getChannelKeywords,
     required WatchValue<bool> isBusy,
     required WatchValue<bool> launchedPlayer,
     required WatchValue<bool> pikpakAvailable,
@@ -129,6 +131,7 @@ class WatchFlowBindings {
   }) : _allDebridAvailable = allDebridAvailable,
        _hideOptions = hideOptions,
        _hideSeekbar = hideSeekbar,
+       _isAndroidTv = isAndroidTv,
        _isBusy = isBusy,
        _launchedPlayer = launchedPlayer,
        _pikpakAvailable = pikpakAvailable,
@@ -180,6 +183,9 @@ class WatchFlowBindings {
   bool get hideOptions => _hideOptions.read();
   final WatchValue<bool> _hideSeekbar;
   bool get hideSeekbar => _hideSeekbar.read();
+  final WatchValue<bool> _isAndroidTv;
+  bool get isAndroidTv => _isAndroidTv.read();
+  final Future<List<String>> Function(String channelId) getChannelKeywords;
   final WatchValue<bool> _isBusy;
   bool get isBusy => _isBusy.read();
   set isBusy(bool value) => _isBusy.write!(value);
@@ -246,6 +252,7 @@ class WatchFlowBindings {
   set activeApiKey(String? value) => _activeApiKey.write!(value);
   final WatchValue<String?> _currentWatchingChannelId;
   String? get currentWatchingChannelId => _currentWatchingChannelId.read();
+  set currentWatchingChannelId(String? value) => _currentWatchingChannelId.write!(value);
   final WatchValue<int> _lastQueueSize;
   int get lastQueueSize => _lastQueueSize.read();
   set lastQueueSize(int value) => _lastQueueSize.write!(value);

@@ -49,6 +49,7 @@ void _installFakes({
 }
 
 const _watchFlowPaths = <String>[
+  'lib/screens/debrify_tv/channel_switch_flow.dart',
   'lib/screens/debrify_tv/watch/alldebrid_watch_flow.dart',
   'lib/screens/debrify_tv/watch/pikpak_watch_flow.dart',
   'lib/screens/debrify_tv/watch/premiumize_watch_flow.dart',
