@@ -1,7 +1,7 @@
 # Refactor board
 
 ## Current roadmap — September 5 (read this section first)
-Overall completion remains approximately65%, an engineering estimate rather than measured acceptance. Relocation is recorded separately from actual deletion.
+Overall percentage: WITHDRAWN. The repeated65% estimate was not recalculated and is not a reliable completion measure. Report completed acceptance criteria, remaining architectural outcomes and verified changes; relocation is separate from actual deletion.
 
 ### Done and merged
 - [x] Safety gates, origin behavior tests, old-backup restore fixtures, adversarial checks, native CI and dependency ceiling.
@@ -371,3 +371,6 @@ Exact63889 independent218executions/202distinct/scopedinherited7/full436452/laye
 ### #164 merged; c1ca fullgate dispatched
 Exact2dda independent40/105/11/full436452/layer77/finalpost163union andall3CIgreen. Actualmergec1cae4c7c6ba3973d529466e72b86bf9677a3be3. Did we make a difference?Watchlistcontenthascoherentowner,168hostlinesremoved3498;wholeprod+87/eightfacades+capdebugcompat remain. More remains698targetgap:83otherclosed,85explicitlychargedagainsthistoric783once. Gods8614/11926/3317/3498/2899 vs19070/16278/10716/9963/7905.
 C0fullgateactualc1caIN_PROGRESS after158163164; allchecks/builds/forwarderledger required. No nextproductionreleaseuntilpass. Userpercentageanswer65engineeringestimate/52percenthostshrinkage, notacceptancecompletion. No user blocker/allCODEMAPlocksreleased.
+
+### Progress reporting correction
+User correctly challenged unchanged65% repeatedover6hours. Estimatewithdrawn, not replaced by anotherunsupportednumber. Future reports must name closed acceptancecriteria and outstanding architectural outcomes; hostshrinkage/testcounts are evidence, notoverallcompletion. Priorpercentageentries are historical and superseded. Prioritize completing coherent architecture over creating more smallPRs.
