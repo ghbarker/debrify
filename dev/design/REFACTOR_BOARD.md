@@ -103,3 +103,6 @@ G1'-5 destination decision approved: lib/screens/search/fav_rows_controller.dart
 
 S2-6 draft PR118 published, frozen609b823550034d58b58dc00127be2067c4ee50e7. C0 independent review active; Locke holding branch stable. Worker reports104core+120consumer+9sweep+12allowlist passes,cleananalysis,77layering; not parent gate credit until reproduced.1867Leaves/433uncredited debt. All67bodydiffs and70method inventory included in PR. CODEMAP lock released. M1-3 quickwatch835line mapping accepted in scope; origin21cases green, sensitivity/pincommit precede move.
 
+
+PR117 merged a0569745 exactee9de82b after independent live-host pin1pass/cleananalysis and CItest/goldensSUCCESS. Difference: tested selection notification coalesces to1host+1child,noextra-frame build; no duplicate-child fix warranted. More: does not cover every asynchronous sequence or prove both listeners necessary. God-file counts unchanged (test-only). G1'-5 neighbouring search lane should integrate before final gate; no production overlap. PR118 independent reproduction complete,CIpending; no merge yet.
+
