@@ -254,6 +254,108 @@ void main() {
       await closeFavourites(tester);
     },
   );
+  testWidgets(
+    'origin unavailable watchlist series keeps then removes saved item',
+    (tester) async {
+      await prepareFavourites(tester);
+      final item = StremioMeta(
+        id: 'invalid-saved-series',
+        type: 'series',
+        name: 'Unavailable',
+        poster: '',
+        sourceAddon: StremioAddon(
+          id: 'xtream-iptv',
+          name: 'IPTV',
+          baseUrl: '',
+          manifestUrl: '',
+        ),
+      );
+      await StorageService.setMyWatchlistItem(item, true);
+      await mountFavourites(tester);
+      tester.widget<ArtPoster>(find.byType(ArtPoster)).onOpen();
+      await tester.pumpAndSettle();
+      expect(find.text('Series unavailable'), findsOneWidget);
+      await tester.tap(find.text('Keep'));
+      await tester.pumpAndSettle();
+      expect(await StorageService.isInMyWatchlist(item), isTrue);
+      tester.widget<ArtPoster>(find.byType(ArtPoster)).onOpen();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Remove'));
+      await pumpFavourites(tester);
+      expect(await StorageService.isInMyWatchlist(item), isFalse);
+      expect(find.byType(ArtPoster), findsNothing);
+      expect(find.text('Removed from My Watchlist'), findsOneWidget);
+      await closeFavourites(tester);
+    },
+  );
+
+  testWidgets(
+    'origin playlist favorite and confirmed deletion persist through row reload',
+    (tester) async {
+      await prepareFavourites(tester);
+      final item = <String, dynamic>{
+        'title': 'Managed Playlist',
+        'kind': 'single',
+        'id': 'managed',
+        'addedAt': 1,
+      };
+      await StorageService.savePlaylistItemsRaw([item]);
+      await mountFavourites(tester);
+      Future<void> open() async {
+        tester.widget<ArtPoster>(find.byType(ArtPoster)).onOpen();
+        await tester.pumpAndSettle();
+      }
+
+      await open();
+      await tester.tap(find.text('Favorite'));
+      await pumpFavourites(tester);
+      expect(
+        await StorageService.getPlaylistFavoriteKeys(),
+        contains(StorageService.computePlaylistDedupeKey(item)),
+      );
+      await open();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      expect(find.text('Delete?'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(await StorageService.getPlaylistItemsRaw(), hasLength(1));
+      await open();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await pumpFavourites(tester);
+      expect(await StorageService.getPlaylistItemsRaw(), isEmpty);
+      expect(find.byType(ArtPoster), findsNothing);
+      await closeFavourites(tester);
+    },
+  );
+
+  testWidgets(
+    'origin missing Stremio IPTV addon reports unavailable without launching',
+    (tester) async {
+      await prepareFavourites(tester);
+      await tester.runAsync(
+        () => StorageService.setIptvChannelFavorited(
+          'stremio-tv://missing/tv1',
+          true,
+          channelName: 'Gone Channel',
+        ),
+      );
+      await mountFavourites(tester);
+      final poster = tester.widget<ArtPoster>(find.byType(ArtPoster));
+      poster.onOpen();
+      poster.onOpen();
+      await pumpFavourites(tester);
+      expect(
+        find.text('The addon behind Gone Channel is no longer installed'),
+        findsOneWidget,
+      );
+      expect(find.byType(SearchScreenHost), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await closeFavourites(tester);
+    },
+  );
 }
 
 Future<void> prepareFavourites(WidgetTester tester) async {
