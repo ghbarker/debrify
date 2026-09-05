@@ -152,3 +152,6 @@ PR121merged1274476d exact96cd6acc afterLocke187/origin9/body52+C0integration12pa
 ## Full automated gate passed: actualmain397398d5/tree65c50171
 Generic5283pass/12exacthistorical/2skip;goldens21exacthistorical after2retries;no unexpected/unused. Native1origin+1current/0skip. Analyzer438/454no new;Python55;layer77normalpass+delta0 firstparent/premerge. Windows158.1s/Android104.2s PASS. Evidence C:/Users/hunth/debrify/debrify-c0-main-3973-gate/.dart_tool/main-gate/gate-summary.json; manualdeferred,video readinessunproven. M15productwaitsgreenpin+typeddesignonly. G17origin6realcases/62suiteindependentlyPASS; standalonecontract stillrequired. C0availableindependentreview, V16paused.
 
+
+124wordingcorrection merged afterexact192626d6all3CIgreen+C0sixpins/difftruthreview. Difference: evidence accuratelylimitsdesktophostcoverage, no behaviorchange orhostLeaves. More:Androidhosttrue/bridge/onFinished stillunproven.125reviewaccepted currentcaller semantics,CIpending.126C0review124PASS/9origin/body3 passed; baseline56df5520 minimalprovenancerepair suppliedowner forfreshCI. M15apartial448/202remaining; M15bactualstateownershipproposal only, nocallbackbag.
+
