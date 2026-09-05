@@ -13,7 +13,7 @@ String _between(String source, String start, String end) {
 void main() {
   final source = File(
     'lib/services/video_player_launcher.dart',
-  ).readAsStringSync();
+  ).readAsStringSync().replaceAll('\r\n', '\n');
 
   test('Android TV source switch carries MDBList episode resume progress', () {
     final resolver = _between(
