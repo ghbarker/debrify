@@ -4,9 +4,10 @@ Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 **Phase 2 binding plan:** `dev/design/REFACTOR_PLAN_PHASE2.md` (#72). It supersedes
 §4 lanes G1–G5 / T2 and the §10 line targets. Ground rules and gates (a)–(e) still
 apply; this phase also requires (f) Leaves, (g) no host-private members / no new
-`part of` / `extension on` the host State, (h) pin commit predates the move.
+`part of` / `extension on` the host State, (h) pin on the origin path before
+the move (#98 post-move pins do not clear h), (i) layering count must not grow.
 
-Baseline: `main` @ `22c40dd4` / #73–#98 · Phase: **2 correction** · Last gate: **2** (Windows + APK builds **pass**; layering **red**)
+Baseline: `main` @ #73–#100 · Phase: **2 correction** · Last gate: **2** (Windows + APK builds **pass**; layering **90** after V1-fix)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -48,15 +49,17 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | G1'-1 · catalog play resolver | merged | `refactor/g1p-1-catalog-play-resolver` | worker | `search_screen.dart` [play/resume hunks], `lib/services/playback/catalog_play_resolver.dart` | G1'-0 | **#78.** Leaves −1 069. No new `part`/`extension on` State. |
 | G1'-2 · source edit/add dialogs | merged | `refactor/g1p-2-source-binding-dialogs` | worker | `search_screen.dart` [source dialog hunks], `lib/widgets/sources/source_binding_dialogs.dart`, pin + widget tests | G1'-1 | **#84.** Leaves −486. `onReorder` ignore (path-keyed baseline). Pin predates move. |
 | G1'-3 · keyword search | merged | `refactor/g1p-3-keyword-search` | worker | `search_screen.dart` [keyword hunks], `lib/services/search/keyword_search_controller.dart`, `lib/screens/search/keyword_search_screen.dart`, pin | G1'-2 | **#90.** Leaves −2 379. Text-grep pin edited after the move. **#98** is a post-move widget pin — does **not** pass on the parent of the move. Parent-path (h) still unpaid. |
-| G1'-4 · continue watching | hold | `refactor/g1p-4-continue-watching` | worker `bc-db4ab579` | `search_screen.dart` [CW hunks], `lib/services/home/continue_watching_controller.dart`, `lib/widgets/home/continue_watching_row.dart`, pin | V1-fix + gate (i) | **#96.** Leaves **1 738**. **#98 landed — still do not merge.** Do not start G1'-5. |
-| G1'-5 … G1'-9 | queued | — | — | `search_screen.dart` | G1'-4 | Sequential. Target ≤ 7 500; no `extension on _SearchScreenState`. |
+| G1'-4 · continue watching | hold | `refactor/g1p-4-continue-watching` | worker `bc-db4ab579` | `search_screen.dart` [CW hunks], `continue_watching_controller.dart`, `continue_watching_row.dart`, pin | CW out of `lib/services/` | **#96.** Leaves **1 738**. #99+#100 landed. **Still do not merge** until the controller leaves `lib/services/` (widgets import). Do not start G1'-5. |
+| G1'-5 … G1'-9 | queued | — | — | `search_screen.dart` | #96 | Sequential. Do not start. |
 | V1-0 · PlayerLaunchConfig | merged | `refactor/v1-0-launch-config` | worker | `video_player_screen.dart` [ctor + `widget.*` reads], `lib/screens/video_player/player_launch_config.dart` | — | **#75.** Value object. Leaves +3 ≈ 0. Unblocks V1-1…10. |
 | V1-1 · resume controller | merged | `refactor/v1-1-resume-controller` | worker | `video_player_screen.dart` [resume hunks], `lib/services/playback/resume_controller.dart` | V1-0 | **#79.** Leaves 666. Pin predates move. Adapter still `widget.*`. |
 | V1-2 · identify-title sheet | merged | `refactor/v1-2-identify-title-sheet` | worker | `video_player_screen.dart` [identify-title hunks], `lib/widgets/player/identify_title_sheet.dart` | V1-1 | **#83.** Leaves 527. Sheet + season dialog. Subtitle fetch stays for V1-3. Pin predates move. |
 | V1-3 · subtitle track controller | merged | `refactor/v1-3-subtitle-track-controller` | worker | `video_player_screen.dart` [subtitle/track hunks], `lib/services/playback/subtitle_track_controller.dart` | V1-2 | **#88.** Leaves 943. Pin predates move. Identify sheet not re-extracted. |
 | V1-4 · IPTV recording | merged | `refactor/v1-4-iptv-recording` | worker | `video_player_screen.dart` [recording hunks], `lib/services/playback/iptv_recording_controller.dart` | V1-3 | **#91.** Leaves 704. Pin predates move. Desktop capture `extension: 'ts'`; Android engine-first then tee. Overlay reads notifiers via host getters. |
 | V1-5 · IPTV zap + catch-up | merged | `refactor/v1-5-iptv-zap` | worker | `video_player_screen.dart` [zap/catch-up/prefetch/banner hunks], `lib/services/playback/iptv_zap_controller.dart` | V1-4 | **#94.** Leaves **1 008**. Pin predates move. Controller owns page cache + prefetch; `onSwitch(channel)` stays on host. Overlay reads banner notifiers via host getters. Recording stop on switch kept. After: player 11 926. |
-| V1-6 … V1-10 | queued | — | — | `video_player_screen.dart` | V1-5 | Sequential. Target ≤ 9 500. V1-9 folds episode-progress into ScrobbleCoordinator. |
+| V1-6 … V1-10 | queued | — | — | `video_player_screen.dart` | V1 lib-pin | Sequential. Do not assign V1-6. |
+| V1-fix · split UI-in-services | merged | `refactor/v1-fix-ui-services` | worker | four controllers → `lib/screens/**` | #99 | **#100.** 106 → 90. Resume/subtitle/zap/keyword moved. Catalog play + recording stayed. |
+| C0-gate2 · layering ceiling | merged | `refactor/c0-gate2-layering` | worker | `check_layering.dart`, `layering_baseline.txt`, `ci_layering_delta.py` | — | **#99.** Gate (i). Ceiling now **90** after #100. `--strict` stays Q1. |
 | M1-0 · WatchSession | merged | `refactor/m1-0-watch-session` | worker | `magic_tv_screen.dart` [WatchSession field/sink hunks], `lib/screens/debrify_tv/watch_session.dart`, tests | P1b merged (#76) | **#81.** Leaves +12 ≈ 0. `ProgressSink` seam. Pin predates move. |
 | M1-1 · channel cache warmer | merged | `refactor/m1-1-channel-cache-warmer` | worker | `magic_tv_screen.dart` [warm/cache hunks], `lib/services/debrify_tv/channel_cache_warmer.dart` | M1-0 | **#87.** Leaves **856** (10 764 → 9 908). TorBox window, quality filter, RD size-filter compute moved. Create/update dialogs stay (M1-5). |
 | M1-2 · import/export | merged | `refactor/m1-2-import-export` | worker | `magic_tv_screen.dart` [import/export hunks], `lib/services/debrify_tv/channel_import_export.dart`, `lib/screens/debrify_tv/import_export_dialogs.dart`, pin | M1-1 | **#95.** Leaves **1 539** (9 908 → 8 369). Pin predates move. Create/update + watch stay. After: magic_tv 8 369. |
@@ -69,7 +72,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | S2-5 · tracking prefs | merged | `refactor/s2-5-tracking-prefs` | worker | `storage_service.dart` [tracking hunks], `lib/services/storage/tracking_prefs.dart`. Owns `trackingSourceRevision`. | S2-4 | **#93.** Leaves **373**. Pin predates move. Trakt/Simkl/MDBList credentials moved (not CloudSecretPrefs). Playback progress stays S2-6. After: storage 6 282. |
 | S2-6 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-5 | Sequential. Target ≤ 2 800. S2-6 playback progress; S2-7 façade collapse. Remaining budget tighter because S2-4 took extra chrome. |
 | G2 · under 3 000 | merged | `refactor/g2-download-location` | worker | `settings_screen.dart` [download-location hunks], `download_location_controller.dart` | — | **#85.** 3 107 → 2 899 (−208). Target ≤ 3 000 met. |
-| Q1 · layering enforcement | queued | — | — | `tool/check_layering.dart`, `test.yml` | gate 2 + V1-fix | Uncapped **106** @ `22c40dd4` (77 @ #72; +22 six-file Phase 2; +7 M1-2). Do not `--strict` until V1-fix. |
+| Q1 · layering enforcement | queued | — | — | `tool/check_layering.dart`, `test.yml` | gate 2 | Ceiling **90**. Do not `--strict` yet. |
 | Q2 · shim + comment sweep | queued | — | — | per area, assigned at gate 2 | gate 2 | — |
 | Q3 · `.cursor` policy | queued | — | — | `.cursor/**`, `dev/design/ENGINEERING_RULES.md` | gate 2 | PR #56 (Qwen helper) held until Phase 3; it edits `.cursor/**`. |
 
@@ -103,4 +106,4 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
-Phase 1 merged. Old Phase 2 G1–G5/T2/G3-HomePrefs **closed as insufficient** (audit in PHASE2 §1). Binding is **#72** `REFACTOR_PLAN_PHASE2.md`. **G3 PlayerPrefs parked** (`refactor/g3-player-prefs` — do not merge). **G5 closed** (remainder is V1-9). **#73–#98 merged** (except hold **#96**). **#90** parent-path (h) still unpaid (#98 is post-move). **#86** Leaves 1 067 vs 1 600 (533 → S2-7). **Do not merge #96. Do not assign G1'-5 or V1-6.** Open: **#96** (held), **#97** (gate-h audit docs; fold if overlapping). PR #56 held for Q3. #36–#43 closed (G4). #89 leftover assignment draft — do not merge.
+Phase 1 merged. Binding is **#72**. **#73–#100 on main** (#99 C0-gate2, #100 V1-fix). Layering ceiling **90**. **HOLD #96** until `continue_watching_controller` leaves `lib/services/`. **#90** parent-path (h) still unpaid. **#86** shortfall 533 → S2-7. Open: **#96** (held), **#97** (gate-h audit; rebase or close). Do not start G1'-5 / V1-6 / S2-6 / M1-3. PR #56 held for Q3. #89 closed.
