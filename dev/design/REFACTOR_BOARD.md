@@ -19,7 +19,7 @@ Overall completion is approximately 65%, an engineering estimate, not a measured
 1. Finish Discover content/action ownership and real standalone dispatch; preserve hidden watchlist/focus effects. Then TV stage layouts and final Search cleanup.
 2. Finish player work: decoder fallback proof remains blocked by native-fixture limitations; timer/speed/aspect, TV guide, tracker progress and overlay separation remain in the plan.
 3. Continue storage ownership and migrate callers away from temporary forwarding APIs. Current host is 1521 lines above target after #141.
-4. M1-7: consolidate provider watch flows below 800 combined lines, while tracking growth in shared code. Current merged five-file total2448; original2556. Magic TV size remains provisional.
+4. M1-7: consolidate provider watch flows below 800 combined lines, while tracking growth in shared code. Current merged five-file total2352; original2556. Shared code growth is included separately. Magic TV size remains provisional.
 5. Q-phase cleanup: remove expired adapters, enforce dependency boundaries, consolidate engineering rules, complete upstream contribution preparation.
 6. Final integrated verification and user acceptance of the final build. Earlier smoke acceptance is not automatically a test of later builds.
 
@@ -281,3 +281,7 @@ Wegener reproduced the speed native pair but identified a disposal-proof gap: au
 ### #143 merged — playlist compatibility checkpoint
 Exactb53 independent81/scopedanalysis and all3CI passed; test-only143 merged. Real old-export/current-restore/builder proof includes derived marker distinction; zero production Leaves. Did we make a difference? Yes, compatibility safety improved; more remains:146 actual owner extraction and Q2 facade removal. Locke retargeting146 to main and integrating; Cicero finaldelta reviewer after145 correction.144 test/nativepassed, goldenspending. God sizes remain Search8614/19070,Player11926/16278,Magic3317/10716,Storage4321/9963,Settings2899/7905. No user blocker.
 
+
+### #144 merged — actual watch-flow deduplication
+Exact53184 independently reviewed191pass/analyzer436452/layer77 and all3CIgreen; cursor144 merged. Four cache-window loops share one owner with original timing/cancel behavior. Did we make a difference?49 fewer physical production lines; fiveflows2352/common1388, total3740. More remains: below800 target not reached. God hosts unchanged8614/11926/3317/4321/2899 against19070/16278/10716/9963/7905. This is secondproductionmerge since7f00gate;146 next thenfullgate.
+- Active: Ampere cached-player originpins (newtestonly); Locke146 integration/nextstorageproposal; Cicero finalgateprepared/146review complete; Wegener boundedtimer-origin feasibility.145corrected4ef independentpairpassed, freshCIpending;147/148independentlypassed awaitinggoldens. No user blocker. LatestCODEMAP rowunion must preserve144 when146 merges.
