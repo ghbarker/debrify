@@ -1,0 +1,31 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "recipeVersion": 5,
+  "includeSecrets": false,
+  "scenario": "playlist-metadata",
+  "absentKeys": [],
+  "omittedKeys": [],
+  "syntheticOnly": true,
+  "sha256": "997c7091aabb99fb8fa152df131af13980534fa713fddbd18bb30743b499ba69",
+  "representedSettings": {
+    "tvmaze_series_mappings": "{\"rd_7\": {\"tvmazeShowId\": 42, \"showName\": \"Synthetic RD\", \"savedAt\": 101}, \"title_a_b\": {\"tvmazeShowId\": 43, \"showName\": \"Synthetic title\", \"savedAt\": 102}, \"webdav|server:server|path:/Case/A\": {\"tvmazeShowId\": 44, \"showName\": \"Synthetic WebDAV\", \"savedAt\": 103}}",
+    "playlist_poster_overrides_v1": "{\"rd_7\": {\"posterUrl\": \"https://example.invalid/0.jpg\", \"savedAt\": 201}, \"title_a_b\": {\"posterUrl\": \"https://example.invalid/1.jpg\", \"savedAt\": 202}, \"webdav|server:server|path:/Case/A\": {\"posterUrl\": \"https://example.invalid/2.jpg\", \"savedAt\": 203}, \"empty\": {\"posterUrl\": \"\", \"savedAt\": 210}, \"null\": {\"posterUrl\": null, \"savedAt\": 211}, \"nonmap\": 7}"
+  },
+  "keyTypes": {
+    "tvmaze_series_mappings": "String",
+    "playlist_poster_overrides_v1": "String"
+  },
+  "excludedKeys": [],
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}

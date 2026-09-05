@@ -785,6 +785,97 @@
           "playback_state_v1": "{\"video_done\":{\"type\":\"video\",\"title\":\"Done\",\"imdbId\":\"tt-done\",\"positionMs\":90,\"durationMs\":100,\"updatedAt\":3},\"video_alias\":{\"type\":\"video\",\"title\":\"Done Alias\",\"imdbId\":\" TT-DONE \",\"positionMs\":5,\"durationMs\":100,\"updatedAt\":2},\"video_partial\":{\"type\":\"video\",\"title\":\"Partial\",\"imdbId\":\"tt-partial\",\"positionMs\":89,\"durationMs\":100,\"updatedAt\":4},\"series\":{\"type\":\"series\",\"title\":\"Repair Series\",\"imdbId\":\"tt-series\",\"finishedEpisodes\":{\"1\":{\"3\":false,\"4\":null}},\"seasons\":{\"1\":{\"1\":{\"positionMs\":\"75\",\"durationMs\":100,\"updatedAt\":5},\"2\":{\"positionMs\":0,\"durationMs\":100,\"updatedAt\":9},\"3\":{\"positionMs\":0,\"durationMs\":100,\"updatedAt\":8},\"4\":{\"positionMs\":0,\"durationMs\":1,\"updatedAt\":7},\"5\":{\"positionMs\":74,\"durationMs\":100,\"updatedAt\":6}}},\"executionSamples\":[{}]}}"
         }
       }
+    },
+    "playlist-metadata": {
+      "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+      "namedKeyCount": 2,
+      "physicalType": "String",
+      "excludedKeys": [],
+      "values": {
+        "tvmaze_series_mappings": "{\"rd_7\": {\"tvmazeShowId\": 42, \"showName\": \"Synthetic RD\", \"savedAt\": 101}, \"title_a_b\": {\"tvmazeShowId\": 43, \"showName\": \"Synthetic title\", \"savedAt\": 102}, \"webdav|server:server|path:/Case/A\": {\"tvmazeShowId\": 44, \"showName\": \"Synthetic WebDAV\", \"savedAt\": 103}}",
+        "playlist_poster_overrides_v1": "{\"rd_7\": {\"posterUrl\": \"https://example.invalid/0.jpg\", \"savedAt\": 201}, \"title_a_b\": {\"posterUrl\": \"https://example.invalid/1.jpg\", \"savedAt\": 202}, \"webdav|server:server|path:/Case/A\": {\"posterUrl\": \"https://example.invalid/2.jpg\", \"savedAt\": 203}, \"empty\": {\"posterUrl\": \"\", \"savedAt\": 210}, \"null\": {\"posterUrl\": null, \"savedAt\": 211}, \"nonmap\": 7}"
+      },
+      "lookups": [
+        {
+          "item": {
+            "rdTorrentId": 7
+          },
+          "key": "rd_7",
+          "mapping": {
+            "tvmazeShowId": 42,
+            "showName": "Synthetic RD",
+            "savedAt": 101
+          },
+          "poster": "https://example.invalid/0.jpg"
+        },
+        {
+          "item": {
+            "rdTorrentId": "7"
+          },
+          "key": "rd_7",
+          "mapping": {
+            "tvmazeShowId": 42,
+            "showName": "Synthetic RD",
+            "savedAt": 101
+          },
+          "poster": "https://example.invalid/0.jpg"
+        },
+        {
+          "item": {
+            "title": "A-B"
+          },
+          "key": "title_a_b",
+          "mapping": {
+            "tvmazeShowId": 43,
+            "showName": "Synthetic title",
+            "savedAt": 102
+          },
+          "poster": "https://example.invalid/1.jpg"
+        },
+        {
+          "item": {
+            "title": "a b"
+          },
+          "key": "title_a_b",
+          "mapping": {
+            "tvmazeShowId": 43,
+            "showName": "Synthetic title",
+            "savedAt": 102
+          },
+          "poster": "https://example.invalid/1.jpg"
+        },
+        {
+          "item": {
+            "provider": "WeBdAv",
+            "rdTorrentId": 7,
+            "webdavServerId": "SERVER",
+            "webdavPath": "/Case/A"
+          },
+          "key": "webdav|server:server|path:/Case/A",
+          "mapping": {
+            "tvmazeShowId": 44,
+            "showName": "Synthetic WebDAV",
+            "savedAt": 103
+          },
+          "poster": "https://example.invalid/2.jpg"
+        }
+      ],
+      "expectedBatch": {
+        "rd_7": "https://example.invalid/0.jpg",
+        "title_a_b": "https://example.invalid/1.jpg",
+        "webdav|server:server|path:/Case/A": "https://example.invalid/2.jpg"
+      },
+      "mutations": {
+        "metadata-key": {
+          "key": "tvmaze_series_mappings",
+          "operation": "rename"
+        },
+        "metadata-type": {
+          "key": "playlist_poster_overrides_v1",
+          "operation": "replace",
+          "value": 7
+        }
+      }
     }
   }
 }
