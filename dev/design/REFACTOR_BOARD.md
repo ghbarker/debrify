@@ -349,3 +349,8 @@ Exactd735 independent91twice/scoped/keytypepostrestoremutants andall3CIgreen. Di
 ### #158/#159 merged
 158exact381 independent17+91+18/scoped/full436452/layer77/finalunion/all3CIpassed. Did we make a difference?Metadataowner co-locates actualkey/CRUD/identity logic,181fewer hostlines (3666),wholeproduction+44/10facadesQ2. More remains866gap=783historical+83other, notnet181deletion.159exact99b independent29/all3CIgreen protectsactualreturnrefresh/latebounddisposal,zeroLeaves; +52ownerproposalDEFERRED untilconcretestandalonecompositionadoption. Gods8614/11926/3317/3666/2899 vs19070/16278/10716/9963/7905. Productioncounter1sincef486.
 CurrentWindowednext origin3197reviewC0/mapAmpere/read-onlyriskWegener; Locke boundedstorage residualclassification. No user blocker,allCODEMAPlocksreleased.
+
+### #160 merged / Windowed product held
+160exact3197 independent24/scoped/all3CIpassed. Did we make a difference?Eightlaterrefillcases improvefiniteproof; more remainsquickdequeue/reentrant/cast/nativegaps,zeroLeaves.163productfrozen121/docs7638 draft:19net/202leaf,24retainedbindingsQ2expiry; exact5prod+1inventorypath authorized. CItestfailedpendingverifiedcast-diagnostic relocation; no addedallowance/baselinewritegrantedyet,C0review. Gods8614/11926/3317/3666/2899 vs19070/16278/10716/9963/7905 unchanged.
+Watchlistownerreleased3prod+keysweep,161162prerequisite; debugannotationonly movedstorefield removal explicitlyapproved,hostcompat annotationsretained. No CODEMAPlocksheld. No user blocker.
+
