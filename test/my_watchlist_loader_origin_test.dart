@@ -11,7 +11,7 @@ import 'package:shared_preferences_platform_interface/types.dart';
 
 // Holds the real StorageService preference read; no controller body is copied.
 class HeldWatchlistPreferences extends InMemorySharedPreferencesStore {
-  HeldWatchlistPreferences(Map<String, Object> data) : super.withData(data);
+  HeldWatchlistPreferences(super.data) : super.withData();
   final release = Completer<void>();
   final events = <String>[];
 
@@ -88,8 +88,9 @@ void main() {
                     controller.watchlistSeriesItems.map((e) => e.id).toList(),
                   );
                   observations.add(controller.watchlistMovieNodes.length);
-                  if (outcome == 'commit throws')
+                  if (outcome == 'commit throws') {
                     throw StateError('host commit failed');
+                  }
                 },
                 homeRowIds: () => [],
                 addonForContinue: (_) => throw UnimplementedError(),
