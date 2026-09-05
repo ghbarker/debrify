@@ -1,13 +1,13 @@
 # Refactor board
 
 ## Current checkpoint — 2026-09-05 (supersedes historical rows below)
-- Merged this round: #114, #117, #118, #116, #120, #119, #121, #122, #123.
-- G1'-7 Wegener: origin-only Discover pins assigned; ownership contract required before extraction. #123 merged397398d5,732net.
-- M1-5 Ampere: origin dialog/settings pins assigned; live binding design and automated gate before move. #122 merged2bbd9f6d,780net.
-- C0 Cicero: full actualmain397398d5 automated gate assigned now. Decoder V1-6 paused: native fixture failed; uncommitted experimental seams isolated, never merged.
-- Locke: bounded independent Discover ownership-contract review assigned. Storage debt audit complete; no unassigned cleanup.
-- Latest full automated gate PASSED actual main 9958dd1e: Windows/Android builds, native pair, full suites against unchanged allowlist, analyzer and layering. Manual smoke deferred by user; never marked passed.
-- Current main god lines: search 9281, player 11926, Magic TV 4519, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
+- Merged this round: #114, #117, #118, #116, #120, #119, #121, #122, #123, #124, #125, #126.
+- G1'-7b Wegener: bound-data-only prerequisite active; corrected green origin8568d5bc before move. Auth/provider/actions remain host; no750credit.
+- M1-5b Ampere: actual settings-state owner + renderer origin pins assigned. Editor/chip126 mergedc35c41c1,448partial;202targetremaining.
+- C0 Cicero: bounded analyzer-provenance read-only audit; next settings independent review. Decoder V1-6 paused: native fixture failed; uncommitted experimental seams isolated, never merged.
+- Locke: independent bound-data review on frozen checkpoint next. Storage debt audit complete; no unassigned cleanup.
+- Latest full automated gate PASSED actual main 397398d5: Windows/Android builds, native pair, full suites against unchanged allowlist, analyzer and layering. Manual smoke deferred by user; never marked passed.
+- Current main god lines: search 9281, player 11926, Magic TV 4071, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
 - Storage target shortfall 1565, including 783 explicit S2-6/S2-7 debt; no double credit.
 - CODEMAP unlocked. Temporary keep-awake expires September 5 at 16:43 UTC. No permanent power or disk changes.
 
@@ -157,4 +157,10 @@ Generic5283pass/12exacthistorical/2skip;goldens21exacthistorical after2retries;n
 
 
 125merged afterexact99c12bb6all3CIgreen+independent76/8origin/currentcallerreview. Difference:purewatchlist read/partition sharedwithoutFavUIdependency;0hostLeaves/0Discover750credit. More:extraasync/allocationdelta andsharedholdorderinggapexplicit. WegenernextnarrowDiscoverdata/sessionproposal assigned;126waitingtest/goldens,nativePASS exact6c5380d7. No userwait.
+
+
+126mergedc35c41c1 exact6c5380d7all3CIgreen+C0independentreview/integration. Difference:editor/sharedchip448hostLeaves,Addhelper/chip1000limit actualoriginpin;settingsremain202target. More:pendingSAVE dedupguardunproven,11linefacadeM1-6expiry,remainingstateownershipnowassigned. Currentgod9281/11926/4071/4365/2899 vsoriginal19070/16278/10716/9963/7905. Secondproductionprerequisite since397gate(125,126);nextafterG17bfullgate.
+
+
+127mergedce73f802 correctedc1674faa all3CIgreen+Locke81/sourceconditionalreview: empty/allinvalidsyncmapclear restored, nonemptyextraasyncboundary remainsdeclared.128merged04264596 all3CIgreen+independentmetadata4rowaudit/16tests;454count/identitymultisetunchanged. Difference: Discoverbounddata prerequisite now preservesemptytiming; historicalanalyzerprovenance repaired. More:0Discover750credit, realaction/lifecycleowner stillneeded. Lockefullactual04264596gateassigned afterthirdprod125126127; C0129review+approved9relocations/2visibilityremovals pendingintegration. Currentgodsearch9268/player11926/magic4071/storage4365/settings2899;13boundhostlinesno750credit.
 
