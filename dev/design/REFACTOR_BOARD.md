@@ -270,3 +270,6 @@ Cicero assigned refactor/v1-7-speed-origin-pin: existing test/native/video_playe
 - Ampere: separate refactor/m1-7-captured-unlock-pins, NEW test/magic_tv_captured_unlock_origin_test.dart only;45-minute first batch actual host captured-key wire observations and missing RD PreferVideos path. No production/seams; stop with explicit debt if path inaccessible. Cursor144 remains frozen53184 and independently passed, CI pending.
 - Wegener:30-minute read-only next Discover watchlist/focus/CW/bound origin-pin feasibility, no edits or general re-inventory. Cicero: test-only player-speed pin as above. No user dependency.
 
+
+- Wegener follow-on: refactor/g1-home-watchlist-focus-pin, NEW test/home_watchlist_refresh_focus_origin_test.dart only;30-minute real Home public-control characterization attempt, no production seams. Discover full Fav adapter retained by decision; private node/independent-await gaps remain explicit in NOTES. No user action required.
+

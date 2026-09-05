@@ -718,3 +718,7 @@ User requested per-god-file forwarder counts in every gate row; ledger inventory
 
 PR139 Windows exact-pair exit79 diagnosed read-only as native flutter_tester.exe access violation0xc0000005, corroboratedApplicationError1000/WER1001 for both origin/current failures. Selector/noTestsRan message is secondary after process crash. Faulting component remains unknown; no dump available, no attribution to skip change/libmpv/driver established. Linux exact-head native pair passed; unset/invalid/strict-runner semantics independently verified. Preserve failed evidence; no blind retries or Windows-green claim.
 
+
+### Discover refresh ordering: retained coupling
+Post140 read-only review found no existing public seam that independently observes Discover private watchlist-node synchronization or separates watchlist and CW awaits: both start through the memoized preference future, and Discover cannot arm Home deferred-down state. Preserve the full FavRows adapter/lifetime; replacing it with a bare loader is not authorized by current pins. No additional136-equivalent test counts as closing this gap. A bounded real Home-consumer focus pin is assigned separately and will not be described as Discover or independent-await proof.
+
