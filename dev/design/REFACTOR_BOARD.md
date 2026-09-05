@@ -8,7 +8,7 @@
 - Latest full automated gate PASSED actual main 04264596: 5307 passing generic tests, 12 exact known failures, two skips; 21 exact known golden errors; no unexpected/unused entries. Native origin/current passed; Windows/ARM64 builds passed; analyzer 438/454, layering 77.
 - Current merged god lines: search 9126, player 11926, Magic TV 3659, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
 - Open debt: storage shortfall 1565; player native fixture paused; temporary forwarders expire in their recorded lanes. No manual smoke pass claimed; user explicitly deferred it without blocking eligible work.
-- CODEMAP unlocked. No user action required. Awake helper PID3412 verified running; expires September 5 at 16:43 UTC, without extension or permanent power changes.
+- CODEMAP unlocked. No user action required. Awake helper PID3412 expired September 5 at 16:43 UTC; process absent and log active=false verified. No extension or permanent power changes.
 ## Prior checkpoints and retained evidence
 
 
