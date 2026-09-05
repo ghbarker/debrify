@@ -1,5 +1,4 @@
 import 'package:debrify/models/torrent.dart';
-import 'package:debrify/models/torrent_filter_state.dart';
 import 'package:debrify/screens/search/keyword_search_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
