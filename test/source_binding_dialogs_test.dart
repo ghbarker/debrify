@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/services/series_source_service.dart';
+import 'package:debrify/screens/search/source_binding_routes.dart';
 import 'package:debrify/widgets/sources/source_binding_dialogs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -81,6 +82,7 @@ void main() {
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () => SourceBindingDialogs.showEdit(
+              cloudRoutes: SourceBindingRoutes.cloud,
               context: context,
               item: _meta(
                 id: 'tt1',
@@ -119,6 +121,7 @@ void main() {
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () => SourceBindingDialogs.showEdit(
+              cloudRoutes: SourceBindingRoutes.cloud,
               context: context,
               item: _meta(
                 id: 'tt2',
@@ -160,6 +163,7 @@ void main() {
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () => SourceBindingDialogs.showAdd(
+              cloudRoutes: SourceBindingRoutes.cloud,
               context: context,
               item: _meta(id: 'kitsu:1', type: 'movie', name: 'Film'),
               onRefreshBound: () async {},
@@ -189,6 +193,7 @@ void main() {
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () => SourceBindingDialogs.showAdd(
+              cloudRoutes: SourceBindingRoutes.cloud,
               context: context,
               item: _meta(
                 id: 'tt1',

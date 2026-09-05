@@ -8,6 +8,7 @@ import 'package:debrify/screens/premiumize/premiumize_files_screen.dart';
 import 'package:debrify/screens/torbox/torbox_downloads_screen.dart';
 import 'package:debrify/services/series_source_service.dart';
 import 'package:debrify/services/secret_vault.dart';
+import 'package:debrify/screens/search/source_binding_routes.dart';
 import 'package:debrify/widgets/sources/source_binding_dialogs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -73,6 +74,7 @@ Future<void> _open(
             if (edit) {
               unawaited(
                 SourceBindingDialogs.showEdit(
+                  cloudRoutes: SourceBindingRoutes.cloud,
                   context: context,
                   item: item,
                   initial: [_old],
@@ -86,6 +88,7 @@ Future<void> _open(
             } else {
               unawaited(
                 SourceBindingDialogs.showAdd(
+                  cloudRoutes: SourceBindingRoutes.cloud,
                   context: context,
                   item: item,
                   onRefreshBound: refresh,

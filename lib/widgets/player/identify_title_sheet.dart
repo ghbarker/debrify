@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/stremio_addon.dart';
-import '../../screens/video_player/widgets/spotlight_dialog.dart';
+import 'spotlight_dialog.dart';
 import '../../services/stremio_service.dart';
 import '../../utils/movie_parser.dart';
 import '../../utils/platform_util.dart';
