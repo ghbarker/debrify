@@ -463,3 +463,9 @@ is an editor mirror, not the source of truth. How to add a provider:
 ---
 _Maintenance: this is a routing hint, not a spec. If a lane moves a path named here,
 update this file in the same PR. Line counts come from `wc -l`, not estimates._
+
+### Playback storage routing (S2-6)
+
+- `lib/services/storage/playback_progress_store.dart` owns continue-watching, local completion and playback JSON, tracker snapshot writes, track preferences and playlist metadata. `localCompletionRevision` is one shared notifier; `readPlaybackStateMap` always reads fresh preferences.
+- `StorageService` retains public forwarding APIs and private bridges for out-of-range progress/migration callers. The remote `movieFinishedRevision`, migration orchestration and `IptvMediaStore` SQLite resume backend retain their existing owners. Key strings remain frozen in `storage_key_ownership.dart`.
+- Origin compatibility: `test/playback_progress_store_origin_compatibility_test.dart`; store/facade identity: `test/playback_progress_store_test.dart`.
