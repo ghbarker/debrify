@@ -151,7 +151,7 @@ void main() {
     () {
       final host = File('lib/screens/search_screen.dart').readAsStringSync();
       final source = File(
-        'lib/services/search/keyword_search_controller.dart',
+        'lib/screens/search/keyword_search_controller.dart',
       ).readAsStringSync();
       expect(
         source,

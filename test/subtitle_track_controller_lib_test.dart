@@ -1,5 +1,5 @@
 import 'package:debrify/models/stremio_addon.dart';
-import 'package:debrify/services/playback/subtitle_track_controller.dart';
+import 'package:debrify/screens/video_player/subtitle_track_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_kit/media_kit.dart' as mk;
 

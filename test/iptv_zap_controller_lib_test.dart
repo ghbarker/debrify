@@ -1,6 +1,6 @@
 import 'package:debrify/models/iptv_playlist.dart';
 import 'package:debrify/screens/video_player/widgets/player_guide_style.dart';
-import 'package:debrify/services/playback/iptv_zap_controller.dart';
+import 'package:debrify/screens/video_player/iptv_zap_controller.dart';
 import 'package:debrify/widgets/iptv/styles/iptv_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

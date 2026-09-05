@@ -43,7 +43,7 @@ import 'search/search_screen_shells.dart';
 import 'search/catalog_search_screen.dart';
 import 'search/discover_screen.dart';
 import 'search/keyword_search_screen.dart';
-import '../services/search/keyword_search_controller.dart';
+import 'search/keyword_search_controller.dart';
 import '../services/filtered_catalog_pager.dart';
 import '../services/hide_watched_prefs.dart';
 import '../services/watched_filter.dart';

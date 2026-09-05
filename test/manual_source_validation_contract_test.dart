@@ -56,7 +56,7 @@ void main() {
       'void _startTransitionOverlay()',
     );
     final resumeSource = File(
-      'lib/services/playback/resume_controller.dart',
+      'lib/screens/video_player/resume_controller.dart',
     ).readAsStringSync();
     final resume = _between(
       resumeSource,

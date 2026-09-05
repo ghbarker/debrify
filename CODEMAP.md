@@ -107,7 +107,7 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   Source edit/add dialogs are `lib/widgets/sources/source_binding_dialogs.dart`
   (`SourceBindingDialogs` — meta + configured cloud/local options → persist /
   torrent+keyword bind callbacks; host `_handleEditOrSelectSource` stays the entry).
-  In-tab keyword torrent search is `lib/services/search/keyword_search_controller.dart`
+  In-tab keyword torrent search is `lib/screens/search/keyword_search_controller.dart`
   (`KeywordSearchController`, `KwPreservedState`) +
   `lib/screens/search/keyword_search_screen.dart` (`KeywordSearchScreen`).
   Host `_switchMode` is the thin launcher (policy + query handoff);
@@ -166,7 +166,7 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   `lib/widgets/torrent_result_row.dart`; source picker: `lib/screens/video_player/widgets/source_sheet.dart`.
   Home/catalog bound-source edit/add dialogs: `lib/widgets/sources/source_binding_dialogs.dart`
   (`SourceBindingDialogs`). In-tab keyword torrent search:
-  `lib/services/search/keyword_search_controller.dart` +
+  `lib/screens/search/keyword_search_controller.dart` +
   `lib/screens/search/keyword_search_screen.dart`.
 
 ## Debrid providers & cloud
@@ -290,12 +290,12 @@ is an editor mirror, not the source of truth. How to add a provider:
   `lib/services/scrobble/`). Launch ctor fields:
   `lib/screens/video_player/player_launch_config.dart` (`PlayerLaunchConfig`;
   `VideoPlayerScreen` public constructor stays). Resume:
-  `lib/services/playback/resume_controller.dart` (`ResumeController` +
+  `lib/screens/video_player/resume_controller.dart` (`ResumeController` +
   `ResumeContext` / `ResumeSession`; host keeps `_ResumeSession` adapter).
   Identify-title sheet: `lib/widgets/player/identify_title_sheet.dart`
   (`showIdentifyTitleSearchSheet` → `StremioMeta?`). Subtitle/track restore,
   persist, diagnostics, and addon fetch:
-  `lib/services/playback/subtitle_track_controller.dart`
+  `lib/screens/video_player/subtitle_track_controller.dart`
   (`SubtitleTrackController` + `SubtitleTrackSession`; host keeps
   `_SubtitleTrackSession` adapter and title/season resolvers).
   IPTV recording (libmpv tee, Android engine, desktop capture):
@@ -304,7 +304,7 @@ is an editor mirror, not the source of truth. How to add a provider:
   `_IptvRecordingSession` adapter; overlay reads `supported` / `active`
   notifiers).
   IPTV zap ring, page cache, prefetch, catch-up, and zap banner:
-  `lib/services/playback/iptv_zap_controller.dart`
+  `lib/screens/video_player/iptv_zap_controller.dart`
   (`IptvZapController` + `IptvZapSession`; host keeps `_IptvZapSession`
   adapter; `onSwitch(channel)` is the host `_switchToIptvChannel`; overlay
   reads banner `ValueNotifier`s via host getters).

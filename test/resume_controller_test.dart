@@ -3,7 +3,7 @@ import 'package:debrify/models/series_playlist.dart';
 import 'package:debrify/screens/video_player/models/gesture_state.dart';
 import 'package:debrify/screens/video_player/models/playlist_entry.dart';
 import 'package:debrify/services/local_playback_resume_resolver.dart';
-import 'package:debrify/services/playback/resume_controller.dart';
+import 'package:debrify/screens/video_player/resume_controller.dart';
 import 'package:debrify/services/resume_write_guard.dart';
 import 'package:flutter_test/flutter_test.dart';
 

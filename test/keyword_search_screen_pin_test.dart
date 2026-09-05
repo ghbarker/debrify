@@ -1,6 +1,6 @@
 import 'package:debrify/models/torrent.dart';
 import 'package:debrify/screens/search/keyword_search_screen.dart';
-import 'package:debrify/services/search/keyword_search_controller.dart';
+import 'package:debrify/screens/search/keyword_search_controller.dart';
 import 'package:debrify/theme/app_theme.dart';
 import 'package:debrify/theme/app_theme_scope.dart';
 import 'package:flutter/material.dart';

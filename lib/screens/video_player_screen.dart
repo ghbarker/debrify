@@ -45,10 +45,10 @@ import 'package:media_kit_video/media_kit_video.dart' as mkv;
 // Video Player Components
 import 'video_player/models/playlist_entry.dart';
 import 'video_player/player_launch_config.dart';
-import '../services/playback/resume_controller.dart';
-import '../services/playback/subtitle_track_controller.dart';
+import 'video_player/resume_controller.dart';
+import 'video_player/subtitle_track_controller.dart';
 import '../services/playback/iptv_recording_controller.dart';
-import '../services/playback/iptv_zap_controller.dart';
+import 'video_player/iptv_zap_controller.dart';
 import 'video_player/services/subtitle_track_utils.dart';
 import 'video_player/models/gesture_state.dart';
 import 'video_player/models/hud_state.dart';
