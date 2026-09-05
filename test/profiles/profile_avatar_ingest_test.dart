@@ -10,6 +10,7 @@ import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/source_text.dart';
 import 'avatar_fixtures.dart';
 
 void main() {
@@ -26,7 +27,7 @@ void main() {
   tearDown(() async {
     AppStorage.debugReset();
     ProfileAvatarPolicy.debugSetUserImagesSupported(null);
-    if (await root.exists()) await root.delete(recursive: true);
+    await deleteTempTree(root);
   });
 
   test('a static image is stored as PNG with a wash colour', () async {

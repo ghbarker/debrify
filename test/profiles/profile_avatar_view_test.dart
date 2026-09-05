@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+import '../support/source_text.dart';
 import 'avatar_fixtures.dart';
 
 void main() {
@@ -23,7 +24,7 @@ void main() {
 
   tearDown(() async {
     AppStorage.debugReset();
-    if (await root.exists()) await root.delete(recursive: true);
+    await deleteTempTree(root);
   });
 
   Widget harness({

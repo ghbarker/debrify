@@ -24,6 +24,7 @@ import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../support/source_text.dart';
 import 'avatar_fixtures.dart';
 
 /// The phone→TV avatar path. The handler is exercised directly: transport
@@ -67,7 +68,7 @@ void main() {
     ProfileRuntime.debugReset();
     ProfileAvatarPolicy.debugSetUserImagesSupported(null);
     AppStorage.debugReset();
-    if (await root.exists()) await root.delete(recursive: true);
+    await deleteTempTree(root);
   });
 
   Future<String> commitAs(UserProfileRole role) async {

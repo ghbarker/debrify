@@ -15,6 +15,46 @@ Phase 2 extractions also follow `dev/design/REFACTOR_PLAN_PHASE2.md` (binding as
   under the old G3 contract. PlayerPrefs is **S2-3** (with `iptv_prefs`) after
   S2-0…S2-2. Do not merge the parked branch.
 
+### Gate 2 · layering regression (blocking)
+
+`tool/check_layering.dart`: **77** at #72 (`48db8f1e`) → **99** just before
+#95 (+22 / −0 six-file Phase 2 delta) → **106** on `22c40dd4` after #95/#98.
+The extra **7** are `channel_import_export.dart` (M1-2) — same class of bug
+(service shows dialogs), not in the V1-fix file list. Ceiling is **106**
+(`tool/layering_baseline.txt`). Default `dart tool/check_layering.dart` fails
+if the count grows. `--all --json` on the PR and its parent: new ids = red.
+`--strict` remains Q1. Suite/builds were fine; layering is **red**.
+
+| File | Lane | Count |
+|---|---|---:|
+| `lib/services/playback/subtitle_track_controller.dart` | V1-3 | 6 |
+| `lib/services/playback/iptv_zap_controller.dart` | V1-5 | 5 |
+| `lib/widgets/sources/source_binding_dialogs.dart` | G1'-2 | 5 |
+| `lib/services/playback/resume_controller.dart` | V1-1 | 4 |
+| `lib/services/search/keyword_search_controller.dart` | G1'-3 | 1 |
+| `lib/widgets/player/identify_title_sheet.dart` | V1-2 | 1 |
+| `lib/services/debrify_tv/channel_import_export.dart` | M1-2 | 7 |
+
+`ProfileScope.fileIn` now POSIX-normalizes the relative path so Windows
+`..\escape` is rejected the same way Linux already rejected `../escape`.
+Keep: Linux behaviour; the old Windows miss was a hole, not a product quirk.
+
+### #90 · parent-path pin still unpaid
+
+`#90` pin is text-grep + test-local re-implementations and was edited after the
+move. **#98** is a post-move widget pin of `KeywordSearchScreen` — it cannot pass
+on the parent of the G1'-3 move, so it does **not** clear gate (h). Follow-up:
+a widget test that is green on that parent commit, then rebase the pin so the
+move commit does not touch it.
+
+### #86 · Leaves shortfall + façade forwarders (Decisions)
+
+**#86** (S2-3) Leaves **1 067 vs 1 600** (shortfall **533**). Clearing slice:
+**S2-7** façade collapse. Forwarders left in `StorageService` are **>10 lines**
+and needed a Decisions entry on the PR before merge (PHASE2 §2.2). Recorded
+here after the fact: S2-7 deletes them; Q2 may `@Deprecated` the names until
+then. Same class of debt on S2-1 (869) and S2-2 (325) — also S2-7.
+
 ## Quirks kept, not fixed
 
 ### H1 · Home row registry
