@@ -366,8 +366,13 @@ is an editor mirror, not the source of truth. How to add a provider:
   the older `magic_tv_channel_import_export_pin_test.dart` is inventory only.
   Existing host seam adapters remain through M1-5/M1-6; review their removal
   after those callers migrate. The flow's YAML cache-read wrapper remains
-  the I/O boundary and has no planned expiry. Create/update single-channel
-  dialogs remain on the host. M1-3 watch flows: `ProviderWatchFlow` owns Quick
+  the I/O boundary and has no planned expiry. Channel editor and Add-keyword
+  helper: `lib/screens/debrify_tv/dialogs/channel_editor_dialog.dart`
+  (`ChannelEditorDialog.open`, live TV/profile/mounted reads; keyword limit 1000).
+  Shared editor/settings chip: `lib/screens/debrify_tv/widgets/spotlight_choice_chip.dart`.
+  Create/update persistence and settings card/global dialog remain on the host.
+  M1-5a origin UI pins: `test/magic_tv_dialog_settings_origin_test.dart` (desktop;
+  no TV-focus claim). M1-5b settings ownership is still pending. M1-3 watch flows: `ProviderWatchFlow` owns Quick
   Play orchestration; `TorboxWatchFlow`, `PikpakWatchFlow`, `PremiumizeWatchFlow`,
   `AlldebridWatchFlow`, and `RealDebridWatchFlow` own per-provider/cached paths
   under `lib/screens/debrify_tv/watch/`. `WatchFlowBindings` keeps live host
