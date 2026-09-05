@@ -9,6 +9,8 @@
 /// [StorageKeyStore] ownership when a domain store is extracted; they must
 /// not change the string.
 enum StorageKeyStore {
+  /// Local movie/series watchlist persistence (MyWatchlistStore).
+  myWatchlistStore,
   /// Playback history and playlist persistence ([PlaybackProgressStore]).
   playbackProgressStore,
 
@@ -236,7 +238,7 @@ class StorageKeyOwnership {
     'user_playlist_v1': StorageKeyStore.playbackProgressStore,
     'playlist_view_modes_v1': StorageKeyStore.playbackProgressStore,
     'playlist_favorites_v1': StorageKeyStore.playbackProgressStore,
-    'my_watchlist_v1': StorageKeyStore.storageService,
+    'my_watchlist_v1': StorageKeyStore.myWatchlistStore,
     'initial_setup_complete_v1': StorageKeyStore.storageService,
     'torrent_search_history_v1': StorageKeyStore.storageService,
     'torrent_search_history_enabled': StorageKeyStore.storageService,

@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:debrify/services/storage/my_watchlist_store.dart';
+
 import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/services/storage/cloud_secret_prefs.dart';
 import 'package:debrify/services/storage/debrify_tv_prefs.dart';
@@ -117,6 +119,7 @@ Set<String> inlinePrefsKeysOnStorageService() {
 Set<String> allDiscoveredPrefsKeys() => {
   ...declaredOnStorageService(),
   ...declaredOnCloudSecretPrefs(),
+  ...MyWatchlistStore.ownedKeys,
   ...HomePrefs.ownedKeys,
   ...StremioTvPrefs.ownedKeys,
   ...SocialPrefs.ownedKeys,
@@ -137,6 +140,18 @@ Set<String> unownedDiscoveredPrefsKeys() =>
     allDiscoveredPrefsKeys().difference(StorageKeyOwnership.byKey.keys.toSet());
 
 void main() {
+  test('watchlist singleton is discovered and missing registry ownership fails', () {
+    const expected = {'my_watchlist_v1'};
+    expect(MyWatchlistStore.ownedKeys, expected);
+    expect(StorageKeyOwnership.keysFor(StorageKeyStore.myWatchlistStore), expected);
+    expect(declaredOnStorageService().intersection(expected), isEmpty);
+    expect(allDiscoveredPrefsKeys(), containsAll(expected));
+    final missing = allDiscoveredPrefsKeys().difference(
+      StorageKeyOwnership.byKey.keys.toSet().difference(expected),
+    );
+    expect(missing, expected);
+  });
+
   test('default filter keys participate in discovery and exact ownership', () {
     const expected = {
       'default_filter_qualities_v1',
@@ -276,6 +291,7 @@ void main() {
       ...fromIptv,
       ...fromAppStyle,
       ...fromTracking,
+      ...MyWatchlistStore.ownedKeys,
       ...PlaybackProgressStore.ownedKeys,
       ...DefaultTorrentFilterPrefs.ownedKeys,
     };
