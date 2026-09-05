@@ -54,6 +54,9 @@ enum StorageKeyStore {
   /// MDBList credentials ([TrackingPrefs]). Owns `trackingSourceRevision`.
   /// [home_tick_sources] stays on [homePrefs].
   trackingPrefs,
+
+  /// Default torrent filter JSON strings ([DefaultTorrentFilterPrefs]).
+  defaultTorrentFilterPrefs,
 }
 
 class StorageKeyOwnership {
@@ -237,11 +240,11 @@ class StorageKeyOwnership {
     'initial_setup_complete_v1': StorageKeyStore.storageService,
     'torrent_search_history_v1': StorageKeyStore.storageService,
     'torrent_search_history_enabled': StorageKeyStore.storageService,
-    'default_filter_qualities_v1': StorageKeyStore.storageService,
-    'default_filter_rip_sources_v1': StorageKeyStore.storageService,
-    'default_filter_languages_v1': StorageKeyStore.storageService,
-    'default_filter_sizes_v1': StorageKeyStore.storageService,
-    'default_filter_dynamic_ranges_v1': StorageKeyStore.storageService,
+    'default_filter_qualities_v1': StorageKeyStore.defaultTorrentFilterPrefs,
+    'default_filter_rip_sources_v1': StorageKeyStore.defaultTorrentFilterPrefs,
+    'default_filter_languages_v1': StorageKeyStore.defaultTorrentFilterPrefs,
+    'default_filter_sizes_v1': StorageKeyStore.defaultTorrentFilterPrefs,
+    'default_filter_dynamic_ranges_v1': StorageKeyStore.defaultTorrentFilterPrefs,
     'quick_play_honors_filters_v1': StorageKeyStore.storageService,
     'default_torrent_provider_v1': StorageKeyStore.providerCredentialPrefs,
     'indexer_manager_configs_v1': StorageKeyStore.storageService,
