@@ -307,10 +307,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     startPrefetch: _queuePrefetcher.startPrefetch,
     stopPrefetch: _queuePrefetcher.stopPrefetch,
     syncProviderAvailability: _syncProviderAvailability,
-    watchWithTorbox: _watchWithTorbox,
-    watchWithPikPak: _watchWithPikPak,
-    watchWithPremiumize: _watchWithPremiumize,
-    watchWithAllDebrid: _watchWithAllDebrid,
     navigator: () => Navigator.of(context),
     messenger: () => ScaffoldMessenger.of(context),
     showProgressDialog: ({required builder, required barrierDismissible}) => showDialog<void>(context: context, builder: builder, barrierDismissible: barrierDismissible),
@@ -320,10 +316,21 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     unlockLink: AllDebridService.unlockLink,
   );
   late final _channelSwitch = ChannelSwitchFlow(_watchBindings);
-  late final _providerWatch = ProviderWatchFlow(_watchBindings);
+  late final _providerWatch = ProviderWatchFlow(
+    _watchBindings,
+    watchWithTorbox: _torboxWatch.watchWithTorbox,
+    watchWithPikPak: _pikpakWatch.watchWithPikPak,
+    watchWithPremiumize: _premiumizeWatch.watchWithPremiumize,
+    watchWithAllDebrid: _alldebridWatch.watchWithAllDebrid,
+  );
   late final _torboxWatch = TorboxWatchFlow(_watchBindings);
   late final _pikpakWatch = PikpakWatchFlow(_watchBindings);
   late final _premiumizeWatch = PremiumizeWatchFlow(_watchBindings);
+  /// AllDebrid Quick Play. Self-contained like [PremiumizeWatchFlow.watchWithPremiumize] for the
+  /// search phase, but follows Real-Debrid's resolve model (sequential
+  /// add-and-probe + background prefetcher) since AllDebrid has no cache-check
+  /// API. Each candidate is added trusting the `ready` flag (no polling) and
+  /// links are unlocked lazily on demand.
   late final _alldebridWatch = AlldebridWatchFlow(_watchBindings);
   late final _realDebridWatch = RealDebridWatchFlow(_watchBindings);
 
@@ -1435,15 +1442,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   }
 
 
-  Future<void> _watchWithTorbox(
-    List<String> keywords,
-    void Function(String message) log,
-  ) => _torboxWatch.watchWithTorbox(keywords, log);
 
-  Future<void> _watchWithPikPak(
-    List<String> keywords,
-    void Function(String message) log,
-  ) => _pikpakWatch.watchWithPikPak(keywords, log);
 
 
 
@@ -3175,20 +3174,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   );
 
 
-  Future<void> _watchWithPremiumize(
-    List<String> keywords,
-    void Function(String message) log,
-  ) => _premiumizeWatch.watchWithPremiumize(keywords, log);
 
-  /// AllDebrid Quick Play. Self-contained like [_watchWithPremiumize] for the
-  /// search phase, but follows Real-Debrid's resolve model (sequential
-  /// add-and-probe + background prefetcher) since AllDebrid has no cache-check
-  /// API. Each candidate is added trusting the `ready` flag (no polling) and
-  /// links are unlocked lazily on demand.
-  Future<void> _watchWithAllDebrid(
-    List<String> keywords,
-    void Function(String message) log,
-  ) => _alldebridWatch.watchWithAllDebrid(keywords, log);
 
   String _normalizeInfohash(String hash) =>
       ChannelCacheWarmer.normalizeInfohash(hash);
