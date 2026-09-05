@@ -65,9 +65,9 @@
       "severity": "WARNING",
       "type": "STATIC_WARNING",
       "code": "UNNECESSARY_CAST",
-      "path": "lib/screens/debrify_tv/watch/torbox_watch_flow.dart",
-      "line": 572,
-      "column": 46,
+      "path": "lib/screens/debrify_tv/watch/windowed_watch_queue.dart",
+      "line": 192,
+      "column": 44,
       "length": 11,
       "message": "Unnecessary cast."
     },
