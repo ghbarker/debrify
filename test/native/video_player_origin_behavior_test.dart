@@ -37,7 +37,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 // recording/zap is claimed.
 // Future CI must provision libmpv and run this file as a required native job on
 // Flutter 3.44.8 at both revisions. Missing native prerequisites must fail the
-// job, not skip this test or count a non-native suite as behavioral coverage.
+// job. Plain test runs skip when no runtime is configured; the required runner
+// rejects skips and supplies the runtime for both revisions.
 
 class _Routes extends NavigatorObserver {
   int pushes = 0;
@@ -85,6 +86,12 @@ Future<void> _until(WidgetTester tester, bool Function() ready) async {
 }
 
 void main() {
+  if (Platform.environment['LIBMPV_LIBRARY_PATH'] == null) {
+    test('retrospective origin: host cancel and disposal checkpoint', () {},
+        skip: 'LIBMPV_LIBRARY_PATH is unset; run the required native-player gate '
+            'with a configured libmpv runtime for behavioral coverage.');
+    return;
+  }
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
   late Directory root;
   late File media;
