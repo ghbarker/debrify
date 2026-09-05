@@ -384,9 +384,10 @@ is an editor mirror, not the source of truth. How to add a provider:
   `WatchFlowBindings` adds live `isAndroidTv` / `getChannelKeywords` and write access
   to the existing current-channel field; cache access uses the same cache-warmer map.
   Seven host delegates remain for provider-flow and initial-watch callers:
-  review M1-5; remove/review all M1-6 before phase completion. Native-positive
+  review M1-5; remove/review all M1-6 before phase completion. Host-true/bridge/native-positive
   launch/onFinished still needs device-runtime proof. `test/magic_tv_channel_switch_origin_test.dart`
-  pins desktop switch/fallback and capture-before-held-prepare-completion behavior;
+  pins desktop switches, host early rejection, Flutter-route continuation and
+  capture-before-held-prepare-completion behavior;
   exact cooldown/key-read order is body-diff evidence, not a timing-test claim.
   Default pick / overlay strings: `lib/services/cloud/magic_tv_provider.dart`
   (`playbackPrecedence` mapped to `real_debrid`; display stays `Torbox` / `Real Debrid`).
