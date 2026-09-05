@@ -429,18 +429,29 @@ void main() {
     ..._recipe['scenarios'] as Map,
     'filter-defaults': {'absentKeys': <String>[]},
     'playlist-progress': {'absentKeys': <String>[]},
+    'repair': {'absentKeys': ['playback_completion_migration_generation', 'resume_ghost_purge_generation']},
+    'repair-markers-zero': {'absentKeys': <String>[]},
+    'repair-markers-one': {'absentKeys': <String>[]},
   };
   for (final entry in scenarios.entries) {
     final scenario = entry.key as String;
     final isFilter = scenario == 'filter-defaults';
     final isPlaylist = scenario == 'playlist-progress';
-    final isResidual = isFilter || isPlaylist;
-    final domain = isPlaylist
+    final isRepair = scenario == 'repair' || scenario.startsWith('repair-markers-');
+    final isResidual = isFilter || isPlaylist || isRepair;
+    final domain = isRepair
+        ? _recipe['residualDomains']['repair'] as Map
+        : isPlaylist
         ? _recipe['residualDomains']['playlist-progress'] as Map
         : residual;
     final scenarioSettings = isResidual
         ? Map<String, Object?>.from(domain['values'] as Map)
         : _settings;
+    if (scenario == 'repair-markers-one') {
+      for (final key in (domain['markerKeys'] as List).cast<String>()) {
+        scenarioSettings[key] = 1;
+      }
+    }
     final credentialValues = isResidual
         ? <String, Object?>{}
         : _credentialEngineValues;
@@ -472,7 +483,7 @@ void main() {
       if (!isResidual)
         ...Map<String, Object?>.from(_recipe['inputOverrides'] as Map),
       ...inputOverrides,
-      if (isPlaylist) ...Map<String, Object?>.from(domain['inputValues'] as Map),
+      if (isPlaylist || isRepair) ...Map<String, Object?>.from(domain['inputValues'] as Map),
     }..removeWhere((key, value) => absent.contains(key));
     final missing = [...absent, ...omitted];
     final expected = <String, Object?>{
@@ -485,6 +496,14 @@ void main() {
         : '$scenario.manifest.json';
 
     Future<void> seedScenario() async {
+      if (isRepair) {
+        await _writeValues(inputExpected);
+        final prefs = await ProfilePreferences.instance();
+        for (final key in absent) {
+          expect(prefs.containsKey(key), isFalse, reason: 'Origin absence: $key');
+        }
+        return;
+      }
       if (isPlaylist) {
         await seedPlaylistProgress();
         return;
@@ -514,6 +533,11 @@ void main() {
 
     Future<void> expectProviderReaders([Map<String, Object?>? restored]) async {
       final readerExpected = restored ?? expected;
+      if (isRepair) {
+        expect(await StorageService.getMovieCompletionThreshold(), 90);
+        expect(await StorageService.getEpisodeCompletionThreshold(), 75);
+        return;
+      }
       if (isPlaylist) {
         await expectPlaylistProgressBuilder();
         return;
@@ -642,9 +666,11 @@ void main() {
       },
     );
 
-    for (final keepDestination in [false, if (missing.isNotEmpty) true]) {
+    for (final repairFailure in ['none', if (scenario == 'repair') ...['marker-type', 'episode-type']]) {
+    for (final keepDestination in [false, if (missing.isNotEmpty && !isRepair) true]) {
       final destinationValues = <String, Object?>{
         if (isPlaylist) 'playlist_restore_sentinel': 'untouched',
+        if (isRepair) 'repair_restore_sentinel': 'untouched',
         if (isFilter) ...{
           'quick_play_honors_filters_v1': false,
           'quick_play_movie_rules_v2': '{"fixture":"movie"}',
@@ -657,10 +683,12 @@ void main() {
       final restoredExpected = {
         ...expected, ...destinationValues,
         // Real restore rearms imported playback when the old package has no marker.
-        if (isPlaylist) 'resume_ghost_purge_generation': 0,
+        if (isPlaylist || scenario == 'repair') 'resume_ghost_purge_generation': 0,
+        if (isRepair && repairFailure != 'none')
+          ...Map<String, Object?>.from(domain['negativeInputs'][repairFailure] as Map),
       };
       test(
-        '$scenario: restore frozen pre-S2 export through real APIs without key or type drift (retain destination: $keepDestination)',
+        '$scenario: restore frozen pre-S2 export through real APIs without key or type drift (retain destination: $keepDestination)${repairFailure == 'none' ? '' : ' repair failure: $repairFailure'}',
         () async {
           final mutations = isFilter
               ? <String, Object>{
@@ -674,7 +702,7 @@ void main() {
                     'value': ['fullHd', 'unknown quality', 'fullHd'],
                   },
                 }
-              : isPlaylist
+              : isPlaylist || isRepair
                   ? domain['mutations'] as Map
                   : _recipe['mutations'] as Map;
           expect(['', ...mutations.keys], contains(_mutation));
@@ -739,6 +767,25 @@ void main() {
               _passphrase,
             );
           }
+          if (isRepair && repairFailure != 'none') {
+            // Separate incoming negative package, derived from the real origin
+            // export through actual section hashing/encryption. Never mix its
+            // expected exception into the normal three-package success paths.
+            final invalid = PortableProfilePackage(
+              mode: package.mode, createdAt: package.createdAt,
+              profiles: package.profiles, resources: package.resources,
+              sections: {
+                ...package.sections,
+                package.profiles.single['preferencesSection'] as String:
+                    await PortableProfilePackage.buildSection({
+                      ..._values(package),
+                      ...Map<String, Object?>.from(domain['negativeInputs'][repairFailure] as Map),
+                    }),
+              }, omissions: package.omissions,
+            );
+            package = await PortableProfilePackage.decrypt(
+              await PortableProfilePackage.encrypt(invalid, _passphrase), _passphrase);
+          }
           final prefs = await SharedPreferences.getInstance();
           final other = otherProfileId;
           if (!isResidual) {
@@ -794,7 +841,8 @@ void main() {
             for (final key in restoredExpected.keys)
               key: prefs.get('$prefix$key'),
           }, restoredExpected);
-          for (final key in missing.where((key) => !keepDestination)) {
+          for (final key in missing.where((key) => !keepDestination &&
+              !(isRepair && key == 'resume_ghost_purge_generation'))) {
             expect(prefs.containsKey('$prefix$key'), false, reason: key);
           }
           for (final entry in expected.entries.where((e) => e.value == null)) {
@@ -850,6 +898,102 @@ void main() {
           for (final entry in destinationValues.entries) {
             expect(prefs.get('p.$profileId.g.1.${entry.key}'), entry.value);
           }
+          if (isRepair && repairFailure != 'none') {
+            var revisionCount = 0;
+            void onInvalidRevision() => revisionCount++;
+            StorageService.localCompletionRevision.addListener(onInvalidRevision);
+            try {
+              await expectLater(repairFailure == 'marker-type'
+                  ? StorageService.purgeUnwatchedResumeGhosts()
+                  : StorageService.migrateExistingPlaybackCompletionThresholds(),
+                  throwsA(isA<TypeError>()));
+              expect(revisionCount, 0);
+              _expectSettings(_values(await export()), restoredExpected);
+            } finally {
+              StorageService.localCompletionRevision.removeListener(onInvalidRevision);
+            }
+            return;
+          }
+          if (isRepair) {
+            // SQLite is populated only AFTER real restore and sanitize-stage
+            // checks. These resume rows are not exported profile settings.
+            final beforeSqlite = _values(await export());
+            for (final key in (domain['sqliteResumeKeys'] as List).cast<String>()) {
+              await StorageService.upsertVideoResume(key, {
+                'positionMs': 90, 'durationMs': 100, 'updatedAt': 3,
+              });
+              expect(await StorageService.getVideoResume(key), isNotNull);
+            }
+            _expectSettings(_values(await export()), beforeSqlite);
+            final unchangedOther = {
+              for (final key in prefs.getKeys())
+                if (key.startsWith('p.$other.g.1.') ||
+                    key.startsWith('p.$profileId.g.1.')) key: prefs.get(key),
+            };
+            final noRepair = scenario == 'repair-markers-one';
+            final afterMigration = noRepair ? restoredExpected : <String, Object?>{
+              ...Map<String, Object?>.from(domain['afterMigration'] as Map),
+              ...destinationValues,
+            };
+            final afterPurge = noRepair ? restoredExpected : <String, Object?>{
+              ...Map<String, Object?>.from(domain['afterPurge'] as Map),
+              ...destinationValues,
+            };
+            final revisions = <Map<String, Object?>>[];
+            void onRevision() {
+              // Capture the actual public notification boundary, not a model
+              // of the repair loop. CW/playback and final marker must lag it.
+              revisions.add({
+                for (final key in [
+                  'playback_state_v1', 'finished_movies_v1',
+                  'continue_watching_v1', 'playback_completion_migration_generation',
+                  'resume_ghost_purge_generation',
+                ]) key: prefs.get('$prefix$key'),
+              });
+            }
+            StorageService.localCompletionRevision.addListener(onRevision);
+            try {
+              await StorageService.migrateExistingPlaybackCompletionThresholds();
+              _expectSettings(_values(await export()), afterMigration);
+              for (final key in ['Done', 'Done Alias']) {
+                expect(await StorageService.getVideoResume(key), noRepair ? isNotNull : isNull);
+              }
+              expect(await StorageService.getVideoResume('Partial'), isNotNull);
+              if (!noRepair) {
+                expect(revisions, [{
+                  'playback_state_v1': restoredExpected['playback_state_v1'],
+                  'finished_movies_v1': ['tt-done', 'tt-existing'],
+                  'continue_watching_v1': restoredExpected['continue_watching_v1'],
+                  'playback_completion_migration_generation': restoredExpected['playback_completion_migration_generation'],
+                  'resume_ghost_purge_generation': 0,
+                }]);
+              } else {
+                expect(revisions, isEmpty);
+              }
+              await StorageService.purgeUnwatchedResumeGhosts();
+              _expectSettings(_values(await export()), afterPurge);
+              if (!noRepair) {
+                expect(revisions.length, 2);
+                expect(revisions.last, {
+                  'playback_state_v1': afterPurge['playback_state_v1'],
+                  'finished_movies_v1': afterPurge['finished_movies_v1'],
+                  'continue_watching_v1': afterPurge['continue_watching_v1'],
+                  'playback_completion_migration_generation': 1,
+                  'resume_ghost_purge_generation': 0,
+                });
+              }
+              final count = revisions.length;
+              await StorageService.migrateExistingPlaybackCompletionThresholds();
+              await StorageService.purgeUnwatchedResumeGhosts();
+              _expectSettings(_values(await export()), afterPurge);
+              expect(revisions.length, count, reason: 'Second run is idempotent');
+            } finally {
+              StorageService.localCompletionRevision.removeListener(onRevision);
+            }
+            _expectSettings({
+              for (final key in unchangedOther.keys) key: prefs.get(key),
+            }, unchangedOther);
+          }
           if (!isResidual) {
             expect(await StorageService.getMdblistSavedClones(), {
               101: 201,
@@ -870,6 +1014,7 @@ void main() {
           }
         },
       );
+    }
     }
   }
 }

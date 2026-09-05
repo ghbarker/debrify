@@ -298,3 +298,90 @@ markers and every episode/identifier permutation are not exhaustively proved.
 Top-level malformed/nonString portability-null scenarios are source-inspected,
 not generated in this single String fixture. No source URLs are claimed portable.
 Forwarder inventory: none changed; expiry not applicable for this test-only pin.
+
+
+### Residual playback repair: seven-key domain, three actual origin packages
+
+Current test origin `84c6a130e82ce696b6d8dbc38e69dc27c584e77d`;
+actual export origin `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`.
+This is test-only; no production/registry/bridge or CODEMAP change, zero Leaves.
+
+The seven-key union is four physical ints (`movie_completion_threshold`,
+`episode_completion_threshold`, `playback_completion_migration_generation`,
+`resume_ghost_purge_generation`), String JSON `playback_state_v1`, String JSON
+`continue_watching_v1`, and StringList `finished_movies_v1`.
+`repair.encrypted.json` exports five keys with BOTH markers absent;
+`repair-markers-zero.encrypted.json` exports seven with BOTH markers int0;
+`repair-markers-one.encrypted.json` exports seven with BOTH markers int1.
+Each has its own manifest and actual ciphertext SHA256. Seven distinct keys,
+not nineteen distinct keys or a new blanket S2 inventory total.
+
+The absence package's restore derives purge int0, but does not derive the
+completion migration marker. That purge0 is NOT counted as exported. Presence,
+physical type and absence are checked before any repair/defaulting. The recipe
+contains independent exact input/sanitized/after-migration/after-purge JSON.
+Actual exporter strips all eight execution field spellings represented by the
+playlist fixture, including nested/list fields. No source URL/path/header bytes
+are claimed portable and no real user secrets or network requests are used.
+
+After actual current ProfileRestoreCoordinator restoration, assertions inspect
+physical types and exact JSON and re-export the represented snapshot. Only THEN
+are three SQLite resume rows seeded through actual StorageService APIs in the
+test's isolated profile database. A before/after export comparison proves those
+rows are not exported preferences. No resource graph or native claim.
+
+Repair order is explicit: migrateExistingPlaybackCompletionThresholds, then
+purgeUnwatchedResumeGhosts. Absent/zero cases finish the equal-threshold movie,
+remove both IMDb-equivalent movie states and SQLite resumes, retain the partial
+movie, finish the equal-threshold episode preserving updatedAt/finishedAt5,
+then purge one unmarked zero-position ghost. False/null finished marks and the
+0ms/1ms dummy shape survive. Stage snapshots capture the real revision boundary:
+finished list changes before CW/playback/final migration marker; purge playback
+changes before its final marker. One-marker packages skip BOTH repairs and keep
+all original state/resume rows. Second runs produce no extra revision and retain
+exact state. Destination sentinel, old generation and other profile remain intact.
+
+Malformed inputs run as TWO SEPARATE negative incoming packages derived from the
+real absent-marker export through actual section hashing/encryption: purge
+marker String"1", and episode position String"75". Exact restored raw values are
+asserted before the real repair throws TypeError; no revision or state change is
+expected. These are derived negative packages, not extra frozen pre-S2 exports.
+No normalization of marker/null/type or swallowed exception makes normal cases
+pass. Mixed marker combinations, every malformed stage/interleaving, database
+failure during fixture repair and device activation are not exhaustively covered;
+PR150's separate origin pin covers finite SQLite failure/profile scheduling cases.
+
+Reproduce using checkout-local package configuration pointing to Flutter3.44.8:
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# Own detached pre-S2 checkout: copy this loader, existing filter/playlist helper
+# tests and recipe unchanged. Generate ONLY the three approved new package pairs.
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --name 'repair.*: generate' --reporter expanded
+# Copy only repair*.encrypted.json and repair*.manifest.json to current checkout.
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart test/playlist_progress_map_origin_test.dart test/playback_progress_store_test.dart test/playback_progress_store_origin_compatibility_test.dart test/local_watch_completion_storage_test.dart test/episode_local_progress_storage_test.dart --reporter json
+& $flutter analyze --no-pub test/storage_origin_restore_fixture_test.dart
+# Both commands MUST fail at post-restore assertions, with valid section hashes:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'repair: restore' --dart-define=STORAGE_FIXTURE_MUTATION=repair-key --reporter expanded
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'repair: restore' --dart-define=STORAGE_FIXTURE_MUTATION=repair-type --reporter expanded
+```
+
+Actual origin generation3PASS; combined89PASS (81 prior +8 new: three current
+exports, three normal restore/repair cases, two separate negative restore cases),
+zero skips/failures; scoped analysis0. Package key/type mutation commands each
+exit1 in all three selected absent-package restore cases at exact post-restore
+checks, before repair. Final normal combined run passed AFTER these mutations.
+No production source mutation was made in this fixture-only assignment.
+
+Generator checks exact origin HEAD, unchanged lib and own app package resolution.
+Final copied loader/two helper tests/recipe are byte-identical origin/current;
+both use the same pinned SDK bytes. All old encrypted files/manifests are exactly
+unchanged, and old recipe sections are additive-only. SDK hashes:
+Flutter.bat `f83bfed7ecd10fd1afd8ce19c0b0119d2c80e24fbf26f4ff4f63c1cc5f75dcd5`;
+Dart.exe `4daa3455f8844ff2a907dffd68ba511f112ba67f5f6635d69a122e5b60bf91ff`.
+
+Did we make a difference? Actual old export now survives current restore and
+actual repair with exact stage/key/type/notification expectations. Is there more
+we could do? Independent fixture review and the full gate precede any separately
+authorized product move. No all-interleavings/profile-safety/complete-sync claim.
+Forwarder inventory unchanged; expiry not applicable to this test-only checkpoint.
