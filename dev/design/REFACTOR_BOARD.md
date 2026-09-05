@@ -21,12 +21,12 @@ Overall completion remains approximately65%, an engineering estimate rather than
 ### Still left
 1. Discover content/actions and standalone dispatch, Search stage layouts and final cleanup. Preserve hidden watchlist/focus behavior until proved.
 2. Player decoder/remaining state and UI separation; timer-only helper rejected because it added code without sufficient benefit.
-3. Storage remaining ownership and Q2 caller migration. Host3666, target2800; remaining866 includes783 explicit historical debt.
+3. Storage remaining ownership and Q2 caller migration. Host3498, target2800; remaining698 after168 net host reduction counted once.
 4. M1-7 watch flows: five files2283/common1431, total3714; five-file targetbelow800 still unmet. Magic TV size provisional.
 5. Q-phase dependency/rule cleanup and upstream contribution work, then final integrated/device acceptance.
 
 ### Current measured state
-- God hosts Search8614/19070, Player11926/16278, MagicTV3317/10716, Storage3666/9963, Settings2899/7905 (current/original).
+- God hosts Search8614/19070, Player11926/16278, MagicTV3317/10716, Storage3498/9963, Settings2899/7905 (current/original).
 - Latest full-gate a443 forwarders total/single physical line: Storage592/147, Search85/72, Player161/112, MagicTV23/12, Settings0/0. Later deletion153 is separate; recount at next gate.
 - #154 made a difference:26 net production lines removed with194 independent tests; #153 removed18 lines/seven getters. More remains above.
 - Only parent edits BOARD/NOTES; CODEMAP locks serialized and currently released. Parked112/109/56; no disk work or renewed keep-awake authorization.
@@ -367,3 +367,7 @@ Watchlistownerreleased3prod+keysweep,161162prerequisite; debugannotationonly mov
 ### #163 merged
 Exact63889 independent218executions/202distinct/scopedinherited7/full436452/layer77/finalmapping/CIall3passed. Did we make a difference?Fournextclosures consolidateinto2deliberatelydistinctprogrammes;19netprod/202leaf,newowner217/model13 fullycharged. Fiveflows2081/common1384/newowner217;below800unfinished/24bindingsQ2retained. Warningbaselineoneentryrelocatedonly,452countunchanged. More remainsreentrancy/cast/nativefinitegaps andqueuedependencies. Godhostsunchanged8614/11926/3317/3666/2899 vs19070/16278/10716/9963/7905.164all3CIgreen finalpost163unionreviewthenmerge/fullgate. No user blocker.
 
+
+### #164 merged; c1ca fullgate dispatched
+Exact2dda independent40/105/11/full436452/layer77/finalpost163union andall3CIgreen. Actualmergec1cae4c7c6ba3973d529466e72b86bf9677a3be3. Did we make a difference?Watchlistcontenthascoherentowner,168hostlinesremoved3498;wholeprod+87/eightfacades+capdebugcompat remain. More remains698targetgap:83otherclosed,85explicitlychargedagainsthistoric783once. Gods8614/11926/3317/3498/2899 vs19070/16278/10716/9963/7905.
+C0fullgateactualc1caIN_PROGRESS after158163164; allchecks/builds/forwarderledger required. No nextproductionreleaseuntilpass. Userpercentageanswer65engineeringestimate/52percenthostshrinkage, notacceptancecompletion. No user blocker/allCODEMAPlocksreleased.
