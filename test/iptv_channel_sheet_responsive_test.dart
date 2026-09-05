@@ -1,5 +1,5 @@
 import 'package:debrify/models/iptv_playlist.dart';
-import 'package:debrify/screens/video_player_screen.dart';
+import 'package:debrify/services/playback/iptv_zap_controller.dart';
 import 'package:debrify/screens/video_player/widgets/iptv_channel_sheet.dart';
 import 'package:debrify/services/video_player_launcher.dart';
 import 'package:flutter/material.dart';

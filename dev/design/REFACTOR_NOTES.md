@@ -458,6 +458,30 @@ behaviour and must be restored, not kept as quirks.
 - **Zap / catch-up / overlay Stack stayed on the host.** Call sites still
   invoke `_stopRecording`; the body moved.
 
+### V1-5 · IPTV zap ring + catch-up
+
+- **`onSwitch(channel)` looks up by url+name.** The host
+  `_switchToIptvChannel` stays the media owner (ticket, recording stop,
+  Stremio ladder). The controller's same-named helper only forwards the
+  channel at that index.
+- **Unpaged zap wraps and arms paging.** A launch window with no page
+  context modulo-wraps, then `_ensureIptvZapPagingArmed` re-anchors so a
+  lost bootstrap does not leave the ring circling the launch list.
+- **Prefetch edge is 12; page size is 1500.** Adjacent-category cache
+  answers only its origin and direction; pending inputs cap at 24 and
+  collapse to ±1.
+- **Catch-up is a single VOD item.** Programme title, `contentType: 'vod'`,
+  paging reset, then switch index 0. Source id is
+  `source_playlist_id` → guide context → launch source.
+- **Banner raise is skipped** when the channel sheet, source sheet, guide,
+  or dock is up. Hide timer is 4500ms. Ticker runs while floating or while
+  the dock owns live identity.
+- **Stream-error burst is 6s.** Auth-looking 401/403/404 skip recovery.
+  `_lastIptvErrorShown` lives on the controller; switch still clears it
+  via `clearErrorBurst`.
+- **Decoder / resume / identify / subtitle / recording were not
+  re-extracted.** Overlay Stack stays for V1-10.
+
 ## Process
 
 Gate check **(c)** is tightened (plan §6): the pinning test must be committed

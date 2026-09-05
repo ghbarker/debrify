@@ -303,6 +303,11 @@ is an editor mirror, not the source of truth. How to add a provider:
   (`IptvRecordingController` + `IptvRecordingSession`; host keeps
   `_IptvRecordingSession` adapter; overlay reads `supported` / `active`
   notifiers).
+  IPTV zap ring, page cache, prefetch, catch-up, and zap banner:
+  `lib/services/playback/iptv_zap_controller.dart`
+  (`IptvZapController` + `IptvZapSession`; host keeps `_IptvZapSession`
+  adapter; `onSwitch(channel)` is the host `_switchToIptvChannel`; overlay
+  reads banner `ValueNotifier`s via host getters).
   Controls overlay:
   `lib/screens/video_player/widgets/controls.dart`. Track/source sheets: `lib/screens/video_player/widgets/`.
 - Launch + native TV: `lib/services/video_player_launcher.dart` 🔴 (`_launchOnAndroidTv`, `_push`),
