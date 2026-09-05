@@ -108,6 +108,7 @@ class _NoNetwork extends HttpOverrides {
 }
 
 String _type(Object? value) {
+  if (value == null) return 'null';
   if (value is bool) return 'bool';
   if (value is int) return 'int';
   if (value is double) return 'double';
@@ -179,7 +180,8 @@ Future<void> _seedThroughStorageService() async {
   // The independent recipe specifies physical encodings, not exporter output.
   await _writeValues({
     for (final e in _settings.entries)
-      if (!_setterSettings.containsKey(e.key)) e.key: e.value,
+      if (!_setterSettings.containsKey(e.key))
+        e.key: (_recipe['inputOverrides'] as Map)[e.key] ?? e.value,
   });
   await _writeValues(_excludedInputs);
   final seeded = await ProfilePreferences.instance();
@@ -341,9 +343,19 @@ void main() {
   for (final entry in (_recipe['scenarios'] as Map).entries) {
     final scenario = entry.key as String;
     final absent = (entry.value['absentKeys'] as List).cast<String>();
+    final omitted = (entry.value['omitKeys'] as List? ?? []).cast<String>();
+    final inputOverrides = Map<String, Object?>.from(
+      entry.value['inputOverrides'] as Map? ?? {},
+    );
+    final inputExpected = <String, Object?>{
+      ..._settings,
+      ...Map<String, Object?>.from(_recipe['inputOverrides'] as Map),
+      ...inputOverrides,
+    }..removeWhere((key, value) => absent.contains(key));
+    final missing = [...absent, ...omitted];
     final expected = <String, Object?>{
       for (final entry in _settings.entries)
-        if (!absent.contains(entry.key)) entry.key: entry.value,
+        if (!missing.contains(entry.key)) entry.key: entry.value,
     };
     final manifestName = scenario == 'profile'
         ? 'manifest.json'
@@ -351,6 +363,7 @@ void main() {
 
     Future<void> seedScenario() async {
       await _seedThroughStorageService();
+      await _writeValues(inputOverrides);
       if (scenario == 'provider-null-folder') {
         await StorageService.setPikPakRestrictedFolder(null, null);
         await StorageService.setSelectedWebDavServerId(null);
@@ -434,7 +447,10 @@ void main() {
           );
           await seedScenario();
           await expectProviderReaders();
-          _expectSettings(await _readThroughStorageService(expected), expected);
+          _expectSettings(
+            await _readThroughStorageService(inputExpected),
+            inputExpected,
+          );
           final package = await export();
           _expectSettings(_values(package), expected);
           _expectExclusions(_values(package));
@@ -450,9 +466,10 @@ void main() {
           await File(p.join(directory.path, manifestName)).writeAsString(
             const JsonEncoder.withIndent('  ').convert({
               'origin': _origin,
-              'recipeVersion': 3,
+              'recipeVersion': 4,
               'scenario': scenario,
               'absentKeys': absent,
+              'omittedKeys': omitted,
               'syntheticOnly': true,
               'sha256': await _digest(bytes),
               'representedSettings': expected,
@@ -473,7 +490,10 @@ void main() {
       () async {
         await seedScenario();
         await expectProviderReaders();
-        _expectSettings(await _readThroughStorageService(expected), expected);
+        _expectSettings(
+          await _readThroughStorageService(inputExpected),
+          inputExpected,
+        );
         final package = await export();
         _expectSettings(_values(package), expected);
         _expectExclusions(_values(package));
@@ -482,10 +502,10 @@ void main() {
       },
     );
 
-    for (final keepDestination in [false, if (absent.isNotEmpty) true]) {
+    for (final keepDestination in [false, if (missing.isNotEmpty) true]) {
       final destinationValues = <String, Object?>{
         if (keepDestination)
-          for (final key in absent) key: 'SYNTHETIC_DESTINATION_$key',
+          for (final key in missing) key: 'SYNTHETIC_DESTINATION_$key',
       };
       final restoredExpected = {...expected, ...destinationValues};
       test(
@@ -523,6 +543,7 @@ void main() {
             unorderedEquals(_excludedInputs.keys),
           );
           expect(package.omissions, manifest['omissions']);
+          expect(manifest['omittedKeys'], omitted);
           expect(package.resources, isEmpty);
           if (_mutation.isNotEmpty) {
             // Mutate a valid incoming package, then use the real section hashing and
@@ -533,6 +554,8 @@ void main() {
             expect(values.containsKey(key), mutation['operation'] != 'insert');
             if (mutation['operation'] == 'rename') {
               values['${key}_renamed'] = values.remove(key);
+            } else if (mutation['operation'] == 'remove') {
+              values.remove(key);
             } else {
               values[key] = mutation['value'];
             }
@@ -561,6 +584,12 @@ void main() {
           );
           await prefs.setInt('p.$other.g.1.stremio_tv_rotation_minutes', 92);
           await prefs.setString('p.$other.g.1.fixture_sentinel', 'untouched');
+          for (final entry in expected.entries.where((e) => e.value == null)) {
+            await prefs.setString(
+              'p.$profileId.g.1.${entry.key}',
+              'SYNTHETIC_STALE_EXECUTION',
+            );
+          }
           for (final entry in destinationValues.entries) {
             await prefs.setString(
               'p.$profileId.g.1.${entry.key}',
@@ -586,8 +615,19 @@ void main() {
             for (final key in restoredExpected.keys)
               key: prefs.get('$prefix$key'),
           }, restoredExpected);
-          for (final key in absent.where((key) => !keepDestination)) {
+          for (final key in missing.where((key) => !keepDestination)) {
             expect(prefs.containsKey('$prefix$key'), false, reason: key);
+          }
+          for (final entry in expected.entries.where((e) => e.value == null)) {
+            expect(
+              prefs.containsKey('$prefix${entry.key}'),
+              false,
+              reason: 'Explicit null clears ${entry.key}',
+            );
+            expect(
+              prefs.getString('p.$profileId.g.1.${entry.key}'),
+              'SYNTHETIC_STALE_EXECUTION',
+            );
           }
           await expectProviderReaders(restoredExpected);
           for (final key in _excludedInputs.keys) {
@@ -604,7 +644,10 @@ void main() {
             await _readThroughStorageService(restoredExpected),
             restoredExpected,
           );
-          _expectSettings(_values(await export()), restoredExpected);
+          _expectSettings(_values(await export()), {
+            for (final e in restoredExpected.entries)
+              if (e.value != null) e.key: e.value,
+          });
           for (final entry in destinationValues.entries) {
             expect(prefs.get('p.$profileId.g.1.${entry.key}'), entry.value);
           }

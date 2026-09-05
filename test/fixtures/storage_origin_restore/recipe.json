@@ -1,6 +1,6 @@
 {
   "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "values": {
     "stremio_tv_rotation_minutes": 37,
     "stremio_tv_auto_refresh": false,
@@ -97,7 +97,35 @@
     "webdav_enabled": false,
     "webdav_hidden_from_nav": true,
     "webdav_selected_server_id_v1": "synthetic-unbound-server",
-    "webdav_show_videos_only": false
+    "webdav_show_videos_only": false,
+    "android_video_renderer_gpu_migration_v1": true,
+    "android_video_renderer_mode": "gpu",
+    "default_player_mode": "internal",
+    "external_player_preferred": "vlc",
+    "ios_external_player_preferred": "infuse",
+    "linux_external_player_preferred": "vlc",
+    "windows_external_player_preferred": "vlc",
+    "network_connect_patience": "patient",
+    "player_apple_multichannel_audio": true,
+    "player_audio_passthrough": false,
+    "player_default_aspect_index_tv": 2,
+    "player_default_audio_language": "fr",
+    "player_night_mode_index": 1,
+    "player_start_portrait": true,
+    "player_system_audio_effects": false,
+    "skip_segment_provider": "skipdb",
+    "skip_segments_enabled": false,
+    "subtitle_auto_sync_enabled": false,
+    "tvos_force_software_decode": true,
+    "tvos_force_stereo_audio_v1": false,
+    "tvos_legacy_audio_output_v1": true,
+    "ui_haptics": false,
+    "iptv_default_playlist": "synthetic-unbound-playlist",
+    "iptv_defaults_initialized": true,
+    "iptv_last_live_channel": null,
+    "iptv_series_audio_lang": "{\"synthetic-series\":\"fr\"}",
+    "startup_iptv_channel": null,
+    "startup_iptv_mode": "pinned"
   },
   "excludedInputs": {
     "mdblist_api_key": "SYNTHETIC_NOT_A_CREDENTIAL_mdblist_api_key",
@@ -118,7 +146,15 @@
     "webdav_base_url": "https://webdav.example.invalid/synthetic",
     "webdav_password": "SYNTHETIC_NOT_A_CREDENTIAL_webdav_password",
     "webdav_servers_v1": "[{\"id\":\"synthetic-excluded\",\"name\":\"Synthetic\",\"baseUrl\":\"https://webdav.example.invalid\",\"username\":\"synthetic\",\"password\":\"SYNTHETIC_NOT_A_PASSWORD\"}]",
-    "webdav_username": "SYNTHETIC_NOT_A_CREDENTIAL_webdav_username"
+    "webdav_username": "SYNTHETIC_NOT_A_CREDENTIAL_webdav_username",
+    "external_player_custom_name": "Synthetic external",
+    "external_player_custom_path": "C:/synthetic/never-execute.exe",
+    "ios_custom_scheme_template": "synthetic-never-launch://{url}",
+    "linux_custom_command": "SYNTHETIC_NEVER_EXECUTE {url}",
+    "windows_custom_command": "SYNTHETIC_NEVER_EXECUTE {url}",
+    "iptv_playlists": [
+      "{\"id\":\"synthetic-excluded-playlist\",\"url\":\"https://iptv.example.invalid/list.m3u\"}"
+    ]
   },
   "completeDomains": {
     "S2-5": [
@@ -210,11 +246,53 @@
       "webdav_servers_v1",
       "webdav_show_videos_only",
       "webdav_username"
+    ],
+    "S2-3": [
+      "android_video_renderer_gpu_migration_v1",
+      "android_video_renderer_mode",
+      "default_player_mode",
+      "external_player_custom_command",
+      "external_player_custom_name",
+      "external_player_custom_path",
+      "external_player_preferred",
+      "ios_custom_scheme_template",
+      "ios_external_player_preferred",
+      "linux_custom_command",
+      "linux_external_player_preferred",
+      "network_buffer_size",
+      "network_connect_patience",
+      "player_apple_multichannel_audio",
+      "player_audio_passthrough",
+      "player_default_aspect_index",
+      "player_default_aspect_index_tv",
+      "player_default_audio_language",
+      "player_default_subtitle_language",
+      "player_night_mode_index",
+      "player_start_portrait",
+      "player_system_audio_effects",
+      "skip_segment_provider",
+      "skip_segments_enabled",
+      "subtitle_auto_sync_enabled",
+      "tvos_force_software_decode",
+      "tvos_force_stereo_audio_v1",
+      "tvos_legacy_audio_output_v1",
+      "ui_haptics",
+      "ui_sounds",
+      "windows_custom_command",
+      "windows_external_player_preferred",
+      "iptv_decoder_mode",
+      "iptv_default_playlist",
+      "iptv_defaults_initialized",
+      "iptv_last_live_channel",
+      "iptv_playlists",
+      "iptv_series_audio_lang",
+      "iptv_track_continue_watching",
+      "startup_iptv_channel",
+      "startup_iptv_mode"
     ]
   },
   "partialDomains": [
-    "S2-1",
-    "S2-3"
+    "S2-1"
   ],
   "mutations": {
     "key": {
@@ -257,6 +335,24 @@
       "key": "pikpak_restricted_folder_id",
       "operation": "insert",
       "value": "SYNTHETIC_WRONGLY_MATERIALIZED"
+    },
+    "player-key": {
+      "key": "player_default_aspect_index_tv",
+      "operation": "rename"
+    },
+    "player-type": {
+      "key": "player_default_aspect_index_tv",
+      "operation": "replace",
+      "value": 2.0
+    },
+    "player-null": {
+      "key": "iptv_last_live_channel",
+      "operation": "remove"
+    },
+    "player-choice": {
+      "key": "external_player_preferred",
+      "operation": "insert",
+      "value": "vlc"
     }
   },
   "scenarios": {
@@ -278,6 +374,55 @@
         "pikpak_tv_folder_id",
         "webdav_selected_server_id_v1"
       ]
+    },
+    "player-custom": {
+      "absentKeys": [],
+      "omitKeys": [
+        "external_player_preferred",
+        "ios_external_player_preferred",
+        "linux_external_player_preferred",
+        "windows_external_player_preferred"
+      ],
+      "inputOverrides": {
+        "external_player_preferred": "custom",
+        "ios_external_player_preferred": "custom_scheme",
+        "linux_external_player_preferred": "custom_command",
+        "windows_external_player_preferred": "custom_command"
+      }
+    },
+    "player-custom-app": {
+      "absentKeys": [],
+      "omitKeys": [
+        "external_player_preferred",
+        "ios_external_player_preferred",
+        "linux_external_player_preferred",
+        "windows_external_player_preferred"
+      ],
+      "inputOverrides": {
+        "external_player_preferred": "custom_app",
+        "ios_external_player_preferred": "custom_scheme",
+        "linux_external_player_preferred": "custom_command",
+        "windows_external_player_preferred": "custom_command"
+      }
+    },
+    "player-custom-command": {
+      "absentKeys": [],
+      "omitKeys": [
+        "external_player_preferred",
+        "ios_external_player_preferred",
+        "linux_external_player_preferred",
+        "windows_external_player_preferred"
+      ],
+      "inputOverrides": {
+        "external_player_preferred": "custom_command",
+        "ios_external_player_preferred": "custom_scheme",
+        "linux_external_player_preferred": "custom_command",
+        "windows_external_player_preferred": "custom_command"
+      }
     }
+  },
+  "inputOverrides": {
+    "iptv_last_live_channel": "{\"url\":\"https://synthetic.example.invalid/iptv_last_live_channel\",\"headers\":{\"Authorization\":\"SYNTHETIC_NOT_A_SECRET\"}}",
+    "startup_iptv_channel": "{\"url\":\"https://synthetic.example.invalid/startup_iptv_channel\",\"headers\":{\"Authorization\":\"SYNTHETIC_NOT_A_SECRET\"}}"
   }
 }

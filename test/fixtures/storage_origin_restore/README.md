@@ -7,10 +7,9 @@ into pre-move pins. Only the new test and this fixture directory are owned.
 
 ## Current coverage
 
-**81/141 policy-admitted named keys, 19/28 excluded named keys, 0/5 dynamic
-families.** Complete named domains: S2-2 (30 admitted/10 excluded), S2-4
-(28/0), S2-5 (8/8). Partial: S2-1 (9/41 admitted,0/3 excluded) and S2-3
-(6/34 admitted,1/7 excluded). Remaining:60 admitted keys,9 exclusions and all
+**109/141 policy-admitted named keys, 25/28 excluded named keys, 0/5 dynamic
+families.** Complete named domains: S2-2 (30 admitted/10 excluded), S2-3 (34/7), S2-4
+(28/0), S2-5 (8/8). Partial: S2-1 (9/41 admitted,0/3 excluded). Remaining:32 admitted keys,3 exclusions and all
 five families. This is not complete S2, complete profile sync, or a resource
 and secret restoration test.
 
@@ -20,7 +19,7 @@ It is not derived from candidate exporter output. `manifest.json` and each
 scenario manifest pin origin, scenario, encrypted hash, exact exported keys,
 values, physical types, expected absences and omission metadata. Physical
 encodings are int, bool, String and List<String>; JSON-encoded preferences
-remain Strings. All30 S2-2 and28 S2-4 types were compared with actual origin
+remain Strings. All30 S2-2,34 S2-3 and28 S2-4 input types were compared with actual origin
 writer calls. This is preference transport coverage, not every setter's
 normalization or every legal UI variant.
 
@@ -36,7 +35,7 @@ Current tests decrypt the origin bytes, restore through
 ProfileRestoreCoordinator.restore, compare every represented physical value
 and type before getters can coerce/cache it, exercise selected provider/tracking
 readers, and re-export the complete preference map. Generation isolation checks
-protect the old generation and an unrelated profile. All19 excluded inputs are
+protect the old generation and an unrelated profile. All25 excluded inputs are
 asserted present with their declared types before export, then absent with
 includeSecrets false and true and in the new restored generation. All packages
 have zero resources.
@@ -50,15 +49,15 @@ resource graph remapping, account reconnection or secret-vault migration.
 
 ## S2-2 null and cache scenarios
 
-- `profile`: all81 admitted named keys populated, including synthetic unbound
-  folder/server IDs; 19 exclusion inputs remain outside the preference package.
+- `profile`: all109 admitted named keys populated, including synthetic unbound
+  folder/server IDs; 25 exclusion inputs remain outside the preference package.
 - `provider-null-folder`: actual setPikPakRestrictedFolder(null,null) removes
   restricted ID/name but retains torrent/TV subfolder caches. The selected
-  WebDAV server setter receives null and removes the preference. Export has78
+  WebDAV server setter receives null and removes the preference. Export has106
   represented keys.
 - `provider-cleared-cache`: actual clearPikPakRestrictedFolder also removes
   both subfolder caches. An empty selected WebDAV server ID removes that key.
-  Export has76 represented keys.
+  Export has104 represented keys.
 
 For both absence variants, restore is tested into an empty destination and a
 destination with prior values. Omitted keys stay absent in the former and keep
@@ -68,23 +67,28 @@ and old-generation preservation are checked on origin and current code.
 
 ## Reproduce
 
-Use Flutter C:/Users/hunth/flutter/bin/flutter.bat. In the exact detached origin,
+Use upstream-pinned Flutter **3.44.8 / Dart3.12.2** at
+C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat. The native Dart is
+C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/cache/dart-sdk/bin/dart.exe.
+In each isolated worktree, the ignored package_config must map flutter,
+flutter_test, flutter_web_plugins and sky_engine to that SDK while keeping
+debrify rooted in that worktree. Do not replace the global shared SDK. In the exact detached origin,
 copy this new test and recipe.json; dependency metadata must resolve that checkout.
 
 ```powershell
-& C:/Users/hunth/flutter/bin/flutter.bat test --no-pub --concurrency=1 --dart-define=STORAGE_ORIGIN_GENERATE=true test/storage_origin_restore_fixture_test.dart
+& C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat test --no-pub --concurrency=1 --dart-define=STORAGE_ORIGIN_GENERATE=true test/storage_origin_restore_fixture_test.dart
 ```
 
 Copy the generated encrypted files and manifests to this fixture directory.
 Run on both origin and candidate:
 
 ```powershell
-& C:/Users/hunth/flutter/bin/flutter.bat test --no-pub --concurrency=1 test/storage_origin_restore_fixture_test.dart
-& C:/Users/hunth/flutter/bin/flutter.bat analyze --no-pub test/storage_origin_restore_fixture_test.dart
+& C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat test --no-pub --concurrency=1 test/storage_origin_restore_fixture_test.dart
+& C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat analyze --no-pub test/storage_origin_restore_fixture_test.dart
 ```
 
-S2-2 evidence: generation3 passed; origin/current8 tests passed each; scoped
-analyzer clean. Before generation, expanded expectations rejected the old56
+S2-3 pinned-SDK evidence: generation6 passed; combined origin/current17 tests passed each; scoped
+analyzer clean. The S2-2 checkpoint had generation3 and8 tests per checkout. Before generation, expanded expectations rejected the old56
 fixture for missing alldebrid_hidden_from_nav. No local full suite.
 
 ## Mutation evidence
@@ -94,9 +98,9 @@ restore; they do not mutate product source. Each command below must exit1 after
 restore. Run without the define for the final green checks.
 
 ```powershell
-& C:/Users/hunth/flutter/bin/flutter.bat test --no-pub --concurrency=1 --dart-define=STORAGE_FIXTURE_MUTATION=provider-key test/storage_origin_restore_fixture_test.dart --plain-name 'profile: restore frozen'
-& C:/Users/hunth/flutter/bin/flutter.bat test --no-pub --concurrency=1 --dart-define=STORAGE_FIXTURE_MUTATION=provider-type test/storage_origin_restore_fixture_test.dart --plain-name 'profile: restore frozen'
-& C:/Users/hunth/flutter/bin/flutter.bat test --no-pub --concurrency=1 --dart-define=STORAGE_FIXTURE_MUTATION=provider-null test/storage_origin_restore_fixture_test.dart --plain-name 'provider-null-folder: restore frozen'
+& C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat test --no-pub --concurrency=1 --dart-define=STORAGE_FIXTURE_MUTATION=provider-key test/storage_origin_restore_fixture_test.dart --plain-name 'profile: restore frozen'
+& C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat test --no-pub --concurrency=1 --dart-define=STORAGE_FIXTURE_MUTATION=provider-type test/storage_origin_restore_fixture_test.dart --plain-name 'profile: restore frozen'
+& C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat test --no-pub --concurrency=1 --dart-define=STORAGE_FIXTURE_MUTATION=provider-null test/storage_origin_restore_fixture_test.dart --plain-name 'provider-null-folder: restore frozen'
 ```
 
 The first renames pikpak_tv_folder_id; the second substitutes a String for
@@ -107,10 +111,54 @@ style-key/style-type recipe modes remain; apply them to the populated profile
 case. The numeric type mode retains37.0 versus37, proving the explicit physical
 type check rather than numerical equality alone.
 
+## S2-3 conditional choices and explicit null overlays
+
+All34 admitted named S2-3 keys and all7 excluded names are represented in the
+pinned inventory. The original six sample settings are retained;28 admitted
+keys and6 excluded names were added. All four conditional player preferences
+use trusted selectors in the populated profile. Three additional original
+exports exercise external_player_preferred = custom/custom_app/custom_command,
+with ios = custom_scheme and linux/windows = custom_command. Each exports105
+named keys, omitting those four preference entries. Empty and populated
+destination cases prove absence versus merge retention. Every excluded selector
+spelling in the origin policy is exercised; not every trusted player variant.
+
+iptv_last_live_channel and startup_iptv_channel start as synthetic String JSON
+containing only example.invalid URLs and synthetic headers. The original
+exporter converts both to explicit null overlays. Each restore begins with
+stale destination values, removes both keys in the new generation, preserves
+the old generation and re-exports neither cleared key. Null in the manifest is
+a portable overlay instruction, not a stored SharedPreferences type. It is
+intentionally different from an omitted conditional selection or null-folder
+source preference. No resolved playback URL or source header crosses restore.
+
+The shared loader separates source inputs, export expectations and restored
+re-export expectations. It does not invoke copied policy code to determine
+expected values. The old81 fixture fails for missing
+android_video_renderer_gpu_migration_v1 before origin regeneration.
+
+Four S2-3 mutations must exit1 after actual restore:
+
+```powershell
+& C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat test --no-pub --concurrency=1 --dart-define=STORAGE_FIXTURE_MUTATION=player-key test/storage_origin_restore_fixture_test.dart --plain-name 'profile: restore frozen'
+& C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat test --no-pub --concurrency=1 --dart-define=STORAGE_FIXTURE_MUTATION=player-type test/storage_origin_restore_fixture_test.dart --plain-name 'profile: restore frozen'
+& C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat test --no-pub --concurrency=1 --dart-define=STORAGE_FIXTURE_MUTATION=player-null test/storage_origin_restore_fixture_test.dart --plain-name 'profile: restore frozen'
+& C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat test --no-pub --concurrency=1 --dart-define=STORAGE_FIXTURE_MUTATION=player-choice test/storage_origin_restore_fixture_test.dart --plain-name 'player-custom: restore frozen'
+```
+
+These rename the TV aspect key, replace integer2 with double2.0, remove an
+explicit null overlay, or wrongly materialize an omitted player selection.
+The type probe fails int-versus-double despite equal numeric values. The null
+probe leaves the stale destination execution value and is rejected; the choice
+probe catches both unwanted insertion and overwritten destination state.
+
 ## Provenance hashes
 
-- `profile.encrypted.json`: 6434 bytes; SHA-256 `62a33b0dcabccf3fb17a09ab18c1510a69d846a7baebb3d83bb7add65a5a49c6`.
-- `provider-null-folder.encrypted.json`: 6210 bytes; SHA-256 `47ceea5d5293b0d4217454ea925b2e3f2be266228e92e3fe8807f7398f42146d`.
-- `provider-cleared-cache.encrypted.json`: 6078 bytes; SHA-256 `3266b9d4195c24e76a33c105c2aff13010b83913fdfdcf9563938be81a246ca2`.
+- `profile.encrypted.json`: 7766 bytes; SHA-256 `8c65eb449598ca7683f17414f9af585224cd5f97efb0c33534afd7d6163f8825`.
+- `provider-null-folder.encrypted.json`: 7542 bytes; SHA-256 `a39ab1f700ea3fce2fe1715a8b41fd8d9db28c7e761f4fd7ef54cd2fedc76a77`.
+- `provider-cleared-cache.encrypted.json`: 7410 bytes; SHA-256 `567f7d7684c2822991d807177c727df0c3ad69c68ae55dd27cb250037d1c45de`.
+- `player-custom.encrypted.json`: 7558 bytes; SHA-256 `835c29354247feff3f12deaa2b6ce8318cd1b171e45ef6019093dc4d660db9e6`.
+- `player-custom-app.encrypted.json`: 7558 bytes; SHA-256 `e1efe6b0ce3447df582acb77cd81fef2136e9dee9920f03c1d608f8fb53288e6`.
+- `player-custom-command.encrypted.json`: 7558 bytes; SHA-256 `9444f4ef95365e26ffaa5df2c128ff82cf83f0991a7f438b3cd42d8da2f33de9`.
 
-Random nonce/salt/time make regenerated ciphertext differ; content must match the independent recipe. Fixture expiry: retain until the backed-up format is explicitly retired. No production forwarders are introduced or modified.
+All six packages were regenerated with the pinned SDK at the exact origin. Random nonce/salt/time make regenerated ciphertext differ; content must match the independent recipe. Fixture expiry: retain until the backed-up format is explicitly retired. No production forwarders are introduced or modified.
