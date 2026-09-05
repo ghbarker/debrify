@@ -109,3 +109,6 @@ PR117 merged a0569745 exactee9de82b after independent live-host pin1pass/cleanan
 
 M1-3 decision: Ampere owns narrow cloud_magic_tv_unlock_pin_test.dart host+sixflow inventory/exactcaptured-keyalias update; preserve assertions, no broad exemptions, source checks supplemental only. Tenentrywrappers+100physical typedbinding retained for credential timing;reviewM1-5,expiryreview/removalM1-6. Reported3070net pendingfinalaudit (3226grossminus156). CODEMAP MagicTV rows exclusively locked to Ampere untilcommit/release. Baselinegrowth forbidden; C0 only location reconciliation with evidence.
 
+
+MERGED1188ecc6323 and116532fd360: exactheadCIgreen; S2 independent104/120/9/12checks+analysis/bodycomparison passed.116origin/current Linuxnative1each no skips, parent runner5tests passed. Difference: playbackstorage logic extracted with frozenkeys, mandatorynative origin/current gate added. More:433storageLeavesdebt, fullvideo readiness/manualsmoke unproven. Current godcounts search11376,player11926,magic8369,storage4415,settings2899 versus original19070/16278/10716/9963/7905. S2-7 readiness/originpins assignedLocke; exactstorelocks beforeedits. M1/G1 active branches must integrate newnativeCI beforefinalgate. C0 owns M1baseline mapping. Remaining extraction slices15 (S2-6merged).
+
