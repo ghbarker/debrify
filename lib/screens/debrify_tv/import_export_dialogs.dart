@@ -9,6 +9,10 @@ import '../../theme/app_theme_scope.dart';
 import '../../widgets/tv_text_field.dart';
 import 'dialogs/spotlight_dialog.dart';
 
+// Screen-facing entry point, kept stable while M1-fix relocates the flow.
+export '../../services/debrify_tv/channel_import_export.dart'
+    show ChannelImportExport, ChannelImportExportHost;
+
 /// Share-dialog size/compression/keyword chip. Origin `_SpotlightMetaPill`
 /// in `lib/screens/magic_tv_screen.dart` (only used by channel share).
 class SpotlightMetaPill extends StatelessWidget {
