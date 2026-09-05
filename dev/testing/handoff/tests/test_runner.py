@@ -23,7 +23,14 @@ if '--version' in sys.argv:
     print(json.dumps({'frameworkVersion': os.environ.get('FAKE_VERSION', '3.44.8')}))
     sys.exit(int(os.environ.get('VERSION_EXIT', '0')))
 else:
-    pathlib.Path(os.environ['CHILD_RECORD']).write_text(json.dumps({'args': sys.argv[1:], 'cwd': os.getcwd()}))
+    selectors = [pathlib.Path(arg) for arg in sys.argv[3:sys.argv.index('--reporter')]]
+    files = [file.resolve() for path in selectors
+             for file in (sorted(path.rglob('*_test.dart')) if path.is_dir() else [path])]
+    contents = [file.read_text() for file in files]
+    pathlib.Path(os.environ['CHILD_RECORD']).write_text(json.dumps({
+        'args': sys.argv[1:], 'cwd': os.getcwd(), 'files': [str(file) for file in files]}))
+    if '// decoy' in contents:
+        sys.exit(19)
     print('raw child stdout')
     print('raw child stderr', file=sys.stderr)
     sys.exit(int(os.environ.get('CHILD_EXIT', '0')))
@@ -54,8 +61,28 @@ else:
         self.assertIn('raw child stderr', result.stderr)
         record = json.loads(self.record.read_text())
         self.assertEqual(Path(record['cwd']), self.root)
-        self.assertIn('test/one test_test.dart', record['args'])
+        self.assertEqual([Path(file) for file in record['files']],
+                         [self.root / 'test' / 'one test_test.dart'])
         self.assertIn('--no-pub', record['args'])
+
+    def test_nested_cwd_executes_inventory_not_shifted_decoy(self):
+        cwd = self.root / 'working dir'
+        (cwd / 'test').mkdir(parents=True)
+        (cwd / 'test' / 'one test_test.dart').write_text('// decoy')
+        self.data['suites']['small']['cwd'] = 'working dir'
+        for selector in ('test/one test_test.dart', 'test'):
+            with self.subTest(selector=selector):
+                self.data['suites']['small']['selectors'] = [selector]
+                result = self.run_kit('small')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                record = json.loads(self.record.read_text())
+                self.assertEqual(Path(record['cwd']), cwd)
+                self.assertEqual([Path(file) for file in record['files']],
+                                 [self.root / 'test' / 'one test_test.dart'])
+                inventory = result.stdout.split('Files:\n', 1)[1].split('Command argv:', 1)[0]
+                self.assertEqual(inventory.strip(), 'test/one test_test.dart')
+                selected = record['args'][2:record['args'].index('--reporter')]
+                self.assertEqual([Path(arg) for arg in selected], [self.root / selector])
 
     def test_success_executes_child(self):
         result = self.run_kit('small')

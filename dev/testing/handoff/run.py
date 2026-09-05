@@ -57,7 +57,8 @@ def main():
         if not cwd.is_dir():
             raise ValueError(f'Missing working directory: {cwd}')
         if suite['engine'] == 'flutter':
-            command = [args.flutter, 'test', '--no-pub', *suite['selectors'], '--reporter', 'expanded']
+            selectors = [str(contained(root, selector)) for selector in suite['selectors']]
+            command = [args.flutter, 'test', '--no-pub', *selectors, '--reporter', 'expanded']
         elif suite['engine'] == 'python':
             command = [sys.executable, '-B', '-m', 'unittest', *[str(path.relative_to(cwd)) for path in files]]
         else:
