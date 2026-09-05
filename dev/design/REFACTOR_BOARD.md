@@ -6,7 +6,7 @@
 - Wegener: next meaningful Discover session/data ownership proposal; Locke: storage residual owner/fixture readiness; both read-only 45-minute assignments. Cicero: full actual f75fa016 gate running. No overlapping production edits.
 - Latest full automated gate passed f75fa016: 5413 passing generic tests, 12 exact known failures, two skips; 21 exact known golden errors after configured retries; no unexpected/unused entries. Native pair, Windows/ARM64 builds, Python55 passed; analyzer436/452, layering77.
 - Full f75fa016 gate passed; eligible next production work still requires origin pins and scoped design approval. Manual smoke PASSED by user acceptance for verified f75fa016 build: phone tested successfully and TV accepted by user; no direct TV hardware test claimed.
-- Current god lines: search9033, player11926, MagicTV3331, storage4365, settings2899. Originals19070/16278/10716/9963/7905. Selection93host lines but production+90; zero standalone750credit. Prefetch228code-net remains2short230.
+- Current god lines: search9033, player11926, MagicTV3317, storage4365, settings2899. Originals19070/16278/10716/9963/7905. Selection93host lines but production+90; zero standalone750credit. Prefetch228code-net remains2short230.
 - CODEMAP unlocked. Latest verified f75fa016 APK installed successfully on Samsung SM_S948U1 via ADB, preserving data. Manual smoke PASSED by user acceptance for f75fa016; phone success and TV acceptance reported.
 - Temporary keep-awake expired16:43UTC and remains off; no power/disk changes or extension.
 ## Prior checkpoints and retained evidence
@@ -213,3 +213,16 @@ User reports "the apk worked great" after successful ADB installation of verifie
 
 ## Manual smoke acceptance — f75fa016
 PASSED by explicit user instruction, based on successful phone testing of the installed verified APK and user acceptance of TV behavior. This supersedes earlier pending/deferred manual-smoke entries for this build. Direct SHIELD/TV hardware testing was not performed; no such execution is claimed.
+
+## Forwarder ledger — required in subsequent gate rows
+Criterion: AST single-operation delegation to another owner; methods/getters/setters counted separately, including multiline declarations and player reverse-host bridges. Excludes computed arguments, constructed callbacks, guards and lifecycle logic. One-line formatting alone is not the debt definition. Exact symbol inventory/reproducer: C:/Users/hunth/debrify/forwarder-ledger/REPORT.md, ledger.csv and scan.dart. No automatic deletion of live compatibility surfaces is authorized.
+| Gate / source | Storage M/G/S | Search M/G/S | Player M/G/S | MagicTV M/G/S | Settings M/G/S |
+|---|---|---|---|---|---|
+| Gate4 c86ea5f2 |540/23/18=581|19/72/5=96|27/111/23=161|19/24/24=67|0/0/0=0|
+| Current e3ee9b7c, same five-file blobs as f75fa016 gate |540/23/18=581|19/72/5=96|27/111/23=161|13/8/6=27|0/0/0=0|
+Physical single-line declaration subset at current: storage147/search83/player112/Magic12/settings0. User preliminary148/31 not reproduced; original counting command unavailable. Historical unmeasured gate counts must remain unmeasured, never retroactively guessed. Q2 targets must account for stable public API/caller migration, not indiscriminate removal. Every new gate report includes this inventory at its exact source.
+
+137merged5b4b2c4b exact793e6d63 independent169/audit/docs+all3CIgreen. Difference:4quickdispatchdependencies narrowed toProviderWatchFlow,7sharedcallbacksremain;14host/12productionnetremoved, earlier sideeffectfreeleafallocation declared. Firstproductionsincef75gate. 136nativeCIfailedrun33984264411C0diagnosisassigned;no merge.138/139goldenspendingwithotherchecksPASS;139WindowsAVrecordedseparately. G17gpresentationmoveactive;M17originadversarialactive;filterstoredesignapprovedbutproductionafter138merge. Currentgods9033/11926/3317/4365/2899. Manualf75useracceptancePASSED.
+
+138merged7e6cf5c5 exact18356 afterindependent144/validrestoremutations/provenance+all3CIgreen: separatefivefilterJSON compatibility domain,0Leaves.139mergedfb5ccc4f exact465ef1 afterindependentunset/invalid/strictness/source+exactLinuxnative/test/goldensPASS: plainmissing-env nativecase skipswithreason, invalid/requiredrunnerstillfails. Windows configuredpair AV remainsNOTgreen/no claimfixed. Both test-only source changes; production countsincef75 remainsone(#137).
+Locke filterstore production RELEASED exact3prod+keysweep; helperasyncboundary documented, capturedfilterprefs/providerseparatephase preserved. Ampere M17 firstshared58lineTB/PP accumulator production authorized afterindependent6origin/mutations; exactcommon/TB/PP scope, no newasync/guards/cancelpolicy. Wegener presentation move+exactunusedaliases/shapeinventoryupdates authorized;136 integratesnewmain139 forfreshstrictCI, oldorigin600shangnotfixed/overridden. C0 availableindependentreview. No overlappingfiles exceptserializedCODEMAP.
