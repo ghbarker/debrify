@@ -571,13 +571,6 @@ class FavRowRef {
 /// content type drives both the play routing and whether focus retunes the
 /// hero live preview. [nodes] are owned here and reconciled by [listId]
 /// across reloads (see [_SearchScreenState._loadIptvListRows]).
-class _IptvListRow {
-  final String listId;
-  String title;
-  List<IptvChannel> channels;
-  final List<FocusNode> nodes = [];
-  _IptvListRow(this.listId, this.title) : channels = const [];
-}
 
 /// Generic DPAD arrow-handling wrapper for a favourites-row card — the arrow
 /// counterpart to [_BoardCell] for the IPTV / Debrify TV / Stremio TV rows.

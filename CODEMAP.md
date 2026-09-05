@@ -119,6 +119,12 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   `lib/screens/search/continue_watching_row.dart` (`ContinueWatchingRow`,
   `CwFocusOwner`, `syncCwNodes`). Host keeps Home board chrome, Discover
   CW landing, `_addonForContinue`, and thin loader/open wrappers.
+  Favourites state, loaders, action flows and deferred-down focus live in
+  `lib/screens/search/fav_rows_controller.dart` (`FavRowsController`,
+  `FavouritesIptvListRow`); classic rows render through
+  `lib/screens/search/fav_row.dart` (`FavRow`). These retain screen/UI dependencies.
+  Host supplies live State/context/update and cross-row callbacks, keeps stage
+  composition, and disposes the favourites nodes in its existing disposal order.
   TV Home stage layouts are `lib/screens/search/stages/` (`_CanvasBoardStage` and friends);
   the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
