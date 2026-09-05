@@ -1,3 +1,4 @@
+import '../services/debrify_tv/queue_prefetcher.dart';
 import 'debrify_tv/watch/provider_watch_flow.dart';
 import 'debrify_tv/watch/torbox_watch_flow.dart';
 import 'debrify_tv/watch/pikpak_watch_flow.dart';
@@ -219,6 +220,15 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     },
   );
 
+  late final _queuePrefetcher = QueuePrefetcher(
+    queue: _queue,
+    seenRestrictedLinks: _seenRestrictedLinks,
+    seenLinkWithTorrentId: _seenLinkWithTorrentId,
+    settingsManager: _settingsManager,
+    isMounted: () => mounted,
+    buildLockedRequest: _magicTvLockedRequest,
+  );
+
   // M1-3 retained host bindings; review at M1-5, expire/review-remove in M1-6.
   late final _watchBindings = WatchFlowBindings(
     allDebridAvailable: WatchValue(() => _allDebridAvailable),
@@ -229,7 +239,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     isBusy: WatchValue(() => _isBusy, (value) => _isBusy = value),
     launchedPlayer: WatchValue(() => _launchedPlayer, (value) => _launchedPlayer = value),
     pikpakAvailable: WatchValue(() => _pikpakAvailable),
-    prefetchStopRequested: WatchValue(() => _prefetchStopRequested, (value) => _prefetchStopRequested = value),
+    prefetchStopRequested: WatchValue(() => _queuePrefetcher.stopRequested, (value) => _queuePrefetcher.stopRequested = value),
     premiumizeAvailable: WatchValue(() => _premiumizeAvailable),
     progressOpen: WatchValue(() => _progressOpen, (value) => _progressOpen = value),
     qualityFallbackNotified: WatchValue(() => _qualityFallbackNotified, (value) => _qualityFallbackNotified = value),
@@ -247,12 +257,12 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     torboxAvailable: WatchValue(() => _torboxAvailable),
     viewerForcesNsfw: WatchValue(() => _viewerForcesNsfw),
     watchCancelled: WatchValue(() => _watchCancelled, (value) => _watchCancelled = value),
-    activeProvider: WatchValue(() => _activeProvider, (value) => _activeProvider = value),
+    activeProvider: WatchValue(() => _queuePrefetcher.activeProvider, (value) => _queuePrefetcher.activeProvider = value),
     provider: WatchValue(() => _provider),
     quickProvider: WatchValue(() => _quickProvider),
     status: WatchValue(() => _watchSession.status, (value) => _watchSession.status = value),
     torboxFileEntryType: WatchValue(() => _torboxFileEntryType),
-    activeApiKey: WatchValue(() => _activeApiKey, (value) => _activeApiKey = value),
+    activeApiKey: WatchValue(() => _queuePrefetcher.activeApiKey, (value) => _queuePrefetcher.activeApiKey = value),
     currentWatchingChannelId: WatchValue(() => _currentWatchingChannelId, (value) => _currentWatchingChannelId = value),
     lastQueueSize: WatchValue(() => _lastQueueSize, (value) => _lastQueueSize = value),
     quickPlayMaxKeywords: WatchValue(() => _quickPlayMaxKeywords),
@@ -288,14 +298,14 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     providerDisplay: _providerDisplay,
     requestChannelById: _requestChannelById,
     requestNextChannel: _requestNextChannel,
-    resolveAllDebridLinks: _resolveAllDebridLinks,
+    resolveAllDebridLinks: _queuePrefetcher.resolveAllDebridLinks,
     resolveChannelNumber: _resolveChannelNumber,
     resolveRdLockedLinks: _resolveRdLockedLinks,
     resolveTorboxQueuedFile: _resolveTorboxQueuedFile,
     showCachedPlaybackDialog: _showCachedPlaybackDialog,
     showSnack: _showSnack,
-    startPrefetch: _startPrefetch,
-    stopPrefetch: _stopPrefetch,
+    startPrefetch: _queuePrefetcher.startPrefetch,
+    stopPrefetch: _queuePrefetcher.stopPrefetch,
     syncProviderAvailability: _syncProviderAvailability,
     watchWithTorbox: _watchWithTorbox,
     watchTorboxWithCachedTorrents: _watchTorboxWithCachedTorrents,
@@ -424,23 +434,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   // De-dupe sets for RD-restricted entries
   final Set<String> _seenRestrictedLinks = {};
   final Set<String> _seenLinkWithTorrentId = {};
-  // Prefetch state
-  static const int _minPrepared = 6; // maintain at least 6 prepared items
-  static const int _lookaheadWindow = 10; // window near head to keep prepared
-  bool _prefetchRunning = false;
-  bool _prefetchStopRequested = false;
-  Future<void>? _prefetchTask;
-  // Invalidates an async start when playback exits while the preference is
-  // still being read. Without this, a stopped player could start a late
-  // prefetch loop after _stopPrefetch returned.
-  int _prefetchEpoch = 0;
-  String? _activeApiKey;
-  // Which provider the active prefetch run resolves through. RD and AllDebrid
-  // are the two cache-check-less providers that use the background prefetcher;
-  // this tells _prefetchOneAtIndex / requestMagicNext which add+resolve path to
-  // use against _activeApiKey.
-  String _activeProvider = CloudProviderId.debrid.magicTvId;
-  final Set<String> _inflightInfohashes = {};
   bool _isAndroidTv = false;
   bool _showSearchBar = false;
   Set<String> _favoriteChannelIds = {};
@@ -511,8 +504,8 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       );
     }
     // Ensure prefetch loop is stopped if this screen is disposed mid-run
-    _prefetchStopRequested = true;
-    _stopPrefetch();
+    _queuePrefetcher.stopRequested = true;
+    _queuePrefetcher.stopPrefetch();
     // Clean up dialog state to avoid dangling context references
     _progressSheetContext = null;
     _progressOpen = false;
@@ -623,11 +616,11 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       return;
     }
     _watchCancelled = true;
-    _prefetchStopRequested = true;
+    _queuePrefetcher.stopRequested = true;
     debugPrint(
       '[MagicTV] _cancelActiveWatch: Set _watchCancelled=true, stopping prefetch',
     );
-    unawaited(_stopPrefetch());
+    unawaited(_queuePrefetcher.stopPrefetch());
     if (clearQueue) {
       debugPrint(
         '[MagicTV] _cancelActiveWatch: Clearing queue (had ${_queue.length} items)',
@@ -3387,7 +3380,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     // dialog entry points, so setting it here would leave channel plays
     // stuck-cancelled on the next attempt.
     if (!await ExternalPlayerNoticeDialog.confirm(context)) {
-      await _stopPrefetch();
+      await _queuePrefetcher.stopPrefetch();
       return true;
     }
     if (!mounted) return true;
@@ -3399,7 +3392,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     );
     if (launched) {
       _launchedPlayer = true;
-      await _stopPrefetch();
+      await _queuePrefetcher.stopPrefetch();
       return true;
     }
     return false;
@@ -3407,253 +3400,4 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
 
   // ===================== Prefetcher =====================
 
-  Future<void> _startPrefetch() async {
-    if (_prefetchRunning || _activeApiKey == null || _activeApiKey!.isEmpty) {
-      return;
-    }
-
-    final startEpoch = _prefetchEpoch;
-    final enabled = await _settingsManager.getGlobalBackgroundPrefetchEnabled();
-
-    // Re-check mutable state after the preference read. Multiple playback
-    // paths can request a start at nearly the same time, and playback may
-    // have stopped while this method was awaiting SharedPreferences.
-    if (!mounted ||
-        startEpoch != _prefetchEpoch ||
-        _prefetchRunning ||
-        _activeApiKey == null ||
-        _activeApiKey!.isEmpty) {
-      return;
-    }
-    if (!enabled) {
-      debugPrint('MagicTV: Background torrent prefetch is disabled.');
-      return;
-    }
-
-    _prefetchRunning = true;
-    _prefetchStopRequested = false;
-    debugPrint('MagicTV: Prefetch started.');
-    _prefetchTask = _runPrefetchLoop();
-  }
-
-  Future<void> _stopPrefetch() async {
-    _prefetchEpoch++;
-    if (!_prefetchRunning) return;
-    _prefetchStopRequested = true;
-    try {
-      await _prefetchTask;
-    } catch (_) {}
-    _prefetchRunning = false;
-    _prefetchTask = null;
-    _inflightInfohashes.clear();
-    debugPrint('MagicTV: Prefetch stopped.');
-  }
-
-  Future<void> _runPrefetchLoop() async {
-    while (mounted && !_prefetchStopRequested) {
-      try {
-        final prepared = _countPreparedInLookahead();
-        if (prepared >= _minPrepared) {
-          await Future.delayed(const Duration(milliseconds: 750));
-          continue;
-        }
-
-        // Find first unprepared torrent within lookahead window and prefetch it
-        final idx = _findUnpreparedTorrentIndexInLookahead();
-        if (idx == -1) {
-          // nothing to prefetch near head; small idle
-          await Future.delayed(const Duration(milliseconds: 750));
-          continue;
-        }
-
-        await _prefetchOneAtIndex(idx);
-        // brief yield (faster when under target prepared)
-        await Future.delayed(Duration(milliseconds: prepared <= 2 ? 75 : 150));
-      } catch (e) {
-        debugPrint('MagicTV: Prefetch loop error: $e');
-        await Future.delayed(const Duration(seconds: 1));
-      }
-    }
-  }
-
-  int _countPreparedInLookahead() {
-    final end = _queue.length < _lookaheadWindow
-        ? _queue.length
-        : _lookaheadWindow;
-    int count = 0;
-    for (int i = 0; i < end; i++) {
-      final item = _queue[i];
-      if (item is Map &&
-          (item['type'] == 'rd_restricted' || item['type'] == 'ad_locked')) {
-        count++;
-      }
-    }
-    return count;
-  }
-
-  int _findUnpreparedTorrentIndexInLookahead() {
-    final end = _queue.length < _lookaheadWindow
-        ? _queue.length
-        : _lookaheadWindow;
-    for (int i = 0; i < end; i++) {
-      final item = _queue[i];
-      if (item is Torrent && !_inflightInfohashes.contains(item.infohash)) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
-  Future<void> _prefetchOneAtIndex(int idx) async {
-    if (_activeApiKey == null || _activeApiKey!.isEmpty) return;
-    if (idx < 0 || idx >= _queue.length) return;
-    final item = _queue[idx];
-    if (item is! Torrent) return;
-    if (MagicTvDispatch.watchId(_activeProvider) == CloudProviderId.alldebrid) {
-      await _prefetchOneAllDebrid(idx, item);
-      return;
-    }
-    final infohash = item.infohash;
-    _inflightInfohashes.add(infohash);
-    debugPrint('MagicTV: Prefetching torrent at idx=$idx name="${item.name}"');
-    try {
-      final batch = await CloudProviderRegistry.instance
-          .prepareMagicTvLockedLinks(
-            provider: CloudProviderId.debrid.magicTvId,
-            request: _magicTvLockedRequest(item),
-          );
-      if (batch == null || batch.lockedLinks.isEmpty) {
-        if (idx < _queue.length && identical(_queue[idx], item)) {
-          _queue.removeAt(idx);
-          _queue.add(item);
-        }
-        debugPrint(
-          'MagicTV: Prefetch: no links; moved torrent to tail idx=$idx',
-        );
-        return;
-      }
-
-      final headLinkCandidates = List<String>.from(batch.lockedLinks);
-      headLinkCandidates.shuffle(Random());
-      final headLink = headLinkCandidates.removeAt(0);
-      _seenRestrictedLinks.add(headLink);
-      _seenLinkWithTorrentId.add('${batch.remoteId}|$headLink');
-
-      if (idx < _queue.length && identical(_queue[idx], item)) {
-        _queue[idx] = {
-          'type': 'rd_restricted',
-          'restrictedLink': headLink,
-          'torrentId': batch.remoteId,
-          'displayName': item.name,
-        };
-      }
-
-      if (headLinkCandidates.isNotEmpty) {
-        _queue.add(item);
-      }
-    } catch (e) {
-      // On failure, move to tail for retry later
-      if (idx < _queue.length && identical(_queue[idx], item)) {
-        _queue.removeAt(idx);
-        _queue.add(item);
-      }
-      debugPrint('MagicTV: Prefetch failed for $infohash: $e (moved to tail)');
-    } finally {
-      _inflightInfohashes.remove(infohash);
-    }
-  }
-
-  /// Adds [candidate] to AllDebrid (trusting the upload `ready` flag — no
-  /// polling) and returns its fresh (unseen) locked video-file links, marking
-  /// them seen. Returns null when the torrent is not cached/ready (the magnet
-  /// is deleted in that case) or has no usable video files. Each returned link
-  /// is still locked and must be unlocked via [AllDebridService.unlockLink]
-  /// before playback — the lazy model mirrors Real-Debrid's restricted links.
-  Future<_AllDebridPrepared?> _resolveAllDebridLinks(Torrent candidate) async {
-    final batch = await CloudProviderRegistry.instance
-        .prepareMagicTvLockedLinks(
-          provider: CloudProviderId.alldebrid.magicTvId,
-          request: _magicTvLockedRequest(candidate),
-        );
-    if (batch == null || batch.lockedLinks.isEmpty) return null;
-    for (final link in batch.lockedLinks) {
-      _seenRestrictedLinks.add(link);
-    }
-    return _AllDebridPrepared(
-      magnetId: batch.remoteId,
-      name: batch.name,
-      lockedLinks: batch.lockedLinks,
-    );
-  }
-
-  /// AllDebrid analog of the Real-Debrid prefetch path. Converts the [item]
-  /// queue slot into a prepared `ad_locked` entry (a still-locked link), and
-  /// since AllDebrid returns every file at once, enqueues the remaining video
-  /// files immediately rather than re-adding the torrent.
-  Future<void> _prefetchOneAllDebrid(int idx, Torrent item) async {
-    final infohash = item.infohash;
-    _inflightInfohashes.add(infohash);
-    debugPrint(
-      'MagicTV: Prefetching AllDebrid torrent at idx=$idx name="${item.name}"',
-    );
-    try {
-      final prepared = await _resolveAllDebridLinks(item);
-      if (prepared == null || prepared.lockedLinks.isEmpty) {
-        // Not ready / no usable video; move to tail to retry later.
-        if (idx < _queue.length && identical(_queue[idx], item)) {
-          _queue.removeAt(idx);
-          _queue.add(item);
-        }
-        debugPrint(
-          'MagicTV: AllDebrid prefetch: not ready/no links; moved to tail idx=$idx',
-        );
-        return;
-      }
-
-      final links = List<String>.from(prepared.lockedLinks);
-      final headLink = links.removeAt(0);
-      Map<String, dynamic> lockedEntry(String link) => {
-        'type': 'ad_locked',
-        'allDebridLink': link,
-        'magnetId': prepared.magnetId,
-        'displayName': item.name,
-      };
-
-      if (idx < _queue.length && identical(_queue[idx], item)) {
-        _queue[idx] = lockedEntry(headLink);
-      } else {
-        // Slot shifted out from under us; don't lose the resolved head link.
-        _queue.add(lockedEntry(headLink));
-      }
-      for (final link in links) {
-        _queue.add(lockedEntry(link));
-      }
-    } catch (e) {
-      if (idx < _queue.length && identical(_queue[idx], item)) {
-        _queue.removeAt(idx);
-        _queue.add(item);
-      }
-      debugPrint(
-        'MagicTV: AllDebrid prefetch failed for $infohash: $e (moved to tail)',
-      );
-    } finally {
-      _inflightInfohashes.remove(infohash);
-    }
-  }
-}
-
-/// Result of adding an AllDebrid magnet for Debrify TV: the resolved (still
-/// locked) video-file links plus identifiers for the created magnet.
-class _AllDebridPrepared implements WatchAllDebridPrepared {
-  @override
-  final String magnetId;
-  @override
-  final String name;
-  @override
-  final List<String> lockedLinks;
-  _AllDebridPrepared({
-    required this.magnetId,
-    required this.name,
-    required this.lockedLinks,
-  });
 }

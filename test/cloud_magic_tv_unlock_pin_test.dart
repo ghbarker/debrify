@@ -42,6 +42,7 @@ String _magicTvSources() {
   final buf = StringBuffer(host);
   buf.writeln(_read('lib/screens/debrify_tv/channel_switch_flow.dart'));
   buf.writeln(_read('lib/services/debrify_tv/channel_cache_warmer.dart'));
+  buf.writeln(_read('lib/services/debrify_tv/queue_prefetcher.dart'));
   for (final provider in [
     'provider', 'real_debrid', 'torbox', 'pikpak', 'premiumize', 'alldebrid',
   ]) {
