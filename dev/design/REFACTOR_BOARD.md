@@ -6,7 +6,7 @@ Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 apply; this phase also requires (f) Leaves, (g) no host-private members / no new
 `part of` / `extension on` the host State, (h) pin commit predates the move.
 
-Baseline: `main` @ #73–#94 · Phase: **2 correction** · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
+Baseline: `main` @ #73–#95 · Phase: **2 correction** · Last gate: 1 (Linux + Windows build/smoke **pass**; Android not run)
 
 Analyzer (`flutter analyze lib test`): **470** issues (0 error · 85 warning · 385 info), exit 0.
 
@@ -47,7 +47,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | G1'-1 · catalog play resolver | merged | `refactor/g1p-1-catalog-play-resolver` | worker | `search_screen.dart` [play/resume hunks], `lib/services/playback/catalog_play_resolver.dart` | G1'-0 | **#78.** Leaves −1 069. No new `part`/`extension on` State. |
 | G1'-2 · source edit/add dialogs | merged | `refactor/g1p-2-source-binding-dialogs` | worker | `search_screen.dart` [source dialog hunks], `lib/widgets/sources/source_binding_dialogs.dart`, pin + widget tests | G1'-1 | **#84.** Leaves −486. `onReorder` ignore (path-keyed baseline). Pin predates move. |
 | G1'-3 · keyword search | merged | `refactor/g1p-3-keyword-search` | worker | `search_screen.dart` [keyword hunks], `lib/services/search/keyword_search_controller.dart`, `lib/screens/search/keyword_search_screen.dart`, pin | G1'-2 | **#90.** Leaves −2 379. Pin predates move. Host keeps thin `_switchMode` launcher + `_openKeywordBind`. |
-| G1'-4 · continue watching | in flight | `refactor/g1p-4-continue-watching` | worker `bc-db4ab579` | `search_screen.dart` [CW hunks], `continue_watching_controller.dart`, `continue_watching_row.dart` | G1'-3 | Leaves **1 700**. Tokens + `_syncCwNodes`. No fav/hero. |
+| G1'-4 · continue watching | in review | `refactor/g1p-4-continue-watching` | worker `bc-db4ab579` | `search_screen.dart` [CW hunks], `lib/services/home/continue_watching_controller.dart`, `lib/widgets/home/continue_watching_row.dart`, pin | G1'-3 | Leaves **1 738** (13 105 → 11 367). Pin predates move. Host keeps Home chrome, Discover, favourites, hero. Forwarders → G1'-9. After: search 11 367. |
 | G1'-5 … G1'-9 | queued | — | — | `search_screen.dart` | G1'-4 | Sequential. Target ≤ 7 500; no `extension on _SearchScreenState`. |
 | V1-0 · PlayerLaunchConfig | merged | `refactor/v1-0-launch-config` | worker | `video_player_screen.dart` [ctor + `widget.*` reads], `lib/screens/video_player/player_launch_config.dart` | — | **#75.** Value object. Leaves +3 ≈ 0. Unblocks V1-1…10. |
 | V1-1 · resume controller | merged | `refactor/v1-1-resume-controller` | worker | `video_player_screen.dart` [resume hunks], `lib/services/playback/resume_controller.dart` | V1-0 | **#79.** Leaves 666. Pin predates move. Adapter still `widget.*`. |
@@ -58,7 +58,7 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | V1-6 … V1-10 | queued | — | — | `video_player_screen.dart` | V1-5 | Sequential. Target ≤ 9 500. V1-9 folds episode-progress into ScrobbleCoordinator. |
 | M1-0 · WatchSession | merged | `refactor/m1-0-watch-session` | worker | `magic_tv_screen.dart` [WatchSession field/sink hunks], `lib/screens/debrify_tv/watch_session.dart`, tests | P1b merged (#76) | **#81.** Leaves +12 ≈ 0. `ProgressSink` seam. Pin predates move. |
 | M1-1 · channel cache warmer | merged | `refactor/m1-1-channel-cache-warmer` | worker | `magic_tv_screen.dart` [warm/cache hunks], `lib/services/debrify_tv/channel_cache_warmer.dart` | M1-0 | **#87.** Leaves **856** (10 764 → 9 908). TorBox window, quality filter, RD size-filter compute moved. Create/update dialogs stay (M1-5). |
-| M1-2 · import/export | in review | `refactor/m1-2-import-export` | worker `bc-2c178b7a` | `magic_tv_screen.dart` [import/export hunks], `lib/services/debrify_tv/channel_import_export.dart`, `lib/screens/debrify_tv/import_export_dialogs.dart`, pin | M1-1 | Leaves **1 539** (9 908 → 8 369). Pin predates move. Create/update + watch stay. After: magic_tv 8 369. |
+| M1-2 · import/export | merged | `refactor/m1-2-import-export` | worker | `magic_tv_screen.dart` [import/export hunks], `lib/services/debrify_tv/channel_import_export.dart`, `lib/screens/debrify_tv/import_export_dialogs.dart`, pin | M1-1 | **#95.** Leaves **1 539** (9 908 → 8 369). Pin predates move. Create/update + watch stay. After: magic_tv 8 369. |
 | M1-3 … M1-6 | queued | — | — | `magic_tv_screen.dart` | M1-2 | Sequential. Target ≤ 4 500. Do not start M1-3 until M1-2 merges. |
 | S2-0 · key registry + façade | merged | `refactor/s2-0-key-registry` | worker | `storage_key_ownership.dart` | — | **#73.** `byKey` completed (274). Façade rule documented. Leaves 0. **Did not extract PlayerPrefs.** |
 | S2-1 · stremio/social/TV prefs | merged | `refactor/s2-1-stremio-social-tv-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-0 | **#77.** Leaves −531. Prefixes `engine_tv_` in `byKey`. |
@@ -101,4 +101,4 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
-Phase 1 merged. Old Phase 2 G1–G5/T2/G3-HomePrefs **closed as insufficient** (audit in PHASE2 §1). Binding is **#72** `REFACTOR_PLAN_PHASE2.md`. **G3 PlayerPrefs parked** (`refactor/g3-player-prefs` — do not merge). **G5 closed** (remainder is V1-9). **#73–#94 merged.** In review: **M1-2** (#95), **G1'-4**. Mini-gate after every three merged extractions per lane. PR #56 held for Q3. #36–#43 closed (G4). #89 leftover assignment draft (docs only) — do not merge.
+Phase 1 merged. Old Phase 2 G1–G5/T2/G3-HomePrefs **closed as insufficient** (audit in PHASE2 §1). Binding is **#72** `REFACTOR_PLAN_PHASE2.md`. **G3 PlayerPrefs parked** (`refactor/g3-player-prefs` — do not merge). **G5 closed** (remainder is V1-9). **#73–#95 merged.** In review: **G1'-4** (#96). Mini-gate after every three merged extractions per lane. PR #56 held for Q3. #36–#43 closed (G4). #89 leftover assignment draft (docs only) — do not merge.
