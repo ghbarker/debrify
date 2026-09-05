@@ -40,7 +40,6 @@ import '../services/debrify_tv_repository.dart';
 import '../services/alldebrid_service.dart';
 import '../services/torrent_service.dart';
 import '../services/engine/engine_registry.dart';
-import '../services/engine/dynamic_engine.dart';
 import '../services/engine/settings_manager.dart';
 import '../services/debrify_tv_zip_importer.dart';
 import '../services/community/magnet_yaml_service.dart';
@@ -62,6 +61,7 @@ import '../utils/tv_keys.dart';
 import '../widgets/tv_text_field.dart';
 import 'video_player_screen.dart';
 import 'debrify_tv/watch_session.dart';
+import '../services/debrify_tv/channel_cache_warmer.dart';
 import 'debrify_tv/layouts/debrify_tv_view.dart';
 import 'debrify_tv/layouts/spotlight_layout.dart';
 import 'debrify_tv/widgets/random_start_slider.dart';
@@ -411,20 +411,6 @@ DebrifyTvZipImportedChannel _parseYamlCompute(Map<String, String> payload) {
   );
 }
 
-class _TvEngineWarmResult {
-  final DynamicEngine engine;
-  final List<Torrent> torrents;
-  final int pagesPulled;
-  final String? failureMessage;
-
-  const _TvEngineWarmResult({
-    required this.engine,
-    required this.torrents,
-    required this.pagesPulled,
-    this.failureMessage,
-  });
-}
-
 class DebrifyTVScreen extends StatefulWidget {
   const DebrifyTVScreen({super.key});
 
@@ -441,6 +427,18 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   final SettingsManager _settingsManager = SettingsManager();
   final TextEditingController _keywordsController = TextEditingController();
   final WatchSession _watchSession = WatchSession();
+  late final ChannelCacheWarmer _cacheWarmer = ChannelCacheWarmer(
+    viewerForcesNsfw: () => _viewerForcesNsfw,
+    filters: () => _tvFilters,
+    minVideoSizeBytes: _torboxMinVideoSizeBytes,
+    onQualityFallback: _notifyQualityFallback,
+    onSizeFallback: () {
+      _showSnack(
+        'Few ${_tvFilters.summary()} files here — playing other sizes too.',
+        color: Colors.orange,
+      );
+    },
+  );
   // Mixed queue: can contain Torrent items or RD-restricted link maps
   List<dynamic> get _queue => _watchSession.queue;
   bool get _isBusy => _watchSession.isBusy;
@@ -458,26 +456,17 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   final Map<String, DebrifyTvChannelStats> _spotlightStats = {};
   Timer? _spotlightStatsDebounce;
   String? _spotlightFocusedId;
-  final Map<String, DebrifyTvChannelCacheEntry> _channelCache = {};
+  Map<String, DebrifyTvChannelCacheEntry> get _channelCache =>
+      _cacheWarmer.channelCache;
   List<Torrent>? get _pikpakCandidatePool => _watchSession.pikpakCandidatePool;
   set _pikpakCandidatePool(List<Torrent>? value) =>
       _watchSession.pikpakCandidatePool = value;
-  final Map<String, bool> _tvEngineStates = <String, bool>{};
-  final Map<String, int> _tvSmallChannelMaxByEngine = <String, int>{};
-  final Map<String, int> _tvLargeChannelMaxByEngine = <String, int>{};
-  final Map<String, int> _tvQuickPlayMaxByEngine = <String, int>{};
-  int _channelBatchSize = 4;
-  int _keywordThreshold = 10;
-  int _minTorrentsPerKeyword = 5;
 
   // Quick Play limits
   int _quickPlayMaxKeywords = 5;
 
-  static const int _playbackTorrentThreshold = 1000;
-  static const int _maxTorrentsPerKeywordPlayback = 25;
   static const int _minimumTorrentsForChannel = 1;
   static const int _maxChannelKeywords = 1000;
-  static const int _keywordWarmEstimateMs = 1000;
   final TextEditingController _channelSearchController =
       TextEditingController();
   String _channelSearchTerm = '';
@@ -522,10 +511,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   // Rate-limits the "filter relaxed" snackbar to once per playback session.
   bool _qualityFallbackNotified = false;
   // Real-Debrid only: consecutive links rejected purely on size, and the
-  // resulting session-wide relaxation. See _rdLinkPassesSizeRules.
-  static const int _rdSizeRejectionLimit = 12;
-  int _rdSizeRejections = 0;
-  bool _sizeFilterRelaxed = false;
+  // resulting session-wide relaxation. See ChannelCacheWarmer.rdLinkPassesSizeRules.
 
   bool _rdAvailable = false;
   bool _torboxAvailable = false;
@@ -927,21 +913,21 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         _spotlightStats.clear();
 
         // Update search settings
-        _tvEngineStates
+        _cacheWarmer.tvEngineStates
           ..clear()
           ..addAll(tvEngineStates);
-        _tvSmallChannelMaxByEngine
+        _cacheWarmer.tvSmallChannelMaxByEngine
           ..clear()
           ..addAll(tvSmallChannelMaxByEngine);
-        _tvLargeChannelMaxByEngine
+        _cacheWarmer.tvLargeChannelMaxByEngine
           ..clear()
           ..addAll(tvLargeChannelMaxByEngine);
-        _tvQuickPlayMaxByEngine
+        _cacheWarmer.tvQuickPlayMaxByEngine
           ..clear()
           ..addAll(tvQuickPlayMaxByEngine);
-        _channelBatchSize = channelBatchSize;
-        _keywordThreshold = keywordThreshold;
-        _minTorrentsPerKeyword = minTorrentsPerKeyword;
+        _cacheWarmer.channelBatchSize = channelBatchSize;
+        _cacheWarmer.keywordThreshold = keywordThreshold;
+        _cacheWarmer.minTorrentsPerKeyword = minTorrentsPerKeyword;
         _quickPlayMaxKeywords = quickPlayMaxKeywords;
       });
       // Outside the setState callback: recomputing the focused channel's
@@ -956,141 +942,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     if (defaultProvider != storedProvider) {
       await StorageService.saveDebrifyTvProvider(defaultProvider);
     }
-  }
-
-  void _accumulateCachedTorrent({
-    required Map<String, CachedTorrent> accumulator,
-    required String infohash,
-    required Torrent torrent,
-    required String keyword,
-    required String source,
-  }) {
-    if (infohash.isEmpty) {
-      return;
-    }
-    final normalizedKeyword = keyword.toLowerCase();
-    final normalizedSource = source.toLowerCase();
-    final existing = accumulator[infohash];
-    if (existing == null) {
-      accumulator[infohash] = CachedTorrent.fromTorrent(
-        torrent,
-        keywords: [normalizedKeyword],
-        sources: [normalizedSource],
-      );
-      return;
-    }
-
-    final shouldOverride = torrent.seeders > existing.seeders;
-    accumulator[infohash] = existing.merge(
-      keywords: [normalizedKeyword],
-      sources: [normalizedSource],
-      override: shouldOverride ? torrent : null,
-    );
-  }
-
-  List<DynamicEngine> _enabledTvKeywordEngines(EngineRegistry registry) {
-    final engines = registry
-        .getTvModeEngines()
-        .where(
-          (engine) =>
-              engine.supportsKeywordSearch &&
-              (_tvEngineStates[engine.name] ??
-                  engine.tvModeConfig?.enabledDefault ??
-                  false),
-        )
-        .toList();
-    engines.sort((a, b) => a.name.compareTo(b.name));
-    return engines;
-  }
-
-  int _tvChannelMaxResultsForEngine(DynamicEngine engine, int totalKeywords) {
-    final useSmallChannelLimit = totalKeywords < _keywordThreshold;
-    final storedLimit = useSmallChannelLimit
-        ? _tvSmallChannelMaxByEngine[engine.name]
-        : _tvLargeChannelMaxByEngine[engine.name];
-    if (storedLimit != null) {
-      return storedLimit;
-    }
-
-    final tvMode = engine.tvModeConfig;
-    if (tvMode == null) {
-      return 50;
-    }
-    return useSmallChannelLimit
-        ? tvMode.smallChannel.maxResults
-        : tvMode.largeChannel.maxResults;
-  }
-
-  int _estimatePagesPulledForEngine(DynamicEngine engine, int resultCount) {
-    if (resultCount <= 0) {
-      return 0;
-    }
-
-    final pagination = engine.config.pagination;
-    final resultsPerPage = pagination.resultsPerPage;
-    if (pagination.type == 'none' ||
-        resultsPerPage == null ||
-        resultsPerPage <= 0) {
-      return 1;
-    }
-
-    final estimatedPages = (resultCount + resultsPerPage - 1) ~/ resultsPerPage;
-    final maxPages = pagination.maxPages;
-    if (maxPages != null && maxPages > 0) {
-      return min(estimatedPages, maxPages);
-    }
-    return estimatedPages;
-  }
-
-  int _estimatePageRequestsForEngine(DynamicEngine engine, int totalKeywords) {
-    final maxResults = _tvChannelMaxResultsForEngine(engine, totalKeywords);
-    final pagination = engine.config.pagination;
-    final resultsPerPage = pagination.resultsPerPage;
-    if (pagination.type == 'none' ||
-        resultsPerPage == null ||
-        resultsPerPage <= 0) {
-      return 1;
-    }
-
-    final estimatedPages = max(
-      1,
-      (maxResults + resultsPerPage - 1) ~/ resultsPerPage,
-    );
-    final maxPages = pagination.maxPages;
-    if (maxPages != null && maxPages > 0) {
-      return min(estimatedPages, maxPages);
-    }
-    return estimatedPages;
-  }
-
-  Map<String, int> _quickPlayMaxResultsOverrides() {
-    return Map<String, int>.from(_tvQuickPlayMaxByEngine);
-  }
-
-  Future<Map<String, bool>> _tvEngineSearchStates() async {
-    final registry = EngineRegistry.instance;
-    await registry.initialize();
-    return <String, bool>{
-      for (final engine in registry.getKeywordSearchEngines())
-        engine.name:
-            _tvEngineStates[engine.name] ??
-            engine.tvModeConfig?.enabledDefault ??
-            false,
-    };
-  }
-
-  List<CachedTorrent> _sortedCachedTorrents(
-    Map<String, CachedTorrent> accumulator,
-  ) {
-    final list = accumulator.values.toList();
-    list.sort((a, b) {
-      final seedCompare = b.seeders.compareTo(a.seeders);
-      if (seedCompare != 0) {
-        return seedCompare;
-      }
-      return b.completed.compareTo(a.completed);
-    });
-    return list;
   }
 
   Future<void> _loadChannels() async {
@@ -1167,267 +1018,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     _watchChannelById(channelId);
   }
 
-  Future<DebrifyTvChannelCacheEntry> _computeChannelCacheEntry(
-    DebrifyTvChannel channel,
-    List<String> normalizedKeywords, {
-    DebrifyTvChannelCacheEntry? baseline,
-    Set<String>? keywordsToSearch,
-  }) async {
-    // The channel's own NSFW setting, FLOORED by the viewer: filtering is
-    // role-locked for a child profile no matter who authored the channel or
-    // what its stored flag says (the rail is viewer-scoped, evaluated at
-    // search/play — never only at creation).
-    final channelAvoidNsfw = channel.avoidNsfw || _viewerForcesNsfw;
-    final registry = EngineRegistry.instance;
-    await registry.initialize();
-    final enabledTvEngines = _enabledTvKeywordEngines(registry);
-    final now = DateTime.now().millisecondsSinceEpoch;
-
-    final accumulator = <String, CachedTorrent>{};
-    final stats = <String, KeywordStat>{};
-
-    if (baseline != null) {
-      for (final cached in _filterCachedTorrentsForKeywords(
-        baseline,
-        normalizedKeywords,
-      )) {
-        final normalizedHash = _normalizeInfohash(cached.infohash);
-        if (normalizedHash.isEmpty) {
-          continue;
-        }
-        accumulator[normalizedHash] = cached;
-      }
-      stats.addAll(
-        _filterKeywordStats(baseline.keywordStats, normalizedKeywords),
-      );
-      debugPrint(
-        'DebrifyTV: Starting incremental warm for "${channel.name}" – seeded cache with ${accumulator.length} torrent(s).',
-      );
-    }
-
-    final Set<String> keywordsToWarm = keywordsToSearch != null
-        ? keywordsToSearch.map((kw) => kw.toLowerCase()).toSet()
-        : normalizedKeywords.toSet();
-
-    if (keywordsToWarm.isEmpty) {
-      debugPrint('DebrifyTV: No keywords to warm for "${channel.name}".');
-    }
-    if (enabledTvEngines.isEmpty && keywordsToWarm.isNotEmpty) {
-      debugPrint(
-        'DebrifyTV: No enabled TV search engines for "${channel.name}".',
-      );
-    }
-
-    bool anySuccess = accumulator.isNotEmpty;
-    String? failureMessage;
-
-    List<String> pendingKeywords = List<String>.from(keywordsToWarm);
-    while (pendingKeywords.isNotEmpty) {
-      final batch = pendingKeywords.take(_channelBatchSize).toList();
-      pendingKeywords = pendingKeywords.skip(batch.length).toList();
-
-      final futures = batch.map((keyword) async {
-        return await _warmKeyword(
-          keyword: keyword,
-          enabledEngines: enabledTvEngines,
-          accumulator: accumulator,
-          stats: stats,
-          now: now,
-          totalKeywords: normalizedKeywords.length,
-          avoidNsfw: channelAvoidNsfw, // Use channel's NSFW setting
-          minTorrentsPerKeyword: _minTorrentsPerKeyword,
-        );
-      }).toList();
-
-      final results = await Future.wait(futures);
-
-      for (final result in results) {
-        if (result == null) {
-          continue;
-        }
-        final keyword = result.keyword;
-        debugPrint(
-          'DebrifyTV: Warmed keyword "$keyword" – added ${result.addedHashes.length} new torrent(s).',
-        );
-        anySuccess = anySuccess || result.addedHashes.isNotEmpty;
-        stats[keyword] = result.stat;
-        failureMessage ??= result.failureMessage;
-      }
-    }
-
-    if (keywordsToWarm.isEmpty) {
-      anySuccess = accumulator.isNotEmpty;
-    }
-
-    if (anySuccess) {
-      return DebrifyTvChannelCacheEntry(
-        version: 1,
-        channelId: channel.id,
-        normalizedKeywords: normalizedKeywords,
-        fetchedAt: DateTime.now().millisecondsSinceEpoch,
-        status: DebrifyTvCacheStatus.ready,
-        errorMessage: null,
-        torrents: _sortedCachedTorrents(accumulator),
-        keywordStats: Map<String, KeywordStat>.from(stats),
-      );
-    }
-
-    failureMessage ??= 'No torrents found for these keywords yet.';
-    return DebrifyTvChannelCacheEntry(
-      version: 1,
-      channelId: channel.id,
-      normalizedKeywords: normalizedKeywords,
-      fetchedAt: DateTime.now().millisecondsSinceEpoch,
-      status: DebrifyTvCacheStatus.failed,
-      errorMessage: failureMessage,
-      torrents: const <CachedTorrent>[],
-      keywordStats: Map<String, KeywordStat>.from(stats),
-    );
-  }
-
-  Future<KeywordWarmResult?> _warmKeyword({
-    required String keyword,
-    required List<DynamicEngine> enabledEngines,
-    required Map<String, CachedTorrent> accumulator,
-    required Map<String, KeywordStat> stats,
-    required int now,
-    required int totalKeywords,
-    required bool avoidNsfw, // Use channel's NSFW setting
-    required int minTorrentsPerKeyword,
-  }) async {
-    final searchResults = await Future.wait(
-      enabledEngines.map((engine) async {
-        final maxResults = _tvChannelMaxResultsForEngine(engine, totalKeywords);
-        try {
-          final torrents = await engine.executeSearch(
-            query: keyword,
-            maxResults: maxResults,
-          );
-          return _TvEngineWarmResult(
-            engine: engine,
-            torrents: torrents,
-            pagesPulled: _estimatePagesPulledForEngine(engine, torrents.length),
-          );
-        } catch (e) {
-          debugPrint(
-            'DebrifyTV: Cache warm ${engine.displayName} failed for "$keyword": $e',
-          );
-          return _TvEngineWarmResult(
-            engine: engine,
-            torrents: const <Torrent>[],
-            pagesPulled: 0,
-            failureMessage:
-                '${engine.displayName} search failed. Some torrents may be missing.',
-          );
-        }
-      }),
-    );
-
-    // Apply NSFW filter to search results before caching
-    final filteredByEngine = <DynamicEngine, List<Torrent>>{};
-    int totalBefore = 0;
-    int totalAfter = 0;
-    int pagesPulled = 0;
-    final failureMessages = <String>[];
-
-    for (final result in searchResults) {
-      pagesPulled += result.pagesPulled;
-      if (result.failureMessage != null) {
-        failureMessages.add(result.failureMessage!);
-      }
-
-      final before = result.torrents.length;
-      totalBefore += before;
-      if (avoidNsfw) {
-        final filtered = result.torrents.where((torrent) {
-          if (NsfwFilter.shouldFilter(torrent.category, torrent.name)) {
-            return false;
-          }
-          return true;
-        }).toList();
-        totalAfter += filtered.length;
-        filteredByEngine[result.engine] = filtered;
-      } else {
-        totalAfter += before;
-        filteredByEngine[result.engine] = result.torrents;
-      }
-    }
-
-    if (avoidNsfw && totalBefore != totalAfter) {
-      debugPrint(
-        'DebrifyTV: Cache NSFW filter for "$keyword": $totalBefore → $totalAfter torrents',
-      );
-    }
-
-    // Check minimum torrents per keyword threshold
-    final totalTorrents = filteredByEngine.values.fold<int>(
-      0,
-      (total, torrents) => total + torrents.length,
-    );
-    if (totalTorrents < minTorrentsPerKeyword) {
-      debugPrint(
-        'DebrifyTV: Skipping keyword "$keyword" – only $totalTorrents torrent(s), minimum is $minTorrentsPerKeyword',
-      );
-      final stat = (stats[keyword] ?? KeywordStat.initial())
-          .copyWith(
-            totalFetched: 0,
-            lastSearchedAt: now,
-            pagesPulled: pagesPulled,
-          )
-          .clearLegacySourceHits();
-      return KeywordWarmResult(
-        keyword: keyword,
-        addedHashes: const <String>{},
-        stat: stat,
-        failureMessage: enabledEngines.isEmpty
-            ? 'No enabled TV search engines.'
-            : 'Too few torrents for "$keyword" (found $totalTorrents, need $minTorrentsPerKeyword)',
-      );
-    }
-
-    final keywordHashes = <String>{};
-
-    for (final entry in filteredByEngine.entries) {
-      final source = entry.key.name;
-      for (final torrent in entry.value) {
-        final hash = _normalizeInfohash(torrent.infohash);
-        if (hash.isEmpty) {
-          continue;
-        }
-        keywordHashes.add(hash);
-        _accumulateCachedTorrent(
-          accumulator: accumulator,
-          infohash: hash,
-          torrent: torrent,
-          keyword: keyword,
-          source: source,
-        );
-      }
-    }
-
-    final updatedStats = stats[keyword] ?? KeywordStat.initial();
-    final stat = updatedStats
-        .copyWith(
-          totalFetched: keywordHashes.length,
-          lastSearchedAt: now,
-          pagesPulled: pagesPulled,
-        )
-        .clearLegacySourceHits();
-
-    String? failureMessage;
-    if (failureMessages.isNotEmpty) {
-      failureMessage = failureMessages.first;
-    } else if (filteredByEngine.values.every((torrents) => torrents.isEmpty)) {
-      failureMessage = 'No torrents found for "$keyword" yet.';
-    }
-
-    return KeywordWarmResult(
-      keyword: keyword,
-      addedHashes: keywordHashes,
-      stat: stat,
-      failureMessage: failureMessage,
-    );
-  }
 
   Future<void> _deleteChannel(String id) async {
     setState(() {
@@ -1506,42 +1096,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     }
   }
 
-  List<String> _parseKeywords(String input) {
-    return input
-        .split(',')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
-  }
-
-  List<String> _normalizedKeywords(List<String> keywords) {
-    final seen = <String>{};
-    final normalized = <String>[];
-    for (final keyword in keywords) {
-      final value = keyword.trim().toLowerCase();
-      if (value.isEmpty || seen.contains(value)) {
-        continue;
-      }
-      seen.add(value);
-      normalized.add(value);
-    }
-    return normalized;
-  }
-
-  Future<DebrifyTvChannelCacheEntry?> _ensureCacheEntry(
-    String channelId,
-  ) async {
-    final cached = _channelCache[channelId];
-    if (cached != null) {
-      return cached;
-    }
-    final fetched = await DebrifyTvCacheService.getEntry(channelId);
-    if (fetched != null) {
-      _channelCache[channelId] = fetched;
-    }
-    return fetched;
-  }
-
   Future<List<String>> _getChannelKeywords(String channelId) async {
     final index = _channels.indexWhere((c) => c.id == channelId);
     if (index == -1) {
@@ -1566,190 +1120,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     return fetched;
   }
 
-  Future<TorboxCacheWindowResult> _fetchTorboxCacheWindow({
-    required List<Torrent> candidates,
-    required int startIndex,
-    required String apiKey,
-  }) async {
-    if (apiKey.isEmpty) {
-      return TorboxCacheWindowResult(
-        cachedTorrents: const <Torrent>[],
-        nextCursor: startIndex,
-        exhausted: startIndex >= candidates.length,
-      );
-    }
-    const int chunkSize = 90;
-    const int maxCalls = 2;
-
-    int cursor = startIndex;
-    int calls = 0;
-    final List<Torrent> hits = <Torrent>[];
-
-    while (cursor < candidates.length && calls < maxCalls && hits.isEmpty) {
-      final int end = min(cursor + chunkSize, candidates.length);
-      final List<Torrent> chunk = candidates.sublist(cursor, end);
-      cursor = end;
-
-      final List<String> hashes = chunk
-          .map((torrent) => _normalizeInfohash(torrent.infohash))
-          .where((hash) => hash.isNotEmpty)
-          .toList();
-
-      if (hashes.isEmpty) {
-        continue;
-      }
-
-      calls += 1;
-      final Set<String> cachedHashes =
-          await CloudProviderRegistry.instance.checkCachedHashes(hashes);
-
-      if (cachedHashes.isEmpty) {
-        continue;
-      }
-
-      final Set<String> normalized = cachedHashes
-          .map((hash) => hash.trim().toLowerCase())
-          .where((hash) => hash.isNotEmpty)
-          .toSet();
-
-      hits.addAll(
-        chunk.where(
-          (torrent) =>
-              normalized.contains(_normalizeInfohash(torrent.infohash)),
-        ),
-      );
-    }
-
-    final bool exhausted = cursor >= candidates.length;
-    return TorboxCacheWindowResult(
-      cachedTorrents: hits,
-      nextCursor: cursor,
-      exhausted: exhausted,
-    );
-  }
-
-  int _estimatedWarmDurationSeconds(
-    int keywordCount, {
-    int? totalKeywordUniverse,
-  }) {
-    if (keywordCount <= 0) {
-      return 0;
-    }
-
-    final int effectiveUniverse = max(1, totalKeywordUniverse ?? keywordCount);
-    final enabledEngines = _enabledTvKeywordEngines(EngineRegistry.instance);
-    if (enabledEngines.isEmpty) {
-      return 0;
-    }
-
-    final int batches = max(
-      1,
-      ((keywordCount + _channelBatchSize - 1) ~/ _channelBatchSize),
-    );
-
-    final int requestWavesPerKeyword = enabledEngines.fold<int>(
-      1,
-      (current, engine) => max(
-        current,
-        _estimatePageRequestsForEngine(engine, effectiveUniverse),
-      ),
-    );
-    final int estimatedMs =
-        batches * requestWavesPerKeyword * _keywordWarmEstimateMs;
-
-    return (estimatedMs + 999) ~/ 1000;
-  }
-
-  List<CachedTorrent> _filterCachedTorrentsForKeywords(
-    DebrifyTvChannelCacheEntry entry,
-    List<String> normalizedKeywords,
-  ) {
-    if (entry.torrents.isEmpty) {
-      return const <CachedTorrent>[];
-    }
-    final allowed = normalizedKeywords.toSet();
-    final filtered = <CachedTorrent>[];
-    for (final cached in entry.torrents) {
-      final matching = cached.keywords.where(allowed.contains).toList();
-      if (matching.isEmpty) {
-        continue;
-      }
-      filtered.add(cached.merge(keywords: matching));
-    }
-    return filtered;
-  }
-
-  Map<String, KeywordStat> _filterKeywordStats(
-    Map<String, KeywordStat> stats,
-    List<String> normalizedKeywords,
-  ) {
-    if (stats.isEmpty) {
-      return const <String, KeywordStat>{};
-    }
-    final allowed = normalizedKeywords.toSet();
-    final filtered = <String, KeywordStat>{};
-    for (final entry in stats.entries) {
-      if (allowed.contains(entry.key)) {
-        filtered[entry.key] = entry.value;
-      }
-    }
-    return filtered;
-  }
-
-  /// Narrows a channel's cached torrents to the user's quality filter.
-  /// Applied at cache READ time (not warm time) so changing the filter takes
-  /// effect immediately instead of forcing a full channel rebuild the way the
-  /// NSFW toggle does. Returns the input untouched when the filter is off, and
-  /// falls back to the unfiltered pool (with a snackbar) when a channel has
-  /// nothing at the requested quality — a filtered channel that plays nothing
-  /// reads as broken, so it degrades instead of failing.
-  List<CachedTorrent> _applyQualityFilterToCached(List<CachedTorrent> all) {
-    if (!_tvFilters.hasQuality || all.isEmpty) return all;
-    final matched = all
-        .where((cached) => _tvFilters.qualityMatchesName(cached.name))
-        .toList();
-    if (matched.isEmpty) {
-      debugPrint(
-        'DebrifyTV: Quality filter matched 0/${all.length} cached torrents — '
-        'falling back to unfiltered.',
-      );
-      _notifyQualityFallback();
-      return all;
-    }
-    if (matched.length != all.length) {
-      debugPrint(
-        'DebrifyTV: Quality filter on cached: ${all.length} → ${matched.length} torrents',
-      );
-    }
-    return matched;
-  }
-
-  /// Quick-play twin of [_applyQualityFilterToCached], for the live search
-  /// results each provider accumulates.
-  ///
-  /// [allowFallback] must stay false while a search is still streaming in.
-  /// Quick play rebuilds this list on every engine that reports, and the RD
-  /// flow launches the player from the first rebuild that yields something
-  /// playable — so falling back on a partial result set would start playing an
-  /// off-filter source just because the fastest engine happened to return
-  /// none. Strict here means the queue simply stays empty until a matching
-  /// result arrives. Pass true only once the result set is final, where an
-  /// empty match genuinely means "this search has nothing".
-  List<Torrent> _applyQualityFilterToTorrents(
-    List<Torrent> torrents, {
-    bool allowFallback = false,
-  }) {
-    if (!_tvFilters.hasQuality || torrents.isEmpty) return torrents;
-    final matched = torrents
-        .where((t) => _tvFilters.qualityMatchesName(t.name))
-        .toList();
-    if (matched.isEmpty && allowFallback) {
-      _notifyQualityFallback();
-      return torrents;
-    }
-    return matched;
-  }
-
   /// Tells the user once per playback session that the quality filter was
   /// relaxed. Rate-limited because the quick-play queue is rebuilt per engine
   /// and channel switches re-enter the same path.
@@ -1760,98 +1130,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       'No ${_tvFilters.summary()} sources found — playing anything available.',
       color: Colors.orange,
     );
-  }
-
-  /// Whether an unrestricted Real-Debrid link may be played, per the size
-  /// rules. RD is the one provider that hands back a flat list of links with
-  /// no per-file metadata, so a file's size is only knowable AFTER
-  /// unrestricting it — hence the check here rather than up front like the
-  /// others. Links whose size RD doesn't report are accepted.
-  ///
-  /// Because RD can't pre-filter, a strict size choice could otherwise walk
-  /// the entire queue rejecting everything. After
-  /// [_rdSizeRejectionLimit] consecutive size-only rejections the size filter
-  /// is relaxed for the rest of the session (with a snackbar) — the same
-  /// degrade-don't-fail contract the other providers get per torrent.
-  bool _rdLinkPassesSizeRules(Map<String, dynamic> unrestrict) {
-    final bytes = (unrestrict['filesize'] as num?)?.toInt() ?? 0;
-    if (bytes <= 0) return true; // RD didn't report a size — don't guess.
-    // Trailer/sample guard, matching Torbox/Premiumize/PikPak/AllDebrid.
-    if (bytes < _torboxMinVideoSizeBytes) return false;
-    if (_sizeFilterRelaxed || !_tvFilters.hasSize) return true;
-    if (_tvFilters.sizeMatchesBytes(bytes)) {
-      _rdSizeRejections = 0;
-      return true;
-    }
-    _rdSizeRejections++;
-    if (_rdSizeRejections >= _rdSizeRejectionLimit) {
-      _sizeFilterRelaxed = true;
-      _showSnack(
-        'Few ${_tvFilters.summary()} files here — playing other sizes too.',
-        color: Colors.orange,
-      );
-      return true;
-    }
-    return false;
-  }
-
-  List<CachedTorrent> _selectTorrentsForPlayback(
-    DebrifyTvChannelCacheEntry entry,
-    List<String> normalizedKeywords,
-  ) {
-    // Filter BEFORE the per-keyword/threshold narrowing below, so the
-    // selection draws from the full matching pool rather than from a
-    // pre-narrowed sample that the filter then guts.
-    final all = _applyQualityFilterToCached(entry.torrents);
-    if (all.length <= _playbackTorrentThreshold) {
-      final list = List<CachedTorrent>.from(all);
-      list.shuffle(Random());
-      return list;
-    }
-
-    final selected = <CachedTorrent>[];
-    final seenHashes = <String>{};
-
-    if (normalizedKeywords.isNotEmpty) {
-      for (final keyword in normalizedKeywords) {
-        int count = 0;
-        for (final cached in all) {
-          if (!cached.keywords.contains(keyword)) continue;
-          final hash = _normalizeInfohash(cached.infohash);
-          if (hash.isEmpty || seenHashes.contains(hash)) {
-            continue;
-          }
-          selected.add(cached);
-          seenHashes.add(hash);
-          count++;
-          if (count >= _maxTorrentsPerKeywordPlayback) {
-            break;
-          }
-        }
-      }
-    }
-
-    if (selected.isEmpty) {
-      return all.take(_playbackTorrentThreshold).toList();
-    }
-
-    if (selected.length < _playbackTorrentThreshold) {
-      for (final cached in all) {
-        final hash = _normalizeInfohash(cached.infohash);
-        if (hash.isEmpty || seenHashes.contains(hash)) {
-          continue;
-        }
-        selected.add(cached);
-        seenHashes.add(hash);
-        if (selected.length >= _playbackTorrentThreshold) {
-          break;
-        }
-      }
-    }
-
-    final random = Random();
-    selected.shuffle(random);
-    return selected;
   }
 
   String _providerDisplay(String provider) => MagicTvProvider.display(provider);
@@ -2043,7 +1321,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     void Function(void Function()) setState,
   ) {
     if (raw.isEmpty) return false;
-    final parsed = _parseKeywords(raw.replaceAll('\n', ','));
+    final parsed = _cacheWarmer.parseKeywords(raw.replaceAll('\n', ','));
     if (parsed.isEmpty) return false;
     var limitReached = false;
     setState(() {
@@ -2105,7 +1383,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
               Future<void> submit() async {
                 final pendingRaw = keywordInputController.text.trim();
                 if (pendingRaw.isNotEmpty) {
-                  final pendingKeywords = _parseKeywords(pendingRaw);
+                  final pendingKeywords = _cacheWarmer.parseKeywords(pendingRaw);
                   for (final rawKw in pendingKeywords) {
                     final trimmedKw = rawKw.trim();
                     if (trimmedKw.isEmpty) {
@@ -3999,7 +3277,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     DebrifyTvChannel channel, {
     required bool isEdit,
   }) async {
-    final normalizedKeywords = _normalizedKeywords(channel.keywords);
+    final normalizedKeywords = _cacheWarmer.normalizedKeywords(channel.keywords);
     if (normalizedKeywords.isEmpty) {
       _showSnack(
         'Add at least one keyword before saving.',
@@ -4012,7 +3290,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       'DebrifyTV: ${isEdit ? 'Updating' : 'Creating'} channel "${channel.name}" with ${normalizedKeywords.length} keyword(s): ${normalizedKeywords.join(', ')}',
     );
 
-    final int estimatedSeconds = _estimatedWarmDurationSeconds(
+    final int estimatedSeconds = _cacheWarmer.estimatedWarmDurationSeconds(
       normalizedKeywords.length,
       totalKeywordUniverse: normalizedKeywords.length,
     );
@@ -4028,7 +3306,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     }
 
     try {
-      final baseline = isEdit ? await _ensureCacheEntry(channel.id) : null;
+      final baseline = isEdit ? await _cacheWarmer.ensureCacheEntry(channel.id) : null;
       if (normalizedKeywords.length > _maxChannelKeywords) {
         _showSnack(
           'Channels support up to $_maxChannelKeywords keywords. Remove some and try again.',
@@ -4040,93 +3318,13 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         return;
       }
 
-      DebrifyTvChannelCacheEntry? workingEntry = baseline;
-      final currentKeywordSet = normalizedKeywords.toSet();
-      Set<String> addedKeywords = const <String>{};
-      Set<String> removedKeywords = const <String>{};
-
-      if (isEdit && baseline != null) {
-        final previousKeywords = baseline.normalizedKeywords.toSet();
-        removedKeywords = previousKeywords.difference(currentKeywordSet);
-        addedKeywords = currentKeywordSet.difference(previousKeywords);
-
-        debugPrint(
-          'DebrifyTV: Detected keyword changes for "${channel.name}" – added: ${addedKeywords.join(', ')}, removed: ${removedKeywords.join(', ')}',
-        );
-
-        if (removedKeywords.isNotEmpty) {
-          ensureProgressDialog();
-          final filteredTorrents = baseline.torrents.where((cached) {
-            final torrentKeywords = cached.keywords.toSet();
-            return torrentKeywords.intersection(removedKeywords).isEmpty;
-          }).toList();
-
-          final filteredStats = Map<String, KeywordStat>.from(
-            baseline.keywordStats,
-          )..removeWhere((key, _) => removedKeywords.contains(key));
-
-          final newStatus = filteredTorrents.isNotEmpty
-              ? DebrifyTvCacheStatus.ready
-              : DebrifyTvCacheStatus.failed;
-
-          workingEntry = baseline.copyWith(
-            normalizedKeywords: normalizedKeywords,
-            torrents: filteredTorrents,
-            keywordStats: filteredStats,
-            status: newStatus,
-            clearErrorMessage: filteredTorrents.isNotEmpty,
-          );
-
-          debugPrint(
-            'DebrifyTV: Pruned ${baseline.torrents.length - filteredTorrents.length} torrent(s) after removing keywords. Remaining: ${filteredTorrents.length}.',
-          );
-        } else if (baseline.normalizedKeywords.length !=
-            normalizedKeywords.length) {
-          workingEntry = baseline.copyWith(
-            normalizedKeywords: normalizedKeywords,
-          );
-        }
-
-        if (addedKeywords.isNotEmpty) {
-          ensureProgressDialog(
-            countdownSeconds: _estimatedWarmDurationSeconds(
-              addedKeywords.length,
-              totalKeywordUniverse: normalizedKeywords.length,
-            ),
-          );
-          debugPrint(
-            'DebrifyTV: Warming new keywords for "${channel.name}": ${addedKeywords.join(', ')}',
-          );
-          workingEntry = await _computeChannelCacheEntry(
-            channel,
-            normalizedKeywords,
-            baseline: workingEntry,
-            keywordsToSearch: addedKeywords,
-          );
-          debugPrint(
-            'DebrifyTV: After warming new keywords, cache has ${workingEntry.torrents.length} torrent(s).',
-          );
-        }
-
-        if (addedKeywords.isEmpty && removedKeywords.isEmpty) {
-          debugPrint(
-            'DebrifyTV: No keyword changes for "${channel.name}" – reusing existing cache.',
-          );
-          workingEntry = baseline.copyWith(
-            normalizedKeywords: normalizedKeywords,
-          );
-        }
-      } else {
-        ensureProgressDialog();
-        debugPrint('DebrifyTV: Running full warm-up for "${channel.name}"');
-        workingEntry = await _computeChannelCacheEntry(
-          channel,
-          normalizedKeywords,
-        );
-        debugPrint(
-          'DebrifyTV: Initial warm-up complete for "${channel.name}" with ${workingEntry.torrents.length} torrent(s).',
-        );
-      }
+      final workingEntry = await _cacheWarmer.buildWorkingCacheForSave(
+        channel: channel,
+        normalizedKeywords: normalizedKeywords,
+        isEdit: isEdit,
+        baseline: baseline,
+        ensureProgressDialog: ensureProgressDialog,
+      );
 
       final entry = workingEntry;
       if (entry == null) {
@@ -4230,8 +3428,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   }) async {
     debugPrint('🎬 [WATCH] Starting for channel: ${channel.name}');
     _qualityFallbackNotified = false;
-    _rdSizeRejections = 0;
-    _sizeFilterRelaxed = false;
+    _cacheWarmer.resetSizeFilterSession();
 
     final keywords = await _getChannelKeywords(channel.id);
     if (keywords.isEmpty) {
@@ -4256,7 +3453,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     }
     debugPrint('✅ [WATCH] Provider ready: $_provider');
 
-    final cacheEntry = await _ensureCacheEntry(channel.id);
+    final cacheEntry = await _cacheWarmer.ensureCacheEntry(channel.id);
     if (cacheEntry == null) {
       debugPrint('❌ [WATCH] Cache entry is null');
       MainPageBridge.notifyAutoLaunchFailed('Cache entry not found');
@@ -4300,27 +3497,18 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     });
     _keywordsController.text = keywords.join(', ');
 
-    final normalizedKeywords = _normalizedKeywords(keywords);
-    final playbackSelection = _selectTorrentsForPlayback(
+    final normalizedKeywords = _cacheWarmer.normalizedKeywords(keywords);
+    final playbackSelection = _cacheWarmer.selectTorrentsForPlayback(
       cacheEntry,
       normalizedKeywords,
     );
     if (leadWith != null) {
       // The chosen title to the front; behaviour after it ends is unchanged.
-      playbackSelection.removeWhere((t) => t.infohash == leadWith.infohash);
-      playbackSelection.insert(0, leadWith);
-      if (playbackSelection.length == 1 && cacheEntry.torrents.length > 1) {
-        // The filter narrowed the selection to the pick alone while the pool
-        // holds more: refill behind it from the wider pool (same cap the
-        // selector uses), or an uncached pick would have nothing to fall
-        // through to — the single-element queue the plan forbids.
-        final rest =
-            cacheEntry.torrents
-                .where((t) => t.infohash != leadWith.infohash)
-                .toList()
-              ..shuffle(Random());
-        playbackSelection.addAll(rest.take(_playbackTorrentThreshold));
-      }
+      _cacheWarmer.prependLeadTorrent(
+        playbackSelection: playbackSelection,
+        leadWith: leadWith,
+        pool: cacheEntry.torrents,
+      );
     }
     final cachedTorrents = playbackSelection
         .map((cached) => cached.toTorrent())
@@ -4387,8 +3575,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     _prefetchStopRequested = false;
     _watchCancelled = false;
     _qualityFallbackNotified = false;
-    _rdSizeRejections = 0;
-    _sizeFilterRelaxed = false;
+    _cacheWarmer.resetSizeFilterSession();
     _originalMaxCap = null;
     void _log(String m) {
       final copy = List<String>.from(_progress.value)..add(m);
@@ -4424,7 +3611,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       return;
     }
 
-    final keywords = _parseKeywords(text);
+    final keywords = _cacheWarmer.parseKeywords(text);
     debugPrint(
       'DebrifyTV: Parsed ${keywords.length} keyword(s): ${keywords.join(' | ')}',
     );
@@ -4558,7 +3745,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
               if (_watchCancelled) {
                 return null;
               }
-              if (!_rdLinkPassesSizeRules(unrestrict)) continue;
+              if (!_cacheWarmer.rdLinkPassesSizeRules(unrestrict)) continue;
               final elapsed = DateTime.now().difference(started).inSeconds;
               final videoUrl = unrestrict['download'] as String?;
               if (videoUrl != null && videoUrl.isNotEmpty) {
@@ -4618,7 +3805,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
                 if (_watchCancelled) {
                   return null;
                 }
-                if (!_rdLinkPassesSizeRules(unrestrict)) continue;
+                if (!_cacheWarmer.rdLinkPassesSizeRules(unrestrict)) continue;
                 final videoUrl = unrestrict['download'] as String?;
                 if (videoUrl == null || videoUrl.isEmpty) continue;
 
@@ -4652,13 +3839,13 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       }
 
       final Map<String, Torrent> dedupByInfohash = {};
-      final engineStates = await _tvEngineSearchStates();
-      final maxResultsOverrides = _quickPlayMaxResultsOverrides();
+      final engineStates = await _cacheWarmer.tvEngineSearchStates();
+      final maxResultsOverrides = _cacheWarmer.quickPlayMaxResultsOverrides();
 
       // Launch limited batches of per-keyword searches so we don't overwhelm
       List<String> pendingKeywords = List<String>.from(keywords);
       while (pendingKeywords.isNotEmpty && !_watchCancelled) {
-        final batch = pendingKeywords.take(_channelBatchSize).toList();
+        final batch = pendingKeywords.take(_cacheWarmer.channelBatchSize).toList();
         pendingKeywords = pendingKeywords.skip(batch.length).toList();
 
         final futures = batch.map((kw) {
@@ -4730,7 +3917,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
             if (_watchCancelled) {
               break;
             }
-            final combined = _applyQualityFilterToTorrents(
+            final combined = _cacheWarmer.applyQualityFilterToTorrents(
               dedupByInfohash.values.toList(),
             );
             combined.shuffle(Random());
@@ -4998,7 +4185,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
           try {
             final started = DateTime.now();
             final unrestrict = await DebridService.unrestrictLink(apiKey, link);
-            if (!_rdLinkPassesSizeRules(unrestrict)) continue;
+            if (!_cacheWarmer.rdLinkPassesSizeRules(unrestrict)) continue;
             final elapsed = DateTime.now().difference(started).inSeconds;
             final videoUrl = unrestrict['download'] as String?;
             if (videoUrl != null && videoUrl.isNotEmpty) {
@@ -5255,8 +4442,8 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
 
     log('🌐 Torbox: searching for cached torrents...');
     final Map<String, Torrent> dedup = <String, Torrent>{};
-    final engineStates = await _tvEngineSearchStates();
-    final maxResultsOverrides = _quickPlayMaxResultsOverrides();
+    final engineStates = await _cacheWarmer.tvEngineSearchStates();
+    final maxResultsOverrides = _cacheWarmer.quickPlayMaxResultsOverrides();
 
     try {
       final futures = keywords
@@ -5313,7 +4500,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
           }
         }
         if (added > 0) {
-          final combined = _applyQualityFilterToTorrents(dedup.values.toList());
+          final combined = _cacheWarmer.applyQualityFilterToTorrents(dedup.values.toList());
           combined.shuffle(Random());
           _queue
             ..clear()
@@ -5328,7 +4515,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         }
       }
 
-      final combinedList = _applyQualityFilterToTorrents(
+      final combinedList = _cacheWarmer.applyQualityFilterToTorrents(
         dedup.values.toList(),
         // Search is complete here — an empty match means this search really
         // has nothing at the requested quality, so degrade rather than fail.
@@ -5362,7 +4549,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
           if (candidateCursor >= combinedList.length) {
             return false;
           }
-          final TorboxCacheWindowResult window = await _fetchTorboxCacheWindow(
+          final TorboxCacheWindowResult window = await _cacheWarmer.fetchTorboxCacheWindow(
             candidates: combinedList,
             startIndex: candidateCursor,
             apiKey: apiKey,
@@ -5627,8 +4814,8 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
 
     log('🌐 PikPak: searching for torrents...');
     final Map<String, Torrent> dedup = <String, Torrent>{};
-    final engineStates = await _tvEngineSearchStates();
-    final maxResultsOverrides = _quickPlayMaxResultsOverrides();
+    final engineStates = await _cacheWarmer.tvEngineSearchStates();
+    final maxResultsOverrides = _cacheWarmer.quickPlayMaxResultsOverrides();
 
     try {
       final futures = keywords
@@ -5685,7 +4872,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
           }
         }
         if (added > 0) {
-          final combined = _applyQualityFilterToTorrents(dedup.values.toList());
+          final combined = _cacheWarmer.applyQualityFilterToTorrents(dedup.values.toList());
           combined.shuffle(Random());
           _queue
             ..clear()
@@ -5700,7 +4887,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         }
       }
 
-      final combinedList = _applyQualityFilterToTorrents(
+      final combinedList = _cacheWarmer.applyQualityFilterToTorrents(
         dedup.values.toList(),
         // Search is complete here — an empty match means this search really
         // has nothing at the requested quality, so degrade rather than fail.
@@ -5989,7 +5176,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
           try {
             final started = DateTime.now();
             final unrestrict = await DebridService.unrestrictLink(apiKey, link);
-            if (!_rdLinkPassesSizeRules(unrestrict)) continue;
+            if (!_cacheWarmer.rdLinkPassesSizeRules(unrestrict)) continue;
             final elapsed = DateTime.now().difference(started).inSeconds;
             final videoUrl = unrestrict['download'] as String?;
             if (videoUrl != null && videoUrl.isNotEmpty) {
@@ -6038,7 +5225,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
                 apiKey,
                 selectedLink,
               );
-              if (!_rdLinkPassesSizeRules(unrestrict)) continue;
+              if (!_cacheWarmer.rdLinkPassesSizeRules(unrestrict)) continue;
               final videoUrl = unrestrict['download'] as String?;
               if (videoUrl == null || videoUrl.isEmpty) continue;
 
@@ -6570,7 +5757,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         ? targetChannel.channelNumber
         : (computedIndex >= 0 ? computedIndex + 1 : 0);
 
-    final cacheEntry = await _ensureCacheEntry(targetChannel.id);
+    final cacheEntry = await _cacheWarmer.ensureCacheEntry(targetChannel.id);
     if (cacheEntry == null) {
       debugPrint(
         'DebrifyTV: Channel "${targetChannel.name}" has no cache entry',
@@ -6607,8 +5794,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     // New channel, new filter verdict — let it warn again if this one has
     // nothing at the requested quality/size.
     _qualityFallbackNotified = false;
-    _rdSizeRejections = 0;
-    _sizeFilterRelaxed = false;
+    _cacheWarmer.resetSizeFilterSession();
     debugPrint('DebrifyTV: Cleared prefetch state');
 
     final keywords = await _getChannelKeywords(targetChannel.id);
@@ -6620,8 +5806,8 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       return null;
     }
 
-    final normalizedKeywords = _normalizedKeywords(keywords);
-    final playbackSelection = _selectTorrentsForPlayback(
+    final normalizedKeywords = _cacheWarmer.normalizedKeywords(keywords);
+    final playbackSelection = _cacheWarmer.selectTorrentsForPlayback(
       cacheEntry,
       normalizedKeywords,
     );
@@ -6663,7 +5849,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       try {
         while (candidateCursor < torboxCandidates.length &&
             cachedCandidates.isEmpty) {
-          final TorboxCacheWindowResult window = await _fetchTorboxCacheWindow(
+          final TorboxCacheWindowResult window = await _cacheWarmer.fetchTorboxCacheWindow(
             candidates: torboxCandidates,
             startIndex: candidateCursor,
             apiKey: apiKey,
@@ -6766,7 +5952,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
               continue;
             }
 
-            if (!_rdLinkPassesSizeRules(unrestrict)) continue;
+            if (!_cacheWarmer.rdLinkPassesSizeRules(unrestrict)) continue;
 
             final String? resolved = unrestrict['download'] as String?;
             if (resolved == null || resolved.isEmpty) {
@@ -7233,7 +6419,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         if (candidateCursor >= candidatePool.length) {
           return false;
         }
-        final TorboxCacheWindowResult window = await _fetchTorboxCacheWindow(
+        final TorboxCacheWindowResult window = await _cacheWarmer.fetchTorboxCacheWindow(
           candidates: candidatePool,
           startIndex: candidateCursor,
           apiKey: apiKey,
@@ -7963,56 +7149,15 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
 
   Future<void> _computeSpotlightStats(DebrifyTvChannel channel) async {
     if (!mounted || _spotlightStats.containsKey(channel.id)) return;
-    final entry = await _ensureCacheEntry(channel.id);
+    final entry = await _cacheWarmer.ensureCacheEntry(channel.id);
     // Focus may have moved during the read; bail rather than classify an
     // off-focus pool. The entry stays in _channelCache, so a return visit
     // pays only the classify.
     if (!mounted || _spotlightFocusedId != channel.id) return;
-    final torrents = entry?.torrents ?? const <CachedTorrent>[];
-
-    // ONE pass classifies every name: the quality count and the mix buckets
-    // share it. Quality only — size is a per-file rule the pool rows cannot
-    // answer, and counting it here would promise what playback can't keep.
-    final hasQuality = _tvFilters.hasQuality;
-    int uhd = 0, fhd = 0, rest = 0, atQuality = 0;
-    for (final t in torrents) {
-      switch (qualityTierForName(t.name)) {
-        case QualityTier.ultraHd:
-          uhd++;
-        case QualityTier.fullHd:
-          fhd++;
-        case QualityTier.hd:
-        case QualityTier.sd:
-          rest++;
-      }
-      if (!hasQuality || _tvFilters.qualityMatchesName(t.name)) {
-        atQuality++;
-      }
-    }
-
-    final keywordYield = <String, int>{
-      for (final kw in entry?.normalizedKeywords ?? const <String>[])
-        kw: entry?.keywordStats[kw]?.totalFetched ?? 0,
-    };
-    final dead = [
-      for (final e in keywordYield.entries)
-        if (e.value == 0) e.key,
-    ];
-
-    final sample = [...torrents]..shuffle(Random());
-
-    final stats = DebrifyTvChannelStats(
+    final stats = _cacheWarmer.classifySpotlightStats(
       channelId: channel.id,
-      pooled: torrents.length,
-      atYourQuality: atQuality,
-      qualityMix: [uhd, fhd, rest],
-      deadKeywords: dead,
-      keywordYield: keywordYield,
-      fetchedAt: (entry?.fetchedAt ?? 0) > 0
-          ? DateTime.fromMillisecondsSinceEpoch(entry!.fetchedAt)
-          : null,
-      status: entry?.status ?? DebrifyTvCacheStatus.warming,
-      sample: sample.take(4).toList(),
+      entry: entry,
+      tierForName: qualityTierForName,
     );
     setState(() {
       _spotlightStats[channel.id] = stats;
@@ -9910,8 +9055,8 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
 
     log('🌐 Premiumize: searching for cached torrents...');
     final Map<String, Torrent> dedup = {};
-    final engineStates = await _tvEngineSearchStates();
-    final maxResultsOverrides = _quickPlayMaxResultsOverrides();
+    final engineStates = await _cacheWarmer.tvEngineSearchStates();
+    final maxResultsOverrides = _cacheWarmer.quickPlayMaxResultsOverrides();
 
     try {
       final futures = keywords
@@ -9946,7 +9091,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         }
       }
 
-      final combinedList = _applyQualityFilterToTorrents(
+      final combinedList = _cacheWarmer.applyQualityFilterToTorrents(
         dedup.values.toList(),
         // Search is complete here — an empty match means this search really
         // has nothing at the requested quality, so degrade rather than fail.
@@ -10202,8 +9347,8 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
 
     log('🌐 AllDebrid: searching for torrents...');
     final Map<String, Torrent> dedup = {};
-    final engineStates = await _tvEngineSearchStates();
-    final maxResultsOverrides = _quickPlayMaxResultsOverrides();
+    final engineStates = await _cacheWarmer.tvEngineSearchStates();
+    final maxResultsOverrides = _cacheWarmer.quickPlayMaxResultsOverrides();
 
     try {
       final futures = keywords
@@ -10239,7 +9384,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         }
       }
 
-      final combinedList = _applyQualityFilterToTorrents(
+      final combinedList = _cacheWarmer.applyQualityFilterToTorrents(
         dedup.values.toList(),
         // Search is complete here — an empty match means this search really
         // has nothing at the requested quality, so degrade rather than fail.
@@ -10428,9 +9573,8 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     }
   }
 
-  String _normalizeInfohash(String hash) {
-    return hash.trim().toLowerCase();
-  }
+  String _normalizeInfohash(String hash) =>
+      ChannelCacheWarmer.normalizeInfohash(hash);
 
   void _showSnack(String message, {Color color = Colors.blueGrey}) {
     if (!mounted) return;
