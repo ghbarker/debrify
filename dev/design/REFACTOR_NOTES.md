@@ -387,6 +387,13 @@ behaviour and must be restored, not kept as quirks.
   two `app.shape.br` sites).
 - **`cloud_magic_tv_unlock_pin_test` still scans host + warmer.**
   Import/export does not touch `unrestrict` / `filesize`.
+- **§2.2 host block (~50 lines) recorded after merge.**
+  `ChannelImportExportHost` / `ProgressSink` on the State:
+  `importExportMounted` / `importExportContext`, `isAndroidTv`,
+  `isBusy` / `status`, `channels` / `channelCache`, `applyImportState`,
+  `reloadImportedChannels`, `confirmDeleteAll`, `showSnack` → **M1-3**.
+  `showImportProgress` / `createImportedTextChannel` → **M1-5**.
+  Do not start M1-3 until a real origin-path pin exists for M1-0/M1-1.
 
 ### S2-4 · App style prefs
 
