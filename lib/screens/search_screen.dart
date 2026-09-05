@@ -43,6 +43,7 @@ import 'search/fav_rows_controller.dart';
 import 'search/fav_row.dart';
 import 'search/hero_presenter.dart';
 import 'search/search_content_data.dart';
+import 'search/discover_lifecycle.dart';
 import '../services/filtered_catalog_pager.dart';
 import '../services/hide_watched_prefs.dart';
 import '../services/watched_filter.dart';
@@ -800,125 +801,34 @@ class _SearchScreenState extends State<SearchScreenHost>
   // unchanged, so a late manifest response can never undo user input.
   int _discSourceRevision = 0;
   List<StremioAddon> _discAddons = const [];
-  final FocusNode _discSourceNode = FocusNode(debugLabel: 'disc_source');
+  final DiscoverLifecycle _discover = DiscoverLifecycle();
+  // Transitional render adapters expire with real G17 ownership / Q2.
+  FocusNode get _discSourceNode => _discover.sourceNode;
 
   /// An MDBList list handed off from the Search tab's Lists mode (consumed
   /// from MainPageBridge.pendingMdblistListOpen on mount). Passed into the
   /// MDBList panel, which opens focused on it with the ♥ like toggle.
   MdblistListChoice? _discMdblistList;
 
-  // The grid tile the DPAD is currently on, mirrored into the two-pane detail
-  // rail (TV Discover). A ValueNotifier — not setState — so a focus move only
-  // rebuilds the rail, never the grid subtree.
-  final ValueNotifier<StremioMeta?> _discFocused = ValueNotifier(null);
-  void _onDiscFocused(StremioMeta item) => _discFocused.value = item;
-
-  // Discover ambient trailer, shared between the rail (which resolves + owns the
-  // single-decoder discipline, writing here) and the full-screen
-  // DiscoverTrailerStage (which renders the window and can promote it to a
-  // fullscreen takeover). See discover_trailer_stage.dart.
-  final ValueNotifier<YoutubeResolvedStreams?> _discTrailerStreams =
-      ValueNotifier(null);
-  final ValueNotifier<bool> _discTrailerLoading = ValueNotifier(false);
-  final ValueNotifier<double> _discTrailerVolume = ValueNotifier(0);
-  final ValueNotifier<double> _discTakeover = ValueNotifier(0);
-  // The playing trailer's (enriched) title — drives the fullscreen takeover's
-  // name/meta overlay. Written by the rail alongside its streams.
-  final ValueNotifier<StremioMeta?> _discTrailerMeta = ValueNotifier(null);
-  // What the rail is actually rendering (focused item merged with enrichment) —
-  // published by the rail, read by the full-frame glass stage that draws the
-  // title's backdrop behind both panes.
-  final ValueNotifier<StremioMeta?> _discShown = ValueNotifier(null);
-  // True while trailer frames are on the stage (set by DiscoverTrailerStage) —
-  // drives the AMBIENT chip in the page's status corner.
-  final ValueNotifier<bool> _discTrailerShowing = ValueNotifier(false);
-  // Theater: after a few seconds of uninterrupted playback the page commits to
-  // the trailer — veils thin to near-clear, rail and grid recede to ~15%. Armed
-  // by [_onDiscShowingChanged]; dropped the instant frames stop (any DPAD move
-  // clears the trailer, so browsing input always brings the lights back).
-  final ValueNotifier<bool> _discTheater = ValueNotifier(false);
-  Timer? _discTheaterTimer;
-  static const Duration _discTheaterDelay = Duration(seconds: 5);
-
-  void _onDiscShowingChanged() {
-    _discTheaterTimer?.cancel();
-    if (_discTrailerShowing.value) {
-      _discTheaterTimer = Timer(_discTheaterDelay, () {
-        if (mounted && _discTrailerShowing.value) _discTheater.value = true;
-      });
-    } else {
-      _discTheater.value = false;
-    }
-  }
-
-  /// Relay the Discover takeover to the app shell so the TV sidebar hides in
-  /// lock-step (a cinema has no menu) — the same signal the Home board uses.
-  void _relayDiscoverChromeDim() =>
-      MainPageBridge.tvChromeDim.value = _discTakeover.value;
-
-  // ── Discover layout (grid / stage) ───────────────────────────────────────
-
-  /// Last loaded `discover_layout`, kept for the life of the process. The
-  /// pref read is async but the layout is needed on the FIRST frame: without
-  /// this, every entry to the Discover tab would build the grid, then swap to
-  /// the stage a frame later — a visible flash on each tab switch. Only the
-  /// very first entry after launch pays it.
-  static String _discLayoutCached = 'stage';
-
-  /// Active Discover layout, from `discover_layout`. Stage is the default;
-  /// grid is the only thing phone/desktop ever render (see [_discStage]).
-  String _discLayout = _discLayoutCached;
-
-  // Warmed before runApp, so the first Discover frame already has the user's
-  // poster-card choices instead of flashing the default chrome.
-  bool _discShowTypeTags = DiscoverPrefs.showTypeTags;
-  bool _discShowRatings = DiscoverPrefs.showRatings;
-  bool _discShowTitles = DiscoverPrefs.showTitles;
-
-  /// Whether the STAGE layout is what this surface should render: the pref, on
-  /// the Discover tab, on a TV. The canvas-size guard lives in the LayoutBuilder
-  /// (a too-small canvas falls back to the flat panel, exactly like the grid's
-  /// two-pane does).
+  ValueNotifier<StremioMeta?> get _discFocused => _discover.focused;
+  ValueNotifier<YoutubeResolvedStreams?> get _discTrailerStreams => _discover.trailerStreams;
+  ValueNotifier<bool> get _discTrailerLoading => _discover.trailerLoading;
+  ValueNotifier<double> get _discTrailerVolume => _discover.trailerVolume;
+  ValueNotifier<double> get _discTakeover => _discover.takeover;
+  ValueNotifier<StremioMeta?> get _discTrailerMeta => _discover.trailerMeta;
+  ValueNotifier<StremioMeta?> get _discShown => _discover.shown;
+  ValueNotifier<bool> get _discTrailerShowing => _discover.trailerShowing;
+  ValueNotifier<bool> get _discTheater => _discover.theater;
+  String get _discLayout => _discover.layout;
+  bool get _discShowTypeTags => _discover.showTypeTags;
+  bool get _discShowRatings => _discover.showRatings;
+  bool get _discShowTitles => _discover.showTitles;
+  void _onDiscFocused(StremioMeta item) => _discover.onFocused(item);
   bool get _discStage =>
       widget.discoverMode && widget.isTelevision && _discLayout == 'stage';
 
-  Future<void> _loadDiscoverLayout() async {
-    final layout = await StorageService.getDiscoverLayout();
-    _discLayoutCached = layout;
-    if (!mounted || layout == _discLayout) return;
-    setState(() => _discLayout = layout);
-  }
-
-  /// Settings picker fired: tear the trailer down BEFORE the relayout, so the
-  /// player is never re-parented mid-play into the other layout's tree (the
-  /// Home board's rule for the same swap), then re-read the pref and rebuild.
-  void _onDiscoverLayoutChanged() {
-    if (!mounted) return;
-    _discTrailerStreams.value = null;
-    _discTrailerMeta.value = null;
-    _discTrailerLoading.value = false;
-    _discTrailerShowing.value = false;
-    _discTheater.value = false;
-    _discTheaterTimer?.cancel();
-    _discTakeover.value = 0;
-    unawaited(_loadDiscoverLayout());
-  }
-
-  void _onDiscoverCardSettingsChanged() {
-    if (!mounted) return;
-    final showTypeTags = DiscoverPrefs.showTypeTags;
-    final showRatings = DiscoverPrefs.showRatings;
-    final showTitles = DiscoverPrefs.showTitles;
-    if (showTypeTags == _discShowTypeTags &&
-        showRatings == _discShowRatings &&
-        showTitles == _discShowTitles) {
-      return;
-    }
-    setState(() {
-      _discShowTypeTags = showTypeTags;
-      _discShowRatings = showRatings;
-      _discShowTitles = showTitles;
-    });
+  void _onDiscoverPreferencesChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -1139,21 +1049,9 @@ class _SearchScreenState extends State<SearchScreenHost>
       }
     }
     _hero.registerTv();
-    // Discover on TV: relay the trailer takeover to the sidebar chrome-dim so
-    // the rail hides when the trailer goes fullscreen. The showing listener
-    // arms the theater timer (deep lights-off a few seconds into playback).
+    _discover.addListener(_onDiscoverPreferencesChanged);
     if (widget.discoverMode) {
-      MainPageBridge.discoverCardSettingsChanged =
-          _onDiscoverCardSettingsChanged;
-    }
-    if (widget.discoverMode && widget.isTelevision) {
-      _discTakeover.addListener(_relayDiscoverChromeDim);
-      _discTrailerShowing.addListener(_onDiscShowingChanged);
-      // Layout pref (grid/stage): read once here, then live-reloaded whenever
-      // the Settings picker fires the bridge. DISCOVER instance only — Home
-      // and Search never render this layout and must not take the slot.
-      unawaited(_loadDiscoverLayout());
-      MainPageBridge.discoverLayoutChanged = _onDiscoverLayoutChanged;
+      _discover.start(isTelevision: widget.isTelevision);
     }
     MainPageBridge.addIntegrationListener(_onIntegrationsChanged);
     // Playback that ran in a separate ACTIVITY (Android TV native player,
@@ -1536,40 +1434,8 @@ class _SearchScreenState extends State<SearchScreenHost>
     _modeListsNode.dispose();
     _modeDropdownNode.dispose();
     _disposeListsNodes();
-    _discSourceNode.dispose();
-    _discFocused.dispose();
-    if (MainPageBridge.discoverCardSettingsChanged ==
-        _onDiscoverCardSettingsChanged) {
-      MainPageBridge.discoverCardSettingsChanged = null;
-    }
-    if (widget.discoverMode && widget.isTelevision) {
-      _discTakeover.removeListener(_relayDiscoverChromeDim);
-      _discTrailerShowing.removeListener(_onDiscShowingChanged);
-      _discTheaterTimer?.cancel();
-      // Only clear the bridge slot if it's still OURS — a newly-mounted
-      // Discover instance may have claimed it before this one tears down.
-      if (MainPageBridge.discoverLayoutChanged == _onDiscoverLayoutChanged) {
-        MainPageBridge.discoverLayoutChanged = null;
-      }
-      // Never leave the sidebar hidden after Discover is torn down mid-takeover,
-      // but reset AFTER this frame: dispose can run inside finalizeTree (tab
-      // switch mid-takeover) while the tree is locked, and a synchronous write
-      // would markNeedsBuild the sidebar's listener mid-unmount (matches the
-      // Home path above).
-      if (MainPageBridge.tvChromeDim.value != 0) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          MainPageBridge.tvChromeDim.value = 0;
-        });
-      }
-    }
-    _discTrailerStreams.dispose();
-    _discTrailerLoading.dispose();
-    _discTrailerVolume.dispose();
-    _discTakeover.dispose();
-    _discTrailerMeta.dispose();
-    _discShown.dispose();
-    _discTrailerShowing.dispose();
-    _discTheater.dispose();
+    _discover.removeListener(_onDiscoverPreferencesChanged);
+    _discover.dispose(isTelevision: widget.discoverMode && widget.isTelevision);
     _boardScroll.dispose();
     _catalogSourcesBtnFocus.dispose();
     _disposeNodes();
@@ -7468,16 +7334,7 @@ class _SearchScreenState extends State<SearchScreenHost>
           // The trailer stage (which drives _discTakeover → sidebar chrome-dim,
           // and _discTrailerShowing → the AMBIENT chip) is unmounted in this
           // branch. Clear both post-frame so nothing sticks across the drop.
-          if (_discTakeover.value != 0 ||
-              _discTrailerShowing.value ||
-              _discTheater.value) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              _discTakeover.value = 0;
-              _discTrailerShowing.value = false;
-              _discTheater.value = false;
-            });
-          }
+          _discover.resetForNarrowCanvas();
           return panel;
         }
         if (_discStage) return _buildDiscoverStage(c, panel);
