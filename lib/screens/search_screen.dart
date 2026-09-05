@@ -42,6 +42,8 @@ import 'search/title_opener.dart';
 import 'search/search_screen_shells.dart';
 import 'search/catalog_search_screen.dart';
 import 'search/discover_screen.dart';
+import 'search/keyword_search_screen.dart';
+import '../services/search/keyword_search_controller.dart';
 import '../services/filtered_catalog_pager.dart';
 import '../services/hide_watched_prefs.dart';
 import '../services/watched_filter.dart';
@@ -91,7 +93,6 @@ import '../widgets/home/home_theme.dart';
 import '../widgets/home/row_tag_pill.dart';
 import '../widgets/home/spotlight_board.dart';
 import '../widgets/movie_watched_badge.dart';
-import '../widgets/search_loading_animation.dart';
 import '../widgets/skeleton_poster.dart';
 import '../widgets/source_row.dart';
 import '../widgets/torrent_filters_sheet.dart';
@@ -251,47 +252,6 @@ class SearchScreenHost extends StatefulWidget {
 }
 
 enum SearchBoardMode { catalog, keyword, lists }
-
-/// Snapshot of an in-progress keyword search, preserved across a tab switch so
-/// returning restores results + scroll instead of a blank prompt — the nav
-/// rebuilds [SearchScreen] fresh on every switch (main.dart `_buildPage`).
-/// Mirrors the old `TorrentSearchScreen._preservedState`. Keyed by [variant] so
-/// a keyword search started on the Home-New board never restores into the
-/// dedicated Search tab (both are [SearchScreen] instances).
-class _KwPreservedState {
-  final String variant;
-  final String query;
-  final List<Torrent> all;
-  final List<Torrent> results;
-  final TorrentFilterState filters;
-  final String sort;
-  final bool sortAsc;
-  final Map<String, List<String>> cache;
-  final bool cachedOnly;
-  final Map<String, int> directCounts;
-  final Map<String, int> torrentCounts;
-  final Set<String> selectedDirect;
-  final Set<String> selectedTorrent;
-  final String? sourceTab;
-  final double scrollOffset;
-  const _KwPreservedState({
-    required this.variant,
-    required this.query,
-    required this.all,
-    required this.results,
-    required this.filters,
-    required this.sort,
-    required this.sortAsc,
-    required this.cache,
-    required this.cachedOnly,
-    required this.directCounts,
-    required this.torrentCounts,
-    required this.selectedDirect,
-    required this.selectedTorrent,
-    required this.sourceTab,
-    required this.scrollOffset,
-  });
-}
 
 /// Fixed Discover sources; installed addons are appended dynamically (key
 /// 'a:{addonId}'). Aliases of [kDiscoverSourceCw] etc. so call sites stay put.
@@ -544,129 +504,6 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// it (matching Home's `addonId`). Set whenever we open a catalog item.
   String? _activeAddonId;
 
-  // Keyword torrent-search state (submit-based).
-  bool _kwLoading = false;
-  String? _kwError;
-  String _kwQuery = '';
-  List<Torrent> _kwAll = []; // unfiltered results from the last search
-  List<Torrent> _kwResults = []; // filtered + sorted view actually rendered
-  final List<FocusNode> _kwNodes = [];
-  // Keyboard/DPAD focus targets for the keyword toolbar pills (Sort / Filters /
-  // Providers / Sources / Select). A fixed pool of 5 covers the most pills ever
-  // shown.
-  final List<FocusNode> _kwToolbarNodes = List.generate(
-    5,
-    (i) => FocusNode(debugLabel: 'kw_tb_$i'),
-  );
-  TorrentFilterState _kwFilters = const TorrentFilterState.empty();
-  String _kwSort = 'relevance';
-  // Sort direction for _kwSort (ignored for 'relevance', which is engine order).
-  // Defaults follow each field's natural direction; the sort dialog can flip it.
-  bool _kwSortAsc = false;
-  Map<String, List<String>> _kwCache = {}; // infohash(lower) → ['TB','PM']
-
-  // Provider (stream-type) multi-select filter, ported from the old search
-  // screen: results are grouped into "Direct" (direct/external URL streams) and
-  // "Torrent" providers by their [Torrent.source], each independently filterable
-  // by which sources are ticked. Empty count maps mean "no such group".
-  Map<String, int> _kwDirectCounts = {}; // source → count (direct/external)
-  Map<String, int> _kwTorrentCounts = {}; // source → count (torrents)
-  Set<String> _kwSelectedDirect = {};
-  Set<String> _kwSelectedTorrent = {};
-
-  /// True when the results list is being narrowed to TorBox-cached torrents
-  /// only (TorBox is the sole usable debrid provider and its cache-check is on)
-  /// — mirrors the old screen's `_showingTorboxCachedOnly`. Drives the banner.
-  bool _kwCachedOnly = false;
-
-  // Bulk-selection state for keyword results (mirrors Home's multi-select).
-  bool _kwSelectionMode = false;
-  final Set<String> _kwSelected = {}; // selected torrent infohashes
-
-  /// Monotonic token so a slow earlier keyword search can't clobber a newer one.
-  int _kwSearchToken = 0;
-
-  /// Infohashes already dispatched to a provider cache-check for the current
-  /// keyword search. Lets each streaming batch check only its fresh hashes.
-  final Set<String> _kwCacheChecked = {};
-
-  /// Whether a TorBox cache-check has successfully run this keyword search —
-  /// the precondition for cached-only mode (never hide rows on a thrown check).
-  bool _kwTbRan = false;
-
-  /// In-flight per-batch cache-check futures for the current search. The
-  /// completion sweep awaits these so cached-only mode is decided only once
-  /// every batch's badges have landed.
-  final List<Future<void>> _kwPendingChecks = [];
-
-  // Cache-check config, resolved ONCE per keyword search (freshly re-read each
-  // search, then reused across its streaming batches — no per-batch storage
-  // reads). Same gating as Home: pref on AND integration on AND key present.
-  bool _kwTbOn = false;
-  bool _kwPmOn = false;
-  String? _kwTbKey;
-  String? _kwPmKey;
-  bool _kwOtherProviderActive = false;
-
-  /// Reads the cache-check gating and whether any usable non-TorBox provider
-  /// is active. Awaited at the top of each search so streaming batch checks
-  /// see up-to-date settings.
-  Future<void> _loadKwCacheConfig() async {
-    final r = await Future.wait([
-      StorageService.getTorboxCacheCheckEnabled(),
-      StorageService.getTorboxIntegrationEnabled(),
-      StorageService.getTorboxApiKey(),
-      StorageService.getPremiumizeCacheCheckEnabled(),
-      StorageService.getPremiumizeIntegrationEnabled(),
-      StorageService.getPremiumizeApiKey(),
-      StorageService.getApiKey(),
-      StorageService.getRealDebridIntegrationEnabled(),
-      StorageService.getAllDebridApiKey(),
-      StorageService.getAllDebridIntegrationEnabled(),
-      StorageService.getPikPakEnabled(),
-    ]);
-    final tbKey = r[2] as String?;
-    final pmKey = r[5] as String?;
-    final rdKey = r[6] as String?;
-    final adKey = r[8] as String?;
-    _kwTbOn = (r[0] as bool) && (r[1] as bool) && (tbKey?.isNotEmpty ?? false);
-    _kwPmOn = (r[3] as bool) && (r[4] as bool) && (pmKey?.isNotEmpty ?? false);
-    _kwTbKey = tbKey;
-    _kwPmKey = pmKey;
-    final rdActive = (r[7] as bool) && (rdKey?.isNotEmpty ?? false);
-    final pmActive = (r[4] as bool) && (pmKey?.isNotEmpty ?? false);
-    final adActive = (r[9] as bool) && (adKey?.isNotEmpty ?? false);
-    final pikpakActive = r[10] as bool;
-    _kwOtherProviderActive = rdActive || pmActive || adActive || pikpakActive;
-  }
-
-  // ── Streaming keyword search (per-engine batches, Sources-list parity) ──
-  /// Raw per-engine batches accumulated this search; merged provisionally so
-  /// first rows paint as soon as the fastest engine answers.
-  final List<List<Torrent>> _kwBatches = [];
-
-  /// True while the awaited search is still in flight (drives the "still
-  /// searching" strip). Distinct from [_kwLoading], which only covers the
-  /// full-screen loader up to the FIRST batch.
-  bool _kwSearching = false;
-
-  /// Set on the first real user interaction (scroll drag, row DPAD nav, row
-  /// tap/long-press, toolbar use) — later arrivals then park in [_kwPending]
-  /// behind the "+N new results" pill instead of reshuffling the list.
-  bool _kwStreamFrozen = false;
-
-  /// Full (unfiltered) result set parked while frozen; adopted by the pill,
-  /// any toolbar action, or a source-tab tap.
-  List<Torrent>? _kwPending;
-
-  /// DPAD focus for the "+N new results" pill.
-  final FocusNode _kwPillFocus = FocusNode(debugLabel: 'kw_pill');
-
-  /// DPAD focus for the pre-search "Sources" button (shown in the empty
-  /// keyword state before a query). Without its own node it's a bare InkWell
-  /// unreachable by the remote — you couldn't pick sources before searching.
-  final FocusNode _kwSourcesBtnFocus = FocusNode(debugLabel: 'kw_sources_btn');
-
   /// DPAD focus for the catalog-mode "Sources" button (empty-prompt state) —
   /// its keyword-mode twin, for picking which searchable addons are queried.
   final FocusNode _catalogSourcesBtnFocus = FocusNode(
@@ -678,33 +515,6 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// [_onSearchFocusForSources]) so a click on the button isn't lost.
   bool _catalogSourcesBarShown = false;
   Timer? _catalogSourcesHideTimer;
-
-  /// Source tab strip (All / per-source), single-select on top of the
-  /// Providers multi-select. Null = All.
-  String? _kwSourceTab;
-  final List<FocusNode> _kwTabNodes = [];
-
-  /// Provider-group keys ('d:src' / 't:src') already offered this search — a
-  /// NEW source auto-selects into the provider filter, but a source the user
-  /// unticked stays unticked when a later batch re-reports it.
-  final Set<String> _kwProviderSeen = {};
-
-  /// Scroll controller for the keyword results list, so we can preserve/restore
-  /// the scroll position across a tab switch (see [_KwPreservedState]).
-  final ScrollController _kwScroll = ScrollController();
-
-  /// Last observed keyword-list scroll offset, captured live (the controller is
-  /// detached by the time [dispose] runs, so we can't read it there).
-  double _kwLastScroll = 0;
-
-  /// Set on restore; the keyword list jumps here once laid out, then clears.
-  double? _pendingKwScroll;
-
-  /// Snapshot of the most recently disposed keyword search, kept alive across
-  /// a same-profile tab rebuild. The holder rejects content from another
-  /// profile/session and participates in profile lifecycle cleanup.
-  static final ProfileSessionMemory<_KwPreservedState> _kwPreserved =
-      ProfileSessionMemory<_KwPreservedState>();
 
   /// Captured at mount, not dispose: an outgoing screen may be torn down after
   /// the next profile is published and must still tag its snapshot as outgoing.
@@ -758,6 +568,9 @@ class _SearchScreenState extends State<SearchScreenHost>
 
   /// Catalog search data layer (query, generation token, per-catalog fetch).
   late final CatalogSearchController _catalogSearch;
+
+  /// Keyword torrent-search data layer (query, streamed batches, freeze/adopt).
+  late final KeywordSearchController _keyword;
 
   // Rows the user hid via Settings → Home Page → Home Rows (fixed-section
   // leaves like `cw:movies`/`trakt:shows`/`fav:iptv` and catalog leaves
@@ -1730,6 +1543,13 @@ class _SearchScreenState extends State<SearchScreenHost>
       onAborted: () => _searchSubmitFocus.cancel(),
     );
     _catalogSearch.addListener(_onCatalogSearchChanged);
+    _keyword = KeywordSearchController(
+      isLive: () => mounted,
+      onCancelSubmitFocus: () => _searchSubmitFocus.cancel(),
+      onCompleteSubmitFocus: _completeSearchSubmitFocus,
+      onRestoreQuery: (q) => _searchController.text = q,
+    );
+    _keyword.addListener(_onKeywordChanged);
     WidgetsBinding.instance.addObserver(this);
     _profileSessionOwner = ProfileSessionMemory.captureOwner();
     // This one widget backs three tabs (Home board / dedicated Search / Discover).
@@ -1868,10 +1688,15 @@ class _SearchScreenState extends State<SearchScreenHost>
     // would flip the mode back and could fire a catalog search with the
     // restored keyword text. A successful restore therefore also suppresses
     // the default-view load outright.
-    final restoredKeyword =
-        widget.isTelevision && !widget.searchMode && !widget.discoverMode
-        ? false
-        : _restoreKeywordState();
+    var restoredKeyword = false;
+    if (searchScreenRestoresKeyword(
+      isTelevision: widget.isTelevision,
+      searchMode: widget.searchMode,
+      discoverMode: widget.discoverMode,
+    )) {
+      restoredKeyword = _keyword.restore(_profileSessionOwner, _variantKey);
+      if (restoredKeyword) _mode = SearchBoardMode.keyword;
+    }
     // Home board only: live-refresh when the Home Rows manager changes which
     // rows are hidden (on non-TV, Settings is a pushed route so the board isn't
     // rebuilt on return; on TV a tab switch already reloads it fresh).
@@ -1932,9 +1757,6 @@ class _SearchScreenState extends State<SearchScreenHost>
       _searchFocusNode.addListener(_onSearchFocusLatchSheet);
     }
     _boardScroll.addListener(_onBoardScroll);
-    _kwScroll.addListener(() {
-      if (_kwScroll.hasClients) _kwLastScroll = _kwScroll.offset;
-    });
     _refreshTraktAuthState();
     _refreshSimklAuthState();
     _refreshMdblistAuthState();
@@ -1942,7 +1764,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // (The keyword restore itself ran earlier — before _loadHomeDefaultView —
     // see the ordering comment there.) A restored search carries its own
     // filters, so don't overwrite them with the saved defaults.
-    if (!restoredKeyword) unawaited(_loadDefaultKeywordFilters());
+    if (!restoredKeyword) unawaited(_keyword.loadDefaultFilters());
     // The dedicated Search tab only shows a field + blank prompt until a query,
     // so it skips the whole board pipeline (home catalogs, Continue Watching,
     // Trakt, favourites) — catalog search fetches its addons on demand. It also
@@ -2015,7 +1837,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     final hasQuery =
         _searchController.text.isNotEmpty ||
         _catalogQuery.isNotEmpty ||
-        _kwQuery.isNotEmpty ||
+        _keyword.kwQuery.isNotEmpty ||
         _listsQuery.isNotEmpty;
     if (!hasQuery) return false;
     // Back also drops out of Keyword/Lists mode, so the tab returns to its
@@ -2096,9 +1918,7 @@ class _SearchScreenState extends State<SearchScreenHost>
         _sheetForced ||
         _searchController.text.isNotEmpty ||
         _searchFocusNode.hasFocus;
-    _kwSearchToken++;
-    _kwSearching = false;
-    _kwLoading = false;
+    _keyword.invalidate();
     _mode = SearchBoardMode.catalog;
     _clearQuery(); // clears the field, kw/lists state, and the catalog query
     _searchFocusNode.unfocus();
@@ -2183,99 +2003,22 @@ class _SearchScreenState extends State<SearchScreenHost>
     }
   }
 
-  /// Restore a preserved keyword search into this instance if one exists for
-  /// this variant. Returns true when a restore happened. Called from initState
-  /// (pre-first-build) so direct field assignment — not setState — is correct.
-  bool _restoreKeywordState() {
-    final snap = _kwPreserved.take(
-      _profileSessionOwner,
-      where: (value) => value.variant == _variantKey && value.query.isNotEmpty,
-    );
-    if (snap == null) {
-      return false;
-    }
-    // The keyword surface is per-profile; a snapshot saved under a profile
-    // that had it must not restore into one that doesn't.
-    if (!ProfilePolicyGuard.allowsSync(ProfileFeature.keywordSearch)) {
-      return false;
-    }
-    _mode = SearchBoardMode.keyword;
-    _kwQuery = snap.query;
-    _kwAll = snap.all;
-    _kwResults = snap.results;
-    _kwFilters = snap.filters;
-    _kwSort = snap.sort;
-    _kwSortAsc = snap.sortAsc;
-    _kwCache = snap.cache;
-    _kwCachedOnly = snap.cachedOnly;
-    _kwDirectCounts = snap.directCounts;
-    _kwTorrentCounts = snap.torrentCounts;
-    _kwSelectedDirect = snap.selectedDirect;
-    _kwSelectedTorrent = snap.selectedTorrent;
-    _kwSourceTab = snap.sourceTab;
-    _searchController.text = snap.query;
-    _disposeKwNodes();
-    for (var i = 0; i < snap.results.length; i++) {
-      _kwNodes.add(FocusNode(debugLabel: 'kw_$i'));
-    }
-    _syncKwTabNodes();
-    _pendingKwScroll = snap.scrollOffset;
-    return true;
-  }
-
   @override
   void dispose() {
     _board.removeListener(_onBoardChanged);
     _board.dispose();
     _catalogSearch.removeListener(_onCatalogSearchChanged);
     _catalogSearch.dispose();
+    _keyword.preserve(
+      _profileSessionOwner,
+      _variantKey,
+      modeIsKeyword: _mode == SearchBoardMode.keyword,
+    );
+    _keyword.removeListener(_onKeywordChanged);
+    _keyword.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _mdblistRevisionRefreshToken++;
     _spotlightHeroNode.dispose();
-    // Preserve a COMPLETED keyword search so returning to this tab restores
-    // results + scroll instead of the blank prompt (the nav rebuilds us fresh).
-    // A still-streaming search is NOT preserved: its batches die with this
-    // instance, so the snapshot would freeze a partial set that restores
-    // looking complete (no strip, no cache badges) — matching pre-streaming
-    // behavior, where a mid-flight switch preserved nothing.
-    if (_mode == SearchBoardMode.keyword &&
-        _kwQuery.isNotEmpty &&
-        _kwResults.isNotEmpty &&
-        !_kwSearching) {
-      // Fold a parked (pill) final set into the snapshot — pure field updates,
-      // safe in dispose — so restore doesn't resurrect a stale subset while
-      // silently dropping the authoritative result.
-      final pending = _kwPending;
-      if (pending != null) {
-        _kwPending = null;
-        _kwAll = pending;
-        if (_kwSourceTab != null &&
-            !pending.any((t) => _kwSourceOf(t) == _kwSourceTab)) {
-          _kwSourceTab = null;
-        }
-        _computeKwProviders(pending);
-      }
-      _kwPreserved.store(
-        _profileSessionOwner,
-        _KwPreservedState(
-          variant: _variantKey,
-          query: _kwQuery,
-          all: _kwAll,
-          results: _kwResults,
-          filters: _kwFilters,
-          sort: _kwSort,
-          sortAsc: _kwSortAsc,
-          cache: _kwCache,
-          cachedOnly: _kwCachedOnly,
-          directCounts: _kwDirectCounts,
-          torrentCounts: _kwTorrentCounts,
-          selectedDirect: _kwSelectedDirect,
-          selectedTorrent: _kwSelectedTorrent,
-          sourceTab: _kwSourceTab,
-          scrollOffset: _kwLastScroll,
-        ),
-      );
-    }
     MainPageBridge.unregisterTvContentFocusHandler(_tabIndex, _focusContent);
     StorageService.localCompletionRevision.removeListener(
       _onLocalCompletionChanged,
@@ -2418,16 +2161,8 @@ class _SearchScreenState extends State<SearchScreenHost>
     _discTrailerShowing.dispose();
     _discTheater.dispose();
     _boardScroll.dispose();
-    _kwScroll.dispose();
-    _kwPillFocus.dispose();
-    _kwSourcesBtnFocus.dispose();
     _catalogSourcesBtnFocus.dispose();
-    for (final n in _kwTabNodes) {
-      n.dispose();
-    }
-    _kwTabNodes.clear();
     _disposeNodes();
-    _disposeKwNodes();
     for (final n in [
       ..._cwMovieNodes,
       ..._cwSeriesNodes,
@@ -2445,7 +2180,6 @@ class _SearchScreenState extends State<SearchScreenHost>
       ..._watchlistMovieNodes,
       ..._watchlistSeriesNodes,
       ..._playlistFavNodes,
-      ..._kwToolbarNodes, // fixed pool — only disposed here, not in _disposeKwNodes
     ]) {
       n.dispose();
     }
@@ -2801,6 +2535,10 @@ class _SearchScreenState extends State<SearchScreenHost>
   }
 
   void _onCatalogSearchChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onKeywordChanged() {
     if (mounted) setState(() {});
   }
 
@@ -5729,7 +5467,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     if (widget.searchMode) {
       if (_mode == SearchBoardMode.keyword) {
         if (_kwToolbarVisible) {
-          _kwToolbarNodes.first.requestFocus();
+          _keyword.kwToolbarNodes.first.requestFocus();
         } else {
           _searchFocusNode.requestFocus();
         }
@@ -5761,7 +5499,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       // (loading / error / pre-search) nothing below is focusable, so keep the
       // search field rather than a stale, detached result node.
       if (_kwToolbarVisible) {
-        _kwToolbarNodes.first.requestFocus();
+        _keyword.kwToolbarNodes.first.requestFocus();
       } else {
         _searchFocusNode.requestFocus();
       }
@@ -5833,19 +5571,13 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// Whether the keyword results toolbar (Sort/Filters/Sources/…) is on-screen,
   /// so focus can route into it between the search field and the result rows.
   bool get _kwToolbarVisible =>
-      _mode == SearchBoardMode.keyword &&
-      !_kwLoading &&
-      _kwError == null &&
-      _kwQuery.isNotEmpty;
+      _mode == SearchBoardMode.keyword && _keyword.kwToolbarVisible;
 
   /// Whether the pre-search "Sources" button is on-screen — the empty keyword
   /// state, before a query. It's the only focusable content then, so DPAD-down
   /// from the search field must land on it (see the field's key handler).
   bool get _kwSourcesButtonVisible =>
-      _mode == SearchBoardMode.keyword &&
-      !_kwLoading &&
-      _kwError == null &&
-      _kwQuery.isEmpty;
+      _mode == SearchBoardMode.keyword && _keyword.kwSourcesButtonVisible;
 
   /// Catalog-mode twin of [_kwSourcesButtonVisible]: the Sources button shown
   /// on the empty catalog prompt (Search tab, no query yet, not mid-search).
@@ -9157,7 +8889,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     }
     switch (_mode) {
       case SearchBoardMode.keyword:
-        _runKeyword(q);
+        unawaited(_keyword.run(q));
         return;
       case SearchBoardMode.catalog:
         if (q.isEmpty) {
@@ -9180,20 +8912,9 @@ class _SearchScreenState extends State<SearchScreenHost>
     _catalogDebounce?.cancel();
     _searchSubmitFocus.cancel();
     _searchController.clear();
-    _kwSearchToken++;
-    _disposeKwNodes();
+    _keyword.clear();
     _disposeListsNodes();
     setState(() {
-      _kwSearching = false;
-      _kwLoading = false;
-      _kwQuery = '';
-      _kwAll = [];
-      _kwResults = [];
-      _kwCache = {};
-      _kwError = null;
-      _kwPending = null;
-      _kwSelectionMode = false;
-      _kwSelected.clear();
       _listsToken++; // cancel an in-flight lists search
       _listsQuery = '';
       _listsResults = const [];
@@ -9373,1088 +9094,6 @@ class _SearchScreenState extends State<SearchScreenHost>
     MainPageBridge.switchTab?.call(MainTab.discover);
   }
 
-  /// Seed the keyword filter set from the user's saved defaults (Settings →
-  /// default quality/rip-source/language filters), matching the old search
-  /// screen's `_loadDefaultFilters`. Runs once at init; only applies when at
-  /// least one default is configured so an empty default keeps filters off.
-  Future<void> _loadDefaultKeywordFilters() async {
-    try {
-      final qualities = await StorageService.getDefaultFilterQualities();
-      final sources = await StorageService.getDefaultFilterRipSources();
-      final languages = await StorageService.getDefaultFilterLanguages();
-      final sizes = await StorageService.getDefaultFilterSizes();
-      final ranges = await StorageService.getDefaultFilterDynamicRanges();
-      if (!mounted) return;
-
-      final qualitySet = <QualityTier>{};
-      final sourceSet = <RipSourceCategory>{};
-      final languageSet = <AudioLanguage>{};
-      final sizeSet = <SizeBucket>{};
-      final rangeSet = <DynamicRange>{};
-      for (final q in qualities) {
-        for (final e in QualityTier.values) {
-          if (e.name == q) qualitySet.add(e);
-        }
-      }
-      for (final s in sources) {
-        for (final e in RipSourceCategory.values) {
-          if (e.name == s) sourceSet.add(e);
-        }
-      }
-      for (final l in languages) {
-        for (final e in AudioLanguage.values) {
-          if (e.name == l) languageSet.add(e);
-        }
-      }
-      for (final s in sizes) {
-        for (final e in SizeBucket.values) {
-          if (e.name == s) sizeSet.add(e);
-        }
-      }
-      for (final r in ranges) {
-        for (final e in DynamicRange.values) {
-          if (e.name == r) rangeSet.add(e);
-        }
-      }
-
-      if (qualitySet.isEmpty &&
-          sourceSet.isEmpty &&
-          languageSet.isEmpty &&
-          sizeSet.isEmpty &&
-          rangeSet.isEmpty) {
-        return;
-      }
-      // If the user already picked filters while these async reads were in
-      // flight, don't clobber their choice with the saved defaults.
-      if (_kwFilters.qualities.isNotEmpty ||
-          _kwFilters.ripSources.isNotEmpty ||
-          _kwFilters.languages.isNotEmpty ||
-          _kwFilters.sizes.isNotEmpty ||
-          _kwFilters.dynamicRanges.isNotEmpty) {
-        return;
-      }
-      setState(() {
-        _kwFilters = TorrentFilterState(
-          qualities: qualitySet,
-          ripSources: sourceSet,
-          languages: languageSet,
-          sizes: sizeSet,
-          dynamicRanges: rangeSet,
-        );
-      });
-      // If results are already on screen (defaults resolved after a fast
-      // search), re-apply so the seeded filters take effect immediately.
-      if (_kwAll.isNotEmpty) _recomputeKeyword();
-    } catch (_) {
-      // Non-fatal: fall back to no default filters.
-    }
-  }
-
-  /// One-shot: restore DPAD focus to the toolbar at the FIRST streamed paint
-  /// (set by _openKeywordSources, whose re-search unmounts the focused pill).
-  /// Consumed/cleared on present so a completion refocus can never yank the
-  /// remote off a row the user reached mid-stream.
-  bool _kwRefocusToolbar = false;
-
-  Future<void> _runKeyword(String query, {bool refocusToolbar = false}) async {
-    if (query.isEmpty) return;
-    final token = ++_kwSearchToken;
-    _kwBatches.clear();
-    _kwSearching = true;
-    _kwStreamFrozen = false;
-    _kwPending = null;
-    _kwProviderSeen.clear();
-    _kwCacheChecked.clear();
-    _kwPendingChecks.clear();
-    _kwTbRan = false;
-    _kwRefocusToolbar = refocusToolbar;
-    setState(() {
-      _kwLoading = true;
-      _kwError = null;
-      _kwQuery = query;
-      _kwCache = {};
-      _kwCachedOnly = false;
-      _kwDirectCounts = {};
-      _kwTorrentCounts = {};
-      _kwSelectedDirect = {};
-      _kwSelectedTorrent = {};
-      _kwSelectionMode = false;
-      _kwSelected.clear();
-      _kwSourceTab = null;
-    });
-    try {
-      // Streaming: each engine's batch lands as soon as THAT engine finishes,
-      // so first rows show in seconds instead of after the slowest engine's
-      // timeout. Provisional merges use the same mergeSearchResults as the
-      // final result, so the list can never drift from what completion shows.
-      void onBatch(String source, List<Torrent> batch) {
-        if (!mounted || token != _kwSearchToken || batch.isEmpty) return;
-        // A timed-out engine's original future keeps running after the
-        // timeout fires — its late batch must not mutate the list after the
-        // awaited result already snapped it to the authoritative set.
-        if (!_kwSearching) return;
-        _kwBatches.add(batch);
-        _presentKwStreaming(
-          TorrentService.mergeSearchResults(_kwBatches),
-          token,
-        );
-        // Stamp TB/PM badges on this engine's rows as they land, and record the
-        // future so the completion sweep can await it before deciding cached-
-        // only mode (settling it mid-stream would flicker rows in/out).
-        _kwPendingChecks.add(_checkKeywordCache(batch, token));
-      }
-
-      // Resolve cache-check gating BEFORE the search starts so streaming
-      // batches badge against fresh settings (a superseded search's config
-      // load is harmless — its batches fail the token guard anyway).
-      await _loadKwCacheConfig();
-      if (!mounted || token != _kwSearchToken) return;
-      final result = await TorrentService.searchAllEngines(
-        query,
-        onBatch: onBatch,
-      );
-      // Drop stale results if a newer search started while this was in flight.
-      if (!mounted || token != _kwSearchToken) return;
-      _kwSearching = false;
-      final torrents = (result['torrents'] as List).cast<Torrent>();
-      final engineErrors = result['engineErrors'];
-      final engineCounts = result['engineCounts'];
-      // No engine ran at all (empty counts AND errors) → the user has disabled
-      // every source. Point them at Sources instead of a bare "No results".
-      // (Both empty-result checks below can only fire when no batch arrived,
-      // so the full-screen loader is still up — never an error over rows.)
-      final noEngineRan =
-          (engineCounts is! Map || engineCounts.isEmpty) &&
-          (engineErrors is! Map || engineErrors.isEmpty);
-      if (torrents.isEmpty && noEngineRan) {
-        _searchSubmitFocus.cancel();
-        setState(() {
-          _kwError =
-              'No sources enabled. Turn on at least one source in '
-              'Sources, then try again.';
-          _kwLoading = false;
-        });
-        return;
-      }
-      // Every source errored and nothing came back → surface the failure
-      // instead of a misleading "No results" (searchAllEngines fails soft).
-      if (torrents.isEmpty && engineErrors is Map && engineErrors.isNotEmpty) {
-        _searchSubmitFocus.cancel();
-        setState(() {
-          _kwError =
-              'Search failed on all sources. Check your connection or '
-              'enabled sources and try again.';
-          _kwLoading = false;
-        });
-        return;
-      }
-      // The awaited result is authoritative — snap to it (or park it).
-      _presentKwStreaming(torrents, token);
-      _finishKeyword(token);
-    } catch (e) {
-      if (!mounted || token != _kwSearchToken) return;
-      _kwSearching = false;
-      _searchSubmitFocus.cancel();
-      setState(() {
-        _kwError = _friendlyKeywordError(e);
-        _kwLoading = false;
-      });
-    }
-  }
-
-  /// Applies a (provisional or final) raw result set: recompute providers and
-  /// the filtered view, or — once the user has interacted ([_kwStreamFrozen])
-  /// — park it behind the "+N new results" pill so rows never reshuffle
-  /// mid-read.
-  void _presentKwStreaming(List<Torrent> raw, int token) {
-    if (!mounted || token != _kwSearchToken) return;
-    // The strip live-updates on every present (frozen or not), so if the
-    // remote is ON a tab, capture its source before indices shift.
-    final tabAnchor = _focusedKwTabSource();
-    if (_kwStreamFrozen) {
-      // The user has taken over focus — drop the pending toolbar refocus.
-      _kwRefocusToolbar = false;
-      _kwPending = raw;
-      _syncKwTabNodes(); // live tabs: nodes track the parked set's sources
-      setState(() {}); // pill count + tab strip update
-      _reanchorKwTab(tabAnchor);
-      return;
-    }
-    _kwAll = raw;
-    _computeKwProviders(raw);
-    _kwLoading = false; // first batch replaces the full-screen loader
-    _recomputeKeyword();
-    _reanchorKwTab(tabAnchor);
-    if (_kwToolbarVisible) {
-      _completeSearchSubmitFocus(_kwToolbarNodes.first);
-    }
-    if (_kwRefocusToolbar) {
-      // The Sources-dialog re-search unmounted the focused toolbar; the
-      // toolbar just remounted with this first paint — put the remote back
-      // NOW, not at completion (rows are interactive from the first batch).
-      _kwRefocusToolbar = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _kwToolbarVisible) _kwToolbarNodes.first.requestFocus();
-      });
-    }
-  }
-
-  /// Completion-only steps: validate the source tab against the final set,
-  /// hide the searching strip, and run the cache-badge check.
-  void _finishKeyword(int token) {
-    if (!mounted || token != _kwSearchToken) return;
-    // Validate against the authoritative FULL set (pending included) — an
-    // early batch that merely hasn't delivered a source yet must not clear
-    // the user's tab mid-stream, so this check only runs here.
-    final full = _kwPending ?? _kwAll;
-    if (_kwSourceTab != null &&
-        !full.any((t) => _kwSourceOf(t) == _kwSourceTab)) {
-      _kwSourceTab = null;
-      // Recompute over the DISPLAYED set even when arrivals are parked, so
-      // the strip ("All" active) and the visible list can't disagree.
-      _recomputeKeyword();
-    }
-    setState(() {}); // searching strip off
-    // Completion: await in-flight batch checks, sweep stragglers, then settle
-    // cached-only mode over the authoritative full set.
-    unawaited(_finalizeKeywordCache(full, token));
-  }
-
-  /// First real user interaction → stop live-reshuffling; buffer new arrivals
-  /// behind the pill instead.
-  void _kwFreeze() {
-    _kwStreamFrozen = true;
-    _searchSubmitFocus.cancel();
-  }
-
-  /// Freeze AND fold any parked arrivals in — used by toolbar/dialog/tab
-  /// actions, so the user always sorts/filters/selects over the complete set.
-  void _kwFreezeAndAdopt() {
-    _kwFreeze();
-    _kwAdoptPending();
-  }
-
-  /// Folds the parked result set into the list (pill tap / toolbar use) and
-  /// refreshes cache badges for the fresh rows.
-  void _kwAdoptPending() {
-    final p = _kwPending;
-    if (p == null) return;
-    _kwPending = null;
-    // Identity-preserving refocus (Sources-list parity): folding arrivals in
-    // can insert rows above the DPAD focus — keep the remote on the SAME
-    // torrent, not the same index. This also keeps a long-pressed row under
-    // its checkmark when _enterKwSelection adopts before toggling.
-    Torrent? focusedTorrent;
-    for (var i = 0; i < _kwNodes.length && i < _kwResults.length; i++) {
-      if (_kwNodes[i].hasFocus) {
-        focusedTorrent = _kwResults[i];
-        break;
-      }
-    }
-    _kwAll = p;
-    // A tab whose source lost every row to dedupe in the adopted set would
-    // otherwise stay "active" over an empty list with no highlighted pill.
-    if (_kwSourceTab != null && !p.any((t) => _kwSourceOf(t) == _kwSourceTab)) {
-      _kwSourceTab = null;
-    }
-    _computeKwProviders(p);
-    _recomputeKeyword();
-    if (focusedTorrent != null) {
-      final key = _kwRowKey(focusedTorrent);
-      final idx = _kwResults.indexWhere((t) => _kwRowKey(t) == key);
-      if (idx >= 0) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && idx < _kwNodes.length) _kwNodes[idx].requestFocus();
-        });
-      }
-    }
-    unawaited(_checkKeywordCache(_kwAll, _kwSearchToken));
-  }
-
-  /// Identity key for pending-row diffing (infohash when real, else the
-  /// name+URL pair direct streams are distinguished by).
-  static String _kwRowKey(Torrent t) =>
-      t.hasRealInfoHash && t.infohash.isNotEmpty
-      ? 'h:${t.infohash.toLowerCase()}'
-      : 'n:${t.name}|${t.directUrl ?? ''}';
-
-  /// Rows waiting behind the pill (0 hides it) — a SET difference, not a
-  /// length delta, so dedupe-shrunk pending sets still count their new rows.
-  int get _kwPendingNewCount {
-    final p = _kwPending;
-    if (p == null) return 0;
-    final shown = {for (final t in _kwAll) _kwRowKey(t)};
-    var count = 0;
-    for (final t in p) {
-      if (!shown.contains(_kwRowKey(t))) count++;
-    }
-    return count;
-  }
-
-  /// A torrent's source-tab bucket ('unknown' for empty sources, matching the
-  /// provider-filter grouping).
-  static String _kwSourceOf(Torrent t) =>
-      t.source.isNotEmpty ? t.source : 'unknown';
-
-  /// The fullest known result set: parked arrivals when frozen, else the
-  /// displayed set. The tab strip derives from THIS so it live-updates
-  /// (counts tick, new source pills appear) even while the rows are frozen —
-  /// the strip sits above the list, so it never shifts what's being read.
-  List<Torrent> get _kwFullSet => _kwPending ?? _kwAll;
-
-  /// Distinct sources in [_kwFullSet], sorted — drives the tab strip.
-  List<String> get _kwSourceList {
-    final s = <String>{for (final t in _kwFullSet) _kwSourceOf(t)};
-    final l = s.toList()..sort();
-    return l;
-  }
-
-  /// The tab strip only earns its row when there's a real choice.
-  bool get _kwTabsVisible => _kwSourceList.length > 1;
-
-  /// Which SOURCE the focused tab points at ('' = the All tab, null = the
-  /// strip isn't focused). Captured BEFORE a strip rebuild so focus can be
-  /// re-anchored by identity — new sources insert alphabetically and shift
-  /// positional node indices under the remote.
-  String? _focusedKwTabSource() {
-    for (var i = 0; i < _kwTabNodes.length; i++) {
-      if (_kwTabNodes[i].hasFocus) {
-        if (i == 0) return '';
-        final sources = _kwSourceList;
-        return i - 1 < sources.length ? sources[i - 1] : '';
-      }
-    }
-    return null;
-  }
-
-  /// Post-frame counterpart of [_focusedKwTabSource]: refocus the tab that
-  /// carries [source] at its NEW index (All when it vanished).
-  void _reanchorKwTab(String? source) {
-    if (source == null) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final idx = source.isEmpty ? 0 : _kwSourceList.indexOf(source) + 1;
-      _focusKwTab(idx > 0 && idx < _kwTabNodes.length ? idx : 0);
-    });
-  }
-
-  /// Turn a raw search exception into a short, human-readable message — matches
-  /// the old screen's network/timeout/generic buckets.
-  String _friendlyKeywordError(Object e) {
-    final msg = e.toString().replaceAll('Exception: ', '');
-    if (msg.contains('SocketException') || msg.contains('Failed host lookup')) {
-      return 'Network error. Please check your connection.';
-    }
-    if (msg.contains('TimeoutException')) {
-      return 'Search timed out. Please try again.';
-    }
-    if (msg.length > 100) return 'Search failed. Please try again.';
-    return msg;
-  }
-
-  // ── Bulk selection (keyword results) ──────────────────────────────────────
-  /// Torrents eligible for bulk actions (excludes direct/external streams).
-  List<Torrent> get _kwSelectableResults => _kwResults
-      .where((t) => !t.isDirectStream && !t.isExternalStream)
-      .toList();
-
-  void _enterKwSelection() {
-    // Multi-select over a live-shifting list would let rows move under the
-    // checkmarks — freeze and fold parked arrivals in first.
-    _kwFreezeAndAdopt();
-    // Entering selection swaps the toolbar to 3 pills; if DPAD focus was on the
-    // now-gone "Select" pill (index 3), pull it back to the new first pill so
-    // the remote doesn't lose focus.
-    final refocusToolbar = _kwToolbarNodes.any((n) => n.hasFocus);
-    setState(() {
-      _kwSelectionMode = true;
-      _kwSelected.clear();
-    });
-    if (refocusToolbar) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _kwToolbarNodes.first.requestFocus();
-      });
-    }
-  }
-
-  void _exitKwSelection() {
-    setState(() {
-      _kwSelectionMode = false;
-      _kwSelected.clear();
-    });
-  }
-
-  void _toggleKwSelection(Torrent t) {
-    setState(() {
-      if (_kwSelected.contains(t.infohash)) {
-        _kwSelected.remove(t.infohash);
-      } else {
-        _kwSelected.add(t.infohash);
-      }
-    });
-  }
-
-  void _selectAllKw() {
-    setState(() {
-      _kwSelected
-        ..clear()
-        ..addAll(_kwSelectableResults.map((t) => t.infohash));
-    });
-  }
-
-  /// Clear the selection but stay in selection mode (matches Home's "None").
-  void _deselectAllKw() {
-    setState(() => _kwSelected.clear());
-  }
-
-  bool _kwBulkBusy = false;
-
-  Future<void> _openBulkAdd() async {
-    if (_kwBulkBusy) return;
-    final chosen = _kwResults
-        .where((t) => _kwSelected.contains(t.infohash))
-        .toList();
-    if (chosen.isEmpty) return;
-    _kwBulkBusy = true;
-    bool chose = false;
-    try {
-      chose = await TorrentBulkAddService.showBulkAddDialog(
-        context,
-        torrents: chosen,
-        keyword: _kwQuery,
-      );
-    } finally {
-      _kwBulkBusy = false;
-    }
-    // Stay in selection mode if the user just dismissed the chooser.
-    if (mounted && chose && _kwSelectionMode) _exitKwSelection();
-  }
-
-  /// True when [t] is (or is treated as) a direct/external URL stream rather
-  /// than an addable torrent — used to bucket results into the provider groups.
-  bool _kwIsDirect(Torrent t) => t.isDirectStream || t.isExternalStream;
-
-  /// Action menu for a keyword-result direct/external stream row (parity with
-  /// the old direct-stream action dialog): Play/Open, Copy URL, Download.
-  void _showKwStreamMenu(Torrent t, int i) {
-    final app = AppThemeScope.of(context);
-    final external = t.isExternalStream;
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: app.home.sheetBg,
-      builder: (sheetCtx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(
-                external ? Icons.open_in_new_rounded : Icons.play_arrow_rounded,
-                color: app.core.tx,
-              ),
-              title: Text(external ? 'Open externally' : 'Play now'),
-              onTap: () {
-                DialogTapGuard.markKeyAction();
-                Navigator.of(sheetCtx).pop();
-                unawaited(
-                  TorrentPlaybackService.activateTorrent(
-                    context,
-                    t,
-                    sources: _kwResults,
-                    sourceIndex: i,
-                    searchKeyword: _kwQuery,
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.copy_rounded, color: Color(0xFFF59E0B)),
-              title: const Text('Copy link'),
-              onTap: () async {
-                DialogTapGuard.markKeyAction();
-                Navigator.of(sheetCtx).pop();
-                await _copyKwLink(t);
-              },
-            ),
-            if (ProfilePolicyGuard.allowsSync(ProfileFeature.downloads))
-              ListTile(
-                leading: const Icon(
-                  Icons.download_rounded,
-                  color: Color(0xFF60A5FA),
-                ),
-                title: const Text('Download to device'),
-                onTap: () {
-                  DialogTapGuard.markKeyAction();
-                  Navigator.of(sheetCtx).pop();
-                  unawaited(
-                    TorrentPlaybackService.downloadDirectStream(context, t),
-                  );
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _copyKwLink(Torrent t) async {
-    final link = t.copyLink;
-    if (link == null) {
-      _snack('No link available for this source.');
-      return;
-    }
-    await Clipboard.setData(ClipboardData(text: link));
-    if (mounted) _snack('Link copied to clipboard');
-  }
-
-  /// Tally result counts per source, split into Direct vs Torrent groups, and
-  /// default every source to selected. Mirrors the old `_calculateStreamTypeCounts`.
-  void _computeKwProviders(List<Torrent> torrents) {
-    final direct = <String, int>{};
-    final torrent = <String, int>{};
-    for (final t in torrents) {
-      final src = _kwSourceOf(t);
-      final bucket = _kwIsDirect(t) ? direct : torrent;
-      bucket[src] = (bucket[src] ?? 0) + 1;
-    }
-    _kwDirectCounts = direct;
-    _kwTorrentCounts = torrent;
-    // Additive selection: a source never seen this search starts ticked, but
-    // one the user unticked stays unticked when a later engine's batch
-    // re-reports it — streaming recomputes must not wipe mid-search choices.
-    // ([_kwProviderSeen] resets per search, so the first call ticks all.)
-    for (final s in direct.keys) {
-      if (_kwProviderSeen.add('d:$s')) _kwSelectedDirect.add(s);
-    }
-    for (final s in torrent.keys) {
-      if (_kwProviderSeen.add('t:$s')) _kwSelectedTorrent.add(s);
-    }
-    // Prune sources that vanished from the merge (dedupe can reattribute a
-    // source's only row to a higher-seeded copy) — stale selections corrupt
-    // the Providers badge arithmetic and the dialog's All/None check. The
-    // seen-key goes too, so a source that REAPPEARS auto-ticks like new.
-    _kwSelectedDirect.removeWhere((s) => !direct.containsKey(s));
-    _kwSelectedTorrent.removeWhere((s) => !torrent.containsKey(s));
-    _kwProviderSeen.removeWhere(
-      (k) => k.startsWith('d:')
-          ? !direct.containsKey(k.substring(2))
-          : !torrent.containsKey(k.substring(2)),
-    );
-  }
-
-  /// TorBox-cached test used by the cached-only prefilter. Entries without a
-  /// real infohash but with a torrent URL (direct links) are always kept, since
-  /// they can't be cache-checked — matching the old screen.
-  bool _kwIsTorboxCached(Torrent t) {
-    if (!t.hasRealInfoHash && t.torrentUrl != null) return true;
-    // Key exactly as the cache map is built and as rows render badges
-    // (`infohash.toLowerCase()`, no trim) so the filter can't drop a torrent
-    // that still shows a TB badge.
-    final labels = _kwCache[t.infohash.toLowerCase()];
-    return labels != null && labels.contains('TB');
-  }
-
-  /// Re-apply cached-only + provider + tab + attribute filters and sort to the
-  /// last search's results, then sync focus nodes to the new length.
-  void _recomputeKeyword() {
-    Iterable<Torrent> base = _kwAll;
-    // 1) TorBox cached-only prefilter (when active).
-    if (_kwCachedOnly) {
-      base = base.where(_kwIsTorboxCached);
-    }
-    // 2) Provider (stream-type) multi-select. An empty group map means that
-    //    group has no providers, so it imposes no constraint on its members.
-    if (_kwDirectCounts.isNotEmpty || _kwTorrentCounts.isNotEmpty) {
-      base = base.where((t) {
-        final src = _kwSourceOf(t);
-        if (_kwIsDirect(t)) {
-          return _kwDirectCounts.isEmpty || _kwSelectedDirect.contains(src);
-        }
-        return _kwTorrentCounts.isEmpty || _kwSelectedTorrent.contains(src);
-      });
-    }
-    // 3) Source tab (single-select) narrows on top of the multi-select.
-    final tab = _kwSourceTab;
-    if (tab != null) {
-      base = base.where((t) => _kwSourceOf(t) == tab);
-    }
-    // 4) Quality / rip-source / language attribute filters.
-    final filtered = TorrentFilterMatcher.apply(base.toList(), _kwFilters);
-    final sorted = _sortKeyword(filtered);
-    _syncKwNodes(sorted.length);
-    _syncKwTabNodes();
-    setState(() => _kwResults = sorted);
-  }
-
-  /// Grows/shrinks [_kwNodes] to the target length without ever disposing the
-  /// focused node unanchored. Removed nodes are disposed POST-FRAME — their
-  /// row widgets are still mounted this frame, and unmounting a Focus widget
-  /// whose node is already disposed asserts (same rule as the Sources list).
-  void _syncKwNodes(int length) {
-    while (_kwNodes.length < length) {
-      _kwNodes.add(FocusNode(debugLabel: 'kw_${_kwNodes.length}'));
-    }
-    if (_kwNodes.length > length) {
-      final removed = <FocusNode>[];
-      while (_kwNodes.length > length) {
-        final node = _kwNodes.removeLast();
-        if (node.hasFocus && _kwNodes.isNotEmpty) _kwNodes.last.requestFocus();
-        removed.add(node);
-      }
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        for (final node in removed) {
-          node.dispose();
-        }
-      });
-    }
-  }
-
-  /// Same grow/shrink discipline for the source-tab pills ("All" + one per
-  /// source in [_kwSourceList]).
-  void _syncKwTabNodes() {
-    final want = _kwSourceList.length + 1;
-    while (_kwTabNodes.length < want) {
-      _kwTabNodes.add(FocusNode(debugLabel: 'kw_tab_${_kwTabNodes.length}'));
-    }
-    if (_kwTabNodes.length > want) {
-      final removed = <FocusNode>[];
-      while (_kwTabNodes.length > want) {
-        final node = _kwTabNodes.removeLast();
-        if (node.hasFocus && _kwTabNodes.isNotEmpty) {
-          _kwTabNodes.last.requestFocus();
-        }
-        removed.add(node);
-      }
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        for (final node in removed) {
-          node.dispose();
-        }
-      });
-    }
-  }
-
-  List<Torrent> _sortKeyword(List<Torrent> list) {
-    final l = [...list];
-    // Direction multiplier: descending by default (asc flips it). 'name' compares
-    // case-insensitively; the rest are numeric.
-    final int dir = _kwSortAsc ? 1 : -1;
-    switch (_kwSort) {
-      case 'seeders':
-        l.sort((a, b) => dir * a.seeders.compareTo(b.seeders));
-        break;
-      case 'size':
-        l.sort((a, b) => dir * a.sizeBytes.compareTo(b.sizeBytes));
-        break;
-      case 'date':
-        l.sort((a, b) => dir * a.createdUnix.compareTo(b.createdUnix));
-        break;
-      case 'name':
-        l.sort(
-          (a, b) =>
-              dir *
-              a.displayTitle.toLowerCase().compareTo(
-                b.displayTitle.toLowerCase(),
-              ),
-        );
-        break;
-      default: // 'relevance' — keep the engine (seeder-deduped) order
-        break;
-    }
-    return l;
-  }
-
-  /// Natural default direction for a sort field: names read A→Z (ascending);
-  /// seeders/size/date read most/largest/newest first (descending).
-  bool _naturalAscFor(String field) => field == 'name';
-
-  /// Additive cache-check against TorBox/Premiumize (the only providers that
-  /// support it), stamping TB/PM badges onto [torrents]' rows. Called per
-  /// streaming batch and once as a completion sweep (via [_finalizeKeywordCache]).
-  ///
-  /// Results MERGE into [_kwCache] so earlier batches' badges survive. A hash is
-  /// added to [_kwCacheChecked] ONLY after every enabled provider resolved for
-  /// it — a thrown check leaves it un-memoized so a later batch or the finalize
-  /// sweep re-queries it (a transient failure must not permanently drop rows).
-  /// Cached-only mode is NOT decided here — see [_finalizeKeywordCache].
-  Future<void> _checkKeywordCache(List<Torrent> torrents, int token) async {
-    final hashes = <String>[];
-    for (final t in torrents) {
-      final h = t.infohash.toLowerCase();
-      // contains (not add): dispatch every not-yet-confirmed hash; memoization
-      // happens post-success below, so a failed hash stays retryable.
-      if (h.isEmpty || _kwCacheChecked.contains(h)) continue;
-      hashes.add(h);
-    }
-    if (hashes.isEmpty) return;
-    final add = <String, List<String>>{};
-    // A provider is "done" for these hashes when it's not enabled (nothing to
-    // do) OR its check succeeded. Only when BOTH are done do we memoize.
-    bool tbDone = !(_kwTbOn && _kwTbKey != null);
-    bool pmDone = !(_kwPmOn && _kwPmKey != null);
-    bool tbOk = false;
-    if (_kwTbOn && _kwTbKey != null) {
-      try {
-        final cached = await CloudProviderRegistry.instance.checkCachedHashes(
-          hashes,
-        );
-        tbDone = true;
-        tbOk = true;
-        for (final h in cached) {
-          (add[h] ??= <String>[]).add('TB');
-        }
-      } catch (_) {}
-    }
-    if (_kwPmOn && _kwPmKey != null) {
-      try {
-        final res = await CloudProviderRegistry.instance.checkCache(hashes);
-        pmDone = true;
-        for (var i = 0; i < hashes.length && i < res.length; i++) {
-          if (res[i]) (add[hashes[i]] ??= <String>[]).add('PM');
-        }
-      } catch (_) {}
-    }
-    // Guard BEFORE mutating any shared state so a superseded search's late
-    // batch can't stamp badges, flip _kwTbRan, or memoize hashes for the new one.
-    if (!mounted || token != _kwSearchToken) return;
-    // A successful TorBox check is the precondition for cached-only mode (a
-    // thrown check must NOT hide every result).
-    if (tbOk) _kwTbRan = true;
-    _kwCache.addAll(add);
-    if (tbDone && pmDone) _kwCacheChecked.addAll(hashes);
-    setState(() {});
-  }
-
-  /// Completion: wait for every in-flight batch check so [_kwCache] and
-  /// [_kwTbRan] reflect the whole result set, sweep any hash a batch missed or
-  /// whose check failed, THEN settle cached-only mode. Deferring the decision
-  /// until the checks resolve is what prevents cached rows from being hidden by
-  /// a not-yet-returned batch — the failure mode of settling it mid-flight.
-  Future<void> _finalizeKeywordCache(List<Torrent> full, int token) async {
-    try {
-      await Future.wait(List<Future<void>>.from(_kwPendingChecks));
-    } catch (_) {}
-    if (!mounted || token != _kwSearchToken) return;
-    // Retry any hash still un-memoized (never dispatched, or a failed check).
-    await _checkKeywordCache(full, token);
-    if (!mounted || token != _kwSearchToken) return;
-    // Narrow to TorBox-cached torrents only when TorBox is the sole usable
-    // provider. Any other active provider may be able to handle a result that
-    // TorBox does not cache, so its rows must remain visible.
-    final cachedOnly = _kwTbRan && !_kwOtherProviderActive;
-    if (cachedOnly != _kwCachedOnly) {
-      // Cached-only mode toggles the visible set → full recompute.
-      _kwCachedOnly = cachedOnly;
-      _recomputeKeyword();
-    } else {
-      // Badges-only update: the result list is unchanged, so just repaint the
-      // cache labels. Rebuilding _kwNodes here (as a full recompute would) drops
-      // TV DPAD focus off whatever row the user navigated to while the async
-      // cache check was still in flight.
-      setState(() {});
-    }
-  }
-
-  Future<void> _openKeywordFilters() async {
-    // Toolbar use is a deliberate reshuffle: stop live streaming updates and
-    // fold parked arrivals in, so the dialog operates on the complete set.
-    _kwFreezeAndAdopt();
-    final result = await showDialog<TorrentFilterState>(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: TorrentFiltersSheet(initialState: _kwFilters),
-      ),
-    );
-    if (result == null || !mounted) return;
-    _kwFilters = result;
-    _recomputeKeyword();
-  }
-
-  /// Info banner shown above the results when the list is narrowed to
-  /// TorBox-cached torrents. Mirrors the old `_buildTorboxCachedOnlyNotice`.
-  Widget _kwCachedOnlyNotice() {
-    final app = AppThemeScope.of(context);
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E3A8A).withValues(alpha: 0.2),
-        borderRadius: app.shape.br(8),
-        border: Border.all(
-          color: const Color(0xFF38BDF8).withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.info_outline_rounded,
-            color: Color(0xFF38BDF8),
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Showing Torbox cached results only. Disable "Check Torbox cache '
-              'during searches" in Torbox settings to see every result.',
-              style: TextStyle(
-                fontSize: 12,
-                color: app.fade(app.core.tx, 0.85),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// True when the provider (stream-type) filter is worth surfacing: at least
-  /// two distinct sources exist across both groups, so filtering can change the
-  /// result set. A single source imposes no meaningful choice.
-  bool get _kwHasProviderFilter =>
-      (_kwDirectCounts.length + _kwTorrentCounts.length) >= 2;
-
-  /// Count of source groups the user has narrowed away from "all selected" —
-  /// drives the active state / badge on the Providers pill.
-  int get _kwProviderFilterActive {
-    var n = 0;
-    if (_kwDirectCounts.isNotEmpty &&
-        _kwSelectedDirect.length != _kwDirectCounts.length) {
-      n += _kwDirectCounts.length - _kwSelectedDirect.length;
-    }
-    if (_kwTorrentCounts.isNotEmpty &&
-        _kwSelectedTorrent.length != _kwTorrentCounts.length) {
-      n += _kwTorrentCounts.length - _kwSelectedTorrent.length;
-    }
-    return n;
-  }
-
-  /// Multi-select dialog to filter keyword results by their source, grouped into
-  /// Direct and Torrent providers. Ported from the old screen's stream-type
-  /// dropdowns, adapted to the new toolbar/dialog idiom.
-  Future<void> _openKeywordProviders() async {
-    // Freeze + adopt so the provider counts reflect everything found so far.
-    _kwFreezeAndAdopt();
-    await showDialog<void>(
-      context: context,
-      builder: (dialogCtx) {
-        final scheme = Theme.of(dialogCtx).colorScheme;
-        return StatefulBuilder(
-          builder: (ctx, setLocal) {
-            void apply(VoidCallback mutate) {
-              setLocal(mutate);
-              _recomputeKeyword();
-            }
-
-            Widget group(
-              String title,
-              Map<String, int> counts,
-              Set<String> selected,
-            ) {
-              if (counts.isEmpty) return const SizedBox.shrink();
-              final entries = counts.entries.toList()
-                ..sort((a, b) => b.value.compareTo(a.value));
-              final allOn = selected.length == counts.length;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 8, 4, 2),
-                    child: Row(
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurface,
-                          ),
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () => apply(() {
-                            if (allOn) {
-                              selected.clear();
-                            } else {
-                              selected
-                                ..clear()
-                                ..addAll(counts.keys);
-                            }
-                          }),
-                          child: Text(allOn ? 'None' : 'All'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ...entries.map(
-                    (e) => CheckboxListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      value: selected.contains(e.key),
-                      title: Text(
-                        e.key,
-                        style: TextStyle(fontSize: 13, color: scheme.onSurface),
-                      ),
-                      secondary: Text(
-                        '${e.value}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                      onChanged: (_) => apply(() {
-                        if (selected.contains(e.key)) {
-                          selected.remove(e.key);
-                        } else {
-                          selected.add(e.key);
-                        }
-                      }),
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            return AlertDialog(
-              title: const Text('Filter by source'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      group('Direct', _kwDirectCounts, _kwSelectedDirect),
-                      group('Torrent', _kwTorrentCounts, _kwSelectedTorrent),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogCtx).pop(),
-                  child: const Text('Done'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _openKeywordSort() async {
-    // Sorting mid-stream over a shifting set would be meaningless — freeze
-    // and fold parked arrivals in first.
-    _kwFreezeAndAdopt();
-    await showDialog<void>(
-      context: context,
-      builder: (dialogCtx) {
-        final scheme = Theme.of(dialogCtx).colorScheme;
-        return StatefulBuilder(
-          builder: (ctx, setLocal) {
-            // Picking a field resets direction to that field's natural default;
-            // the toggle below can then flip it. Changes apply live.
-            void applyField(String value) {
-              setLocal(() {
-                _kwSort = value;
-                _kwSortAsc = _naturalAscFor(value);
-              });
-              _recomputeKeyword();
-            }
-
-            void applyDir(bool asc) {
-              setLocal(() => _kwSortAsc = asc);
-              _recomputeKeyword();
-            }
-
-            Widget tile(String value, String label) => ListTile(
-              dense: true,
-              title: Text(label),
-              trailing: _kwSort == value
-                  ? Icon(Icons.check_rounded, color: scheme.primary)
-                  : null,
-              onTap: () => applyField(value),
-            );
-
-            final dirEnabled = _kwSort != 'relevance';
-            return AlertDialog(
-              backgroundColor: scheme.surfaceContainerHigh,
-              title: const Text('Sort by'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  tile('relevance', 'Relevance'),
-                  tile('seeders', 'Seeders'),
-                  tile('size', 'Size'),
-                  tile('date', 'Date added'),
-                  tile('name', 'Name'),
-                  const Divider(height: 12),
-                  // Direction toggle — disabled for 'relevance' (engine order).
-                  Opacity(
-                    opacity: dirEnabled ? 1 : 0.4,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          const Expanded(child: Text('Direction')),
-                          ToggleButtons(
-                            isSelected: [!_kwSortAsc, _kwSortAsc],
-                            onPressed: dirEnabled
-                                ? (i) => applyDir(i == 1)
-                                : null,
-                            borderRadius: BorderRadius.circular(8),
-                            constraints: const BoxConstraints(
-                              minHeight: 34,
-                              minWidth: 46,
-                            ),
-                            children: const [
-                              Icon(Icons.arrow_downward_rounded, size: 18),
-                              Icon(Icons.arrow_upward_rounded, size: 18),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogCtx).pop(),
-                  child: const Text('Done'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _openKeywordSources() async {
-    // If the remote was on the toolbar, the re-search below unmounts it (loading
-    // spinner) and would strand DPAD focus — restore it at the FIRST streamed
-    // paint (see _kwRefocusToolbar), when the toolbar remounts. A completion
-    // refocus would arrive seconds after rows became interactive and could
-    // yank the remote off a row the user had already navigated to.
-    final fromToolbar = _kwToolbarNodes.any((n) => n.hasFocus);
-    await showDialog<void>(
-      context: context,
-      builder: (_) => const _KeywordSourcesDialog(),
-    );
-    if (!mounted || _kwQuery.isEmpty) return;
-    // Re-search with the new enabled set.
-    await _runKeyword(_kwQuery, refocusToolbar: fromToolbar);
-  }
-
-  void _disposeKwNodes() {
-    for (final n in _kwNodes) {
-      n.dispose();
-    }
-    _kwNodes.clear();
-  }
-
   void _switchMode(SearchBoardMode mode) {
     // Belt for every entry point at once: the keyword surface is gated per
     // profile (catalog search never is).
@@ -10466,8 +9105,8 @@ class _SearchScreenState extends State<SearchScreenHost>
     setState(() {
       _mode = mode;
       // Leaving the keyword list drops any in-progress multi-selection.
-      _kwSelectionMode = false;
-      _kwSelected.clear();
+      _keyword.kwSelectionMode = false;
+      _keyword.kwSelected.clear();
     });
     // Carry the typed query across: if there's text in the box, run the target
     // mode's search immediately instead of showing the empty state.
@@ -10475,7 +9114,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     if (query.isEmpty) return;
     switch (mode) {
       case SearchBoardMode.keyword:
-        if (query != _kwQuery) _runKeyword(query);
+        if (query != _keyword.kwQuery) unawaited(_keyword.run(query));
         return;
       case SearchBoardMode.catalog:
         if (query != _catalogQuery) _runCatalogSearch(query);
@@ -11477,7 +10116,7 @@ class _SearchScreenState extends State<SearchScreenHost>
           // only content, and _focusContent keeps focus on the field there —
           // so target it directly, otherwise Down is a dead end.
           if (_kwSourcesButtonVisible) {
-            _kwSourcesBtnFocus.requestFocus();
+            _keyword.kwSourcesBtnFocus.requestFocus();
           } else if (_catalogSourcesButtonVisible) {
             _catalogSourcesBtnFocus.requestFocus();
           } else {
@@ -11546,7 +10185,7 @@ class _SearchScreenState extends State<SearchScreenHost>
             onDownArrow: tv
                 ? () {
                     if (_kwSourcesButtonVisible) {
-                      _kwSourcesBtnFocus.requestFocus();
+                      _keyword.kwSourcesBtnFocus.requestFocus();
                     } else if (_catalogSourcesButtonVisible) {
                       _catalogSourcesBtnFocus.requestFocus();
                     } else {
@@ -11623,7 +10262,36 @@ class _SearchScreenState extends State<SearchScreenHost>
   }
 
   Widget _buildBody() {
-    if (_mode == SearchBoardMode.keyword) return _buildKeyword();
+    if (_mode == SearchBoardMode.keyword) {
+      return KeywordSearchScreen(
+        controller: _keyword,
+        isTelevision: widget.isTelevision,
+        onOpenStream: (context, torrent, sources, sourceIndex, searchKeyword) {
+          unawaited(
+            TorrentPlaybackService.activateTorrent(
+              context,
+              torrent,
+              sources: sources,
+              sourceIndex: sourceIndex,
+              searchKeyword: searchKeyword,
+            ),
+          );
+        },
+        onBulkAdd: (context, torrents, keyword) =>
+            TorrentBulkAddService.showBulkAddDialog(
+              context,
+              torrents: torrents,
+              keyword: keyword,
+            ),
+        onOpenSources: () => showDialog<void>(
+          context: context,
+          builder: (_) => const _KeywordSourcesDialog(),
+        ),
+        onFocusSearchField: _focusSearchFieldAtEnd,
+        onFocusSidebar: () => MainPageBridge.focusTvSidebar?.call(),
+        onSnack: _snack,
+      );
+    }
     if (_mode == SearchBoardMode.lists) return _buildListsSearch();
     // Full-screen spinner only until the FIRST result row streams in — after
     // that the board renders and late rows append beneath it (a slim progress
@@ -12008,1053 +10676,6 @@ class _SearchScreenState extends State<SearchScreenHost>
       _runCatalogSearch(_catalogQuery);
     }
   }
-
-  Widget _buildKeyword() {
-    if (_kwLoading) {
-      // Branded phased loader (parity with the old screen) instead of a bare
-      // spinner. Keyword search is never series-aware, so isSeries stays false.
-      return SearchLoadingAnimation(
-        phase: SearchPhase.searching,
-        isTelevision: widget.isTelevision,
-      );
-    }
-    if (_kwError != null) {
-      return _message(Icons.error_outline_rounded, 'Search failed', _kwError!);
-    }
-    if (_kwQuery.isEmpty) {
-      // Surface Sources before searching so users can enable/disable the
-      // trackers that get queried up front.
-      return Column(
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: _kwSourcesButton(),
-            ),
-          ),
-          Expanded(
-            child: _message(
-              Icons.bolt_rounded,
-              'Keyword torrent search',
-              'Type a title and press search to find torrents across your '
-                  'enabled sources, then tap one to play. Use Sources to choose '
-                  'which trackers are queried.',
-            ),
-          ),
-        ],
-      );
-    }
-    final narrow =
-        !widget.isTelevision && MediaQuery.of(context).size.width < 600;
-    // Apply a restored scroll offset once the list is laid out, then clear it so
-    // it only fires on the first build after a restore.
-    if (_pendingKwScroll != null && _kwResults.isNotEmpty) {
-      final off = _pendingKwScroll!;
-      _pendingKwScroll = null;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _kwScroll.hasClients) {
-          _kwScroll.jumpTo(off.clamp(0.0, _kwScroll.position.maxScrollExtent));
-        }
-      });
-    }
-    final content = Column(
-      children: [
-        // Tabs are suppressed during multi-select: switching source mid-select
-        // would hide checked rows under the user while "Add · N" still counts
-        // them (matching the toolbar's own selection lock-out).
-        if (_kwTabsVisible && !_kwSelectionMode) _kwSourceTabs(),
-        _buildKeywordToolbar(floatingSelect: narrow),
-        if (_kwSearching) _kwSearchingStrip(),
-        if (_kwCachedOnly && _kwAll.isNotEmpty) _kwCachedOnlyNotice(),
-        Expanded(
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: _kwResults.isEmpty
-                    ? _message(
-                        Icons.search_off_rounded,
-                        _kwAll.isEmpty ? 'No results' : 'No matches',
-                        _kwAll.isEmpty
-                            ? 'Nothing found for "$_kwQuery". Try different '
-                                  'keywords or enable more sources.'
-                            : 'No results match your filters. Adjust or clear them.',
-                      )
-                    : NotificationListener<ScrollNotification>(
-                        // A user drag (not programmatic scrolls) freezes live
-                        // reshuffling — arrivals park behind the pill instead.
-                        onNotification: (n) {
-                          if (n is ScrollStartNotification &&
-                              n.dragDetails != null) {
-                            _kwFreeze();
-                          }
-                          return false;
-                        },
-                        child: ListView.builder(
-                          controller: _kwScroll,
-                          // A focused SourceRow can scale and rise in
-                          // Spotlight. The first item starts at scroll offset
-                          // zero, so it needs real viewport clearance rather
-                          // than relying on ensureVisible to make room.
-                          padding: EdgeInsets.symmetric(
-                            vertical: widget.isTelevision ? 24 : 8,
-                            horizontal: 10,
-                          ),
-                          cacheExtent: 1200,
-                          itemCount: _kwResults.length,
-                          itemBuilder: (context, i) {
-                            final t = _kwResults[i];
-                            final selectable =
-                                !t.isDirectStream && !t.isExternalStream;
-                            final isStream = !selectable;
-                            final labels =
-                                _kwCache[t.infohash.toLowerCase()] ?? const [];
-                            final tags = isStream
-                                ? const <FormatTag>[]
-                                : FormatTagDetector.detect(t.name);
-                            return SourceRow(
-                              key: ValueKey(
-                                '${t.infohash}_${_kwSelectionMode}_${_kwSelected.contains(t.infohash)}',
-                              ),
-                              title: t.displayTitle,
-                              titleMaxLines: 6,
-                              subtitle: _kwRowSubtitle(t),
-                              focusNode: _kwNodes[i],
-                              isTelevision: widget.isTelevision,
-                              showPlayPill: widget.isTelevision,
-                              formatTags: tags,
-                              badgeName: t.name,
-                              badgeDescription: t.badgeDescription,
-                              qualityTag: tags.isEmpty
-                                  ? _SourcesScreenState._qualityLabel(t)
-                                  : null,
-                              cacheLabel: labels.isEmpty
-                                  ? null
-                                  : labels.join(' | '),
-                              streamBadge: t.isExternalStream
-                                  ? 'External'
-                                  : t.isDirectStream
-                                  ? 'Direct'
-                                  : null,
-                              isSelectionMode: _kwSelectionMode && selectable,
-                              isSelected: _kwSelected.contains(t.infohash),
-                              onCopy: _kwSelectionMode || t.copyLink == null
-                                  ? null
-                                  : () => unawaited(_copyKwLink(t)),
-                              onTap: () {
-                                if (_kwSelectionMode && selectable) {
-                                  _toggleKwSelection(t);
-                                  return;
-                                }
-                                // Swallow a SELECT that leaks through as a toolbar
-                                // dialog (sort/filter/sources) closes on TV.
-                                if (DialogTapGuard.shouldIgnoreTap()) return;
-                                // Playing pushes the player — freeze so the list
-                                // is exactly as left when the user comes back.
-                                _kwFreeze();
-                                unawaited(
-                                  TorrentPlaybackService.activateTorrent(
-                                    context,
-                                    t,
-                                    // Pass the whole result set so the in-player Sources
-                                    // switcher can hop to any other keyword hit (parity
-                                    // with the old screen, which always passed _torrents).
-                                    sources: _kwResults,
-                                    sourceIndex: i,
-                                    searchKeyword: _kwQuery,
-                                  ),
-                                );
-                              },
-                              onLongPress: _kwSelectionMode
-                                  ? null
-                                  : selectable
-                                  ? () {
-                                      _enterKwSelection();
-                                      _toggleKwSelection(t);
-                                    }
-                                  // Direct/external streams aren't selectable — long
-                                  // press opens their Play/Copy/Download menu instead
-                                  // (parity with the old direct-stream action dialog).
-                                  : () {
-                                      _kwFreeze();
-                                      _showKwStreamMenu(t, i);
-                                    },
-                              onNavigateUp: () {
-                                _kwFreeze();
-                                if (i > 0) {
-                                  _kwNodes[i - 1].requestFocus();
-                                } else if (_kwPendingNewCount > 0 &&
-                                    !_kwSelectionMode) {
-                                  // Parked arrivals: the pill is the row above
-                                  // (unmounted during multi-select, where UP
-                                  // must reach the selection toolbar instead).
-                                  _kwPillFocus.requestFocus();
-                                } else if (_kwToolbarVisible) {
-                                  // From the top row, Up lands on the toolbar (Sort…),
-                                  // not straight back to the search field.
-                                  _kwToolbarNodes.first.requestFocus();
-                                } else {
-                                  _searchFocusNode.requestFocus();
-                                }
-                              },
-                              onNavigateDown: () {
-                                _kwFreeze();
-                                if (i < _kwNodes.length - 1) {
-                                  _kwNodes[i + 1].requestFocus();
-                                }
-                              },
-                            );
-                          },
-                        ),
-                      ),
-              ),
-              // Frozen-mode arrivals wait behind this pill so the list never
-              // reshuffles under the user. Hidden during multi-select —
-              // adopting would renumber rows under the checkmarks.
-              if (_kwPendingNewCount > 0 && !_kwSelectionMode)
-                Positioned(
-                  top: 10,
-                  left: 0,
-                  right: 0,
-                  child: Center(child: _kwNewResultsPill()),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-
-    if (!narrow) return content;
-    // Small screens: Home-style floating select FAB / selection bar overlaid
-    // on the results, instead of the toolbar "Select" pill.
-    final canSelect = _kwSelectableResults.isNotEmpty;
-    return Stack(
-      children: [
-        Positioned.fill(child: content),
-        if (canSelect)
-          _kwSelectionMode ? _buildKwSelectionBar() : _buildKwSelectFab(),
-      ],
-    );
-  }
-
-  /// Standalone "Sources" pill shown in the pre-search keyword state so users
-  /// can pick which trackers are queried before typing a query.
-  Widget _kwSourcesButton() {
-    final app = AppThemeScope.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    return Focus(
-      focusNode: _kwSourcesBtnFocus,
-      onKeyEvent: (node, event) {
-        if (event is! KeyDownEvent) return KeyEventResult.ignored;
-        final key = event.logicalKey;
-        if (isActivateKey(key) || key == LogicalKeyboardKey.space) {
-          _openKeywordSources();
-          return KeyEventResult.handled;
-        }
-        // It's the only content in the pre-search state: Up returns to the
-        // search field, Left hands off to the sidebar. Down has nowhere to go.
-        if (key == LogicalKeyboardKey.arrowUp) {
-          _focusSearchFieldAtEnd();
-          return KeyEventResult.handled;
-        }
-        if (key == LogicalKeyboardKey.arrowLeft) {
-          MainPageBridge.focusTvSidebar?.call();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: ListenableBuilder(
-        listenable: _kwSourcesBtnFocus,
-        builder: (context, _) {
-          final focused = _kwSourcesBtnFocus.hasFocus;
-          return Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: _openKeywordSources,
-              borderRadius: app.shape.brPill,
-              canRequestFocus: false,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 9,
-                ),
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerHigh,
-                  borderRadius: app.shape.brPill,
-                  // 1.5px always so focus never shifts layout: white ring when
-                  // focused, else the faint idle border.
-                  border: Border.all(
-                    color: focused
-                        ? app.fade(app.core.tx, 0.9)
-                        : app.fade(app.core.tx, 0.10),
-                    width: 1.5,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.dns_rounded,
-                      size: 16,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Sources',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  /// `size · ↑seeders · ↓leechers · SOURCE · date` meta line for a keyword
-  /// row — same grammar as the Sources screen's rows (shared SourceRow look).
-  static String _kwRowSubtitle(Torrent t) {
-    final parts = <String>[];
-    if (t.isDirectStream || t.isExternalStream) {
-      if (t.sizeBytes > 0) {
-        parts.add(_SourcesScreenState._fmtSize(t.sizeBytes));
-      }
-      if (t.source.isNotEmpty) parts.add(t.source.toUpperCase());
-      return parts.join(' · ');
-    }
-    if (t.sizeBytes > 0) parts.add(_SourcesScreenState._fmtSize(t.sizeBytes));
-    if (t.seeders > 0) parts.add('↑ ${t.seeders}');
-    if (t.leechers > 0) parts.add('↓ ${t.leechers}');
-    if (t.source.isNotEmpty) parts.add(t.source.toUpperCase());
-    final date = _SourcesScreenState._fmtDate(t.createdUnix);
-    if (date != null) parts.add(date);
-    return parts.join(' · ');
-  }
-
-  /// Display name for a source tab ('stremio:foo' → 'Foo').
-  static String _kwPrettySource(String s) {
-    final v = s.startsWith('stremio:') ? s.substring(8) : s;
-    return v.isEmpty ? s : v[0].toUpperCase() + v.substring(1);
-  }
-
-  /// Horizontal source tabs (All / per-source with counts) above the toolbar —
-  /// the fast single-select layer on top of the Providers multi-select. Only
-  /// built when [_kwTabsVisible] (2+ sources). Derives from [_kwFullSet]:
-  /// counts tick and new source pills appear live even while the rows below
-  /// are frozen behind the pill (activating any tab folds the parked set in
-  /// first, so what a tab press shows is always the complete picture). DPAD:
-  /// left/right across tabs, up to the search field, down into the toolbar,
-  /// select to activate.
-  Widget _kwSourceTabs() {
-    final app = AppThemeScope.of(context);
-    final accent = app.home.chromeAccent;
-    final dim = app.fade(app.core.tx, 0.55);
-    final sources = _kwSourceList;
-    final full = _kwFullSet;
-    final counts = <String, int>{};
-    for (final t in full) {
-      counts[_kwSourceOf(t)] = (counts[_kwSourceOf(t)] ?? 0) + 1;
-    }
-    final total = sources.length + 1;
-
-    Widget tab(int navIndex, String label, bool on, VoidCallback onTap) {
-      // Nodes are synced in _recomputeKeyword; a mid-build mismatch (e.g. the
-      // strip rebuilt by a non-recompute setState) must not range-crash.
-      final node = navIndex < _kwTabNodes.length ? _kwTabNodes[navIndex] : null;
-      Widget body(bool focused) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-        decoration: BoxDecoration(
-          color: on ? accent : app.fade(app.core.tx, 0.05),
-          borderRadius: app.shape.brPill,
-          // Always 2px so focus never shifts layout.
-          border: Border.all(
-            color: focused ? app.fade(app.core.tx, 0.9) : Colors.transparent,
-            width: 2,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            // Scored against the fill the selected tab actually paints.
-            // `accent` IS the theme accent, and white fails on 17 of the 18
-            // selectable themes (Noir's and Frost's are #FFFFFF), so a
-            // hardcoded white label vanished into its own pill. Legacy's
-            // #7B5CFF scores 4.36 against white, so inkOn still returns white
-            // there — no visual change to today's app.
-            color: on ? app.inkOn(accent) : dim,
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-      final Widget tappable = node == null
-          ? Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: app.shape.brPill,
-                child: body(false),
-              ),
-            )
-          : Focus(
-              focusNode: node,
-              onKeyEvent: (n, e) => _handleKwTabKey(navIndex, total, onTap, e),
-              child: Builder(
-                builder: (context) {
-                  final focused = Focus.of(context).hasFocus;
-                  return Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: onTap,
-                      borderRadius: app.shape.brPill,
-                      canRequestFocus: false,
-                      child: body(focused),
-                    ),
-                  );
-                },
-              ),
-            );
-      return Padding(padding: const EdgeInsets.only(right: 6), child: tappable);
-    }
-
-    // SingleChildScrollView + Row (not a lazy ListView) so EVERY tab's
-    // FocusNode stays mounted — requestFocus on an unmounted node is a silent
-    // no-op that would strand DPAD at the viewport edge (same reason the
-    // keyword toolbar uses this shape).
-    return SizedBox(
-      height: 42,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-        child: Row(
-          children: [
-            tab(
-              0,
-              'All · ${full.length}',
-              _kwSourceTab == null,
-              () => _setKwSourceTab(null),
-            ),
-            for (var i = 0; i < sources.length; i++)
-              tab(
-                i + 1,
-                '${_kwPrettySource(sources[i])} · ${counts[sources[i]] ?? 0}',
-                _kwSourceTab == sources[i],
-                () => _setKwSourceTab(sources[i]),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Focus a source tab AND scroll the strip to reveal it — a bare
-  /// requestFocus doesn't scroll, so an off-screen tab would take focus
-  /// invisibly.
-  void _focusKwTab(int index) {
-    if (index < 0 || index >= _kwTabNodes.length) return;
-    final node = _kwTabNodes[index];
-    node.requestFocus();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = node.context;
-      if (mounted && ctx != null && ctx.mounted) {
-        Scrollable.ensureVisible(
-          ctx,
-          alignment: 0.5,
-          duration: const Duration(milliseconds: 120),
-        );
-      }
-    });
-  }
-
-  void _setKwSourceTab(String? source) {
-    final tabHadFocus = _kwTabNodes.any((n) => n.hasFocus);
-    // A deliberate reshuffle: fold parked arrivals in so the tab filters the
-    // complete set (also freezes further live updates).
-    _kwFreezeAndAdopt();
-    // The tapped source can vanish in the adopt (dedupe reattribution) — an
-    // active tab no longer in the strip would strand an empty list.
-    if (source != null && !_kwAll.any((t) => _kwSourceOf(t) == source)) {
-      source = null;
-    }
-    if (_kwSourceTab != source) {
-      _kwSourceTab = source;
-      _recomputeKeyword();
-    }
-    // Tab nodes are positional and the adopt can re-sort _kwSourceList —
-    // re-anchor DPAD focus onto the tab that was actually chosen.
-    if (tabHadFocus) {
-      final s = source;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        final idx = s == null ? 0 : _kwSourceList.indexOf(s) + 1;
-        _focusKwTab(idx > 0 && idx < _kwTabNodes.length ? idx : 0);
-      });
-    }
-  }
-
-  /// DPAD/keyboard handling for a focused source tab: select activates,
-  /// left/right move between tabs (left edge escapes to the sidebar), up
-  /// returns to the search field, down drops into the toolbar pills.
-  KeyEventResult _handleKwTabKey(
-    int index,
-    int total,
-    VoidCallback onTap,
-    KeyEvent event,
-  ) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    final key = event.logicalKey;
-    if (isActivateKey(key) || key == LogicalKeyboardKey.space) {
-      onTap();
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowUp) {
-      _focusSearchFieldAtEnd();
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowDown) {
-      _kwToolbarNodes.first.requestFocus();
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowLeft) {
-      if (index > 0) {
-        _focusKwTab(index - 1);
-      } else {
-        MainPageBridge.focusTvSidebar?.call();
-      }
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowRight) {
-      if (index < total - 1) _focusKwTab(index + 1);
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
-  }
-
-  /// Slim "still searching" strip under the toolbar while engines are in
-  /// flight — rows are already usable, this just says more may arrive.
-  Widget _kwSearchingStrip() {
-    final app = AppThemeScope.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
-      child: Row(
-        children: [
-          const SizedBox(
-            width: 11,
-            height: 11,
-            child: CircularProgressIndicator(strokeWidth: 1.6),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Still searching sources…',
-            style: TextStyle(
-              fontSize: 11.5,
-              color: app.fade(app.core.tx, 0.55),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// The "+N new results" pill: tap (or OK on TV) folds the parked arrivals
-  /// into the list; DOWN returns to the rows, UP reaches the toolbar.
-  Widget _kwNewResultsPill() {
-    final app = AppThemeScope.of(context);
-    final accent = app.home.chromeAccent;
-    final n = _kwPendingNewCount;
-    return Focus(
-      focusNode: _kwPillFocus,
-      onKeyEvent: (node, e) {
-        if (e is! KeyDownEvent) return KeyEventResult.ignored;
-        if (isActivateKey(e.logicalKey)) {
-          _kwAdoptPending();
-          if (_kwNodes.isNotEmpty) _kwNodes.first.requestFocus();
-          return KeyEventResult.handled;
-        }
-        if (e.logicalKey == LogicalKeyboardKey.arrowDown) {
-          if (_kwNodes.isNotEmpty) _kwNodes.first.requestFocus();
-          return KeyEventResult.handled;
-        }
-        if (e.logicalKey == LogicalKeyboardKey.arrowUp) {
-          _kwToolbarNodes.first.requestFocus();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: ListenableBuilder(
-        listenable: _kwPillFocus,
-        builder: (context, _) {
-          final focused = _kwPillFocus.hasFocus;
-          return GestureDetector(
-            onTap: _kwAdoptPending,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-              decoration: BoxDecoration(
-                color: focused ? app.core.tx : accent,
-                borderRadius: app.shape.brPill,
-                border: Border.all(
-                  color: focused ? app.core.tx : Colors.transparent,
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.45),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.arrow_upward_rounded,
-                    size: 14,
-                    // Unfocused the pill is FILLED with the accent, so its ink
-                    // has to be scored against it — white is invisible on the
-                    // near-white accents (Noir, Frost, Vault). The focused
-                    // branch keeps its dark ink on the white focus fill.
-                    color: focused
-                        ? const Color(0xFF17131F)
-                        : app.inkOn(accent),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '$n new result${n == 1 ? '' : 's'}',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: focused
-                          ? const Color(0xFF17131F)
-                          : app.inkOn(accent),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  /// [floatingSelect] true on small screens where the multi-select entry is a
-  /// floating FAB + bar (Home-style) rather than a toolbar pill — so the
-  /// toolbar stays Sort/Filters/Sources and never swaps to selection controls.
-  Widget _buildKeywordToolbar({bool floatingSelect = false}) {
-    final app = AppThemeScope.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    // Every facet counts. Sizes were already missing here, so a size-only
-    // filter quietly trimmed the results while the pill still read "Filters"
-    // and rendered inactive — the same trap a dynamic-range-only filter would
-    // fall into.
-    final filterCount =
-        _kwFilters.qualities.length +
-        _kwFilters.ripSources.length +
-        _kwFilters.languages.length +
-        _kwFilters.sizes.length +
-        _kwFilters.dynamicRanges.length;
-
-    // [navIndex]/[navTotal], when provided, make the pill keyboard/DPAD
-    // focusable at that position in the toolbar (left/right between pills, up to
-    // the search field, down into the results, select to activate).
-    Widget pill(
-      IconData icon,
-      String label,
-      VoidCallback onTap, {
-      bool active = false,
-      bool compact = false,
-      int? navIndex,
-      int navTotal = 0,
-    }) {
-      Widget body(bool focused) => Container(
-        padding: compact
-            ? const EdgeInsets.all(10)
-            : const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-        decoration: BoxDecoration(
-          color: active
-              ? scheme.primary.withValues(alpha: 0.16)
-              : scheme.surfaceContainerHigh,
-          borderRadius: app.shape.brPill,
-          // Always 2px so focus never shifts layout: white ring when
-          // focused, else the active/idle border.
-          border: Border.all(
-            color: focused
-                ? app.fade(app.core.tx, 0.9)
-                : active
-                ? scheme.primary.withValues(alpha: 0.5)
-                : app.fade(app.core.tx, 0.10),
-            width: 2,
-          ),
-        ),
-        child: compact
-            ? Icon(
-                icon,
-                size: 18,
-                color: active ? scheme.primary : scheme.onSurfaceVariant,
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 15, color: scheme.onSurfaceVariant),
-                  const SizedBox(width: 6),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                ],
-              ),
-      );
-
-      final Widget tappable = navIndex == null
-          ? Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: app.shape.brPill,
-                child: body(false),
-              ),
-            )
-          : Focus(
-              focusNode: _kwToolbarNodes[navIndex],
-              onKeyEvent: (n, event) =>
-                  _handleKwToolbarKey(navIndex, navTotal, onTap, event),
-              child: Builder(
-                builder: (context) {
-                  final focused = Focus.of(context).hasFocus;
-                  return Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: onTap,
-                      borderRadius: app.shape.brPill,
-                      canRequestFocus: false,
-                      child: body(focused),
-                    ),
-                  );
-                },
-              ),
-            );
-
-      return Padding(padding: const EdgeInsets.only(right: 8), child: tappable);
-    }
-
-    if (_kwSelectionMode && !floatingSelect) {
-      final selectable = _kwSelectableResults.length;
-      final count = _kwSelected.length;
-      final allSelected = count > 0 && count == selectable;
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-        child: Row(
-          children: [
-            pill(
-              Icons.close_rounded,
-              'Cancel',
-              _exitKwSelection,
-              navIndex: 0,
-              navTotal: 3,
-            ),
-            pill(
-              allSelected ? Icons.deselect_rounded : Icons.select_all_rounded,
-              allSelected ? 'None' : 'All',
-              allSelected ? _deselectAllKw : _selectAllKw,
-              navIndex: 1,
-              navTotal: 3,
-            ),
-            pill(
-              Icons.playlist_add_rounded,
-              count > 0 ? 'Add · $count' : 'Add',
-              count > 0 ? _openBulkAdd : () {},
-              active: count > 0,
-              navIndex: 2,
-              navTotal: 3,
-            ),
-          ],
-        ),
-      );
-    }
-
-    final canSelect = _kwSelectableResults.isNotEmpty;
-    final showSelect = canSelect && !floatingSelect;
-    final showProviders = _kwHasProviderFilter;
-    final providerActive = _kwProviderFilterActive;
-    // Build the pill set dynamically so navIndex stays contiguous when the
-    // optional Providers / Select pills come and go. Base pills always present:
-    // Sort, Filters, Sources (3); Providers and Select are optional.
-    final total = 3 + (showProviders ? 1 : 0) + (showSelect ? 1 : 0);
-    var idx = 0;
-    final pills = <Widget>[
-      pill(
-        Icons.sort_rounded,
-        'Sort · ${_sortLabel(_kwSort)}',
-        _openKeywordSort,
-        compact: floatingSelect,
-        navIndex: idx++,
-        navTotal: total,
-      ),
-      pill(
-        Icons.filter_list_rounded,
-        filterCount > 0 ? 'Filters · $filterCount' : 'Filters',
-        _openKeywordFilters,
-        active: filterCount > 0,
-        compact: floatingSelect,
-        navIndex: idx++,
-        navTotal: total,
-      ),
-      if (showProviders)
-        pill(
-          Icons.hub_rounded,
-          providerActive > 0 ? 'Providers · $providerActive' : 'Providers',
-          _openKeywordProviders,
-          active: providerActive > 0,
-          compact: floatingSelect,
-          navIndex: idx++,
-          navTotal: total,
-        ),
-      pill(
-        Icons.dns_rounded,
-        'Sources',
-        _openKeywordSources,
-        compact: floatingSelect,
-        navIndex: idx++,
-        navTotal: total,
-      ),
-      if (showSelect)
-        pill(
-          Icons.checklist_rounded,
-          'Select',
-          _enterKwSelection,
-          navIndex: idx++,
-          navTotal: total,
-        ),
-    ];
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-      child: Row(children: pills),
-    );
-  }
-
-  /// DPAD/keyboard handling for a focused keyword-toolbar pill: select fires the
-  /// pill, left/right move between pills, up returns to the search field, down
-  /// drops into the first result row.
-  KeyEventResult _handleKwToolbarKey(
-    int index,
-    int total,
-    VoidCallback onTap,
-    KeyEvent event,
-  ) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    final key = event.logicalKey;
-    if (isActivateKey(key) || key == LogicalKeyboardKey.space) {
-      onTap();
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowUp) {
-      // Source tabs sit between the toolbar and the search field — land on
-      // the active tab so the strip context is obvious. Hidden during
-      // multi-select (the strip is suppressed then — see _buildKeyword).
-      if (!_kwSelectionMode && _kwTabsVisible && _kwTabNodes.isNotEmpty) {
-        final tabs = _kwSourceList;
-        final active = _kwSourceTab == null
-            ? 0
-            : tabs.indexOf(_kwSourceTab!) + 1;
-        _focusKwTab(active >= 0 && active < _kwTabNodes.length ? active : 0);
-        return KeyEventResult.handled;
-      }
-      _focusSearchFieldAtEnd();
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowDown) {
-      if (_kwNodes.isNotEmpty) {
-        _kwNodes.first.requestFocus();
-      } else if (_kwPendingNewCount > 0 && !_kwSelectionMode) {
-        // Zero rows (e.g. a no-match filter) but arrivals parked behind the
-        // pill: the pill must stay reachable or it's visible-but-dead on TV.
-        _kwPillFocus.requestFocus();
-      }
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowLeft) {
-      if (index > 0) {
-        _kwToolbarNodes[index - 1].requestFocus();
-      } else {
-        MainPageBridge.focusTvSidebar?.call();
-      }
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowRight) {
-      if (index < total - 1) _kwToolbarNodes[index + 1].requestFocus();
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
-  }
-
-  /// Floating checklist FAB (bottom-left) that enters multi-select on small
-  /// screens — ported from Home's torrent-search layout.
-  Widget _buildKwSelectFab() {
-    final app = AppThemeScope.of(context);
-    return Positioned(
-      left: 16,
-      bottom: 16,
-      child: GestureDetector(
-        onTap: _enterKwSelection,
-        child: Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            color: app.home.controlBg,
-            shape: BoxShape.circle,
-            border: Border.all(color: app.fade(app.core.tx, 0.15)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Icon(Icons.checklist_rounded, color: app.core.tx, size: 20),
-        ),
-      ),
-    );
-  }
-
-  /// Floating multi-select bar (bottom) — Home-style. Right-inset so it clears
-  /// the mobile floating "Menu" nav.
-  Widget _buildKwSelectionBar() {
-    final app = AppThemeScope.of(context);
-    final selectable = _kwSelectableResults.length;
-    final count = _kwSelected.length;
-    final allSelected = count > 0 && count == selectable;
-    final bottomPad = MediaQuery.of(context).padding.bottom;
-
-    Widget chip(Widget child, VoidCallback? onTap, Color bg) => GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(color: bg, borderRadius: app.shape.br(8)),
-        child: child,
-      ),
-    );
-
-    return Positioned(
-      left: 12,
-      // Clear the bottom-right "Menu" FAB — which only the floating nav
-      // style has; the classic bar occupies its own strip below the page.
-      right: MainPageBridge.phoneNavStyleCached == 'floating' ? 108 : 12,
-      bottom: 12 + bottomPad,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
-          borderRadius: app.shape.br(16),
-          border: Border.all(color: app.fade(app.home.chromeAccent, 0.45)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            chip(
-              Icon(
-                Icons.close_rounded,
-                color: app.core.tx.withValues(alpha: 0xB3 / 0xFF),
-                size: 18,
-              ),
-              _exitKwSelection,
-              app.fade(app.core.tx, 0.1),
-            ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                '$count selected',
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: count > 0
-                      ? app.home.chromeAccent
-                      : app.core.tx.withValues(alpha: 0x8A / 0xFF),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            chip(
-              Text(
-                allSelected ? 'None' : 'All',
-                style: TextStyle(
-                  color: app.core.tx.withValues(alpha: 0xB3 / 0xFF),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-              allSelected ? _deselectAllKw : _selectAllKw,
-              app.fade(app.core.tx, 0.08),
-            ),
-            const SizedBox(width: 8),
-            chip(
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.playlist_add_rounded,
-                    // Enabled, this chip is filled with the OPAQUE accent, so
-                    // its ink is scored against it (white disappears on Noir's
-                    // and Frost's #FFFFFF accent). Disabled, the fill is a 0.3
-                    // wash over the dark bar, where white38 still reads.
-                    color: count > 0
-                        ? app.inkOn(app.home.chromeAccent)
-                        : Colors.white38,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Add',
-                    style: TextStyle(
-                      color: count > 0
-                          ? app.inkOn(app.home.chromeAccent)
-                          : Colors.white38,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              count > 0 ? _openBulkAdd : null,
-              count > 0
-                  ? app.home.chromeAccent
-                  : app.fade(app.home.chromeAccent, 0.3),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _sortLabel(String s) =>
-      const {
-        'relevance': 'Relevance',
-        'seeders': 'Seeders',
-        'size': 'Size',
-        'date': 'Date',
-        'name': 'Name',
-      }[s] ??
-      s;
 
   /// Poster width for a board rail. On TV the logical canvas can be as short as
   /// 540px (a 1080p panel at density 320 → devicePixelRatio 2.0), where a poster
