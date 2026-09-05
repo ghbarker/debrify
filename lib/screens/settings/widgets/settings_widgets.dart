@@ -344,7 +344,7 @@ abstract final class SettingsRows {
   static const createBackup = SettingsRowContent(
     icon: Icons.save_alt_rounded,
     title: 'Create Backup',
-    subtitle: 'Save services, addons, and search engines to a file',
+    subtitle: 'Back up all profiles and shared connections (Admin)',
   );
   static const restoreBackup = SettingsRowContent(
     icon: Icons.restore_rounded,
@@ -364,7 +364,7 @@ abstract final class SettingsRows {
   static const createWebDavBackup = SettingsRowContent(
     icon: Icons.cloud_upload_outlined,
     title: 'Save backup to WebDAV',
-    subtitle: 'Create, upload, and verify an encrypted profile package',
+    subtitle: 'Save an encrypted backup of all profiles (Admin)',
   );
   static const restoreWebDavBackup = SettingsRowContent(
     icon: Icons.cloud_download_outlined,

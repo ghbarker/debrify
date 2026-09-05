@@ -148,38 +148,26 @@ class ProfileBackupFlows {
     if (!actor.allows(ProfileFeature.backupRestore)) {
       throw StateError('This profile is not allowed to create backups');
     }
-    final canExportAll =
-        actor.role == UserProfileRole.admin &&
-        actor.allows(ProfileFeature.manageProfiles);
+    if (!actor.isAdmin || !actor.allows(ProfileFeature.manageProfiles)) {
+      throw StateError('Switch to an Admin profile to back up all profiles');
+    }
     if (!context.mounted) return;
     final passphrase = TextEditingController();
-    var allProfiles = false;
     final confirmed = await showSettingsDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(allProfiles ? 'Back up all profiles' : 'Back up profile'),
+          title: const Text('Back up all profiles'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Creates an encrypted profile package. Downloads, recordings, '
+                'Backs up all profiles and shared connections in an encrypted file. Downloads, recordings, '
                 'active jobs, device paths, and remote pairings are not '
                 'included.',
               ),
               const SizedBox(height: 12),
-              if (canExportAll)
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('All profiles and shared connections'),
-                  subtitle: const Text(
-                    'Admin-only graph backup. Imported profile and resource IDs are remapped on restore.',
-                  ),
-                  value: allProfiles,
-                  onChanged: (value) =>
-                      setDialogState(() => allProfiles = value),
-                ),
               TvTextField(
                 controller: passphrase,
                 obscureText: true,
@@ -218,7 +206,7 @@ class ProfileBackupFlows {
       ..clear()
       ..dispose();
     if (confirmed != true) return;
-    if (allProfiles && !await reauthenticateSensitiveProfile(actor)) return;
+    if (!await reauthenticateSensitiveProfile(actor)) return;
 
     final resourceService = ConnectionResourceService(
       registry: registry,
@@ -231,19 +219,11 @@ class ProfileBackupFlows {
     Future<PortableProfilePackage> export({required bool compact}) =>
         _runIfCurrent(
           migrateAuthorization,
-          () => allProfiles
-              ? service.exportAllProfiles(
-                  context: authorization,
-                  includeSecrets: true,
-                  compactDatabaseSnapshots: compact,
-                )
-              : service.exportProfile(
-                  context: authorization,
-                  scope: ProfileRuntime.capture(),
-                  includeSecrets: true,
-                  sanitized: false,
-                  compactDatabaseSnapshots: compact,
-                ),
+          () => service.exportAllProfiles(
+            context: authorization,
+            includeSecrets: true,
+            compactDatabaseSnapshots: compact,
+          ),
         );
 
     PortableProfilePackage? package;
@@ -286,7 +266,7 @@ class ProfileBackupFlows {
     if (debrifyTvOmission?.isEmpty == false) {
       final continueWithoutChannels = await _confirmDebrifyTvOmission(
         debrifyTvOmission!,
-        allProfiles: allProfiles,
+        allProfiles: true,
       );
       if (!continueWithoutChannels) return;
     }
@@ -321,9 +301,7 @@ class ProfileBackupFlows {
             directoryPath: target.path,
             stagedFile: stagedFile,
             scratchDirectory: stagingDirectory,
-            fileNamePrefix: allProfiles
-                ? 'debrify-profiles'
-                : 'debrify-profile',
+            fileNamePrefix: 'debrify-profiles',
             beforeSend: ProfileAsyncAuthorization.currentOutboundBarrier,
           ),
         ),
@@ -337,7 +315,7 @@ class ProfileBackupFlows {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          '${allProfiles ? 'All-profile backup' : 'Profile backup'} '
+          'All-profile backup '
           '$destinationLabel'
           '${debrifyTvOmission?.isEmpty == false
               ? '. Debrify TV was excluded as confirmed; restore it from a channel ZIP or Remote.'
@@ -363,65 +341,51 @@ class ProfileBackupFlows {
     if (!actor.allows(ProfileFeature.backupRestore)) {
       throw StateError('This profile is not allowed to create backups');
     }
-    final canExportAll =
-        actor.role == UserProfileRole.admin &&
-        actor.allows(ProfileFeature.manageProfiles);
+    if (!actor.isAdmin || !actor.allows(ProfileFeature.manageProfiles)) {
+      throw StateError('Switch to an Admin profile to back up all profiles');
+    }
     if (!context.mounted) return;
-    var allProfiles = false;
     final confirmed = await showSettingsDialog<bool>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          scrollable: true,
-          title: Text(allProfiles ? 'Back up all profiles' : 'Back up profile'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Creates a Debrify backup file (.debrify). It is not '
-                'encrypted and contains your account credentials and '
-                'connection passwords, so keep it private.\n\n'
-                'Included: settings, connections, Debrify TV channels with '
-                'their saved hashes, IPTV playlists, favorites, lists, '
-                'history, and ordering. Provider channel lists and TV guides '
-                'are rebuilt after restore, which may need network access. '
-                'Downloads, recordings, active jobs, device paths, and remote '
-                'pairings are not included.\n\n'
-                'Admin backups also include the WebDAV sync login and its on/off state. '
-                'Enabled sync resumes automatically after restore.\n\n'
-                'Older Debrify versions cannot read this file.',
-              ),
-              const SizedBox(height: 12),
-              if (canExportAll)
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('All profiles and shared connections'),
-                  subtitle: const Text(
-                    'Admin-only graph backup. Imported profile and resource IDs are remapped on restore.',
-                  ),
-                  value: allProfiles,
-                  onChanged: (value) =>
-                      setDialogState(() => allProfiles = value),
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
+      builder: (dialogContext) => AlertDialog(
+        scrollable: true,
+        title: const Text('Back up all profiles'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Creates a Debrify backup file (.debrify). It is not '
+              'encrypted and contains your account credentials and '
+              'connection passwords, so keep it private.\n\n'
+              'Included: all profiles and shared connections, settings, Debrify TV channels with '
+              'their saved hashes, IPTV playlists, favorites, lists, '
+              'history, and ordering. Provider channel lists and TV guides '
+              'are rebuilt after restore, which may need network access. '
+              'Downloads, recordings, active jobs, device paths, and remote '
+              'pairings are not included.\n\n'
+              'Includes the WebDAV sync login and its on/off state. '
+              'Enabled sync resumes automatically after restore.\n\n'
+              'Older Debrify versions cannot read this file.',
             ),
-            FilledButton(
-              autofocus: true,
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Create backup'),
-            ),
+            const SizedBox(height: 12),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            autofocus: true,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Create backup'),
+          ),
+        ],
       ),
     );
     if (confirmed != true) return;
-    if (allProfiles && !await reauthenticateSensitiveProfile(actor)) return;
+    if (!await reauthenticateSensitiveProfile(actor)) return;
 
     final exporter = LocalBackupExporter(
       service: ProfilePackageService(
@@ -442,14 +406,11 @@ class ProfileBackupFlows {
             () => exporter.export(
               context: authorization,
               staging: staging,
-              allProfiles: allProfiles,
-              scope: allProfiles ? null : ProfileRuntime.capture(),
+              allProfiles: true,
               onStage: setStage,
               onBytes: _byteStageReporter(setStage),
               cancellation: cancellation,
-              captureSync: canExportAll
-                  ? WebDavSyncRuntime.instance.captureBackupConnection
-                  : null,
+              captureSync: WebDavSyncRuntime.instance.captureBackupConnection,
             ),
           ),
           cancellation: cancellation,
@@ -468,7 +429,7 @@ class ProfileBackupFlows {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '${allProfiles ? 'All-profile backup' : 'Profile backup'} saved'
+              'All-profile backup saved'
               '${result.cachesPruned ? '. Provider channel lists and TV guides will refresh after a restore.' : '.'}',
             ),
             duration: Duration(seconds: result.cachesPruned ? 7 : 4),
