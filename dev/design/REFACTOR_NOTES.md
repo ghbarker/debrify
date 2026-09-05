@@ -705,3 +705,7 @@ G17a PR125 current-caller contract accepted after independent76current/8origin t
 
 M15a analyzer provenance repair authorized: historical0a0ca9e6 mislabeled originaleditor baseline2096:17 as importdialog137:13. Minimumtwo-rowrepair maps originaleditor to neweditor166:17/span8351 and originalimport3198:15 to actualimport141:13/span1229. Samecode/type/severity/message,454count andSORT_CHILDmultiset8 unchanged; no arbitraryhostrow reassignment. Otherhistoricalmislabels recorded asdebt, notexpandedcleanup.
 
+
+## Shape guard debt identified during PR129 review
+Independent review of 4ab8e1c confirms only moved-renderer inventory repair, floor490 unchanged. Existing aggregate bare-radius test is allowlisted for tv_sidebar_nav.dart; an additional offender can therefore be masked under the same test identity. Raw mutation failure does not prove fail-closed CI. C0 assigned read-only minimum per-file guard/allowance migration proposal before any new edits. No allowance expanded, no product radius change authorized.
+
