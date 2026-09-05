@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:cryptography/dart.dart';
 import 'package:debrify/services/profiles/portable_profile_package.dart';
 import 'package:debrify/services/profiles/legacy_backup_adapter.dart';
 import 'package:debrify/services/profiles/profile_database_snapshot.dart';
@@ -93,6 +95,161 @@ void main() {
       },
     };
   }
+
+  group('bounded encrypted-byte admission', () {
+    Map<String, dynamic> envelope() => <String, dynamic>{
+      'format': 'debrify-profile-package',
+      'version': 4,
+      'encrypted': true,
+      'kdf': <String, dynamic>{
+        'algorithm': 'argon2id',
+        'salt': base64Encode(Uint8List(16)),
+        'memory': 19456,
+        'iterations': 2,
+        'parallelism': 1,
+      },
+      'aead': <String, dynamic>{
+        'algorithm': 'aes-256-gcm',
+        'aad': 'debrify-profile-backup-v4',
+        'nonce': base64Encode(Uint8List(12)),
+        'ciphertext': base64Encode(Uint8List(16)),
+      },
+    };
+
+    Uint8List bytes(Map<String, dynamic> value) =>
+        Uint8List.fromList(utf8.encode(jsonEncode(value)));
+
+    late Cryptography previous;
+    late _KdfTripwire tripwire;
+    setUp(() {
+      previous = Cryptography.instance;
+      tripwire = _KdfTripwire();
+      Cryptography.instance = tripwire;
+    });
+    tearDown(() => Cryptography.instance = previous);
+
+    test('rejects excessive bytes before parsing or constructing a KDF', () async {
+      expect(PortableProfilePackage.maxBoundedEncryptedBytes, 10 * 1024 * 1024);
+      await expectLater(
+        PortableProfilePackage.decryptBoundedBytes(
+          Uint8List(10 * 1024 * 1024 + 1), 'correct horse'),
+        throwsA(isA<FormatException>().having(
+          (error) => error.message, 'message', 'Backup exceeds the input limit')),
+      );
+      expect(tripwire.calls, 0);
+    });
+
+    test('accepts the exact byte ceiling and one byte below before KDF', () async {
+      final encoded = bytes(envelope());
+      for (final size in [10 * 1024 * 1024 - 1, 10 * 1024 * 1024]) {
+        final padded = Uint8List(size)..fillRange(0, size, 32);
+        padded.setRange(0, encoded.length, encoded);
+        await expectLater(
+          PortableProfilePackage.decryptBoundedBytes(padded, 'correct horse'),
+          throwsA(isA<StateError>()),
+        );
+      }
+      expect(tripwire.calls, 2);
+    });
+
+    test('rejects malformed UTF8 JSON and headers without constructing a KDF', () async {
+      for (final input in [
+        Uint8List.fromList([0xff]),
+        Uint8List.fromList(utf8.encode('{bad')),
+        Uint8List.fromList(utf8.encode('[]')),
+        bytes({...envelope(), 'format': 'wrong'}),
+        bytes({...envelope(), 'version': 99}),
+        bytes({...envelope(), 'encrypted': false}),
+        bytes({...envelope(), 'kdf': null}),
+        bytes({...envelope(), 'aead': null}),
+      ]) {
+        await expectLater(
+          PortableProfilePackage.decryptBoundedBytes(input, 'correct horse'),
+          throwsA(isA<FormatException>()),
+        );
+      }
+      expect(tripwire.calls, 0);
+    });
+
+    test('reuses base64 salt nonce algorithm and AAD rejection before KDF', () async {
+      for (final change in [
+        ('kdf', 'algorithm', 'pbkdf2'),
+        ('kdf', 'salt', '!'),
+        ('kdf', 'salt', base64Encode(Uint8List(7))),
+        ('kdf', 'salt', base64Encode(Uint8List(65))),
+        ('aead', 'algorithm', 'aes-cbc'),
+        ('aead', 'aad', 'wrong'),
+        ('aead', 'nonce', '!'),
+        ('aead', 'nonce', base64Encode(Uint8List(11))),
+        ('aead', 'ciphertext', '!'),
+        ('aead', 'ciphertext', base64Encode(Uint8List(15))),
+      ]) {
+        final value = envelope();
+        (value[change.$1] as Map)[change.$2] = change.$3;
+        await expectLater(
+          PortableProfilePackage.decryptBoundedBytes(bytes(value), 'correct horse'),
+          throwsA(isA<FormatException>()),
+          reason: '${change.$1}.${change.$2}',
+        );
+      }
+      expect(tripwire.calls, 0);
+    });
+
+    test('requires exact integer exporter costs before constructing a KDF', () async {
+      for (final entry in <String, List<Object?>>{
+        'memory': [8, 131072, 19456.0, 19456.5, '19456', true, null, -1],
+        'iterations': [1, 16, 2.0, 2.5, '2', true, null, -1],
+        'parallelism': [2, 8, 1.0, 1.5, '1', true, null, -1],
+      }.entries) {
+        for (final cost in entry.value) {
+          final value = envelope();
+          (value['kdf'] as Map)[entry.key] = cost;
+          await expectLater(
+            PortableProfilePackage.decryptBoundedBytes(bytes(value), 'correct horse'),
+            throwsA(isA<FormatException>()),
+            reason: '${entry.key}: $cost (${cost.runtimeType})',
+          );
+        }
+        final missing = envelope();
+        (missing['kdf'] as Map).remove(entry.key);
+        await expectLater(
+          PortableProfilePackage.decryptBoundedBytes(bytes(missing), 'correct horse'),
+          throwsA(isA<FormatException>()),
+        );
+      }
+      expect(tripwire.calls, 0);
+    });
+
+    test('real default exporter decrypts; bad passphrase and ciphertext still fail', () async {
+      // Only genuine default-cost work runs; hostile-cost cases use the tripwire.
+      Cryptography.instance = previous;
+      final source = await package();
+      final encoded = await PortableProfilePackage.encodeEncryptedBytes(source, 'correct horse');
+      final header = jsonDecode(utf8.decode(encoded)) as Map<String, dynamic>;
+      final kdf = header['kdf'] as Map;
+      expect(kdf['memory'], 19456);
+      expect(kdf['iterations'], 2);
+      expect(kdf['parallelism'], 1);
+      expect(PortableProfilePackage.defaultKdfMemory, 19456);
+      expect(PortableProfilePackage.defaultKdfIterations, 2);
+      expect(PortableProfilePackage.defaultKdfParallelism, 1);
+      final restored = await PortableProfilePackage.decryptBoundedBytes(encoded, 'correct horse');
+      expect(restored.profiles, source.profiles);
+      expect(restored.sections, source.sections);
+      await expectLater(
+        PortableProfilePackage.decryptBoundedBytes(encoded, 'wrong horse'),
+        throwsA(isA<FormatException>()),
+      );
+      final aead = header['aead'] as Map;
+      final ciphertext = base64Decode(aead['ciphertext'] as String);
+      ciphertext[0] ^= 1;
+      aead['ciphertext'] = base64Encode(ciphertext);
+      await expectLater(
+        PortableProfilePackage.decryptBoundedBytes(bytes(header), 'correct horse'),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
 
   test('generic decrypt retains historical nondefault and numeric KDF costs', () async {
     final source = await package();
@@ -853,4 +1010,20 @@ void main() {
     final followUp = adapted.sections['legacyFollowUp'] as Map;
     expect((followUp['iptvLists'] as List).single['name'], 'Imported list 1');
   });
+}
+
+/// Uses the library's existing algorithm factory seam; never allocates a KDF.
+class _KdfTripwire extends DartCryptography {
+  int calls = 0;
+
+  @override
+  Argon2id argon2id({
+    required int memory,
+    required int parallelism,
+    required int iterations,
+    required int hashLength,
+  }) {
+    calls++;
+    throw StateError('KDF construction reached');
+  }
 }
