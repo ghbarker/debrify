@@ -108,7 +108,7 @@ class LayeringDeltaTest(unittest.TestCase):
 
     def test_exact_checker_schema_and_empty_reports_pass(self):
         row = {"file": "lib/a.dart", "import": "package:flutter/widgets.dart",
-               "rule": "services: no Flutter", "line": 3,
+               "rule": "services: no Flutter", "detail": "imports Flutter",
                "id": "lib/a.dart|services: no Flutter|package:flutter/widgets.dart"}
         for payload in ({"count": 0, "ceiling": 90, "violations": []},
                         {"count": 1, "ceiling": 90, "violations": [row]}):
