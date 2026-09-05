@@ -272,11 +272,11 @@ void main() {
   });
 
   for (final provider in [CloudProviderId.torbox, CloudProviderId.pikpak]) {
-    for (final androidHost in [false, true]) {
+    for (final cachedTvOverride in [false, true]) {
       testWidgets(
-        'origin ${provider.name} switch and launcher fallback androidHost=$androidHost',
+        'origin ${provider.name} desktop switch and host launcher rejection cachedTvOverride=$cachedTvOverride',
         (tester) async {
-          PlatformUtil.debugSetAndroidTvCached(androidHost);
+          PlatformUtil.debugSetAndroidTvCached(cachedTvOverride);
           torbox = _HeldTorbox(provider);
           CloudProviderRegistry.instance = CloudProviderRegistry([torbox]);
           await StorageService.saveDebrifyTvProvider(provider.magicTvId);
@@ -318,8 +318,8 @@ void main() {
           expect(player.channelNumber, 1);
           expect(player.requestChannelById, isNotNull);
           expect(player.requestNextChannel, isNotNull);
-          // The actual host launcher runs for androidHost=true but the unchanged
-          // dart:io bridge rejects desktop. No positive Android launch is claimed.
+          // Both cached overrides leave the desktop host TV flag false; the host
+          // guard rejects launch before the bridge. Host-true/native paths are unproven.
           expect(await player.requestChannelById!('missing'), isNull);
           expect(torbox.requests, hasLength(1));
           torbox.pending = Completer<MagicTvPrepared?>();
@@ -373,7 +373,7 @@ void main() {
   }
   for (final provider in [CloudProviderId.debrid, CloudProviderId.alldebrid]) {
     testWidgets(
-      'origin ${provider.name} switch captures credentials after cooldown before prepare',
+      'origin ${provider.name} switch retains credentials captured before held preparation completes',
       (tester) async {
         PlatformUtil.debugSetAndroidTvCached(true);
         final port = _LockedProvider(provider);
