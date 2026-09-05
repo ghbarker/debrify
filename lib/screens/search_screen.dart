@@ -42,6 +42,7 @@ import 'search/continue_watching_row.dart';
 import 'search/fav_rows_controller.dart';
 import 'search/fav_row.dart';
 import 'search/hero_presenter.dart';
+import 'search/search_content_data.dart';
 import '../services/filtered_catalog_pager.dart';
 import '../services/hide_watched_prefs.dart';
 import '../services/watched_filter.dart';
@@ -521,7 +522,9 @@ class _SearchScreenState extends State<SearchScreenHost>
 
   /// imdbId → number of pinned (bound) sources — drives the board tile badge,
   /// detail Sources tint, and the Episodes "Source(s)" button count.
-  final Map<String, int> _boundCounts = {};
+  final SearchContentData _contentData = SearchContentData();
+  // Compatibility aliases expire with G17 real-owner migration / Q2.
+  Map<String, int> get _boundCounts => _contentData.boundCounts;
 
   // Board state. [_homeSections] is the homepage cache; [_sections] is whatever
   // is currently shown (homepage OR per-addon catalog search results). Both the
@@ -1982,26 +1985,15 @@ class _SearchScreenState extends State<SearchScreenHost>
   }
 
   /// IMDb id for a catalog item, or null when it isn't a `tt…` id.
-  String? _imdbOf(StremioMeta item) {
-    final id = item.imdbId ?? (item.id.startsWith('tt') ? item.id : null);
-    return (id != null && id.isNotEmpty) ? id : null;
-  }
+  String? _imdbOf(StremioMeta item) => _contentData.imdbOf(item);
 
-  bool _isBound(StremioMeta item) {
-    final id = _imdbOf(item);
-    return id != null && (_boundCounts[id] ?? 0) > 0;
-  }
+  bool _isBound(StremioMeta item) => _contentData.isBound(item);
 
-  int _boundCountFor(StremioMeta item) {
-    final id = _imdbOf(item);
-    return id == null ? 0 : (_boundCounts[id] ?? 0);
-  }
+  int _boundCountFor(StremioMeta item) => _contentData.boundCountFor(item);
 
   /// Re-read how many pinned sources each currently-displayed title has. Called
   /// after sections load and after any bind/unbind/playback.
   Future<void> _refreshBoundSources() async {
-    final counts = <String, int>{};
-    final seen = <String>{};
     // Cover every on-screen tile that renders a bound badge: catalog sections
     // AND the Continue Watching rows (whose titles may not appear in any
     // section, so editing their sources must still refresh the CW card badge).
@@ -2016,12 +2008,8 @@ class _SearchScreenState extends State<SearchScreenHost>
       ..._mdblistMovies,
       ..._mdblistSeries,
     ];
-    for (final item in items) {
-      final imdb = _imdbOf(item);
-      if (imdb == null || !seen.add(imdb)) continue;
-      final n = (await SeriesSourceService.getSources(imdb)).length;
-      if (n > 0) counts[imdb] = n;
-    }
+    final result = _contentData.readBoundCounts(items);
+    final counts = result is Future<Map<String, int>> ? await result : result;
     if (!mounted) return;
     setState(
       () => _boundCounts
