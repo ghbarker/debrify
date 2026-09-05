@@ -166,6 +166,36 @@ then. Same class of debt on S2-1 (869) and S2-2 (325) — also S2-7.
   async (`Future<void> Function`); `CloudFilesSource.onSourceSelected`
   remains the RD/TorBox sync type.
 
+### G1'-4 · tracker + local continue-watching
+
+- **Generation tokens drop stale loads.** `_cwLoadToken` / `_traktCwToken` /
+  `_simklCwToken` / `_mdblistCwToken` / `_iptvCwLoadToken` increment at the
+  start of each loader; a newer run never has its nodes/state replaced.
+  Keep: origin per-source loaders.
+- **`_traktCwLoading = true` is a plain assignment** (initState-safe, not
+  `setState`). Transient Trakt error leaves existing rows and only clears
+  the loading flag. Resume refresh coalesces to 30s.
+- **Simkl `result == null` is a transient fetch failure** — leave rows in
+  place. Disconnect returns empty lists and falls through.
+- **MDBList `!result.isUsable` discards.** Forced load stamps
+  `_mdblistCwForcedLoadAt`; `_mdblistCwForceFresh` is a 3s window.
+  Revision refresh waits for a current route (20×100ms) then 750ms.
+- **`syncCwNodes` preserves the surviving prefix.** Only a shrinking tail
+  is disposed; focus in that tail hands off to the last survivor
+  (`search_cw_` debug labels).
+- **Merged providers ship the combined list through the MOVIES slot**
+  (same row id / node list); Series row is suppressed.
+- **`_cwVisible` is allocation-free field checks**, not `_cwRows`. Keep
+  in lock-step with the row gates.
+- **Progress: Smart keeps the row's own numbers; dedicated source remaps.**
+  IPTV is exempt (routeKey, not imdbId).
+- **Card menu:** IPTV series play label is "Open series"; PikPak-only
+  hides Play except IPTV. Hold-to-quick-play skips IPTV series.
+  Host cells pass `showWatchedBadge: false`.
+- **Host keeps** Home board chrome, favourites, hero, Discover CW landing,
+  `_addonForContinue`, `_openItem` / `_onCatalogPlay` / `_playSelection`,
+  and thin loader wrappers. Leftover wrappers listed as G1'-9 debt.
+
 ### G1'-3 · keyword search
 
 - **Streamed batches merge through `TorrentService.mergeSearchResults`.** A late
