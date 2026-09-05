@@ -876,6 +876,76 @@
           "value": 7
         }
       }
+    },
+    "my-watchlist": {
+      "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+      "namedKeyCount": 1,
+      "physicalType": "String",
+      "excludedKeys": [],
+      "values": {
+        "my_watchlist_v1": "[{\"key\": \"obsolete-0\", \"addedAt\": \"9\", \"item\": {\"id\": \"catalog-a\", \"imdb_id\": \"tt1234567\", \"type\": \"movie\", \"name\": \"Movie A\", \"poster\": \"https://example.invalid/catalog-a.jpg\", \"background\": \"https://example.invalid/background.jpg\", \"year\": \"2026\", \"source_addon\": {\"id\": \"addon/A\", \"name\": \"Synthetic addon/A\"}}}, {\"key\": \"obsolete-1\", \"addedAt\": 3, \"item\": {\"id\": \"catalog-b\", \"imdb_id\": \"tt1234567\", \"type\": \"movie\", \"name\": \"Movie B\", \"poster\": \"https://example.invalid/catalog-b.jpg\", \"background\": \"https://example.invalid/background.jpg\", \"year\": \"2026\", \"source_addon\": {\"id\": \"addon/B\", \"name\": \"Synthetic addon/B\"}}}, {\"key\": \"obsolete-2\", \"addedAt\": 7, \"item\": {\"id\": \"local:one\", \"type\": \"movie\", \"name\": \"Local movie\", \"poster\": \"https://example.invalid/local:one.jpg\", \"background\": \"https://example.invalid/background.jpg\", \"year\": \"2026\", \"source_addon\": {\"id\": \"addon/A\", \"name\": \"Synthetic addon/A\"}}}, {\"key\": \"obsolete-3\", \"addedAt\": 5, \"item\": {\"id\": \"series-local\", \"type\": \"series\", \"name\": \"Local series\", \"poster\": \"https://example.invalid/series-local.jpg\", \"background\": \"https://example.invalid/background.jpg\", \"year\": \"2026\", \"source_addon\": {\"id\": \"addon/B\", \"name\": \"Synthetic addon/B\"}}}, {\"key\": \"bad\", \"addedAt\": 99, \"item\": 7}]"
+      },
+      "expectedReads": [
+        {
+          "id": "catalog-a",
+          "imdbId": "tt1234567",
+          "type": "movie",
+          "name": "Movie A",
+          "poster": "https://example.invalid/catalog-a.jpg",
+          "background": "https://example.invalid/background.jpg",
+          "year": "2026",
+          "sourceId": "addon/A",
+          "sourceName": "Synthetic addon/A",
+          "key": "movie:tt1234567"
+        },
+        {
+          "id": "local:one",
+          "imdbId": null,
+          "type": "movie",
+          "name": "Local movie",
+          "poster": "https://example.invalid/local:one.jpg",
+          "background": "https://example.invalid/background.jpg",
+          "year": "2026",
+          "sourceId": "addon/A",
+          "sourceName": "Synthetic addon/A",
+          "key": "movie:addon:addon%2FA:local%3Aone"
+        },
+        {
+          "id": "series-local",
+          "imdbId": null,
+          "type": "series",
+          "name": "Local series",
+          "poster": "https://example.invalid/series-local.jpg",
+          "background": "https://example.invalid/background.jpg",
+          "year": "2026",
+          "sourceId": "addon/B",
+          "sourceName": "Synthetic addon/B",
+          "key": "series:addon:addon%2FB:series-local"
+        },
+        {
+          "id": "catalog-b",
+          "imdbId": "tt1234567",
+          "type": "movie",
+          "name": "Movie B",
+          "poster": "https://example.invalid/catalog-b.jpg",
+          "background": "https://example.invalid/background.jpg",
+          "year": "2026",
+          "sourceId": "addon/B",
+          "sourceName": "Synthetic addon/B",
+          "key": "movie:tt1234567"
+        }
+      ],
+      "mutations": {
+        "watchlist-key": {
+          "key": "my_watchlist_v1",
+          "operation": "rename"
+        },
+        "watchlist-type": {
+          "key": "my_watchlist_v1",
+          "operation": "replace",
+          "value": 7
+        }
+      }
     }
   }
 }

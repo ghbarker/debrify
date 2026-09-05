@@ -1,0 +1,29 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "recipeVersion": 5,
+  "includeSecrets": false,
+  "scenario": "my-watchlist",
+  "absentKeys": [],
+  "omittedKeys": [],
+  "syntheticOnly": true,
+  "sha256": "d8e5baa9d89ad93aa199b5ea66477921332ad55ea6eb2291dbb74721a51716eb",
+  "representedSettings": {
+    "my_watchlist_v1": "[{\"key\": \"obsolete-0\", \"addedAt\": \"9\", \"item\": {\"id\": \"catalog-a\", \"imdb_id\": \"tt1234567\", \"type\": \"movie\", \"name\": \"Movie A\", \"poster\": \"https://example.invalid/catalog-a.jpg\", \"background\": \"https://example.invalid/background.jpg\", \"year\": \"2026\", \"source_addon\": {\"id\": \"addon/A\", \"name\": \"Synthetic addon/A\"}}}, {\"key\": \"obsolete-1\", \"addedAt\": 3, \"item\": {\"id\": \"catalog-b\", \"imdb_id\": \"tt1234567\", \"type\": \"movie\", \"name\": \"Movie B\", \"poster\": \"https://example.invalid/catalog-b.jpg\", \"background\": \"https://example.invalid/background.jpg\", \"year\": \"2026\", \"source_addon\": {\"id\": \"addon/B\", \"name\": \"Synthetic addon/B\"}}}, {\"key\": \"obsolete-2\", \"addedAt\": 7, \"item\": {\"id\": \"local:one\", \"type\": \"movie\", \"name\": \"Local movie\", \"poster\": \"https://example.invalid/local:one.jpg\", \"background\": \"https://example.invalid/background.jpg\", \"year\": \"2026\", \"source_addon\": {\"id\": \"addon/A\", \"name\": \"Synthetic addon/A\"}}}, {\"key\": \"obsolete-3\", \"addedAt\": 5, \"item\": {\"id\": \"series-local\", \"type\": \"series\", \"name\": \"Local series\", \"poster\": \"https://example.invalid/series-local.jpg\", \"background\": \"https://example.invalid/background.jpg\", \"year\": \"2026\", \"source_addon\": {\"id\": \"addon/B\", \"name\": \"Synthetic addon/B\"}}}, {\"key\": \"bad\", \"addedAt\": 99, \"item\": 7}]"
+  },
+  "keyTypes": {
+    "my_watchlist_v1": "String"
+  },
+  "excludedKeys": [],
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}

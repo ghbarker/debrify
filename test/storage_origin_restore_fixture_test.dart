@@ -430,6 +430,7 @@ void main() {
     'filter-defaults': {'absentKeys': <String>[]},
     'playlist-progress': {'absentKeys': <String>[]},
     'playlist-metadata': {'absentKeys': <String>[]},
+    'my-watchlist': {'absentKeys': <String>[]},
     'repair': {'absentKeys': ['playback_completion_migration_generation', 'resume_ghost_purge_generation']},
     'repair-markers-zero': {'absentKeys': <String>[]},
     'repair-markers-one': {'absentKeys': <String>[]},
@@ -440,8 +441,11 @@ void main() {
     final isPlaylist = scenario == 'playlist-progress';
     final isRepair = scenario == 'repair' || scenario.startsWith('repair-markers-');
     final isMetadata = scenario == 'playlist-metadata';
-    final isResidual = isFilter || isPlaylist || isRepair || isMetadata;
-    final domain = isMetadata
+    final isWatchlist = scenario == 'my-watchlist';
+    final isResidual = isFilter || isPlaylist || isRepair || isMetadata || isWatchlist;
+    final domain = isWatchlist
+        ? _recipe['residualDomains']['my-watchlist'] as Map
+        : isMetadata
         ? _recipe['residualDomains']['playlist-metadata'] as Map
         : isRepair
         ? _recipe['residualDomains']['repair'] as Map
@@ -500,6 +504,15 @@ void main() {
         : '$scenario.manifest.json';
 
     Future<void> seedScenario() async {
+      if (isWatchlist) {
+        expect(domain['origin'], _origin);
+        expect(domain['namedKeyCount'], 1);
+        expect(domain['physicalType'], 'String');
+        expect(domain['excludedKeys'], isEmpty);
+        expect(scenarioSettings.keys, ['my_watchlist_v1']);
+        await _writeValues(inputExpected);
+        return;
+      }
       if (isMetadata) {
         expect(domain['origin'], _origin);
         expect(domain['namedKeyCount'], 2);
@@ -549,6 +562,30 @@ void main() {
 
     Future<void> expectProviderReaders([Map<String, Object?>? restored]) async {
       final readerExpected = restored ?? expected;
+      if (isWatchlist) {
+        final prefs = await ProfilePreferences.instance();
+        final before = prefs.get('my_watchlist_v1');
+        expect(before, isA<String>());
+        expect(before, expected['my_watchlist_v1']);
+        final items = await StorageService.getMyWatchlistItems();
+        expect([
+          for (final item in items) {
+            'id': item.id, 'imdbId': item.imdbId, 'type': item.type,
+            'name': item.name, 'poster': item.poster,
+            'background': item.background, 'year': item.year,
+            'sourceId': item.sourceAddon?.id, 'sourceName': item.sourceAddon?.name,
+            'key': StorageService.myWatchlistItemKey(item),
+          },
+        ], domain['expectedReads']);
+        for (final item in items) {
+          expect(await StorageService.isInMyWatchlist(item), isTrue);
+        }
+        // Reading canonical identities must not persist over legacy row keys.
+        expect(prefs.get('my_watchlist_v1'), before);
+        final raw = await SharedPreferences.getInstance();
+        expect(raw.get('${ProfileRuntime.capture().preferencePrefix}my_watchlist_v1'), before);
+        return;
+      }
       if (isMetadata) {
         for (final lookup in domain['lookups'] as List) {
           final item = Map<String, dynamic>.from(lookup['item'] as Map);
@@ -702,6 +739,7 @@ void main() {
         if (isPlaylist) 'playlist_restore_sentinel': 'untouched',
         if (isRepair) 'repair_restore_sentinel': 'untouched',
         if (isMetadata) 'metadata_restore_sentinel': 'untouched',
+        if (isWatchlist) 'watchlist_restore_sentinel': 'untouched',
         if (isFilter) ...{
           'quick_play_honors_filters_v1': false,
           'quick_play_movie_rules_v2': '{"fixture":"movie"}',
@@ -733,7 +771,7 @@ void main() {
                     'value': ['fullHd', 'unknown quality', 'fullHd'],
                   },
                 }
-              : isPlaylist || isRepair || isMetadata
+              : isPlaylist || isRepair || isMetadata || isWatchlist
                   ? domain['mutations'] as Map
                   : _recipe['mutations'] as Map;
           expect(['', ...mutations.keys], contains(_mutation));
