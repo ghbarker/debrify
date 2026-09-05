@@ -135,3 +135,7 @@ S2-7 Locke owns exact app_style_prefs.dart and home_prefs.dart phasedhooks pluss
 
 119merged9958dd1e afterexactf8bd6ce4 all3CIgreen+independent82pass. Difference:3070hostlines removed into typedproviderwatchflows; capturedkey/cancel quirks pinned. More:thinbindings+wrappers retained expiryM1-6, contextdiagnosticvisibility notasyncsafety proof. Godmagic8369to5299 vsoriginal10716; othercurrentcounts unchanged. Fullautomatedgate nowactive, manualdeferred.
 
+
+## Automated gate passed — actualmain9958dd1e, treee6b0e8a1
+Pinned3.44.8/JDK21: generic5263pass/12exactknownfailures/2skip;goldens21exactknownerrors after2retries;0new/unused. Nativeorigin/current1each0skip. Analyzer438/454,0errors/0new;Python55;layering77delta0. Windows167.1s/Android113.2s buildsPASS. Evidence C:/Users/hunth/debrify/debrify-c0-main-9958-gate/.dart_tool/main-gate/gate-summary.json. Manualdeferred NOTpassed. M1-4productmove nowauthorized;C0V1-6readiness/originpins assigned onrefactor/v1-6-decoder-diagnostics. Exactpaths/seamsbeforeedits.
+
