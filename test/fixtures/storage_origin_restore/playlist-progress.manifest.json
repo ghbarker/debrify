@@ -1,0 +1,29 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "recipeVersion": 5,
+  "includeSecrets": false,
+  "scenario": "playlist-progress",
+  "absentKeys": [],
+  "omittedKeys": [],
+  "syntheticOnly": true,
+  "sha256": "6de4130f0bcffa5e98be128b2de5031620b979ac33dc4453f31270cbb88f65e3",
+  "representedSettings": {
+    "playback_state_v1": "{\"video_movie\":{\"type\":\"video\",\"positionMs\":25,\"durationMs\":100,\"updatedAt\":2},\"series_clean_show\":{\"type\":\"series\",\"title\":\"Clean Show\",\"finishedEpisodes\":{\"1\":{\"1\":false}},\"seasons\":{\"1\":{\"1\":{\"positionMs\":95,\"durationMs\":100,\"updatedAt\":4},\"2\":{\"positionMs\":25,\"durationMs\":100,\"updatedAt\":5}}},\"executionSamples\":[{}]},\"series_clean_show_s01_1080p\":{\"type\":\"series\",\"title\":\"Clean.Show.S01.1080p\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":80,\"durationMs\":100,\"updatedAt\":9}}}},\"series_full_only_s01_1080p\":{\"type\":\"series\",\"title\":\"Full Only\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":50,\"durationMs\":100,\"updatedAt\":6}}}},\"series_partial_first\":{\"type\":\"series\",\"title\":\"Partial\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":10,\"durationMs\":100,\"updatedAt\":7}}}},\"series_partial_second\":{\"type\":\"series\",\"title\":\"Partial Show\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":90,\"durationMs\":100,\"updatedAt\":8}}}}}"
+  },
+  "keyTypes": {
+    "playback_state_v1": "String"
+  },
+  "excludedKeys": [],
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}

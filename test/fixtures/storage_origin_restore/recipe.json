@@ -635,6 +635,81 @@
       "namedKeyCount": 5,
       "physicalType": "String",
       "excludedKeys": []
+    },
+    "playlist-progress": {
+      "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+      "namedKeyCount": 1,
+      "physicalType": "String",
+      "excludedKeys": [],
+      "strippedExecutionFields": [
+        "url",
+        "videourl",
+        "streamurl",
+        "localpath",
+        "localuri",
+        "filepath",
+        "headers",
+        "httpheaders"
+      ],
+      "inputValues": {
+        "playback_state_v1": "{\"video_movie\":{\"type\":\"video\",\"positionMs\":25,\"durationMs\":100,\"updatedAt\":2,\"url\":\"https://example.invalid/never-play\",\"headers\":{\"Synthetic\":\"never-authorized\"},\"localPath\":\"SYNTHETIC_DEVICE_PATH\"},\"series_clean_show\":{\"type\":\"series\",\"title\":\"Clean Show\",\"finishedEpisodes\":{\"1\":{\"1\":false}},\"seasons\":{\"1\":{\"1\":{\"positionMs\":95,\"durationMs\":100,\"updatedAt\":4},\"2\":{\"positionMs\":25,\"durationMs\":100,\"updatedAt\":5,\"videoUrl\":\"https://example.invalid/nested-never-play\"}}},\"executionSamples\":[{\"streamUrl\":\"https://example.invalid/list-never-play\",\"httpHeaders\":{\"Synthetic\":\"x\"},\"localUri\":\"SYNTHETIC_URI\",\"filePath\":\"SYNTHETIC_FILE\"}]},\"series_clean_show_s01_1080p\":{\"type\":\"series\",\"title\":\"Clean.Show.S01.1080p\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":80,\"durationMs\":100,\"updatedAt\":9}}}},\"series_full_only_s01_1080p\":{\"type\":\"series\",\"title\":\"Full Only\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":50,\"durationMs\":100,\"updatedAt\":6}}}},\"series_partial_first\":{\"type\":\"series\",\"title\":\"Partial\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":10,\"durationMs\":100,\"updatedAt\":7}}}},\"series_partial_second\":{\"type\":\"series\",\"title\":\"Partial Show\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":90,\"durationMs\":100,\"updatedAt\":8}}}}}"
+      },
+      "values": {
+        "playback_state_v1": "{\"video_movie\":{\"type\":\"video\",\"positionMs\":25,\"durationMs\":100,\"updatedAt\":2},\"series_clean_show\":{\"type\":\"series\",\"title\":\"Clean Show\",\"finishedEpisodes\":{\"1\":{\"1\":false}},\"seasons\":{\"1\":{\"1\":{\"positionMs\":95,\"durationMs\":100,\"updatedAt\":4},\"2\":{\"positionMs\":25,\"durationMs\":100,\"updatedAt\":5}}},\"executionSamples\":[{}]},\"series_clean_show_s01_1080p\":{\"type\":\"series\",\"title\":\"Clean.Show.S01.1080p\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":80,\"durationMs\":100,\"updatedAt\":9}}}},\"series_full_only_s01_1080p\":{\"type\":\"series\",\"title\":\"Full Only\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":50,\"durationMs\":100,\"updatedAt\":6}}}},\"series_partial_first\":{\"type\":\"series\",\"title\":\"Partial\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":10,\"durationMs\":100,\"updatedAt\":7}}}},\"series_partial_second\":{\"type\":\"series\",\"title\":\"Partial Show\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":90,\"durationMs\":100,\"updatedAt\":8}}}}}"
+      },
+      "playlistItems": [
+        {
+          "title": "Movie",
+          "torrent_hash": "movie"
+        },
+        {
+          "title": "Clean.Show.S01.1080p",
+          "torrent_hash": "clean",
+          "fileCount": 4
+        },
+        {
+          "title": "Full.Only.S01.1080p",
+          "torrent_hash": "full",
+          "count": 2
+        },
+        {
+          "title": "Partial Show Extended",
+          "torrent_hash": "partial"
+        }
+      ],
+      "expectedProgress": {
+        "realdebrid|hash:movie": {
+          "positionMs": 25,
+          "durationMs": 100,
+          "updatedAt": 2
+        },
+        "realdebrid|hash:clean": {
+          "positionMs": 1250000,
+          "durationMs": 4000000,
+          "updatedAt": 5
+        },
+        "realdebrid|hash:full": {
+          "positionMs": 500000,
+          "durationMs": 2000000,
+          "updatedAt": 6
+        },
+        "realdebrid|hash:partial": {
+          "positionMs": 100000,
+          "durationMs": 1000000,
+          "updatedAt": 7
+        }
+      },
+      "mutations": {
+        "playlist-key": {
+          "key": "playback_state_v1",
+          "operation": "rename"
+        },
+        "playlist-type": {
+          "key": "playback_state_v1",
+          "operation": "replace",
+          "value": "{\"video_movie\":{\"type\":\"video\",\"positionMs\":25.0,\"durationMs\":100,\"updatedAt\":2},\"series_clean_show\":{\"type\":\"series\",\"title\":\"Clean Show\",\"finishedEpisodes\":{\"1\":{\"1\":false}},\"seasons\":{\"1\":{\"1\":{\"positionMs\":95,\"durationMs\":100,\"updatedAt\":4},\"2\":{\"positionMs\":25,\"durationMs\":100,\"updatedAt\":5}}},\"executionSamples\":[{}]},\"series_clean_show_s01_1080p\":{\"type\":\"series\",\"title\":\"Clean.Show.S01.1080p\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":80,\"durationMs\":100,\"updatedAt\":9}}}},\"series_full_only_s01_1080p\":{\"type\":\"series\",\"title\":\"Full Only\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":50,\"durationMs\":100,\"updatedAt\":6}}}},\"series_partial_first\":{\"type\":\"series\",\"title\":\"Partial\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":10,\"durationMs\":100,\"updatedAt\":7}}}},\"series_partial_second\":{\"type\":\"series\",\"title\":\"Partial Show\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":90,\"durationMs\":100,\"updatedAt\":8}}}}}"
+        }
+      }
     }
   }
 }
