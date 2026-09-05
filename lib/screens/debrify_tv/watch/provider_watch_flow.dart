@@ -423,53 +423,6 @@ Future<dynamic> pushCachedWatchPlayer(
   );
 }
 
-/// Per-invocation cursor over the original live candidate list.
-/// Fetch and logging remain provider-specific; cancellation stays in each leaf.
-class CachedWatchQueueCursor {
-  CachedWatchQueueCursor({
-    required this.host,
-    required this.candidates,
-    required this.fetchWindow,
-    required this.batchReady,
-  });
-
-  final WatchFlowBindings host;
-  final List<Torrent> candidates;
-  final Future<TorboxCacheWindowResult> Function(int startIndex) fetchWindow;
-  final void Function(int count) batchReady;
-  int _cursor = 0;
-
-  Future<bool> populate() async {
-    while (true) {
-      if (_cursor >= candidates.length) {
-        return false;
-      }
-      final TorboxCacheWindowResult window = await fetchWindow(_cursor);
-      _cursor = window.nextCursor;
-      if (window.cachedTorrents.isEmpty) {
-        if (window.exhausted) {
-          return false;
-        }
-        continue;
-      }
-      host.queue
-        ..clear()
-        ..addAll(window.cachedTorrents);
-      host.lastQueueSize = host.queue.length;
-      host.lastSearchAt = DateTime.now();
-      if (host.mounted) {
-        host.setState(() {
-          host.status = host.queue.isEmpty
-              ? ''
-              : 'Queue has ${host.queue.length} remaining';
-        });
-      }
-      batchReady(host.queue.length);
-      return true;
-    }
-  }
-}
-
 /// Synchronous per-search result accumulation shared by TorBox and PikPak.
 /// Leaves retain their awaits, cancellation and terminal fallback boundaries.
 class QuickWatchSearchAccumulator {

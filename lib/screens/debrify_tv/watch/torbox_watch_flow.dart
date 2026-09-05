@@ -11,6 +11,7 @@ import '../../magic_tv_screen.dart'
     show MagicTvDispatch, MagicTvNextChannelQuirk;
 
 import 'provider_watch_flow.dart';
+import 'windowed_watch_queue.dart';
 
 class TorboxWatchFlow {
   const TorboxWatchFlow(this.host);
@@ -103,7 +104,7 @@ class TorboxWatchFlow {
         });
       }
 
-      final populateQueue = CachedWatchQueueCursor(
+      final run = WindowedWatchRun(
         host: host,
         candidates: combinedList,
         fetchWindow: (startIndex) => host.cacheWarmer.fetchTorboxCacheWindow(
@@ -112,7 +113,15 @@ class TorboxWatchFlow {
           apiKey: apiKey,
         ),
         batchReady: (count) => log('✅ Found $count cached Torbox torrent(s)'),
-      ).populate;
+        prepare: (candidate) => host.prepareTorboxTorrent(
+          candidate: candidate,
+          apiKey: apiKey,
+          log: log,
+        ),
+        provider: WindowedProvider.torbox,
+        log: log,
+      );
+      final populateQueue = run.populate;
 
       bool seeded;
       try {
@@ -146,98 +155,7 @@ class TorboxWatchFlow {
         return;
       }
 
-      Future<Map<String, String>?> requestTorboxNext() async {
-        if (host.watchCancelled) {
-          return null;
-        }
-        while (!host.watchCancelled) {
-          if (host.queue.isEmpty) {
-            bool replenished;
-            try {
-              replenished = await populateQueue();
-            } catch (e) {
-              log('❌ Torbox cache check failed: $e');
-              host.closeProgressDialog();
-              if (host.mounted && !host.watchCancelled) {
-                host.setState(() {
-                  host.status = 'Torbox cache check failed. Try again.';
-                });
-                host.showSnack(
-                  'Torbox cache check failed: ${host.formatTorboxError(e)}',
-                  color: Colors.red,
-                );
-              }
-              return null;
-            }
-            if (!replenished) {
-              break;
-            }
-          }
-          if (host.queue.isEmpty) {
-            break;
-          }
-          final item = host.queue.removeAt(0);
-          if (host.watchCancelled) {
-            break;
-          }
-          if (item is Map && item['type'] == host.torboxFileEntryType) {
-            final resolved = await host.resolveTorboxQueuedFile(
-              entry: item as Map<String, dynamic>,
-              log: log,
-            );
-            if (host.watchCancelled) {
-              return null;
-            }
-            if (resolved != null) {
-              if (host.mounted && !host.watchCancelled) {
-                host.setState(() {
-                  host.status = host.queue.isEmpty
-                      ? ''
-                      : 'Queue has ${host.queue.length} remaining';
-                });
-              }
-              if (host.watchCancelled) {
-                return null;
-              }
-              return resolved;
-            }
-            continue;
-          }
-
-          if (item is Torrent) {
-            final result = await host.prepareTorboxTorrent(
-              candidate: item,
-              apiKey: apiKey,
-              log: log,
-            );
-            if (host.watchCancelled) {
-              return null;
-            }
-            if (result != null) {
-              if (result.hasMore && !host.watchCancelled) {
-                combinedList.add(item);
-              }
-              if (host.mounted && !host.watchCancelled) {
-                host.setState(() {
-                  host.status = host.queue.isEmpty
-                      ? ''
-                      : 'Queue has ${host.queue.length} remaining';
-                });
-              }
-              if (host.watchCancelled) {
-                return null;
-              }
-              return {'url': result.streamUrl, 'title': result.title};
-            }
-          }
-        }
-        if (host.mounted && !host.watchCancelled) {
-          host.setState(() {
-            host.status = 'No more cached Torbox streams available.';
-          });
-        }
-        return null;
-      }
+      final requestTorboxNext = run.nextQuick;
 
       final first = await requestTorboxNext();
       if (host.watchCancelled) {
@@ -390,7 +308,7 @@ class TorboxWatchFlow {
       });
     }
 
-    final populateQueue = CachedWatchQueueCursor(
+    final run = WindowedWatchRun(
       host: host,
       candidates: candidatePool,
       fetchWindow: (startIndex) => host.cacheWarmer.fetchTorboxCacheWindow(
@@ -400,7 +318,15 @@ class TorboxWatchFlow {
       ),
       batchReady: (count) =>
           log('✅ Cached Torbox batch ready with $count item(s)'),
-    ).populate;
+      prepare: (candidate) => host.prepareTorboxTorrent(
+        candidate: candidate,
+        apiKey: apiKey,
+        log: log,
+      ),
+      provider: WindowedProvider.torbox,
+      log: log,
+    );
+    final populateQueue = run.populate;
 
     bool seeded;
     try {
@@ -433,65 +359,7 @@ class TorboxWatchFlow {
       return;
     }
 
-    Future<Map<String, String>?> requestTorboxNext() async {
-      while (true) {
-        if (host.queue.isEmpty) {
-          bool replenished;
-          try {
-            replenished = await populateQueue();
-          } catch (e) {
-            host.closeProgressDialog();
-            host.showSnack(
-              'Torbox cache check failed: ${host.formatTorboxError(e)}',
-              color: Colors.orange,
-            );
-            if (host.mounted) {
-              host.setState(() {
-                host.isBusy = false;
-              });
-            }
-            return null;
-          }
-          if (!replenished) {
-            break;
-          }
-        }
-        if (host.queue.isEmpty) {
-          break;
-        }
-
-        final next = host.queue.removeAt(0);
-        if (next is Map && next['type'] == host.torboxFileEntryType) {
-          final resolved = await host.resolveTorboxQueuedFile(
-            entry: Map<String, dynamic>.from(next as Map),
-            log: log,
-          );
-          if (resolved != null) {
-            return resolved;
-          }
-          continue;
-        }
-
-        if (next is! Torrent) {
-          continue;
-        }
-
-        final prepared = await host.prepareTorboxTorrent(
-          candidate: next,
-          apiKey: apiKey,
-          log: log,
-        );
-        if (prepared == null) {
-          continue;
-        }
-
-        if (prepared.hasMore) {
-          candidatePool.add(next);
-        }
-        return {'url': prepared.streamUrl, 'title': prepared.title};
-      }
-      return null;
-    }
+    final requestTorboxNext = run.nextCached;
 
     try {
       final first = await requestTorboxNext();

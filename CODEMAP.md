@@ -421,19 +421,26 @@ is an editor mirror, not the source of truth. How to add a provider:
   `provider_watch_flow.dart` synchronously shares TorBox/PikPak result accumulation;
   each invocation keeps its own dedup map, while leaves retain awaits, cancellation
   and terminal fallback. Live pins: `test/magic_tv_watch_dedup_origin_test.dart`.
-  `CachedWatchQueueCursor` in the same common file owns the four TorBox/Premiumize
-  quick/cached refill loops over the same live candidate lists; leaves retain
-  captured-key fetch/log capabilities and cancellation decisions. Live pins:
-  `test/magic_tv_cache_window_watch_origin_test.dart` (16 desktop cases, no native
-  playback claim). Cursor slice: 49 physical / 43 body-and-wiring net lines removed;
-  cursor checkpoint: five flows 2352 lines, common 1388.
+  The original four TorBox/Premiumize cursor refills are now owned by
+  `WindowedWatchRun` in `lib/screens/debrify_tv/watch/windowed_watch_queue.dart`,
+  alongside distinct `nextQuick` / `nextCached` methods. Original live queues,
+  overlapping completion and cancellation ordering remain; leaves retain captured-key
+  fetch and live host-prepare calls. `WindowedPreparedTorrent` in
+  `lib/models/debrify_tv/prepared_torrents.dart` is the immediate TB/PM result interface.
+  Pins: `test/magic_tv_cache_window_watch_origin_test.dart` (16 initial-window cases)
+  and `test/magic_tv_windowed_queue_origin_test.dart` (8 later-next cases; cancellation
+  uses the retained dialog callback, not visible player UI). Reentrancy, quick dequeue
+  consumption and TB map cast/copy remain unproven; no native playback claim.
   `pushCachedWatchPlayer` in the same common file shares cached TB/PM/PP Flutter
   presentation, returning the navigator Future without async; live reads stay in
   the builder. Pins: `test/magic_tv_cached_player_presentation_origin_test.dart`.
   Presentation removes 26 net physical lines (93 - 24 wiring - 43 helper): five
-  flows now 2283, common 1431. Under-800 and existing UI/captured-key debt remain;
+  flows at that checkpoint 2283, common 1431. Under-800 and UI/captured-key debt remain;
   no live-builder-time change, valid channel-switch or native playback proof.
-  These shared phases do not complete the five-flow dedup target. `WatchFlowBindings` keeps live host
+  Windowed slice removes 19 net production lines: five flows 2081 (-202), common
+  1384 (-47), new owner 217 and model growth 13 fully charged; no host reduction.
+  Its 24 binding/tear-off lines are retained for Q2 composition review/removal before
+  Phase 2 completion. These shared phases do not complete the five-flow dedup target. `WatchFlowBindings` keeps live host
   state, navigation, existing preparation/prefetch/launcher callbacks and
   captured-key service calls. Six entry wrappers and five dead cached binding slots
   are removed. Four provider-specific quick-dispatch dependencies now belong to

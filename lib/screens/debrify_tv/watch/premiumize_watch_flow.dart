@@ -12,6 +12,7 @@ import '../../magic_tv_screen.dart'
     show MagicTvDispatch, MagicTvNextChannelQuirk;
 
 import 'provider_watch_flow.dart';
+import 'windowed_watch_queue.dart';
 
 class PremiumizeWatchFlow {
   const PremiumizeWatchFlow(this.host);
@@ -116,7 +117,7 @@ class PremiumizeWatchFlow {
         host.setState(() => host.status = 'Checking Premiumize cache...');
       }
 
-      final populateQueue = CachedWatchQueueCursor(
+      final run = WindowedWatchRun(
         host: host,
         candidates: combinedList,
         fetchWindow: (startIndex) => host.fetchPremiumizeCacheWindow(
@@ -126,7 +127,15 @@ class PremiumizeWatchFlow {
         ),
         batchReady: (count) =>
             log('✅ Found $count cached Premiumize torrent(s)'),
-      ).populate;
+        prepare: (candidate) => host.preparePremiumizeTorrent(
+          candidate: candidate,
+          apiKey: apiKey,
+          log: log,
+        ),
+        provider: WindowedProvider.premiumize,
+        log: log,
+      );
+      final populateQueue = run.populate;
 
       bool seeded;
       try {
@@ -161,62 +170,7 @@ class PremiumizeWatchFlow {
         return;
       }
 
-      Future<Map<String, String>?> requestPremiumizeNext() async {
-        if (host.watchCancelled) return null;
-        while (!host.watchCancelled) {
-          if (host.queue.isEmpty) {
-            bool replenished;
-            try {
-              replenished = await populateQueue();
-            } catch (e) {
-              log('❌ Premiumize cache check failed: $e');
-              host.closeProgressDialog();
-              if (host.mounted && !host.watchCancelled) {
-                host.setState(
-                  () =>
-                      host.status = 'Premiumize cache check failed. Try again.',
-                );
-                host.showSnack(
-                  'Premiumize cache check failed: $e',
-                  color: Colors.red,
-                );
-              }
-              return null;
-            }
-            if (!replenished) break;
-          }
-          if (host.queue.isEmpty) break;
-
-          final item = host.queue.removeAt(0);
-          if (host.watchCancelled) break;
-          if (item is! Torrent) continue;
-
-          final result = await host.preparePremiumizeTorrent(
-            candidate: item,
-            apiKey: apiKey,
-            log: log,
-          );
-          if (host.watchCancelled) return null;
-          if (result != null) {
-            if (result.hasMore && !host.watchCancelled) combinedList.add(item);
-            if (host.mounted && !host.watchCancelled) {
-              host.setState(() {
-                host.status = host.queue.isEmpty
-                    ? ''
-                    : 'Queue has ${host.queue.length} remaining';
-              });
-            }
-            if (host.watchCancelled) return null;
-            return {'url': result.streamUrl, 'title': result.title};
-          }
-        }
-        if (host.mounted && !host.watchCancelled) {
-          host.setState(
-            () => host.status = 'No more cached Premiumize streams.',
-          );
-        }
-        return null;
-      }
+      final requestPremiumizeNext = run.nextQuick;
 
       final first = await requestPremiumizeNext();
       if (host.watchCancelled) return;
@@ -355,7 +309,7 @@ class PremiumizeWatchFlow {
       });
     }
 
-    final populateQueue = CachedWatchQueueCursor(
+    final run = WindowedWatchRun(
       host: host,
       candidates: candidatePool,
       fetchWindow: (startIndex) => host.fetchPremiumizeCacheWindow(
@@ -365,7 +319,15 @@ class PremiumizeWatchFlow {
       ),
       batchReady: (count) =>
           log('✅ Cached Premiumize batch ready with $count item(s)'),
-    ).populate;
+      prepare: (candidate) => host.preparePremiumizeTorrent(
+        candidate: candidate,
+        apiKey: apiKey,
+        log: log,
+      ),
+      provider: WindowedProvider.premiumize,
+      log: log,
+    );
+    final populateQueue = run.populate;
 
     bool seeded;
     try {
@@ -387,39 +349,7 @@ class PremiumizeWatchFlow {
       return;
     }
 
-    Future<Map<String, String>?> requestPremiumizeNext() async {
-      while (true) {
-        if (host.queue.isEmpty) {
-          bool replenished;
-          try {
-            replenished = await populateQueue();
-          } catch (e) {
-            host.closeProgressDialog();
-            host.showSnack(
-              'Premiumize cache check failed: $e',
-              color: Colors.orange,
-            );
-            if (host.mounted) host.setState(() => host.isBusy = false);
-            return null;
-          }
-          if (!replenished) break;
-        }
-        if (host.queue.isEmpty) break;
-
-        final next = host.queue.removeAt(0);
-        if (next is! Torrent) continue;
-
-        final prepared = await host.preparePremiumizeTorrent(
-          candidate: next,
-          apiKey: apiKey,
-          log: log,
-        );
-        if (prepared == null) continue;
-        if (prepared.hasMore) candidatePool.add(next);
-        return {'url': prepared.streamUrl, 'title': prepared.title};
-      }
-      return null;
-    }
+    final requestPremiumizeNext = run.nextCached;
 
     try {
       final first = await requestPremiumizeNext();
