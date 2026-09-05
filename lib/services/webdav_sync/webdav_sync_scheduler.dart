@@ -136,6 +136,14 @@ final class WebDavSyncScheduler {
 
   bool get isArmed => _contextProvider != null;
 
+  /// Unlike poll readiness, normal in-flight work does not make sync inactive.
+  bool get automaticSyncActive =>
+      isArmed &&
+      _remotePollingForeground &&
+      !_gateHolds &&
+      pollState != WebDavSyncPollState.pausedBackoff &&
+      pollState != WebDavSyncPollState.disabledNoValidators;
+
   WebDavSyncPollState get pollState {
     if (_pollDisabledNoValidators) {
       return WebDavSyncPollState.disabledNoValidators;

@@ -287,6 +287,7 @@ final class WebDavSyncRuntimeStatus {
     this.lastPushMs,
     this.lastRemoteChangeMs,
     this.pollState = WebDavSyncPollState.gated,
+    this.automaticSyncActive = false,
     this.localStateMissing = false,
     this.pruneBlockingProfiles = const <String>[],
     this.safetyCleanupBlocked = false,
@@ -303,6 +304,7 @@ final class WebDavSyncRuntimeStatus {
   final int? lastPushMs;
   final int? lastRemoteChangeMs;
   final WebDavSyncPollState pollState;
+  final bool automaticSyncActive;
   final bool localStateMissing;
   final List<String> pruneBlockingProfiles;
   final bool safetyCleanupBlocked;
@@ -836,6 +838,7 @@ final class WebDavSyncRuntime
         clockPauseReason: state.lastClockPauseReason,
         lastPushMs: state.lastPushMs,
         lastRemoteChangeMs: state.lastRemoteChangeMs,
+        automaticSyncActive: _scheduler?.automaticSyncActive ?? false,
         pollState: peerCount == 0
             ? WebDavSyncPollState.gated
             : (_scheduler?.pollState ?? WebDavSyncPollState.gated),

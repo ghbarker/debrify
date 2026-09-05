@@ -51,6 +51,37 @@ void main() {
     active: true,
   );
 
+  test('automatic status stays active without peers and during sync', () {
+    fakeAsync((async) {
+      final runner = _Runner()..blocker = Completer<void>();
+      final gate = _Gate();
+      final scheduler = WebDavSyncScheduler(runner: runner, gate: gate);
+      expect(scheduler.automaticSyncActive, isFalse);
+      scheduler.arm(() async => context());
+      expect(scheduler.automaticSyncActive, isTrue);
+      unawaited(scheduler.signal(WebDavSyncTrigger.manual));
+      async.flushMicrotasks();
+      expect(runner.runs, 1);
+      expect(scheduler.pollState, WebDavSyncPollState.gated);
+      expect(scheduler.automaticSyncActive, isTrue);
+      runner.blocker!.complete();
+      async.flushMicrotasks();
+      expect(scheduler.automaticSyncActive, isTrue);
+      gate.televisionPlayback = true;
+      expect(scheduler.automaticSyncActive, isFalse);
+      gate.televisionPlayback = false;
+      gate.lowMemory = true;
+      expect(scheduler.automaticSyncActive, isFalse);
+      gate.lowMemory = false;
+      scheduler.pauseRemotePolling();
+      expect(scheduler.automaticSyncActive, isFalse);
+      scheduler.resumeRemotePolling();
+      expect(scheduler.automaticSyncActive, isTrue);
+      scheduler.dispose();
+      expect(scheduler.automaticSyncActive, isFalse);
+    });
+  });
+
   test('logout clears old save intent before a new account is armed', () {
     fakeAsync((async) {
       final runner = _Runner();
@@ -1248,6 +1279,7 @@ void main() {
 
       advanceTo(60);
       expect(scheduler.pollState, WebDavSyncPollState.pausedBackoff);
+      expect(scheduler.automaticSyncActive, isFalse);
       advanceTo(120);
       advanceTo(180);
       advanceTo(240);
@@ -1303,6 +1335,7 @@ void main() {
       async.flushMicrotasks();
       expect(transport.probeSeconds, <int>[5]);
       expect(scheduler.pollState, WebDavSyncPollState.pausedBackoff);
+      expect(scheduler.automaticSyncActive, isFalse);
 
       async.elapse(const Duration(seconds: 59));
       async.flushMicrotasks();

@@ -745,6 +745,17 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
 
   Widget _buildSyncSection() {
     final active = _syncBinding?.lifecycle == WebDavSyncLifecycle.active;
+    final live =
+        active &&
+        !_logoutPending &&
+        _runtimeStatus?.automaticSyncActive == true &&
+        _runtimeStatus?.clockPauseReason == null &&
+        _runtimeStatus?.localStateMissing == false;
+    final statusLabel = live
+        ? 'Automatic sync is active'
+        : active
+        ? 'Automatic sync is paused or limited'
+        : 'Sync is not active';
     final finishingFirstSync =
         _syncBinding?.lifecycle == WebDavSyncLifecycle.awaitingAdoption &&
         _syncBinding?.errorMessage == null;
@@ -799,12 +810,37 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
                     : Icons.cloud_outlined,
                 color: active ? Theme.of(context).colorScheme.primary : null,
               ),
-              title: Text(
-                _logoutPending
-                    ? 'Logout needs attention'
-                    : active
-                    ? 'Connected to $connectedName'
-                    : 'Not connected',
+              title: Row(
+                children: [
+                  Tooltip(
+                    message: statusLabel,
+                    child: Semantics(
+                      label: statusLabel,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: live
+                              ? Colors.green
+                              : active || finishingFirstSync || _logoutPending
+                              ? Colors.amber
+                              : Theme.of(context).colorScheme.outline,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _logoutPending
+                          ? 'Logout needs attention'
+                          : active
+                          ? 'Connected to $connectedName'
+                          : 'Not connected',
+                    ),
+                  ),
+                ],
               ),
               subtitle: Text(
                 _logoutPending
