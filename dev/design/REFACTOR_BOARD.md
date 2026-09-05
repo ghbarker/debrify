@@ -1,16 +1,14 @@
 # Refactor board
 
-## Current checkpoint — 2026-09-05 (supersedes historical rows below)
-- Merged this round: #114, #117, #118, #116, #120, #119, #121, #122, #123, #124, #125, #126.
-- G1'-7b Wegener: bound-data-only prerequisite active; corrected green origin8568d5bc before move. Auth/provider/actions remain host; no750credit.
-- M1-5b Ampere: actual settings-state owner + renderer origin pins assigned. Editor/chip126 mergedc35c41c1,448partial;202targetremaining.
-- C0 Cicero: bounded analyzer-provenance read-only audit; next settings independent review. Decoder V1-6 paused: native fixture failed; uncommitted experimental seams isolated, never merged.
-- Locke: independent bound-data review on frozen checkpoint next. Storage debt audit complete; no unassigned cleanup.
-- Latest full automated gate PASSED actual main 397398d5: Windows/Android builds, native pair, full suites against unchanged allowlist, analyzer and layering. Manual smoke deferred by user; never marked passed.
-- Current main god lines: search 9281, player 11926, Magic TV 4071, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
-- Storage target shortfall 1565, including 783 explicit S2-6/S2-7 debt; no double credit.
-- CODEMAP unlocked. Temporary keep-awake expires September 5 at 16:43 UTC. No permanent power or disk changes.
-
+## Current checkpoint — 2026-09-05 15:43 UTC (supersedes historical rows below)
+- Latest merged PRs: #125, #126, #127 and #128; main 6aeec78f contains the latest gate record.
+- M1-5b Ampere, refactor/m1-5b-playback-settings: #129 held at 24ba72f3. Independent review passed; CI test failed on shape_manifest_test.dart, while goldens/native passed. Diagnose missing moved-file coverage; no threshold relaxation. M1-6 remains readiness-only.
+- G1'-7c Wegener, refactor/g1-7c-discover-lifecycle: #130 cf38a3e7 independently passed 86 tests and body/ownership review; CI test/native passed, goldens pending. 143 proposed host lines are not counted as merged or credited toward the standalone Discover target.
+- C0 Cicero: independent lifecycle review complete; available for corrected #129 verification. Locke: full integrated gate complete; available for the next independent review. No duplicate workers or overlapping edits.
+- Latest full automated gate PASSED actual main 04264596: 5307 passing generic tests, 12 exact known failures, two skips; 21 exact known golden errors; no unexpected/unused entries. Native origin/current passed; Windows/ARM64 builds passed; analyzer 438/454, layering 77.
+- Current merged god lines: search 9268, player 11926, Magic TV 4071, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
+- Open debt: storage shortfall 1565; player native fixture paused; temporary forwarders expire in their recorded lanes. No manual smoke pass claimed; user explicitly deferred it without blocking eligible work.
+- CODEMAP unlocked. No user action required. Awake helper PID3412 verified running; expires September 5 at 16:43 UTC, without extension or permanent power changes.
 ## Prior checkpoints and retained evidence
 
 
