@@ -3,10 +3,10 @@
 ## Current checkpoint — 2026-09-05 15:43 UTC (supersedes historical rows below)
 - Latest merged PRs: #125, #126, #127 and #128; main 6aeec78f contains the latest gate record.
 - M1-5b Ampere, refactor/m1-5b-playback-settings: #129 held at 24ba72f3. Independent review passed; CI test failed on shape_manifest_test.dart, while goldens/native passed. Diagnose missing moved-file coverage; no threshold relaxation. M1-6 remains readiness-only.
-- G1'-7c Wegener, refactor/g1-7c-discover-lifecycle: #130 cf38a3e7 independently passed 86 tests and body/ownership review; CI test/native passed, goldens pending. 143 proposed host lines are not counted as merged or credited toward the standalone Discover target.
+- G1'-7c merged #130 at 5232013a after independent 86-test/body review and all three exact-head CI checks. 143 host lines removed; zero credit toward standalone Discover. Wegener assigned G1'-7d actual-origin pin feasibility only, branch refactor/g1-7d-playback-selection; no production scope granted.
 - C0 Cicero: independent lifecycle review complete; available for corrected #129 verification. Locke: full integrated gate complete; available for the next independent review. No duplicate workers or overlapping edits.
 - Latest full automated gate PASSED actual main 04264596: 5307 passing generic tests, 12 exact known failures, two skips; 21 exact known golden errors; no unexpected/unused entries. Native origin/current passed; Windows/ARM64 builds passed; analyzer 438/454, layering 77.
-- Current merged god lines: search 9268, player 11926, Magic TV 4071, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
+- Current merged god lines: search 9126, player 11926, Magic TV 4071, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
 - Open debt: storage shortfall 1565; player native fixture paused; temporary forwarders expire in their recorded lanes. No manual smoke pass claimed; user explicitly deferred it without blocking eligible work.
 - CODEMAP unlocked. No user action required. Awake helper PID3412 verified running; expires September 5 at 16:43 UTC, without extension or permanent power changes.
 ## Prior checkpoints and retained evidence
@@ -166,3 +166,6 @@ Generic5283pass/12exacthistorical/2skip;goldens21exacthistorical after2retries;n
 ## Full automated gate PASS actual04264596/treef88985eb
 Generic5307pass/12exactknown/2skip;goldens21exactknown;0unexpected/unused,rawfalse/effective0 unchangedallowlist. Strictnative1+1/0skip;analyzer438/454no new;layer77delta0;Python55;Windows+AndroidbuildsPASS. Evidence C:/Users/hunth/debrify/debrify-locke-main-0426-gate/.dart_tool/main-gate/REPORT.md. Manualdeferred,no nativepositiveclaim. G17clifecycleproductreleasedaftergreen2539fc5c;C0originreviewactive.129integrated24ba72f3 CIpending/reviewpassed. No userwait.
 
+
+
+#130 merged5232013a exactcf38a3e7: lifecycle owns presentation resources and cleanup; 143 net host lines, production net+1. Difference: explicit resource lifetime with actual-origin pins; more: 14 aliases/focus forwarder expire realG17/Q2, Discover still not standalone. First production slice since full04264596gate. #129 correction4ab8e1c independent review/newCI pending; exact new renderer added to shape inventory,490floor unchanged. G17d only test/discover_playback_selection_origin_test.dart writable; routefactory/IOseam decision required before product edits.
