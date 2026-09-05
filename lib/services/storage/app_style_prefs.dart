@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 import '../../models/sidebar_configuration.dart';
 import '../../models/tv_hero_artwork_quality.dart';
 import '../../utils/platform_util.dart';
@@ -750,7 +748,8 @@ class AppStylePrefs {
 
   /// Exposed so a test can assert this set and `kLaunchIdents` agree in BOTH
   /// directions — drift either way silently strands the pref on the default.
-  @visibleForTesting
+  /// The StorageService façade keeps `@visibleForTesting`; this store getter
+  /// is the implementation the façade forwards to.
   static Set<String> get launchAnimationValues => _launchAnimationValues;
 
   /// Which launch ident the splash plays (Appearance → Launch Animation).
