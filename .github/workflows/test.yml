@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.base.sha }}
-          path: ${{ runner.temp }}/layering-parent
+          path: layering-parent
 
       - name: Install native test libraries
         run: |
@@ -52,7 +52,7 @@ jobs:
           dart run tool/check_layering.dart --all
           dart run tool/check_layering.dart --all --json > /tmp/layering-head.json
           python3 -c "import json; print('layering count (HEAD):', json.load(open('/tmp/layering-head.json'))['count'])"
-          PARENT="${{ runner.temp }}/layering-parent"
+          PARENT="${{ github.workspace }}/layering-parent"
           if [ -d "$PARENT" ]; then
             dart run tool/check_layering.dart --all --json --root "$PARENT" > /tmp/layering-parent.json
             python3 tool/ci_layering_delta.py /tmp/layering-parent.json /tmp/layering-head.json
