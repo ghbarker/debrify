@@ -191,3 +191,6 @@ Generic5404pass/12exactknown/2skip;goldens21exactknown after2configuredretries;n
 
 G17e revised bounded owner move authorized after independent828de2ce58originPASS. Exact newselection_playback_owner/searchhostdeclaredhunks/partSourcesfactory only. Host retains async listener lifecycle and empty-browse entry guard before context; resolver stayshost. Owner futures returned directly, route lookup/read timing preserved. Two substantive adapters >10lines explicitly accepted untilrealG17/Q2; legalowner-to-legacy-library cycle is debt, ZERO750standalonecredit. No otherproductionseams/lifecycle/actions authorized. CODEMAPnotyetlocked.
 
+
+M16 expiry A+B authorized onrefactor/m1-6-expiry: host plusprovider_watch_flow fiveunusedslots only. Existingactualorigin suites reproducedgreen before removal; twoauditablecommits sixforwards/deadslots then18mechanicalaliases. Forecast72host includes34aliaslines, plus42binding, NOTqueue133credit. Preserveallwrites/tearofftiming, two write-onlyfields. Retain11livecallbacks/editor/settingsUIboundaries asQ2compositiondebt; no fullM1closure. CODEMAPwaitserializedgrant. G17e scopesdisjoint.
+
