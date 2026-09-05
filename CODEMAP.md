@@ -480,3 +480,9 @@ update this file in the same PR. Line counts come from `wc -l`, not estimates._
 - `lib/services/storage/playback_progress_store.dart` owns continue-watching, local completion and playback JSON, tracker snapshot writes, track preferences and playlist metadata. `localCompletionRevision` is one shared notifier; `readPlaybackStateMap` always reads fresh preferences.
 - `StorageService` retains public forwarding APIs and private bridges for out-of-range progress/migration callers. The remote `movieFinishedRevision`, migration orchestration and `IptvMediaStore` SQLite resume backend retain their existing owners. Key strings remain frozen in `storage_key_ownership.dart`.
 - Origin compatibility: `test/playback_progress_store_origin_compatibility_test.dart`; store/facade identity: `test/playback_progress_store_test.dart`.
+
+### Defaults migration routing (S2-7)
+
+- `StorageService.migrateDefaultsGeneration` captures preferences once and retains generation checks, the residual detail-trailer write and the final generation marker. Its phased calls preserve theme/detail -> Home -> sidebars -> Home trailer -> detail trailer -> TV style order.
+- `AppStylePrefs.migrateDefaultsGeneration1Theme`, `migrateDefaultsGeneration1Sidebars` and `migrateDefaultsGeneration3TvStyle` own the style writes; `HomePrefs.migrateDefaultsGeneration1TvHome` and `migrateDefaultsGeneration2Trailers` own Home writes. All receive the same captured `ProfilePreferences`; they do not warm caches or advance generation.
+- `test/migration_hooks_origin_test.dart` pins real persistence order, types, explicit choices, idempotence and failed-write retry before extraction.

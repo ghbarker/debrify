@@ -538,4 +538,27 @@ class HomePrefs {
       );
     }
   }
+  /// Runs between generation 1 theme/detail and sidebar writes.
+  static Future<void> migrateDefaultsGeneration1TvHome(
+    ProfilePreferences prefs,
+  ) async {
+    if (!prefs.containsKey(tvHomeStyleKey)) {
+      await prefs.setString(tvHomeStyleKey, 'spotlight');
+    }
+  }
+
+  /// Runs before the coordinator's residual detail-trailer write.
+  static Future<void> migrateDefaultsGeneration2Trailers(
+    ProfilePreferences prefs,
+  ) async {
+    // Both ambient trailer surfaces, for installs whose form factor used to
+    // default one of them off. An explicit off — the toggles write
+    // unconditionally, so a stored `false` is always a real choice — is left
+    // alone: this turns trailers on for people who never had an opinion, not
+    // for people who said no.
+    if (!prefs.containsKey('home_hero_trailer_enabled')) {
+      await prefs.setBool('home_hero_trailer_enabled', true);
+    }
+  }
+
 }
