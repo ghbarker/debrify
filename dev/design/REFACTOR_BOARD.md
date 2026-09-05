@@ -13,8 +13,8 @@ Overall completion remains approximately65%, an engineering estimate rather than
 
 ### Now
 - [x] #155 repair owner merged:259 fewer host lines/+30 total production, seven temporary forwarding methods; existing quirks preserved.
-- [ ] Full integrated gate f4862238 in progress after #153/#154/#155: Cicero running tests/builds/forwarder ledger.
-- [ ] Locke: playlist metadata origin tests, new test file only.
+- [x] Full integrated gate f4862238 passed after #153/#154/#155:5526pass/12known/2skip;goldens21known;native/analysis/layer/builds passed.
+- [ ] Locke: released playlist metadata owner extraction after independently passing origin/restore fixtures; two production files only.
 - [ ] Wegener: review proposed captured-key capability for actual architectural benefit; Ampere proposal ready, no implementation authorization.
 - [ ] Parent: merge exact reviewed green heads, maintain ownership and this roadmap. No user action required.
 
@@ -330,3 +330,10 @@ Wegener oneauthorizedsecondphase attempt failed equallybc46/current beforelongcl
 ### #155 merged; fullgate f486 dispatched
 Exact882aef39 product/docs/actualunion independentlyPASS andall3CIgreen. Actualmergef4862238612bbfaa51631d51c3f760bbb5edcb86. Did we make a difference?259fewer hostlines (3847), repairlogic reunitedwithstore; wholeproduction+30/sevenfacades remainQ2, not259netdeletion. More remains:1047hostgap/knownprofilequirks. Gods8614/11926/3317/3847/2899 vs19070/16278/10716/9963/7905.
 Cicero fullgate f486IN_PROGRESS allchecks/builds/forwarders. Metadataorigin156reviewPASSawaitCI; fixture d735independentreview; productmappingread-only. Captured-key standalone+36proposal DEFERRED after independentreview: no typedconsumer/deletion, follow-on RDlookup foundno coherent equivalentqueueblock. No implementation/no user blocker. Nextproductionhelduntilf486gatepasses.
+
+### Full gate f486 — PASS
+| Source | Tests/diagnostics | Builds | Forwarders total/single physical line | Result |
+|---|---|---|---|---|
+|f4862238612bbfaa51631d51c3f760bbb5edcb86 treeecfd6559cd22a65791dcda24e2e90baa9825e5ed|5526pass/12exactknown/2skip;goldens21exactknown after2configuredretries;0unexpected/unused;436/452same16unused;layer77delta0;Python55;nativebc46/currentcorrected1451+1unskipped|Windows164.4s68files ZIP4b8ffa5fcc19b5115e57b04181cea17b558b4f60c5e2aca9158f21e96e8d05c5;ARM64108.8s APKdfc6c0235d16d4c35aed6c7d14627af4021bb3d5c43ac1c60df973dc88ca794c|Storage596/147;Search85/72;Player161/112;Magic23/12;Settings0/0|AutomatedPASS unchangedbaselines/rawgenericandgoldensfalse;no newmanualsmoke/install|
+Report C:/Users/hunth/debrify/debrify-c0-post-153-155-gate/.dart_tool/main-gate/REPORT.md. Did we make a difference?Integrated3changes verified withoutnewregressions; more remains knownfailures/dependencyandforwardingdebt. Gods8614/11926/3317/3847/2899 vs19070/16278/10716/9963/7905.
+Metadataowner released refactor/s2-playlist-metadata-owner, onlyhost214lineblock+2unusedaliases/existingstore11bodies, tenfacades; prerequisite156157mustmergebeforeproduct. C0independentreviewer. CODEMAPnotgrantedyet. Counterreset0. No user blocker.
