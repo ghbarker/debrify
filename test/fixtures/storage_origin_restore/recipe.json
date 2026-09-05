@@ -1,6 +1,6 @@
 {
   "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "values": {
     "stremio_tv_rotation_minutes": 37,
     "stremio_tv_auto_refresh": false,
@@ -72,7 +72,32 @@
     "text_brightness": "dim",
     "tv_hero_artwork_quality": "full_hd",
     "tv_player_controls_style": "marquee",
-    "tv_sidebar_style": "ghost"
+    "tv_sidebar_style": "ghost",
+    "alldebrid_hidden_from_nav": true,
+    "alldebrid_integration_enabled": false,
+    "alldebrid_post_torrent_action": "delete",
+    "pikpak_enabled": false,
+    "pikpak_hidden_from_nav": true,
+    "pikpak_ignore_small_videos": true,
+    "pikpak_post_torrent_action": "delete",
+    "pikpak_restricted_folder_id": "synthetic-restricted-folder",
+    "pikpak_restricted_folder_name": "Synthetic folder",
+    "pikpak_show_videos_only": false,
+    "pikpak_torrents_folder_id": "synthetic-torrents-folder",
+    "pikpak_tv_folder_id": "synthetic-tv-folder",
+    "premiumize_check_cache_before_search": true,
+    "premiumize_hidden_from_nav": true,
+    "premiumize_integration_enabled": false,
+    "premiumize_post_torrent_action": "delete",
+    "rd_skip_blocked_torrents": true,
+    "real_debrid_hidden_from_nav": true,
+    "torbox_hidden_from_nav": true,
+    "torbox_integration_enabled": false,
+    "torbox_post_torrent_action": "delete",
+    "webdav_enabled": false,
+    "webdav_hidden_from_nav": true,
+    "webdav_selected_server_id_v1": "synthetic-unbound-server",
+    "webdav_show_videos_only": false
   },
   "excludedInputs": {
     "mdblist_api_key": "SYNTHETIC_NOT_A_CREDENTIAL_mdblist_api_key",
@@ -83,7 +108,17 @@
     "trakt_refresh_token": "SYNTHETIC_NOT_A_CREDENTIAL_trakt_refresh_token",
     "trakt_token_expiry": 1893456000000,
     "trakt_username": "SYNTHETIC_NOT_A_CREDENTIAL_trakt_username",
-    "external_player_custom_command": "SYNTHETIC_DO_NOT_EXECUTE {url}"
+    "external_player_custom_command": "SYNTHETIC_DO_NOT_EXECUTE {url}",
+    "pikpak_access_token": "SYNTHETIC_NOT_A_CREDENTIAL_pikpak_access_token",
+    "pikpak_captcha_token": "SYNTHETIC_NOT_A_CREDENTIAL_pikpak_captcha_token",
+    "pikpak_device_id": "SYNTHETIC_NOT_A_CREDENTIAL_pikpak_device_id",
+    "pikpak_refresh_token": "SYNTHETIC_NOT_A_CREDENTIAL_pikpak_refresh_token",
+    "pikpak_user_id": "SYNTHETIC_NOT_A_CREDENTIAL_pikpak_user_id",
+    "real_debrid_endpoint": "https://rd.example.invalid/synthetic",
+    "webdav_base_url": "https://webdav.example.invalid/synthetic",
+    "webdav_password": "SYNTHETIC_NOT_A_CREDENTIAL_webdav_password",
+    "webdav_servers_v1": "[{\"id\":\"synthetic-excluded\",\"name\":\"Synthetic\",\"baseUrl\":\"https://webdav.example.invalid\",\"username\":\"synthetic\",\"password\":\"SYNTHETIC_NOT_A_PASSWORD\"}]",
+    "webdav_username": "SYNTHETIC_NOT_A_CREDENTIAL_webdav_username"
   },
   "completeDomains": {
     "S2-5": [
@@ -133,11 +168,52 @@
       "tv_player_controls_style",
       "tv_sidebar_style",
       "tv_ui_scale_percent"
+    ],
+    "S2-2": [
+      "alldebrid_hidden_from_nav",
+      "alldebrid_integration_enabled",
+      "alldebrid_post_torrent_action",
+      "default_torrent_provider_v1",
+      "pikpak_access_token",
+      "pikpak_captcha_token",
+      "pikpak_device_id",
+      "pikpak_enabled",
+      "pikpak_hidden_from_nav",
+      "pikpak_ignore_small_videos",
+      "pikpak_post_torrent_action",
+      "pikpak_refresh_token",
+      "pikpak_restricted_folder_id",
+      "pikpak_restricted_folder_name",
+      "pikpak_show_videos_only",
+      "pikpak_torrents_folder_id",
+      "pikpak_tv_folder_id",
+      "pikpak_user_id",
+      "post_torrent_action",
+      "premiumize_check_cache_before_search",
+      "premiumize_hidden_from_nav",
+      "premiumize_integration_enabled",
+      "premiumize_post_torrent_action",
+      "rd_skip_blocked_torrents",
+      "real_debrid_endpoint",
+      "real_debrid_file_selection",
+      "real_debrid_hidden_from_nav",
+      "real_debrid_integration_enabled",
+      "torbox_check_cache_before_search",
+      "torbox_hidden_from_nav",
+      "torbox_integration_enabled",
+      "torbox_post_torrent_action",
+      "webdav_base_url",
+      "webdav_enabled",
+      "webdav_hidden_from_nav",
+      "webdav_password",
+      "webdav_selected_server_id_v1",
+      "webdav_servers_v1",
+      "webdav_show_videos_only",
+      "webdav_username"
     ]
   },
   "partialDomains": [
     "S2-1",
-    "S2-2",
     "S2-3"
   ],
   "mutations": {
@@ -167,6 +243,41 @@
       "key": "phone_nav_bar_indices",
       "operation": "replace",
       "value": "[\"2\",\"0\",\"1\"]"
+    },
+    "provider-key": {
+      "key": "pikpak_tv_folder_id",
+      "operation": "rename"
+    },
+    "provider-type": {
+      "key": "pikpak_ignore_small_videos",
+      "operation": "replace",
+      "value": "true"
+    },
+    "provider-null": {
+      "key": "pikpak_restricted_folder_id",
+      "operation": "insert",
+      "value": "SYNTHETIC_WRONGLY_MATERIALIZED"
+    }
+  },
+  "scenarios": {
+    "profile": {
+      "absentKeys": []
+    },
+    "provider-null-folder": {
+      "absentKeys": [
+        "pikpak_restricted_folder_id",
+        "pikpak_restricted_folder_name",
+        "webdav_selected_server_id_v1"
+      ]
+    },
+    "provider-cleared-cache": {
+      "absentKeys": [
+        "pikpak_restricted_folder_id",
+        "pikpak_restricted_folder_name",
+        "pikpak_torrents_folder_id",
+        "pikpak_tv_folder_id",
+        "webdav_selected_server_id_v1"
+      ]
     }
   }
 }

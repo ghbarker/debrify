@@ -122,13 +122,16 @@ Future<String> _digest(List<int> bytes) async => (await Sha256().hash(
   bytes,
 )).bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
-void _expectSettings(Map<String, Object?> actual) {
+void _expectSettings(
+  Map<String, Object?> actual,
+  Map<String, Object?> expected,
+) {
   expect(
     actual,
-    _settings,
+    expected,
     reason: 'Every represented key and value is preserved',
   );
-  for (final entry in _settings.entries) {
+  for (final entry in expected.entries) {
     expect(_type(actual[entry.key]), _type(entry.value), reason: entry.key);
   }
 }
@@ -193,8 +196,10 @@ Future<void> _seedThroughStorageService() async {
   );
 }
 
-Future<Map<String, Object?>> _readThroughStorageService() async => {
-  for (final key in _settings.keys)
+Future<Map<String, Object?>> _readThroughStorageService(
+  Map<String, Object?> expected,
+) async => {
+  for (final key in expected.keys)
     if (!_setterSettings.containsKey(key))
       key: (await ProfilePreferences.instance()).get(key),
   'stremio_tv_rotation_minutes':
@@ -333,188 +338,294 @@ void main() {
         sanitized: false,
       );
 
-  if (_generate) {
-    test('generate only through the unchanged pre-S2 lib exporter', () async {
-      final head = await Process.run('git', ['rev-parse', 'HEAD']);
-      expect(head.exitCode, 0);
-      expect(head.stdout.toString().trim(), _origin);
-      final diff = await Process.run('git', [
-        'diff',
-        '--exit-code',
-        _origin,
-        '--',
-        'lib',
-      ]);
+  for (final entry in (_recipe['scenarios'] as Map).entries) {
+    final scenario = entry.key as String;
+    final absent = (entry.value['absentKeys'] as List).cast<String>();
+    final expected = <String, Object?>{
+      for (final entry in _settings.entries)
+        if (!absent.contains(entry.key)) entry.key: entry.value,
+    };
+    final manifestName = scenario == 'profile'
+        ? 'manifest.json'
+        : '$scenario.manifest.json';
+
+    Future<void> seedScenario() async {
+      await _seedThroughStorageService();
+      if (scenario == 'provider-null-folder') {
+        await StorageService.setPikPakRestrictedFolder(null, null);
+        await StorageService.setSelectedWebDavServerId(null);
+      } else if (scenario == 'provider-cleared-cache') {
+        await StorageService.clearPikPakRestrictedFolder();
+        await StorageService.setSelectedWebDavServerId('');
+      }
+      final prefs = await ProfilePreferences.instance();
+      for (final key in absent) {
+        expect(
+          prefs.containsKey(key),
+          false,
+          reason: 'Origin input absence: $key',
+        );
+      }
+    }
+
+    Future<void> expectProviderReaders([Map<String, Object?>? restored]) async {
+      final readerExpected = restored ?? expected;
       expect(
-        diff.exitCode,
-        0,
-        reason: 'Never generate from modified production',
+        await StorageService.getPikPakRestrictedFolderId(),
+        readerExpected['pikpak_restricted_folder_id'],
       );
-      final config = File('.dart_tool/package_config.json');
-      final metadata = jsonDecode(await config.readAsString()) as Map;
-      final app = (metadata['packages'] as List).cast<Map>().singleWhere(
-        (entry) => entry['name'] == 'debrify',
-      );
-      final library = config.absolute.uri
-          .resolve(app['rootUri'] as String)
-          .resolve(app['packageUri'] as String)
-          .resolve('services/storage_service.dart');
       expect(
-        p.equals(
-          library.toFilePath(),
-          p.join(
-            Directory.current.path,
+        await StorageService.getPikPakRestrictedFolderName(),
+        readerExpected['pikpak_restricted_folder_name'],
+      );
+      expect(
+        await StorageService.getPikPakTorrentsFolderId(),
+        readerExpected['pikpak_torrents_folder_id'],
+      );
+      expect(
+        await StorageService.getPikPakTvFolderId(),
+        readerExpected['pikpak_tv_folder_id'],
+      );
+      expect(
+        await StorageService.getSelectedWebDavServerId(),
+        readerExpected['webdav_selected_server_id_v1'],
+      );
+    }
+
+    if (_generate) {
+      test(
+        '$scenario: generate only through the unchanged pre-S2 lib exporter',
+        () async {
+          final head = await Process.run('git', ['rev-parse', 'HEAD']);
+          expect(head.exitCode, 0);
+          expect(head.stdout.toString().trim(), _origin);
+          final diff = await Process.run('git', [
+            'diff',
+            '--exit-code',
+            _origin,
+            '--',
             'lib',
-            'services',
-            'storage_service.dart',
-          ),
-        ),
-        isTrue,
-      );
-      await _seedThroughStorageService();
-      _expectSettings(await _readThroughStorageService());
-      final package = await export();
-      _expectSettings(_values(package));
-      _expectExclusions(_values(package));
-      expect(package.resources, isEmpty);
-      final bytes = await PortableProfilePackage.encodeEncryptedBytes(
-        package,
-        _passphrase,
-      );
-      final directory = await Directory(_directory).create(recursive: true);
-      await File(
-        p.join(directory.path, 'profile.encrypted.json'),
-      ).writeAsBytes(bytes);
-      await File(p.join(directory.path, 'manifest.json')).writeAsString(
-        const JsonEncoder.withIndent('  ').convert({
-          'origin': _origin,
-          'recipeVersion': 2,
-          'syntheticOnly': true,
-          'sha256': await _digest(bytes),
-          'representedSettings': _settings,
-          'keyTypes': _settings.map(
-            (key, value) => MapEntry(key, _type(value)),
-          ),
-          'excludedKeys': _excludedInputs.keys.toList(),
-          'omissions': package.omissions,
-        }),
-      );
-    });
-    return;
-  }
-
-  test(
-    'current storage and profile APIs export all represented keys and types',
-    () async {
-      await _seedThroughStorageService();
-      _expectSettings(await _readThroughStorageService());
-      final package = await export();
-      _expectSettings(_values(package));
-      _expectExclusions(_values(package));
-      _expectSettings(_values(await export(includeSecrets: true)));
-      _expectExclusions(_values(await export(includeSecrets: true)));
-    },
-  );
-
-  test(
-    'restore frozen pre-S2 export through real APIs without key or type drift',
-    () async {
-      final mutations = _recipe['mutations'] as Map;
-      expect(['', ...mutations.keys], contains(_mutation));
-      final manifest =
-          jsonDecode(await File('$_directory/manifest.json').readAsString())
-              as Map<String, dynamic>;
-      expect(manifest['origin'], _origin);
-      expect(manifest['syntheticOnly'], true);
-      _expectSettings(
-        Map<String, Object?>.from(manifest['representedSettings'] as Map),
-      );
-      expect(
-        manifest['keyTypes'],
-        _settings.map((key, value) => MapEntry(key, _type(value))),
-      );
-      final bytes = await File(
-        '$_directory/profile.encrypted.json',
-      ).readAsBytes();
-      expect(await _digest(bytes), manifest['sha256']);
-      var package = await PortableProfilePackage.decrypt(
-        jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>,
-        _passphrase,
-      );
-      _expectSettings(_values(package));
-      _expectExclusions(_values(package));
-      expect(manifest['excludedKeys'], unorderedEquals(_excludedInputs.keys));
-      expect(package.omissions, manifest['omissions']);
-      expect(package.resources, isEmpty);
-      if (_mutation.isNotEmpty) {
-        // Mutate a valid incoming package, then use the real section hashing and
-        // codec. This probes semantic checks after restore, not hash rejection.
-        final values = _values(package);
-        final mutation = mutations[_mutation] as Map;
-        final key = mutation['key'] as String;
-        expect(values.containsKey(key), true);
-        if (mutation['operation'] == 'rename') {
-          values['${key}_renamed'] = values.remove(key);
-        } else {
-          values[key] = mutation['value'];
-        }
-        final mutated = PortableProfilePackage(
-          mode: package.mode,
-          createdAt: package.createdAt,
-          profiles: package.profiles,
-          resources: package.resources,
-          sections: {
-            ...package.sections,
-            package.profiles.single['preferencesSection'] as String:
-                await PortableProfilePackage.buildSection(values),
-          },
-          omissions: package.omissions,
-        );
-        package = await PortableProfilePackage.decrypt(
-          await PortableProfilePackage.encrypt(mutated, _passphrase),
-          _passphrase,
-        );
-      }
-      final prefs = await SharedPreferences.getInstance();
-      final other = otherProfileId;
-      await prefs.setInt('p.$profileId.g.1.stremio_tv_rotation_minutes', 91);
-      await prefs.setInt('p.$other.g.1.stremio_tv_rotation_minutes', 92);
-      await prefs.setString('p.$other.g.1.fixture_sentinel', 'untouched');
-      final report =
-          await ProfileRestoreCoordinator(
-            registry: registry,
-            cipher: cipher,
-          ).restore(
-            package: package,
-            destinationProfileId: profileId,
-            authorization: await ProfileAuthorizationContext.capture(registry),
+          ]);
+          expect(
+            diff.exitCode,
+            0,
+            reason: 'Never generate from modified production',
           );
-      expect(report.publishedGeneration, 2);
-      expect(ProfileRuntime.capture().dataGeneration, 2);
-      final prefix = ProfileRuntime.capture().preferencePrefix;
-      // Inspect physical types before getters can default/coerce/cache them.
-      _expectSettings({
-        for (final key in _settings.keys) key: prefs.get('$prefix$key'),
-      });
-      for (final key in _excludedInputs.keys) {
-        expect(prefs.containsKey('$prefix$key'), false, reason: key);
-      }
-      expect(prefs.getInt('p.$profileId.g.1.stremio_tv_rotation_minutes'), 91);
-      expect(prefs.getInt('p.$other.g.1.stremio_tv_rotation_minutes'), 92);
-      expect(prefs.getString('p.$other.g.1.fixture_sentinel'), 'untouched');
-      StorageService.resetProfileCaches();
-      _expectSettings(await _readThroughStorageService());
-      _expectSettings(_values(await export()));
-      expect(await StorageService.getMdblistSavedClones(), {
-        101: 201,
-        102: 202,
-      });
-      expect(
-        await StorageService.getMdblistSyncCheckpoint(),
-        jsonDecode(_settings['mdblist_sync_checkpoint_v1']! as String),
+          final config = File('.dart_tool/package_config.json');
+          final metadata = jsonDecode(await config.readAsString()) as Map;
+          final app = (metadata['packages'] as List).cast<Map>().singleWhere(
+            (entry) => entry['name'] == 'debrify',
+          );
+          final library = config.absolute.uri
+              .resolve(app['rootUri'] as String)
+              .resolve(app['packageUri'] as String)
+              .resolve('services/storage_service.dart');
+          expect(
+            p.equals(
+              library.toFilePath(),
+              p.join(
+                Directory.current.path,
+                'lib',
+                'services',
+                'storage_service.dart',
+              ),
+            ),
+            isTrue,
+          );
+          await seedScenario();
+          await expectProviderReaders();
+          _expectSettings(await _readThroughStorageService(expected), expected);
+          final package = await export();
+          _expectSettings(_values(package), expected);
+          _expectExclusions(_values(package));
+          expect(package.resources, isEmpty);
+          final bytes = await PortableProfilePackage.encodeEncryptedBytes(
+            package,
+            _passphrase,
+          );
+          final directory = await Directory(_directory).create(recursive: true);
+          await File(
+            p.join(directory.path, '$scenario.encrypted.json'),
+          ).writeAsBytes(bytes);
+          await File(p.join(directory.path, manifestName)).writeAsString(
+            const JsonEncoder.withIndent('  ').convert({
+              'origin': _origin,
+              'recipeVersion': 3,
+              'scenario': scenario,
+              'absentKeys': absent,
+              'syntheticOnly': true,
+              'sha256': await _digest(bytes),
+              'representedSettings': expected,
+              'keyTypes': expected.map(
+                (key, value) => MapEntry(key, _type(value)),
+              ),
+              'excludedKeys': _excludedInputs.keys.toList(),
+              'omissions': package.omissions,
+            }),
+          );
+        },
       );
-      expect(await StorageService.takeTrackingProgressFallbackNotice(), true);
-      expect(await StorageService.takeTrackingProgressFallbackNotice(), false);
-    },
-  );
+      continue;
+    }
+
+    test(
+      '$scenario: current storage and profile APIs export all represented keys and types',
+      () async {
+        await seedScenario();
+        await expectProviderReaders();
+        _expectSettings(await _readThroughStorageService(expected), expected);
+        final package = await export();
+        _expectSettings(_values(package), expected);
+        _expectExclusions(_values(package));
+        _expectSettings(_values(await export(includeSecrets: true)), expected);
+        _expectExclusions(_values(await export(includeSecrets: true)));
+      },
+    );
+
+    for (final keepDestination in [false, if (absent.isNotEmpty) true]) {
+      final destinationValues = <String, Object?>{
+        if (keepDestination)
+          for (final key in absent) key: 'SYNTHETIC_DESTINATION_$key',
+      };
+      final restoredExpected = {...expected, ...destinationValues};
+      test(
+        '$scenario: restore frozen pre-S2 export through real APIs without key or type drift (retain destination: $keepDestination)',
+        () async {
+          final mutations = _recipe['mutations'] as Map;
+          expect(['', ...mutations.keys], contains(_mutation));
+          final manifest =
+              jsonDecode(await File('$_directory/$manifestName').readAsString())
+                  as Map<String, dynamic>;
+          expect(manifest['origin'], _origin);
+          expect(manifest['syntheticOnly'], true);
+          expect(manifest['scenario'], scenario);
+          expect(manifest['absentKeys'], absent);
+          _expectSettings(
+            Map<String, Object?>.from(manifest['representedSettings'] as Map),
+            expected,
+          );
+          expect(
+            manifest['keyTypes'],
+            expected.map((key, value) => MapEntry(key, _type(value))),
+          );
+          final bytes = await File(
+            '$_directory/$scenario.encrypted.json',
+          ).readAsBytes();
+          expect(await _digest(bytes), manifest['sha256']);
+          var package = await PortableProfilePackage.decrypt(
+            jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>,
+            _passphrase,
+          );
+          _expectSettings(_values(package), expected);
+          _expectExclusions(_values(package));
+          expect(
+            manifest['excludedKeys'],
+            unorderedEquals(_excludedInputs.keys),
+          );
+          expect(package.omissions, manifest['omissions']);
+          expect(package.resources, isEmpty);
+          if (_mutation.isNotEmpty) {
+            // Mutate a valid incoming package, then use the real section hashing and
+            // codec. This probes semantic checks after restore, not hash rejection.
+            final values = _values(package);
+            final mutation = mutations[_mutation] as Map;
+            final key = mutation['key'] as String;
+            expect(values.containsKey(key), mutation['operation'] != 'insert');
+            if (mutation['operation'] == 'rename') {
+              values['${key}_renamed'] = values.remove(key);
+            } else {
+              values[key] = mutation['value'];
+            }
+            final mutated = PortableProfilePackage(
+              mode: package.mode,
+              createdAt: package.createdAt,
+              profiles: package.profiles,
+              resources: package.resources,
+              sections: {
+                ...package.sections,
+                package.profiles.single['preferencesSection'] as String:
+                    await PortableProfilePackage.buildSection(values),
+              },
+              omissions: package.omissions,
+            );
+            package = await PortableProfilePackage.decrypt(
+              await PortableProfilePackage.encrypt(mutated, _passphrase),
+              _passphrase,
+            );
+          }
+          final prefs = await SharedPreferences.getInstance();
+          final other = otherProfileId;
+          await prefs.setInt(
+            'p.$profileId.g.1.stremio_tv_rotation_minutes',
+            91,
+          );
+          await prefs.setInt('p.$other.g.1.stremio_tv_rotation_minutes', 92);
+          await prefs.setString('p.$other.g.1.fixture_sentinel', 'untouched');
+          for (final entry in destinationValues.entries) {
+            await prefs.setString(
+              'p.$profileId.g.1.${entry.key}',
+              entry.value! as String,
+            );
+          }
+          final report =
+              await ProfileRestoreCoordinator(
+                registry: registry,
+                cipher: cipher,
+              ).restore(
+                package: package,
+                destinationProfileId: profileId,
+                authorization: await ProfileAuthorizationContext.capture(
+                  registry,
+                ),
+              );
+          expect(report.publishedGeneration, 2);
+          expect(ProfileRuntime.capture().dataGeneration, 2);
+          final prefix = ProfileRuntime.capture().preferencePrefix;
+          // Inspect physical types before getters can default/coerce/cache them.
+          _expectSettings({
+            for (final key in restoredExpected.keys)
+              key: prefs.get('$prefix$key'),
+          }, restoredExpected);
+          for (final key in absent.where((key) => !keepDestination)) {
+            expect(prefs.containsKey('$prefix$key'), false, reason: key);
+          }
+          await expectProviderReaders(restoredExpected);
+          for (final key in _excludedInputs.keys) {
+            expect(prefs.containsKey('$prefix$key'), false, reason: key);
+          }
+          expect(
+            prefs.getInt('p.$profileId.g.1.stremio_tv_rotation_minutes'),
+            91,
+          );
+          expect(prefs.getInt('p.$other.g.1.stremio_tv_rotation_minutes'), 92);
+          expect(prefs.getString('p.$other.g.1.fixture_sentinel'), 'untouched');
+          StorageService.resetProfileCaches();
+          _expectSettings(
+            await _readThroughStorageService(restoredExpected),
+            restoredExpected,
+          );
+          _expectSettings(_values(await export()), restoredExpected);
+          for (final entry in destinationValues.entries) {
+            expect(prefs.get('p.$profileId.g.1.${entry.key}'), entry.value);
+          }
+          expect(await StorageService.getMdblistSavedClones(), {
+            101: 201,
+            102: 202,
+          });
+          expect(
+            await StorageService.getMdblistSyncCheckpoint(),
+            jsonDecode(_settings['mdblist_sync_checkpoint_v1']! as String),
+          );
+          expect(
+            await StorageService.takeTrackingProgressFallbackNotice(),
+            true,
+          );
+          expect(
+            await StorageService.takeTrackingProgressFallbackNotice(),
+            false,
+          );
+        },
+      );
+    }
+  }
 }

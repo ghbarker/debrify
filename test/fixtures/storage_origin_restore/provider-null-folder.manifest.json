@@ -1,10 +1,14 @@
 {
   "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
   "recipeVersion": 3,
-  "scenario": "profile",
-  "absentKeys": [],
+  "scenario": "provider-null-folder",
+  "absentKeys": [
+    "pikpak_restricted_folder_id",
+    "pikpak_restricted_folder_name",
+    "webdav_selected_server_id_v1"
+  ],
   "syntheticOnly": true,
-  "sha256": "62a33b0dcabccf3fb17a09ab18c1510a69d846a7baebb3d83bb7add65a5a49c6",
+  "sha256": "47ceea5d5293b0d4217454ea925b2e3f2be266228e92e3fe8807f7398f42146d",
   "representedSettings": {
     "stremio_tv_rotation_minutes": 37,
     "stremio_tv_auto_refresh": false,
@@ -84,8 +88,6 @@
     "pikpak_hidden_from_nav": true,
     "pikpak_ignore_small_videos": true,
     "pikpak_post_torrent_action": "delete",
-    "pikpak_restricted_folder_id": "synthetic-restricted-folder",
-    "pikpak_restricted_folder_name": "Synthetic folder",
     "pikpak_show_videos_only": false,
     "pikpak_torrents_folder_id": "synthetic-torrents-folder",
     "pikpak_tv_folder_id": "synthetic-tv-folder",
@@ -100,7 +102,6 @@
     "torbox_post_torrent_action": "delete",
     "webdav_enabled": false,
     "webdav_hidden_from_nav": true,
-    "webdav_selected_server_id_v1": "synthetic-unbound-server",
     "webdav_show_videos_only": false
   },
   "keyTypes": {
@@ -167,8 +168,6 @@
     "pikpak_hidden_from_nav": "bool",
     "pikpak_ignore_small_videos": "bool",
     "pikpak_post_torrent_action": "String",
-    "pikpak_restricted_folder_id": "String",
-    "pikpak_restricted_folder_name": "String",
     "pikpak_show_videos_only": "bool",
     "pikpak_torrents_folder_id": "String",
     "pikpak_tv_folder_id": "String",
@@ -183,7 +182,6 @@
     "torbox_post_torrent_action": "String",
     "webdav_enabled": "bool",
     "webdav_hidden_from_nav": "bool",
-    "webdav_selected_server_id_v1": "String",
     "webdav_show_videos_only": "bool"
   },
   "excludedKeys": [
