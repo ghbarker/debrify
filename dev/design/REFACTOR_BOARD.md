@@ -2,11 +2,11 @@
 
 ## Current checkpoint — 2026-09-05 17:45 UTC (supersedes historical rows below)
 - Merged: #129 settings owner, #130 lifecycle, #131 guard hardening, #132 playback pins, #133 prefetch, #134 selection owner (75564bbb). Exact-head independent reviews and all CI checks passed for each.
-- Ampere: #135 refactor/m1-6-expiry held at855f0492 after one new CI failure in magic_tv_channel_cache_warmer_pin_test.dart; investigating exact source-guard repair. Goldens/native passed. No blanket allowance or weaker assertion authorized.
-- Wegener: G17e selection owner merged; no next production assignment. Locke: independent review complete. Cicero: available for corrected #135 review and next full gate.
+- Ampere: #135 merged f75fa016; now read-only M1/Q2 composition and remaining boundary review (30-minute bounded assignment).
+- Wegener: next meaningful Discover session/data ownership proposal; Locke: storage residual owner/fixture readiness; both read-only 45-minute assignments. Cicero: full actual f75fa016 gate running. No overlapping production edits.
 - Latest full automated gate passed abc74484: 5404 passing generic tests, 12 exact known failures, two skips; 21 exact known golden errors after configured retries; no unexpected/unused entries. Native pair, Windows/ARM64 builds, Python55 passed; analyzer436/452, layering77.
-- Two production merges since that gate (#133/#134); next production merge triggers full integrated gate. Manual smoke deferred, never marked passed.
-- Current god lines: search9033, player11926, MagicTV3403, storage4365, settings2899. Originals19070/16278/10716/9963/7905. Selection93host lines but production+90; zero standalone750credit. Prefetch228code-net remains2short230.
+- Three production merges since abc74484; full actual f75fa016 automated gate assigned before more production work. Manual smoke deferred, never marked passed.
+- Current god lines: search9033, player11926, MagicTV3331, storage4365, settings2899. Originals19070/16278/10716/9963/7905. Selection93host lines but production+90; zero standalone750credit. Prefetch228code-net remains2short230.
 - CODEMAP unlocked. Phone install alone waits for a working wireless ADB address/connection; verified abc74484 APK is ready. Refactor does not wait on user smoke.
 - Temporary keep-awake expired16:43UTC and remains off; no power/disk changes or extension.
 ## Prior checkpoints and retained evidence
@@ -194,3 +194,5 @@ G17e revised bounded owner move authorized after independent828de2ce58originPASS
 
 M16 expiry A+B authorized onrefactor/m1-6-expiry: host plusprovider_watch_flow fiveunusedslots only. Existingactualorigin suites reproducedgreen before removal; twoauditablecommits sixforwards/deadslots then18mechanicalaliases. Forecast72host includes34aliaslines, plus42binding, NOTqueue133credit. Preserveallwrites/tearofftiming, two write-onlyfields. Retain11livecallbacks/editor/settingsUIboundaries asQ2compositiondebt; no fullM1closure. CODEMAPwaitserializedgrant. G17e scopesdisjoint.
 
+
+135mergedf75fa016 exactaf4ac9e7 all3CIgreen+independent135/34/body/integrationreview. Difference:114productionlinesremoved (72hostincludes34aliases+42binding); samecallback/writebehavior. More:11livecallbacks/UIcompositiondebt, nofullM1closure. Currentgods9033/11926/3331/4365/2899. C0fullgateactive; threeotherworkersread-onlynextscope preparation toavoididleCIwaits. PhoneinstallstillwaitingADBconnectiononly.
