@@ -413,8 +413,12 @@ is an editor mirror, not the source of truth. How to add a provider:
   under `lib/screens/debrify_tv/watch/`. `WatchFlowBindings` keeps live host
   state, navigation, existing preparation/prefetch/launcher callbacks and
   captured-key service calls. Six entry wrappers and five dead cached binding slots
-  are removed. Four live quick-entry callbacks remain Q2 composition debt alongside
-  typed bindings; direct construction-time tearoffs would cycle initialization. No pure-port claim.
+  are removed. Four provider-specific quick-dispatch dependencies now belong to
+  `ProviderWatchFlow`; their host forwarders and shared binding slots are removed,
+  not the dependencies. The lazy owner evaluates bindings before cached leaf tearoffs.
+  First owner access may allocate all four side-effect-free leaf objects earlier;
+  construction invokes no playback, I/O or credential reads. No identical allocation
+  timing or pure-port claim; captured-key and UI composition debt remains.
   Live origin/runtime orchestration pins: `test/magic_tv_provider_watch_origin_test.dart`
   (21 cases; actual route requests/next callbacks, not native video playback).
   `test/cloud_magic_tv_unlock_pin_test.dart` is supplemental inventory only.
@@ -437,7 +441,7 @@ is an editor mirror, not the source of truth. How to add a provider:
   `test/magic_tv_queue_prefetch_origin_test.dart` pins RD/AD preparation, held-stop
   completion, failure-tail rotation and channel restart. Preference-read epoch races,
   competing starts, lookahead edges and native-positive paths remain unproven.
-  The remaining 11 live callbacks and UI boundaries require Q2 composition review;
+  Seven shared routing callbacks and UI boundaries require Q2 composition review;
   this expiry slice does not close all M1 debt or claim a pure port.
   Default pick / overlay strings: `lib/services/cloud/magic_tv_provider.dart`
   (`playbackPrecedence` mapped to `real_debrid`; display stays `Torbox` / `Real Debrid`).

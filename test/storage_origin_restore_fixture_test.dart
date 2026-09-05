@@ -24,6 +24,9 @@ import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'default_torrent_filter_prefs_origin_test.dart'
+    show filterDefaultCases, seedFilterDefaults, expectFilterDefaultReaders;
+
 const _origin = '6d26d7a1a98c7ddd37b4a25815f74123c1e29126';
 const _directory = 'test/fixtures/storage_origin_restore';
 const _passphrase = 'SYNTHETIC fixture only - no account credentials';
@@ -389,8 +392,56 @@ void main() {
         sanitized: false,
       );
 
-  for (final entry in (_recipe['scenarios'] as Map).entries) {
+  final residual = _recipe['residualDomains']['filter-defaults'] as Map;
+  setUpAll(() {
+    expect(residual['namedKeyCount'], 5);
+    expect(residual['origin'], _origin);
+    expect(residual['physicalType'], 'String');
+    expect(residual['excludedKeys'], isEmpty);
+    expect(
+      (residual['values'] as Map).values.every((v) => v is String),
+      isTrue,
+    );
+    expect(
+      (residual['values'] as Map).keys,
+      unorderedEquals(filterDefaultCases.map((e) => e.key)),
+    );
+    expect(
+      (residual['values'] as Map).keys.toSet().intersection(
+        _settings.keys.toSet(),
+      ),
+      isEmpty,
+    );
+  });
+  final scenarios = {
+    ..._recipe['scenarios'] as Map,
+    'filter-defaults': {'absentKeys': <String>[]},
+  };
+  for (final entry in scenarios.entries) {
     final scenario = entry.key as String;
+    final isFilter = scenario == 'filter-defaults';
+    final scenarioSettings = isFilter
+        ? Map<String, Object?>.from(residual['values'] as Map)
+        : _settings;
+    final credentialValues = isFilter
+        ? <String, Object?>{}
+        : _credentialEngineValues;
+    final excludedKeys = isFilter ? <String>[] : _excludedInputs.keys.toList();
+    void expectExclusions(
+      Map<String, Object?> values, {
+      bool includeSecrets = false,
+    }) {
+      if (!isFilter) _expectExclusions(values, includeSecrets: includeSecrets);
+    }
+
+    Future<Map<String, Object?>> readScenario(
+      Map<String, Object?> values,
+    ) async {
+      if (!isFilter) return _readThroughStorageService(values);
+      final prefs = await ProfilePreferences.instance();
+      return {for (final key in values.keys) key: prefs.get(key)};
+    }
+
     final includeSecrets = entry.value['includeSecrets'] == true;
     final absent = (entry.value['absentKeys'] as List).cast<String>();
     final omitted = (entry.value['omitKeys'] as List? ?? []).cast<String>();
@@ -398,22 +449,27 @@ void main() {
       entry.value['inputOverrides'] as Map? ?? {},
     );
     final inputExpected = <String, Object?>{
-      ..._settings,
-      ..._credentialEngineValues,
-      ...Map<String, Object?>.from(_recipe['inputOverrides'] as Map),
+      ...scenarioSettings,
+      ...credentialValues,
+      if (!isFilter)
+        ...Map<String, Object?>.from(_recipe['inputOverrides'] as Map),
       ...inputOverrides,
     }..removeWhere((key, value) => absent.contains(key));
     final missing = [...absent, ...omitted];
     final expected = <String, Object?>{
-      for (final entry in _settings.entries)
+      for (final entry in scenarioSettings.entries)
         if (!missing.contains(entry.key)) entry.key: entry.value,
-      if (includeSecrets) ..._credentialEngineValues,
+      if (includeSecrets) ...credentialValues,
     };
     final manifestName = scenario == 'profile'
         ? 'manifest.json'
         : '$scenario.manifest.json';
 
     Future<void> seedScenario() async {
+      if (isFilter) {
+        await seedFilterDefaults(scenarioSettings);
+        return;
+      }
       await _seedThroughStorageService();
       await _writeValues(inputOverrides);
       if (scenario == 'provider-null-folder') {
@@ -435,6 +491,10 @@ void main() {
 
     Future<void> expectProviderReaders([Map<String, Object?>? restored]) async {
       final readerExpected = restored ?? expected;
+      if (isFilter) {
+        await expectFilterDefaultReaders(readerExpected);
+        return;
+      }
       expect(
         await StorageService.getPikPakRestrictedFolderId(),
         readerExpected['pikpak_restricted_folder_id'],
@@ -499,13 +559,10 @@ void main() {
           );
           await seedScenario();
           await expectProviderReaders();
-          _expectSettings(
-            await _readThroughStorageService(inputExpected),
-            inputExpected,
-          );
+          _expectSettings(await readScenario(inputExpected), inputExpected);
           final package = await export(includeSecrets: includeSecrets);
           _expectSettings(_values(package), expected);
-          _expectExclusions(_values(package), includeSecrets: includeSecrets);
+          expectExclusions(_values(package), includeSecrets: includeSecrets);
           expect(package.resources, isEmpty);
           final bytes = await PortableProfilePackage.encodeEncryptedBytes(
             package,
@@ -529,7 +586,7 @@ void main() {
               'keyTypes': expected.map(
                 (key, value) => MapEntry(key, _type(value)),
               ),
-              'excludedKeys': _excludedInputs.keys.toList(),
+              'excludedKeys': excludedKeys,
               'omissions': package.omissions,
             }),
           );
@@ -543,18 +600,15 @@ void main() {
       () async {
         await seedScenario();
         await expectProviderReaders();
-        _expectSettings(
-          await _readThroughStorageService(inputExpected),
-          inputExpected,
-        );
+        _expectSettings(await readScenario(inputExpected), inputExpected);
         final package = await export(includeSecrets: includeSecrets);
         _expectSettings(_values(package), expected);
-        _expectExclusions(_values(package), includeSecrets: includeSecrets);
+        expectExclusions(_values(package), includeSecrets: includeSecrets);
         _expectSettings(_values(await export(includeSecrets: true)), {
           ...expected,
-          ..._credentialEngineValues,
+          ...credentialValues,
         });
-        _expectExclusions(
+        expectExclusions(
           _values(await export(includeSecrets: true)),
           includeSecrets: true,
         );
@@ -563,6 +617,12 @@ void main() {
 
     for (final keepDestination in [false, if (missing.isNotEmpty) true]) {
       final destinationValues = <String, Object?>{
+        if (isFilter) ...{
+          'quick_play_honors_filters_v1': false,
+          'quick_play_movie_rules_v2': '{"fixture":"movie"}',
+          'quick_play_series_rules_v2': '{"fixture":"series"}',
+          'filter_restore_sentinel': 'untouched',
+        },
         if (keepDestination)
           for (final key in missing) key: 'SYNTHETIC_DESTINATION_$key',
       };
@@ -570,7 +630,19 @@ void main() {
       test(
         '$scenario: restore frozen pre-S2 export through real APIs without key or type drift (retain destination: $keepDestination)',
         () async {
-          final mutations = _recipe['mutations'] as Map;
+          final mutations = isFilter
+              ? <String, Object>{
+                  'filter-key': {
+                    'key': 'default_filter_qualities_v1',
+                    'operation': 'rename',
+                  },
+                  'filter-type': {
+                    'key': 'default_filter_qualities_v1',
+                    'operation': 'replace',
+                    'value': ['fullHd', 'unknown quality', 'fullHd'],
+                  },
+                }
+              : _recipe['mutations'] as Map;
           expect(['', ...mutations.keys], contains(_mutation));
           final manifest =
               jsonDecode(await File('$_directory/$manifestName').readAsString())
@@ -596,11 +668,8 @@ void main() {
             _passphrase,
           );
           _expectSettings(_values(package), expected);
-          _expectExclusions(_values(package), includeSecrets: includeSecrets);
-          expect(
-            manifest['excludedKeys'],
-            unorderedEquals(_excludedInputs.keys),
-          );
+          expectExclusions(_values(package), includeSecrets: includeSecrets);
+          expect(manifest['excludedKeys'], unorderedEquals(excludedKeys));
           expect(package.omissions, manifest['omissions']);
           expect(manifest['omittedKeys'], omitted);
           expect(manifest['includeSecrets'], includeSecrets);
@@ -638,10 +707,20 @@ void main() {
           }
           final prefs = await SharedPreferences.getInstance();
           final other = otherProfileId;
-          await prefs.setInt(
-            'p.$profileId.g.1.stremio_tv_rotation_minutes',
-            91,
-          );
+          if (!isFilter) {
+            await prefs.setInt(
+              'p.$profileId.g.1.stremio_tv_rotation_minutes',
+              91,
+            );
+          } else {
+            for (final key in expected.keys) {
+              await prefs.setString(
+                'p.$profileId.g.1.$key',
+                '["old generation"]',
+              );
+              await prefs.setString('p.$other.g.1.$key', '["other profile"]');
+            }
+          }
           await prefs.setInt('p.$other.g.1.stremio_tv_rotation_minutes', 92);
           await prefs.setString('p.$other.g.1.fixture_sentinel', 'untouched');
           for (final entry in expected.entries.where((e) => e.value == null)) {
@@ -651,10 +730,12 @@ void main() {
             );
           }
           for (final entry in destinationValues.entries) {
-            await prefs.setString(
-              'p.$profileId.g.1.${entry.key}',
-              entry.value! as String,
-            );
+            final key = 'p.$profileId.g.1.${entry.key}';
+            if (entry.value is bool) {
+              await prefs.setBool(key, entry.value! as bool);
+            } else {
+              await prefs.setString(key, entry.value! as String);
+            }
           }
           final report =
               await ProfileRestoreCoordinator(
@@ -691,20 +772,30 @@ void main() {
           }
           await expectProviderReaders(restoredExpected);
           for (final key in [
-            ..._excludedInputs.keys,
-            if (!includeSecrets) ..._credentialEngineValues.keys,
+            ...excludedKeys,
+            if (!includeSecrets) ...credentialValues.keys,
           ]) {
             expect(prefs.containsKey('$prefix$key'), false, reason: key);
           }
-          expect(
-            prefs.getInt('p.$profileId.g.1.stremio_tv_rotation_minutes'),
-            91,
-          );
+          if (!isFilter) {
+            expect(
+              prefs.getInt('p.$profileId.g.1.stremio_tv_rotation_minutes'),
+              91,
+            );
+          } else {
+            for (final key in expected.keys) {
+              expect(
+                prefs.getString('p.$profileId.g.1.$key'),
+                '["old generation"]',
+              );
+              expect(prefs.getString('p.$other.g.1.$key'), '["other profile"]');
+            }
+          }
           expect(prefs.getInt('p.$other.g.1.stremio_tv_rotation_minutes'), 92);
           expect(prefs.getString('p.$other.g.1.fixture_sentinel'), 'untouched');
           StorageService.resetProfileCaches();
           _expectSettings(
-            await _readThroughStorageService(restoredExpected),
+            await readScenario(restoredExpected),
             restoredExpected,
           );
           _expectSettings(
@@ -717,22 +808,24 @@ void main() {
           for (final entry in destinationValues.entries) {
             expect(prefs.get('p.$profileId.g.1.${entry.key}'), entry.value);
           }
-          expect(await StorageService.getMdblistSavedClones(), {
-            101: 201,
-            102: 202,
-          });
-          expect(
-            await StorageService.getMdblistSyncCheckpoint(),
-            jsonDecode(_settings['mdblist_sync_checkpoint_v1']! as String),
-          );
-          expect(
-            await StorageService.takeTrackingProgressFallbackNotice(),
-            true,
-          );
-          expect(
-            await StorageService.takeTrackingProgressFallbackNotice(),
-            false,
-          );
+          if (!isFilter) {
+            expect(await StorageService.getMdblistSavedClones(), {
+              101: 201,
+              102: 202,
+            });
+            expect(
+              await StorageService.getMdblistSyncCheckpoint(),
+              jsonDecode(_settings['mdblist_sync_checkpoint_v1']! as String),
+            );
+            expect(
+              await StorageService.takeTrackingProgressFallbackNotice(),
+              true,
+            );
+            expect(
+              await StorageService.takeTrackingProgressFallbackNotice(),
+              false,
+            );
+          }
         },
       );
     }
