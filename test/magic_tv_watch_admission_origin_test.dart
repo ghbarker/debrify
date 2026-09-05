@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -167,8 +168,8 @@ void main() {
     await SettingsManager().setGlobalBackgroundPrefetchEnabled(false);
     await StorageService.savePremiumizeApiKey('fixture-key');
     await StorageService.saveAllDebridApiKey('fixture-ad-key');
-    await StorageService.setPikPakAccessToken('fixture-access');
-    await StorageService.setPikPakRefreshToken('fixture-refresh');
+    await ProviderCredentialPrefs.setPikPakAccessToken('fixture-access');
+    await ProviderCredentialPrefs.setPikPakRefreshToken('fixture-refresh');
     await StorageService.setDebrifyTvFilterQualities(['fullHd']);
     routes = _Routes();
   });

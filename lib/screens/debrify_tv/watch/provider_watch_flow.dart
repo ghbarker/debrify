@@ -1,3 +1,5 @@
+import '../../../services/storage/provider_credential_prefs.dart';
+import '../../../services/pikpak_tv_service.dart';
 import '../../../services/debrify_tv/queue_prefetcher.dart' show WatchAllDebridPrepared;
 import '../dialogs/cached_loading_dialog.dart';
 import 'dart:async';
@@ -497,6 +499,171 @@ class QuickWatchSearchAccumulator {
           host.status = queueStatus;
         });
       }
+    }
+  }
+}
+
+enum QuickWatchProvider { torbox, premiumize, allDebrid, pikpak }
+
+/// Admission and search are shared; each leaf retains its preparation/launch
+/// continuation and its original finally. Invocation is synchronous at handoff,
+/// so cleanup stays inside the leaf rather than after another awaited future.
+Future<void> runQuickWatchSearch(
+  WatchFlowBindings host, {
+  required QuickWatchProvider provider,
+  required List<String> keywords,
+  required void Function(String) log,
+  required Future<void> Function(List<Torrent>, String) continueWith,
+}) async {
+  final label = switch (provider) {
+    QuickWatchProvider.torbox => 'Torbox',
+    QuickWatchProvider.premiumize => 'Premiumize',
+    QuickWatchProvider.allDebrid => 'AllDebrid',
+    QuickWatchProvider.pikpak => 'PikPak',
+  };
+  // PikPak authenticates through its availability check and has no captured key.
+  String apiKey = '';
+  if (provider == QuickWatchProvider.pikpak) {
+    final pikpakAvailable = await PikPakTvService.instance.isAvailable();
+    if (!pikpakAvailable) {
+      host.closeProgressDialog();
+      if (!host.mounted) return;
+      host.setState(() {
+        host.status = 'Please login to PikPak in Settings first!';
+        host.isBusy = false;
+      });
+      host.showSnack(
+        'Please login to PikPak in Settings first!',
+        color: Colors.orange,
+      );
+      return;
+    }
+  } else {
+    final integrationEnabled = await (provider == QuickWatchProvider.torbox
+        ? ProviderCredentialPrefs.getTorboxIntegrationEnabled()
+        : provider == QuickWatchProvider.premiumize
+        ? ProviderCredentialPrefs.getPremiumizeIntegrationEnabled()
+        : ProviderCredentialPrefs.getAllDebridIntegrationEnabled());
+    if (!integrationEnabled) {
+      host.closeProgressDialog();
+      if (!host.mounted) return;
+      host.setState(() {
+        host.status = 'Enable $label in Settings to use this provider.';
+        host.isBusy = false;
+      });
+      host.showSnack(
+        'Enable $label in Settings to use this provider.',
+        color: Colors.orange,
+      );
+      return;
+    }
+    final capturedKey = await (provider == QuickWatchProvider.torbox
+        ? StorageService.getTorboxApiKey()
+        : provider == QuickWatchProvider.premiumize
+        ? StorageService.getPremiumizeApiKey()
+        : StorageService.getAllDebridApiKey());
+    if (capturedKey == null || capturedKey.isEmpty) {
+      host.closeProgressDialog();
+      if (!host.mounted) return;
+      host.setState(() {
+        host.status =
+            'Add your $label API key in Settings to use this provider.';
+        host.isBusy = false;
+      });
+      host.showSnack(
+        'Please add your $label API key in Settings first!',
+        color: Colors.red,
+      );
+      return;
+    }
+    apiKey = capturedKey;
+  }
+
+  final queueStatus = switch (provider) {
+    QuickWatchProvider.torbox => 'Checking Torbox cache...',
+    QuickWatchProvider.premiumize => 'Checking Premiumize cache...',
+    QuickWatchProvider.allDebrid => 'Finding a playable stream...',
+    QuickWatchProvider.pikpak => 'Preparing PikPak stream...',
+  };
+  log(
+    provider == QuickWatchProvider.torbox ||
+            provider == QuickWatchProvider.premiumize
+        ? '🌐 $label: searching for cached torrents...'
+        : '🌐 $label: searching for torrents...',
+  );
+  final search =
+      provider == QuickWatchProvider.torbox ||
+          provider == QuickWatchProvider.pikpak
+      ? QuickWatchSearchAccumulator(
+          host,
+          providerLabel: label,
+          queueStatus: queueStatus,
+        )
+      : null;
+  final Map<String, Torrent> dedup = {};
+  final engineStates = await host.cacheWarmer.tvEngineSearchStates();
+  final maxResultsOverrides = host.cacheWarmer.quickPlayMaxResultsOverrides();
+  bool continued = false;
+  try {
+    final futures = keywords
+        .map(
+          (kw) => TorrentService.searchAllEngines(
+            kw,
+            engineStates: engineStates,
+            maxResultsOverrides: maxResultsOverrides,
+          ),
+        )
+        .toList();
+    await for (final result in Stream.fromFutures(futures)) {
+      if (provider == QuickWatchProvider.allDebrid && host.watchCancelled) {
+        return;
+      }
+      if (search != null) {
+        search.accept(result);
+      } else {
+        final torrents =
+            (result['torrents'] as List<Torrent>? ?? const <Torrent>[]);
+        List<Torrent> torrentsToProcess = torrents;
+        if (host.quickAvoidNsfw || host.viewerForcesNsfw) {
+          torrentsToProcess = torrents.where((t) {
+            return !NsfwFilter.shouldFilter(t.category, t.name);
+          }).toList();
+        }
+        for (final torrent in torrentsToProcess) {
+          final normalizedHash = host.normalizeInfohash(torrent.infohash);
+          if (normalizedHash.isEmpty) continue;
+          dedup.putIfAbsent(normalizedHash, () => torrent);
+        }
+        if (dedup.isNotEmpty && host.mounted) {
+          host.setState(() => host.status = queueStatus);
+        }
+      }
+    }
+    final combinedList = host.cacheWarmer.applyQualityFilterToTorrents(
+      search != null ? search.snapshot() : dedup.values.toList(),
+      // All searches completed: retain the original final quality fallback.
+      allowFallback: true,
+    );
+    if (combinedList.isEmpty) {
+      host.closeProgressDialog();
+      if (host.mounted) {
+        host.setState(() {
+          host.status = 'No results found. Try different keywords.';
+        });
+        host.showSnack(
+          'No results found. Try different keywords.',
+          color: Colors.red,
+        );
+      }
+      return;
+    }
+    combinedList.shuffle(Random());
+    continued = true;
+    return continueWith(combinedList, apiKey);
+  } finally {
+    if (!continued) {
+      host.closeProgressDialog();
+      if (host.mounted) host.setState(() => host.isBusy = false);
     }
   }
 }

@@ -4,7 +4,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../models/torrent.dart';
 import '../../../services/storage_service.dart';
-import '../../../services/torrent_service.dart';
 import '../../../services/main_page_bridge.dart';
 import '../../../theme/app_surfaces.dart';
 import '../../video_player_screen.dart';
@@ -21,84 +20,13 @@ class TorboxWatchFlow {
   Future<void> watchWithTorbox(
     List<String> keywords,
     void Function(String message) log,
-  ) async {
-    final integrationEnabled =
-        await ProviderCredentialPrefs.getTorboxIntegrationEnabled();
-    if (!integrationEnabled) {
-      host.closeProgressDialog();
-      if (!host.mounted) return;
-      host.setState(() {
-        host.status = 'Enable Torbox in Settings to use this provider.';
-        host.isBusy = false;
-      });
-      host.showSnack(
-        'Enable Torbox in Settings to use this provider.',
-        color: Colors.orange,
-      );
-      return;
-    }
-
-    final apiKey = await StorageService.getTorboxApiKey();
-    if (apiKey == null || apiKey.isEmpty) {
-      host.closeProgressDialog();
-      if (!host.mounted) return;
-      host.setState(() {
-        host.status =
-            'Add your Torbox API key in Settings to use this provider.';
-        host.isBusy = false;
-      });
-      host.showSnack(
-        'Please add your Torbox API key in Settings first!',
-        color: Colors.red,
-      );
-      return;
-    }
-
-    log('🌐 Torbox: searching for cached torrents...');
-    final search = QuickWatchSearchAccumulator(
-      host,
-      providerLabel: 'Torbox',
-      queueStatus: 'Checking Torbox cache...',
-    );
-    final engineStates = await host.cacheWarmer.tvEngineSearchStates();
-    final maxResultsOverrides = host.cacheWarmer.quickPlayMaxResultsOverrides();
-
+  ) => runQuickWatchSearch(
+    host,
+    provider: QuickWatchProvider.torbox,
+    keywords: keywords,
+    log: log,
+    continueWith: (combinedList, apiKey) async {
     try {
-      final futures = keywords
-          .map(
-            (kw) => TorrentService.searchAllEngines(
-              kw,
-              engineStates: engineStates,
-              maxResultsOverrides: maxResultsOverrides,
-            ),
-          )
-          .toList();
-
-      await for (final result in Stream.fromFutures(futures)) {
-        search.accept(result);
-      }
-
-      final combinedList = host.cacheWarmer.applyQualityFilterToTorrents(
-        search.snapshot(),
-        // Search is complete here — an empty match means this search really
-        // has nothing at the requested quality, so degrade rather than fail.
-        allowFallback: true,
-      );
-      if (combinedList.isEmpty) {
-        host.closeProgressDialog();
-        if (host.mounted) {
-          host.setState(() {
-            host.status = 'No results found. Try different keywords.';
-          });
-          host.showSnack(
-            'No results found. Try different keywords.',
-            color: Colors.red,
-          );
-        }
-        return;
-      }
-
-      combinedList.shuffle(Random());
       if (host.mounted) {
         host.setState(() {
           host.status = 'Checking Torbox cache...';
@@ -249,7 +177,7 @@ class TorboxWatchFlow {
         });
       }
     }
-  }
+  });
 
   Future<void> watchTorboxWithCachedTorrents(
     List<Torrent> cachedTorrents, {

@@ -4,10 +4,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../models/torrent.dart';
 import '../../../services/storage_service.dart';
-import '../../../services/torrent_service.dart';
 import '../../../services/main_page_bridge.dart';
 import '../../../theme/app_surfaces.dart';
-import '../../../utils/nsfw_filter.dart';
 import '../../video_player_screen.dart';
 import '../../magic_tv_screen.dart'
     show MagicTvDispatch, MagicTvNextChannelQuirk;
@@ -22,98 +20,13 @@ class PremiumizeWatchFlow {
   Future<void> watchWithPremiumize(
     List<String> keywords,
     void Function(String message) log,
-  ) async {
-    final integrationEnabled =
-        await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
-    if (!integrationEnabled) {
-      host.closeProgressDialog();
-      if (!host.mounted) return;
-      host.setState(() {
-        host.status = 'Enable Premiumize in Settings to use this provider.';
-        host.isBusy = false;
-      });
-      host.showSnack(
-        'Enable Premiumize in Settings to use this provider.',
-        color: Colors.orange,
-      );
-      return;
-    }
-
-    final apiKey = await StorageService.getPremiumizeApiKey();
-    if (apiKey == null || apiKey.isEmpty) {
-      host.closeProgressDialog();
-      if (!host.mounted) return;
-      host.setState(() {
-        host.status =
-            'Add your Premiumize API key in Settings to use this provider.';
-        host.isBusy = false;
-      });
-      host.showSnack(
-        'Please add your Premiumize API key in Settings first!',
-        color: Colors.red,
-      );
-      return;
-    }
-
-    log('🌐 Premiumize: searching for cached torrents...');
-    final Map<String, Torrent> dedup = {};
-    final engineStates = await host.cacheWarmer.tvEngineSearchStates();
-    final maxResultsOverrides = host.cacheWarmer.quickPlayMaxResultsOverrides();
-
+  ) => runQuickWatchSearch(
+    host,
+    provider: QuickWatchProvider.premiumize,
+    keywords: keywords,
+    log: log,
+    continueWith: (combinedList, apiKey) async {
     try {
-      final futures = keywords
-          .map(
-            (kw) => TorrentService.searchAllEngines(
-              kw,
-              engineStates: engineStates,
-              maxResultsOverrides: maxResultsOverrides,
-            ),
-          )
-          .toList();
-
-      await for (final result in Stream.fromFutures(futures)) {
-        final torrents =
-            (result['torrents'] as List<Torrent>? ?? const <Torrent>[]);
-
-        List<Torrent> torrentsToProcess = torrents;
-        if (host.quickAvoidNsfw || host.viewerForcesNsfw) {
-          torrentsToProcess = torrents.where((t) {
-            return !NsfwFilter.shouldFilter(t.category, t.name);
-          }).toList();
-        }
-
-        for (final torrent in torrentsToProcess) {
-          final normalizedHash = host.normalizeInfohash(torrent.infohash);
-          if (normalizedHash.isEmpty) continue;
-          dedup.putIfAbsent(normalizedHash, () => torrent);
-        }
-
-        if (dedup.isNotEmpty && host.mounted) {
-          host.setState(() => host.status = 'Checking Premiumize cache...');
-        }
-      }
-
-      final combinedList = host.cacheWarmer.applyQualityFilterToTorrents(
-        dedup.values.toList(),
-        // Search is complete here — an empty match means this search really
-        // has nothing at the requested quality, so degrade rather than fail.
-        allowFallback: true,
-      );
-      if (combinedList.isEmpty) {
-        host.closeProgressDialog();
-        if (host.mounted) {
-          host.setState(
-            () => host.status = 'No results found. Try different keywords.',
-          );
-          host.showSnack(
-            'No results found. Try different keywords.',
-            color: Colors.red,
-          );
-        }
-        return;
-      }
-
-      combinedList.shuffle(Random());
       if (host.mounted) {
         host.setState(() => host.status = 'Checking Premiumize cache...');
       }
@@ -252,7 +165,7 @@ class PremiumizeWatchFlow {
       host.closeProgressDialog();
       if (host.mounted) host.setState(() => host.isBusy = false);
     }
-  }
+  });
 
   Future<void> watchPremiumizeWithCachedTorrents(
     List<Torrent> cachedTorrents, {
