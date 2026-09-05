@@ -313,3 +313,8 @@ Exact3e594/cf6de/494 independently reproduced and eachall3CIpassed.149threeactua
 ### Current scoped releases
 Ampere cachedpresentation product4files plus explicit4sourceguardcountadaptations (PP/PM/TB2to1/common2to3, alladversarialchecksretained). Wegener153Q2productreviewPASS checkinglatestunion/CI; C0independentreviews. Locke repair-owner released exact8methods/4registryrows and approved6privatebridge+3obsoletealiaslines; forecast258host/+31whole,7facades, existingquirks unchanged, no mergebefore152fixture. No CODEMAP locks granted yet for newproducts. No user blocker; a443fullgatepassed, productioncounter0.
 
+
+### #152 repair fixtures merged
+Exact41f8 independent89twice/scopedanalysis/actualkeytype mutants andall3CIpassed. Did we make a difference?PreS2export/currentrestore/actualrepair proof, distinct5/7/7packages sevenkeyunion with derivedmarker separate. More remains: finiteinterleavings/profilequirks are not fixed or exhaustivelyproved. ZeroLeaves; gods8614/11926/3317/4106/2899 vs19070/16278/10716/9963/7905 unchanged.
+Currentproducts:153Q2 independentPASS awaitinggoldens;154presentation194independentPASS awaitingCI;155repair productPASS/docsunionreview ongoing/CI.155scope additionallyapproved4exactownedSetexpectedkeys+oneunusedjson_isolateimport;259host/+30whole, no allowance. AllCODEMAPlocksreleased. No user blocker. Nextfullgate afterthese3productionmerges; counter0.
+
