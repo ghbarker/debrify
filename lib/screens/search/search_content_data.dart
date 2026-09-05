@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../models/stremio_addon.dart';
 import '../../services/series_source_service.dart';
 
@@ -20,15 +22,30 @@ class SearchContentData {
     return id == null ? 0 : (boundCounts[id] ?? 0);
   }
 
-  Future<Map<String, int>> readBoundCounts(List<StremioMeta> items) async {
-    final counts = <String, int>{};
+  FutureOr<Map<String, int>> readBoundCounts(List<StremioMeta> items) {
+    final ids = _eligibleIds(items).iterator;
+    // The origin host reached its commit without awaiting when every item was
+    // ineligible. Preserve that synchronous path, including an empty snapshot.
+    if (!ids.moveNext()) return <String, int>{};
+    return _readEligibleCounts(ids);
+  }
+
+  Iterable<String> _eligibleIds(List<StremioMeta> items) sync* {
     final seen = <String>{};
     for (final item in items) {
       final imdb = imdbOf(item);
       if (imdb == null || !seen.add(imdb)) continue;
+      yield imdb;
+    }
+  }
+
+  Future<Map<String, int>> _readEligibleCounts(Iterator<String> ids) async {
+    final counts = <String, int>{};
+    do {
+      final imdb = ids.current;
       final n = (await SeriesSourceService.getSources(imdb)).length;
       if (n > 0) counts[imdb] = n;
-    }
+    } while (ids.moveNext());
     return counts;
   }
 }

@@ -6,6 +6,7 @@ import 'package:debrify/models/profiles/connection_resource.dart';
 import 'package:debrify/models/profiles/profile_policy.dart';
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/search_screen.dart';
+import 'package:debrify/screens/search/search_content_data.dart';
 import 'package:debrify/screens/see_all/continue_watching_see_all_screen.dart';
 import 'package:debrify/screens/see_all/mdblist_see_all_screen.dart';
 import 'package:debrify/services/main_page_bridge.dart';
@@ -159,6 +160,28 @@ Future<void> mountDiscover(WidgetTester tester, {bool tv = false}) async {
 }
 
 void main() {
+  // New helper contract, not an invocation of the original private host method.
+  // Origin _refreshBoundSources only awaited inside its eligible-ID loop, so
+  // empty/all-ineligible snapshots reached the clear synchronously.
+  for (final allInvalid in [false, true]) {
+    test('bound reader returns a synchronous map: allInvalid=$allInvalid', () {
+      final data = SearchContentData();
+      final result = data.readBoundCounts([
+        if (allInvalid) ...[
+          const StremioMeta(id: 'addon:one', type: 'movie', name: 'One'),
+          const StremioMeta(
+            id: 'tt1234567',
+            imdbId: '',
+            type: 'movie',
+            name: 'Two',
+          ),
+        ],
+      ]);
+      expect(result, isNot(isA<Future<Map<String, int>>>()));
+      expect(result, isA<Map<String, int>>());
+      expect(result, isEmpty);
+    });
+  }
   for (final dispose in [false, true]) {
     testWidgets('origin Discover held bound completion dispose=$dispose', (
       tester,

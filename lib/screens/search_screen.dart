@@ -2008,7 +2008,8 @@ class _SearchScreenState extends State<SearchScreenHost>
       ..._mdblistMovies,
       ..._mdblistSeries,
     ];
-    final counts = await _contentData.readBoundCounts(items);
+    final result = _contentData.readBoundCounts(items);
+    final counts = result is Future<Map<String, int>> ? await result : result;
     if (!mounted) return;
     setState(
       () => _boundCounts
