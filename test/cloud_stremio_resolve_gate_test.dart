@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:debrify/models/torrent.dart';
 import 'package:debrify/services/cloud/cloud_credentials.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
@@ -119,7 +120,7 @@ void main() {
   });
 
   test('PM/AD are toggle-only; picker still wants a key', () async {
-    await StorageService.setPremiumizeIntegrationEnabled(true);
+    await ProviderCredentialPrefs.setPremiumizeIntegrationEnabled(true);
     expect(
       await CloudCredentials.isStremioAvailable(CloudProviderId.premiumize),
       isFalse,
@@ -134,7 +135,7 @@ void main() {
       ),
       isTrue,
     );
-    await StorageService.setAllDebridIntegrationEnabled(false);
+    await ProviderCredentialPrefs.setAllDebridIntegrationEnabled(false);
     expect(
       await StremioTvResolveGate.canAttempt(
         provider: 'alldebrid',

@@ -23,25 +23,25 @@ void main() {
   test(
     'StorageService writes are readable through ProviderCredentialPrefs',
     () async {
-      await StorageService.saveRdEndpoint('https://backup.example/rd');
-      await StorageService.saveFileSelection('all');
-      await StorageService.setTorboxCacheCheckEnabled(true);
-      await StorageService.setRealDebridIntegrationEnabled(false);
-      await StorageService.setRealDebridHiddenFromNav(true);
-      await StorageService.setRdSkipBlockedTorrents(false);
-      await StorageService.setTorboxIntegrationEnabled(false);
-      await StorageService.setPremiumizeIntegrationEnabled(false);
-      await StorageService.savePremiumizePostTorrentAction('delete');
-      await StorageService.setAllDebridIntegrationEnabled(false);
-      await StorageService.saveAllDebridPostTorrentAction('keep');
-      await StorageService.savePostTorrentAction('delete');
-      await StorageService.setPikPakEnabled(true);
-      await StorageService.setPikPakAccessToken('access-token');
-      await StorageService.setPikPakShowVideosOnly(false);
-      await StorageService.setPikPakRestrictedFolder('fid', 'Restricted');
-      await StorageService.setWebDavShowVideosOnly(false);
-      await StorageService.setDefaultTorrentProvider('torbox');
-      await StorageService.saveWebDavServers(const [
+      await ProviderCredentialPrefs.saveRdEndpoint('https://backup.example/rd');
+      await ProviderCredentialPrefs.saveFileSelection('all');
+      await ProviderCredentialPrefs.setTorboxCacheCheckEnabled(true);
+      await ProviderCredentialPrefs.setRealDebridIntegrationEnabled(false);
+      await ProviderCredentialPrefs.setRealDebridHiddenFromNav(true);
+      await ProviderCredentialPrefs.setRdSkipBlockedTorrents(false);
+      await ProviderCredentialPrefs.setTorboxIntegrationEnabled(false);
+      await ProviderCredentialPrefs.setPremiumizeIntegrationEnabled(false);
+      await ProviderCredentialPrefs.savePremiumizePostTorrentAction('delete');
+      await ProviderCredentialPrefs.setAllDebridIntegrationEnabled(false);
+      await ProviderCredentialPrefs.saveAllDebridPostTorrentAction('keep');
+      await ProviderCredentialPrefs.savePostTorrentAction('delete');
+      await ProviderCredentialPrefs.setPikPakEnabled(true);
+      await ProviderCredentialPrefs.setPikPakAccessToken('access-token');
+      await ProviderCredentialPrefs.setPikPakShowVideosOnly(false);
+      await ProviderCredentialPrefs.setPikPakRestrictedFolder('fid', 'Restricted');
+      await ProviderCredentialPrefs.setWebDavShowVideosOnly(false);
+      await ProviderCredentialPrefs.setDefaultTorrentProvider('torbox');
+      await ProviderCredentialPrefs.saveWebDavServers(const [
         WebDavConfig(
           id: 's1',
           name: 'Home',

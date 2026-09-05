@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 
 import 'package:collection/collection.dart';
@@ -219,7 +220,7 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
     } else {
       _debridProvider = debridProvider;
     }
-    _rdSkipBlockedTorrents = await StorageService.getRdSkipBlockedTorrents();
+    _rdSkipBlockedTorrents = await ProviderCredentialPrefs.getRdSkipBlockedTorrents();
     _torrentsFirst = await StorageService.getStremioTvTorrentsFirst();
     _maxStartPercent = await StorageService.getStremioTvMaxStartPercent();
     _hideNowPlaying = await StorageService.getStremioTvHideNowPlaying();

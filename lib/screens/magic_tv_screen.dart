@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import '../services/debrify_tv/queue_prefetcher.dart';
 import 'debrify_tv/watch/provider_watch_flow.dart';
 import 'debrify_tv/watch/torbox_watch_flow.dart';
@@ -663,15 +664,15 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     final showVideoTitle = await StorageService.getDebrifyTvShowVideoTitle();
     // hideBackButton is hardcoded to false - no longer loading from storage
     final avoidNsfw = await _settingsManager.getGlobalAvoidNsfw(true);
-    final rdSkipBlocked = await StorageService.getRdSkipBlockedTorrents();
+    final rdSkipBlocked = await ProviderCredentialPrefs.getRdSkipBlockedTorrents();
     final tvFilters = await DebrifyTvFilters.load();
     final storedProvider = await StorageService.getDebrifyTvProvider();
     final hasStoredProvider = await StorageService.hasDebrifyTvProvider();
     final rdIntegrationEnabled =
-        await StorageService.getRealDebridIntegrationEnabled();
+        await ProviderCredentialPrefs.getRealDebridIntegrationEnabled();
     final rdKey = await StorageService.getApiKey();
     final torboxIntegrationEnabled =
-        await StorageService.getTorboxIntegrationEnabled();
+        await ProviderCredentialPrefs.getTorboxIntegrationEnabled();
     final torboxKey = await StorageService.getTorboxApiKey();
 
     final registry = EngineRegistry.instance;
@@ -721,14 +722,14 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         torboxIntegrationEnabled && torboxKey != null && torboxKey.isNotEmpty;
     final pikpakAvailable = await PikPakTvService.instance.isAvailable();
     final premiumizeIntegrationEnabled =
-        await StorageService.getPremiumizeIntegrationEnabled();
+        await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
     final premiumizeKey = await StorageService.getPremiumizeApiKey();
     final premiumizeAvailable =
         premiumizeIntegrationEnabled &&
         premiumizeKey != null &&
         premiumizeKey.isNotEmpty;
     final allDebridIntegrationEnabled =
-        await StorageService.getAllDebridIntegrationEnabled();
+        await ProviderCredentialPrefs.getAllDebridIntegrationEnabled();
     final allDebridKey = await StorageService.getAllDebridApiKey();
     final allDebridAvailable =
         allDebridIntegrationEnabled &&
@@ -900,21 +901,21 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
 
   Future<void> _syncProviderAvailability() async {
     final rdIntegrationEnabled =
-        await StorageService.getRealDebridIntegrationEnabled();
+        await ProviderCredentialPrefs.getRealDebridIntegrationEnabled();
     final rdKey = await StorageService.getApiKey();
     final torboxIntegrationEnabled =
-        await StorageService.getTorboxIntegrationEnabled();
+        await ProviderCredentialPrefs.getTorboxIntegrationEnabled();
     final torboxKey = await StorageService.getTorboxApiKey();
     final pikpakAvailable = await PikPakTvService.instance.isAvailable();
     final premiumizeIntegrationEnabled =
-        await StorageService.getPremiumizeIntegrationEnabled();
+        await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
     final premiumizeKey = await StorageService.getPremiumizeApiKey();
     final premiumizeAvailable =
         premiumizeIntegrationEnabled &&
         premiumizeKey != null &&
         premiumizeKey.isNotEmpty;
     final allDebridIntegrationEnabled =
-        await StorageService.getAllDebridIntegrationEnabled();
+        await ProviderCredentialPrefs.getAllDebridIntegrationEnabled();
     final allDebridKey = await StorageService.getAllDebridApiKey();
     final allDebridAvailable =
         allDebridIntegrationEnabled &&

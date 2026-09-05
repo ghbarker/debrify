@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
@@ -268,10 +269,10 @@ class PikPakApiService {
       debugPrint('PikPak: Starting login');
 
       // 1. Generate or load device ID
-      String? deviceId = await StorageService.getPikPakDeviceId();
+      String? deviceId = await ProviderCredentialPrefs.getPikPakDeviceId();
       if (deviceId == null) {
         deviceId = _generateDeviceId();
-        await StorageService.setPikPakDeviceId(deviceId);
+        await ProviderCredentialPrefs.setPikPakDeviceId(deviceId);
         debugPrint('PikPak: Generated a new device ID');
       } else {
         debugPrint('PikPak: Using the stored device ID');
@@ -316,11 +317,11 @@ class PikPakApiService {
         Future<void> commit() async {
           await StorageService.setPikPakEmail(email);
           await StorageService.setPikPakPassword(password);
-          await StorageService.setPikPakAccessToken(accessToken);
-          await StorageService.setPikPakRefreshToken(refreshToken);
-          await StorageService.setPikPakCaptchaToken(captchaToken);
+          await ProviderCredentialPrefs.setPikPakAccessToken(accessToken);
+          await ProviderCredentialPrefs.setPikPakRefreshToken(refreshToken);
+          await ProviderCredentialPrefs.setPikPakCaptchaToken(captchaToken);
           if (userId != null) {
-            await StorageService.setPikPakUserId(userId);
+            await ProviderCredentialPrefs.setPikPakUserId(userId);
           }
         }
 
@@ -390,7 +391,7 @@ class PikPakApiService {
     try {
       // Always reload from the operation's captured scope. A token retained by
       // the singleton may belong to a profile that has since switched away.
-      final refreshToken = await StorageService.getPikPakRefreshToken();
+      final refreshToken = await ProviderCredentialPrefs.getPikPakRefreshToken();
       if (refreshToken == null) {
         debugPrint('PikPak: No refresh token available');
         return false;
@@ -398,8 +399,8 @@ class PikPakApiService {
 
       debugPrint('PikPak: Refreshing access token...');
 
-      final deviceId = await StorageService.getPikPakDeviceId();
-      final captchaToken = await StorageService.getPikPakCaptchaToken();
+      final deviceId = await ProviderCredentialPrefs.getPikPakDeviceId();
+      final captchaToken = await ProviderCredentialPrefs.getPikPakCaptchaToken();
 
       // Try multiple refresh methods in order of preference
       // Method 1: Standard OAuth2 refresh without client_secret (rclone approach)
@@ -583,11 +584,11 @@ class PikPakApiService {
 
       Future<void> commit() async {
         if (refreshToken != null) {
-          await StorageService.setPikPakRefreshToken(refreshToken);
+          await ProviderCredentialPrefs.setPikPakRefreshToken(refreshToken);
         }
-        await StorageService.setPikPakAccessToken(accessToken);
+        await ProviderCredentialPrefs.setPikPakAccessToken(accessToken);
         if (userId != null) {
-          await StorageService.setPikPakUserId(userId);
+          await ProviderCredentialPrefs.setPikPakUserId(userId);
         }
       }
 
@@ -631,7 +632,7 @@ class PikPakApiService {
       // If captcha error, clear it
       if (errorCode == 4002 || errorCode == '4002') {
         debugPrint('PikPak: Captcha token invalid during refresh');
-        StorageService.clearPikPakCaptchaToken();
+        ProviderCredentialPrefs.clearPikPakCaptchaToken();
       }
     } catch (e) {
       // Ignore JSON parsing errors
@@ -693,8 +694,8 @@ class PikPakApiService {
     // Always load from storage to ensure we have the latest tokens
     // This handles cases where tokens were refreshed in a different session
     // or the in-memory token became stale
-    final storedAccessToken = await StorageService.getPikPakAccessToken();
-    final storedRefreshToken = await StorageService.getPikPakRefreshToken();
+    final storedAccessToken = await ProviderCredentialPrefs.getPikPakAccessToken();
+    final storedRefreshToken = await ProviderCredentialPrefs.getPikPakRefreshToken();
 
     if (storedAccessToken == null || storedRefreshToken == null) {
       throw Exception('Not authenticated. Please login first.');
@@ -745,9 +746,9 @@ class PikPakApiService {
   ) async {
     await _ensureAuthenticated();
 
-    var accessToken = (await StorageService.getPikPakAccessToken())!;
-    final deviceId = await StorageService.getPikPakDeviceId();
-    final captchaToken = await StorageService.getPikPakCaptchaToken();
+    var accessToken = (await ProviderCredentialPrefs.getPikPakAccessToken())!;
+    final deviceId = await ProviderCredentialPrefs.getPikPakDeviceId();
+    final captchaToken = await ProviderCredentialPrefs.getPikPakCaptchaToken();
 
     final headers = {
       'Authorization': 'Bearer $accessToken',
@@ -783,12 +784,12 @@ class PikPakApiService {
       debugPrint('PikPak: Access token expired, refreshing...');
       if (await refreshAccessToken()) {
         // Retry the request with new token
-        accessToken = (await StorageService.getPikPakAccessToken())!;
+        accessToken = (await ProviderCredentialPrefs.getPikPakAccessToken())!;
         headers['Authorization'] = 'Bearer $accessToken';
 
         // Also reload captcha token in case it was refreshed
         final updatedCaptchaToken =
-            await StorageService.getPikPakCaptchaToken();
+            await ProviderCredentialPrefs.getPikPakCaptchaToken();
         if (updatedCaptchaToken != null && updatedCaptchaToken.isNotEmpty) {
           headers['X-Captcha-Token'] = updatedCaptchaToken;
         }
@@ -832,12 +833,12 @@ class PikPakApiService {
         if (await refreshAccessToken()) {
           debugPrint('PikPak: Token refreshed, retrying request...');
           // Retry the request with new token
-          accessToken = (await StorageService.getPikPakAccessToken())!;
+          accessToken = (await ProviderCredentialPrefs.getPikPakAccessToken())!;
           headers['Authorization'] = 'Bearer $accessToken';
 
           // Also reload captcha token in case it was refreshed
           final updatedCaptchaToken =
-              await StorageService.getPikPakCaptchaToken();
+              await ProviderCredentialPrefs.getPikPakCaptchaToken();
           if (updatedCaptchaToken != null && updatedCaptchaToken.isNotEmpty) {
             headers['X-Captcha-Token'] = updatedCaptchaToken;
           }
@@ -879,7 +880,7 @@ class PikPakApiService {
         debugPrint(
           'PikPak: Captcha token invalid (error 4002), clearing token',
         );
-        await StorageService.clearPikPakCaptchaToken();
+        await ProviderCredentialPrefs.clearPikPakCaptchaToken();
       }
 
       throw Exception(
@@ -915,12 +916,12 @@ class PikPakApiService {
       if (e.toString().contains('Verification code is invalid')) {
         debugPrint('PikPak: Captcha token invalid, requesting fresh token...');
 
-        final deviceId = await StorageService.getPikPakDeviceId();
+        final deviceId = await ProviderCredentialPrefs.getPikPakDeviceId();
         if (deviceId == null) {
           throw Exception('No device ID found. Please login first.');
         }
 
-        final userId = await StorageService.getPikPakUserId();
+        final userId = await ProviderCredentialPrefs.getPikPakUserId();
         if (userId == null) {
           debugPrint(
             'PikPak: Warning: No user ID found, this might cause issues',
@@ -934,7 +935,7 @@ class PikPakApiService {
           userId: userId,
         );
 
-        await StorageService.setPikPakCaptchaToken(captchaToken);
+        await ProviderCredentialPrefs.setPikPakCaptchaToken(captchaToken);
         debugPrint('PikPak: Retrying with fresh captcha token');
 
         // Retry the request
@@ -1107,13 +1108,13 @@ class PikPakApiService {
       if (e.toString().contains('Verification code is invalid')) {
         debugPrint('PikPak: Captcha token invalid, requesting fresh token...');
 
-        final deviceId = await StorageService.getPikPakDeviceId();
+        final deviceId = await ProviderCredentialPrefs.getPikPakDeviceId();
         if (deviceId == null) {
           throw Exception('No device ID found. Please login first.');
         }
 
         // Get userId for file operations
-        final userId = await StorageService.getPikPakUserId();
+        final userId = await ProviderCredentialPrefs.getPikPakUserId();
         if (userId == null) {
           debugPrint(
             'PikPak: Warning: No user ID found, this might cause issues',
@@ -1127,7 +1128,7 @@ class PikPakApiService {
           userId: userId,
         );
 
-        await StorageService.setPikPakCaptchaToken(captchaToken);
+        await ProviderCredentialPrefs.setPikPakCaptchaToken(captchaToken);
         debugPrint('PikPak: Retrying with fresh captcha token');
 
         // Retry the request
@@ -1174,12 +1175,12 @@ class PikPakApiService {
           'PikPak: Captcha token invalid for task status, requesting fresh token...',
         );
 
-        final deviceId = await StorageService.getPikPakDeviceId();
+        final deviceId = await ProviderCredentialPrefs.getPikPakDeviceId();
         if (deviceId == null) {
           throw Exception('No device ID found. Please login first.');
         }
 
-        final userId = await StorageService.getPikPakUserId();
+        final userId = await ProviderCredentialPrefs.getPikPakUserId();
         final action = 'GET:/drive/v1/tasks';
         final captchaToken = await _getCaptchaTokenSynchronized(
           action: action,
@@ -1187,7 +1188,7 @@ class PikPakApiService {
           userId: userId,
         );
 
-        await StorageService.setPikPakCaptchaToken(captchaToken);
+        await ProviderCredentialPrefs.setPikPakCaptchaToken(captchaToken);
         debugPrint('PikPak: Retrying task status with fresh captcha token');
 
         final response = await _makeAuthenticatedRequest(
@@ -1227,12 +1228,12 @@ class PikPakApiService {
       if (e.toString().contains('Verification code is invalid')) {
         debugPrint('PikPak: Captcha token invalid, requesting fresh token...');
 
-        final deviceId = await StorageService.getPikPakDeviceId();
+        final deviceId = await ProviderCredentialPrefs.getPikPakDeviceId();
         if (deviceId == null) {
           throw Exception('No device ID found. Please login first.');
         }
 
-        final userId = await StorageService.getPikPakUserId();
+        final userId = await ProviderCredentialPrefs.getPikPakUserId();
         final action = 'POST:/drive/v1/files:batchTrash';
         final captchaToken = await _getCaptchaTokenSynchronized(
           action: action,
@@ -1240,7 +1241,7 @@ class PikPakApiService {
           userId: userId,
         );
 
-        await StorageService.setPikPakCaptchaToken(captchaToken);
+        await ProviderCredentialPrefs.setPikPakCaptchaToken(captchaToken);
         debugPrint('PikPak: Retrying with fresh captcha token');
 
         await _makeAuthenticatedRequest(
@@ -1279,12 +1280,12 @@ class PikPakApiService {
       if (e.toString().contains('Verification code is invalid')) {
         debugPrint('PikPak: Captcha token invalid, requesting fresh token...');
 
-        final deviceId = await StorageService.getPikPakDeviceId();
+        final deviceId = await ProviderCredentialPrefs.getPikPakDeviceId();
         if (deviceId == null) {
           throw Exception('No device ID found. Please login first.');
         }
 
-        final userId = await StorageService.getPikPakUserId();
+        final userId = await ProviderCredentialPrefs.getPikPakUserId();
         final action = 'POST:/drive/v1/files:batchDelete';
         final captchaToken = await _getCaptchaTokenSynchronized(
           action: action,
@@ -1292,7 +1293,7 @@ class PikPakApiService {
           userId: userId,
         );
 
-        await StorageService.setPikPakCaptchaToken(captchaToken);
+        await ProviderCredentialPrefs.setPikPakCaptchaToken(captchaToken);
         debugPrint('PikPak: Retrying with fresh captcha token');
 
         await _makeAuthenticatedRequest(
@@ -1313,8 +1314,8 @@ class PikPakApiService {
   /// Check if user is authenticated
   Future<bool> isAuthenticated() async {
     try {
-      final accessToken = await StorageService.getPikPakAccessToken();
-      final refreshToken = await StorageService.getPikPakRefreshToken();
+      final accessToken = await ProviderCredentialPrefs.getPikPakAccessToken();
+      final refreshToken = await ProviderCredentialPrefs.getPikPakRefreshToken();
       final isAuth = accessToken != null && refreshToken != null;
       authStateNotifier.value = isAuth;
       return isAuth;
@@ -1334,7 +1335,7 @@ class PikPakApiService {
 
   /// Logout - clear all tokens
   Future<void> logout() async {
-    await StorageService.clearPikPakAuth();
+    await ProviderCredentialPrefs.clearPikPakAuth();
     authStateNotifier.value = false;
     debugPrint('PikPak: Logged out');
   }
@@ -1364,7 +1365,7 @@ class PikPakApiService {
   Future<bool> verifyRestrictedFolderExists() async {
     try {
       final restrictedFolderId =
-          await StorageService.getPikPakRestrictedFolderId();
+          await ProviderCredentialPrefs.getPikPakRestrictedFolderId();
 
       // If no restricted folder is set, return true (nothing to verify)
       if (restrictedFolderId == null || restrictedFolderId.isEmpty) {
@@ -1423,12 +1424,12 @@ class PikPakApiService {
       if (e.toString().contains('Verification code is invalid')) {
         debugPrint('PikPak: Captcha token invalid, requesting fresh token...');
 
-        final deviceId = await StorageService.getPikPakDeviceId();
+        final deviceId = await ProviderCredentialPrefs.getPikPakDeviceId();
         if (deviceId == null) {
           throw Exception('No device ID found. Please login first.');
         }
 
-        final userId = await StorageService.getPikPakUserId();
+        final userId = await ProviderCredentialPrefs.getPikPakUserId();
         if (userId == null) {
           debugPrint(
             'PikPak: Warning: No user ID found, this might cause issues',
@@ -1442,7 +1443,7 @@ class PikPakApiService {
           userId: userId,
         );
 
-        await StorageService.setPikPakCaptchaToken(captchaToken);
+        await ProviderCredentialPrefs.setPikPakCaptchaToken(captchaToken);
         debugPrint('PikPak: Retrying with fresh captcha token');
 
         // Retry the request
@@ -1481,12 +1482,12 @@ class PikPakApiService {
       if (e.toString().contains('Verification code is invalid')) {
         debugPrint('PikPak: Captcha token invalid, requesting fresh token...');
 
-        final deviceId = await StorageService.getPikPakDeviceId();
+        final deviceId = await ProviderCredentialPrefs.getPikPakDeviceId();
         if (deviceId == null) {
           throw Exception('No device ID found. Please login first.');
         }
 
-        final userId = await StorageService.getPikPakUserId();
+        final userId = await ProviderCredentialPrefs.getPikPakUserId();
         if (userId == null) {
           debugPrint(
             'PikPak: Warning: No user ID found, this might cause issues',
@@ -1500,7 +1501,7 @@ class PikPakApiService {
           userId: userId,
         );
 
-        await StorageService.setPikPakCaptchaToken(captchaToken);
+        await ProviderCredentialPrefs.setPikPakCaptchaToken(captchaToken);
         debugPrint('PikPak: Retrying with fresh captcha token');
 
         // Retry the request
@@ -1543,12 +1544,12 @@ class PikPakApiService {
       if (e.toString().contains('Verification code is invalid')) {
         debugPrint('PikPak: Captcha token invalid, requesting fresh token...');
 
-        final deviceId = await StorageService.getPikPakDeviceId();
+        final deviceId = await ProviderCredentialPrefs.getPikPakDeviceId();
         if (deviceId == null) {
           throw Exception('No device ID found. Please login first.');
         }
 
-        final userId = await StorageService.getPikPakUserId();
+        final userId = await ProviderCredentialPrefs.getPikPakUserId();
         if (userId == null) {
           debugPrint(
             'PikPak: Warning: No user ID found, this might cause issues',
@@ -1562,7 +1563,7 @@ class PikPakApiService {
           userId: userId,
         );
 
-        await StorageService.setPikPakCaptchaToken(captchaToken);
+        await ProviderCredentialPrefs.setPikPakCaptchaToken(captchaToken);
         debugPrint('PikPak: Retrying with fresh captcha token');
 
         // Retry the request with same filters

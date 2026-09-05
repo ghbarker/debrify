@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:flutter/material.dart';
 
 import '../models/torrent.dart';
@@ -9,7 +10,6 @@ import 'debrid_service.dart';
 import 'debrify_tv_channel_add_service.dart';
 import 'pikpak_api_service.dart';
 import 'premiumize_service.dart';
-import 'storage_service.dart';
 import 'cloud/cloud_credentials.dart';
 import 'cloud/cloud_provider_id.dart';
 import 'cloud/cloud_provider_port.dart';
@@ -356,14 +356,14 @@ class TorrentBulkAddService {
     );
 
     try {
-      final parentFolderId = await StorageService.getPikPakRestrictedFolderId();
+      final parentFolderId = await ProviderCredentialPrefs.getPikPakRestrictedFolderId();
       String? subFolderId;
       try {
         subFolderId = await pikpak.findOrCreateSubfolder(
           folderName: 'debrify-torrents',
           parentFolderId: parentFolderId,
-          getCachedId: StorageService.getPikPakTorrentsFolderId,
-          setCachedId: StorageService.setPikPakTorrentsFolderId,
+          getCachedId: ProviderCredentialPrefs.getPikPakTorrentsFolderId,
+          setCachedId: ProviderCredentialPrefs.setPikPakTorrentsFolderId,
         );
       } catch (e) {
         if (e.toString().contains('RESTRICTED_FOLDER_DELETED')) {

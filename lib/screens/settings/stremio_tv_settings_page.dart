@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:flutter/material.dart';
 import '../../services/analytics_service.dart';
 import '../../services/storage_service.dart';
@@ -57,7 +58,7 @@ class _StremioTvSettingsPageState extends State<StremioTvSettingsPage> {
       if (await StorageService.hasTorboxCredential()) {
         providers.add(CloudProviderId.torbox.catalogChoice);
       }
-      final pikpakEnabled = await StorageService.getPikPakEnabled();
+      final pikpakEnabled = await ProviderCredentialPrefs.getPikPakEnabled();
       if (pikpakEnabled) {
         providers.add(CloudProviderId.pikpak.catalogChoice);
       }

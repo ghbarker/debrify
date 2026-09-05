@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -163,14 +165,14 @@ class PlaylistPlayerService {
     Map<String, dynamic> item, {
     bool playRandom = false,
   }) async {
-    await StorageService.updatePlaylistItemLastPlayed(item);
+    await PlaybackProgressStore.updatePlaylistItemLastPlayed(item);
 
     // Re-read from storage to pick up any fields saved by other screens
     // (e.g. imdbId saved by View Files or video player)
-    final freshItems = await StorageService.getPlaylistItemsRaw();
-    final dedupeKey = StorageService.computePlaylistDedupeKey(item);
+    final freshItems = await PlaybackProgressStore.getPlaylistItemsRaw();
+    final dedupeKey = PlaybackProgressStore.computePlaylistDedupeKey(item);
     final freshItem = freshItems.firstWhere(
-      (e) => StorageService.computePlaylistDedupeKey(e) == dedupeKey,
+      (e) => PlaybackProgressStore.computePlaylistDedupeKey(e) == dedupeKey,
       orElse: () => item,
     );
 
@@ -260,7 +262,7 @@ class PlaylistPlayerService {
               if (!context.mounted) return;
               MainPageBridge.notifyPlayerLaunching();
               final savedViewModeString =
-                  await StorageService.getPlaylistItemViewMode(item);
+                  await PlaybackProgressStore.getPlaylistItemViewMode(item);
               final viewMode = PlaylistViewModeStorage.fromStorageString(
                 savedViewModeString,
               );
@@ -368,7 +370,7 @@ class PlaylistPlayerService {
         }
 
         final savedViewModeString =
-            await StorageService.getPlaylistItemViewMode(item);
+            await PlaybackProgressStore.getPlaylistItemViewMode(item);
 
         // Apply Sort A-Z sorting if in sorted mode
         if (savedViewModeString == 'sortedAZ') {
@@ -528,7 +530,7 @@ class PlaylistPlayerService {
     final String url = (item['url'] as String?) ?? '';
     if (!context.mounted) return;
     MainPageBridge.notifyPlayerLaunching();
-    final savedViewModeString = await StorageService.getPlaylistItemViewMode(
+    final savedViewModeString = await PlaybackProgressStore.getPlaylistItemViewMode(
       item,
     );
     final viewMode = PlaylistViewModeStorage.fromStorageString(
@@ -583,7 +585,7 @@ class PlaylistPlayerService {
             if (!context.mounted) return;
             MainPageBridge.notifyPlayerLaunching();
             final savedViewModeString =
-                await StorageService.getPlaylistItemViewMode(item);
+                await PlaybackProgressStore.getPlaylistItemViewMode(item);
             final viewMode = PlaylistViewModeStorage.fromStorageString(
               savedViewModeString,
             );
@@ -739,7 +741,7 @@ class PlaylistPlayerService {
     }
     if (!context.mounted) return;
     MainPageBridge.notifyPlayerLaunching();
-    final savedViewModeString = await StorageService.getPlaylistItemViewMode(
+    final savedViewModeString = await PlaybackProgressStore.getPlaylistItemViewMode(
       item,
     );
     final viewMode = PlaylistViewModeStorage.fromStorageString(
@@ -825,7 +827,7 @@ class PlaylistPlayerService {
         if (!context.mounted) return;
         MainPageBridge.notifyPlayerLaunching();
         final savedViewModeString =
-            await StorageService.getPlaylistItemViewMode(item);
+            await PlaybackProgressStore.getPlaylistItemViewMode(item);
         final viewMode = PlaylistViewModeStorage.fromStorageString(
           savedViewModeString,
         );
@@ -868,7 +870,7 @@ class PlaylistPlayerService {
       },
     );
 
-    final previousKey = StorageService.computePlaylistDedupeKey(item);
+    final previousKey = PlaybackProgressStore.computePlaylistDedupeKey(item);
 
     try {
       TorboxTorrent? torrent = await TorboxService.getTorrentById(
@@ -933,7 +935,7 @@ class PlaylistPlayerService {
         return;
       }
 
-      final savedViewModeString = await StorageService.getPlaylistItemViewMode(
+      final savedViewModeString = await PlaybackProgressStore.getPlaylistItemViewMode(
         item,
       );
 
@@ -1104,7 +1106,7 @@ class PlaylistPlayerService {
         if (!context.mounted) return;
         MainPageBridge.notifyPlayerLaunching();
         final savedViewModeString =
-            await StorageService.getPlaylistItemViewMode(item);
+            await PlaybackProgressStore.getPlaylistItemViewMode(item);
         final viewMode = PlaylistViewModeStorage.fromStorageString(
           savedViewModeString,
         );
@@ -1245,7 +1247,7 @@ class PlaylistPlayerService {
       final bool isSeriesCollection =
           candidates.length > 1 && SeriesParser.isSeriesPlaylist(filenames);
 
-      final savedViewModeString = await StorageService.getPlaylistItemViewMode(
+      final savedViewModeString = await PlaybackProgressStore.getPlaylistItemViewMode(
         item,
       );
 
@@ -1497,7 +1499,7 @@ class PlaylistPlayerService {
         return;
       }
 
-      final savedViewModeString = await StorageService.getPlaylistItemViewMode(
+      final savedViewModeString = await PlaybackProgressStore.getPlaylistItemViewMode(
         item,
       );
 
@@ -1729,7 +1731,7 @@ class PlaylistPlayerService {
     }
 
     try {
-      final savedViewModeString = await StorageService.getPlaylistItemViewMode(
+      final savedViewModeString = await PlaybackProgressStore.getPlaylistItemViewMode(
         item,
       );
 
@@ -2033,7 +2035,7 @@ class PlaylistPlayerService {
     final title = _webDavFileName(file, fallbackTitle);
     final sizeBytes = _asInt(item['sizeBytes'] ?? file?['sizeBytes']);
     final url = WebDavService.directUrl(config, path);
-    final savedViewModeString = await StorageService.getPlaylistItemViewMode(
+    final savedViewModeString = await PlaybackProgressStore.getPlaylistItemViewMode(
       item,
     );
     final viewMode =
@@ -2120,7 +2122,7 @@ class PlaylistPlayerService {
         .toList();
     final bool isSeriesCollection =
         candidates.length > 1 && SeriesParser.isSeriesPlaylist(filenames);
-    final savedViewModeString = await StorageService.getPlaylistItemViewMode(
+    final savedViewModeString = await PlaybackProgressStore.getPlaylistItemViewMode(
       item,
     );
 
@@ -2236,7 +2238,7 @@ class PlaylistPlayerService {
   ) async {
     final serverId = (item['webdavServerId'] ?? '').toString();
     final baseUrl = (item['webdavBaseUrl'] ?? '').toString();
-    final servers = await StorageService.getWebDavServers(forSettings: false);
+    final servers = await ProviderCredentialPrefs.getWebDavServers(forSettings: false);
     for (final server in servers) {
       if (serverId.isNotEmpty && server.id == serverId) return server;
     }
@@ -2386,16 +2388,16 @@ class PlaylistPlayerService {
       item['restrictedLink'] = newLinks[0].toString();
     }
 
-    final items = await StorageService.getPlaylistItemsRaw();
-    final itemKey = StorageService.computePlaylistDedupeKey(item);
+    final items = await PlaybackProgressStore.getPlaylistItemsRaw();
+    final itemKey = PlaybackProgressStore.computePlaylistDedupeKey(item);
     final itemIndex = items.indexWhere(
       (playlistItem) =>
-          StorageService.computePlaylistDedupeKey(playlistItem) == itemKey,
+          PlaybackProgressStore.computePlaylistDedupeKey(playlistItem) == itemKey,
     );
 
     if (itemIndex != -1) {
       items[itemIndex] = item;
-      await StorageService.savePlaylistItemsRaw(items);
+      await PlaybackProgressStore.savePlaylistItemsRaw(items);
     }
   }
 
@@ -2684,14 +2686,14 @@ class PlaylistPlayerService {
     Map<String, dynamic> item,
     String previousKey,
   ) async {
-    final items = await StorageService.getPlaylistItemsRaw();
+    final items = await PlaybackProgressStore.getPlaylistItemsRaw();
     final index = items.indexWhere(
       (playlistItem) =>
-          StorageService.computePlaylistDedupeKey(playlistItem) == previousKey,
+          PlaybackProgressStore.computePlaylistDedupeKey(playlistItem) == previousKey,
     );
     if (index == -1) return;
     items[index] = Map<String, dynamic>.from(item);
-    await StorageService.savePlaylistItemsRaw(items);
+    await PlaybackProgressStore.savePlaylistItemsRaw(items);
   }
 
   static _TorboxPlaylistEntriesResult _buildTorboxPlaylistEntries({

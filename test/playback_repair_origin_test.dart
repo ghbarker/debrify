@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -159,7 +160,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_playback);
       await expectLater(
-        StorageService.migrateExistingPlaybackCompletionThresholds(),
+        PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds(),
         throwsA(isA<DatabaseException>()),
       );
       expect(events, [
@@ -176,7 +177,7 @@ void main() {
       expect(await StorageService.getVideoResume('Done'), isNotNull);
       await db.execute('DROP TRIGGER fail_resume_delete');
       events.clear();
-      await StorageService.migrateExistingPlaybackCompletionThresholds();
+      await PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds();
       expect(events, [
         'write:flutter.$_finished',
         'revision',
@@ -188,7 +189,7 @@ void main() {
       expect(prefs.getInt(_migration), 1);
       expect(await StorageService.getVideoResume('Done'), isNull);
       events.clear();
-      await StorageService.migrateExistingPlaybackCompletionThresholds();
+      await PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds();
       expect(events, isEmpty);
       expect(prefs.getString('repair_sentinel'), 'untouched');
     },
@@ -201,7 +202,7 @@ void main() {
       backend.failKey = 'flutter.$_finished';
       final persisted = await backend.getAll();
       await expectLater(
-        StorageService.migrateExistingPlaybackCompletionThresholds(),
+        PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds(),
         throwsA(isA<StateError>()),
       );
       expect(events, ['write:flutter.$_finished']);
@@ -215,7 +216,7 @@ void main() {
     'purge writes playback then notifies then marks; false marks/dummy survive',
     () async {
       await install(_ghostValues());
-      await StorageService.purgeUnwatchedResumeGhosts();
+      await PlaybackProgressStore.purgeUnwatchedResumeGhosts();
       expect(events, [
         'write:flutter.$_playback',
         'revision',
@@ -227,7 +228,7 @@ void main() {
       expect((seasons['1'] as Map).keys, ['2', '3']);
       expect(prefs.getInt(_purge), 1);
       events.clear();
-      await StorageService.purgeUnwatchedResumeGhosts();
+      await PlaybackProgressStore.purgeUnwatchedResumeGhosts();
       expect(events, isEmpty);
     },
   );
@@ -239,7 +240,7 @@ void main() {
       backend.failKey = 'flutter.$_playback';
       final persisted = await backend.getAll();
       await expectLater(
-        StorageService.purgeUnwatchedResumeGhosts(),
+        PlaybackProgressStore.purgeUnwatchedResumeGhosts(),
         throwsA(isA<StateError>()),
       );
       expect(events, ['write:flutter.$_playback']);
@@ -252,7 +253,7 @@ void main() {
     () async {
       await install(_ghostValues(), committed: true);
       backend.holdKey = 'flutter.${a.preferenceKey(_playback)}';
-      final run = StorageService.purgeUnwatchedResumeGhosts();
+      final run = PlaybackProgressStore.purgeUnwatchedResumeGhosts();
       final observed = expectLater(run, throwsA(isA<StateError>()));
       try {
         await backend.entered.future.timeout(const Duration(seconds: 5));
@@ -293,7 +294,7 @@ void main() {
       values[_playback] = jsonEncode(playback);
       await install(values, committed: true);
       backend.holdKey = 'flutter.${a.preferenceKey(_cw)}';
-      final run = StorageService.migrateExistingPlaybackCompletionThresholds();
+      final run = PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds();
       final observed = expectLater(run, throwsA(isA<StateError>()));
       try {
         await backend.entered.future.timeout(const Duration(seconds: 5));
@@ -335,13 +336,13 @@ void main() {
   for (final marker in [null, 0, 1, 'wrong-type']) {
     test('synchronous rearm honors key presence including marker $marker', () {
       final overlay = <String, Object?>{_playback: '{}', _purge: marker};
-      StorageService.rearmGhostPurgeForImportedPlayback(overlay);
+      PlaybackProgressStore.rearmGhostPurgeForImportedPlayback(overlay);
       expect(overlay, {_playback: '{}', _purge: marker});
       final missing = <String, Object?>{_playback: null};
-      StorageService.rearmGhostPurgeForImportedPlayback(missing);
+      PlaybackProgressStore.rearmGhostPurgeForImportedPlayback(missing);
       expect(missing, {_playback: null, _purge: 0});
       final unrelated = <String, Object?>{'sentinel': 1};
-      StorageService.rearmGhostPurgeForImportedPlayback(unrelated);
+      PlaybackProgressStore.rearmGhostPurgeForImportedPlayback(unrelated);
       expect(unrelated, {'sentinel': 1});
     });
   }
@@ -351,8 +352,8 @@ void main() {
       await install({..._ghostValues(), key: '1'});
       await expectLater(
         key == _migration
-            ? StorageService.migrateExistingPlaybackCompletionThresholds()
-            : StorageService.purgeUnwatchedResumeGhosts(),
+            ? PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds()
+            : PlaybackProgressStore.purgeUnwatchedResumeGhosts(),
         throwsA(isA<TypeError>()),
       );
       expect(events, isEmpty);
@@ -360,8 +361,8 @@ void main() {
   }
 
   test('empty repair writes only its own marker without notifying', () async {
-    await StorageService.migrateExistingPlaybackCompletionThresholds();
-    await StorageService.purgeUnwatchedResumeGhosts();
+    await PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds();
+    await PlaybackProgressStore.purgeUnwatchedResumeGhosts();
     expect(events, ['write:flutter.$_migration', 'write:flutter.$_purge']);
   });
 }

@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../models/advanced_search_selection.dart';
@@ -7,7 +8,6 @@ import '../episode_tracker_snapshot_revision.dart';
 import '../mdblist/mdblist_continue_watching_service.dart';
 import '../next_episode_service.dart';
 import '../simkl/simkl_service.dart';
-import '../storage_service.dart';
 import '../tracking_source_policy.dart';
 import '../trakt/trakt_continue_watching_service.dart';
 
@@ -389,14 +389,14 @@ class CatalogPlayResolver {
     int? season;
     int? episode;
     final byId = trackingPolicy.progressFrom(TrackingSource.local)
-        ? await StorageService.getLastPlayedEpisodeByImdbId(playId)
+        ? await PlaybackProgressStore.getLastPlayedEpisodeByImdbId(playId)
         : null;
     season = byId?['season'] as int?;
     episode = byId?['episode'] as int?;
     final lastFinished = byId?['finished'] == true;
     if (season == null || episode == null) {
       final byTitle = trackingPolicy.progressFrom(TrackingSource.local)
-          ? await StorageService.getLastPlayedEpisode(seriesTitle: item.name)
+          ? await PlaybackProgressStore.getLastPlayedEpisode(seriesTitle: item.name)
           : null;
       season ??= byTitle?['season'] as int?;
       episode ??= byTitle?['episode'] as int?;
@@ -896,10 +896,10 @@ class CatalogPlayResolver {
   Future<({int season, int episode, double? pct, int? tsMs, bool finished})?>
   localSeriesResumeFor(StremioMeta item, String playId) async {
     Map<String, dynamic>? entry =
-        await StorageService.getLastPlayedEpisodeByImdbId(playId);
+        await PlaybackProgressStore.getLastPlayedEpisodeByImdbId(playId);
     var finished = entry?['finished'] == true;
     if (entry?['season'] is! int || entry?['episode'] is! int) {
-      entry = await StorageService.getLastPlayedEpisode(seriesTitle: item.name);
+      entry = await PlaybackProgressStore.getLastPlayedEpisode(seriesTitle: item.name);
       finished = entry?['finished'] == true;
     }
     final season = entry?['season'];
@@ -1081,7 +1081,7 @@ class CatalogPlayResolver {
     // in lock-step with the movie branch of resolvePlay).
     final playId = item.imdbId ?? item.effectiveImdbId ?? item.id;
     final st = trackingPolicy.progressFrom(TrackingSource.local)
-        ? await StorageService.getVideoPlaybackStateByImdbId(playId)
+        ? await PlaybackProgressStore.getVideoPlaybackStateByImdbId(playId)
         : null;
     if (cancelled()) return (started: false, season: null, episode: null);
     var started = st != null;

@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:debrify/services/main_page_bridge.dart';
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/see_all/continue_watching_see_all_screen.dart';
@@ -91,7 +92,7 @@ void main() {
       addTearDown(StremioService.instance.invalidateCache);
       await StorageService.setDiscoverDefaultSource('cw');
       await StorageService.setHomeContinueWatchingEnabled(true);
-      await StorageService.saveContinueWatchingItem(
+      await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'tt1234567',
         title: 'Bound origin',
         contentType: 'movie',
@@ -172,7 +173,7 @@ void main() {
         await StorageService.setHomeContinueWatchingEnabled(true);
         await StorageService.setDiscoverLayout(layout);
         for (final id in ['origin-one', 'origin-two']) {
-          await StorageService.saveContinueWatchingItem(
+          await PlaybackProgressStore.saveContinueWatchingItem(
             imdbId: id,
             title: id,
             contentType: 'movie',

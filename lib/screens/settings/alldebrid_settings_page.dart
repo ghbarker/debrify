@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:flutter/material.dart';
 import '../../services/storage_service.dart';
 import '../../services/alldebrid_account_service.dart';
@@ -41,9 +42,9 @@ class _AllDebridSettingsPageState extends State<AllDebridSettingsPage> {
   Future<void> _load() async {
     final configured = await StorageService.hasAllDebridCredential();
     final integrationEnabled =
-        await StorageService.getAllDebridIntegrationEnabled();
-    final postAction = await StorageService.getAllDebridPostTorrentAction();
-    final hiddenFromNav = await StorageService.getAllDebridHiddenFromNav();
+        await ProviderCredentialPrefs.getAllDebridIntegrationEnabled();
+    final postAction = await ProviderCredentialPrefs.getAllDebridPostTorrentAction();
+    final hiddenFromNav = await ProviderCredentialPrefs.getAllDebridHiddenFromNav();
     setState(() {
       _savedApiKey = configured ? '' : null;
       _integrationEnabled = integrationEnabled;
@@ -94,7 +95,7 @@ class _AllDebridSettingsPageState extends State<AllDebridSettingsPage> {
 
   Future<void> _savePostAction(String value) async {
     setState(() => _postTorrentAction = value);
-    await StorageService.saveAllDebridPostTorrentAction(value);
+    await ProviderCredentialPrefs.saveAllDebridPostTorrentAction(value);
     _snack('Preference saved');
   }
 
@@ -154,7 +155,7 @@ class _AllDebridSettingsPageState extends State<AllDebridSettingsPage> {
       );
       return;
     }
-    await StorageService.clearAllDebridHiddenFromNav();
+    await ProviderCredentialPrefs.clearAllDebridHiddenFromNav();
     AllDebridAccountService.clearUserInfo();
     if (mounted) {
       setState(() => _hiddenFromNav = false);
@@ -201,7 +202,7 @@ class _AllDebridSettingsPageState extends State<AllDebridSettingsPage> {
       );
       if (confirmed != true) return;
     }
-    await StorageService.setAllDebridHiddenFromNav(value);
+    await ProviderCredentialPrefs.setAllDebridHiddenFromNav(value);
     if (!mounted) return;
     setState(() => _hiddenFromNav = value);
     MainPageBridge.notifyIntegrationChanged();
@@ -214,7 +215,7 @@ class _AllDebridSettingsPageState extends State<AllDebridSettingsPage> {
         _isEditing = false;
       }
     });
-    await StorageService.setAllDebridIntegrationEnabled(value);
+    await ProviderCredentialPrefs.setAllDebridIntegrationEnabled(value);
     MainPageBridge.notifyIntegrationChanged();
     if (!mounted) return;
     if (value && _savedApiKey != null) {

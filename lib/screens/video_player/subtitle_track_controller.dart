@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -513,7 +514,7 @@ class SubtitleTrackController {
 
       if (seriesPlaylist != null && seriesPlaylist.isSeries) {
         // For series content, get preferences for the entire series
-        trackPreferences = await StorageService.getSeriesTrackPreferences(
+        trackPreferences = await PlaybackProgressStore.getSeriesTrackPreferences(
           seriesTitle: seriesPlaylist.seriesTitle ?? 'Unknown Series',
         );
       } else {
@@ -522,7 +523,7 @@ class SubtitleTrackController {
         final videoTitle = session.videoTitle.isNotEmpty
             ? session.videoTitle
             : 'Unknown Video';
-        trackPreferences = await StorageService.getVideoTrackPreferences(
+        trackPreferences = await PlaybackProgressStore.getVideoTrackPreferences(
           videoTitle: videoTitle,
         );
       }
@@ -1154,7 +1155,7 @@ class SubtitleTrackController {
       final seriesPlaylist = session.seriesPlaylist;
       if (seriesPlaylist != null && seriesPlaylist.isSeries) {
         // For series content, save preferences for the entire series
-        await StorageService.saveSeriesTrackPreferences(
+        await PlaybackProgressStore.saveSeriesTrackPreferences(
           seriesTitle: seriesPlaylist.seriesTitle ?? 'Unknown Series',
           audioTrackId: audio,
           subtitleTrackId: subtitle,
@@ -1165,7 +1166,7 @@ class SubtitleTrackController {
         final videoTitle = session.videoTitle.isNotEmpty
             ? session.videoTitle
             : 'Unknown Video';
-        await StorageService.saveVideoTrackPreferences(
+        await PlaybackProgressStore.saveVideoTrackPreferences(
           videoTitle: videoTitle,
           audioTrackId: audio,
           subtitleTrackId: subtitle,

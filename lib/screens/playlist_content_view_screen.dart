@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -142,7 +144,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
       await _parseSeriesPlaylist();
 
       // Auto-set Series View for detected series (only if no saved preference exists)
-      final savedViewMode = await StorageService.getPlaylistItemViewMode(
+      final savedViewMode = await PlaybackProgressStore.getPlaylistItemViewMode(
         widget.playlistItem,
       );
       if (_seriesPlaylist?.isSeries == true && savedViewMode == null) {
@@ -210,7 +212,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
 
   /// Load saved view mode for this playlist item
   Future<void> _loadSavedViewMode() async {
-    final savedModeString = await StorageService.getPlaylistItemViewMode(
+    final savedModeString = await PlaybackProgressStore.getPlaylistItemViewMode(
       widget.playlistItem,
     );
     if (savedModeString != null && mounted) {
@@ -266,7 +268,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
       // 1. Try IMDB ID lookup first (most reliable — avoids title mismatches)
       final imdbId = widget.playlistItem['imdbId'] as String?;
       if (imdbId != null && imdbId.isNotEmpty) {
-        episodeProgress = await StorageService.getEpisodeProgressByImdbId(
+        episodeProgress = await PlaybackProgressStore.getEpisodeProgressByImdbId(
           imdbId,
         );
       }
@@ -275,7 +277,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
       if (episodeProgress.isEmpty) {
         final seriesTitle = widget.playlistItem['seriesTitle'] as String?;
         if (seriesTitle != null && seriesTitle.isNotEmpty) {
-          episodeProgress = await StorageService.getEpisodeProgress(
+          episodeProgress = await PlaybackProgressStore.getEpisodeProgress(
             seriesTitle: seriesTitle,
           );
         }
@@ -285,7 +287,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
       if (episodeProgress.isEmpty) {
         final title = widget.playlistItem['title'] as String?;
         if (title != null) {
-          episodeProgress = await StorageService.getEpisodeProgress(
+          episodeProgress = await PlaybackProgressStore.getEpisodeProgress(
             seriesTitle: title,
           );
         }
@@ -835,7 +837,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
     });
 
     // Save view mode preference
-    StorageService.savePlaylistItemViewMode(
+    PlaybackProgressStore.savePlaylistItemViewMode(
       widget.playlistItem,
       _viewModeToString(mode),
     );
@@ -2073,7 +2075,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
 
       if (seriesTitle != null && seriesTitle.isNotEmpty) {
         print('🔄 Reloading progress after video playback for: $seriesTitle');
-        final episodeProgress = await StorageService.getEpisodeProgress(
+        final episodeProgress = await PlaybackProgressStore.getEpisodeProgress(
           seriesTitle: seriesTitle,
         );
 
@@ -2123,7 +2125,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
         ? (widget.playlistItem?['torrent_hash'] as String?)
         : null;
 
-    await StorageService.updatePlaylistItemImdbId(
+    await PlaybackProgressStore.updatePlaylistItemImdbId(
       imdbId,
       rdTorrentId: rdTorrentId,
       torboxTorrentId: torboxTorrentId,
@@ -2182,7 +2184,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
       if (titleForProgress != null && titleForProgress.isNotEmpty) {
         print('🔄 Reloading progress with clean title: $titleForProgress');
         print('📌 isSeries: ${_seriesPlaylist!.isSeries}');
-        final episodeProgress = await StorageService.getEpisodeProgress(
+        final episodeProgress = await PlaybackProgressStore.getEpisodeProgress(
           seriesTitle: titleForProgress,
         );
         print('📊 Loaded ${episodeProgress.length} episodes with progress');
@@ -2201,7 +2203,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
       // Only show loading indicator if data needs to be fetched
       bool showLoading = true;
       if (widget.playlistItem != null) {
-        final mapping = await StorageService.getTVMazeSeriesMapping(
+        final mapping = await PlaybackProgressStore.getTVMazeSeriesMapping(
           widget.playlistItem!,
         );
         if (mapping != null) {
@@ -2260,7 +2262,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
 
     if (selectedShow != null && mounted) {
       // 1. Get OLD mapping (before it's overwritten)
-      final oldMapping = await StorageService.getTVMazeSeriesMapping(
+      final oldMapping = await PlaybackProgressStore.getTVMazeSeriesMapping(
         widget.playlistItem,
       );
       final oldShowId = oldMapping?['tvmazeShowId'] as int?;
@@ -2279,7 +2281,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
       await TVMazeService.clearSeriesCache(_seriesPlaylist?.seriesTitle ?? '');
 
       // 4. Save new mapping
-      await StorageService.saveTVMazeSeriesMapping(
+      await PlaybackProgressStore.saveTVMazeSeriesMapping(
         playlistItem: widget.playlistItem,
         tvmazeShowId: selectedShow['id'] as int,
         showName: selectedShow['name'] as String,
@@ -2345,22 +2347,22 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
     if (posterUrl == null || posterUrl.isEmpty) return;
 
     try {
-      await StorageService.savePlaylistPosterOverride(
+      await PlaybackProgressStore.savePlaylistPosterOverride(
         playlistItem: widget.playlistItem,
         posterUrl: posterUrl,
       );
 
-      final itemKey = StorageService.computePlaylistDedupeKey(
+      final itemKey = PlaybackProgressStore.computePlaylistDedupeKey(
         widget.playlistItem,
       );
-      final items = await StorageService.getPlaylistItemsRaw();
+      final items = await PlaybackProgressStore.getPlaylistItemsRaw();
       final itemIndex = items.indexWhere(
-        (item) => StorageService.computePlaylistDedupeKey(item) == itemKey,
+        (item) => PlaybackProgressStore.computePlaylistDedupeKey(item) == itemKey,
       );
 
       if (itemIndex >= 0) {
         items[itemIndex]['posterUrl'] = posterUrl;
-        await StorageService.savePlaylistItemsRaw(items);
+        await PlaybackProgressStore.savePlaylistItemsRaw(items);
       }
     } catch (e) {
       debugPrint('Error saving detected series poster: $e');
@@ -2389,7 +2391,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
 
       // CRITICAL: Save poster override to persistent storage
       // This ensures the poster persists across app restarts
-      await StorageService.savePlaylistPosterOverride(
+      await PlaybackProgressStore.savePlaylistPosterOverride(
         playlistItem: widget.playlistItem,
         posterUrl: posterUrl,
       );
@@ -2403,7 +2405,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
         case PlaylistPlayKind.realdebrid:
           final rdTorrentId = widget.playlistItem['rdTorrentId'] as String?;
           if (rdTorrentId != null) {
-            updated = await StorageService.updatePlaylistItemPoster(
+            updated = await PlaybackProgressStore.updatePlaylistItemPoster(
               posterUrl,
               rdTorrentId: rdTorrentId,
             );
@@ -2413,14 +2415,14 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
           if (torboxTorrentId != null) {
             // Torbox uses integer IDs, but updatePlaylistItemPoster expects String
             // We need to update the playlist manually
-            final items = await StorageService.getPlaylistItemsRaw();
+            final items = await PlaybackProgressStore.getPlaylistItemsRaw();
             final itemIndex = items.indexWhere(
               (item) => item['torboxTorrentId'] == torboxTorrentId,
             );
 
             if (itemIndex >= 0) {
               items[itemIndex]['posterUrl'] = posterUrl;
-              await StorageService.savePlaylistItemsRaw(items);
+              await PlaybackProgressStore.savePlaylistItemsRaw(items);
               updated = true;
             }
           }
@@ -2428,7 +2430,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
           final pikpakCollectionId =
               widget.playlistItem['pikpakFileId'] as String?;
           if (pikpakCollectionId != null) {
-            updated = await StorageService.updatePlaylistItemPoster(
+            updated = await PlaybackProgressStore.updatePlaylistItemPoster(
               posterUrl,
               pikpakCollectionId: pikpakCollectionId,
             );
@@ -2438,12 +2440,12 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
           final premiumizeItemId = widget.playlistItem['premiumizeItemId']
               ?.toString();
           if (premiumizeHash != null && premiumizeHash.isNotEmpty) {
-            updated = await StorageService.updatePlaylistItemPoster(
+            updated = await PlaybackProgressStore.updatePlaylistItemPoster(
               posterUrl,
               premiumizeHash: premiumizeHash,
             );
           } else if (premiumizeItemId != null && premiumizeItemId.isNotEmpty) {
-            updated = await StorageService.updatePlaylistItemPoster(
+            updated = await PlaybackProgressStore.updatePlaylistItemPoster(
               posterUrl,
               premiumizeItemId: premiumizeItemId,
             );
@@ -2451,7 +2453,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
         case PlaylistPlayKind.alldebrid:
           final allDebridHash = widget.playlistItem['torrent_hash'] as String?;
           if (allDebridHash != null && allDebridHash.isNotEmpty) {
-            updated = await StorageService.updatePlaylistItemPoster(
+            updated = await PlaybackProgressStore.updatePlaylistItemPoster(
               posterUrl,
               allDebridHash: allDebridHash,
             );
@@ -3321,7 +3323,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
 
     try {
       // Check current watched state
-      final isCurrentlyFinished = await StorageService.isEpisodeFinished(
+      final isCurrentlyFinished = await PlaybackProgressStore.isEpisodeFinished(
         seriesTitle: seriesTitle,
         season: season,
         episode: episodeNum,
@@ -3331,7 +3333,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
       if (isCurrentlyFinished) {
         // Episode is marked as watched, unmark it
         print('🔄 Unmarking as watched: $seriesTitle S${season}E$episodeNum');
-        await StorageService.unmarkEpisodeAsFinished(
+        await PlaybackProgressStore.unmarkEpisodeAsFinished(
           seriesTitle: seriesTitle,
           season: season,
           episode: episodeNum,
@@ -3340,7 +3342,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
       } else {
         // Episode is not watched, mark it as finished
         print('✅ Marking as watched: $seriesTitle S${season}E$episodeNum');
-        await StorageService.markEpisodeAsFinished(
+        await PlaybackProgressStore.markEpisodeAsFinished(
           seriesTitle: seriesTitle,
           season: season,
           episode: episodeNum,
@@ -4081,7 +4083,7 @@ class _PlaylistContentViewScreenState extends State<PlaylistContentViewScreen> {
   Future<WebDavConfig?> _resolveWebDavConfig() async {
     final serverId = (widget.playlistItem['webdavServerId'] ?? '').toString();
     final baseUrl = (widget.playlistItem['webdavBaseUrl'] ?? '').toString();
-    final servers = await StorageService.getWebDavServers(forSettings: false);
+    final servers = await ProviderCredentialPrefs.getWebDavServers(forSettings: false);
     for (final server in servers) {
       if (serverId.isNotEmpty && server.id == serverId) return server;
     }

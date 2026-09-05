@@ -70,16 +70,16 @@ void main() {
   );
 
   test('StorageService IPTV writes are readable through IptvPrefs', () async {
-    await StorageService.setIptvDecoderMode('software');
-    await StorageService.setIptvDefaultPlaylist('pl-1');
-    await StorageService.setIptvDefaultsInitialized(true);
-    await StorageService.setIptvTrackContinueWatching(false);
+    await IptvPrefs.setIptvDecoderMode('software');
+    await IptvPrefs.setIptvDefaultPlaylist('pl-1');
+    await IptvPrefs.setIptvDefaultsInitialized(true);
+    await IptvPrefs.setIptvTrackContinueWatching(false);
     await StorageService.setIptvSeriesAudioLanguage('show::1', 'deu');
-    await StorageService.setStartupIptvEnabled(true);
-    await StorageService.setStartupIptvMode(
+    await IptvPrefs.setStartupIptvEnabled(true);
+    await IptvPrefs.setStartupIptvMode(
       StorageService.startupIptvModePinned,
     );
-    await StorageService.setIptvPlaylists([
+    await IptvPrefs.setIptvPlaylists([
       IptvPlaylist(
         id: 'real',
         name: 'Sports',

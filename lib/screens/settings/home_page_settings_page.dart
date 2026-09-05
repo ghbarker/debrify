@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:flutter/material.dart';
 import '../../models/stremio_addon.dart';
 import '../../services/home_collections_store.dart';
@@ -421,7 +422,7 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
           .getEnabledCollections();
       var iptvLists = const <IptvListMeta>[];
       try {
-        iptvLists = await StorageService.getIptvLists();
+        iptvLists = await IptvPrefs.getIptvLists();
       } catch (_) {
         // Enabled iptvlist: entries surface as unavailable leaves.
       }

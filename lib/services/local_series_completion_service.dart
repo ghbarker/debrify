@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -67,7 +68,7 @@ class LocalSeriesCompletionService {
       final state = await _readState();
       return state[id]?['title']?.toString();
     });
-    await StorageService.unmarkSeriesAsFinished(id, seriesTitle: title);
+    await PlaybackProgressStore.unmarkSeriesAsFinished(id, seriesTitle: title);
     // Await the re-derivation so a completed badge cannot survive past the
     // watched action's own Future even if the revision listener is delayed.
     await caughtUpIds();
@@ -303,7 +304,7 @@ class LocalSeriesCompletionService {
 
   Future<bool> _recalculateAll(Map<String, Map<String, dynamic>> state) async {
     var changed = false;
-    final finishedIndex = await StorageService.getFinishedSeriesEpisodeIndex();
+    final finishedIndex = await PlaybackProgressStore.getFinishedSeriesEpisodeIndex();
     for (final entry in state.entries) {
       if (await _recalculateRecord(
         entry.key,
@@ -324,7 +325,7 @@ class LocalSeriesCompletionService {
     final title = record['title']?.toString() ?? '';
     if (title.isEmpty) return false;
     final finished = finishedIndex == null
-        ? await StorageService.getFinishedEpisodesByImdbId(
+        ? await PlaybackProgressStore.getFinishedEpisodesByImdbId(
             imdbId: imdbId,
             seriesTitle: title,
           )
@@ -346,15 +347,15 @@ class LocalSeriesCompletionService {
     if (wasCaughtUp == caughtUp) return false;
     record['caughtUp'] = caughtUp;
     if (caughtUp) {
-      final items = await StorageService.getContinueWatchingItems();
+      final items = await PlaybackProgressStore.getContinueWatchingItems();
       final match = items.where((item) {
         return item['imdbId']?.toString().trim().toLowerCase() == imdbId;
       }).firstOrNull;
       if (match != null) record['continueWatching'] = match;
-      await StorageService.removeContinueWatchingItem(imdbId);
+      await PlaybackProgressStore.removeContinueWatchingItem(imdbId);
     } else if (wasCaughtUp && record['continueWatching'] is Map) {
       final item = Map<String, dynamic>.from(record['continueWatching'] as Map);
-      await StorageService.saveContinueWatchingItem(
+      await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: imdbId,
         title: item['title']?.toString() ?? title,
         contentType: 'series',

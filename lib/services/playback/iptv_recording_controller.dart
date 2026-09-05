@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -13,7 +14,6 @@ import '../desktop_recording_service.dart';
 import '../live_recording_service.dart';
 import '../profiles/profile_policy_guard.dart';
 import '../profiles/profile_runtime.dart';
-import '../storage_service.dart';
 
 /// Live player state the moved IPTV recording functions read and write.
 ///
@@ -534,7 +534,7 @@ class IptvRecordingController {
     // edit made while this player lives (PiP, background), and every edit
     // bumps every source's revision — a stale one would be refused at start.
     try {
-      final playlists = await StorageService.getIptvPlaylists(
+      final playlists = await IptvPrefs.getIptvPlaylists(
         forSettings: false,
       );
       for (final playlist in playlists) {

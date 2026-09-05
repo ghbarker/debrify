@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -93,7 +94,7 @@ class _QuickPlaySettingsPageState extends State<QuickPlaySettingsPage> {
   Future<void> _load() async {
     final movie = await StorageService.getQuickPlayRules(isMovie: true);
     final show = await StorageService.getQuickPlayRules(isMovie: false);
-    final provider = await StorageService.getDefaultTorrentProvider();
+    final provider = await ProviderCredentialPrefs.getDefaultTorrentProvider();
     final playMode = await StorageService.getPlayButtonMode();
     if (!mounted) return;
     setState(() {

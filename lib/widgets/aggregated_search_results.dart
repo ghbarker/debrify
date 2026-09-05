@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -480,7 +482,7 @@ class AggregatedSearchResultsState extends State<AggregatedSearchResults> {
     if (item.type == 'series') {
       final imdbId = item.effectiveImdbId;
       if (imdbId != null) {
-        final lastPlayed = await StorageService.getLastPlayedEpisodeByImdbId(
+        final lastPlayed = await PlaybackProgressStore.getLastPlayedEpisodeByImdbId(
           imdbId,
         );
         if (!mounted) return;
@@ -491,7 +493,7 @@ class AggregatedSearchResultsState extends State<AggregatedSearchResults> {
       }
       // Fallback to title-based lookup
       if (season == null || episode == null) {
-        final byTitle = await StorageService.getLastPlayedEpisode(
+        final byTitle = await PlaybackProgressStore.getLastPlayedEpisode(
           seriesTitle: item.name,
         );
         if (!mounted) return;
@@ -581,9 +583,9 @@ class AggregatedSearchResultsState extends State<AggregatedSearchResults> {
     final torboxKey = await StorageService.getTorboxApiKey();
     final premiumizeKey = await StorageService.getPremiumizeApiKey();
     final premiumizeIntegration =
-        await StorageService.getPremiumizeIntegrationEnabled();
+        await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
     final allDebridKey = await StorageService.getAllDebridApiKey();
-    final pikpakEnabled = await StorageService.getPikPakEnabled();
+    final pikpakEnabled = await ProviderCredentialPrefs.getPikPakEnabled();
     final rdEnabled = rdKey != null && rdKey.isNotEmpty;
     final torboxEnabled = torboxKey != null && torboxKey.isNotEmpty;
     final premiumizeEnabled = premiumizeIntegration &&

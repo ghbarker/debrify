@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -142,17 +143,17 @@ class KeywordSearchController extends ChangeNotifier {
   /// see up-to-date settings.
   Future<void> loadCacheConfig() async {
     final r = await Future.wait([
-      StorageService.getTorboxCacheCheckEnabled(),
-      StorageService.getTorboxIntegrationEnabled(),
+      ProviderCredentialPrefs.getTorboxCacheCheckEnabled(),
+      ProviderCredentialPrefs.getTorboxIntegrationEnabled(),
       StorageService.getTorboxApiKey(),
-      StorageService.getPremiumizeCacheCheckEnabled(),
-      StorageService.getPremiumizeIntegrationEnabled(),
+      ProviderCredentialPrefs.getPremiumizeCacheCheckEnabled(),
+      ProviderCredentialPrefs.getPremiumizeIntegrationEnabled(),
       StorageService.getPremiumizeApiKey(),
       StorageService.getApiKey(),
-      StorageService.getRealDebridIntegrationEnabled(),
+      ProviderCredentialPrefs.getRealDebridIntegrationEnabled(),
       StorageService.getAllDebridApiKey(),
-      StorageService.getAllDebridIntegrationEnabled(),
-      StorageService.getPikPakEnabled(),
+      ProviderCredentialPrefs.getAllDebridIntegrationEnabled(),
+      ProviderCredentialPrefs.getPikPakEnabled(),
     ]);
     final tbKey = r[2] as String?;
     final pmKey = r[5] as String?;

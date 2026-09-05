@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1498,9 +1499,9 @@ class TraktResultsViewState extends State<TraktResultsView> {
     final torboxKey = await StorageService.getTorboxApiKey();
     final premiumizeKey = await StorageService.getPremiumizeApiKey();
     final premiumizeIntegration =
-        await StorageService.getPremiumizeIntegrationEnabled();
+        await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
     final allDebridKey = await StorageService.getAllDebridApiKey();
-    final pikpakEnabled = await StorageService.getPikPakEnabled();
+    final pikpakEnabled = await ProviderCredentialPrefs.getPikPakEnabled();
     final rdEnabled = rdKey != null && rdKey.isNotEmpty;
     final torboxEnabled = torboxKey != null && torboxKey.isNotEmpty;
     final premiumizeEnabled =

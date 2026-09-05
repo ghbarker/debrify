@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:flutter/material.dart';
 import '../../services/storage_service.dart';
 import '../../services/premiumize_account_service.dart';
@@ -42,10 +43,10 @@ class _PremiumizeSettingsPageState extends State<PremiumizeSettingsPage> {
   Future<void> _load() async {
     final configured = await StorageService.hasPremiumizeCredential();
     final integrationEnabled =
-        await StorageService.getPremiumizeIntegrationEnabled();
-    final cachePref = await StorageService.getPremiumizeCacheCheckEnabled();
-    final postAction = await StorageService.getPremiumizePostTorrentAction();
-    final hiddenFromNav = await StorageService.getPremiumizeHiddenFromNav();
+        await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled();
+    final cachePref = await ProviderCredentialPrefs.getPremiumizeCacheCheckEnabled();
+    final postAction = await ProviderCredentialPrefs.getPremiumizePostTorrentAction();
+    final hiddenFromNav = await ProviderCredentialPrefs.getPremiumizeHiddenFromNav();
     setState(() {
       _savedApiKey = configured ? '' : null;
       _integrationEnabled = integrationEnabled;
@@ -97,12 +98,12 @@ class _PremiumizeSettingsPageState extends State<PremiumizeSettingsPage> {
 
   Future<void> _updateCacheCheck(bool value) async {
     setState(() => _checkCacheBeforeSearch = value);
-    await StorageService.setPremiumizeCacheCheckEnabled(value);
+    await ProviderCredentialPrefs.setPremiumizeCacheCheckEnabled(value);
   }
 
   Future<void> _savePostAction(String value) async {
     setState(() => _postTorrentAction = value);
-    await StorageService.savePremiumizePostTorrentAction(value);
+    await ProviderCredentialPrefs.savePremiumizePostTorrentAction(value);
     _snack('Preference saved');
   }
 
@@ -166,7 +167,7 @@ class _PremiumizeSettingsPageState extends State<PremiumizeSettingsPage> {
     }
     // Reset the hide-from-nav flag so the tab reappears after re-login
     // (matches the Torbox/PikPak logout-to-unhide security model).
-    await StorageService.clearPremiumizeHiddenFromNav();
+    await ProviderCredentialPrefs.clearPremiumizeHiddenFromNav();
     PremiumizeAccountService.clearUserInfo();
     if (mounted) {
       setState(() => _hiddenFromNav = false);
@@ -225,7 +226,7 @@ class _PremiumizeSettingsPageState extends State<PremiumizeSettingsPage> {
 
       if (confirmed != true) return;
 
-      await StorageService.setPremiumizeHiddenFromNav(true);
+      await ProviderCredentialPrefs.setPremiumizeHiddenFromNav(true);
       setState(() => _hiddenFromNav = true);
       MainPageBridge.notifyIntegrationChanged();
       _snack('Premiumize hidden from navigation', err: false);
@@ -262,7 +263,7 @@ class _PremiumizeSettingsPageState extends State<PremiumizeSettingsPage> {
         _isEditing = false;
       }
     });
-    await StorageService.setPremiumizeIntegrationEnabled(value);
+    await ProviderCredentialPrefs.setPremiumizeIntegrationEnabled(value);
     MainPageBridge.notifyIntegrationChanged();
     if (!mounted) return;
     if (value && _savedApiKey != null) {

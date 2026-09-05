@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../screens/video_player/services/subtitle_settings_service.dart';
@@ -160,7 +161,7 @@ class ProfileAppLifecycleParticipant implements ProfileLifecycleParticipant {
       // forever. Best-effort — a profile switch must not fail over cleanup of
       // playback state written by builds as old as 0.7.0.
       try {
-        await StorageService.purgeUnwatchedResumeGhosts();
+        await PlaybackProgressStore.purgeUnwatchedResumeGhosts();
       } catch (e) {
         debugPrint('ProfileAppLifecycle: resume-ghost purge failed — $e');
       }

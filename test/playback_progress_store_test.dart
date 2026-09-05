@@ -19,7 +19,7 @@ void main() {
         isTrue,
       );
       final before = notifier.value;
-      await StorageService.setSeriesExplicitlyWatched('TT2', watched: true);
+      await PlaybackProgressStore.setSeriesExplicitlyWatched('TT2', watched: true);
       expect(await PlaybackProgressStore.getExplicitlyWatchedSeriesIds(), {
         'tt2',
       });
@@ -27,7 +27,7 @@ void main() {
         'TT1',
         watched: true,
       );
-      expect(await StorageService.getExplicitlyWatchedSeriesIds(), {
+      expect(await PlaybackProgressStore.getExplicitlyWatchedSeriesIds(), {
         'tt1',
         'tt2',
       });

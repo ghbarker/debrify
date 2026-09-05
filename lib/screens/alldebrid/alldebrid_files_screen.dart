@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1008,7 +1009,7 @@ class _AllDebridFilesScreenState extends State<AllDebridCloudFilesHost> {
     }
     bool added;
     if (videos.length == 1) {
-      added = await StorageService.addPlaylistItemRaw({
+      added = await PlaybackProgressStore.addPlaylistItemRaw({
         'provider': 'alldebrid',
         'title': FileUtils.cleanPlaylistTitle(magnet.name),
         'kind': 'single',
@@ -1017,7 +1018,7 @@ class _AllDebridFilesScreenState extends State<AllDebridCloudFilesHost> {
         'sizeBytes': videos.first.size,
       });
     } else {
-      added = await StorageService.addPlaylistItemRaw({
+      added = await PlaybackProgressStore.addPlaylistItemRaw({
         'provider': 'alldebrid',
         'title': FileUtils.cleanPlaylistTitle(magnet.name),
         'kind': 'collection',

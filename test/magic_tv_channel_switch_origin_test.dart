@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -247,8 +248,8 @@ void main() {
     await StorageService.saveAllDebridApiKey('captured-key');
     await StorageService.saveTorboxApiKey('fixture-key');
     await StorageService.savePremiumizeApiKey('fixture-key');
-    await StorageService.setPikPakAccessToken('fixture-access');
-    await StorageService.setPikPakRefreshToken('fixture-refresh');
+    await ProviderCredentialPrefs.setPikPakAccessToken('fixture-access');
+    await ProviderCredentialPrefs.setPikPakRefreshToken('fixture-refresh');
     await StorageService.saveDebrifyTvProvider('torbox');
     await StorageService.setDefaultPlayerMode('internal');
     torbox = _HeldTorbox();

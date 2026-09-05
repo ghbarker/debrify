@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:flutter/material.dart';
 
 import '../engine/local_engine_storage.dart';
@@ -503,7 +504,7 @@ Future<void> _buildAddons(TransferBuildContext ctx) async {
 
 Future<void> _buildWebDav(TransferBuildContext ctx) async {
   try {
-    final servers = await StorageService.getWebDavServers();
+    final servers = await ProviderCredentialPrefs.getWebDavServers();
     final webDavServers = servers.map((s) {
       final json = s.toTransferJson();
       if (!ctx.includeCredentials) json['password'] = '';
@@ -577,7 +578,7 @@ Future<void> _applyRealDebrid(TransferApplyContext ctx) async {
   if (key != null && key.isNotEmpty) {
     try {
       await StorageService.saveApiKey(key);
-      await StorageService.setRealDebridIntegrationEnabled(true);
+      await ProviderCredentialPrefs.setRealDebridIntegrationEnabled(true);
       ctx.report.realDebrid = true;
     } catch (_) {
       ctx.report.errors.add('Real-Debrid: restore failed');
@@ -590,7 +591,7 @@ Future<void> _applyTorbox(TransferApplyContext ctx) async {
   if (key != null && key.isNotEmpty) {
     try {
       await StorageService.saveTorboxApiKey(key);
-      await StorageService.setTorboxIntegrationEnabled(true);
+      await ProviderCredentialPrefs.setTorboxIntegrationEnabled(true);
       ctx.report.torbox = true;
     } catch (_) {
       ctx.report.errors.add('Torbox: restore failed');
@@ -603,7 +604,7 @@ Future<void> _applyPremiumize(TransferApplyContext ctx) async {
   if (key != null && key.isNotEmpty) {
     try {
       await StorageService.savePremiumizeApiKey(key);
-      await StorageService.setPremiumizeIntegrationEnabled(true);
+      await ProviderCredentialPrefs.setPremiumizeIntegrationEnabled(true);
       ctx.report.premiumize = true;
     } catch (_) {
       ctx.report.errors.add('Premiumize: restore failed');
@@ -616,7 +617,7 @@ Future<void> _applyAllDebrid(TransferApplyContext ctx) async {
   if (key != null && key.isNotEmpty) {
     try {
       await StorageService.saveAllDebridApiKey(key);
-      await StorageService.setAllDebridIntegrationEnabled(true);
+      await ProviderCredentialPrefs.setAllDebridIntegrationEnabled(true);
       ctx.report.allDebrid = true;
     } catch (_) {
       ctx.report.errors.add('AllDebrid: restore failed');
@@ -635,7 +636,7 @@ Future<void> _applyPikpak(TransferApplyContext ctx) async {
         if (password != null && password.isNotEmpty) {
           await StorageService.setPikPakPassword(password);
         }
-        await StorageService.setPikPakEnabled(true);
+        await ProviderCredentialPrefs.setPikPakEnabled(true);
         // PikPak needs an active session, not just stored credentials —
         // run a real login so isAuthenticated() returns true after
         // restore. If it fails (e.g. offline), the credentials remain
@@ -878,24 +879,24 @@ Future<TransferInventory> _inspectKey({
 
 Future<TransferInventory> _inspectRealDebrid() => _inspectKey(
   read: StorageService.getApiKey,
-  enabled: StorageService.getRealDebridIntegrationEnabled,
+  enabled: ProviderCredentialPrefs.getRealDebridIntegrationEnabled,
 );
 Future<TransferInventory> _inspectTorbox() => _inspectKey(
   read: StorageService.getTorboxApiKey,
-  enabled: StorageService.getTorboxIntegrationEnabled,
+  enabled: ProviderCredentialPrefs.getTorboxIntegrationEnabled,
 );
 Future<TransferInventory> _inspectPremiumize() => _inspectKey(
   read: StorageService.getPremiumizeApiKey,
-  enabled: StorageService.getPremiumizeIntegrationEnabled,
+  enabled: ProviderCredentialPrefs.getPremiumizeIntegrationEnabled,
 );
 Future<TransferInventory> _inspectAllDebrid() => _inspectKey(
   read: StorageService.getAllDebridApiKey,
-  enabled: StorageService.getAllDebridIntegrationEnabled,
+  enabled: ProviderCredentialPrefs.getAllDebridIntegrationEnabled,
 );
 
 Future<TransferInventory> _inspectPikpak() async {
   final email = await StorageService.getPikPakEmail(forRemoteTransfer: true);
-  final enabled = await StorageService.getPikPakEnabled();
+  final enabled = await ProviderCredentialPrefs.getPikPakEnabled();
   final ok = email != null && email.isNotEmpty && enabled;
   // Password must be typed on Send Setup to TV.
   return TransferInventory(isConfigured: ok, defaultSelected: false);
@@ -960,7 +961,7 @@ Future<TransferInventory> _inspectSearchEngines() async {
 
 Future<TransferInventory> _inspectWebDav() async {
   try {
-    final n = (await StorageService.getWebDavServers(
+    final n = (await ProviderCredentialPrefs.getWebDavServers(
       forSettings: false,
       forRemoteTransfer: true,
     )).length;
@@ -1134,7 +1135,7 @@ Future<Object?> _readSearchEnginesWire(TransferSendContext ctx) async {
 }
 
 Future<Object?> _readWebDavWire(TransferSendContext ctx) async {
-  final servers = await StorageService.getWebDavServers(
+  final servers = await ProviderCredentialPrefs.getWebDavServers(
     forSettings: false,
     forRemoteTransfer: ctx.forRemoteTransfer,
   );

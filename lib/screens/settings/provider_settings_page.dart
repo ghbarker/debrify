@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/analytics_service.dart';
@@ -61,16 +62,16 @@ class DefaultProviderDispatch {
       case CloudProviderId.pikpak:
         return PikPakApiService.instance.isAuthenticated();
       case CloudProviderId.debrid:
-        return await StorageService.getRealDebridIntegrationEnabled() &&
+        return await ProviderCredentialPrefs.getRealDebridIntegrationEnabled() &&
             await StorageService.hasRealDebridCredential();
       case CloudProviderId.torbox:
-        return await StorageService.getTorboxIntegrationEnabled() &&
+        return await ProviderCredentialPrefs.getTorboxIntegrationEnabled() &&
             await StorageService.hasTorboxCredential();
       case CloudProviderId.premiumize:
-        return await StorageService.getPremiumizeIntegrationEnabled() &&
+        return await ProviderCredentialPrefs.getPremiumizeIntegrationEnabled() &&
             await StorageService.hasPremiumizeCredential();
       case CloudProviderId.alldebrid:
-        return await StorageService.getAllDebridIntegrationEnabled() &&
+        return await ProviderCredentialPrefs.getAllDebridIntegrationEnabled() &&
             await StorageService.hasAllDebridCredential();
     }
   }
@@ -158,14 +159,14 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
     }
 
     // Load current setting
-    var currentProvider = await StorageService.getDefaultTorrentProvider();
+    var currentProvider = await ProviderCredentialPrefs.getDefaultTorrentProvider();
     final next = DefaultProviderDispatch.resetIfUnavailable(
       currentProvider,
       available,
     );
     if (next != currentProvider) {
       currentProvider = next;
-      await StorageService.setDefaultTorrentProvider(next);
+      await ProviderCredentialPrefs.setDefaultTorrentProvider(next);
     }
 
     if (!mounted) return;
@@ -211,7 +212,7 @@ class _ProviderSettingsPageState extends State<ProviderSettingsPage> {
     setState(() {
       _selectedProvider = provider;
     });
-    await StorageService.setDefaultTorrentProvider(provider);
+    await ProviderCredentialPrefs.setDefaultTorrentProvider(provider);
   }
 
   @override

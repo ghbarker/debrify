@@ -1,10 +1,11 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import '../../screens/video_player_screen.dart';
 import '../../services/analytics_service.dart';
 import '../../services/pikpak_api_service.dart';
-import '../../services/storage_service.dart';
 import '../../services/download_service.dart';
 import '../../services/video_player_launcher.dart';
 import '../../services/main_page_bridge.dart';
@@ -474,12 +475,12 @@ class _PikPakFilesScreenState extends State<PikPakCloudFilesHost> {
   }
 
   Future<void> _loadSettings() async {
-    final enabled = await StorageService.getPikPakEnabled();
-    final showVideosOnly = await StorageService.getPikPakShowVideosOnly();
-    final ignoreSmallVideos = await StorageService.getPikPakIgnoreSmallVideos();
+    final enabled = await ProviderCredentialPrefs.getPikPakEnabled();
+    final showVideosOnly = await ProviderCredentialPrefs.getPikPakShowVideosOnly();
+    final ignoreSmallVideos = await ProviderCredentialPrefs.getPikPakIgnoreSmallVideos();
     final email = await PikPakApiService.instance.getEmail();
-    final restrictedId = await StorageService.getPikPakRestrictedFolderId();
-    final restrictedName = await StorageService.getPikPakRestrictedFolderName();
+    final restrictedId = await ProviderCredentialPrefs.getPikPakRestrictedFolderId();
+    final restrictedName = await ProviderCredentialPrefs.getPikPakRestrictedFolderName();
 
     if (!mounted) return;
 
@@ -2999,7 +3000,7 @@ class _PikPakFilesScreenState extends State<PikPakCloudFilesHost> {
       return;
     }
 
-    final added = await StorageService.addPlaylistItemRaw({
+    final added = await PlaybackProgressStore.addPlaylistItemRaw({
       'provider': 'pikpak',
       'title': FileUtils.cleanPlaylistTitle(file['name'] ?? 'Video'),
       'kind': 'single',
@@ -3093,7 +3094,7 @@ class _PikPakFilesScreenState extends State<PikPakCloudFilesHost> {
       if (videoFiles.length == 1) {
         // Single video file - store full metadata for instant playback
         final file = videoFiles.first;
-        final added = await StorageService.addPlaylistItemRaw({
+        final added = await PlaybackProgressStore.addPlaylistItemRaw({
           'provider': 'pikpak',
           'title': FileUtils.cleanPlaylistTitle(file['name'] ?? folderName),
           'kind': 'single',
@@ -3125,7 +3126,7 @@ class _PikPakFilesScreenState extends State<PikPakCloudFilesHost> {
             )
             .toList();
 
-        final added = await StorageService.addPlaylistItemRaw({
+        final added = await PlaybackProgressStore.addPlaylistItemRaw({
           'provider': 'pikpak',
           'title': FileUtils.cleanPlaylistTitle(folderName),
           'kind': 'collection',

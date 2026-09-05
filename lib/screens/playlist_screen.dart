@@ -1,10 +1,10 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/analytics_service.dart';
-import '../services/storage_service.dart';
 import '../services/main_page_bridge.dart';
 import '../theme/app_theme_scope.dart';
 import '../services/playlist_player_service.dart';
@@ -135,11 +135,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   }
 
   Future<void> _loadData() async {
-    final items = await StorageService.getPlaylistItemsRaw();
+    final items = await PlaybackProgressStore.getPlaylistItemsRaw();
 
     // Apply poster overrides for items that have saved custom posters
     for (var item in items) {
-      final posterOverride = await StorageService.getPlaylistPosterOverride(
+      final posterOverride = await PlaybackProgressStore.getPlaylistPosterOverride(
         item,
       );
       if (posterOverride != null && posterOverride.isNotEmpty) {
@@ -148,10 +148,10 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     }
 
     // Load progress data from playback state
-    final progressMap = await StorageService.buildPlaylistProgressMap(items);
+    final progressMap = await PlaybackProgressStore.buildPlaylistProgressMap(items);
 
     // Load favorites
-    final favoriteKeys = await StorageService.getPlaylistFavoriteKeys();
+    final favoriteKeys = await PlaybackProgressStore.getPlaylistFavoriteKeys();
 
     if (!mounted) return;
     setState(() {
@@ -186,7 +186,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   // Favorites section items (filtered by search)
   List<Map<String, dynamic>> _getFavoriteItems(String query) {
     return _getFilteredItems(query).where((item) {
-      final dedupeKey = StorageService.computePlaylistDedupeKey(item);
+      final dedupeKey = PlaybackProgressStore.computePlaylistDedupeKey(item);
       return _favoriteKeys.contains(dedupeKey);
     }).toList();
   }
@@ -198,10 +198,10 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   // Toggle favorite status for an item
   Future<void> _toggleFavorite(Map<String, dynamic> item) async {
-    final dedupeKey = StorageService.computePlaylistDedupeKey(item);
+    final dedupeKey = PlaybackProgressStore.computePlaylistDedupeKey(item);
     final isCurrentlyFavorited = _favoriteKeys.contains(dedupeKey);
 
-    await StorageService.setPlaylistItemFavorited(item, !isCurrentlyFavorited);
+    await PlaybackProgressStore.setPlaylistItemFavorited(item, !isCurrentlyFavorited);
 
     if (!mounted) return;
     setState(() {
@@ -308,12 +308,12 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         // Find the index of the item being deleted for focus restoration
         final currentIndex = _allItems.indexWhere(
           (playlistItem) =>
-              StorageService.computePlaylistDedupeKey(playlistItem) ==
-              StorageService.computePlaylistDedupeKey(item),
+              PlaybackProgressStore.computePlaylistDedupeKey(playlistItem) ==
+              PlaybackProgressStore.computePlaylistDedupeKey(item),
         );
 
-        final dedupeKey = StorageService.computePlaylistDedupeKey(item);
-        await StorageService.removePlaylistItemByKey(dedupeKey);
+        final dedupeKey = PlaybackProgressStore.computePlaylistDedupeKey(item);
+        await PlaybackProgressStore.removePlaylistItemByKey(dedupeKey);
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
@@ -400,7 +400,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
     if (confirmed == true) {
       final title = item['title'] as String? ?? '';
-      await StorageService.clearPlaylistProgress(title: title);
+      await PlaybackProgressStore.clearPlaylistProgress(title: title);
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,

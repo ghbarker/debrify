@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -253,7 +255,7 @@ class _DebridDownloadsScreenState extends State<RealDebridCloudFilesHost> {
         widget.initialSearchQuery!.isNotEmpty) {
       _isTorrentSearchActive = true;
       _torrentSearchController.text = widget.initialSearchQuery!;
-      StorageService.getRealDebridHiddenFromNav().then((v) {
+      ProviderCredentialPrefs.getRealDebridHiddenFromNav().then((v) {
         if (mounted) setState(() => _hiddenFromNav = v);
       });
     }
@@ -3848,7 +3850,7 @@ class _DebridDownloadsScreenState extends State<RealDebridCloudFilesHost> {
         final mimeType = unrestrictResult['mimeType']?.toString() ?? '';
 
         if (FileUtils.isVideoMimeType(mimeType)) {
-          final ok = await StorageService.addPlaylistItemRaw({
+          final ok = await PlaybackProgressStore.addPlaylistItemRaw({
             'title': FileUtils.cleanPlaylistTitle(torrent.filename),
             'url': '',
             'restrictedLink': torrent.links[0],
@@ -3872,7 +3874,7 @@ class _DebridDownloadsScreenState extends State<RealDebridCloudFilesHost> {
         }
       }
     } else {
-      final ok = await StorageService.addPlaylistItemRaw({
+      final ok = await PlaybackProgressStore.addPlaylistItemRaw({
         'title': FileUtils.cleanPlaylistTitle(torrent.filename),
         'kind': 'collection',
         'rdTorrentId': torrent.id,
@@ -4443,7 +4445,7 @@ class _DebridDownloadsScreenState extends State<RealDebridCloudFilesHost> {
 
     try {
       // Get the default file selection preference
-      final fileSelection = await StorageService.getFileSelection();
+      final fileSelection = await ProviderCredentialPrefs.getFileSelection();
 
       // Add the magnet using the same logic as the torrent search screen
       await DebridService.addTorrentToDebrid(
@@ -4954,7 +4956,7 @@ class _DebridDownloadsScreenState extends State<RealDebridCloudFilesHost> {
           'rdTorrentId': torrent.id,
           'kind': 'single',
         };
-        final ok = await StorageService.addPlaylistItemRaw(item);
+        final ok = await PlaybackProgressStore.addPlaylistItemRaw(item);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -6342,7 +6344,7 @@ class _DebridDownloadsScreenState extends State<RealDebridCloudFilesHost> {
     if (_currentTorrentId == null) return;
 
     try {
-      final added = await StorageService.addPlaylistItemRaw({
+      final added = await PlaybackProgressStore.addPlaylistItemRaw({
         'provider': 'rd',
         'title': FileUtils.cleanPlaylistTitle(file.name),
         'kind': 'single',
@@ -6374,7 +6376,7 @@ class _DebridDownloadsScreenState extends State<RealDebridCloudFilesHost> {
       }
 
       // Add as a collection to playlist
-      final added = await StorageService.addPlaylistItemRaw({
+      final added = await PlaybackProgressStore.addPlaylistItemRaw({
         'provider': 'rd',
         'title': FileUtils.cleanPlaylistTitle(folder.name),
         'kind': 'collection',

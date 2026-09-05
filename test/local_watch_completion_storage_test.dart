@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:debrify/services/debrify_tv_database.dart';
 import 'package:debrify/services/iptv_media_store.dart';
 import 'package:debrify/models/stremio_addon.dart';
@@ -32,28 +33,28 @@ void main() {
 
   test('movie and episode completion thresholds are independent', () async {
     expect(
-      await StorageService.getMovieCompletionThreshold(),
+      await PlaybackProgressStore.getMovieCompletionThreshold(),
       StorageService.defaultLocalCompletionThreshold,
     );
     expect(
-      await StorageService.getEpisodeCompletionThreshold(),
+      await PlaybackProgressStore.getEpisodeCompletionThreshold(),
       StorageService.defaultLocalCompletionThreshold,
     );
 
-    await StorageService.setMovieCompletionThreshold(90);
-    await StorageService.setEpisodeCompletionThreshold(75);
+    await PlaybackProgressStore.setMovieCompletionThreshold(90);
+    await PlaybackProgressStore.setEpisodeCompletionThreshold(75);
 
-    expect(await StorageService.getMovieCompletionThreshold(), 90);
-    expect(await StorageService.getEpisodeCompletionThreshold(), 75);
+    expect(await PlaybackProgressStore.getMovieCompletionThreshold(), 90);
+    expect(await PlaybackProgressStore.getEpisodeCompletionThreshold(), 75);
   });
 
   test('finishing a local movie clears resume and continue watching', () async {
-    await StorageService.saveContinueWatchingItem(
+    await PlaybackProgressStore.saveContinueWatchingItem(
       imdbId: 'TT001',
       title: 'Example Movie',
       contentType: 'movie',
     );
-    await StorageService.saveVideoPlaybackState(
+    await PlaybackProgressStore.saveVideoPlaybackState(
       videoTitle: 'Example Movie',
       videoUrl: 'https://example.com/movie.m3u8',
       positionMs: 64000,
@@ -61,11 +62,11 @@ void main() {
       imdbId: 'TT001',
     );
 
-    await StorageService.markMovieAsFinished('TT001');
+    await PlaybackProgressStore.markMovieAsFinished('TT001');
 
     // Simulate a final autosave racing with the completion cleanup. The local
     // completed marker remains authoritative until a deliberate rewatch.
-    await StorageService.saveVideoPlaybackState(
+    await PlaybackProgressStore.saveVideoPlaybackState(
       videoTitle: 'Example Movie',
       videoUrl: 'https://example.com/movie.m3u8',
       positionMs: 96000,
@@ -73,20 +74,20 @@ void main() {
       imdbId: 'TT001',
     );
 
-    expect(await StorageService.isMovieFinished('tt001'), isTrue);
+    expect(await PlaybackProgressStore.isMovieFinished('tt001'), isTrue);
     expect(
       await StorageService.getVideoPlaybackState(videoTitle: 'Example Movie'),
       isNull,
     );
-    expect(await StorageService.getVideoPlaybackStateByImdbId('tt001'), isNull);
-    expect(await StorageService.getContinueWatchingItems(), isEmpty);
+    expect(await PlaybackProgressStore.getVideoPlaybackStateByImdbId('tt001'), isNull);
+    expect(await PlaybackProgressStore.getContinueWatchingItems(), isEmpty);
 
-    await StorageService.unmarkMovieAsFinished('tt001');
-    expect(await StorageService.isMovieFinished('tt001'), isFalse);
+    await PlaybackProgressStore.unmarkMovieAsFinished('tt001');
+    expect(await PlaybackProgressStore.isMovieFinished('tt001'), isFalse);
   });
 
   test('clearing playlist progress invalidates local completion', () async {
-    await StorageService.saveSeriesPlaybackState(
+    await PlaybackProgressStore.saveSeriesPlaybackState(
       seriesTitle: 'Example Series',
       season: 1,
       episode: 1,
@@ -94,7 +95,7 @@ void main() {
       durationMs: 1000,
       imdbId: 'tt-series',
     );
-    await StorageService.markEpisodeAsFinished(
+    await PlaybackProgressStore.markEpisodeAsFinished(
       seriesTitle: 'Example Series',
       season: 1,
       episode: 1,
@@ -102,10 +103,10 @@ void main() {
     );
     final revisionBefore = StorageService.localCompletionRevision.value;
 
-    await StorageService.clearPlaylistProgress(title: 'Example Series');
+    await PlaybackProgressStore.clearPlaylistProgress(title: 'Example Series');
 
     expect(
-      await StorageService.isEpisodeFinished(
+      await PlaybackProgressStore.isEpisodeFinished(
         seriesTitle: 'Example Series',
         season: 1,
         episode: 1,
@@ -116,7 +117,7 @@ void main() {
   });
 
   test('clearing playback by IMDb invalidates local completion', () async {
-    await StorageService.markEpisodeAsFinished(
+    await PlaybackProgressStore.markEpisodeAsFinished(
       seriesTitle: 'IMDb Clear Show',
       season: 1,
       episode: 1,
@@ -124,10 +125,10 @@ void main() {
     );
     final revisionBefore = StorageService.localCompletionRevision.value;
 
-    await StorageService.clearPlaybackStateByImdbId('TT-IMDB-CLEAR');
+    await PlaybackProgressStore.clearPlaybackStateByImdbId('TT-IMDB-CLEAR');
 
     expect(
-      await StorageService.isEpisodeFinished(
+      await PlaybackProgressStore.isEpisodeFinished(
         seriesTitle: 'IMDb Clear Show',
         season: 1,
         episode: 1,
@@ -138,23 +139,23 @@ void main() {
   });
 
   test('finished episode index unions duplicate IMDb records', () async {
-    await StorageService.markEpisodeAsFinished(
+    await PlaybackProgressStore.markEpisodeAsFinished(
       seriesTitle: 'Original Title',
       season: 1,
       episode: 1,
       imdbId: 'tt-duplicate',
     );
-    await StorageService.markEpisodeAsFinished(
+    await PlaybackProgressStore.markEpisodeAsFinished(
       seriesTitle: 'Localized Title',
       season: 1,
       episode: 2,
       imdbId: 'tt-duplicate',
     );
 
-    final index = await StorageService.getFinishedSeriesEpisodeIndex();
+    final index = await PlaybackProgressStore.getFinishedSeriesEpisodeIndex();
     expect(index['tt-duplicate']?['1'], {1, 2});
     expect(
-      await StorageService.getFinishedEpisodesByImdbId(imdbId: 'tt-duplicate'),
+      await PlaybackProgressStore.getFinishedEpisodesByImdbId(imdbId: 'tt-duplicate'),
       {
         '1': {1, 2},
       },
@@ -184,20 +185,20 @@ void main() {
   test(
     'existing playback is migrated once using separate thresholds',
     () async {
-      await StorageService.setMovieCompletionThreshold(90);
-      await StorageService.setEpisodeCompletionThreshold(75);
+      await PlaybackProgressStore.setMovieCompletionThreshold(90);
+      await PlaybackProgressStore.setEpisodeCompletionThreshold(75);
 
-      await StorageService.saveContinueWatchingItem(
+      await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'tt-movie-done',
         title: 'Done Movie',
         contentType: 'movie',
       );
-      await StorageService.saveContinueWatchingItem(
+      await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'tt-movie-partial',
         title: 'Partial Movie',
         contentType: 'movie',
       );
-      await StorageService.saveVideoPlaybackState(
+      await PlaybackProgressStore.saveVideoPlaybackState(
         videoTitle: 'Done Movie',
         videoUrl: 'https://example.com/done.m3u8',
         positionMs: 900,
@@ -211,14 +212,14 @@ void main() {
         'aspect': 'contain',
         'updatedAt': 1,
       });
-      await StorageService.saveVideoPlaybackState(
+      await PlaybackProgressStore.saveVideoPlaybackState(
         videoTitle: 'Partial Movie',
         videoUrl: 'https://example.com/partial.m3u8',
         positionMs: 850,
         durationMs: 1000,
         imdbId: 'tt-movie-partial',
       );
-      await StorageService.saveSeriesPlaybackState(
+      await PlaybackProgressStore.saveSeriesPlaybackState(
         seriesTitle: 'Example Series',
         season: 1,
         episode: 1,
@@ -226,7 +227,7 @@ void main() {
         durationMs: 1000,
         imdbId: 'tt-series',
       );
-      await StorageService.saveSeriesPlaybackState(
+      await PlaybackProgressStore.saveSeriesPlaybackState(
         seriesTitle: 'Example Series',
         season: 1,
         episode: 2,
@@ -235,10 +236,10 @@ void main() {
         imdbId: 'tt-series',
       );
 
-      await StorageService.migrateExistingPlaybackCompletionThresholds();
+      await PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds();
 
-      expect(await StorageService.isMovieFinished('tt-movie-done'), isTrue);
-      expect(await StorageService.isMovieFinished('tt-movie-partial'), isFalse);
+      expect(await PlaybackProgressStore.isMovieFinished('tt-movie-done'), isTrue);
+      expect(await PlaybackProgressStore.isMovieFinished('tt-movie-partial'), isFalse);
       expect(
         await StorageService.getVideoPlaybackState(videoTitle: 'Done Movie'),
         isNull,
@@ -249,7 +250,7 @@ void main() {
         isNotNull,
       );
       expect(
-        await StorageService.isEpisodeFinished(
+        await PlaybackProgressStore.isEpisodeFinished(
           seriesTitle: 'Example Series',
           season: 1,
           episode: 1,
@@ -257,7 +258,7 @@ void main() {
         isTrue,
       );
       expect(
-        await StorageService.isEpisodeFinished(
+        await PlaybackProgressStore.isEpisodeFinished(
           seriesTitle: 'Example Series',
           season: 1,
           episode: 2,
@@ -265,7 +266,7 @@ void main() {
         isFalse,
       );
       expect(
-        (await StorageService.getContinueWatchingItems())
+        (await PlaybackProgressStore.getContinueWatchingItems())
             .map((item) => item['imdbId'])
             .toList(),
         ['tt-movie-partial'],
@@ -273,9 +274,9 @@ void main() {
 
       // The generation marker makes this a one-time adoption: changing the
       // threshold later must not retroactively migrate more old entries.
-      await StorageService.setMovieCompletionThreshold(80);
-      await StorageService.migrateExistingPlaybackCompletionThresholds();
-      expect(await StorageService.isMovieFinished('tt-movie-partial'), isFalse);
+      await PlaybackProgressStore.setMovieCompletionThreshold(80);
+      await PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds();
+      expect(await PlaybackProgressStore.isMovieFinished('tt-movie-partial'), isFalse);
     },
   );
 }

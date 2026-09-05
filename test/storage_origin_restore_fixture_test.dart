@@ -1,3 +1,6 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
+import 'package:debrify/services/storage/playback_progress_store.dart';
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -172,17 +175,17 @@ Future<void> _seedThroughStorageService() async {
   await StorageService.setYoutubeMaxHeight(720);
   await StorageService.saveDebrifyTvRandomStartPercent(13);
   await StorageService.saveDebrifyTvProvider('real_debrid');
-  await StorageService.saveFileSelection('all');
-  await StorageService.setTorboxCacheCheckEnabled(true);
-  await StorageService.setRealDebridIntegrationEnabled(false);
-  await StorageService.setDefaultTorrentProvider('torbox');
-  await StorageService.savePostTorrentAction('delete');
+  await ProviderCredentialPrefs.saveFileSelection('all');
+  await ProviderCredentialPrefs.setTorboxCacheCheckEnabled(true);
+  await ProviderCredentialPrefs.setRealDebridIntegrationEnabled(false);
+  await ProviderCredentialPrefs.setDefaultTorrentProvider('torbox');
+  await ProviderCredentialPrefs.savePostTorrentAction('delete');
   await StorageService.setPlayerDefaultAspectIndex(4);
   await StorageService.setUiSounds(false);
   await StorageService.setDefaultSubtitleLanguage('es');
   await StorageService.setNetworkBufferSize('huge');
-  await StorageService.setIptvDecoderMode('hardware');
-  await StorageService.setIptvTrackContinueWatching(false);
+  await IptvPrefs.setIptvDecoderMode('hardware');
+  await IptvPrefs.setIptvTrackContinueWatching(false);
   await StorageService.setAppTheme('spotlight');
   await StorageService.setThemeOverrides('{"synthetic":"fixture"}');
   await StorageService.setPhoneNavStyle('floating');
@@ -238,14 +241,14 @@ Future<Map<String, Object?>> _readThroughStorageService(
   'debrify_tv_random_start_percent':
       await StorageService.getDebrifyTvRandomStartPercent(),
   'debrify_tv_provider': await StorageService.getDebrifyTvProvider(),
-  'real_debrid_file_selection': await StorageService.getFileSelection(),
+  'real_debrid_file_selection': await ProviderCredentialPrefs.getFileSelection(),
   'torbox_check_cache_before_search':
-      await StorageService.getTorboxCacheCheckEnabled(),
+      await ProviderCredentialPrefs.getTorboxCacheCheckEnabled(),
   'real_debrid_integration_enabled':
-      await StorageService.getRealDebridIntegrationEnabled(),
+      await ProviderCredentialPrefs.getRealDebridIntegrationEnabled(),
   'default_torrent_provider_v1':
-      await StorageService.getDefaultTorrentProvider(),
-  'post_torrent_action': await StorageService.getPostTorrentAction(),
+      await ProviderCredentialPrefs.getDefaultTorrentProvider(),
+  'post_torrent_action': await ProviderCredentialPrefs.getPostTorrentAction(),
   'player_default_aspect_index':
       await StorageService.getPlayerDefaultAspectIndex(),
   'ui_sounds': await StorageService.getUiSounds(),
@@ -254,7 +257,7 @@ Future<Map<String, Object?>> _readThroughStorageService(
   'network_buffer_size': await StorageService.getNetworkBufferSize(),
   'iptv_decoder_mode': await StorageService.getIptvDecoderMode(),
   'iptv_track_continue_watching':
-      await StorageService.getIptvTrackContinueWatching(),
+      await IptvPrefs.getIptvTrackContinueWatching(),
   'app_theme': await StorageService.getAppTheme(),
   'theme_overrides': await StorageService.getThemeOverrides(),
   'phone_nav_style': await StorageService.getPhoneNavStyle(),
@@ -544,11 +547,11 @@ void main() {
       await _seedThroughStorageService();
       await _writeValues(inputOverrides);
       if (scenario == 'provider-null-folder') {
-        await StorageService.setPikPakRestrictedFolder(null, null);
-        await StorageService.setSelectedWebDavServerId(null);
+        await ProviderCredentialPrefs.setPikPakRestrictedFolder(null, null);
+        await ProviderCredentialPrefs.setSelectedWebDavServerId(null);
       } else if (scenario == 'provider-cleared-cache') {
-        await StorageService.clearPikPakRestrictedFolder();
-        await StorageService.setSelectedWebDavServerId('');
+        await ProviderCredentialPrefs.clearPikPakRestrictedFolder();
+        await ProviderCredentialPrefs.setSelectedWebDavServerId('');
       }
       final prefs = await ProfilePreferences.instance();
       for (final key in absent) {
@@ -589,20 +592,20 @@ void main() {
       if (isMetadata) {
         for (final lookup in domain['lookups'] as List) {
           final item = Map<String, dynamic>.from(lookup['item'] as Map);
-          expect(StorageService.getPlaylistItemUniqueKey(item), lookup['key']);
-          expect(await StorageService.getTVMazeSeriesMapping(item), lookup['mapping']);
-          expect(await StorageService.getPlaylistPosterOverride(item), lookup['poster']);
+          expect(PlaybackProgressStore.getPlaylistItemUniqueKey(item), lookup['key']);
+          expect(await PlaybackProgressStore.getTVMazeSeriesMapping(item), lookup['mapping']);
+          expect(await PlaybackProgressStore.getPlaylistPosterOverride(item), lookup['poster']);
         }
-        final batch = await StorageService.getAllPlaylistPosterOverrides();
+        final batch = await PlaybackProgressStore.getAllPlaylistPosterOverrides();
         expect(batch, domain['expectedBatch']);
         expect(batch.keys.toList(), (domain['expectedBatch'] as Map).keys.toList());
-        expect(await StorageService.getTVMazeSeriesMapping({'title': 'missing'}), isNull);
-        expect(await StorageService.getPlaylistPosterOverride({'title': 'missing'}), isNull);
+        expect(await PlaybackProgressStore.getTVMazeSeriesMapping({'title': 'missing'}), isNull);
+        expect(await PlaybackProgressStore.getPlaylistPosterOverride({'title': 'missing'}), isNull);
         return;
       }
       if (isRepair) {
-        expect(await StorageService.getMovieCompletionThreshold(), 90);
-        expect(await StorageService.getEpisodeCompletionThreshold(), 75);
+        expect(await PlaybackProgressStore.getMovieCompletionThreshold(), 90);
+        expect(await PlaybackProgressStore.getEpisodeCompletionThreshold(), 75);
         return;
       }
       if (isPlaylist) {
@@ -614,23 +617,23 @@ void main() {
         return;
       }
       expect(
-        await StorageService.getPikPakRestrictedFolderId(),
+        await ProviderCredentialPrefs.getPikPakRestrictedFolderId(),
         readerExpected['pikpak_restricted_folder_id'],
       );
       expect(
-        await StorageService.getPikPakRestrictedFolderName(),
+        await ProviderCredentialPrefs.getPikPakRestrictedFolderName(),
         readerExpected['pikpak_restricted_folder_name'],
       );
       expect(
-        await StorageService.getPikPakTorrentsFolderId(),
+        await ProviderCredentialPrefs.getPikPakTorrentsFolderId(),
         readerExpected['pikpak_torrents_folder_id'],
       );
       expect(
-        await StorageService.getPikPakTvFolderId(),
+        await ProviderCredentialPrefs.getPikPakTvFolderId(),
         readerExpected['pikpak_tv_folder_id'],
       );
       expect(
-        await StorageService.getSelectedWebDavServerId(),
+        await ProviderCredentialPrefs.getSelectedWebDavServerId(),
         readerExpected['webdav_selected_server_id_v1'],
       );
     }
@@ -973,8 +976,8 @@ void main() {
             StorageService.localCompletionRevision.addListener(onInvalidRevision);
             try {
               await expectLater(repairFailure == 'marker-type'
-                  ? StorageService.purgeUnwatchedResumeGhosts()
-                  : StorageService.migrateExistingPlaybackCompletionThresholds(),
+                  ? PlaybackProgressStore.purgeUnwatchedResumeGhosts()
+                  : PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds(),
                   throwsA(isA<TypeError>()));
               expect(revisionCount, 0);
               _expectSettings(_values(await export()), restoredExpected);
@@ -1022,7 +1025,7 @@ void main() {
             }
             StorageService.localCompletionRevision.addListener(onRevision);
             try {
-              await StorageService.migrateExistingPlaybackCompletionThresholds();
+              await PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds();
               _expectSettings(_values(await export()), afterMigration);
               for (final key in ['Done', 'Done Alias']) {
                 expect(await StorageService.getVideoResume(key), noRepair ? isNotNull : isNull);
@@ -1039,7 +1042,7 @@ void main() {
               } else {
                 expect(revisions, isEmpty);
               }
-              await StorageService.purgeUnwatchedResumeGhosts();
+              await PlaybackProgressStore.purgeUnwatchedResumeGhosts();
               _expectSettings(_values(await export()), afterPurge);
               if (!noRepair) {
                 expect(revisions.length, 2);
@@ -1052,8 +1055,8 @@ void main() {
                 });
               }
               final count = revisions.length;
-              await StorageService.migrateExistingPlaybackCompletionThresholds();
-              await StorageService.purgeUnwatchedResumeGhosts();
+              await PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds();
+              await PlaybackProgressStore.purgeUnwatchedResumeGhosts();
               _expectSettings(_values(await export()), afterPurge);
               expect(revisions.length, count, reason: 'Second run is idempotent');
             } finally {

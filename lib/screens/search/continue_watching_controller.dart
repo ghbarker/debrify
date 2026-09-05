@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -765,7 +767,7 @@ class ContinueWatchingController extends ChangeNotifier {
       return;
     }
 
-    final raw = await StorageService.getContinueWatchingItems();
+    final raw = await PlaybackProgressStore.getContinueWatchingItems();
     final items = <StremioMeta>[];
     final progress = <String, double>{};
     final episode = <String, String>{};
@@ -794,7 +796,7 @@ class ContinueWatchingController extends ChangeNotifier {
       // HomeContinueWatchingSection (finished episodes count as 100%).
       double? pct;
       if (type == 'series') {
-        final lastEp = await StorageService.getLastPlayedEpisodeByImdbId(
+        final lastEp = await PlaybackProgressStore.getLastPlayedEpisodeByImdbId(
           imdbId,
         );
         if (lastEp != null) {
@@ -824,7 +826,7 @@ class ContinueWatchingController extends ChangeNotifier {
           if (left != null) remainingMinutes[imdbId] = left;
         }
       } else {
-        final state = await StorageService.getVideoPlaybackStateByImdbId(
+        final state = await PlaybackProgressStore.getVideoPlaybackStateByImdbId(
           imdbId,
         );
         if (state != null) {
@@ -1473,8 +1475,8 @@ class ContinueWatchingController extends ChangeNotifier {
   }) async {
     final imdbId = imdbOf(item) ?? item.id;
     if (imdbId.isEmpty) return;
-    await StorageService.removeContinueWatchingItem(imdbId);
-    await StorageService.clearPlaybackStateByImdbId(imdbId);
+    await PlaybackProgressStore.removeContinueWatchingItem(imdbId);
+    await PlaybackProgressStore.clearPlaybackStateByImdbId(imdbId);
     if (!_live) return;
     onSnack?.call('Removed from Continue Watching');
     await loadContinueWatching();
@@ -1486,14 +1488,14 @@ class ContinueWatchingController extends ChangeNotifier {
     if (entry.isSeries) {
       final seriesId = (entry.raw['seriesId'] as String?) ?? '';
       if (seriesId.isEmpty) return;
-      await StorageService.removeIptvContinueWatchingSeries(
+      await IptvPrefs.removeIptvContinueWatchingSeries(
         playlistId: (entry.raw['playlistId'] as String?) ?? '',
         seriesId: seriesId,
       );
     } else {
       final url = (entry.raw['url'] as String?) ?? entry.routeKey;
       if (url.isEmpty) return;
-      await StorageService.removeIptvContinueWatchingItem(url);
+      await IptvPrefs.removeIptvContinueWatchingItem(url);
     }
     if (!_live) return;
     onSnack?.call('Removed from Continue Watching');
@@ -1656,8 +1658,8 @@ class ContinueWatchingController extends ChangeNotifier {
     required String imdbId,
     required void Function() popDetail,
   }) async {
-    await StorageService.removeContinueWatchingItem(imdbId);
-    await StorageService.clearPlaybackStateByImdbId(imdbId);
+    await PlaybackProgressStore.removeContinueWatchingItem(imdbId);
+    await PlaybackProgressStore.clearPlaybackStateByImdbId(imdbId);
     if (!_live) return;
     popDetail();
     onSnack?.call('Removed from Continue Watching');

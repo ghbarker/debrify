@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -150,7 +151,7 @@ Future<PlaybackTransport> preparePlayback(
       isMovie: false,
     );
   }
-  await StorageService.saveContinueWatchingItem(
+  await PlaybackProgressStore.saveContinueWatchingItem(
     imdbId: 'tt1234567',
     title: 'Transport origin',
     contentType: series ? 'series' : 'movie',
@@ -165,7 +166,7 @@ ContinueWatchingSeeAllScreen playbackPanel(WidgetTester tester) =>
       find.byType(ContinueWatchingSeeAllScreen, skipOffstage: false),
     );
 
-Future<void> saveReturnMarker() => StorageService.saveContinueWatchingItem(
+Future<void> saveReturnMarker() => PlaybackProgressStore.saveContinueWatchingItem(
   imdbId: 'tt7654321',
   title: 'Return marker',
   contentType: 'movie',
@@ -493,7 +494,7 @@ void main() {
     final fixture = await preparePlayback(tester);
     final panel = playbackPanel(tester);
     final item = panel.items.single;
-    await StorageService.removeContinueWatchingItem(item.imdbId!);
+    await PlaybackProgressStore.removeContinueWatchingItem(item.imdbId!);
     await StorageService.setMyWatchlistItem(item, true);
     expect(await StorageService.isInMyWatchlist(item), isTrue);
     panel.onQuickPlay!(panel.items.single);
@@ -530,7 +531,7 @@ void main() {
       await StorageService.setDiscoverDefaultSource('cw');
       await StorageService.setHomeContinueWatchingEnabled(true);
       await StorageService.setPlayButtonMode('always');
-      await StorageService.saveContinueWatchingItem(
+      await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'tt1234567',
         title: 'Cancel origin',
         contentType: 'movie',
@@ -594,7 +595,7 @@ void main() {
       await StorageService.setDiscoverDefaultSource('cw');
       await StorageService.setHomeContinueWatchingEnabled(true);
       await StorageService.setPlayButtonMode('always');
-      await StorageService.saveContinueWatchingItem(
+      await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'tt1234567',
         title: 'Playback origin',
         contentType: 'movie',
@@ -620,7 +621,7 @@ void main() {
       expect(sources.meta.imdbId, 'tt1234567');
       expect(sources.forcePlayOnTap, isTrue);
       expect(sources.bindMode, isFalse);
-      await StorageService.saveContinueWatchingItem(
+      await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'tt7654321',
         title: 'Saved while sources open',
         contentType: 'movie',

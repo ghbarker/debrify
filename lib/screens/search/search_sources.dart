@@ -1714,11 +1714,11 @@ class _SourcesScreenState extends State<_SourcesScreen> {
   /// pre-check API (RD/AllDebrid discover cachedness only by adding).
   Future<void> _loadCacheConfig() async {
     final r = await Future.wait([
-      StorageService.getTorboxCacheCheckEnabled(),
-      StorageService.getTorboxIntegrationEnabled(),
+      ProviderCredentialPrefs.getTorboxCacheCheckEnabled(),
+      ProviderCredentialPrefs.getTorboxIntegrationEnabled(),
       StorageService.getTorboxApiKey(),
-      StorageService.getPremiumizeCacheCheckEnabled(),
-      StorageService.getPremiumizeIntegrationEnabled(),
+      ProviderCredentialPrefs.getPremiumizeCacheCheckEnabled(),
+      ProviderCredentialPrefs.getPremiumizeIntegrationEnabled(),
       StorageService.getPremiumizeApiKey(),
     ]);
     final tbKey = r[2] as String?;

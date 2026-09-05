@@ -1,9 +1,9 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'episode_tracker_snapshot_revision.dart';
 import 'local_series_completion_service.dart';
 import 'mdblist/mdblist_models.dart';
 import 'mdblist/mdblist_service.dart';
 import 'simkl/simkl_service.dart';
-import 'storage_service.dart';
 import 'tracking_source_policy.dart';
 import 'trakt/trakt_service.dart';
 import 'watched_status_service.dart';
@@ -45,14 +45,14 @@ class WatchedActionCoordinator {
     if (id.isEmpty) return const WatchedActionResult(['this device']);
     final series = contentType == 'series' || contentType == 'show';
     if (series) {
-      await StorageService.setSeriesExplicitlyWatched(id, watched: watched);
+      await PlaybackProgressStore.setSeriesExplicitlyWatched(id, watched: watched);
       if (!watched) {
         await LocalSeriesCompletionService.instance.clearCompletedHistory(id);
       }
     } else if (watched) {
-      await StorageService.markMovieAsFinished(id);
+      await PlaybackProgressStore.markMovieAsFinished(id);
     } else {
-      await StorageService.unmarkMovieAsFinished(id);
+      await PlaybackProgressStore.unmarkMovieAsFinished(id);
     }
 
     final policy = await TrackingSourcePolicy.load();
@@ -101,14 +101,14 @@ class WatchedActionCoordinator {
     Set<TrackingSource> forceTargets = const <TrackingSource>{},
   }) async {
     if (watched) {
-      await StorageService.markEpisodeAsFinished(
+      await PlaybackProgressStore.markEpisodeAsFinished(
         seriesTitle: seriesTitle,
         season: season,
         episode: episode,
         imdbId: imdbId,
       );
     } else {
-      await StorageService.unmarkEpisodeAsFinished(
+      await PlaybackProgressStore.unmarkEpisodeAsFinished(
         seriesTitle: seriesTitle,
         season: season,
         episode: episode,

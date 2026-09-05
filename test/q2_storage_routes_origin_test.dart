@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -97,14 +98,14 @@ void main() {
     });
     install({'playback_state_v1': raw});
     expect(
-      await StorageService.getFinishedEpisodesForSeason(
+      await PlaybackProgressStore.getFinishedEpisodesForSeason(
         seriesTitle: 'A-B',
         season: 2,
       ),
       {3, 5},
     );
     expect(
-      await StorageService.getFinishedEpisodesForSeason(
+      await PlaybackProgressStore.getFinishedEpisodesForSeason(
         seriesTitle: 'A B',
         season: 9,
       ),
@@ -127,7 +128,7 @@ void main() {
       }),
     });
     await expectLater(
-      StorageService.getFinishedEpisodesForSeason(
+      PlaybackProgressStore.getFinishedEpisodesForSeason(
         seriesTitle: 'Show',
         season: 1,
       ),
@@ -138,18 +139,18 @@ void main() {
 
   test('canonical channel keeps synthetic case and meaningful URL parts', () {
     expect(
-      StorageService.canonicalIptvChannelKey('stremio-tv://UP/A%2FB'),
+      IptvPrefs.canonicalIptvChannelKey('stremio-tv://UP/A%2FB'),
       'stremio-tv://UP/A%2FB',
     );
     expect(
-      StorageService.canonicalIptvChannelKey(
+      IptvPrefs.canonicalIptvChannelKey(
         'https://EXAMPLE.invalid/live/u/p/12.m3u8?token=x',
       ),
       'https://example.invalid/u/p/12?token=x',
     );
-    expect(StorageService.canonicalIptvChannelKey('not a URL'), 'not a URL');
+    expect(IptvPrefs.canonicalIptvChannelKey('not a URL'), 'not a URL');
     expect(
-      StorageService.canonicalIptvChannelKey(
+      IptvPrefs.canonicalIptvChannelKey(
         'https://x.invalid/movie/u/p/12.ts',
       ),
       'https://x.invalid/movie/u/p/12.ts',
@@ -165,7 +166,7 @@ void main() {
       });
       final cached = <String, dynamic>{'url': 'https://example.invalid/live'};
       StorageService.startupIptvChannelCached = cached;
-      await StorageService.clearStartupIptvChannel();
+      await IptvPrefs.clearStartupIptvChannel();
       expect(backend.events, ['remove:flutter.startup_iptv_channel']);
       expect(await backend.snapshot(), {
         'flutter.startup_iptv_mode': 'last',
@@ -203,7 +204,7 @@ void main() {
   test(
     'movie save retains defaults, raw values and retained reader route',
     () async {
-      await StorageService.saveVideoPlaybackState(
+      await PlaybackProgressStore.saveVideoPlaybackState(
         videoTitle: 'A-B',
         videoUrl: 'https://example.invalid/movie',
         positionMs: -7,
@@ -240,7 +241,7 @@ void main() {
           if (fail) {
             backend.failWrite = key;
             await expectLater(
-              StorageService.setSeriesExplicitlyWatched(
+              PlaybackProgressStore.setSeriesExplicitlyWatched(
                 ' TT-Q2 ',
                 watched: true,
               ),
@@ -250,7 +251,7 @@ void main() {
             expect((await backend.snapshot()).containsKey(key), isFalse);
           } else {
             backend.holdWrite = key;
-            final pending = StorageService.setSeriesExplicitlyWatched(
+            final pending = PlaybackProgressStore.setSeriesExplicitlyWatched(
               ' TT-Q2 ',
               watched: true,
             );
@@ -266,7 +267,7 @@ void main() {
             'write:StringList:$key',
             if (!fail) 'revision',
           ]);
-          expect(await StorageService.getExplicitlyWatchedSeriesIds(), {
+          expect(await PlaybackProgressStore.getExplicitlyWatchedSeriesIds(), {
             'tt-q2',
           });
         } finally {
@@ -281,22 +282,22 @@ void main() {
     (
       TransferCategories.realDebrid,
       StorageService.saveApiKey,
-      StorageService.setRealDebridIntegrationEnabled,
+      ProviderCredentialPrefs.setRealDebridIntegrationEnabled,
     ),
     (
       TransferCategories.torbox,
       StorageService.saveTorboxApiKey,
-      StorageService.setTorboxIntegrationEnabled,
+      ProviderCredentialPrefs.setTorboxIntegrationEnabled,
     ),
     (
       TransferCategories.premiumize,
       StorageService.savePremiumizeApiKey,
-      StorageService.setPremiumizeIntegrationEnabled,
+      ProviderCredentialPrefs.setPremiumizeIntegrationEnabled,
     ),
     (
       TransferCategories.allDebrid,
       StorageService.saveAllDebridApiKey,
-      StorageService.setAllDebridIntegrationEnabled,
+      ProviderCredentialPrefs.setAllDebridIntegrationEnabled,
     ),
   ]) {
     test(
@@ -320,14 +321,14 @@ void main() {
     (
       'debrify-torrents',
       'pikpak_torrents_folder_id',
-      StorageService.getPikPakTorrentsFolderId,
-      StorageService.setPikPakTorrentsFolderId,
+      ProviderCredentialPrefs.getPikPakTorrentsFolderId,
+      ProviderCredentialPrefs.setPikPakTorrentsFolderId,
     ),
     (
       'debrify-tv',
       'pikpak_tv_folder_id',
-      StorageService.getPikPakTvFolderId,
-      StorageService.setPikPakTvFolderId,
+      ProviderCredentialPrefs.getPikPakTvFolderId,
+      ProviderCredentialPrefs.setPikPakTvFolderId,
     ),
   ]) {
     test(
@@ -362,8 +363,8 @@ void main() {
       test(
         '${folder.$1}: real folder consumer awaits setter; failure=$fail',
         () async {
-          await StorageService.setPikPakAccessToken('synthetic-access');
-          await StorageService.setPikPakRefreshToken('synthetic-refresh');
+          await ProviderCredentialPrefs.setPikPakAccessToken('synthetic-access');
+          await ProviderCredentialPrefs.setPikPakRefreshToken('synthetic-refresh');
           backend.events.clear();
           final key = 'flutter.${folder.$2}';
           if (fail) {

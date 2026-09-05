@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:debrify/models/torrent.dart';
 import 'package:debrify/screens/video_player/models/playlist_entry.dart';
 import 'package:debrify/services/cloud/alldebrid_cloud_provider.dart';
@@ -136,7 +137,7 @@ void main() {
     'credential dialects: playback key-only, magnet key+toggle, picker split',
     () async {
       await StorageService.saveApiKey('rd-key');
-      await StorageService.setRealDebridIntegrationEnabled(false);
+      await ProviderCredentialPrefs.setRealDebridIntegrationEnabled(false);
       expect(
         await CloudCredentials.configured(
           CloudProviderId.debrid,
@@ -160,7 +161,7 @@ void main() {
       );
 
       await StorageService.savePremiumizeApiKey('pm-key');
-      await StorageService.setPremiumizeIntegrationEnabled(false);
+      await ProviderCredentialPrefs.setPremiumizeIntegrationEnabled(false);
       expect(
         await CloudCredentials.configured(
           CloudProviderId.premiumize,
@@ -182,7 +183,7 @@ void main() {
         ),
         isFalse,
       );
-      await StorageService.setPremiumizeIntegrationEnabled(true);
+      await ProviderCredentialPrefs.setPremiumizeIntegrationEnabled(true);
       expect(
         await CloudCredentials.configured(
           CloudProviderId.premiumize,

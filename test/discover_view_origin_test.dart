@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/search_screen.dart';
@@ -25,7 +26,7 @@ Future<void> _mountOrigin(WidgetTester tester, String layout) async {
   await StorageService.setDiscoverDefaultSource('cw');
   await StorageService.setDiscoverLayout(layout);
   await StorageService.setHomeContinueWatchingEnabled(true);
-  await StorageService.saveContinueWatchingItem(
+  await PlaybackProgressStore.saveContinueWatchingItem(
     imdbId: 'view-origin',
     title: 'View origin',
     contentType: 'movie',

@@ -1,6 +1,6 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:convert';
 
-import 'package:debrify/services/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -80,7 +80,7 @@ void main() {
           // Confirm the marker exists in storage, so the absence above is an
           // observable stale panel while the player route still covers Discover.
           expect(
-            (await StorageService.getContinueWatchingItems()).map(
+            (await PlaybackProgressStore.getContinueWatchingItems()).map(
               (m) => m['title'],
             ),
             contains('Return marker'),

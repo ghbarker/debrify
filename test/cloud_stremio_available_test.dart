@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:debrify/services/cloud/cloud_credentials.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
@@ -20,7 +21,7 @@ void main() {
 
   test('RD key without integration is Stremio-available, not magnet', () async {
     await StorageService.saveApiKey('rd-key');
-    await StorageService.setRealDebridIntegrationEnabled(false);
+    await ProviderCredentialPrefs.setRealDebridIntegrationEnabled(false);
     expect(
       await CloudCredentials.isStremioAvailable(CloudProviderId.debrid),
       isTrue,
@@ -44,7 +45,7 @@ void main() {
 
   test('PM key without integration is playback, not Stremio', () async {
     await StorageService.savePremiumizeApiKey('pm-key');
-    await StorageService.setPremiumizeIntegrationEnabled(false);
+    await ProviderCredentialPrefs.setPremiumizeIntegrationEnabled(false);
     expect(
       await CloudCredentials.isPlaybackConfigured(CloudProviderId.premiumize),
       isTrue,
@@ -60,7 +61,7 @@ void main() {
   });
 
   test('PikPak is enabled-only, not email', () async {
-    await StorageService.setPikPakEnabled(true);
+    await ProviderCredentialPrefs.setPikPakEnabled(true);
     expect(
       await CloudCredentials.isStremioAvailable(CloudProviderId.pikpak),
       isTrue,
@@ -71,11 +72,11 @@ void main() {
   test('picker order is PikPak before Premiumize; labels are catalogChoice', () async {
     await StorageService.saveApiKey('rd-key');
     await StorageService.saveTorboxApiKey('tb-key');
-    await StorageService.setPikPakEnabled(true);
+    await ProviderCredentialPrefs.setPikPakEnabled(true);
     await StorageService.savePremiumizeApiKey('pm-key');
-    await StorageService.setPremiumizeIntegrationEnabled(true);
+    await ProviderCredentialPrefs.setPremiumizeIntegrationEnabled(true);
     await StorageService.saveAllDebridApiKey('ad-key');
-    await StorageService.setAllDebridIntegrationEnabled(true);
+    await ProviderCredentialPrefs.setAllDebridIntegrationEnabled(true);
 
     expect(CloudProviderId.fromPlaybackId('realdebrid'), isNull);
     expect(CloudProviderId.playbackPrecedence, [

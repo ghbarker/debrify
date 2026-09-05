@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/iptv_prefs.dart';
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:debrify/services/debrify_tv_database.dart';
@@ -42,7 +44,7 @@ void main() {
         ),
         true,
       );
-      await StorageService.savePlaylistItemsRaw([
+      await PlaybackProgressStore.savePlaylistItemsRaw([
         {
           'title': 'Older Playlist',
           'kind': 'single',
@@ -202,7 +204,7 @@ void main() {
           true,
           channelName: 'Favourite Live',
         );
-        listId = await StorageService.createIptvList('Mixed List');
+        listId = await IptvPrefs.createIptvList('Mixed List');
         await StorageService.setIptvChannelInList(
           listId,
           'xtream-series://gone/42',
@@ -234,7 +236,7 @@ void main() {
       nodes[1].requestFocus();
       await pumpFavourites(tester);
       await tester.runAsync(
-        () => StorageService.renameIptvList(listId, 'Renamed List'),
+        () => IptvPrefs.renameIptvList(listId, 'Renamed List'),
       );
       await pumpFavourites(tester);
       expect(find.text('Renamed List'), findsOneWidget);
@@ -299,7 +301,7 @@ void main() {
         'id': 'managed',
         'addedAt': 1,
       };
-      await StorageService.savePlaylistItemsRaw([item]);
+      await PlaybackProgressStore.savePlaylistItemsRaw([item]);
       await mountFavourites(tester);
       Future<void> open() async {
         tester.widget<ArtPoster>(find.byType(ArtPoster)).onOpen();
@@ -310,8 +312,8 @@ void main() {
       await tester.tap(find.text('Favorite'));
       await pumpFavourites(tester);
       expect(
-        await StorageService.getPlaylistFavoriteKeys(),
-        contains(StorageService.computePlaylistDedupeKey(item)),
+        await PlaybackProgressStore.getPlaylistFavoriteKeys(),
+        contains(PlaybackProgressStore.computePlaylistDedupeKey(item)),
       );
       await open();
       await tester.tap(find.text('Delete'));
@@ -319,13 +321,13 @@ void main() {
       expect(find.text('Delete?'), findsOneWidget);
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
-      expect(await StorageService.getPlaylistItemsRaw(), hasLength(1));
+      expect(await PlaybackProgressStore.getPlaylistItemsRaw(), hasLength(1));
       await open();
       await tester.tap(find.text('Delete'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Delete'));
       await pumpFavourites(tester);
-      expect(await StorageService.getPlaylistItemsRaw(), isEmpty);
+      expect(await PlaybackProgressStore.getPlaylistItemsRaw(), isEmpty);
       expect(find.byType(ArtPoster), findsNothing);
       await closeFavourites(tester);
     },

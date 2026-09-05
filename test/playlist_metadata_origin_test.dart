@@ -1,7 +1,7 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:convert';
 
 import 'package:debrify/services/profiles/profile_runtime.dart';
-import 'package:debrify/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
@@ -100,7 +100,7 @@ void main() {
     ];
     for (final (input, expected) in cases) {
       expect(
-        StorageService.getPlaylistItemUniqueKey(input),
+        PlaybackProgressStore.getPlaylistItemUniqueKey(input),
         expected,
         reason: '$input',
       );
@@ -110,7 +110,7 @@ void main() {
       {'title': 7},
     ]) {
       expect(
-        () => StorageService.getPlaylistItemUniqueKey(item),
+        () => PlaybackProgressStore.getPlaylistItemUniqueKey(item),
         throwsA(isA<TypeError>()),
       );
     }
@@ -121,7 +121,7 @@ void main() {
     () async {
       install({_mapping: '{"first":{"untouched":true}}'});
       final before = DateTime.now().millisecondsSinceEpoch;
-      await StorageService.saveTVMazeSeriesMapping(
+      await PlaybackProgressStore.saveTVMazeSeriesMapping(
         playlistItem: {'title': 'A-B'},
         tvmazeShowId: 42,
         showName: 'Show',
@@ -140,23 +140,23 @@ void main() {
         allOf(isA<int>(), inInclusiveRange(before, after)),
       );
       expect(
-        await StorageService.getTVMazeSeriesMapping({'title': 'a b'}),
+        await PlaybackProgressStore.getTVMazeSeriesMapping({'title': 'a b'}),
         entry,
       );
-      await StorageService.saveTVMazeSeriesMapping(
+      await PlaybackProgressStore.saveTVMazeSeriesMapping(
         playlistItem: {'title': 'a b'},
         tvmazeShowId: -1,
         showName: '',
       );
       expect(
-        (await StorageService.getTVMazeSeriesMapping({
+        (await PlaybackProgressStore.getTVMazeSeriesMapping({
           'title': 'A-B',
         }))!['tvmazeShowId'],
         -1,
       );
-      await StorageService.clearTVMazeSeriesMapping({'title': 'A-B'});
+      await PlaybackProgressStore.clearTVMazeSeriesMapping({'title': 'A-B'});
       expect(await durable(_mapping), '{"first":{"untouched":true}}');
-      await StorageService.clearAllTVMazeSeriesMappings();
+      await PlaybackProgressStore.clearAllTVMazeSeriesMappings();
       expect(await durable(_mapping), isNull);
       expect(backend.events.every((e) => e.contains(_mapping)), isTrue);
     },
@@ -167,7 +167,7 @@ void main() {
     () async {
       install({_poster: '{"first":{"posterUrl":"keep"}}'});
       final before = DateTime.now().millisecondsSinceEpoch;
-      await StorageService.savePlaylistPosterOverride(
+      await PlaybackProgressStore.savePlaylistPosterOverride(
         playlistItem: _item,
         posterUrl: 'https://example.invalid/poster',
       );
@@ -183,22 +183,22 @@ void main() {
         allOf(isA<int>(), inInclusiveRange(before, after)),
       );
       expect(
-        await StorageService.getPlaylistPosterOverride(_item),
+        await PlaybackProgressStore.getPlaylistPosterOverride(_item),
         'https://example.invalid/poster',
       );
-      await StorageService.savePlaylistPosterOverride(
+      await PlaybackProgressStore.savePlaylistPosterOverride(
         playlistItem: _item,
         posterUrl: '',
       );
-      expect(await StorageService.getPlaylistPosterOverride(_item), isNull);
+      expect(await PlaybackProgressStore.getPlaylistPosterOverride(_item), isNull);
       expect(
         (jsonDecode((await durable(_poster))! as String)
             as Map)['rd_7']['posterUrl'],
         '',
       );
-      await StorageService.clearPlaylistPosterOverride(_item);
+      await PlaybackProgressStore.clearPlaylistPosterOverride(_item);
       expect(await durable(_poster), '{"first":{"posterUrl":"keep"}}');
-      await StorageService.clearAllPlaylistPosterOverrides();
+      await PlaybackProgressStore.clearAllPlaylistPosterOverrides();
       expect(await durable(_poster), isNull);
       expect(backend.events.every((e) => e.contains(_poster)), isTrue);
     },
@@ -216,24 +216,24 @@ void main() {
       >[
         (
           key: _mapping,
-          save: (item) => StorageService.saveTVMazeSeriesMapping(
+          save: (item) => PlaybackProgressStore.saveTVMazeSeriesMapping(
             playlistItem: item,
             tvmazeShowId: 1,
             showName: 'S',
           ),
-          read: StorageService.getTVMazeSeriesMapping,
-          clear: StorageService.clearTVMazeSeriesMapping,
-          clearAll: StorageService.clearAllTVMazeSeriesMappings,
+          read: PlaybackProgressStore.getTVMazeSeriesMapping,
+          clear: PlaybackProgressStore.clearTVMazeSeriesMapping,
+          clearAll: PlaybackProgressStore.clearAllTVMazeSeriesMappings,
         ),
         (
           key: _poster,
-          save: (item) => StorageService.savePlaylistPosterOverride(
+          save: (item) => PlaybackProgressStore.savePlaylistPosterOverride(
             playlistItem: item,
             posterUrl: 'P',
           ),
-          read: StorageService.getPlaylistPosterOverride,
-          clear: StorageService.clearPlaylistPosterOverride,
-          clearAll: StorageService.clearAllPlaylistPosterOverrides,
+          read: PlaybackProgressStore.getPlaylistPosterOverride,
+          clear: PlaybackProgressStore.clearPlaylistPosterOverride,
+          clearAll: PlaybackProgressStore.clearAllPlaylistPosterOverrides,
         ),
       ];
 
@@ -329,7 +329,7 @@ void main() {
         _mapping:
             '{"rd_7":{"tvmazeShowId":"legacy","showName":false,"savedAt":null,"extra":[1]}}',
       });
-      expect(await StorageService.getTVMazeSeriesMapping(_item), {
+      expect(await PlaybackProgressStore.getTVMazeSeriesMapping(_item), {
         'tvmazeShowId': 'legacy',
         'showName': false,
         'savedAt': null,
@@ -339,7 +339,7 @@ void main() {
         install({
           _mapping: jsonEncode({'rd_7': value}),
         });
-        expect(await StorageService.getTVMazeSeriesMapping(_item), isNull);
+        expect(await PlaybackProgressStore.getTVMazeSeriesMapping(_item), isNull);
       }
     },
   );
@@ -351,7 +351,7 @@ void main() {
         _poster:
             '{"z":{"posterUrl":"Z"},"skip":7,"empty":{"posterUrl":""},"null":{"posterUrl":null},"a":{"posterUrl":" "}}',
       });
-      final result = await StorageService.getAllPlaylistPosterOverrides();
+      final result = await PlaybackProgressStore.getAllPlaylistPosterOverrides();
       expect(result, {'z': 'Z', 'a': ' '});
       expect(result.keys.toList(), ['z', 'a']);
       expect(backend.events, isEmpty);
@@ -365,14 +365,14 @@ void main() {
         _poster:
             '{"rd_7":{"posterUrl":"good"},"bad":{"posterUrl":7},"last":{"posterUrl":"last"}}',
       });
-      expect(await StorageService.getAllPlaylistPosterOverrides(), isEmpty);
-      expect(await StorageService.getPlaylistPosterOverride(_item), 'good');
+      expect(await PlaybackProgressStore.getAllPlaylistPosterOverrides(), isEmpty);
+      expect(await PlaybackProgressStore.getPlaylistPosterOverride(_item), 'good');
       expect(
-        await StorageService.getPlaylistPosterOverride({'title': 'missing'}),
+        await PlaybackProgressStore.getPlaylistPosterOverride({'title': 'missing'}),
         isNull,
       );
       install({_poster: '{"rd_7":{"posterUrl":7}}'});
-      expect(await StorageService.getPlaylistPosterOverride(_item), isNull);
+      expect(await PlaybackProgressStore.getPlaylistPosterOverride(_item), isNull);
       expect(backend.events, isEmpty);
     },
   );
@@ -380,15 +380,15 @@ void main() {
   test(
     'batch absent/malformed JSON returns empty; wrong physical type escapes',
     () async {
-      expect(await StorageService.getAllPlaylistPosterOverrides(), isEmpty);
+      expect(await PlaybackProgressStore.getAllPlaylistPosterOverrides(), isEmpty);
       for (final raw in ['{', '[]', 'null']) {
         install({_poster: raw});
-        expect(await StorageService.getAllPlaylistPosterOverrides(), isEmpty);
+        expect(await PlaybackProgressStore.getAllPlaylistPosterOverrides(), isEmpty);
         expect(await durable(_poster), raw);
       }
       install({_poster: 7});
       await expectLater(
-        StorageService.getAllPlaylistPosterOverrides(),
+        PlaybackProgressStore.getAllPlaylistPosterOverrides(),
         throwsA(isA<TypeError>()),
       );
       expect(backend.events, isEmpty);

@@ -1,10 +1,10 @@
+import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
 import '../utils/file_utils.dart';
 import 'pikpak_api_service.dart';
-import 'storage_service.dart';
 
 /// Service for preparing PikPak torrents for Debrify TV playback.
 ///
@@ -59,7 +59,7 @@ class PikPakTvService {
 
     try {
       // Get parent folder ID (restricted folder or root)
-      final parentFolderId = await StorageService.getPikPakRestrictedFolderId();
+      final parentFolderId = await ProviderCredentialPrefs.getPikPakRestrictedFolderId();
 
       // Find or create "debrify-tv" subfolder
       String? subFolderId;
@@ -67,8 +67,8 @@ class PikPakTvService {
         subFolderId = await _api.findOrCreateSubfolder(
           folderName: 'debrify-tv',
           parentFolderId: parentFolderId,
-          getCachedId: StorageService.getPikPakTvFolderId,
-          setCachedId: StorageService.setPikPakTvFolderId,
+          getCachedId: ProviderCredentialPrefs.getPikPakTvFolderId,
+          setCachedId: ProviderCredentialPrefs.setPikPakTvFolderId,
         );
         log('Using debrify-tv subfolder ID: $subFolderId');
       } catch (e) {

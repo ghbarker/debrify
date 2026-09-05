@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -35,7 +36,7 @@ Future<void> expectPlaylistProgressBuilder() async {
       .map((e) => Map<String, dynamic>.from(e as Map))
       .toList();
   expect(
-    await StorageService.buildPlaylistProgressMap(items),
+    await PlaybackProgressStore.buildPlaylistProgressMap(items),
     recipe['expectedProgress'],
   );
 }
@@ -67,7 +68,7 @@ Future<Map<String, Map<String, dynamic>>> _build(
 ) async {
   final prefs = await ProfilePreferences.instance();
   await prefs.setString(playlistProgressKey, jsonEncode(states));
-  return StorageService.buildPlaylistProgressMap(items);
+  return PlaybackProgressStore.buildPlaylistProgressMap(items);
 }
 
 void main() {
@@ -317,7 +318,7 @@ void main() {
       final prefs = await ProfilePreferences.instance();
       await prefs.setString(playlistProgressKey, raw);
       expect(
-        await StorageService.buildPlaylistProgressMap([_item('Show')]),
+        await PlaybackProgressStore.buildPlaylistProgressMap([_item('Show')]),
         isEmpty,
       );
     });
@@ -342,7 +343,7 @@ void main() {
     final prefs = await ProfilePreferences.instance();
     await prefs.setStringList(playlistProgressKey, ['wrong physical type']);
     await expectLater(
-      StorageService.buildPlaylistProgressMap([_item('Show')]),
+      PlaybackProgressStore.buildPlaylistProgressMap([_item('Show')]),
       throwsA(isA<TypeError>()),
     );
   });

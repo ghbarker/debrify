@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -342,7 +343,7 @@ class ResumeController {
     final locallyFinishedMovie =
         !preferLocalResume &&
         localMovieImdbId != null &&
-        await StorageService.isMovieFinished(localMovieImdbId);
+        await PlaybackProgressStore.isMovieFinished(localMovieImdbId);
     // Speed/aspect are device prefs riding in the resume record — restore
     // them in EVERY progress mode; only the POSITION is a policy-gated
     // resume candidate.
@@ -739,7 +740,7 @@ class ResumeController {
 
           if (currentEpisode.seriesInfo.season != null &&
               currentEpisode.seriesInfo.episode != null) {
-            await StorageService.saveSeriesPlaybackState(
+            await PlaybackProgressStore.saveSeriesPlaybackState(
               seriesTitle: seriesPlaylist.seriesTitle ?? 'Unknown Series',
               season: currentEpisode.seriesInfo.season!,
               episode: currentEpisode.seriesInfo.episode!,
@@ -776,7 +777,7 @@ class ResumeController {
               currentVideoUrl = session.videoUrl;
             }
 
-            await StorageService.saveVideoPlaybackState(
+            await PlaybackProgressStore.saveVideoPlaybackState(
               videoTitle: resumeId,
               videoUrl: currentVideoUrl,
               positionMs: pos.inMilliseconds,
@@ -797,7 +798,7 @@ class ResumeController {
               final season = seriesInfo.season ?? 0;
               final episode = seriesInfo.episode ?? (session.currentIndex + 1);
 
-              await StorageService.saveSeriesPlaybackState(
+              await PlaybackProgressStore.saveSeriesPlaybackState(
                 seriesTitle: seriesPlaylist.seriesTitle!,
                 season: season, // Parsed from filename, fallback to 0
                 episode: episode, // Parsed from filename, fallback to index
@@ -822,7 +823,7 @@ class ResumeController {
           if (session.effectiveContentType == 'series' &&
               session.effectiveContentSeason != null &&
               session.effectiveContentEpisode != null) {
-            await StorageService.saveSeriesPlaybackState(
+            await PlaybackProgressStore.saveSeriesPlaybackState(
               seriesTitle: session.effectiveContentTitle ?? session.title,
               season: session.effectiveContentSeason!,
               episode: session.effectiveContentEpisode!,
@@ -841,7 +842,7 @@ class ResumeController {
             final title = session.currentStremioTvContentTitle ?? session.title;
             final videoTitle = title.isNotEmpty ? title : 'Unknown Video';
 
-            await StorageService.saveVideoPlaybackState(
+            await PlaybackProgressStore.saveVideoPlaybackState(
               videoTitle: videoTitle,
               videoUrl: currentUrl,
               positionMs: pos.inMilliseconds,
