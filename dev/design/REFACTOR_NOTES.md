@@ -393,6 +393,11 @@ behaviour and must be restored, not kept as quirks.
 - **TV UI scale setter writes any int;** only the getter coerces to 90.
 - **Empty `theme_overrides` removes the key.**
 - **Callers still import `StorageService`.** `@Deprecated` waits for Q2.
+- **`stale_runtime_guard_test` names, not callees.** A façade
+  `static String get fooCached` still counts even when the body is a
+  store getter. `resetProfileCaches()` must **name** each mirror in its
+  own body — calling `AppStylePrefs.resetCaches()` is not enough. S2-5
+  and later must list every extracted `*Cached` on the façade.
 
 ### V1-3 · subtitle track controller
 
