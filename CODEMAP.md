@@ -125,6 +125,13 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   `lib/screens/search/fav_row.dart` (`FavRow`). These retain screen/UI dependencies.
   Host supplies live State/context/update and cross-row callbacks, keeps stage
   composition, and disposes the favourites nodes in its existing disposal order.
+  Hero state, focus-rest/enrichment timers, ambient trailers/live IPTV and shell
+  art/tint/chrome relays live in `lib/screens/search/hero_presenter.dart`
+  (`HeroPresenter`, `HeroEnvironment`). This remains screen/UI presentation,
+  with typed environment/context/update callbacks; no pure-logic claim.
+  Host keeps PageRoute subscription and focus recovery before trailer rearming.
+  Its 15 property and 5 callback aliases (21 physical lines) serve existing
+  host/stage consumers; removal with caller migration is G1'-8, not a new part.
   TV Home stage layouts are `lib/screens/search/stages/` (`_CanvasBoardStage` and friends);
   the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
