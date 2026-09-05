@@ -1,5 +1,23 @@
 part of '../search_screen.dart';
 
+/// Temporary public entry to the existing private Sources widget. This remains
+/// part of the legacy search library until real G17 owns the route independently.
+Widget buildSearchSources({
+  required AdvancedSearchSelection selection,
+  required PlaybackMeta meta,
+  required bool isTelevision,
+  bool bindMode = false,
+  String? keywordSeed,
+  bool forcePlayOnTap = false,
+}) => _SourcesScreen(
+  selection: selection,
+  meta: meta,
+  isTelevision: isTelevision,
+  bindMode: bindMode,
+  keywordSeed: keywordSeed,
+  forcePlayOnTap: forcePlayOnTap,
+);
+
 class _SourcesScreen extends StatefulWidget {
   final AdvancedSearchSelection selection;
   final PlaybackMeta meta;
