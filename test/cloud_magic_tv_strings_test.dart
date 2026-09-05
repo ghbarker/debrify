@@ -48,6 +48,29 @@ void _installFakes({
   ]);
 }
 
+const _watchFlowPaths = <String>[
+  'lib/screens/debrify_tv/watch/alldebrid_watch_flow.dart',
+  'lib/screens/debrify_tv/watch/pikpak_watch_flow.dart',
+  'lib/screens/debrify_tv/watch/premiumize_watch_flow.dart',
+  'lib/screens/debrify_tv/watch/provider_watch_flow.dart',
+  'lib/screens/debrify_tv/watch/real_debrid_watch_flow.dart',
+  'lib/screens/debrify_tv/watch/torbox_watch_flow.dart',
+];
+
+List<String?> _providerLiteralHits(String source) {
+  final withoutBlock = source.replaceAll(
+    RegExp(r'/\*.*?\*/', dotAll: true),
+    '',
+  );
+  final withoutLine = withoutBlock
+      .split('\n')
+      .where((line) => !line.trimLeft().startsWith('//'))
+      .join('\n');
+  return RegExp(
+    r"'(realdebrid|real_debrid|torbox|premiumize|alldebrid|pikpak)'",
+  ).allMatches(withoutLine).map((m) => m.group(0)).toList();
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -219,20 +242,11 @@ void main() {
   test(
     'Magic TV screen has no provider-id string literals outside comments',
     () {
-      final source = File(
-        'lib/screens/magic_tv_screen.dart',
-      ).readAsStringSync();
-      final withoutBlock = source.replaceAll(
-        RegExp(r'/\*.*?\*/', dotAll: true),
-        '',
-      );
-      final withoutLine = withoutBlock
-          .split('\n')
-          .where((line) => !line.trimLeft().startsWith('//'))
+      // Supplemental inventory follows the host's six relocated flow bodies.
+      final source = ['lib/screens/magic_tv_screen.dart', ..._watchFlowPaths]
+          .map((path) => File(path).readAsStringSync())
           .join('\n');
-      final hits = RegExp(
-        r"'(realdebrid|real_debrid|torbox|premiumize|alldebrid|pikpak)'",
-      ).allMatches(withoutLine).map((m) => m.group(0)).toList();
+      final hits = _providerLiteralHits(source);
       expect(hits, isEmpty, reason: 'string-match leftovers: $hits');
       expect(source.contains('MagicTvDispatch.watchId'), isTrue);
       expect(source.contains('MagicTvDispatch.usesLockedLinks'), isTrue);
@@ -241,4 +255,16 @@ void main() {
       expect(source.contains('CloudProviderId.fromMagicTvId'), isTrue);
     },
   );
+  test('provider literal drift in every watch flow trips the inventory', () {
+    for (final path in _watchFlowPaths) {
+      final source = File(path).readAsStringSync();
+      expect(_providerLiteralHits(source), isEmpty, reason: path);
+      for (final id in ['realdebrid', 'real_debrid', 'torbox',
+        'premiumize', 'alldebrid', 'pikpak']) {
+        expect(_providerLiteralHits("$source\nfinal drift = '$id';\n"),
+            contains("'$id'"), reason: '$path: $id');
+      }
+    }
+  });
+
 }

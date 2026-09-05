@@ -44,15 +44,42 @@ const List<String> kStillFrozenPaths = [
 /// construction someone adds — these greps can. They are deliberately dumb:
 /// a determined evasion will beat them, but the realistic failure (a new
 /// call site written by pattern-matching on neighbouring code) will not.
+// Exact destinations relocated from Magic TV; no directory exemptions.
+const _watchFlowPlayerCounts = <String, int>{
+  'lib/screens/debrify_tv/watch/alldebrid_watch_flow.dart': 2,
+  'lib/screens/debrify_tv/watch/pikpak_watch_flow.dart': 2,
+  'lib/screens/debrify_tv/watch/premiumize_watch_flow.dart': 2,
+  'lib/screens/debrify_tv/watch/provider_watch_flow.dart': 2,
+  'lib/screens/debrify_tv/watch/real_debrid_watch_flow.dart': 1,
+  'lib/screens/debrify_tv/watch/torbox_watch_flow.dart': 2,
+};
+
+// Match each construction at its actual frozen builder site, not a file marker.
+bool _onlyFrozenPlayerSites(String source) {
+  final players = RegExp(r'\bVideoPlayerScreen\s*\(')
+      .allMatches(source).map((m) => m.start).toSet();
+  final frozen = RegExp(
+    r'\bFrozenLegacyPageRoute\s*\(\s*builder\s*:\s*\(_\)\s*=>\s*(VideoPlayerScreen\s*\()',
+  ).allMatches(source).map((m) => m.end - m.group(1)!.length).toSet();
+  return players.isNotEmpty && players.length == frozen.length &&
+      players.containsAll(frozen) &&
+      RegExp(r'\bFrozenLegacyPageRoute\s*\(').allMatches(source).length == frozen.length &&
+      !source.contains('MaterialPageRoute');
+}
+
 void main() {
   test('VideoPlayerScreen is constructed only where the freeze exists', () {
     const allowed = {
       'lib/screens/video_player_screen.dart', // itself
-      'lib/screens/magic_tv_screen.dart', // 12 pushes, all FrozenLegacyPageRoute
+      'lib/screens/magic_tv_screen.dart', // retained player push, FrozenLegacyPageRoute
       'lib/services/video_player_launcher.dart', // the one shared factory
     };
     final offenders = <String>[];
     for (final file in _libDartFiles()) {
+      if (_watchFlowPlayerCounts.containsKey(_rel(file))) {
+        if (!_onlyFrozenPlayerSites(_code(file))) offenders.add(_rel(file));
+        continue;
+      }
       if (allowed.contains(_rel(file))) continue;
       if (_code(file).contains('VideoPlayerScreen(')) {
         offenders.add(_rel(file));
@@ -70,6 +97,20 @@ void main() {
     expect(source.contains('MaterialPageRoute'), isFalse,
         reason: 'a raw MaterialPageRoute in magic_tv_screen would push an '
             'excluded screen without the legacy freeze');
+  });
+
+  test('each relocated player site is frozen and rejects unwrapped additions', () {
+    for (final entry in _watchFlowPlayerCounts.entries) {
+      final source = _code(File(entry.key));
+      expect(RegExp(r'\bVideoPlayerScreen\s*\(').allMatches(source).length,
+          entry.value, reason: entry.key);
+      expect(_onlyFrozenPlayerSites(source), isTrue, reason: entry.key);
+      expect(_onlyFrozenPlayerSites('$source\nVideoPlayerScreen();'),
+          isFalse, reason: '${entry.key}: unwrapped extra construction');
+      expect(_onlyFrozenPlayerSites(source.replaceFirst(
+          'FrozenLegacyPageRoute(', 'MaterialPageRoute(')),
+          isFalse, reason: '${entry.key}: existing construction loses freeze');
+    }
   });
 
   test('video_player_launcher pushes via FrozenLegacyPageRoute', () {
@@ -181,7 +222,7 @@ void main() {
       'lib/theme/legacy_theme_boundary.dart', // defines it
       'lib/theme/app_surfaces.dart', // the boundary factory that vends it
       'lib/services/video_player_launcher.dart', // the shared player factory
-      'lib/screens/magic_tv_screen.dart', // 12 player pushes
+      'lib/screens/magic_tv_screen.dart', // retained player push
       'lib/screens/playlist_screen.dart', // player push
       'lib/screens/downloads_screen.dart', // player push
     };
@@ -193,6 +234,10 @@ void main() {
     final offenders = <String>[];
     for (final file in _libDartFiles()) {
       final rel = _rel(file);
+      if (_watchFlowPlayerCounts.containsKey(rel)) {
+        if (!_onlyFrozenPlayerSites(_code(file))) offenders.add(rel);
+        continue;
+      }
       if (frozenDestinationPushers.contains(rel)) continue;
       if (stillFrozen.any(rel.startsWith)) continue;
       // Both spellings: pushExcluded is the factory wrapper over the route,
