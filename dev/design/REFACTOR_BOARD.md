@@ -1,5 +1,37 @@
 # Refactor board
 
+## Live roadmap
+
+Updated by the orchestrator when assignments, blockers, PR checks or merges change. A checked item means completed, not merely assigned. Detailed evidence and ownership follow below.
+
+### Working now
+- [ ] **CI consistency — Cicero:** verify PR110 + PR111 together using Flutter3.44.8; restore ceiling77 and Windows analyzer enforcement.
+- [ ] **Magic TV — Ampere:** PR111 dependency fix in review; live historical cache/watch behavior pins underway. M1-3 waits.
+- [ ] **Continue Watching — Wegener:** integrate #96 with #104/#105/#107 and prove disposal guard with a real failing regression test.
+- [ ] **Backup + settings safety — Locke:** draft decoder PR112 open; implement synthetic pre-refactor export/current-restore fixtures.
+
+### Next, in order
+- [ ] Merge #111 after independent verification and exact-head CI, then rebase/check/merge #110.
+- [ ] Merge #96 only when integrated evidence, compatibility review and CI pass; then eligible G1'-5.
+- [ ] Run corrective full suite, analyzer and both native builds on one pinned Flutter. Record exact commit and remaining failures.
+- [ ] Complete M1/V1 origin-pin debt and S2 restore fixtures before the affected next extraction.
+- [ ] Resume eligible sequential lanes: Search G1'-5..9; Player V1-6..10; Magic TV M1-3..6; Storage S2-6..7.
+- [ ] Prepare upstream contribution strategy and map existing upstream PRs to refactored files.
+- [ ] Phase3: remove expired forwarders and migrate callers (Q2), enforce layering (Q1), centralize engineering rules (Q3).
+
+### Completed in this correction round
+- [x] Merge #108: Windows source guards, 21 tests reproduced, clean touched analysis.
+- [x] Diagnose SDK mismatch:3.44.8 gives454 diagnostics on parent/correction; no new issues against unchanged baseline.
+- [x] Recover backup worker scope and commits; open separate opt-in decoder draft112.
+- [x] Record upstream-contribution direction; hold out-of-plan #109 and Phase3-only #56.
+- [x] Restore five-minute worker follow-up and require completion/blocker reports.
+
+### Explicit blockers
+- [ ] **SHIELD smoke:** hardware unavailable; no phone-as-TV pass claimed.
+- [ ] **PR110 ceiling:** current main has seven M1 violations; depends on111.
+- [ ] **PR96 disposal:** candidate exists; effective race regression coverage still being built.
+
+
 ## Current orchestration — Gate 3 audit (2026-09-05)
 
 This section supersedes stale status/ceiling/merge instructions below. Orchestrator is the only assignment and merge entry point; workers never edit this board.
