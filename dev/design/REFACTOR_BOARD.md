@@ -264,3 +264,9 @@ Cursor dedup product released after independent16origin+4sensitiveprobes+design 
 ### V1-7 test-only sequencing decision
 Cicero assigned refactor/v1-7-speed-origin-pin: existing test/native/video_player_origin_behavior_test.dart only, real Controls/menu/player/persisted-speed pin with identical bytes on bc46/current required native runner. Explicit exception permits characterization while V1-6 decoder proof is paused; no product, runner, CI, SDK or CODEMAP edits, no decoder or V1-7 completion claim. One bounded implementation attempt; report evidence/blocker rather than repeated native retries. Cursor144 final53184 independentPASS; exact-head CI running. Playlist143 b53 independent review in progress; product219-line move remains held.
 
+
+### Follow-on ownership after independent checkpoints
+- Locke: released separate refactor/s2-playlist-progress-owner based greenb53; only219-line StorageService builder and existing playback_progress_store.dart owner; unchanged reader bridge/callers/keys. Origin143 remains frozen awaitingCI; product cannot merge before143. Forecast215host reduction/+5total, not credited until merge. CODEMAP not granted.
+- Ampere: separate refactor/m1-7-captured-unlock-pins, NEW test/magic_tv_captured_unlock_origin_test.dart only;45-minute first batch actual host captured-key wire observations and missing RD PreferVideos path. No production/seams; stop with explicit debt if path inaccessible. Cursor144 remains frozen53184 and independently passed, CI pending.
+- Wegener:30-minute read-only next Discover watchlist/focus/CW/bound origin-pin feasibility, no edits or general re-inventory. Cicero: test-only player-speed pin as above. No user dependency.
+
