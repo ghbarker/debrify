@@ -202,7 +202,7 @@ class _ProviderSnap {
 }
 
 /// Origin `_computeKwProviders`.
-_ProviderSnap computeKwProviders(
+_ProviderSnap _computeKwProviders(
   List<Torrent> torrents, {
   required Set<String> seen,
   required Set<String> selectedDirect,
@@ -456,21 +456,13 @@ void main() {
       final live = TorrentService.mergeSearchResults([fast, slow]);
       expect(live.map((t) => t.infohash).toList(), ['a', 'b']);
 
-      var frozen = false;
-      List<Torrent>? pending;
       List<Torrent> shown = TorrentService.mergeSearchResults([fast]);
-      frozen = true; // first interaction
-      final raw = TorrentService.mergeSearchResults([fast, slow]);
-      if (frozen) {
-        pending = raw;
-      } else {
-        shown = raw;
-      }
+      // First interaction freezes live reshuffles; later arrivals park.
+      final pending = TorrentService.mergeSearchResults([fast, slow]);
       expect(shown.map((t) => t.infohash).toList(), ['a']);
       expect(kwPendingNewCount(shown, pending), 1);
 
-      shown = pending!;
-      pending = null;
+      shown = pending;
       expect(shown.map((t) => t.infohash).toList(), ['a', 'b']);
     });
 
@@ -478,7 +470,7 @@ void main() {
       final kept = _t(hash: 'a', name: 'A', source: 'alpha');
       final pending = [kept];
       String? tab = 'beta';
-      if (tab != null && !pending.any((t) => kwSourceOf(t) == tab)) {
+      if (!pending.any((t) => kwSourceOf(t) == tab)) {
         tab = null;
       }
       expect(tab, isNull);
@@ -577,7 +569,7 @@ void main() {
       final seen = <String>{};
       final selectedDirect = <String>{};
       final selectedTorrent = <String>{};
-      final first = computeKwProviders(
+      final first = _computeKwProviders(
         [_t(hash: 'a', name: 'A', source: 'alpha')],
         seen: seen,
         selectedDirect: selectedDirect,
@@ -585,7 +577,7 @@ void main() {
       );
       expect(first.selectedTorrent, {'alpha'});
       selectedTorrent.remove('alpha');
-      final second = computeKwProviders(
+      final second = _computeKwProviders(
         [
           _t(hash: 'a', name: 'A', source: 'alpha'),
           _t(hash: 'b', name: 'B', source: 'beta'),
@@ -597,7 +589,7 @@ void main() {
       expect(second.selectedTorrent, {'beta'});
       expect(second.seen, {'t:alpha', 't:beta'});
 
-      final pruned = computeKwProviders(
+      final pruned = _computeKwProviders(
         [_t(hash: 'b', name: 'B', source: 'beta')],
         seen: seen,
         selectedDirect: selectedDirect,
