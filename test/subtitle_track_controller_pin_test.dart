@@ -418,9 +418,12 @@ void main() {
 /// Bodies live on the god file until the move; after the move they live on
 /// the controller. The pin must keep passing without edits (gate h).
 String _subtitleOriginSource() {
-  final moved = File('lib/services/playback/subtitle_track_controller.dart');
-  if (moved.existsSync()) {
-    return moved.readAsStringSync();
+  for (final path in [
+    'lib/screens/video_player/subtitle_track_controller.dart',
+    'lib/services/playback/subtitle_track_controller.dart',
+  ]) {
+    final moved = File(path);
+    if (moved.existsSync()) return moved.readAsStringSync();
   }
   return File('lib/screens/video_player_screen.dart').readAsStringSync();
 }

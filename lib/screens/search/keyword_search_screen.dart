@@ -8,7 +8,7 @@ import '../../models/torrent.dart';
 import '../../models/torrent_filter_state.dart';
 import '../../services/main_page_bridge.dart';
 import '../../services/profiles/profile_policy_guard.dart';
-import '../../services/search/keyword_search_controller.dart';
+import 'keyword_search_controller.dart';
 import '../../services/torrent_playback_service.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/dialog_tap_guard.dart';

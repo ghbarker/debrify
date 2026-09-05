@@ -10,14 +10,14 @@ import '../../models/android_video_renderer_mode.dart';
 import '../../models/series_playlist.dart';
 import '../../models/stremio_addon.dart';
 import '../../models/stremio_subtitle.dart';
-import '../../screens/video_player/services/external_subtitle_payload.dart';
-import '../../screens/video_player/services/subtitle_track_utils.dart';
-import '../../screens/video_player/utils/language_mapping.dart';
-import '../../screens/video_player/widgets/tracks_sheet.dart';
+import '../../services/storage_service.dart';
+import '../../services/stremio_subtitle_service.dart';
 import '../../utils/platform_util.dart';
 import '../../widgets/player/identify_title_sheet.dart';
-import '../storage_service.dart';
-import '../stremio_subtitle_service.dart';
+import 'services/external_subtitle_payload.dart';
+import 'services/subtitle_track_utils.dart';
+import 'utils/language_mapping.dart';
+import 'widgets/tracks_sheet.dart';
 
 /// Origin `_SubtitleApplyAttempt`.
 class SubtitleApplyAttempt {

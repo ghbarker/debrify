@@ -50,7 +50,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// `_runKeyword`…`_openKeywordSources`, `_buildKeyword`…`_sortLabel`,
 /// `_handleKwTabKey` / `_handleKwToolbarKey`.
 String _origin() {
-  final controller = File('lib/services/search/keyword_search_controller.dart');
+  final controller = File('lib/screens/search/keyword_search_controller.dart')
+      .existsSync()
+      ? File('lib/screens/search/keyword_search_controller.dart')
+      : File('lib/services/search/keyword_search_controller.dart');
   final screen = File('lib/screens/search/keyword_search_screen.dart');
   if (controller.existsSync() && screen.existsSync()) {
     return '${controller.readAsStringSync()}\n${screen.readAsStringSync()}';
