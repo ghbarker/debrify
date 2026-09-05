@@ -702,3 +702,6 @@ MagicTV_loadSettings uses AndroidNativeDownloader.isTelevision, which returnsfal
 
 G17a PR125 current-caller contract accepted after independent76current/8origin tests: soleproduction commit callback synchronous once; loader partition moves before mounted/commit with extraasyncboundary. Disposedpath mayallocate discardedlists; arbitrary delayed/multiapplycallbackequivalence and exactmicrotasktiming NOTproven. No currentcallerfailure found. HostrefreshIO order unchanged; sharedprefshold cannotkill removedwatchlistawait. Zero750Leavescredit. M15a editor/chip only approved; rejectedlarge20fieldsettingscallbackbag, remainingsettings requiresactualownershipdesign.
 
+
+M15a analyzer provenance repair authorized: historical0a0ca9e6 mislabeled originaleditor baseline2096:17 as importdialog137:13. Minimumtwo-rowrepair maps originaleditor to neweditor166:17/span8351 and originalimport3198:15 to actualimport141:13/span1229. Samecode/type/severity/message,454count andSORT_CHILDmultiset8 unchanged; no arbitraryhostrow reassignment. Otherhistoricalmislabels recorded asdebt, notexpandedcleanup.
+
