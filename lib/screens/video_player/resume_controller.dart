@@ -4,16 +4,16 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/iptv_playlist.dart';
 import '../../models/series_playlist.dart';
-import '../../screens/video_player/constants/timing_constants.dart';
-import '../../screens/video_player/models/gesture_state.dart';
-import '../../screens/video_player/models/playlist_entry.dart';
-import '../../screens/video_player/utils/aspect_mode_utils.dart';
+import '../../services/local_playback_resume_resolver.dart';
+import '../../services/resume_write_guard.dart';
+import '../../services/storage_service.dart';
+import '../../services/tracking_source_policy.dart';
 import '../../utils/episode_progress_merge.dart';
 import '../../utils/series_parser.dart';
-import '../local_playback_resume_resolver.dart';
-import '../resume_write_guard.dart';
-import '../storage_service.dart';
-import '../tracking_source_policy.dart';
+import 'constants/timing_constants.dart';
+import 'models/gesture_state.dart';
+import 'models/playlist_entry.dart';
+import 'utils/aspect_mode_utils.dart';
 
 /// `(entry, position, duration)` snapshot the resume path persists and seeks.
 class ResumeContext {

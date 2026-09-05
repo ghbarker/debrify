@@ -1,3 +1,3 @@
 # Layering violation ceiling (Phase 2 gate i). Shrink only.
-# Measured on origin/main after #95/#98. Historical: #72 (48db8f1e)=77; pre-#95=99.
-106
+# Historical: #72=77; pre-#95=99; after #95/#98=106; after #100 V1-fix=90.
+90

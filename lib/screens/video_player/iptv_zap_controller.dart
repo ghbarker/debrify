@@ -5,14 +5,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/iptv_playlist.dart';
-import '../../screens/video_player/widgets/iptv_channel_sheet.dart'
-    show IptvGuideContext, iptvChannelFromBrowsePayload;
-import '../../screens/video_player/widgets/iptv_zap_banner.dart';
-import '../../screens/video_player/widgets/player_guide_style.dart';
-import '../../widgets/iptv/styles/iptv_style.dart';
-import '../iptv_epg_service.dart';
-import '../storage_service.dart';
+import '../../services/iptv_epg_service.dart';
+import '../../services/storage_service.dart';
 import '../../utils/iptv_player_paging.dart';
+import '../../widgets/iptv/styles/iptv_style.dart';
+import 'widgets/iptv_channel_sheet.dart'
+    show IptvGuideContext, iptvChannelFromBrowsePayload;
+import 'widgets/iptv_zap_banner.dart';
+import 'widgets/player_guide_style.dart';
 
 /// Live player state the moved IPTV zap / catch-up functions read and write.
 ///

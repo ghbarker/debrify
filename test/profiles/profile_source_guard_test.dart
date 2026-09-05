@@ -151,7 +151,7 @@ void main() {
     () {
       final host = readSource('lib/screens/search_screen.dart');
       final source = readSource(
-        'lib/services/search/keyword_search_controller.dart',
+        'lib/screens/search/keyword_search_controller.dart',
       );
       expect(
         source,

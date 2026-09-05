@@ -363,9 +363,12 @@ void main() {
 /// Bodies live on the god file until the move; after the move they live on
 /// the controller. The pin must keep passing without edits (gate h).
 String _resumeOriginSource() {
-  final moved = File('lib/services/playback/resume_controller.dart');
-  if (moved.existsSync()) {
-    return moved.readAsStringSync();
+  for (final path in [
+    'lib/screens/video_player/resume_controller.dart',
+    'lib/services/playback/resume_controller.dart',
+  ]) {
+    final moved = File(path);
+    if (moved.existsSync()) return moved.readAsStringSync();
   }
   return File('lib/screens/video_player_screen.dart').readAsStringSync();
 }
