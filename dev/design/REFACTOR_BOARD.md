@@ -363,3 +363,7 @@ Watchlistownerreleased3prod+keysweep,161162prerequisite; debugannotationonly mov
 ### #162 merged / products reviewed
 162exact819 independent105/scoped/actualpackagekeytype mutants/all3CIpassed. Did we make a difference?OldWatchlistStringrestore/readcanonicalizationwithoutpersist verified; more remains164owner/Q2callers,zeroLeaves. Gods8614/11926/3317/3666/2899 vs19070/16278/10716/9963/7905 unchanged.163final638 independentPASS withexact1baselineentryrelocation/no extraallowance,readyfreshCI;164product/docsWegenerPASS latestunionpending. Nextfullgate after163164(158alreadyone). No user blocker,allCODEMAPlocksreleased.
 
+
+### #163 merged
+Exact63889 independent218executions/202distinct/scopedinherited7/full436452/layer77/finalmapping/CIall3passed. Did we make a difference?Fournextclosures consolidateinto2deliberatelydistinctprogrammes;19netprod/202leaf,newowner217/model13 fullycharged. Fiveflows2081/common1384/newowner217;below800unfinished/24bindingsQ2retained. Warningbaselineoneentryrelocatedonly,452countunchanged. More remainsreentrancy/cast/nativefinitegaps andqueuedependencies. Godhostsunchanged8614/11926/3317/3666/2899 vs19070/16278/10716/9963/7905.164all3CIgreen finalpost163unionreviewthenmerge/fullgate. No user blocker.
+
