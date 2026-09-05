@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../models/torrent.dart';
-import '../../../models/debrify_tv/cache_results.dart';
 import '../../../services/storage_service.dart';
 import '../../../services/torrent_service.dart';
 import '../../../services/main_page_bridge.dart';
@@ -117,37 +116,17 @@ class PremiumizeWatchFlow {
         host.setState(() => host.status = 'Checking Premiumize cache...');
       }
 
-      int candidateCursor = 0;
-
-      Future<bool> populateQueue() async {
-        while (true) {
-          if (candidateCursor >= combinedList.length) return false;
-          final window = await host.fetchPremiumizeCacheWindow(
-            candidates: combinedList,
-            startIndex: candidateCursor,
-            apiKey: apiKey,
-          );
-          candidateCursor = window.nextCursor;
-          if (window.cachedTorrents.isEmpty) {
-            if (window.exhausted) return false;
-            continue;
-          }
-          host.queue
-            ..clear()
-            ..addAll(window.cachedTorrents);
-          host.lastQueueSize = host.queue.length;
-          host.lastSearchAt = DateTime.now();
-          if (host.mounted) {
-            host.setState(() {
-              host.status = host.queue.isEmpty
-                  ? ''
-                  : 'Queue has ${host.queue.length} remaining';
-            });
-          }
-          log('✅ Found ${host.queue.length} cached Premiumize torrent(s)');
-          return true;
-        }
-      }
+      final populateQueue = CachedWatchQueueCursor(
+        host: host,
+        candidates: combinedList,
+        fetchWindow: (startIndex) => host.fetchPremiumizeCacheWindow(
+          candidates: combinedList,
+          startIndex: startIndex,
+          apiKey: apiKey,
+        ),
+        batchReady: (count) =>
+            log('✅ Found $count cached Premiumize torrent(s)'),
+      ).populate;
 
       bool seeded;
       try {
@@ -376,40 +355,17 @@ class PremiumizeWatchFlow {
       });
     }
 
-    int candidateCursor = 0;
-
-    Future<bool> populateQueue() async {
-      while (true) {
-        if (candidateCursor >= candidatePool.length) return false;
-        final TorboxCacheWindowResult window = await host
-            .fetchPremiumizeCacheWindow(
-              candidates: candidatePool,
-              startIndex: candidateCursor,
-              apiKey: apiKey,
-            );
-        candidateCursor = window.nextCursor;
-        if (window.cachedTorrents.isEmpty) {
-          if (window.exhausted) return false;
-          continue;
-        }
-        host.queue
-          ..clear()
-          ..addAll(window.cachedTorrents);
-        host.lastQueueSize = host.queue.length;
-        host.lastSearchAt = DateTime.now();
-        if (host.mounted) {
-          host.setState(() {
-            host.status = host.queue.isEmpty
-                ? ''
-                : 'Queue has ${host.queue.length} remaining';
-          });
-        }
-        log(
-          '✅ Cached Premiumize batch ready with ${host.queue.length} item(s)',
-        );
-        return true;
-      }
-    }
+    final populateQueue = CachedWatchQueueCursor(
+      host: host,
+      candidates: candidatePool,
+      fetchWindow: (startIndex) => host.fetchPremiumizeCacheWindow(
+        candidates: candidatePool,
+        startIndex: startIndex,
+        apiKey: apiKey,
+      ),
+      batchReady: (count) =>
+          log('✅ Cached Premiumize batch ready with $count item(s)'),
+    ).populate;
 
     bool seeded;
     try {
