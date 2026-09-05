@@ -692,3 +692,6 @@ Storage4365 exceeds2800target by1565:783explicit shortfalls(433S2-6+350S2-7),782
 
 V1-6 decoder feasibility paused: actualnative syntheticvideo failed beforepositiveparams evenwith approved2IO-only testingseams; no greenpin/extraction/PR,450Leaves notclaimed. Failedscaffold remains uncommitted only isolated debrify-v1-6-decoder-diagnostics. No furtherhooks permitted. PositiveAndroidfallback also unproven. Newnativetest cannot silentlyship because currentnativejob singlecase; explicitCIregistration required iffuturefeasibilitysucceeds.
 
+
+G1'-7 readiness: actualDiscover uses20hostcollaborators, not plannedboardRefs seam.56discoverMode tokens/39widgetaccesses currentinventory; privateexecutionbranches targetzero, frozenpubliccompatibilitydispatch exempt. Must approve explicitdata/action lifetime ownership, no hiddenhost/callbackbag. No broadsharedwidget/router edits approved; actualoriginstartup/focuspins next after123merge. M1-5scope core+cohesivehelpers/sharedchip approved; noimport/watchhooks padding, livewrites/resetorder preserved; productwaitnextautomatedgate.
+
