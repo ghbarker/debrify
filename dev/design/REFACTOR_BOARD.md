@@ -14,12 +14,13 @@ Updated by the orchestrator when assignments, blockers, PR checks or merges chan
 
 ### Working now
 - [ ] **CI consistency — Cicero:** verify PR110 + PR111 together using Flutter3.44.8; restore ceiling77 and Windows analyzer enforcement.
-- [ ] **Magic TV — Ampere:** PR111 dependency fix in review; live historical cache/watch behavior pins underway. M1-3 waits.
+- [ ] **Magic TV — Ampere:** PR111 MERGED at0d4ca1a2; live historical cache/watch behavior pins underway. M1-3 still waits for origin debt/gate/upstream strategy.
 - [ ] **Continue Watching — Wegener:** integrate #96 with #104/#105/#107 and prove disposal guard with a real failing regression test.
 - [ ] **Settings safety — Locke:** tests only: restore actual pre-refactor exports and diff every represented key/type/value. Decoder #112 PARKED; no product work.
 
 ### Next, in order
-- [ ] Merge #111 after independent verification and exact-head CI, then rebase/check/merge #110.
+- [x] Merge #111 after independent verification and exact-head CI (0d4ca1a2).
+- [ ] Rebase/check/merge #110 on new main; Cicero assigned, no raised baseline.
 - [ ] Merge #96 only when integrated evidence, compatibility review and CI pass; then eligible G1'-5.
 - [ ] Run corrective full suite, analyzer and both native builds on one pinned Flutter. Record exact commit and remaining failures.
 - [ ] Complete M1/V1 origin-pin debt and S2 restore fixtures before the affected next extraction.
@@ -36,7 +37,7 @@ Updated by the orchestrator when assignments, blockers, PR checks or merges chan
 
 ### Explicit blockers
 - [ ] **SHIELD smoke:** hardware unavailable; no phone-as-TV pass claimed.
-- [ ] **PR110 ceiling:** current main has seven M1 violations; depends on111.
+- [ ] **PR110:** seven M1 violations removed by111; awaiting updated branch and exact-head CI.
 - [ ] **PR96 disposal:** deterministic mutation pin reported; at most one final SDK verification attempt. If unsuccessful, record debt; no further pin PRs.
 
 
@@ -193,3 +194,5 @@ Current main03471d13 god-file line counts (git blobs, not working-tree estimates
 - `lib/screens/settings_screen.dart`: 2899 lines.
 
 Latest policy correction: upstream build.yml blob2a48503bcf470fef4affcc606182c90444855511 pins Flutter3.44.8 across platforms (verified GitHub API). Keep dev/CI aligned to upstream; do not upgrade or regenerate goldens merely to follow the laptop SDK. #112 parked. Upstream strategy precedes next extractions. Hourly fallback only.
+
+Merge111 report: exact head e56863f1 test+goldens green; independent65 M1 tests,40 pre-move origin tests,50 Python tests,9 layering tests, analyzer454/no new; combined ceiling77. Main0d4ca1a2. Did we make a difference? Seven illegal UI imports removed from service with real origin pins. More to do: actual-main gates, remaining seams M1-5/6, origin debt and upstream strategy. God files unchanged by111: search13105, player11926, MagicTV8369, storage6282, settings2899 (verify next gate). In-progress owners unchanged; M1-3 remains gated, no user-input wait.
