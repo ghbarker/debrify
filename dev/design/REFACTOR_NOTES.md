@@ -399,6 +399,26 @@ behaviour and must be restored, not kept as quirks.
   own body — calling `AppStylePrefs.resetCaches()` is not enough. S2-5
   and later must list every extracted `*Cached` on the façade.
 
+### S2-5 · Tracking prefs
+
+- **`trackingSourceRevision` lives on TrackingPrefs.** StorageService keeps a
+  forwarding getter so existing `StorageService.trackingSourceRevision.value`
+  reads and writes hit the same notifier.
+- **`home_tick_sources` stays on HomePrefs.** TrackingPrefs.get/set wrap it
+  only so `setHomeTickSources` can bump the revision. Ownership did not move.
+- **Legacy catalog switches stay bool keys.** `trakt_sync_catalog_items` /
+  `simkl_sync_catalog_items` / `mdblist_sync_catalog_items` default false.
+  Absent legacy key still seeds that tracker ON when adopting masters.
+- **Unknown `watch_progress_source` reads `smart`.** Dedicated disconnect
+  fallback only owns trakt/simkl/mdblist — never smart or local.
+- **Empty MDBList username removes the key.** Empty Trakt username persists
+  `''`. `clearMdblistAuth` also drops clones + checkpoint.
+- **MDBList tokens are not CloudSecretPrefs.** Same SecretVault +
+  ProfileCredentialFacade dance as origin. `_credentialConfigured` moved
+  with the three tracker helpers.
+- **Episode progress / `_getPlaybackStateMap` stayed** for S2-6.
+- **Callers still import `StorageService`.** `@Deprecated` waits for Q2.
+
 ### V1-3 · subtitle track controller
 
 - **Stored `auto` is no-choice.** A persisted subtitle id of `auto` (audio-only
