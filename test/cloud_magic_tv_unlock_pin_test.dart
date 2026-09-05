@@ -89,10 +89,7 @@ void main() {
     // Both success returns (all-videos and largest-video fallback) carry
     // the keys Magic TV reads. fileSelection/files/updatedInfo stay on the
     // origin but Magic TV does not use them at the PreferVideos sites.
-    expect(
-      "'downloadLink': downloadLink,".allMatches(preferVideos).length,
-      2,
-    );
+    expect("'downloadLink': downloadLink,".allMatches(preferVideos).length, 2);
     expect("'torrentId': torrentId,".allMatches(preferVideos).length, 2);
     expect("'links': links,".allMatches(preferVideos).length, 2);
   });
@@ -113,13 +110,15 @@ void main() {
   test('Magic TV reads unrestrict download + filesize, not a String URL', () {
     expect(magicTvSrc.contains("unrestrict['download']"), isTrue);
     expect(magicTvSrc.contains("unrestrict['filesize']"), isTrue);
-    expect(
-      'DebridService.unrestrictLink'.allMatches(magicTvSrc).length,
-      6,
-    );
+    expect('DebridService.unrestrictLink'.allMatches(magicTvSrc).length, 6);
     // First arg is the in-scope apiKey, not a credentials lookup.
-    expect(magicTvSrc, contains('DebridService.unrestrictLink(\n'
-        '                apiKeyEarly,'));
+    expect(
+      magicTvSrc,
+      contains(
+        'DebridService.unrestrictLink(\n'
+        '                apiKeyEarly,',
+      ),
+    );
     expect(magicTvSrc, contains('DebridService.unrestrictLink(apiKey, link)'));
   });
 
@@ -130,10 +129,7 @@ void main() {
       reason: 'requestMagicNext and _playNextFromQueue — not locked-link walk',
     );
     expect(magicTvSrc.contains("result['downloadLink'] as String?"), isTrue);
-    expect(
-      magicTvSrc.contains("result['torrentId'] as String? ?? ''"),
-      isTrue,
-    );
+    expect(magicTvSrc.contains("result['torrentId'] as String? ?? ''"), isTrue);
     expect(
       magicTvSrc.contains("result['links'] as List<dynamic>? ?? const []"),
       isTrue,
@@ -155,11 +151,15 @@ void main() {
     );
     expect(
       magicTvSrc,
-      contains('final videoUrl = await AllDebridService.unlockLink(apiKey, link)'),
+      contains(
+        'final videoUrl = await AllDebridService.unlockLink(apiKey, link)',
+      ),
     );
     expect(
       magicTvSrc,
-      contains('videoUrl = await AllDebridService.unlockLink(apiKey, headLink)'),
+      contains(
+        'videoUrl = await AllDebridService.unlockLink(apiKey, headLink)',
+      ),
     );
   });
 
@@ -176,9 +176,7 @@ void main() {
     );
     expect(
       capabilitiesSrc,
-      contains(
-        'Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(',
-      ),
+      contains('Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks('),
     );
     expect(capabilitiesSrc.contains('unrestrictLink'), isFalse);
     expect(capabilitiesSrc.contains('addTorrentPreferVideos'), isFalse);
