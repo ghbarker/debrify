@@ -2,11 +2,11 @@
 
 ## Current checkpoint — 2026-09-05 15:43 UTC (supersedes historical rows below)
 - Latest merged PRs: #125, #126, #127 and #128; main 6aeec78f contains the latest gate record.
-- M1-5b Ampere, refactor/m1-5b-playback-settings: #129 held at 24ba72f3. Independent review passed; CI test failed on shape_manifest_test.dart, while goldens/native passed. Diagnose missing moved-file coverage; no threshold relaxation. M1-6 remains readiness-only.
+- M1-5b merged #129 at 78be96c1 after independent review and all three corrected-head CI checks. Ampere assigned M1-6 origin-pin feasibility only on refactor/m1-6-queue-prefetch; no production scope yet.
 - G1'-7c merged #130 at 5232013a after independent 86-test/body review and all three exact-head CI checks. 143 host lines removed; zero credit toward standalone Discover. Wegener assigned G1'-7d actual-origin pin feasibility only, branch refactor/g1-7d-playback-selection; no production scope granted.
-- C0 Cicero: independent lifecycle review complete; available for corrected #129 verification. Locke: full integrated gate complete; available for the next independent review. No duplicate workers or overlapping edits.
+- C0 Cicero: approved isolated shape-guard hardening, only shape_manifest_test.dart and its one allowlist identity. Locke: independent G17d real-origin pin review. Wegener: G17d transport-boundary design; no product move authorized.
 - Latest full automated gate PASSED actual main 04264596: 5307 passing generic tests, 12 exact known failures, two skips; 21 exact known golden errors; no unexpected/unused entries. Native origin/current passed; Windows/ARM64 builds passed; analyzer 438/454, layering 77.
-- Current merged god lines: search 9126, player 11926, Magic TV 4071, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
+- Current merged god lines: search 9126, player 11926, Magic TV 3659, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
 - Open debt: storage shortfall 1565; player native fixture paused; temporary forwarders expire in their recorded lanes. No manual smoke pass claimed; user explicitly deferred it without blocking eligible work.
 - CODEMAP unlocked. No user action required. Awake helper PID3412 verified running; expires September 5 at 16:43 UTC, without extension or permanent power changes.
 ## Prior checkpoints and retained evidence
@@ -169,3 +169,5 @@ Generic5307pass/12exactknown/2skip;goldens21exactknown;0unexpected/unused,rawfal
 
 
 #130 merged5232013a exactcf38a3e7: lifecycle owns presentation resources and cleanup; 143 net host lines, production net+1. Difference: explicit resource lifetime with actual-origin pins; more: 14 aliases/focus forwarder expire realG17/Q2, Discover still not standalone. First production slice since full04264596gate. #129 correction4ab8e1c independent review/newCI pending; exact new renderer added to shape inventory,490floor unchanged. G17d only test/discover_playback_selection_origin_test.dart writable; routefactory/IOseam decision required before product edits.
+
+129merged78be96c1 exact4ab8e1c afterall3CIgreen+independentreview. Difference:18settingsfields nowowned bystate, renderer extracted,412hostLeaves; combinedM15=860. More:18aliases/realUIboundaries remain expiryM1-6/Q2, noAndroidpositive proof. Secondproductionmerge since04264596gate; nextthirdproductionrequiresfullgate. C0shapehardening authorized2testfilesonly; M16neworigin-test-only feasibility; Locke G17d20caseindependentreview. No userwait.
