@@ -16,7 +16,7 @@ Updated by the orchestrator when assignments, blockers, PR checks or merges chan
 - [ ] **CI consistency — Cicero:** verify PR110 + PR111 together using Flutter3.44.8; restore ceiling77 and Windows analyzer enforcement.
 - [ ] **Magic TV — Ampere:** PR111 MERGED at0d4ca1a2; live historical cache/watch behavior pins underway. M1-3 still waits for origin debt/gate/upstream strategy.
 - [ ] **Continue Watching — Wegener:** integrate #96 with #104/#105/#107 and prove disposal guard with a real failing regression test.
-- [ ] **Settings safety — Locke:** tests only: restore actual pre-refactor exports and diff every represented key/type/value. Decoder #112 PARKED; no product work.
+- [ ] **Settings safety — Locke:** draft #114 rebased f6764d2a;29/141 admitted named keys covered,5 families and28 exclusions inventoried. S2-5 first complete-domain checkpoint (8 admitted/8 excluded). Decoder #112 PARKED.
 
 ### Next, in order
 - [x] Merge #111 after independent verification and exact-head CI (0d4ca1a2).
@@ -24,7 +24,7 @@ Updated by the orchestrator when assignments, blockers, PR checks or merges chan
 - [ ] Merge #96 only when integrated evidence, compatibility review and CI pass; then eligible G1'-5.
 - [ ] Run corrective full suite, analyzer and both native builds on one pinned Flutter. Record exact commit and remaining failures.
 - [ ] Complete M1/V1 origin-pin debt and S2 restore fixtures before the affected next extraction.
-- [ ] Prepare upstream contribution strategy and map existing upstream PRs to refactored files BEFORE any further extraction assignment.
+- [x] Upstream strategy mapped: upstreamdb440a8d, fork0d4ca1a2 is385ahead/0behind across371files; existing upstream PRs55 then54 then56 must refresh/test sequentially (pairwise conflicts). No bulk fork merge. Coordinate upstream review before publishing further refactor PRs there.
 - [ ] Resume eligible sequential lanes: Search G1'-5..9; Player V1-6..10; Magic TV M1-3..6; Storage S2-6..7.
 - [ ] Phase3: remove expired forwarders and migrate callers (Q2), enforce layering (Q1), centralize engineering rules (Q3).
 
@@ -195,4 +195,6 @@ Current main03471d13 god-file line counts (git blobs, not working-tree estimates
 
 Latest policy correction: upstream build.yml blob2a48503bcf470fef4affcc606182c90444855511 pins Flutter3.44.8 across platforms (verified GitHub API). Keep dev/CI aligned to upstream; do not upgrade or regenerate goldens merely to follow the laptop SDK. #112 parked. Upstream strategy precedes next extractions. Hourly fallback only.
 
-Merge111 report: exact head e56863f1 test+goldens green; independent65 M1 tests,40 pre-move origin tests,50 Python tests,9 layering tests, analyzer454/no new; combined ceiling77. Main0d4ca1a2. Did we make a difference? Seven illegal UI imports removed from service with real origin pins. More to do: actual-main gates, remaining seams M1-5/6, origin debt and upstream strategy. God files unchanged by111: search13105, player11926, MagicTV8369, storage6282, settings2899 (verify next gate). In-progress owners unchanged; M1-3 remains gated, no user-input wait.
+Merge111 report: exact head e56863f1 test+goldens green; independent65 M1 tests,40 pre-move origin tests,50 Python tests,9 layering tests, analyzer454/no new; combined ceiling77. Main0d4ca1a2. Did we make a difference? Seven illegal UI imports removed from service with real origin pins. More to do: actual-main gates, remaining seams M1-5/6, origin debt and upstream strategy. God files unchanged by111: search13108, player11926, MagicTV8369, storage6282, settings2899 (verify next gate). In-progress owners unchanged; M1-3 remains gated, no user-input wait.
+
+Verification update: C0 full suite candidate0abc4c8 (tree identical to110 head8bd40543) 5168passed/33exact allowlisted/2skipped, no unexpected/unused; Windows release build pass127.4s. Android SDK/JDK installed with explicit license acceptance, ARM64 build in progress. #110 test CI green, goldens pending. #115 retrospective8-case M1 pin open; successful-engine test batch capped20–30min plus one corrective pass. #114 full fixture expansion estimate8–14 focused hours, checkpoint per domain;29settings is not full coverage.
