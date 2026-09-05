@@ -426,7 +426,13 @@ is an editor mirror, not the source of truth. How to add a provider:
   captured-key fetch/log capabilities and cancellation decisions. Live pins:
   `test/magic_tv_cache_window_watch_origin_test.dart` (16 desktop cases, no native
   playback claim). Cursor slice: 49 physical / 43 body-and-wiring net lines removed;
-  five flows remain 2352 lines, common 1388. The under-800 target remains open.
+  cursor checkpoint: five flows 2352 lines, common 1388.
+  `pushCachedWatchPlayer` in the same common file shares cached TB/PM/PP Flutter
+  presentation, returning the navigator Future without async; live reads stay in
+  the builder. Pins: `test/magic_tv_cached_player_presentation_origin_test.dart`.
+  Presentation removes 26 net physical lines (93 - 24 wiring - 43 helper): five
+  flows now 2283, common 1431. Under-800 and existing UI/captured-key debt remain;
+  no live-builder-time change, valid channel-switch or native playback proof.
   These shared phases do not complete the five-flow dedup target. `WatchFlowBindings` keeps live host
   state, navigation, existing preparation/prefetch/launcher callbacks and
   captured-key service calls. Six entry wrappers and five dead cached binding slots

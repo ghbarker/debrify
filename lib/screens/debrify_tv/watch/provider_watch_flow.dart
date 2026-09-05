@@ -380,6 +380,49 @@ class WatchFlowBindings {
   final Future<String> Function(String apiKey, String link) unlockLink;
 }
 
+/// Cached TB/PM/PP Flutter presentation; provider handoff remains in leaves.
+/// Keep live host/map reads in the builder and return the navigator Future directly.
+Future<dynamic> pushCachedWatchPlayer(
+  WatchFlowBindings host,
+  Map<String, String> first,
+  Future<Map<String, String>?> Function() requestNext, {
+  String? channelName,
+  int? channelNumber,
+  List<Map<String, dynamic>>? channelDirectory,
+}) {
+  MainPageBridge.notifyPlayerLaunching();
+
+  return host.navigator().push(
+    FrozenLegacyPageRoute(
+      builder: (_) => VideoPlayerScreen(
+        videoUrl: first['url'] ?? '',
+        title: first['title'] ?? 'Debrify TV',
+        startFromRandom: host.startRandom,
+        randomStartMaxPercent: host.randomStartPercent,
+        hideSeekbar: host.hideSeekbar,
+        showChannelName: host.showChannelName,
+        channelName: channelName,
+        channelNumber: channelNumber,
+        showVideoTitle: host.showVideoTitle,
+        hideOptions: host.hideOptions,
+        requestMagicNext: requestNext,
+        requestNextChannel:
+            host.channels.length > 1 &&
+                MagicTvDispatch.allowsNextChannel(
+                  host.provider,
+                  MagicTvNextChannelQuirk.exceptAllDebrid,
+                )
+            ? host.requestNextChannel
+            : null,
+        channelDirectory: channelDirectory,
+        requestChannelById: host.channels.length > 1
+            ? host.requestChannelById
+            : null,
+      ),
+    ),
+  );
+}
+
 /// Per-invocation cursor over the original live candidate list.
 /// Fetch and logging remain provider-specific; cancellation stays in each leaf.
 class CachedWatchQueueCursor {

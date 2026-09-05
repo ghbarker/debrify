@@ -47,11 +47,11 @@ const List<String> kStillFrozenPaths = [
 // Exact destinations relocated from Magic TV; no directory exemptions.
 const _watchFlowPlayerCounts = <String, int>{
   'lib/screens/debrify_tv/watch/alldebrid_watch_flow.dart': 2,
-  'lib/screens/debrify_tv/watch/pikpak_watch_flow.dart': 2,
-  'lib/screens/debrify_tv/watch/premiumize_watch_flow.dart': 2,
-  'lib/screens/debrify_tv/watch/provider_watch_flow.dart': 2,
+  'lib/screens/debrify_tv/watch/pikpak_watch_flow.dart': 1,
+  'lib/screens/debrify_tv/watch/premiumize_watch_flow.dart': 1,
+  'lib/screens/debrify_tv/watch/provider_watch_flow.dart': 3,
   'lib/screens/debrify_tv/watch/real_debrid_watch_flow.dart': 1,
-  'lib/screens/debrify_tv/watch/torbox_watch_flow.dart': 2,
+  'lib/screens/debrify_tv/watch/torbox_watch_flow.dart': 1,
 };
 
 // Match each construction at its actual frozen builder site, not a file marker.
