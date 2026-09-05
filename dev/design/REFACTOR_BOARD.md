@@ -5,9 +5,9 @@
 - Ampere: #135 merged f75fa016; now read-only M1/Q2 composition and remaining boundary review (30-minute bounded assignment).
 - Wegener: next meaningful Discover session/data ownership proposal; Locke: storage residual owner/fixture readiness; both read-only 45-minute assignments. Cicero: full actual f75fa016 gate running. No overlapping production edits.
 - Latest full automated gate passed f75fa016: 5413 passing generic tests, 12 exact known failures, two skips; 21 exact known golden errors after configured retries; no unexpected/unused entries. Native pair, Windows/ARM64 builds, Python55 passed; analyzer436/452, layering77.
-- Full f75fa016 gate passed; eligible next production work still requires origin pins and scoped design approval. Manual smoke unreported, never marked passed.
+- Full f75fa016 gate passed; eligible next production work still requires origin pins and scoped design approval. Manual smoke PASSED by user acceptance for verified f75fa016 build: phone tested successfully and TV accepted by user; no direct TV hardware test claimed.
 - Current god lines: search9033, player11926, MagicTV3331, storage4365, settings2899. Originals19070/16278/10716/9963/7905. Selection93host lines but production+90; zero standalone750credit. Prefetch228code-net remains2short230.
-- CODEMAP unlocked. Latest verified f75fa016 APK installed successfully on Samsung SM_S948U1 via ADB, preserving data. No user-dependent installation blocker remains; manual test results not yet reported.
+- CODEMAP unlocked. Latest verified f75fa016 APK installed successfully on Samsung SM_S948U1 via ADB, preserving data. Manual smoke PASSED by user acceptance for f75fa016; phone success and TV acceptance reported.
 - Temporary keep-awake expired16:43UTC and remains off; no power/disk changes or extension.
 ## Prior checkpoints and retained evidence
 
@@ -210,3 +210,6 @@ Status: design/readiness; owner Ampere after current independent fixture review.
 
 ## Phone feedback
 User reports "the apk worked great" after successful ADB installation of verified f75fa016 build (through#135), preserving data. Record successful user-reported phone testing; exact feature checklist not supplied, no SHIELD/TV or exhaustive compatibility claim. Refactor continues.
+
+## Manual smoke acceptance — f75fa016
+PASSED by explicit user instruction, based on successful phone testing of the installed verified APK and user acceptance of TV behavior. This supersedes earlier pending/deferred manual-smoke entries for this build. Direct SHIELD/TV hardware testing was not performed; no such execution is claimed.
