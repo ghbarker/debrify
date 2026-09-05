@@ -125,6 +125,9 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   `lib/screens/search/fav_row.dart` (`FavRow`). These retain screen/UI dependencies.
   Host supplies live State/context/update and cross-row callbacks, keeps stage
   composition, and disposes the favourites nodes in its existing disposal order.
+  `FavRowsController.loadMyWatchlist` delegates read/partition to
+  `lib/services/home/my_watchlist_loader.dart` (`MyWatchlistLoader.load`);
+  the adapter retains mounted/commit, node synchronization and autofocus.
   Hero state, focus-rest/enrichment timers, ambient trailers/live IPTV and shell
   art/tint/chrome relays live in `lib/screens/search/hero_presenter.dart`
   (`HeroPresenter`, `HeroEnvironment`). This remains screen/UI presentation,
