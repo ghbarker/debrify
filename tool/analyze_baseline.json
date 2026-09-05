@@ -1145,20 +1145,20 @@
       "severity": "INFO",
       "type": "LINT",
       "code": "SORT_CHILD_PROPERTIES_LAST",
-      "path": "lib/screens/debrify_tv/import_export_dialogs.dart",
-      "line": 137,
-      "column": 13,
-      "length": 7917,
+      "path": "lib/screens/debrify_tv/dialogs/channel_editor_dialog.dart",
+      "line": 166,
+      "column": 17,
+      "length": 8351,
       "message": "The 'child' argument should be last in widget constructor invocations."
     },
     {
       "severity": "INFO",
       "type": "LINT",
       "code": "SORT_CHILD_PROPERTIES_LAST",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 3198,
-      "column": 15,
-      "length": 1258,
+      "path": "lib/screens/debrify_tv/import_export_dialogs.dart",
+      "line": 141,
+      "column": 13,
+      "length": 1229,
       "message": "The 'child' argument should be last in widget constructor invocations."
     },
     {
