@@ -198,3 +198,15 @@ M16 expiry A+B authorized onrefactor/m1-6-expiry: host plusprovider_watch_flow f
 135mergedf75fa016 exactaf4ac9e7 all3CIgreen+independent135/34/body/integrationreview. Difference:114productionlinesremoved (72hostincludes34aliases+42binding); samecallback/writebehavior. More:11livecallbacks/UIcompositiondebt, nofullM1closure. Currentgods9033/11926/3331/4365/2899. C0fullgateactive; threeotherworkersread-onlynextscope preparation toavoididleCIwaits. PhoneinstallstillwaitingADBconnectiononly.
 
 Fullf75fa016gatePASS recorded: evidence debrify-c0-main-f75f-gate/.dart_tool/main-gate/REPORT.md. APK SHAa4ba9de8c1e46e11b377d9fc693c08f57aadd7d9b89fe7c8236e559e2b555830 verified thenADBinstall-r SUCCESS. Covers135; usermanualtestnotclaimed. G17fcontentoriginpins andfivefilterlegacyfixturepins active separatetests; C0M1compositiondesignreviewread-only; no broadproductionrelease.
+
+## Gate 4 — user-reported Windows run
+| Gate | Exact source / environment | Analyzer / layering | Tests | Build / smoke | Forwarders |
+|---|---|---|---|---|---|
+| Gate 4, user report | c86ea5f2; Windows Flutter3.47.2 | 453 issues,0errors;77/77,+0/-0 |5413pass/34fail:33known + native origin test missing LIBMPV_LIBRARY_PATH |Windows build PASS and launched, user-reported |All five god-file counts being independently inventoried; user preliminary storage148/search31, not yet verified |
+This is distinct from pinned3.44.8 f75fa016 automated gate. Native plain-test skip when env absent assigned C0, required native runner must remain strict.
+
+## New lane M1-7 — watch-flow deduplication
+Status: design/readiness; owner Ampere after current independent fixture review. Target five provider watch-flow files combined below800 lines, consolidating through ProviderWatchFlow and CloudProviderPort capabilities. Current size/normalization overlap and exact owned paths must be verified before product assignment. Provider quirks require origin pins; no blanket normalized-equivalence assumption. MagicTV host-size target remains provisional until this lane merges. Parent owns board; plan files unchanged.
+
+## Phone feedback
+User reports "the apk worked great" after successful ADB installation of verified f75fa016 build (through#135), preserving data. Record successful user-reported phone testing; exact feature checklist not supplied, no SHIELD/TV or exhaustive compatibility claim. Refactor continues.
