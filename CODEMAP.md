@@ -103,7 +103,17 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   Detail opening is `lib/screens/search/title_opener.dart` (`TitleOpener`; State `_openItem` is a forward).
   Catalog play/resume resolve is `lib/services/playback/catalog_play_resolver.dart`
   (`CatalogPlayResolver` — meta + tracker snapshots → `PlaySelection`/`ResumeInfo`;
-  host `_onCatalogPlay` keeps overlay, `_activeAddonId`, and launch).
+  host `_onCatalogPlay` keeps the overlay and resolver orchestration).
+  Selection metadata/art, addon identity, service launch and Sources navigation are
+  `lib/screens/search/selection_playback_owner.dart` (`SelectionPlaybackOwner`,
+  `SelectionPlaybackRoutes`: live TV read, bound refresh, full refresh).
+  `buildSearchSources` in `lib/screens/search/search_sources.dart` forwards to the
+  unchanged private Sources widget. Owner → legacy host library → owner remains
+  a legal cycle, not independent Discover ownership. Host `_playSelection` (32
+  lines) retains async entry/listener try/finally/State.mounted; `_browseSelection`
+  (24 lines) retains logging and the empty-ID guard before State.context. Both
+  adapters expire with real G17/Q2 migration. G17e: 93 net host Leaves, production
+  +90 net lines before docs; **zero** credit against the 750 standalone target.
   Source edit/add dialogs are `lib/widgets/sources/source_binding_dialogs.dart`
   (`SourceBindingDialogs` — meta + configured cloud/local options → persist /
   torrent+keyword bind callbacks; host `_handleEditOrSelectSource` stays the entry).

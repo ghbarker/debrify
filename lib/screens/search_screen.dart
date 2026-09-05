@@ -14,7 +14,6 @@ import '../utils/home_rail_metrics.dart';
 import '../utils/platform_util.dart';
 import '../models/home_collection.dart';
 import '../models/iptv_playlist.dart';
-import '../models/play_loader_art.dart';
 import '../models/stremio_addon.dart';
 import '../models/stremio_tv/stremio_tv_channel.dart';
 import '../models/torrent.dart';
@@ -44,6 +43,7 @@ import 'search/fav_row.dart';
 import 'search/hero_presenter.dart';
 import 'search/search_content_data.dart';
 import 'search/discover_lifecycle.dart';
+import 'search/selection_playback_owner.dart';
 import '../services/filtered_catalog_pager.dart';
 import '../services/hide_watched_prefs.dart';
 import '../services/watched_filter.dart';
@@ -488,7 +488,12 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// The addon that produced the item currently being played/browsed, threaded
   /// into playback so Continue Watching can route resume / next-episode back to
   /// it (matching Home's `addonId`). Set whenever we open a catalog item.
-  String? _activeAddonId;
+  final _selectionPlayback = SelectionPlaybackOwner();
+  late final _selectionRoutes = SelectionPlaybackRoutes(
+    readIsTelevision: () => widget.isTelevision,
+    refreshBoundSources: _refreshBoundSources,
+    refreshAfterPlayback: () => _refreshAfterPlayback(),
+  );
 
   /// DPAD focus for the catalog-mode "Sources" button (empty-prompt state) —
   /// its keyword-mode twin, for picking which searchable addons are queried.
@@ -5664,7 +5669,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       imdbOf: _imdbOf,
       isBound: _isBound,
       boundCountFor: _boundCountFor,
-      onActiveAddon: (id) => _activeAddonId = id,
+      onActiveAddon: (id) => _selectionPlayback.activeAddonId = id,
       resolveResumeInfo: _resolveResumeInfo,
       onCatalogPlay: _onCatalogPlay,
       onCatalogBrowse: _onCatalogBrowse,
@@ -5674,7 +5679,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       onDetailQuickAction: _handleDetailQuickAction,
       onDetailSimklQuickAction: _handleDetailSimklQuickAction,
       onDetailMdblistQuickAction: _handleDetailMdblistQuickAction,
-      onLoaderArt: _adoptDetailPlayArt,
+      onLoaderArt: _selectionPlayback.adoptDetailArt,
       getRecommendations: _stremio.getRecommendations,
       fetchMetaDetails: _stremio.fetchMetaDetails,
       onAfterPlayback: _refreshAfterPlayback,
@@ -5969,8 +5974,8 @@ class _SearchScreenState extends State<SearchScreenHost>
   }) async {
     // The loader's backdrop/logo/meta line for this title. Captured here (the
     // one play entry point that still holds the catalog meta) and read back in
-    // [_metaFor], which only ever sees a selection.
-    _capturePlayArt(item);
+    // [SelectionPlaybackOwner.metaFor], which only ever sees a selection.
+    _selectionPlayback.captureCatalogArt(item);
     var cancelled = false;
     final resolving = preferTraktResume
         ? TorrentPlaybackService.showResolvingOverlay(
@@ -5982,7 +5987,7 @@ class _SearchScreenState extends State<SearchScreenHost>
               posterUrl: item.poster,
               year: item.year,
               addonId: addon.id,
-              art: _pendingPlayArt,
+              art: _selectionPlayback.pendingArt,
             ),
             title: item.name,
             onCancel: () => cancelled = true,
@@ -6013,7 +6018,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       // Set the active addon before any early return so a movie play carries the
       // right addon id into meta.addonId (addon-stream resume/next), instead of a
       // stale one left over from a previously-browsed series.
-      _activeAddonId = addon.id;
+      _selectionPlayback.activeAddonId = addon.id;
       final decision = await _catalogPlayResolver.resolvePlay(
         item,
         addon,
@@ -6093,7 +6098,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     bool isTraktSource = false,
     bool isMdblistSource = false,
   }) {
-    _activeAddonId = addon.id;
+    _selectionPlayback.activeAddonId = addon.id;
     Navigator.of(context)
         .push(
           MaterialPageRoute(
@@ -6147,7 +6152,7 @@ class _SearchScreenState extends State<SearchScreenHost>
           MaterialPageRoute(
             builder: (_) => _SourcesScreen(
               selection: sel,
-              meta: _metaFor(sel),
+              meta: _selectionPlayback.metaFor(sel),
               isTelevision: widget.isTelevision,
               bindMode: true,
             ),
@@ -6184,7 +6189,7 @@ class _SearchScreenState extends State<SearchScreenHost>
           MaterialPageRoute(
             builder: (_) => _SourcesScreen(
               selection: sel,
-              meta: _metaFor(sel),
+              meta: _selectionPlayback.metaFor(sel),
               isTelevision: widget.isTelevision,
               bindMode: true,
               keywordSeed: seed,
@@ -6194,84 +6199,11 @@ class _SearchScreenState extends State<SearchScreenHost>
         .then((_) => _refreshBoundSources());
   }
 
-  /// Auto-best in-tab play: search torrents for the selection, pick the best
-  /// instantly-playable source, and play — never leaving the Search tab.
-  PlaybackMeta _metaFor(AdvancedSearchSelection sel) => PlaybackMeta.catalog(
-    // Only a real IMDb id here — the launcher's Trakt auto-sync + local
-    // Continue Watching must never fire on an empty or non-IMDb (IPTV) id,
-    // even though the search itself still uses sel.imdbId (the addon id).
-    imdbId: sel.imdbId.startsWith('tt') ? sel.imdbId : null,
-    contentType: sel.contentType ?? (sel.isSeries ? 'series' : 'movie'),
-    season: sel.season,
-    episode: sel.episode,
-    title: sel.title,
-    posterUrl: sel.posterUrl,
-    year: sel.year,
-    addonId: _activeAddonId,
-    traktProgressPercent: sel.traktProgressPercent,
-    // Trakt-row plays scrobble to Trakt instead of saving a duplicate local
-    // Continue Watching entry (mirrors Home passing selection.traktSource).
-    traktScrobble: sel.traktSource,
-    simklProgressPercent: sel.simklProgressPercent,
-    simklScrobble: sel.simklSource,
-    mdblistProgressPercent: sel.mdblistProgressPercent,
-    mdblistScrobble: sel.mdblistSource,
-    art: _artFor(sel.imdbId, sel.title),
-  );
-
-  /// Loader artwork for the title being played, captured by [_onCatalogPlay]
-  /// from the catalog meta it already holds. Presentation only.
-  ///
-  /// Keyed, because plays reach [_metaFor] through selections this screen did
-  /// not build (tracker continue-watching rows, the episode picker) — an
-  /// unkeyed stash would paint the previous title's backdrop behind the next
-  /// play. A miss simply means no art, which the loader already handles.
-  PlayLoaderArt? _pendingPlayArt;
-  String? _pendingPlayArtKey;
-
-  void _capturePlayArt(StremioMeta item) {
-    final key = _playArtKey(item.effectiveImdbId ?? item.id, item.name);
-    // The detail page publishes a strictly richer version of the same title
-    // (logo, runtime, rating, certificate — none of which catalog rows carry),
-    // so never let the row's sparse copy overwrite it.
-    if (_pendingPlayArt != null && _pendingPlayArtKey == key) return;
-    final art = PlayLoaderArt.fromMeta(item);
-    if (art.isEmpty) {
-      _pendingPlayArt = null;
-      _pendingPlayArtKey = null;
-      return;
-    }
-    _pendingPlayArt = art;
-    _pendingPlayArtKey = key;
-  }
-
-  /// The detail page's enrichment, replacing whatever the row had.
-  void _adoptDetailPlayArt(StremioMeta item, PlayLoaderArt art) {
-    _pendingPlayArt = art;
-    _pendingPlayArtKey = _playArtKey(
-      item.effectiveImdbId ?? item.id,
-      item.name,
-    );
-  }
-
-  static String _playArtKey(String? id, String title) =>
-      '${id ?? ''}|${title.trim().toLowerCase()}';
-
-  PlayLoaderArt? _artFor(String? id, String title) {
-    final art = _pendingPlayArt;
-    if (art == null) return null;
-    // Either half matching is enough: tracker rows carry the IMDb id but often
-    // a differently-punctuated title, and id-less addon titles carry neither.
-    final key = _playArtKey(id, title);
-    if (key == _pendingPlayArtKey) return art;
-    final storedId = _pendingPlayArtKey?.split('|').first ?? '';
-    if (storedId.isNotEmpty && id == storedId) return art;
-    return null;
-  }
-
   /// Catalog auto-best play — the service picks the provider, shows the real
   /// cinematic overlay, searches, and plays (with source list + content
   /// metadata so the in-player Sources switcher + Continue Watching work).
+  // Decision: this >10-line adapter retains State.context error timing and
+  // listener try/finally. Remove with real G17/Q2 caller/lifecycle migration.
   Future<void> _playSelection(AdvancedSearchSelection sel) async {
     // Playback is about to change every resume signal — never let a
     // pre-playback reconciled answer survive into the post-playback reads.
@@ -6288,19 +6220,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     void onExternal() => external = true;
     MainPageBridge.addExternalPlayerLaunchListener(onExternal);
     try {
-      await TorrentPlaybackService.playFromSelection(
-        context,
-        imdbId: sel.imdbId,
-        isMovie: !sel.isSeries,
-        season: sel.season,
-        episode: sel.episode,
-        meta: _metaFor(sel),
-        // This is the user's own Play press, so it honors "Play button opens".
-        // The selection already carries the exact season/episode the button was
-        // going to play, so the manual list opens on that episode — no next-up
-        // resolution here, and no way for the list to disagree with the button.
-        openSourcePicker: () => _browseSelection(sel, forcePlayOnTap: true),
-      );
+      await _selectionPlayback.launch(context, sel, routes: _selectionRoutes);
     } finally {
       MainPageBridge.removeExternalPlayerLaunchListener(onExternal);
     }
@@ -6310,19 +6230,17 @@ class _SearchScreenState extends State<SearchScreenHost>
     // detail page / See-All on top owns the refresh through its own route
     // callback — the latch keeps that deferred pass aware playback happened, so
     // skipping here loses nothing and avoids refreshing an invisible board.
-    final boardOnTop = ModalRoute.of(context)?.isCurrent ?? false;
-    if (external || !boardOnTop) {
-      // Old-screen parity: a movie auto-binds its source on play, so refresh
-      // the board's bound badges (harmless no-op for series and non-IMDb
-      // titles, which don't auto-bind).
-      await _refreshBoundSources();
-      return;
-    }
-    await _refreshAfterPlayback();
+    await _selectionPlayback.refreshAfterLaunch(
+      context,
+      external: external,
+      routes: _selectionRoutes,
+    );
   }
 
   /// Manual sources list in-tab — the screen searches itself (own loading) and
   /// each tap plays with the full source list + content metadata.
+  // Decision: this >10-line adapter logs/guards before State.context. Remove
+  // with real G17/Q2 caller migration; do not replace with an eager forwarder.
   void _browseSelection(
     AdvancedSearchSelection sel, {
     // Set only by the Play-button hand-off: the press already said "play", so
@@ -6340,23 +6258,12 @@ class _SearchScreenState extends State<SearchScreenHost>
       _snack('No IMDb match to find sources for "${sel.title}".');
       return;
     }
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (_) => TvHeldKeyGuard(
-              child: _SourcesScreen(
-                selection: sel,
-                meta: _metaFor(sel),
-                isTelevision: widget.isTelevision,
-                forcePlayOnTap: forcePlayOnTap,
-              ),
-            ),
-          ),
-        )
-        // A long-press pin/unpin may have happened in the sources list — and a
-        // tap PLAYS, so the board's Continue Watching can be stale too (the
-        // player sits above this screen, so nothing else refreshes for it).
-        .then((_) => _refreshAfterPlayback());
+    _selectionPlayback.browse(
+      context,
+      sel,
+      routes: _selectionRoutes,
+      forcePlayOnTap: forcePlayOnTap,
+    );
   }
 
   void _snack(String message) {
