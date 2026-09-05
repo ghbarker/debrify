@@ -1,3 +1,4 @@
+import '../../../services/debrify_tv/queue_prefetcher.dart' show WatchAllDebridPrepared;
 import '../dialogs/cached_loading_dialog.dart';
 import 'dart:async';
 import 'dart:math';
@@ -28,11 +29,6 @@ class WatchValue<T> {
   final void Function(T)? write;
 }
 
-abstract interface class WatchAllDebridPrepared {
-  String get magnetId;
-  String get name;
-  List<String> get lockedLinks;
-}
 
 class WatchFlowBindings {
   WatchFlowBindings({
