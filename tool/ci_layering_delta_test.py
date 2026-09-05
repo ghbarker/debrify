@@ -2,7 +2,7 @@ import io
 import json
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 import ci_layering_delta
@@ -33,6 +33,108 @@ class LayeringDeltaTest(unittest.TestCase):
         for path in paths:
             path.unlink()
         return result, output.getvalue()
+
+    def compare_payloads(self, parent, head):
+        paths = [self.root / "parent.json", self.root / "head.json"]
+        output, errors = io.StringIO(), io.StringIO()
+        try:
+            for path, payload in zip(paths, [parent, head]):
+                path.write_text(json.dumps(payload), encoding="utf-8")
+            with redirect_stdout(output), redirect_stderr(errors):
+                result = ci_layering_delta.main(["x", *map(str, paths)])
+            return result, output.getvalue(), errors.getvalue()
+        finally:
+            # Unlink even on rejection: open handles would fail here on Windows.
+            for path in paths:
+                path.unlink(missing_ok=True)
+
+    def assert_invalid(self, payload):
+        valid = {"count": 0, "violations": []}
+        for side in ("parent", "head"):
+            with self.subTest(side=side, payload=payload):
+                result, output, errors = self.compare_payloads(
+                    payload if side == "parent" else valid,
+                    payload if side == "head" else valid,
+                )
+                self.assertEqual(result, 2, output)
+                self.assertIn(f"{side}.json", errors)
+                self.assertIn("Invalid layering report", errors)
+                self.assertNotIn("gate (i) pass", output)
+
+    def test_reject_non_object_report(self):
+        for payload in (None, [], "", 1):
+            self.assert_invalid(payload)
+
+    def test_reject_missing_or_wrong_typed_violations(self):
+        self.assert_invalid({"count": 0})
+        for rows in (None, {}, "", False, 0):
+            self.assert_invalid({"count": 0, "violations": rows})
+
+    def test_reject_missing_noninteger_or_negative_count(self):
+        self.assert_invalid({"violations": []})
+        for count in (None, True, False, "0", 0.0, -1):
+            self.assert_invalid({"count": count, "violations": []})
+
+    def test_reject_inconsistent_count(self):
+        self.assert_invalid({"count": 1, "violations": []})
+        self.assert_invalid({"count": 0, "violations": [{"id": "a|r|i"}]})
+
+    def test_reject_non_object_rows(self):
+        for row in (None, [], "", 1):
+            self.assert_invalid({"count": 1, "violations": [row]})
+
+    def test_reject_malformed_explicit_identity(self):
+        for ident in (None, "", " ", False, 1, [], {}, "a", "a||i", "|r|i", "a|r|"):
+            self.assert_invalid({"count": 1, "violations": [{"id": ident}]})
+
+    def test_reject_incomplete_or_malformed_fallback_identity(self):
+        self.assert_invalid({"count": 1, "violations": [{}]})
+        for field in ("file", "rule", "import"):
+            row = {"file": "a", "rule": "r", "import": "i"}
+            del row[field]
+            self.assert_invalid({"count": 1, "violations": [row]})
+            for value in (None, "", " ", False, 1, []):
+                self.assert_invalid({"count": 1, "violations": [
+                    {**row, field: value}
+                ]})
+
+    def test_reject_inconsistent_or_partial_identity_fields(self):
+        self.assert_invalid({"count": 1, "violations": [
+            {"id": "a|r|i", "file": "b", "rule": "r", "import": "i"}
+        ]})
+        self.assert_invalid({"count": 1, "violations": [
+            {"id": "a|r|i", "file": "a"}
+        ]})
+
+    def test_exact_checker_schema_and_empty_reports_pass(self):
+        row = {"file": "lib/a.dart", "import": "package:flutter/widgets.dart",
+               "rule": "services: no Flutter", "line": 3,
+               "id": "lib/a.dart|services: no Flutter|package:flutter/widgets.dart"}
+        for payload in ({"count": 0, "ceiling": 90, "violations": []},
+                        {"count": 1, "ceiling": 90, "violations": [row]}):
+            result, output, errors = self.compare_payloads(payload, payload)
+            self.assertEqual(result, 0, errors)
+            self.assertIn("gate (i) pass", output)
+            self.assertEqual(errors, "")
+
+    def test_missing_and_invalid_json_files_fail_clearly(self):
+        parent = self.root / "parent.json"
+        head = self.root / "head.json"
+        parent.write_text('{"count": 0, "violations": []}', encoding="utf-8")
+        try:
+            for content in (None, "{"):
+                with self.subTest(content=content):
+                    if content is not None:
+                        head.write_text(content, encoding="utf-8")
+                    errors = io.StringIO()
+                    with redirect_stderr(errors):
+                        result = ci_layering_delta.main(["x", str(parent), str(head)])
+                    self.assertEqual(result, 2)
+                    self.assertIn("head.json", errors.getvalue())
+                    self.assertIn("Invalid layering report", errors.getvalue())
+        finally:
+            parent.unlink()
+            head.unlink(missing_ok=True)
 
     def test_pass_when_head_is_subset(self):
         self.assertEqual(self.compare(["a|r|i", "b|r|i"], ["a|r|i"])[0], 0)
