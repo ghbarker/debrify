@@ -155,3 +155,6 @@ Generic5283pass/12exacthistorical/2skip;goldens21exacthistorical after2retries;n
 
 124wordingcorrection merged afterexact192626d6all3CIgreen+C0sixpins/difftruthreview. Difference: evidence accuratelylimitsdesktophostcoverage, no behaviorchange orhostLeaves. More:Androidhosttrue/bridge/onFinished stillunproven.125reviewaccepted currentcaller semantics,CIpending.126C0review124PASS/9origin/body3 passed; baseline56df5520 minimalprovenancerepair suppliedowner forfreshCI. M15apartial448/202remaining; M15bactualstateownershipproposal only, nocallbackbag.
 
+
+125merged afterexact99c12bb6all3CIgreen+independent76/8origin/currentcallerreview. Difference:purewatchlist read/partition sharedwithoutFavUIdependency;0hostLeaves/0Discover750credit. More:extraasync/allocationdelta andsharedholdorderinggapexplicit. WegenernextnarrowDiscoverdata/sessionproposal assigned;126waitingtest/goldens,nativePASS exact6c5380d7. No userwait.
+
