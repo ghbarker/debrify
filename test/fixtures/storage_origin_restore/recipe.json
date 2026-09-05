@@ -44,7 +44,35 @@
     "mdblist_sync_catalog_items": true,
     "mdblist_saved_clones": "{\"101\":201,\"102\":202}",
     "mdblist_sync_checkpoint_v1": "{\"version\":1,\"synthetic\":{\"cursor\":7,\"done\":false},\"ids\":[101,102]}",
-    "tracking_progress_fallback_notice": true
+    "tracking_progress_fallback_notice": true,
+    "debrify_tv_player_style": "cinema",
+    "debrify_tv_style": "spotlight",
+    "desktop_sidebar_style": "rail",
+    "detail_page_style": "dossier",
+    "detail_theme": "noir",
+    "discover_default_source": "trakt",
+    "discover_last_source": "simkl",
+    "discover_layout": "grid",
+    "iptv_channel_preview_enabled": false,
+    "iptv_player_guide_style": "glass",
+    "iptv_style": "edition",
+    "launch_animation": "prism",
+    "launch_ident_palette": "theme",
+    "parents_guide_style": "classic",
+    "phone_nav_bar_indices": [
+      "2",
+      "0",
+      "1"
+    ],
+    "play_loader_style": "classic",
+    "player_dock_palette": "ice",
+    "player_dock_size": "large",
+    "player_dock_style": "compact",
+    "sidebar_configuration_v1": "{\"version\":1,\"order\":[\"home\",\"search\"],\"labels\":{\"home\":\"Synthetic home\"}}",
+    "text_brightness": "dim",
+    "tv_hero_artwork_quality": "full_hd",
+    "tv_player_controls_style": "marquee",
+    "tv_sidebar_style": "ghost"
   },
   "excludedInputs": {
     "mdblist_api_key": "SYNTHETIC_NOT_A_CREDENTIAL_mdblist_api_key",
@@ -75,12 +103,70 @@
       "trakt_token_expiry",
       "trakt_username",
       "watch_progress_source"
+    ],
+    "S2-4": [
+      "app_theme",
+      "debrify_tv_player_style",
+      "debrify_tv_style",
+      "desktop_sidebar_style",
+      "detail_page_style",
+      "detail_theme",
+      "discover_default_source",
+      "discover_last_source",
+      "discover_layout",
+      "iptv_channel_preview_enabled",
+      "iptv_player_guide_style",
+      "iptv_style",
+      "launch_animation",
+      "launch_ident_palette",
+      "parents_guide_style",
+      "phone_nav_bar_indices",
+      "phone_nav_style",
+      "play_loader_style",
+      "player_dock_palette",
+      "player_dock_size",
+      "player_dock_style",
+      "sidebar_configuration_v1",
+      "text_brightness",
+      "theme_overrides",
+      "tv_hero_artwork_quality",
+      "tv_player_controls_style",
+      "tv_sidebar_style",
+      "tv_ui_scale_percent"
     ]
   },
   "partialDomains": [
     "S2-1",
     "S2-2",
-    "S2-3",
-    "S2-4"
-  ]
+    "S2-3"
+  ],
+  "mutations": {
+    "key": {
+      "key": "stremio_tv_rotation_minutes",
+      "operation": "rename"
+    },
+    "type": {
+      "key": "stremio_tv_rotation_minutes",
+      "operation": "replace",
+      "value": 37.0
+    },
+    "tracking-key": {
+      "key": "mdblist_saved_clones",
+      "operation": "rename"
+    },
+    "tracking-type": {
+      "key": "tracking_progress_fallback_notice",
+      "operation": "replace",
+      "value": "true"
+    },
+    "style-key": {
+      "key": "phone_nav_bar_indices",
+      "operation": "rename"
+    },
+    "style-type": {
+      "key": "phone_nav_bar_indices",
+      "operation": "replace",
+      "value": "[\"2\",\"0\",\"1\"]"
+    }
+  }
 }

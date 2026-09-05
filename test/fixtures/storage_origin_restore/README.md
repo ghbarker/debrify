@@ -16,9 +16,9 @@ single-profile exporter, and PortableProfilePackage's real encrypted-file encode
 ## Provenance and scope
 
 - Generated on Windows with Flutter 3.47.2 / Dart 3.13.2.
-- `profile.encrypted.json`: 4,074 bytes; v4 singleProfile package, zero resources.
-- SHA-256: `a7f5d122f543c9e8bff09536417fe6caa0db33a425cd12db6ff3391477b5edda`.
-- `manifest.json`: full origin SHA, hash, 32 represented settings, their exact
+- `profile.encrypted.json`: 5,166 bytes; v4 singleProfile package, zero resources.
+- SHA-256: `e725238700059877e2aaa3db378178a683c5f041551112b464aad99f7289edbd`.
+- `manifest.json`: full origin SHA, hash, 56 represented settings, their exact
   persisted types, nine explicit excluded keys, and original omission metadata.
 - Recipe version 2. Random salt/nonce and creation time mean a newly generated
   encrypted file has a different hash; content and expected settings must match.
@@ -36,8 +36,10 @@ Exact represented S2 domains (the manifest lists every key):
 - **S2-3, six settings:** player aspect, UI sounds, subtitle language, network
   buffer, IPTV decoder and continue-watching switch. Also prove a synthetic
   custom executable command is excluded by the origin portability policy.
-- **S2-4, four settings:** app theme, raw JSON theme overrides, phone navigation
-  style and TV UI scale.
+- **S2-4, all 28 admitted named settings:** every AppStylePrefs-owned key in
+  recipe.json, including layout/theme/docks/sidebar, ordered phone navigation
+  indices, launch settings and artwork/scale preferences. Zero policy-excluded
+  keys belong to this domain. Physical encodings match all 28 origin writers.
 - **S2-5, all eight policy-admitted named keys:** scrobble target list, progress
   source, three tracker catalog-sync switches, saved clone mapping, nested sync
   checkpoint and one-shot fallback notice. All eight excluded tracking keys are
@@ -46,8 +48,8 @@ Exact represented S2 domains (the manifest lists every key):
 
 Represented physical types are **int, bool, String and List<String>**. Every
 represented value and type is checked; false switches, distinct provider spellings,
-ordered lists, and a JSON-encoded string are intentional. This fixture is not an
-exhaustive inventory of S2 settings, double preferences, S2-6/7, DB/file data,
+ordered lists, and a JSON-encoded string are intentional. This fixture covers the complete S2-4 and S2-5 named preference inventories,
+but is not exhaustive across S2 settings, double preferences, S2-6/7, DB/file data,
 all-profile graphs, PIN/recovery flows or sanitized export modes.
 
 ## Isolation and assertions
@@ -127,8 +129,8 @@ S2-6/7 coverage requires another orchestrator assignment.
 The data-driven recipe records independent values, excluded synthetic inputs and
 complete-domain inventory. It is not computed from candidate export output.
 S2-5 is complete for the pinned inventory: eight admitted keys (5 previous + 3
-added) and eight excluded keys. Total fixture coverage is 32/141 admitted named
-keys and 9/28 excluded keys; five dynamic families remain untested. S2-1..4 remain
+added) and eight excluded keys. At this checkpoint coverage was 32/141 admitted named
+keys and 9/28 excluded keys; five dynamic families were untested. S2-1..4 were
 partial. The all-domain target is not yet complete.
 
 Excluded inputs are asserted present with their physical types before export.
@@ -140,3 +142,22 @@ Additional valid-package mutation modes tracking-key and tracking-type rename
 mdblist_saved_clones or change the fallback boolean to a String. Each must fail
 after actual restore; no product source is mutated. Existing key/type modes
 remain supported. Generation checks exact origin HEAD and unchanged lib.
+
+## S2-4 checkpoint and current coverage
+
+Added the remaining 24 AppStylePrefs keys through the same recipe and typed
+ProfilePreferences seed/real export/restore path. All 28 physical writer types
+were checked against origin6d26, and all restored values/types and re-exported
+keys are checked end-to-end. This is preference transport coverage, not every
+UI getter normalization or every legal style variant.
+
+Current coverage: **56/141 admitted named keys, 9/28 excluded keys, 0/5 dynamic
+families**. S2-4 (28 admitted, 0 excluded) and S2-5 (8 admitted, 8 excluded) are
+complete for the pinned inventory; S2-1..3 remain partial. Remaining work is
+85 admitted named keys,19 exclusions and all5 dynamic families.
+
+Mutation definitions are shared recipe data. style-key renames the ordered
+phone_nav_bar_indices key; style-type replaces its List<String> with a JSON
+String containing the same elements. Both fail after real restore. Every
+represented value receives an explicit physical type check. The old32 fixture
+failed expanded expectations before regeneration.

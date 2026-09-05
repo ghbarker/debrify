@@ -404,7 +404,7 @@ void main() {
   }
 
   test(
-    'current public setters export all represented origin settings and types',
+    'current storage and profile APIs export all represented keys and types',
     () async {
       await _seedThroughStorageService();
       _expectSettings(await _readThroughStorageService());
@@ -419,13 +419,8 @@ void main() {
   test(
     'restore frozen pre-S2 export through real APIs without key or type drift',
     () async {
-      expect([
-        '',
-        'key',
-        'type',
-        'tracking-key',
-        'tracking-type',
-      ], contains(_mutation));
+      final mutations = _recipe['mutations'] as Map;
+      expect(['', ...mutations.keys], contains(_mutation));
       final manifest =
           jsonDecode(await File('$_directory/manifest.json').readAsString())
               as Map<String, dynamic>;
@@ -455,20 +450,13 @@ void main() {
         // Mutate a valid incoming package, then use the real section hashing and
         // codec. This probes semantic checks after restore, not hash rejection.
         final values = _values(package);
-        if (_mutation == 'tracking-key') {
-          values['mdblist_saved_clones_renamed'] = values.remove(
-            'mdblist_saved_clones',
-          );
-        } else if (_mutation == 'tracking-type') {
-          values['tracking_progress_fallback_notice'] = 'true';
-        } else if (_mutation == 'key') {
-          values['stremio_tv_rotation_minutes_renamed'] = values.remove(
-            'stremio_tv_rotation_minutes',
-          );
+        final mutation = mutations[_mutation] as Map;
+        final key = mutation['key'] as String;
+        expect(values.containsKey(key), true);
+        if (mutation['operation'] == 'rename') {
+          values['${key}_renamed'] = values.remove(key);
         } else {
-          // Numerically equal on purpose: only an exact physical-type check
-          // distinguishes this double from the required integer.
-          values['stremio_tv_rotation_minutes'] = 37.0;
+          values[key] = mutation['value'];
         }
         final mutated = PortableProfilePackage(
           mode: package.mode,
