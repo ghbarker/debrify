@@ -7,6 +7,9 @@ import 'dart:io';
 import 'package:debrify/models/debrify_tv_cache.dart';
 import 'package:debrify/models/debrify_tv_channel_record.dart';
 import 'package:debrify/screens/magic_tv_screen.dart';
+import 'package:debrify/screens/video_player_screen.dart';
+import 'package:debrify/theme/app_surfaces.dart';
+import 'package:debrify/theme/legacy_theme_boundary.dart';
 import 'package:debrify/screens/debrify_tv/dialogs/spotlight_dialog.dart';
 import 'package:debrify/screens/debrify_tv/dialogs/cached_loading_dialog.dart';
 import 'package:debrify/screens/debrify_tv/layouts/debrify_tv_view.dart';
@@ -35,13 +38,15 @@ import 'support/fake_cloud_provider.dart';
 
 // Actual pre-cursor origin: 6d04e6a018de47c2cce594173d2e67868c3e531d.
 // Real host/storage/engine/registry; only external provider responses are held.
-// No hasMore, cancellation, error, private queue/timestamp or native playback claim.
+// Appended candidate and held cache cancel/error are exercised below.
+// No private queue/timestamp or native playback claim.
 class _WindowProvider extends FakeCloudProvider {
   _WindowProvider(CloudProviderId id) : super(id: id);
   final queries = <List<String>>[];
   final releases = <Completer<bool>>[];
   final prepares = <MagicTvPrepareRequest>[];
   final prepared = Completer<MagicTvPrepared?>();
+  final nextPrepared = Completer<MagicTvPrepared?>();
   Future<bool> _hold(List<String> hashes) {
     queries.add(List.of(hashes));
     final release = Completer<bool>();
@@ -61,7 +66,7 @@ class _WindowProvider extends FakeCloudProvider {
   @override
   Future<MagicTvPrepared?> prepareMagicTv(MagicTvPrepareRequest request) {
     prepares.add(request);
-    return prepared.future;
+    return prepares.length == 1 ? prepared.future : nextPrepared.future;
   }
 
   void releaseAll() {
@@ -69,13 +74,27 @@ class _WindowProvider extends FakeCloudProvider {
       if (!r.isCompleted) r.complete(false);
     }
     if (!prepared.isCompleted) prepared.complete(null);
+    if (!nextPrepared.isCompleted) nextPrepared.complete(null);
   }
 }
 
 class _Routes extends NavigatorObserver {
   int pushes = 0;
+  bool interceptPlayer = false;
+  VideoPlayerScreen? playerRequest;
   @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) => pushes++;
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    pushes++;
+    if (interceptPlayer && route is FrozenLegacyPageRoute) {
+      final context = navigator!.context;
+      final boundary = route.builder(context) as LegacyThemeBoundary;
+      playerRequest =
+          (boundary.child as Builder).builder(context) as VideoPlayerScreen;
+      // Inspect actual route arguments and invoke its actual next callback below;
+      // do not mount a native decoder or substitute host orchestration.
+      scheduleMicrotask(() => navigator!.removeRoute(route));
+    }
+  }
 }
 
 DebrifyTvView _view(WidgetTester tester) =>
@@ -373,6 +392,186 @@ void main() {
           );
         },
       );
+    }
+  }
+  for (final id in [CloudProviderId.torbox, CloudProviderId.premiumize]) {
+    for (final quick in [false, true]) {
+      for (final outcome in ['hasMore', 'cancel', 'error']) {
+        testWidgets(
+          'origin ${id.name} ${quick ? "quick" : "cached"}: held cache $outcome after two misses',
+          (tester) async {
+            torbox = _WindowProvider(id);
+            routes.interceptPlayer = outcome == 'hasMore';
+            await StorageService.setDefaultPlayerMode('internal');
+            CloudProviderRegistry.instance = CloudProviderRegistry([torbox]);
+            await StorageService.saveDebrifyTvProvider(id.magicTvId);
+            await tester.runAsync(_seed);
+            await _mount(
+              tester,
+              routes,
+              expectedPaintDiagnostics: quick ? 1 : 0,
+            );
+            await _focus(tester);
+            var engineRequests = 0;
+            if (quick) {
+              await tester.runAsync(() async {
+                await LocalEngineStorage.instance.saveEngine(
+                  engineId: 'origin_success',
+                  fileName: 'origin_success.yaml',
+                  yamlContent: _engineYaml,
+                  displayName: 'Origin Success',
+                );
+                await EngineRegistry.instance.reload();
+              });
+              _view(tester).onQuickPlay();
+              await _until(
+                tester,
+                () => find.text('Play now').evaluate().isNotEmpty,
+              );
+              await tester.enterText(
+                find.descendant(
+                  of: find.byType(DebrifyTvSpotlightDialog),
+                  matching: find.byType(TextField),
+                ),
+                'keep0, keep1, keep2, keep3, keep4',
+              );
+            }
+            await http.runWithClient(
+              () async {
+                if (quick) {
+                  await tester.tap(find.text('Play now'));
+                } else {
+                  _view(tester).onWatch(_view(tester).channels.single);
+                }
+                final sizes = id == CloudProviderId.torbox
+                    ? [90, 90, 21]
+                    : [100, 100, 1];
+                for (var i = 0; i < 3; i++) {
+                  await _until(tester, () => torbox.queries.length == i + 1);
+                  expect(torbox.queries[i], hasLength(sizes[i]));
+                  expect(torbox.prepares, isEmpty);
+                  await tester.pump(const Duration(milliseconds: 200));
+                  expect(torbox.queries, hasLength(i + 1));
+                  expect(torbox.prepares, isEmpty);
+                  if (i == 2 && outcome == 'cancel') {
+                    await tester.pump(const Duration(milliseconds: 300));
+                    await tester.tap(find.text('Cancel'));
+                    await _until(tester, () => !_view(tester).busy);
+                    expect(torbox.prepares, isEmpty);
+                  }
+                  if (i == 2 && outcome == 'error') {
+                    torbox.releases[i].completeError(
+                      Exception('held cache failure'),
+                    );
+                  } else {
+                    torbox.releases[i].complete(i == 2);
+                  }
+                }
+                final queried = torbox.queries.expand((q) => q).toList();
+                expect(queried, hasLength(201));
+                expect(queried.toSet(), _pool.map((t) => t.infohash).toSet());
+                if (outcome == 'hasMore') {
+                  await _until(tester, () => torbox.prepares.length == 1);
+                  final hit = torbox.queries.last.first;
+                  expect(torbox.prepares.single.infohash, hit);
+                  torbox.prepared.complete(
+                    const MagicTvPrepared(
+                      streamUrl: 'https://fixture.invalid/more.mkv',
+                      title: 'More files',
+                      hasMore: true,
+                    ),
+                  );
+                  await _until(tester, () => routes.playerRequest != null);
+                  final player = routes.playerRequest!;
+                  expect(player.videoUrl, 'https://fixture.invalid/more.mkv');
+                  expect(player.title, 'More files');
+                  expect(player.requestMagicNext, isNotNull);
+                  final next = player.requestMagicNext!();
+                  await _until(tester, () => torbox.queries.length == 4);
+                  expect(torbox.queries.last, [hit]);
+                  expect(torbox.prepares, hasLength(1));
+                  torbox.releases.last.complete(true);
+                  await _until(tester, () => torbox.prepares.length == 2);
+                  expect(torbox.prepares.last.infohash, hit);
+                  torbox.nextPrepared.complete(null);
+                  expect(await next, isNull);
+                  expect(await player.requestMagicNext!(), isNull);
+                  expect(torbox.queries, hasLength(4));
+                  expect(torbox.prepares, hasLength(2));
+                } else if (outcome == 'cancel' && !quick) {
+                  // Origin cached TB/PM accept the late cache hit after cancel.
+                  await _until(tester, () => torbox.prepares.length == 1);
+                  expect(
+                    torbox.prepares.single.infohash,
+                    torbox.queries.last.first,
+                  );
+                  torbox.prepared.complete(null);
+                }
+                await _until(tester, () => !_view(tester).busy);
+                for (var i = 0; i < 10; i++) {
+                  await tester.runAsync(
+                    () => Future<void>.delayed(const Duration(milliseconds: 5)),
+                  );
+                  await tester.pump(const Duration(milliseconds: 100));
+                }
+                expect(find.byType(CachedLoadingDialog), findsNothing);
+                if (outcome != 'hasMore') {
+                  expect(torbox.queries, hasLength(3));
+                  expect(
+                    torbox.prepares,
+                    hasLength(outcome == 'cancel' && !quick ? 1 : 0),
+                  );
+                  expect(routes.playerRequest, isNull);
+                  expect(routes.pushes, quick ? 3 : 2);
+                }
+                if (outcome == 'error') {
+                  expect(
+                    find.textContaining('cache check failed:'),
+                    findsOneWidget,
+                  );
+                  expect(
+                    find.textContaining('held cache failure'),
+                    findsOneWidget,
+                  );
+                }
+                expect(engineRequests, quick ? 5 : 0);
+                await tester.pumpWidget(const SizedBox.shrink());
+                await tester.pumpAndSettle();
+              },
+              () => MockClient((request) async {
+                engineRequests++;
+                expect(
+                  request.url.origin + request.url.path,
+                  'https://origin-success.invalid/search',
+                );
+                final query = request.url.queryParameters['q']!;
+                expect(
+                  query,
+                  isIn(['keep0', 'keep1', 'keep2', 'keep3', 'keep4']),
+                );
+                final part = int.parse(query.substring(4));
+                return http.Response(
+                  jsonEncode({
+                    'results': _pool
+                        .skip(part * 50)
+                        .take(50)
+                        .map(
+                          (t) => {
+                            'infohash': t.infohash,
+                            'name': t.name,
+                            'seeders': 20,
+                            'size_bytes': t.sizeBytes,
+                          },
+                        )
+                        .toList(),
+                  }),
+                  200,
+                );
+              }),
+            );
+          },
+        );
+      }
     }
   }
 }
