@@ -108,10 +108,6 @@ class WatchFlowBindings {
     required this.startPrefetch,
     required this.stopPrefetch,
     required this.syncProviderAvailability,
-    required this.watchWithTorbox,
-    required this.watchWithPikPak,
-    required this.watchWithPremiumize,
-    required this.watchWithAllDebrid,
     required this.navigator,
     required this.messenger,
     required this.showProgressDialog,
@@ -369,6 +365,30 @@ class WatchFlowBindings {
   final Future<void> Function() startPrefetch;
   final Future<void> Function() stopPrefetch;
   final Future<void> Function() syncProviderAvailability;
+  final NavigatorState Function() navigator;
+  final ScaffoldMessengerState Function() messenger;
+  final Future<void> Function({
+    required WidgetBuilder builder,
+    required bool barrierDismissible,
+  })
+  showProgressDialog;
+  final void Function(VoidCallback fn) setState;
+  final Future<Map<String, dynamic>> Function(String apiKey, String link)
+  unrestrictLink;
+  final Future<Map<String, dynamic>> Function(String apiKey, String magnet)
+  addTorrentPreferVideos;
+  final Future<String> Function(String apiKey, String link) unlockLink;
+}
+
+class ProviderWatchFlow {
+  const ProviderWatchFlow(
+    this.host, {
+    required this.watchWithTorbox,
+    required this.watchWithPikPak,
+    required this.watchWithPremiumize,
+    required this.watchWithAllDebrid,
+  });
+  final WatchFlowBindings host;
   final Future<void> Function(
     List<String> keywords,
     void Function(String message) log,
@@ -389,24 +409,6 @@ class WatchFlowBindings {
     void Function(String message) log,
   )
   watchWithAllDebrid;
-  final NavigatorState Function() navigator;
-  final ScaffoldMessengerState Function() messenger;
-  final Future<void> Function({
-    required WidgetBuilder builder,
-    required bool barrierDismissible,
-  })
-  showProgressDialog;
-  final void Function(VoidCallback fn) setState;
-  final Future<Map<String, dynamic>> Function(String apiKey, String link)
-  unrestrictLink;
-  final Future<Map<String, dynamic>> Function(String apiKey, String magnet)
-  addTorrentPreferVideos;
-  final Future<String> Function(String apiKey, String link) unlockLink;
-}
-
-class ProviderWatchFlow {
-  const ProviderWatchFlow(this.host);
-  final WatchFlowBindings host;
 
   Future<void> watch() async {
     host.launchedPlayer = false;
@@ -510,16 +512,16 @@ class ProviderWatchFlow {
 
     switch (MagicTvDispatch.watchId(host.quickProvider)) {
       case CloudProviderId.torbox:
-        await host.watchWithTorbox(keywords, _log);
+        await watchWithTorbox(keywords, _log);
         return;
       case CloudProviderId.pikpak:
-        await host.watchWithPikPak(keywords, _log);
+        await watchWithPikPak(keywords, _log);
         return;
       case CloudProviderId.premiumize:
-        await host.watchWithPremiumize(keywords, _log);
+        await watchWithPremiumize(keywords, _log);
         return;
       case CloudProviderId.alldebrid:
-        await host.watchWithAllDebrid(keywords, _log);
+        await watchWithAllDebrid(keywords, _log);
         return;
       case CloudProviderId.debrid:
         break;
