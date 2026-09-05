@@ -233,6 +233,7 @@ void main() {
       }
       await closeFavourites(tester);
       expect(tester.takeException(), isNull);
+      debugPrint = previousPrint;
     });
   }
   TestWidgetsFlutterBinding.ensureInitialized();
