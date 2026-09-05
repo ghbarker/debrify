@@ -69,10 +69,17 @@ const _setterSettings = <String, Object>{
 final _recipe =
     jsonDecode(File('$_directory/recipe.json').readAsStringSync())
         as Map<String, dynamic>;
-final _settings = Map<String, Object?>.from(_recipe['values'] as Map);
-final _excludedInputs = Map<String, Object>.from(
-  _recipe['excludedInputs'] as Map,
+final _settings = <String, Object?>{
+  ...Map<String, Object?>.from(_recipe['values'] as Map),
+  ...Map<String, Object?>.from(_recipe['familyValues'] as Map),
+};
+final _credentialEngineValues = Map<String, Object?>.from(
+  _recipe['credentialEngineValues'] as Map,
 );
+final _excludedInputs = <String, Object>{
+  ...Map<String, Object>.from(_recipe['excludedInputs'] as Map),
+  ...Map<String, Object>.from(_recipe['familyExcludedInputs'] as Map),
+};
 
 Future<void> _writeValues(Map<String, Object?> values) async {
   final prefs = await ProfilePreferences.instance();
@@ -95,8 +102,14 @@ Future<void> _writeValues(Map<String, Object?> values) async {
   }
 }
 
-void _expectExclusions(Map<String, Object?> values) {
-  for (final key in _excludedInputs.keys) {
+void _expectExclusions(
+  Map<String, Object?> values, {
+  bool includeSecrets = false,
+}) {
+  for (final key in [
+    ..._excludedInputs.keys,
+    if (!includeSecrets) ..._credentialEngineValues.keys,
+  ]) {
     expect(values.containsKey(key), false, reason: 'Excluded by origin: $key');
   }
 }
@@ -183,6 +196,7 @@ Future<void> _seedThroughStorageService() async {
       if (!_setterSettings.containsKey(e.key))
         e.key: (_recipe['inputOverrides'] as Map)[e.key] ?? e.value,
   });
+  await _writeValues(_credentialEngineValues);
   await _writeValues(_excludedInputs);
   final seeded = await ProfilePreferences.instance();
   for (final entry in _excludedInputs.entries) {
@@ -267,6 +281,41 @@ void main() {
   late HttpOverrides? previousHttp;
 
   setUpAll(() {
+    expect(_recipe['origin'], _origin);
+    final named = (_recipe['values'] as Map).keys.toSet();
+    final excluded = (_recipe['excludedInputs'] as Map).keys.toSet();
+    expect(named.length, 141);
+    expect(excluded.length, 28);
+    expect(named.intersection(excluded), isEmpty);
+    final declared = (_recipe['completeDomains'] as Map).values
+        .expand((keys) => keys as List)
+        .toList();
+    expect(declared, unorderedEquals({...named, ...excluded}));
+    expect(_recipe['partialDomains'], isEmpty);
+    final families = _recipe['families'] as Map;
+    expect(families.length, 5);
+    final sampled = <Object?>[];
+    for (final entry in families.entries) {
+      expect(entry.value['finiteSampleOnly'], true);
+      final keys = [
+        ...entry.value['ordinaryKeys'] as List,
+        ...entry.value['credentialShapedKeys'] as List,
+      ];
+      expect(
+        keys.every((key) => (key as String).startsWith(entry.key as String)),
+        true,
+      );
+      sampled.addAll(keys);
+    }
+    expect(
+      sampled,
+      unorderedEquals({
+        ...(_recipe['familyValues'] as Map).keys,
+        ...(_recipe['familyExcludedInputs'] as Map).keys,
+        ..._credentialEngineValues.keys,
+      }),
+    );
+    expect(sampled.length, 21);
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   });
@@ -342,6 +391,7 @@ void main() {
 
   for (final entry in (_recipe['scenarios'] as Map).entries) {
     final scenario = entry.key as String;
+    final includeSecrets = entry.value['includeSecrets'] == true;
     final absent = (entry.value['absentKeys'] as List).cast<String>();
     final omitted = (entry.value['omitKeys'] as List? ?? []).cast<String>();
     final inputOverrides = Map<String, Object?>.from(
@@ -349,6 +399,7 @@ void main() {
     );
     final inputExpected = <String, Object?>{
       ..._settings,
+      ..._credentialEngineValues,
       ...Map<String, Object?>.from(_recipe['inputOverrides'] as Map),
       ...inputOverrides,
     }..removeWhere((key, value) => absent.contains(key));
@@ -356,6 +407,7 @@ void main() {
     final expected = <String, Object?>{
       for (final entry in _settings.entries)
         if (!missing.contains(entry.key)) entry.key: entry.value,
+      if (includeSecrets) ..._credentialEngineValues,
     };
     final manifestName = scenario == 'profile'
         ? 'manifest.json'
@@ -451,9 +503,9 @@ void main() {
             await _readThroughStorageService(inputExpected),
             inputExpected,
           );
-          final package = await export();
+          final package = await export(includeSecrets: includeSecrets);
           _expectSettings(_values(package), expected);
-          _expectExclusions(_values(package));
+          _expectExclusions(_values(package), includeSecrets: includeSecrets);
           expect(package.resources, isEmpty);
           final bytes = await PortableProfilePackage.encodeEncryptedBytes(
             package,
@@ -466,7 +518,8 @@ void main() {
           await File(p.join(directory.path, manifestName)).writeAsString(
             const JsonEncoder.withIndent('  ').convert({
               'origin': _origin,
-              'recipeVersion': 4,
+              'recipeVersion': 5,
+              'includeSecrets': includeSecrets,
               'scenario': scenario,
               'absentKeys': absent,
               'omittedKeys': omitted,
@@ -494,11 +547,17 @@ void main() {
           await _readThroughStorageService(inputExpected),
           inputExpected,
         );
-        final package = await export();
+        final package = await export(includeSecrets: includeSecrets);
         _expectSettings(_values(package), expected);
-        _expectExclusions(_values(package));
-        _expectSettings(_values(await export(includeSecrets: true)), expected);
-        _expectExclusions(_values(await export(includeSecrets: true)));
+        _expectExclusions(_values(package), includeSecrets: includeSecrets);
+        _expectSettings(_values(await export(includeSecrets: true)), {
+          ...expected,
+          ..._credentialEngineValues,
+        });
+        _expectExclusions(
+          _values(await export(includeSecrets: true)),
+          includeSecrets: true,
+        );
       },
     );
 
@@ -537,13 +596,14 @@ void main() {
             _passphrase,
           );
           _expectSettings(_values(package), expected);
-          _expectExclusions(_values(package));
+          _expectExclusions(_values(package), includeSecrets: includeSecrets);
           expect(
             manifest['excludedKeys'],
             unorderedEquals(_excludedInputs.keys),
           );
           expect(package.omissions, manifest['omissions']);
           expect(manifest['omittedKeys'], omitted);
+          expect(manifest['includeSecrets'], includeSecrets);
           expect(package.resources, isEmpty);
           if (_mutation.isNotEmpty) {
             // Mutate a valid incoming package, then use the real section hashing and
@@ -630,7 +690,10 @@ void main() {
             );
           }
           await expectProviderReaders(restoredExpected);
-          for (final key in _excludedInputs.keys) {
+          for (final key in [
+            ..._excludedInputs.keys,
+            if (!includeSecrets) ..._credentialEngineValues.keys,
+          ]) {
             expect(prefs.containsKey('$prefix$key'), false, reason: key);
           }
           expect(
@@ -644,10 +707,13 @@ void main() {
             await _readThroughStorageService(restoredExpected),
             restoredExpected,
           );
-          _expectSettings(_values(await export()), {
-            for (final e in restoredExpected.entries)
-              if (e.value != null) e.key: e.value,
-          });
+          _expectSettings(
+            _values(await export(includeSecrets: includeSecrets)),
+            {
+              for (final e in restoredExpected.entries)
+                if (e.value != null) e.key: e.value,
+            },
+          );
           for (final entry in destinationValues.entries) {
             expect(prefs.get('p.$profileId.g.1.${entry.key}'), entry.value);
           }

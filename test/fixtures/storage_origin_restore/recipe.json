@@ -1,6 +1,6 @@
 {
   "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "values": {
     "stremio_tv_rotation_minutes": 37,
     "stremio_tv_auto_refresh": false,
@@ -125,7 +125,42 @@
     "iptv_last_live_channel": null,
     "iptv_series_audio_lang": "{\"synthetic-series\":\"fr\"}",
     "startup_iptv_channel": null,
-    "startup_iptv_mode": "pinned"
+    "startup_iptv_mode": "pinned",
+    "stremio_tv_disabled_channel_filters_v1": "[\"synthetic-addon\",\"synthetic-catalog\"]",
+    "stremio_tv_favorite_channels_v1": "{\"synthetic-channel\":true}",
+    "stremio_tv_hide_now_playing": true,
+    "stremio_tv_local_catalogs_v1": "[{\"id\":\"synthetic-catalog\",\"name\":\"Synthetic\",\"url\":\"https://catalog.example.invalid/list\"}]",
+    "stremio_tv_max_start_percent": 23,
+    "stremio_tv_preferred_quality": "1080p",
+    "stremio_tv_random_episodes": false,
+    "stremio_tv_series_rotation_minutes": 19,
+    "stremio_tv_torrents_first": true,
+    "lemmy_allow_nsfw": false,
+    "lemmy_default_community": "synthetic@example.invalid",
+    "lemmy_instance": "https://lemmy.example.invalid",
+    "reddit_allow_nsfw": false,
+    "reddit_default_subreddit": "synthetic_default",
+    "reddit_enabled": false,
+    "reddit_favorite_subreddits": [
+      "synthetic_alpha",
+      "synthetic_beta"
+    ],
+    "reddit_hidden_from_nav": true,
+    "reddit_last_subreddit": "synthetic_last",
+    "debrify_tv_avoid_nsfw": true,
+    "debrify_tv_channels": "[{\"id\":\"synthetic-channel\",\"name\":\"Synthetic\",\"keywords\":[\"synthetic\"]}]",
+    "debrify_tv_external_notice_dismissed": true,
+    "debrify_tv_favorite_channels_v1": "{\"synthetic-favorite\":true}",
+    "debrify_tv_filter_qualities": "[\"720p\",\"1080p\"]",
+    "debrify_tv_filter_sizes": "[\"small\",\"large\"]",
+    "debrify_tv_hide_back_button": true,
+    "debrify_tv_hide_options": true,
+    "debrify_tv_hide_seekbar": true,
+    "debrify_tv_keyword_threshold": 7,
+    "debrify_tv_min_torrents_per_keyword": 11,
+    "debrify_tv_show_video_title": false,
+    "debrify_tv_show_watermark": false,
+    "debrify_tv_start_random": false
   },
   "excludedInputs": {
     "mdblist_api_key": "SYNTHETIC_NOT_A_CREDENTIAL_mdblist_api_key",
@@ -154,7 +189,10 @@
     "windows_custom_command": "SYNTHETIC_NEVER_EXECUTE {url}",
     "iptv_playlists": [
       "{\"id\":\"synthetic-excluded-playlist\",\"url\":\"https://iptv.example.invalid/list.m3u\"}"
-    ]
+    ],
+    "reddit_access_token": "SYNTHETIC_NOT_A_CREDENTIAL_reddit_access_token",
+    "reddit_refresh_token": "SYNTHETIC_NOT_A_CREDENTIAL_reddit_refresh_token",
+    "reddit_username": "SYNTHETIC_NOT_A_CREDENTIAL_reddit_username"
   },
   "completeDomains": {
     "S2-5": [
@@ -289,11 +327,55 @@
       "iptv_track_continue_watching",
       "startup_iptv_channel",
       "startup_iptv_mode"
+    ],
+    "S2-1": [
+      "stremio_tv_auto_refresh",
+      "stremio_tv_catalog_repo_urls_v1",
+      "stremio_tv_debrid_provider",
+      "stremio_tv_disabled_channel_filters_v1",
+      "stremio_tv_favorite_channels_v1",
+      "stremio_tv_hide_now_playing",
+      "stremio_tv_local_catalogs_v1",
+      "stremio_tv_max_start_percent",
+      "stremio_tv_preferred_quality",
+      "stremio_tv_random_episodes",
+      "stremio_tv_rotation_minutes",
+      "stremio_tv_series_rotation_minutes",
+      "stremio_tv_torrents_first",
+      "lemmy_allow_nsfw",
+      "lemmy_default_community",
+      "lemmy_favorite_communities",
+      "lemmy_instance",
+      "reddit_access_token",
+      "reddit_allow_nsfw",
+      "reddit_default_subreddit",
+      "reddit_enabled",
+      "reddit_favorite_subreddits",
+      "reddit_hidden_from_nav",
+      "reddit_last_subreddit",
+      "reddit_recent_subreddits",
+      "reddit_refresh_token",
+      "reddit_username",
+      "youtube_max_height",
+      "debrify_tv_avoid_nsfw",
+      "debrify_tv_channels",
+      "debrify_tv_external_notice_dismissed",
+      "debrify_tv_favorite_channels_v1",
+      "debrify_tv_filter_qualities",
+      "debrify_tv_filter_sizes",
+      "debrify_tv_hide_back_button",
+      "debrify_tv_hide_options",
+      "debrify_tv_hide_seekbar",
+      "debrify_tv_keyword_threshold",
+      "debrify_tv_min_torrents_per_keyword",
+      "debrify_tv_provider",
+      "debrify_tv_random_start_percent",
+      "debrify_tv_show_video_title",
+      "debrify_tv_show_watermark",
+      "debrify_tv_start_random"
     ]
   },
-  "partialDomains": [
-    "S2-1"
-  ],
+  "partialDomains": [],
   "mutations": {
     "key": {
       "key": "stremio_tv_rotation_minutes",
@@ -353,6 +435,32 @@
       "key": "external_player_preferred",
       "operation": "insert",
       "value": "vlc"
+    },
+    "family-key": {
+      "key": "debrify_tv_channel_small_synthetic_alpha",
+      "operation": "rename"
+    },
+    "family-type": {
+      "key": "engine_tv_synthetic_playback_ratio",
+      "operation": "replace",
+      "value": 1
+    },
+    "family-secret": {
+      "key": "engine_tv_synthetic_api_key",
+      "operation": "insert",
+      "value": "SYNTHETIC_WRONGLY_INCLUDED"
+    },
+    "social-key": {
+      "key": "reddit_favorite_subreddits",
+      "operation": "rename"
+    },
+    "social-type": {
+      "key": "stremio_tv_disabled_channel_filters_v1",
+      "operation": "replace",
+      "value": [
+        "synthetic-addon",
+        "synthetic-catalog"
+      ]
     }
   },
   "scenarios": {
@@ -419,10 +527,99 @@
         "linux_external_player_preferred": "custom_command",
         "windows_external_player_preferred": "custom_command"
       }
+    },
+    "family-secrets-included": {
+      "absentKeys": [],
+      "includeSecrets": true
     }
   },
   "inputOverrides": {
     "iptv_last_live_channel": "{\"url\":\"https://synthetic.example.invalid/iptv_last_live_channel\",\"headers\":{\"Authorization\":\"SYNTHETIC_NOT_A_SECRET\"}}",
     "startup_iptv_channel": "{\"url\":\"https://synthetic.example.invalid/startup_iptv_channel\",\"headers\":{\"Authorization\":\"SYNTHETIC_NOT_A_SECRET\"}}"
+  },
+  "familyValues": {
+    "engine_tv_": 3,
+    "engine_tv_synthetic_alpha": 7,
+    "engine_tv_synthetic_beta": 11,
+    "debrify_tv_use_": false,
+    "debrify_tv_use_synthetic_alpha": true,
+    "debrify_tv_use_synthetic_beta": false,
+    "debrify_tv_channel_small_": 3,
+    "debrify_tv_channel_small_synthetic_alpha": 7,
+    "debrify_tv_channel_small_synthetic_beta": 11,
+    "debrify_tv_channel_large_": 3,
+    "debrify_tv_channel_large_synthetic_alpha": 7,
+    "debrify_tv_channel_large_synthetic_beta": 11,
+    "debrify_tv_quick_play_": 3,
+    "debrify_tv_quick_play_synthetic_alpha": 7,
+    "debrify_tv_quick_play_synthetic_beta": 11,
+    "engine_tv_synthetic_playback_ratio": 1.0
+  },
+  "familyExcludedInputs": {
+    "debrify_tv_use_synthetic_api_key": false,
+    "debrify_tv_channel_small_synthetic_api_key": 13,
+    "debrify_tv_channel_large_synthetic_api_key": 13,
+    "debrify_tv_quick_play_synthetic_api_key": 13
+  },
+  "credentialEngineValues": {
+    "engine_tv_synthetic_api_key": "SYNTHETIC_NOT_A_CREDENTIAL_ENGINE"
+  },
+  "families": {
+    "engine_tv_": {
+      "ordinaryKeys": [
+        "engine_tv_",
+        "engine_tv_synthetic_alpha",
+        "engine_tv_synthetic_beta",
+        "engine_tv_synthetic_playback_ratio"
+      ],
+      "credentialShapedKeys": [
+        "engine_tv_synthetic_api_key"
+      ],
+      "finiteSampleOnly": true
+    },
+    "debrify_tv_use_": {
+      "ordinaryKeys": [
+        "debrify_tv_use_",
+        "debrify_tv_use_synthetic_alpha",
+        "debrify_tv_use_synthetic_beta"
+      ],
+      "credentialShapedKeys": [
+        "debrify_tv_use_synthetic_api_key"
+      ],
+      "finiteSampleOnly": true
+    },
+    "debrify_tv_channel_small_": {
+      "ordinaryKeys": [
+        "debrify_tv_channel_small_",
+        "debrify_tv_channel_small_synthetic_alpha",
+        "debrify_tv_channel_small_synthetic_beta"
+      ],
+      "credentialShapedKeys": [
+        "debrify_tv_channel_small_synthetic_api_key"
+      ],
+      "finiteSampleOnly": true
+    },
+    "debrify_tv_channel_large_": {
+      "ordinaryKeys": [
+        "debrify_tv_channel_large_",
+        "debrify_tv_channel_large_synthetic_alpha",
+        "debrify_tv_channel_large_synthetic_beta"
+      ],
+      "credentialShapedKeys": [
+        "debrify_tv_channel_large_synthetic_api_key"
+      ],
+      "finiteSampleOnly": true
+    },
+    "debrify_tv_quick_play_": {
+      "ordinaryKeys": [
+        "debrify_tv_quick_play_",
+        "debrify_tv_quick_play_synthetic_alpha",
+        "debrify_tv_quick_play_synthetic_beta"
+      ],
+      "credentialShapedKeys": [
+        "debrify_tv_quick_play_synthetic_api_key"
+      ],
+      "finiteSampleOnly": true
+    }
   }
 }
