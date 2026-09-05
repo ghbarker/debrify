@@ -2,11 +2,11 @@
 
 ## Current checkpoint — 2026-09-05 15:43 UTC (supersedes historical rows below)
 - Latest merged PRs: #125, #126, #127 and #128; main 6aeec78f contains the latest gate record.
-- M1-5b Ampere, refactor/m1-5b-playback-settings: #129 held at 24ba72f3. Independent review passed; CI test failed on shape_manifest_test.dart, while goldens/native passed. Diagnose missing moved-file coverage; no threshold relaxation. M1-6 remains readiness-only.
-- G1'-7c Wegener, refactor/g1-7c-discover-lifecycle: #130 cf38a3e7 independently passed 86 tests and body/ownership review; CI test/native passed, goldens pending. 143 proposed host lines are not counted as merged or credited toward the standalone Discover target.
-- C0 Cicero: independent lifecycle review complete; available for corrected #129 verification. Locke: full integrated gate complete; available for the next independent review. No duplicate workers or overlapping edits.
+- M1-5b merged #129 at 78be96c1 after independent review and all three corrected-head CI checks. Ampere assigned M1-6 origin-pin feasibility only on refactor/m1-6-queue-prefetch; no production scope yet.
+- G1'-7c merged #130 at 5232013a after independent 86-test/body review and all three exact-head CI checks. 143 host lines removed; zero credit toward standalone Discover. Wegener assigned G1'-7d actual-origin pin feasibility only, branch refactor/g1-7d-playback-selection; no production scope granted.
+- C0 Cicero: approved isolated shape-guard hardening, only shape_manifest_test.dart and its one allowlist identity. Locke: independent G17d real-origin pin review. Wegener: G17d transport-boundary design; no product move authorized.
 - Latest full automated gate PASSED actual main 04264596: 5307 passing generic tests, 12 exact known failures, two skips; 21 exact known golden errors; no unexpected/unused entries. Native origin/current passed; Windows/ARM64 builds passed; analyzer 438/454, layering 77.
-- Current merged god lines: search 9268, player 11926, Magic TV 4071, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
+- Current merged god lines: search 9126, player 11926, Magic TV 3659, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
 - Open debt: storage shortfall 1565; player native fixture paused; temporary forwarders expire in their recorded lanes. No manual smoke pass claimed; user explicitly deferred it without blocking eligible work.
 - CODEMAP unlocked. No user action required. Awake helper PID3412 verified running; expires September 5 at 16:43 UTC, without extension or permanent power changes.
 ## Prior checkpoints and retained evidence
@@ -165,4 +165,18 @@ Generic5283pass/12exacthistorical/2skip;goldens21exacthistorical after2retries;n
 
 ## Full automated gate PASS actual04264596/treef88985eb
 Generic5307pass/12exactknown/2skip;goldens21exactknown;0unexpected/unused,rawfalse/effective0 unchangedallowlist. Strictnative1+1/0skip;analyzer438/454no new;layer77delta0;Python55;Windows+AndroidbuildsPASS. Evidence C:/Users/hunth/debrify/debrify-locke-main-0426-gate/.dart_tool/main-gate/REPORT.md. Manualdeferred,no nativepositiveclaim. G17clifecycleproductreleasedaftergreen2539fc5c;C0originreviewactive.129integrated24ba72f3 CIpending/reviewpassed. No userwait.
+
+
+
+#130 merged5232013a exactcf38a3e7: lifecycle owns presentation resources and cleanup; 143 net host lines, production net+1. Difference: explicit resource lifetime with actual-origin pins; more: 14 aliases/focus forwarder expire realG17/Q2, Discover still not standalone. First production slice since full04264596gate. #129 correction4ab8e1c independent review/newCI pending; exact new renderer added to shape inventory,490floor unchanged. G17d only test/discover_playback_selection_origin_test.dart writable; routefactory/IOseam decision required before product edits.
+
+129merged78be96c1 exact4ab8e1c afterall3CIgreen+independentreview. Difference:18settingsfields nowowned bystate, renderer extracted,412hostLeaves; combinedM15=860. More:18aliases/realUIboundaries remain expiryM1-6/Q2, noAndroidpositive proof. Secondproductionmerge since04264596gate; nextthirdproductionrequiresfullgate. C0shapehardening authorized2testfilesonly; M16neworigin-test-only feasibility; Locke G17d20caseindependentreview. No userwait.
+
+G17d scope decision: Wegener exclusively owns two terminal testing hooks in video_player_launcher.dart (existing route widget builder only) and external_player_service.dart (Windows explorer.exe Process.run only), plus discover_playback_selection_origin_test.dart. Independent design approved; preserve real routing/persistence/bridge/lifecycle and default behavior. Separate seam/pin commit before any move; no TPS/host/bridge edits. Windows-only process evidence explicitly limited, no native proof. M16 race/failure origin pins active; Locke independent origin review next. C0 owns shape test/oneallowlist identity; scopes disjoint.
+
+
+M16 move authorized after independent ac667f9d fourteen-test origin proof: exact host/new queue_prefetcher service/provider_watch_flow interface import only. Two source-inventory tests may add exact destination path without weaker assertions. Real queue/set/settings identity, request timing, late completion and failure rotation preserved. No alias/dead-slot cleanup in this move. Estimate228 code/declaration net vs230 target, physical255 includes27oldcomments/separators; actual audit required. CODEMAP not yet locked. Third production merge since04264596 triggers full integrated gate. G17d terminal proof3b36abd4 under Locke independent review; no selection move yet.
+
+
+131mergedc6a3de16 exacte767b980 all3CIgreen+independent8effectiveorigin/currentmutationcases. Difference: per-file shape failures and separateexisting-sidebar cap stopnewviolations beingmasked byhistoricalaggregateallowance. Oneallowanceidentity migrated, no growth/floorchange/productLeaves. C0availableM16review/nextfullgate. Currentgod9126/11926/3659/4365/2899 vsoriginal19070/16278/10716/9963/7905. G17d55independentPASS, fixturefinallyhardening+latestmainintegration beforedraft; no selectionmove. Nextproductionmerge triggersfullgate, includingtestingseams iftheymergefirst.
 

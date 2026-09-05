@@ -13,6 +13,8 @@ import 'package:debrify/screens/debrify_tv/dialogs/spotlight_dialog.dart';
 import 'package:debrify/screens/debrify_tv/layouts/debrify_tv_view.dart';
 import 'package:debrify/screens/debrify_tv/layouts/spotlight_layout.dart';
 import 'package:debrify/services/cloud/cloud_provider_id.dart';
+import 'package:debrify/services/cloud/magic_tv_provider.dart';
+import 'package:debrify/screens/debrify_tv/widgets/spotlight_choice_chip.dart';
 import 'package:debrify/services/cloud/cloud_provider_registry.dart';
 import 'package:debrify/services/cloud/magic_tv_prepare_args.dart';
 import 'package:debrify/services/debrify_tv_cache_service.dart';
@@ -562,6 +564,140 @@ void main() {
       expect(writes, isEmpty);
       expect(persisted['flutter.debrify_tv_provider'], 'torbox');
       await close(tester, 'Done');
+    },
+  );
+  // M1-5b origin c35c41c1; actual load and Reset paths, no private host access.
+  testWidgets(
+    'origin load keeps percent and normalizes seekbar before held write completes',
+    (tester) async {
+      await StorageService.saveDebrifyTvRandomStartPercent(65);
+      await StorageService.saveDebrifyTvHideSeekbar(true);
+      await prefs.setString('debrify_tv_provider', 'unknown-origin-provider');
+      writes.clear();
+      heldKey = 'flutter.debrify_tv_hide_seekbar';
+      heldWrite = Completer<void>();
+      await _mount(tester, routes, expectedEditorPaintDiagnostics: 1);
+      await _until(tester, () => writes.length >= 2);
+      expect(writes, [
+        ('setBool', 'debrify_tv_hide_seekbar', false),
+        ('setString', 'debrify_tv_provider', 'torbox'),
+      ]);
+      expect(persisted['flutter.debrify_tv_hide_seekbar'], isTrue);
+      expect(persisted['flutter.debrify_tv_provider'], 'torbox');
+      await settings(tester);
+      expect(tester.widget<SwitchRow>(find.byType(SwitchRow)).value, isTrue);
+      expect(
+        tester.widget<RandomStartSlider>(find.byType(RandomStartSlider)).value,
+        65,
+      );
+      heldWrite!.complete();
+      await _until(
+        tester,
+        () => persisted['flutter.debrify_tv_hide_seekbar'] == false,
+      );
+      await close(tester, 'Done');
+      expect(persisted['flutter.debrify_tv_random_start_percent'], 65);
+    },
+  );
+
+  testWidgets(
+    'origin Reset ignores preferred Torbox and chooses available Real Debrid',
+    (tester) async {
+      await tester.runAsync(() => StorageService.saveApiKey('origin-rd-key'));
+      await _mount(tester, routes, expectedEditorPaintDiagnostics: 2);
+      await settings(tester);
+      final torbox = find.byWidgetPredicate(
+        (w) => w is SpotlightChoiceChip && w.label == 'Torbox',
+      );
+      expect(tester.widget<SpotlightChoiceChip>(torbox).selected, isTrue);
+      writes.clear();
+      tester
+          .widget<DebrifyTvDialogButton>(
+            find.widgetWithText(DebrifyTvDialogButton, 'Reset to defaults'),
+          )
+          .onPressed!();
+      await _until(tester, () => writes.length == 7);
+      expect(writes.last, ('setString', 'debrify_tv_provider', 'real_debrid'));
+      final rd = find.byWidgetPredicate(
+        (w) => w is SpotlightChoiceChip && w.label == 'Real Debrid',
+      );
+      expect(tester.widget<SpotlightChoiceChip>(rd).selected, isTrue);
+      await close(tester, 'Done');
+      expect(persisted['flutter.debrify_tv_provider'], 'real_debrid');
+    },
+  );
+
+  test(
+    'origin provider helpers preserve all availability masks and Real Debrid fallback',
+    () {
+      const ids = [
+        CloudProviderId.debrid,
+        CloudProviderId.torbox,
+        CloudProviderId.premiumize,
+        CloudProviderId.alldebrid,
+        CloudProviderId.pikpak,
+      ];
+      const names = [
+        'real_debrid',
+        'torbox',
+        'premiumize',
+        'alldebrid',
+        'pikpak',
+      ];
+      for (var mask = 0; mask < 32; mask++) {
+        final flags = List.generate(5, (i) => (mask & (1 << i)) != 0);
+        final available = MagicTvProvider.availability(
+          realDebrid: flags[0],
+          torbox: flags[1],
+          premiumize: flags[2],
+          allDebrid: flags[3],
+          pikpak: flags[4],
+        );
+        for (var i = 0; i < ids.length; i++) {
+          expect(
+            MagicTvDispatch.isSelectable(
+              names[i],
+              realDebrid: flags[0],
+              torbox: flags[1],
+              premiumize: flags[2],
+              allDebrid: flags[3],
+              pikpak: flags[4],
+            ),
+            flags[i],
+          );
+          expect(available[ids[i]], flags[i]);
+        }
+        for (final unknown in ['', 'unknown', 'debrid', 'rd', 'Torbox']) {
+          expect(MagicTvDispatch.watchId(unknown), CloudProviderId.debrid);
+          expect(
+            MagicTvDispatch.isSelectable(
+              unknown,
+              realDebrid: flags[0],
+              torbox: flags[1],
+              premiumize: flags[2],
+              allDebrid: flags[3],
+              pikpak: flags[4],
+            ),
+            flags[0],
+          );
+        }
+        final first = flags.indexOf(true);
+        expect(
+          MagicTvProvider.pickDefault(preferred: null, available: available),
+          first < 0 ? 'real_debrid' : names[first],
+        );
+        for (var i = 0; i < ids.length; i++) {
+          if (flags[i]) {
+            expect(
+              MagicTvProvider.pickDefault(
+                preferred: names[i],
+                available: available,
+              ),
+              names[i],
+            );
+          }
+        }
+      }
     },
   );
 }
