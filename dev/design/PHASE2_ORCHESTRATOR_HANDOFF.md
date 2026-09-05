@@ -25,10 +25,9 @@ player 11 926 · magic_tv 8 369 · storage 6 282 · settings 2 899 (≤ 3 000 me
 
 ## Binding holds
 
-1. **#96 HOLD** until `continue_watching_controller.dart` leaves `lib/services/`
-   (it imports `package:flutter/widgets.dart`). Same seam as #100:
-   `lib/screens/search/` or `lib/widgets/home/`. Do **not** merge as-is —
-   it fails gate (i) against ceiling 90.
+1. **#96** path-moved to `lib/screens/search/` (controller + row) on `ec77a1ac`.
+   Local layering 90 / no new ids. **Wait CI**, then `--no-ff`. Do not merge
+   a services-path revert.
 2. **#98 does not clear G1'-3 gate (h).** Post-move `KeywordSearchScreen` pin.
    Parent-path (h) still unpaid.
 3. **#97 closed.** Gate-(h) / Leaves tables landed on main.
@@ -51,14 +50,13 @@ Remaining service offender in the six-file class: `channel_import_export.dart`
 
 | PR | Branch | Action |
 |---|---|---|
-| **#96** | `refactor/g1p-4-continue-watching` | HOLD. Leaves −1 738. Move controller out of `lib/services/`, rebase onto current main, wait CI, then `--no-ff`. Do not start G1'-5 until it merges. |
+| **#96** | `refactor/g1p-4-continue-watching` | `ec77a1ac`. Leaves −1 738. Path-moved. Wait CI, then `--no-ff`. Do not start G1'-5 until it merges. |
 | **#56** | Qwen | Held for Q3. |
 
 ## Next actions
 
-1. Path-move CW controller on #96 (or resume worker `bc-db4ab579`). Rebase onto main.
-2. When #96 test+goldens green **and** layering ≤ 90 with no new ids: `--no-ff`.
-3. Do not assign G1'-5 / V1-6 / S2-6 / M1-3.
+1. When #96 test+goldens green **and** layering ≤ 90 with no new ids: `--no-ff`.
+2. Do not assign G1'-5 / V1-6 / S2-6 / M1-3.
 
 ## Workers (idle)
 
