@@ -14,6 +14,48 @@ Phase 2 extractions also follow `dev/design/REFACTOR_PLAN_PHASE2.md` (binding as
 - **`refactor/g3-player-prefs` is parked.** Pin+move already exist on that branch
   under the old G3 contract. PlayerPrefs is **S2-3** (with `iptv_prefs`) after
   S2-0…S2-2. Do not merge the parked branch.
+- **Gate (h) evidence.** A pin must exercise lib code on the origin path: a widget
+  test driving the State, or a test calling the origin function. `File(...).readAsStringSync()`
+  greps and test-local re-implementations of the moved body do **not** count.
+- **Leaves shortfalls are not "Decisions needed: None".** Record the miss here
+  with the slice that clears it, or reject the PR. See the Leaves shortfalls table.
+
+### Gate 2 · layering regression (blocking)
+
+`tool/check_layering.dart`: **77** at #72 → **99** pre-#95 → **106** after
+#95/#98 → **90** after **#100** (V1-fix). Ceiling is **90**.
+`--strict` remains Q1. Remaining service offender in the six-file class:
+`channel_import_export.dart` (M1-2, 7). #96 path-moved both CW units to
+`lib/screens/search/` so the count stays 90.
+
+| File | Lane | After #100 |
+|---|---|---|
+| `subtitle_track_controller.dart` | V1-3 | moved to `lib/screens/video_player/` |
+| `iptv_zap_controller.dart` | V1-5 | moved to `lib/screens/video_player/` |
+| `resume_controller.dart` | V1-1 | moved to `lib/screens/video_player/` |
+| `keyword_search_controller.dart` | G1'-3 | moved to `lib/screens/search/` |
+| `catalog_play_resolver.dart` / `iptv_recording_controller.dart` | G1'-1 / V1-4 | stayed (`foundation` only) |
+| `channel_import_export.dart` | M1-2 | still in services (7); out of V1-fix |
+
+`ProfileScope.fileIn` now POSIX-normalizes the relative path so Windows
+`..\escape` is rejected the same way Linux already rejected `../escape`.
+Keep: Linux behaviour; the old Windows miss was a hole, not a product quirk.
+
+### #90 · parent-path pin still unpaid
+
+`#90` pin is text-grep + test-local re-implementations and was edited after the
+move. **#98** is a post-move widget pin of `KeywordSearchScreen` — it cannot pass
+on the parent of the G1'-3 move, so it does **not** clear gate (h). Follow-up:
+a widget test that is green on that parent commit, then rebase the pin so the
+move commit does not touch it.
+
+### #86 · Leaves shortfall + façade forwarders (Decisions)
+
+**#86** (S2-3) Leaves **1 067 vs 1 600** (shortfall **533**). Clearing slice:
+**S2-7** façade collapse. Forwarders left in `StorageService` are **>10 lines**
+and needed a Decisions entry on the PR before merge (PHASE2 §2.2). Recorded
+here after the fact: S2-7 deletes them; Q2 may `@Deprecated` the names until
+then. Same class of debt on S2-1 (869) and S2-2 (325) — also S2-7.
 
 ## Quirks kept, not fixed
 
@@ -152,6 +194,12 @@ Phase 2 extractions also follow `dev/design/REFACTOR_PLAN_PHASE2.md` (binding as
 - **Host keeps** `_switchMode` (policy + query handoff), `_modeKeywordNode`,
   `_openKeywordBind`, and the catalog Sources bar. Leftover wrappers listed
   as G1'-9 debt.
+- **Double rebuild.** `KeywordSearchController._emit` calls `notifyListeners`.
+  The host (`_SearchScreenState`) listens with `_onKeywordChanged` → `setState`,
+  and `KeywordSearchScreen` also listens → `setState`. Same notify rebuilds the
+  shell and the extracted screen. Keep until **G1'-9** drops the host listener
+  (the screen already owns the paint). Do not "fix" in a later extract. **#98**
+  is a post-move widget pin and does **not** clear parent-path (h) for #90.
 
 ### G1'-2 · source edit/add dialogs
 
@@ -513,6 +561,52 @@ behaviour and must be restored, not kept as quirks.
   via `clearErrorBurst`.
 - **Decoder / resume / identify / subtitle / recording were not
   re-extracted.** Overlay Stack stays for V1-10.
+
+## Leaves shortfalls (merged Phase 2)
+
+A PR under its Leaves target is a reject unless the shortfall is named here
+with the slice that clears it. "Decisions needed: None" is not that record.
+
+| PR | Lane | Target | Actual | Shortfall | Clears |
+|---|---|---:|---:|---:|---|
+| #77 | S2-1 | 1 400 | 531 | 869 | S2-7 (later slices took named hunks; leftover is facade) |
+| #82 | S2-2 | 900 | 575 | 325 | S2-7 |
+| #83 | V1-2 | 700 | 527 | 173 | absorbed by V1-3 (subtitle-fetch tail; already merged) |
+| #86 | S2-3 | 1 600 | 1 067 | **533** | **S2-7** (style went to S2-4; completion/progress is S2-6; the 533-line hole is facade collapse) |
+| #87 | M1-1 | 850 | 856 board / 581 first body | 0 after resubmit | create/update UI stays M1-5 |
+
+Met: G1'-1 1069/850, G1'-2 486/450, G1'-3 2379/2100, V1-1 666/650, V1-3 943/900, V1-4 704/550, V1-5 1008/1000, M1-2 1539/1500, S2-4 806/800, S2-5 373/350, G2 3107→2899 vs 3000, Leaves-0 prereqs.
+
+## Gate (h) pin audit (merged Phase 2)
+
+Evidence: widget test driving State, or a test calling the origin/lib function.
+Text greps and test-local clones fail the gate even when the pin commit predates the move.
+
+| PR | Lane | Pin file | Verdict |
+|---|---|---|---|
+| #73 | S2-0 | registry / byKey tests | **pass** (lib StorageService / ownership) |
+| #74 | G1'-0 | `search_public_types_pin_test.dart` | text-only (rename; acceptable for Leaves 0) |
+| #75 | V1-0 | `video_player_launch_fields_pin_test.dart` | **pass** (constructs `VideoPlayerScreen`) |
+| #76 | P1b | `cloud_magic_tv_unlock_test.dart` | **pass** (calls cloud lib) |
+| #77 #82 #86 #92 #93 | S2-1..5 | `storage_*_snapshot_test.dart` / s2x roundtrip | **pass** (write/read through `StorageService`) |
+| #78 | G1'-1 | `catalog_play_resolver_pin_test.dart` | **fail** text + test-local clones |
+| #79 | V1-1 | `player_resume_pin_test.dart` | **fail** text + clones (`resume_controller_test` is post-move) |
+| #81 | M1-0 | `magic_tv_watch_session_fields_pin_test.dart` | **fail** text-only |
+| #83 | V1-2 | `identify_title_sheet_pin_test.dart` | **fail** text; widget tests import the new file |
+| #84 | G1'-2 | `source_binding_dialogs_pin_test.dart` | **fail** text + clones; `source_binding_dialogs_test` is post-move |
+| #85 | G2 | `download_location_pin_test.dart` | **fail** text-only (lane already met 3000; no next slice) |
+| #87 | M1-1 | `magic_tv_channel_cache_warmer_pin_test.dart` | **fail** text + clones |
+| #88 | V1-3 | `subtitle_track_controller_pin_test.dart` | **fail** text + clones |
+| #90 | G1'-3 | `keyword_search_pin_test.dart` | **fail** text + clones. **#98** pumps `KeywordSearchScreen` post-move — does **not** clear parent-path (h) |
+| #91 | V1-4 | `iptv_recording_controller_pin_test.dart` | **fail** text + clones |
+| #94 | V1-5 | `iptv_zap_controller_pin_test.dart` | **fail** text + clones |
+| #95 | M1-2 | `magic_tv_channel_import_export_pin_test.dart` | **fail** text + clones (merged; §2.2 host block recorded after) |
+| #100 | V1-fix | `673af47d` lib-call pins | **pass** for the four moved files (predates `10f10a61`) |
+
+Follow-ups before the next slice of that lane merges:
+- G1': parent-path (h) for #90 still unpaid. Do not merge #96 until CW leaves `lib/services/`.
+- V1: real lib pin for V1-1..5 before V1-6 assigns.
+- M1: real lib pin for M1-0/M1-1 before M1-3. #95 is **merged**; Decisions recorded (`ChannelImportExportHost` / `ProgressSink` → M1-3 / M1-5).
 
 ## Process
 

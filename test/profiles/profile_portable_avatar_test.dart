@@ -11,6 +11,7 @@ import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+import '../support/source_text.dart';
 import 'avatar_fixtures.dart';
 
 /// Avatars are the first binary user data a portable package carries. These
@@ -51,7 +52,7 @@ void main() {
   tearDown(() async {
     AppStorage.debugReset();
     ProfileAvatarPolicy.debugSetUserImagesSupported(null);
-    if (await root.exists()) await root.delete(recursive: true);
+    await deleteTempTree(root);
   });
 
   test('an avatar round-trips with its digest intact', () async {
@@ -147,7 +148,7 @@ void main() {
     expect(await file.exists(), isTrue);
     // A generation bump must not be able to strand it.
     expect(file.path, isNot(startsWith(scope.generationDirectory(root).path)));
-    expect(file.path, isNot(contains(p.join('g', '3'))));
+    expect(posixPath(file.path), isNot(contains('g/3')));
   });
 
   test(
