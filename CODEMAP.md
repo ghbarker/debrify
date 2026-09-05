@@ -39,7 +39,8 @@ TV Home stages (parts of `search_screen.dart`, G1 step 5): `lib/screens/search/s
 — `_CanvasBoardStage`, `_AtriumBoardStage`, `_MosaicBoardStage`, `_PromenadeBoardStage`,
 `_DeckBoardStage`, `_TonightBoardStage`, `_SpotlightBoardStage`. Dispatch helper:
 `tv_home_stage_dispatch.dart` (`resolveTvHomeStageLayout`). Empty Spotlight shelves
-fall through to classic. `_buildDiscoverStage` stays on the host (Discover chrome).
+fall through to classic. Discover grid/stage chrome is `search/discover_view.dart`
+(`DiscoverView`); the host still supplies the actual source panel.
 
 🔴 huge: `lib/screens/search_screen.dart` (13 105) · `lib/screens/video_player_screen.dart`
 (16 278) · `lib/screens/magic_tv_screen.dart` (10 716) · `lib/services/storage_service.dart`
@@ -143,7 +144,15 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   the host retains snapshot capture, mounted checks and stable-map UI commits.
   Discover focus/trailer signals, layout cache, settings bridges and timer live in
   `lib/screens/search/discover_lifecycle.dart` (`DiscoverLifecycle`); eager host
-  adapters expire with real G17 ownership / Q2. Renderers/actions remain in the host.
+  retains construction, preference listener and disposal. Three live aliases and
+  focus forwarding expire with real G17 ownership / Q2; content/actions stay hosted.
+  `lib/screens/search/discover_view.dart` (`DiscoverView`) borrows that lifecycle,
+  TV flag and raw panel; owns grid/stage composition and private backdrop/veils/dim.
+  Shared `HeroTrailerLoadingPill` / `HeroAmbientChip` and private States live in
+  `lib/screens/search/trailer_status_chips.dart`, also used by existing Home consumers.
+  No view/chip import of the legacy host. Fav/CW effects and init/dispose remain
+  hosted: 419 physical host Leaves, production +37 net lines, UI relocation rather
+  than pure logic. This is not standalone Discover or automatic 750-target closure.
   Hero state, focus-rest/enrichment timers, ambient trailers/live IPTV and shell
   art/tint/chrome relays live in `lib/screens/search/hero_presenter.dart`
   (`HeroPresenter`, `HeroEnvironment`). This remains screen/UI presentation,
