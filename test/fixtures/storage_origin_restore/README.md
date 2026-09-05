@@ -385,3 +385,69 @@ actual repair with exact stage/key/type/notification expectations. Is there more
 we could do? Independent fixture review and the full gate precede any separately
 authorized product move. No all-interleavings/profile-safety/complete-sync claim.
 Forwarder inventory unchanged; expiry not applicable to this test-only checkpoint.
+
+### Residual playlist metadata: two physical String JSON keys
+
+Current fixture origin `7f5f9dff788760c0b0bf6831196e014d51ece12b`;
+actual pre-S2 export origin `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`.
+Only `playlist-metadata.encrypted.json` and its manifest are new artifacts.
+The separately counted domain is TWO keys: `tvmaze_series_mappings` and
+`playlist_poster_overrides_v1`. Both are admitted physical Strings, and exact
+JSON bytes (including whitespace, insertion order and nested scalar types) survive
+actual current restore. No blanket S2 inventory increase is claimed.
+
+Synthetic input has three mappings with fixed integer show IDs/timestamps and
+three corresponding poster URLs at example.invalid. Additional empty/null poster
+values and a nonmap record remain in raw JSON but are excluded by the actual
+batch getter. Five public lookups cover RD integer/string identity collision,
+normalized-title collision and WebDAV precedence/path case; each checks the real
+unique-key, mapping and poster API. Batch output order and missing-item nulls are
+also checked. These are finite cases, not network/image loading or native proof.
+
+The existing generator runs against the actual origin library, checks its Git
+HEAD and clean lib, verifies own package resolution, and uses the actual exporter
+and encrypted package codec. Current restore uses the real coordinator and checks
+raw physical values BEFORE any public reader. Old generation, other profile and
+`metadata_restore_sentinel` survive. Represented current re-export matches too.
+There are no playback-state repair calls, extra exported markers or resources.
+No real user profile, credentials, paths or device grants are used.
+
+This is encrypted profile portability, NOT tvOS recovery. The separate recovery
+snapshot policy excludes `tvmaze_` keys; this fixture does not change or prove that
+path. API malformed/failure behavior is separately pinned by PR156's 17 cases.
+No concurrency serialization, profile-safety fix or complete-sync claim.
+
+Reproduce with own checkout package configuration and pinned Flutter3.44.8:
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# Own detached pre-S2 tree with identical loader, recipe and existing two helper tests:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --plain-name 'playlist-metadata: generate' --reporter json
+# Copy ONLY the new playlist-metadata pair to current; then:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart test/playlist_progress_map_origin_test.dart test/playback_progress_store_test.dart test/playback_progress_store_origin_compatibility_test.dart test/local_watch_completion_storage_test.dart test/episode_local_progress_storage_test.dart --reporter json
+& $flutter analyze --no-pub test/storage_origin_restore_fixture_test.dart
+# Each MUST fail after real restore, not during hash/decryption validation:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'playlist-metadata: restore' --dart-define=STORAGE_FIXTURE_MUTATION=metadata-key --reporter json
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'playlist-metadata: restore' --dart-define=STORAGE_FIXTURE_MUTATION=metadata-type --reporter json
+```
+
+Actual origin generation: 1 passed. Combined current run: 91 passed (89 existing
+plus current export and restore), zero failures/skips; scoped analysis: no issues.
+Both valid-package mutations exited 1 at post-restore raw-value assertions:
+renaming the mapping key leaves the old destination value; changing the poster
+physical String to int7 restores int7. Neither is silently normalized. The final
+normal combined run is repeated after mutations. No production source mutation.
+
+Did we make a difference? Two previously unrepresented metadata keys now have
+actual pre-S2 export/current restore/public-reader proof. Is there more we could
+do? Independent fixture review and explicit product scope precede any owner move.
+Zero Leaves; forwarder inventory unchanged, expiry not applicable to this test-only
+checkpoint. All prior ciphertext/manifests and prior recipe sections are preserved.
+
+Provenance: new ciphertext SHA256
+`997c7091aabb99fb8fa152df131af13980534fa713fddbd18bb30743b499ba69`.
+All 24 prior fixture Git blobs are unchanged (checkout CRLF is accounted for by
+Git's clean filter); no prior artifact was written. Loader, recipe and two existing
+helper tests were byte-identical between origin/current generation checkouts.
+Flutter.bat SHA256 `f83bfed7ecd10fd1afd8ce19c0b0119d2c80e24fbf26f4ff4f63c1cc5f75dcd5`;
+Dart.exe SHA256 `4daa3455f8844ff2a907dffd68ba511f112ba67f5f6635d69a122e5b60bf91ff`.
