@@ -26,20 +26,62 @@ In the commands below, `python` denotes that executable.
 - `python dev/testing/handoff/run.py profile-path --flutter E:/FlutterSdks/flutter-3.44.8/bin/flutter.bat`:
   SDK check accepted **3.44.8**, then Flutter exited **1 before loading tests**:
   `cannot run without a dependency on either "package:flutter_test" or "package:test"`.
-  This new worktree has no `.dart_tool/package_config.json`. No test assertion ran.
-  This is a setup limitation, not a passing or failing profile behavior result.
+  At that initial attempt the worktree had no `.dart_tool/package_config.json`.
+  No test assertion ran. The authorized preparation and successful rerun below
+  supersede this setup limitation.
 
-The Flutter attempt inherited process-only TEMP/TMP=`E:/FlutterSdks/downloads`,
-PUB_CACHE=`E:/FlutterSdks/pub-cache`, GRADLE_USER_HOME=`E:/Android/gradle`.
-No SDK install, dependency preparation, app build, gate-workspace write or copied
-package metadata was performed. No existing tracked source, root dependency,
-workflow, baseline, plan, board or notes were changed. Full Flutter, analyzer,
-Linux/macOS execution and historical parent-tree execution were not run.
-The POSIX fixture launcher is provided but this host only verified Windows.
+## Authorized prepared-worktree verification
 
-Next useful slice: in a prepared checkout, run `profile-path` and `keyword-state`
-with the pinned SDK and record raw failures before broadening to `backup-export`.
-Main's native-path pins may expose the pending fix; do not silently allowlist it.
-After pending changes merge, inspect their new paths and evidence before adding
-any bounded selectors. Native lifecycle and setting-attribute synchronization
-remain coverage discussions, not implementations or coverage claims in this kit.
+Tested commit: `3eec5e0f8c410d3ea820a3f76383ac54bd3286b3`, with production
+code/tests unchanged from base `843d631b780cf5c04f14e3f3e1070bb914e8e197`.
+Both suites ran through the committed kit runner on Windows, Flutter **3.44.8**.
+
+Preparation: `E:/FlutterSdks/flutter-3.44.8/bin/flutter.bat pub get` exited 0.
+Process-only TEMP/TMP=`E:/FlutterSdks/downloads`, PUB_CACHE=`E:/FlutterSdks/pub-cache`,
+GRADLE_USER_HOME=`E:/Android/gradle` were used for preparation and both runs.
+No SDK installation or gate-workspace writes were performed.
+
+Metadata checks:
+
+- `.dart_tool/package_config.json` resolves `debrify.rootUri` to
+  `file:///E:/DebrifyWorktrees/test-handoff-kit/`, this worker's own checkout.
+- `flutter` and `flutter_test` resolve under
+  `file:///E:/FlutterSdks/flutter-3.44.8/packages/`.
+- The resolved `pubspec.lock` is unchanged from HEAD. All 172 dependency versions
+  in `.dart_tool/package_graph.json` agree with the committed lockfile (excluding
+  the root application, which is not a dependency lock entry).
+- Only generated tracked plugin registrant noise from dependency preparation was
+  restored to HEAD: the `.cc`, `.h` and `.cmake` files under `linux/flutter/` and
+  `windows/flutter/`, plus `macos/Flutter/GeneratedPluginRegistrant.swift`.
+  Ignored local package/build metadata remains in this worktree; no root edits
+  are included in the verification commit.
+
+Commands and raw outcomes:
+
+```text
+python dev/testing/handoff/run.py profile-path --flutter E:/FlutterSdks/flutter-3.44.8/bin/flutter.bat
+python dev/testing/handoff/run.py keyword-state --flutter E:/FlutterSdks/flutter-3.44.8/bin/flutter.bat
+```
+
+- `profile-path`: **35 passed, 0 failed; exit 0**. Runs
+  `test/profile_scope_test.dart` and `test/profiles/profile_scope_test.dart`.
+  Actual native Windows path/traversal cases, valid relative representations,
+  generation/preference identity and scope behavior executed.
+- `keyword-state`: **8 passed, 0 failed; exit 0**. Runs
+  `test/keyword_search_origin_widget_test.dart`,
+  `test/keyword_search_screen_pin_test.dart`, and
+  `test/keyword_search_controller_lib_test.dart`. Real SearchScreen submit/clear,
+  imported results and Name-sort reset, extracted screen State notifications and
+  actual controller helper tests executed. This run does not establish a separate
+  real-State snapshot-restoration pin or historical pre-move execution.
+
+No retries, allowlists, suppressed failures or test/source changes were applied.
+These were Flutter test runs only, not duplicate application/platform builds.
+Full Flutter, analyzer, Linux/macOS execution and historical parent-tree execution
+were not run. The POSIX runner fixture is provided but only Windows was verified.
+
+Next useful slice: run `backup-export` in this prepared checkout, then assess
+profile lifecycle/isolation separately. After pending changes merge, inspect their
+new paths and evidence before adding bounded selectors. Native lifecycle and
+setting-attribute synchronization remain coverage discussions, not implementations
+or coverage claims in this kit.
