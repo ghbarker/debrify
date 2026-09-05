@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/source_text.dart';
+
 /// Locate the Dart SDK `dart` binary. Do not use `runInShell: true`
 /// (Windows cmd wrapping is a gate-2 flake).
 String _dartExecutable() {
@@ -36,7 +38,65 @@ Future<ProcessResult> _runLayering(List<String> extra) {
   ], workingDirectory: Directory.current.path);
 }
 
+class _LockedDirectory implements Directory {
+  int attempts = 0;
+  final failure = const FileSystemException('still owned by a resource');
+
+  @override
+  bool existsSync() => true;
+
+  @override
+  Future<bool> exists() async => true;
+
+  @override
+  void deleteSync({bool recursive = false}) {
+    attempts++;
+    throw failure;
+  }
+
+  @override
+  Future<Directory> delete({bool recursive = false}) async {
+    attempts++;
+    throw failure;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
+  test('temp cleanup exposes resource ownership failures without retries', () async {
+    final directory = _LockedDirectory();
+    await expectLater(deleteTempTree(directory), throwsA(same(directory.failure)));
+    expect(directory.attempts, 1);
+  });
+
+  test('temp cleanup removes a tree after its file handle is closed', () async {
+    final directory = await Directory.systemTemp.createTemp('c0 closed handle ');
+    addTearDown(() async {
+      if (await directory.exists()) await directory.delete(recursive: true);
+    });
+    final file = File('${directory.path}/owned.txt');
+    final handle = await file.open(mode: FileMode.write);
+    try {
+      await handle.writeString('owned');
+    } finally {
+      await handle.close();
+    }
+    await deleteTempTree(directory);
+    expect(await directory.exists(), isFalse);
+    await deleteTempTree(directory); // Already absent is harmless.
+  });
+
+  test('checker executable is an actual native SDK binary', () async {
+    final executable = _dartExecutable();
+    expect(File(executable).isAbsolute, isTrue);
+    expect(File(executable).existsSync(), isTrue);
+    if (Platform.isWindows) expect(executable, endsWith('.exe'));
+    final result = await Process.run(executable, ['--version']);
+    expect(result.exitCode, 0, reason: '${result.stderr}');
+    expect('${result.stdout}${result.stderr}', contains('Dart SDK version'));
+  });
   test('non-strict exits 0 when count equals the committed ceiling', () async {
     final result = await _runLayering(const []);
     expect(result.exitCode, 0, reason: result.stderr.toString());
