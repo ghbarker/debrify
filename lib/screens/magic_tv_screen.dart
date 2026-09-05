@@ -62,6 +62,8 @@ import 'debrify_tv/dialogs/cached_loading_dialog.dart';
 import 'debrify_tv/dialogs/channel_creation_dialog.dart';
 import 'debrify_tv/dialogs/external_player_notice_dialog.dart';
 import 'debrify_tv/dialogs/spotlight_dialog.dart';
+import 'debrify_tv/dialogs/channel_editor_dialog.dart';
+import 'debrify_tv/widgets/spotlight_choice_chip.dart';
 
 /// Magic TV provider-string dispatch. Persisted chip ids stay
 /// [CloudProviderId.magicTvId] (`real_debrid`, not playback `debrid`).
@@ -189,123 +191,6 @@ int _parseRandomStartPercent(dynamic value) {
 enum _SettingsScope { quickPlay, channels }
 
 enum _DebrifyTvTopMenuAction { import, export, add, deleteAll, settings }
-
-class _SpotlightChoiceChip extends StatefulWidget {
-  final String label;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback onPressed;
-  final IconData? trailingIcon;
-
-  const _SpotlightChoiceChip({
-    required this.label,
-    required this.selected,
-    required this.enabled,
-    required this.onPressed,
-    this.trailingIcon,
-  });
-
-  @override
-  State<_SpotlightChoiceChip> createState() => _SpotlightChoiceChipState();
-}
-
-class _SpotlightChoiceChipState extends State<_SpotlightChoiceChip> {
-  bool _focused = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final app = AppThemeScope.of(context);
-    final tv = app.debrifyTv;
-    final focused = _focused && widget.enabled;
-    final fill = focused
-        ? app.core.tx
-        : widget.selected
-        ? tv.accent
-        : tv.fillWeak;
-    final ink = focused
-        ? app.inkOn(app.core.tx)
-        : widget.selected
-        ? app.inkOn(tv.accent)
-        : tv.textDim;
-    return Focus(
-      canRequestFocus: widget.enabled,
-      onFocusChange: (value) => setState(() => _focused = value),
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent || event is KeyRepeatEvent) {
-          final key = event.logicalKey;
-          if (key == LogicalKeyboardKey.arrowLeft ||
-              key == LogicalKeyboardKey.arrowUp) {
-            node.previousFocus();
-            return KeyEventResult.handled;
-          }
-          if (key == LogicalKeyboardKey.arrowRight ||
-              key == LogicalKeyboardKey.arrowDown) {
-            node.nextFocus();
-            return KeyEventResult.handled;
-          }
-          if (event is KeyDownEvent && isActivateOrSpaceKey(key)) {
-            widget.onPressed();
-            return KeyEventResult.handled;
-          }
-        }
-        return KeyEventResult.ignored;
-      },
-      child: Semantics(
-        button: true,
-        selected: widget.selected,
-        enabled: widget.enabled,
-        label: widget.label,
-        child: GestureDetector(
-          onTap: widget.enabled ? widget.onPressed : null,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            transform: focused
-                ? (Matrix4.identity()..translateByDouble(0, -2, 0, 1))
-                : Matrix4.identity(),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: widget.enabled ? fill : tv.fillWeak.withValues(alpha: .3),
-              borderRadius: app.shape.br(99),
-              border: Border.all(
-                color: focused
-                    ? app.core.tx
-                    : widget.selected
-                    ? tv.accent
-                    : tv.hairline,
-              ),
-              boxShadow: focused
-                  ? const [
-                      BoxShadow(
-                        color: Color(0x66000000),
-                        blurRadius: 18,
-                        offset: Offset(0, 9),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.label,
-                  style: TextStyle(
-                    color: widget.enabled ? ink : tv.textFaint,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (widget.trailingIcon != null) ...[
-                  const SizedBox(width: 7),
-                  Icon(widget.trailingIcon, size: 14, color: ink),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class DebrifyTVScreen extends StatefulWidget {
   const DebrifyTVScreen({super.key});
@@ -1198,7 +1083,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
           runSpacing: 8,
           children: [
             for (final quality in QualityTier.values)
-              _SpotlightChoiceChip(
+              SpotlightChoiceChip(
                 label: DebrifyTvFilters.qualityLabel(quality),
                 selected: _tvFilters.qualities.contains(quality),
                 enabled: !_isBusy,
@@ -1214,7 +1099,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
           runSpacing: 8,
           children: [
             for (final bucket in SizeBucket.values)
-              _SpotlightChoiceChip(
+              SpotlightChoiceChip(
                 label: DebrifyTvFilters.sizeLabel(bucket),
                 selected: _tvFilters.sizes.contains(bucket),
                 enabled: !_isBusy,
@@ -1266,7 +1151,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     }) {
       return Tooltip(
         message: available ? 'Use $label for Debrify TV' : unavailableMessage,
-        child: _SpotlightChoiceChip(
+        child: SpotlightChoiceChip(
           label: label,
           selected: currentProvider == value,
           enabled: available && !_isBusy,
@@ -1316,350 +1201,17 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     );
   }
 
-  bool _addKeywordsToList(
-    String raw,
-    List<String> keywordList,
-    void Function(void Function()) setState,
-  ) {
-    if (raw.isEmpty) return false;
-    final parsed = _cacheWarmer.parseKeywords(raw.replaceAll('\n', ','));
-    if (parsed.isEmpty) return false;
-    var limitReached = false;
-    setState(() {
-      for (final kw in parsed) {
-        if (keywordList.length >= _maxChannelKeywords) {
-          limitReached = true;
-          break;
-        }
-        final exists = keywordList.any(
-          (existing) => existing.toLowerCase() == kw.toLowerCase(),
-        );
-        if (!exists) {
-          keywordList.add(kw);
-        }
-      }
-    });
-    return limitReached || keywordList.length >= _maxChannelKeywords;
-  }
-
   Future<DebrifyTvChannel?> _openChannelDialog({
     DebrifyTvChannel? existing,
-  }) async {
-    final nameController = TextEditingController(text: existing?.name ?? '');
-    final keywordInputController = TextEditingController();
-    FocusNode? channelNameFocus;
-    FocusNode? channelKeywordFocus;
-    if (_isAndroidTv) {
-      channelNameFocus = FocusNode(debugLabel: 'DebrifyTVChannelName');
-      channelKeywordFocus = FocusNode(debugLabel: 'DebrifyTVChannelKeyword');
-    }
-    final List<String> keywordList = [];
-    final seenKeywords = <String>{};
-    final initialKeywords = existing != null
-        ? existing.keywords
-        : const <String>[];
-    for (final kw in initialKeywords) {
-      final trimmed = kw.trim();
-      if (trimmed.isEmpty) continue;
-      final lower = trimmed.toLowerCase();
-      if (seenKeywords.contains(lower)) continue;
-      seenKeywords.add(lower);
-      keywordList.add(trimmed);
-      if (keywordList.length >= _maxChannelKeywords) break;
-    }
-    // Channel defaults - keep NSFW preference per channel only
-    bool avoidNsfw = existing?.avoidNsfw ?? true;
-    String? error;
-
-    DebrifyTvChannel? result;
-    try {
-      result = await showDialog<DebrifyTvChannel>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          return StatefulBuilder(
-            builder: (context, setModalState) {
-              final app = AppThemeScope.of(context);
-              final tv = app.debrifyTv;
-              Future<void> submit() async {
-                final pendingRaw = keywordInputController.text.trim();
-                if (pendingRaw.isNotEmpty) {
-                  final pendingKeywords = _cacheWarmer.parseKeywords(pendingRaw);
-                  for (final rawKw in pendingKeywords) {
-                    final trimmedKw = rawKw.trim();
-                    if (trimmedKw.isEmpty) {
-                      continue;
-                    }
-                    final alreadyPresent = keywordList.any(
-                      (existing) =>
-                          existing.toLowerCase() == trimmedKw.toLowerCase(),
-                    );
-                    if (alreadyPresent) {
-                      continue;
-                    }
-                    if (keywordList.length >= _maxChannelKeywords) {
-                      setModalState(() {
-                        error =
-                            'You can add up to $_maxChannelKeywords keywords per channel.';
-                      });
-                      return;
-                    }
-                    keywordList.add(trimmedKw);
-                  }
-                  keywordInputController.clear();
-                }
-
-                final name = nameController.text.trim();
-                final keywords = <String>[];
-                final seen = <String>{};
-                for (final raw in keywordList) {
-                  final trimmed = raw.trim();
-                  if (trimmed.isEmpty) continue;
-                  final lower = trimmed.toLowerCase();
-                  if (seen.contains(lower)) continue;
-                  seen.add(lower);
-                  keywords.add(trimmed);
-                }
-                if (name.isEmpty) {
-                  setModalState(() {
-                    error = 'Give the channel a name';
-                  });
-                  return;
-                }
-                if (keywords.isEmpty) {
-                  setModalState(() {
-                    error = 'Add at least one keyword';
-                  });
-                  return;
-                }
-                if (keywords.length > _maxChannelKeywords) {
-                  setModalState(() {
-                    error =
-                        'You can add up to $_maxChannelKeywords keywords per channel.';
-                  });
-                  return;
-                }
-                final now = DateTime.now();
-                final channel = DebrifyTvChannel(
-                  id:
-                      existing?.id ??
-                      DateTime.now().microsecondsSinceEpoch.toString(),
-                  name: name,
-                  keywords: keywords,
-                  avoidNsfw: avoidNsfw, // Channel's own NSFW setting
-                  channelNumber: existing?.channelNumber ?? 0,
-                  createdAt: existing?.createdAt ?? now,
-                  updatedAt: now,
-                );
-                Navigator.of(dialogContext).pop(channel);
-              }
-
-              return DebrifyTvSpotlightDialog(
-                eyebrow: existing == null
-                    ? 'Channel editor · new'
-                    : 'Channel editor · ${existing.channelNumber.toString().padLeft(2, '0')}',
-                title: existing == null ? 'Create a channel' : 'Edit channel',
-                subtitle:
-                    'Keywords are search terms. Add one or several and Debrify will pool the results.',
-                icon: Icons.tv_rounded,
-                maxWidth: 720,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TvTextField(
-                      controller: nameController,
-                      focusNode: channelNameFocus,
-                      autofocus: _isAndroidTv,
-                      textCapitalization: TextCapitalization.words,
-                      // The shared TV shell/keyboard chrome follows
-                      // settings.accent. NOT debrifyTv.accent: legacy
-                      // paints that the channel grid's Netflix red, while
-                      // the keyboard's highlight has always been violet.
-                      accent: app.settings.accent,
-                      keyboardGround: app.youtube.keyboardPanel,
-                      keyboardInk: app.core.tx,
-                      keyboardInkOnAccent: app.inkOn(app.settings.accent),
-                      decoration: const InputDecoration(
-                        labelText: 'Channel name',
-                        prefixIcon: Icon(Icons.label_rounded),
-                      ),
-                      onDownArrow: () => channelKeywordFocus?.requestFocus(),
-                      onUpArrow: () {
-                        final ctx = channelNameFocus?.context;
-                        if (ctx != null) {
-                          FocusScope.of(ctx).previousFocus();
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Keywords (${keywordList.length}/$_maxChannelKeywords)',
-                      style: TextStyle(
-                        color: tv.textDim,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Tip: type a keyword and press Enter. Add multiples by separating with commas.',
-                      style: TextStyle(color: tv.textFaint, fontSize: 11),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        ...keywordList.map(
-                          (keyword) => _SpotlightChoiceChip(
-                            label: keyword,
-                            selected: false,
-                            enabled: true,
-                            trailingIcon: Icons.close_rounded,
-                            onPressed: () {
-                              setModalState(() {
-                                keywordList.remove(keyword);
-                                if (error != null &&
-                                    error!.contains(
-                                      '$_maxChannelKeywords keywords',
-                                    ) &&
-                                    keywordList.length < _maxChannelKeywords) {
-                                  error = null;
-                                }
-                              });
-                            },
-                          ),
-                        ),
-                        SizedBox(
-                          width: 200,
-                          child: TvTextField(
-                            controller: keywordInputController,
-                            focusNode: channelKeywordFocus,
-                            decoration: const InputDecoration(
-                              hintText: 'Add keyword',
-                              prefixIcon: Icon(Icons.add_rounded),
-                            ),
-                            style: TextStyle(color: app.core.tx),
-                            // Shared TV shell/keyboard chrome — see the
-                            // channel-name field above.
-                            accent: app.settings.accent,
-                            keyboardGround: app.youtube.keyboardPanel,
-                            keyboardInk: app.core.tx,
-                            keyboardInkOnAccent: app.inkOn(app.settings.accent),
-                            onUpArrow: () => channelNameFocus?.requestFocus(),
-                            onDownArrow: () {
-                              final ctx = channelKeywordFocus?.context;
-                              if (ctx != null) {
-                                FocusScope.of(ctx).nextFocus();
-                              }
-                            },
-                            onSubmitted: (value) {
-                              final limitReached = _addKeywordsToList(
-                                value,
-                                keywordList,
-                                setModalState,
-                              );
-                              keywordInputController.clear();
-                              if (limitReached) {
-                                setModalState(() {
-                                  error =
-                                      'You can add up to $_maxChannelKeywords keywords per channel.';
-                                });
-                              } else if (error != null &&
-                                  error!.contains(
-                                    '$_maxChannelKeywords keywords',
-                                  )) {
-                                setModalState(() {
-                                  error = null;
-                                });
-                              }
-                            },
-                            onChanged: (value) {
-                              if (value.contains(',')) {
-                                final limitReached = _addKeywordsToList(
-                                  value,
-                                  keywordList,
-                                  setModalState,
-                                );
-                                keywordInputController.clear();
-                                if (limitReached) {
-                                  setModalState(() {
-                                    error =
-                                        'You can add up to $_maxChannelKeywords keywords per channel.';
-                                  });
-                                } else if (error != null &&
-                                    error!.contains(
-                                      '$_maxChannelKeywords keywords',
-                                    )) {
-                                  setModalState(() {
-                                    error = null;
-                                  });
-                                }
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    DebrifyTvDialogSection(
-                      label: 'Channel settings',
-                      child: SwitchRow(
-                        title: 'Avoid NSFW content',
-                        subtitle: _viewerForcesNsfw
-                            ? 'Always on for this profile'
-                            : 'Best-effort filter while building this channel',
-                        value: _viewerForcesNsfw || avoidNsfw,
-                        onChanged: (v) {
-                          if (_viewerForcesNsfw) return;
-                          setModalState(() => avoidNsfw = v);
-                        },
-                      ),
-                    ),
-                    if (error != null) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        error!,
-                        style: const TextStyle(color: Colors.redAccent),
-                      ),
-                    ],
-                  ],
-                ),
-                actions: [
-                  DebrifyTvDialogButton(
-                    label: 'Cancel',
-                    onPressed: () => Navigator.of(dialogContext).pop(),
-                  ),
-                  DebrifyTvDialogButton(
-                    label: 'Save channel',
-                    icon: Icons.check_rounded,
-                    tone: DebrifyTvDialogButtonTone.primary,
-                    onPressed: submit,
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      );
-    } finally {
-      void disposer() {
-        channelNameFocus?.dispose();
-        channelKeywordFocus?.dispose();
-        nameController.dispose();
-        keywordInputController.dispose();
-      }
-
-      if (mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => disposer());
-      } else {
-        disposer();
-      }
-    }
-
-    return result;
-  }
+  }) => ChannelEditorDialog.open(
+    context,
+    existing: existing,
+    isAndroidTv: () => _isAndroidTv,
+    viewerForcesNsfw: () => _viewerForcesNsfw,
+    isMounted: () => mounted,
+    parseKeywords: _cacheWarmer.parseKeywords,
+    maxChannelKeywords: _maxChannelKeywords,
+  );
 
   Future<void> _handleAddChannel() async {
     await _syncProviderAvailability();
