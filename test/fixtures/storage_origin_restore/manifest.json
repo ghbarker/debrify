@@ -1,8 +1,8 @@
 {
   "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
-  "recipeVersion": 1,
+  "recipeVersion": 2,
   "syntheticOnly": true,
-  "sha256": "e5f7f3afe43b9632f6ac4d8597ca779320d29a25b44a4d0009b9f1281314bb7f",
+  "sha256": "a7f5d122f543c9e8bff09536417fe6caa0db33a425cd12db6ff3391477b5edda",
   "representedSettings": {
     "stremio_tv_rotation_minutes": 37,
     "stremio_tv_auto_refresh": false,
@@ -43,7 +43,10 @@
     "watch_progress_source": "simkl",
     "trakt_sync_catalog_items": true,
     "simkl_sync_catalog_items": false,
-    "mdblist_sync_catalog_items": true
+    "mdblist_sync_catalog_items": true,
+    "mdblist_saved_clones": "{\"101\":201,\"102\":202}",
+    "mdblist_sync_checkpoint_v1": "{\"version\":1,\"synthetic\":{\"cursor\":7,\"done\":false},\"ids\":[101,102]}",
+    "tracking_progress_fallback_notice": true
   },
   "keyTypes": {
     "stremio_tv_rotation_minutes": "int",
@@ -74,9 +77,20 @@
     "watch_progress_source": "String",
     "trakt_sync_catalog_items": "bool",
     "simkl_sync_catalog_items": "bool",
-    "mdblist_sync_catalog_items": "bool"
+    "mdblist_sync_catalog_items": "bool",
+    "mdblist_saved_clones": "String",
+    "mdblist_sync_checkpoint_v1": "String",
+    "tracking_progress_fallback_notice": "bool"
   },
   "excludedKeys": [
+    "mdblist_api_key",
+    "mdblist_username",
+    "simkl_access_token",
+    "simkl_username",
+    "trakt_access_token",
+    "trakt_refresh_token",
+    "trakt_token_expiry",
+    "trakt_username",
     "external_player_custom_command"
   ],
   "omissions": {

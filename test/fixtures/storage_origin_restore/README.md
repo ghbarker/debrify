@@ -7,20 +7,20 @@ CloudSecretPrefs and the ownership registry; S2-1 through S2-5 stores were absen
 It does not retroactively turn an earlier extraction's tests into pre-move pins.
 
 The generator is in `test/storage_origin_restore_fixture_test.dart`. Copy that
-new test into a fresh detached checkout of the exact origin; production is never
+new test and recipe.json into a fresh detached checkout of the exact origin; production is never
 copied into the test or modified. Generation checks the exact HEAD, unchanged lib,
 and package configuration resolving the app to that checkout. It writes the
-artifact by calling original StorageService setters, ProfilePackageService's
+artifact by calling original StorageService setters and typed ProfilePreferences writes, ProfilePackageService's
 single-profile exporter, and PortableProfilePackage's real encrypted-file encoder.
 
 ## Provenance and scope
 
 - Generated on Windows with Flutter 3.47.2 / Dart 3.13.2.
-- `profile.encrypted.json`: 3,806 bytes; v4 singleProfile package, zero resources.
-- SHA-256: `e5f7f3afe43b9632f6ac4d8597ca779320d29a25b44a4d0009b9f1281314bb7f`.
-- `manifest.json`: full origin SHA, hash, 29 represented settings, their exact
-  persisted types, explicit excluded key, and original omission metadata.
-- Recipe version 1. Random salt/nonce and creation time mean a newly generated
+- `profile.encrypted.json`: 4,074 bytes; v4 singleProfile package, zero resources.
+- SHA-256: `a7f5d122f543c9e8bff09536417fe6caa0db33a425cd12db6ff3391477b5edda`.
+- `manifest.json`: full origin SHA, hash, 32 represented settings, their exact
+  persisted types, nine explicit excluded keys, and original omission metadata.
+- Recipe version 2. Random salt/nonce and creation time mean a newly generated
   encrypted file has a different hash; content and expected settings must match.
 - The checked-in fixture is never regenerated during ordinary tests.
 
@@ -38,8 +38,11 @@ Exact represented S2 domains (the manifest lists every key):
   custom executable command is excluded by the origin portability policy.
 - **S2-4, four settings:** app theme, raw JSON theme overrides, phone navigation
   style and TV UI scale.
-- **S2-5, five settings:** scrobble target list, progress source and the three
-  tracker catalog-sync switches. No tracker account credentials.
+- **S2-5, all eight policy-admitted named keys:** scrobble target list, progress
+  source, three tracker catalog-sync switches, saved clone mapping, nested sync
+  checkpoint and one-shot fallback notice. All eight excluded tracking keys are
+  seeded with synthetic markers and proven absent from export and new restore
+  generation. No tracker resource graph or encrypted account-secret restoration.
 
 Represented physical types are **int, bool, String and List<String>**. Every
 represented value and type is checked; false switches, distinct provider spellings,
@@ -59,7 +62,9 @@ Current setters must produce all the independently specified key/value pairs
 through the real exporter. The frozen origin file is hash checked and decrypted
 with the real codec, then restored with ProfileRestoreCoordinator.restore.
 Assertions inspect physical preferences before getters can coerce/default/cache
-them, check every public getter, and re-export the restored settings. The old
+them, check the original setter/getter pins and the added tracking consumers, and
+re-export the restored settings. Expanded data uses ProfilePreferences physical
+encodings; it does not claim coverage of every domain setter. The old
 generation and another profile's sentinels must remain unchanged. The excluded
 custom command must not become a preference in the new generation. Omission
 metadata must equal the original export. All registry/database handles are closed
@@ -116,3 +121,22 @@ Test and fixtures only. No production, existing test, BOARD/NOTES, CI, dependenc
 or baseline edits. The backup decoder feature is a separate draft PR (#112) and
 is not a dependency of this fixture test. Further resource/secret/PIN/graph or
 S2-6/7 coverage requires another orchestrator assignment.
+
+## S2-5 checkpoint
+
+The data-driven recipe records independent values, excluded synthetic inputs and
+complete-domain inventory. It is not computed from candidate export output.
+S2-5 is complete for the pinned inventory: eight admitted keys (5 previous + 3
+added) and eight excluded keys. Total fixture coverage is 32/141 admitted named
+keys and 9/28 excluded keys; five dynamic families remain untested. S2-1..4 remain
+partial. The all-domain target is not yet complete.
+
+Excluded inputs are asserted present with their physical types before export.
+They remain excluded with includeSecrets false and true. The real restored
+tracking getters check JSON mapping/checkpoint decoding and one-shot notice
+consumption. No source bodies or generated exporter expectations are used.
+
+Additional valid-package mutation modes tracking-key and tracking-type rename
+mdblist_saved_clones or change the fallback boolean to a String. Each must fail
+after actual restore; no product source is mutated. Existing key/type modes
+remain supported. Generation checks exact origin HEAD and unchanged lib.

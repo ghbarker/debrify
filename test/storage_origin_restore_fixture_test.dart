@@ -12,6 +12,7 @@ import 'package:debrify/services/profiles/profile_authorization.dart';
 import 'package:debrify/services/profiles/profile_bootstrap.dart';
 import 'package:debrify/services/profiles/profile_package_service.dart';
 import 'package:debrify/services/profiles/profile_registry.dart';
+import 'package:debrify/services/profiles/profile_preferences.dart';
 import 'package:debrify/services/profiles/profile_restore_coordinator.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
@@ -30,8 +31,8 @@ const _generate = bool.fromEnvironment('STORAGE_ORIGIN_GENERATE');
 const _mutation = String.fromEnvironment('STORAGE_FIXTURE_MUTATION');
 
 // Independent reviewed values, not inferred from the candidate exporter.
-// These are selected settings from S2-1..5, not an exhaustive storage inventory.
-const _settings = <String, Object>{
+// Existing setter pins remain; the recipe adds complete domains incrementally.
+const _setterSettings = <String, Object>{
   'stremio_tv_rotation_minutes': 37,
   'stremio_tv_auto_refresh': false,
   'stremio_tv_debrid_provider': 'realdebrid',
@@ -65,7 +66,40 @@ const _settings = <String, Object>{
   'simkl_sync_catalog_items': false,
   'mdblist_sync_catalog_items': true,
 };
-const _excludedKey = 'external_player_custom_command';
+final _recipe =
+    jsonDecode(File('$_directory/recipe.json').readAsStringSync())
+        as Map<String, dynamic>;
+final _settings = Map<String, Object?>.from(_recipe['values'] as Map);
+final _excludedInputs = Map<String, Object>.from(
+  _recipe['excludedInputs'] as Map,
+);
+
+Future<void> _writeValues(Map<String, Object?> values) async {
+  final prefs = await ProfilePreferences.instance();
+  for (final entry in values.entries) {
+    final value = entry.value;
+    switch (value) {
+      case bool():
+        await prefs.setBool(entry.key, value);
+      case int():
+        await prefs.setInt(entry.key, value);
+      case double():
+        await prefs.setDouble(entry.key, value);
+      case String():
+        await prefs.setString(entry.key, value);
+      case List():
+        await prefs.setStringList(entry.key, value.cast<String>());
+      default:
+        throw StateError('Unsupported recipe value: ${entry.key}');
+    }
+  }
+}
+
+void _expectExclusions(Map<String, Object?> values) {
+  for (final key in _excludedInputs.keys) {
+    expect(values.containsKey(key), false, reason: 'Excluded by origin: $key');
+  }
+}
 
 class _NoNetwork extends HttpOverrides {
   @override
@@ -104,13 +138,13 @@ Future<void> _seedThroughStorageService() async {
   await StorageService.setStremioTvAutoRefresh(false);
   await StorageService.setStremioTvDebridProvider('realdebrid');
   await StorageService.setStremioTvCatalogRepoUrls(
-    _settings['stremio_tv_catalog_repo_urls_v1']! as List<String>,
+    _setterSettings['stremio_tv_catalog_repo_urls_v1']! as List<String>,
   );
   await StorageService.setRedditRecentSubreddits(
-    _settings['reddit_recent_subreddits']! as List<String>,
+    _setterSettings['reddit_recent_subreddits']! as List<String>,
   );
   await StorageService.setLemmyFavoriteCommunities(
-    _settings['lemmy_favorite_communities']! as List<String>,
+    _setterSettings['lemmy_favorite_communities']! as List<String>,
   );
   await StorageService.setYoutubeMaxHeight(720);
   await StorageService.saveDebrifyTvRandomStartPercent(13);
@@ -138,12 +172,31 @@ Future<void> _seedThroughStorageService() async {
   await StorageService.setTraktSyncCatalogItems(true);
   await StorageService.setSimklSyncCatalogItems(false);
   await StorageService.setMdblistSyncCatalogItems(true);
+  // Additional domains share typed data and the actual profile preference API.
+  // The independent recipe specifies physical encodings, not exporter output.
+  await _writeValues({
+    for (final e in _settings.entries)
+      if (!_setterSettings.containsKey(e.key)) e.key: e.value,
+  });
+  await _writeValues(_excludedInputs);
+  final seeded = await ProfilePreferences.instance();
+  for (final entry in _excludedInputs.entries) {
+    expect(
+      seeded.get(entry.key),
+      entry.value,
+      reason: 'Exclusion input present',
+    );
+    expect(_type(seeded.get(entry.key)), _type(entry.value), reason: entry.key);
+  }
   await StorageService.setCustomExternalPlayerCommand(
     'SYNTHETIC_DO_NOT_EXECUTE {url}',
   );
 }
 
 Future<Map<String, Object?>> _readThroughStorageService() async => {
+  for (final key in _settings.keys)
+    if (!_setterSettings.containsKey(key))
+      key: (await ProfilePreferences.instance()).get(key),
   'stremio_tv_rotation_minutes':
       await StorageService.getStremioTvRotationMinutes(),
   'stremio_tv_auto_refresh': await StorageService.getStremioTvAutoRefresh(),
@@ -266,7 +319,7 @@ void main() {
     await temp.delete(recursive: true);
   });
 
-  Future<PortableProfilePackage> export() async =>
+  Future<PortableProfilePackage> export({bool includeSecrets = false}) async =>
       ProfilePackageService(
         registry: registry,
         resources: ConnectionResourceService(
@@ -276,7 +329,7 @@ void main() {
       ).exportProfile(
         context: await ProfileAuthorizationContext.capture(registry),
         scope: ProfileRuntime.capture(),
-        includeSecrets: false,
+        includeSecrets: includeSecrets,
         sanitized: false,
       );
 
@@ -322,6 +375,7 @@ void main() {
       _expectSettings(await _readThroughStorageService());
       final package = await export();
       _expectSettings(_values(package));
+      _expectExclusions(_values(package));
       expect(package.resources, isEmpty);
       final bytes = await PortableProfilePackage.encodeEncryptedBytes(
         package,
@@ -334,14 +388,14 @@ void main() {
       await File(p.join(directory.path, 'manifest.json')).writeAsString(
         const JsonEncoder.withIndent('  ').convert({
           'origin': _origin,
-          'recipeVersion': 1,
+          'recipeVersion': 2,
           'syntheticOnly': true,
           'sha256': await _digest(bytes),
           'representedSettings': _settings,
           'keyTypes': _settings.map(
             (key, value) => MapEntry(key, _type(value)),
           ),
-          'excludedKeys': [_excludedKey],
+          'excludedKeys': _excludedInputs.keys.toList(),
           'omissions': package.omissions,
         }),
       );
@@ -356,14 +410,22 @@ void main() {
       _expectSettings(await _readThroughStorageService());
       final package = await export();
       _expectSettings(_values(package));
-      expect(_values(package), isNot(contains(_excludedKey)));
+      _expectExclusions(_values(package));
+      _expectSettings(_values(await export(includeSecrets: true)));
+      _expectExclusions(_values(await export(includeSecrets: true)));
     },
   );
 
   test(
     'restore frozen pre-S2 export through real APIs without key or type drift',
     () async {
-      expect(['', 'key', 'type'], contains(_mutation));
+      expect([
+        '',
+        'key',
+        'type',
+        'tracking-key',
+        'tracking-type',
+      ], contains(_mutation));
       final manifest =
           jsonDecode(await File('$_directory/manifest.json').readAsString())
               as Map<String, dynamic>;
@@ -385,13 +447,21 @@ void main() {
         _passphrase,
       );
       _expectSettings(_values(package));
+      _expectExclusions(_values(package));
+      expect(manifest['excludedKeys'], unorderedEquals(_excludedInputs.keys));
       expect(package.omissions, manifest['omissions']);
       expect(package.resources, isEmpty);
       if (_mutation.isNotEmpty) {
         // Mutate a valid incoming package, then use the real section hashing and
         // codec. This probes semantic checks after restore, not hash rejection.
         final values = _values(package);
-        if (_mutation == 'key') {
+        if (_mutation == 'tracking-key') {
+          values['mdblist_saved_clones_renamed'] = values.remove(
+            'mdblist_saved_clones',
+          );
+        } else if (_mutation == 'tracking-type') {
+          values['tracking_progress_fallback_notice'] = 'true';
+        } else if (_mutation == 'key') {
           values['stremio_tv_rotation_minutes_renamed'] = values.remove(
             'stremio_tv_rotation_minutes',
           );
@@ -438,13 +508,25 @@ void main() {
       _expectSettings({
         for (final key in _settings.keys) key: prefs.get('$prefix$key'),
       });
-      expect(prefs.containsKey('$prefix$_excludedKey'), false);
+      for (final key in _excludedInputs.keys) {
+        expect(prefs.containsKey('$prefix$key'), false, reason: key);
+      }
       expect(prefs.getInt('p.$profileId.g.1.stremio_tv_rotation_minutes'), 91);
       expect(prefs.getInt('p.$other.g.1.stremio_tv_rotation_minutes'), 92);
       expect(prefs.getString('p.$other.g.1.fixture_sentinel'), 'untouched');
       StorageService.resetProfileCaches();
       _expectSettings(await _readThroughStorageService());
       _expectSettings(_values(await export()));
+      expect(await StorageService.getMdblistSavedClones(), {
+        101: 201,
+        102: 202,
+      });
+      expect(
+        await StorageService.getMdblistSyncCheckpoint(),
+        jsonDecode(_settings['mdblist_sync_checkpoint_v1']! as String),
+      );
+      expect(await StorageService.takeTrackingProgressFallbackNotice(), true);
+      expect(await StorageService.takeTrackingProgressFallbackNotice(), false);
     },
   );
 }

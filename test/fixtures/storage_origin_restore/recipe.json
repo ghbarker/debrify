@@ -1,0 +1,86 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "schemaVersion": 2,
+  "values": {
+    "stremio_tv_rotation_minutes": 37,
+    "stremio_tv_auto_refresh": false,
+    "stremio_tv_debrid_provider": "realdebrid",
+    "stremio_tv_catalog_repo_urls_v1": [
+      "https://alpha.example.invalid/catalog.json",
+      "https://beta.example.invalid/catalog.json"
+    ],
+    "reddit_recent_subreddits": [
+      "synthetic_alpha",
+      "synthetic_beta"
+    ],
+    "lemmy_favorite_communities": [
+      "synthetic@example.invalid"
+    ],
+    "youtube_max_height": 720,
+    "debrify_tv_random_start_percent": 13,
+    "debrify_tv_provider": "real_debrid",
+    "real_debrid_file_selection": "all",
+    "torbox_check_cache_before_search": true,
+    "real_debrid_integration_enabled": false,
+    "default_torrent_provider_v1": "torbox",
+    "post_torrent_action": "delete",
+    "player_default_aspect_index": 4,
+    "ui_sounds": false,
+    "player_default_subtitle_language": "es",
+    "network_buffer_size": "huge",
+    "iptv_decoder_mode": "hardware",
+    "iptv_track_continue_watching": false,
+    "app_theme": "spotlight",
+    "theme_overrides": "{\"synthetic\":\"fixture\"}",
+    "phone_nav_style": "floating",
+    "tv_ui_scale_percent": 80,
+    "tracking_scrobble_targets": [
+      "local",
+      "mdblist"
+    ],
+    "watch_progress_source": "simkl",
+    "trakt_sync_catalog_items": true,
+    "simkl_sync_catalog_items": false,
+    "mdblist_sync_catalog_items": true,
+    "mdblist_saved_clones": "{\"101\":201,\"102\":202}",
+    "mdblist_sync_checkpoint_v1": "{\"version\":1,\"synthetic\":{\"cursor\":7,\"done\":false},\"ids\":[101,102]}",
+    "tracking_progress_fallback_notice": true
+  },
+  "excludedInputs": {
+    "mdblist_api_key": "SYNTHETIC_NOT_A_CREDENTIAL_mdblist_api_key",
+    "mdblist_username": "SYNTHETIC_NOT_A_CREDENTIAL_mdblist_username",
+    "simkl_access_token": "SYNTHETIC_NOT_A_CREDENTIAL_simkl_access_token",
+    "simkl_username": "SYNTHETIC_NOT_A_CREDENTIAL_simkl_username",
+    "trakt_access_token": "SYNTHETIC_NOT_A_CREDENTIAL_trakt_access_token",
+    "trakt_refresh_token": "SYNTHETIC_NOT_A_CREDENTIAL_trakt_refresh_token",
+    "trakt_token_expiry": 1893456000000,
+    "trakt_username": "SYNTHETIC_NOT_A_CREDENTIAL_trakt_username",
+    "external_player_custom_command": "SYNTHETIC_DO_NOT_EXECUTE {url}"
+  },
+  "completeDomains": {
+    "S2-5": [
+      "mdblist_api_key",
+      "mdblist_saved_clones",
+      "mdblist_sync_catalog_items",
+      "mdblist_sync_checkpoint_v1",
+      "mdblist_username",
+      "simkl_access_token",
+      "simkl_sync_catalog_items",
+      "simkl_username",
+      "tracking_progress_fallback_notice",
+      "tracking_scrobble_targets",
+      "trakt_access_token",
+      "trakt_refresh_token",
+      "trakt_sync_catalog_items",
+      "trakt_token_expiry",
+      "trakt_username",
+      "watch_progress_source"
+    ]
+  },
+  "partialDomains": [
+    "S2-1",
+    "S2-2",
+    "S2-3",
+    "S2-4"
+  ]
+}
