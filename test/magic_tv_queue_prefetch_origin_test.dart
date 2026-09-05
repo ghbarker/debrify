@@ -43,6 +43,7 @@ class _LockedProvider extends FakeCloudProvider {
   _LockedProvider(CloudProviderId id) : super(id: id);
   final pending = Completer<MagicTvLockedBatch?>();
   final requests = <MagicTvPrepareRequest>[];
+  final additionalReplies = <Future<MagicTvLockedBatch?>>[];
   @override
   Future<MagicTvLockedBatch?> prepareMagicTvLockedLinks(
     MagicTvPrepareRequest request,
@@ -54,6 +55,9 @@ class _LockedProvider extends FakeCloudProvider {
         name: 'initial',
         lockedLinks: ['https://locked.invalid/initial'],
       );
+    }
+    if (requests.length > 2 && additionalReplies.isNotEmpty) {
+      return additionalReplies.removeAt(0);
     }
     return pending.future;
   }
@@ -133,8 +137,9 @@ final _pool = [
 Future<DebrifyTvChannelCacheEntry> _seed(
   String id,
   String name,
-  int number,
-) async {
+  int number, {
+  int torrentCount = 2,
+}) async {
   final now = DateTime.utc(2026, 9, 5);
   await DebrifyTvRepository.instance.upsertChannel(
     DebrifyTvChannelRecord(
@@ -154,7 +159,7 @@ Future<DebrifyTvChannelCacheEntry> _seed(
     fetchedAt: 123,
     status: DebrifyTvCacheStatus.ready,
     errorMessage: 'Baseline diagnostic',
-    torrents: _pool.take(2).toList(),
+    torrents: _pool.take(torrentCount).toList(),
     keywordStats: const {
       'keep': KeywordStat(
         totalFetched: 2,
@@ -347,4 +352,212 @@ void main() {
       },
     );
   }
+  for (final provider in [CloudProviderId.debrid, CloudProviderId.alldebrid]) {
+    testWidgets(
+      'origin ${provider.name} failed held prefetch rotates same torrent to tail and stops',
+      (tester) async {
+        port = _LockedProvider(provider);
+        CloudProviderRegistry.instance = CloudProviderRegistry([port]);
+        await StorageService.saveDebrifyTvProvider(provider.magicTvId);
+        await tester.runAsync(
+          () => _seed('first', 'First channel', 1, torrentCount: 3),
+        );
+        final routes = _Routes();
+        final unlocks = <http.Request>[];
+        port.additionalReplies.addAll([
+          Future.value(_batch('after-failure')),
+          Future.value(_batch('retry-failed')),
+        ]);
+        await http.runWithClient(() async {
+          await _mount(tester, routes);
+          await _until(tester, () => _view(tester).channels.length == 1);
+          _view(tester).onWatch(_view(tester).channels.single);
+          await _until(
+            tester,
+            () => routes.playerRequest != null && port.requests.length == 2,
+          );
+          await tester.pump(const Duration(seconds: 2));
+          expect(routes.playerRouteRemoved, isTrue);
+          expect(_view(tester).busy, isTrue);
+          final initialHash = port.requests[0].torrent.infohash;
+          final failedHash = port.requests[1].torrent.infohash;
+          expect(failedHash, isNot(initialHash));
+          expect(unlocks, hasLength(1));
+          port.pending.completeError(StateError('fixture prepare failure'));
+          await _until(tester, () => !_view(tester).busy);
+          await tester.pump(const Duration(seconds: 2));
+          expect(
+            port.requests,
+            hasLength(2),
+            reason: 'Stopped loop must not retry after failure',
+          );
+          expect(unlocks, hasLength(1));
+          final firstNext = await _next(tester, routes.playerRequest!);
+          expect(firstNext, {
+            'url': 'https://fixture.invalid/after-failure.mkv',
+            'title': 'after-failure.mkv',
+          });
+          expect(port.requests, hasLength(3));
+          expect(
+            port.requests[2].torrent.infohash,
+            isNot(isIn([initialHash, failedHash])),
+            reason: 'Untouched queued torrent precedes failed torrent',
+          );
+          final secondNext = await _next(tester, routes.playerRequest!);
+          expect(secondNext, {
+            'url': 'https://fixture.invalid/retry-failed.mkv',
+            'title': 'retry-failed.mkv',
+          });
+          expect(port.requests, hasLength(4));
+          expect(
+            port.requests[3].torrent.infohash,
+            failedHash,
+            reason: 'Failed torrent must remain available at tail',
+          );
+          expect(unlocks.map((r) => r.bodyFields['link']), [
+            'https://locked.invalid/initial',
+            'https://locked.invalid/after-failure',
+            'https://locked.invalid/retry-failed',
+          ]);
+          expect(await _next(tester, routes.playerRequest!), isNull);
+          expect(port.requests, hasLength(4));
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pumpAndSettle();
+        }, () => _unlockClient(provider, unlocks));
+      },
+    );
+
+    testWidgets(
+      'origin ${provider.name} channel restart waits for held old preparation then starts new prefetch',
+      (tester) async {
+        port = _LockedProvider(provider);
+        CloudProviderRegistry.instance = CloudProviderRegistry([port]);
+        await StorageService.saveDebrifyTvProvider(provider.magicTvId);
+        await tester.runAsync(() async {
+          await _seed('first', 'First channel', 1);
+          await _seed('second', 'Second channel', 7);
+        });
+        final restarted = Completer<MagicTvLockedBatch?>();
+        port.additionalReplies.addAll([
+          Future.value(_batch('new-channel')),
+          restarted.future,
+        ]);
+        final routes = _Routes();
+        final unlocks = <http.Request>[];
+        await http.runWithClient(() async {
+          await _mount(tester, routes);
+          await _until(tester, () => _view(tester).channels.length == 2);
+          _view(
+            tester,
+          ).onWatch(_view(tester).channels.firstWhere((c) => c.id == 'first'));
+          await _until(
+            tester,
+            () => routes.playerRequest != null && port.requests.length == 2,
+          );
+          final player = routes.playerRequest!;
+          expect(player.requestChannelById, isNotNull);
+          var switched = false;
+          Map<String, dynamic>? switchResult;
+          player.requestChannelById!('second').then((value) {
+            switchResult = value;
+            switched = true;
+          });
+          // Real cache read must settle before advancing the original cooldown.
+          for (var i = 0; i < 10; i++) {
+            await tester.runAsync(
+              () => Future<void>.delayed(const Duration(milliseconds: 5)),
+            );
+            await tester.pump(const Duration(seconds: 1));
+          }
+          expect(routes.playerRouteRemoved, isTrue);
+          expect(switched, isFalse);
+          expect(
+            port.requests,
+            hasLength(2),
+            reason:
+                'New channel cannot prepare while old stop awaits its held task',
+          );
+          expect(unlocks, hasLength(1));
+          port.pending.complete(_batch('old-prefetch'));
+          await _until(tester, () => switched && port.requests.length == 4);
+          expect(switchResult, {
+            'channelId': 'second',
+            'channelName': 'Second channel',
+            'channelNumber': 7,
+            'firstUrl': 'https://fixture.invalid/new-channel.mkv',
+            'firstTitle': 'new-channel.mkv',
+          });
+          expect(
+            port.requests[2].torrent.infohash,
+            isNot(port.requests[3].torrent.infohash),
+          );
+          expect(unlocks.map((r) => r.bodyFields['link']), [
+            'https://locked.invalid/initial',
+            'https://locked.invalid/new-channel',
+          ]);
+          // Stop the restarted task through actual host disposal while it is held.
+          // Its original late completion still updates the shared queue.
+          await tester.pumpWidget(const SizedBox.shrink());
+          restarted.complete(_batch('new-prefetch'));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 2));
+          expect(await _next(tester, player), {
+            'url': 'https://fixture.invalid/new-prefetch.mkv',
+            'title': 'new-prefetch.mkv',
+          });
+          expect(
+            port.requests,
+            hasLength(4),
+            reason:
+                'Restarted prefetch, not a fresh synchronous preparation, supplied next',
+          );
+          expect(
+            unlocks.last.bodyFields['link'],
+            'https://locked.invalid/new-prefetch',
+          );
+          await tester.pumpAndSettle();
+        }, () => _unlockClient(provider, unlocks));
+      },
+    );
+  }
+}
+
+MagicTvLockedBatch _batch(String id) => MagicTvLockedBatch(
+  remoteId: id,
+  name: id,
+  lockedLinks: ['https://locked.invalid/$id'],
+);
+
+MockClient _unlockClient(
+  CloudProviderId provider,
+  List<http.Request> unlocks,
+) => MockClient((request) async {
+  unlocks.add(request);
+  final name = Uri.parse(request.bodyFields['link']!).pathSegments.last;
+  final url = 'https://fixture.invalid/$name.mkv';
+  return http.Response(
+    jsonEncode(
+      provider == CloudProviderId.debrid
+          ? {'download': url, 'filesize': 1000000000}
+          : {
+              'status': 'success',
+              'data': {'link': url},
+            },
+    ),
+    200,
+  );
+});
+
+Future<Map<String, String>?> _next(
+  WidgetTester tester,
+  VideoPlayerScreen player,
+) async {
+  Map<String, String>? result;
+  var done = false;
+  player.requestMagicNext!().then((value) {
+    result = value;
+    done = true;
+  });
+  await _until(tester, () => done);
+  return result;
 }
