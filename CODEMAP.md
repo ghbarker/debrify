@@ -130,7 +130,7 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   `lib/screens/search/continue_watching_row.dart` (`ContinueWatchingRow`,
   `CwFocusOwner`, `syncCwNodes`). Host keeps Home board chrome, Discover
   CW landing, `_addonForContinue`, and thin loader/open wrappers.
-  Favourites state, loaders, action flows and deferred-down focus live in
+  Favourites state, loaders and action flows live in
   `lib/screens/search/fav_rows_controller.dart` (`FavRowsController`,
   `FavouritesIptvListRow`); classic rows render through
   `lib/screens/search/fav_row.dart` (`FavRow`). These retain screen/UI dependencies.
@@ -139,6 +139,19 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   `FavRowsController.loadMyWatchlist` delegates read/partition to
   `lib/services/home/my_watchlist_loader.dart` (`MyWatchlistLoader.load`);
   the adapter retains mounted/commit, node synchronization and autofocus.
+  Shared board runtime is `lib/screens/search/search_board_runtime.dart`
+  (`SearchBoardRuntime`, `CanvasRail`): displayed sections, catalog nodes/column
+  memory, scroll/paging, canonical/classic rail navigation and deferred Down.
+  Home and Discover's existing host use the same runtime implementation; existing
+  HomeBoardController/CatalogSearchController/CW/Fav instances remain borrowed.
+  Host retains hero/top-shelf effects, stage hooks and ordered disposal; seven live
+  environment/effect capabilities remain. Fav types still import the legacy host
+  library: this is screen-layer ownership, not an independent pure-data layer.
+  Renderer/stage aliases expire with real G17/G1'-8 caller migration and Q2 cleanup.
+  Origin: `test/search_board_runtime_origin_test.dart` (3 mounted Home cases), plus
+  existing favourites and held-bound Home focus pins; no hidden Discover-node proof.
+  Actual host 8615 -> 8349 (-266); Fav -75, stage type -20, new runtime +467:
+  production +106. This closes board-runtime ownership, not standalone Discover.
   Bound-source data and sequential reads live in
   `lib/screens/search/search_content_data.dart` (`SearchContentData`);
   the host retains snapshot capture, mounted checks and stable-map UI commits.
