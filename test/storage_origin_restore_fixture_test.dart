@@ -429,6 +429,7 @@ void main() {
     ..._recipe['scenarios'] as Map,
     'filter-defaults': {'absentKeys': <String>[]},
     'playlist-progress': {'absentKeys': <String>[]},
+    'playlist-metadata': {'absentKeys': <String>[]},
     'repair': {'absentKeys': ['playback_completion_migration_generation', 'resume_ghost_purge_generation']},
     'repair-markers-zero': {'absentKeys': <String>[]},
     'repair-markers-one': {'absentKeys': <String>[]},
@@ -438,8 +439,11 @@ void main() {
     final isFilter = scenario == 'filter-defaults';
     final isPlaylist = scenario == 'playlist-progress';
     final isRepair = scenario == 'repair' || scenario.startsWith('repair-markers-');
-    final isResidual = isFilter || isPlaylist || isRepair;
-    final domain = isRepair
+    final isMetadata = scenario == 'playlist-metadata';
+    final isResidual = isFilter || isPlaylist || isRepair || isMetadata;
+    final domain = isMetadata
+        ? _recipe['residualDomains']['playlist-metadata'] as Map
+        : isRepair
         ? _recipe['residualDomains']['repair'] as Map
         : isPlaylist
         ? _recipe['residualDomains']['playlist-progress'] as Map
@@ -496,6 +500,18 @@ void main() {
         : '$scenario.manifest.json';
 
     Future<void> seedScenario() async {
+      if (isMetadata) {
+        expect(domain['origin'], _origin);
+        expect(domain['namedKeyCount'], 2);
+        expect(domain['physicalType'], 'String');
+        expect(domain['excludedKeys'], isEmpty);
+        expect(scenarioSettings.keys, unorderedEquals([
+          'tvmaze_series_mappings', 'playlist_poster_overrides_v1',
+        ]));
+        // Synthetic fixed timestamps/raw JSON, exported by the actual origin.
+        await _writeValues(inputExpected);
+        return;
+      }
       if (isRepair) {
         await _writeValues(inputExpected);
         final prefs = await ProfilePreferences.instance();
@@ -533,6 +549,20 @@ void main() {
 
     Future<void> expectProviderReaders([Map<String, Object?>? restored]) async {
       final readerExpected = restored ?? expected;
+      if (isMetadata) {
+        for (final lookup in domain['lookups'] as List) {
+          final item = Map<String, dynamic>.from(lookup['item'] as Map);
+          expect(StorageService.getPlaylistItemUniqueKey(item), lookup['key']);
+          expect(await StorageService.getTVMazeSeriesMapping(item), lookup['mapping']);
+          expect(await StorageService.getPlaylistPosterOverride(item), lookup['poster']);
+        }
+        final batch = await StorageService.getAllPlaylistPosterOverrides();
+        expect(batch, domain['expectedBatch']);
+        expect(batch.keys.toList(), (domain['expectedBatch'] as Map).keys.toList());
+        expect(await StorageService.getTVMazeSeriesMapping({'title': 'missing'}), isNull);
+        expect(await StorageService.getPlaylistPosterOverride({'title': 'missing'}), isNull);
+        return;
+      }
       if (isRepair) {
         expect(await StorageService.getMovieCompletionThreshold(), 90);
         expect(await StorageService.getEpisodeCompletionThreshold(), 75);
@@ -671,6 +701,7 @@ void main() {
       final destinationValues = <String, Object?>{
         if (isPlaylist) 'playlist_restore_sentinel': 'untouched',
         if (isRepair) 'repair_restore_sentinel': 'untouched',
+        if (isMetadata) 'metadata_restore_sentinel': 'untouched',
         if (isFilter) ...{
           'quick_play_honors_filters_v1': false,
           'quick_play_movie_rules_v2': '{"fixture":"movie"}',
@@ -702,7 +733,7 @@ void main() {
                     'value': ['fullHd', 'unknown quality', 'fullHd'],
                   },
                 }
-              : isPlaylist || isRepair
+              : isPlaylist || isRepair || isMetadata
                   ? domain['mutations'] as Map
                   : _recipe['mutations'] as Map;
           expect(['', ...mutations.keys], contains(_mutation));
