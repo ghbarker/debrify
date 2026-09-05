@@ -644,6 +644,19 @@ final class WebDavSyncScheduler {
     }
   }
 
+  /// Account logout discards intent; ordinary reconfiguration keeps it.
+  void forgetAccount() {
+    disarm();
+    _pendingLocalChangeSequence = null;
+    _pendingProfileReceiptSequence = null;
+    _localChangeRetries = 0;
+    _capacityBlocked = false;
+    _lastStartedAt = null;
+    // Keep sequence numbers monotonic if an old completion is still unwinding.
+    _localChangeSequence++;
+    saveFeedback?.forgetAccount();
+  }
+
   Future<WebDavSyncCycleReport> signal(WebDavSyncTrigger trigger) =>
       _signal(trigger, _localChangeSequence, _armEpoch);
 

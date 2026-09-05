@@ -14,6 +14,7 @@ import 'webdav_sync_hot_merge.dart';
 import 'webdav_sync_hot_models.dart';
 import 'webdav_sync_large_section_io.dart';
 import 'webdav_sync_manifest_publisher.dart';
+import 'webdav_sync_logout.dart';
 import 'webdav_sync_models.dart';
 import 'webdav_sync_setup_service.dart';
 import 'webdav_sync_transport.dart';
@@ -37,11 +38,13 @@ final class WebDavSyncDeviceSummary {
     required this.deviceId,
     required this.lastSeenMs,
     required this.isThisDevice,
+    this.isRegistered = true,
   });
 
   final String deviceId;
   final int lastSeenMs;
   final bool isThisDevice;
+  final bool isRegistered;
 }
 
 typedef WebDavSyncGraphTransportFactory =
@@ -227,12 +230,28 @@ final class WebDavSyncGraphTier {
   Future<List<WebDavSyncDeviceSummary>> listDevices() async {
     final active = await _activeBinding();
     final scan = await _discovery.scanActive(bindingId: active.id);
+    final secrets = await _bindingStore.readSecrets(active);
+    final transport = _transportFactory(binding: active, secrets: secrets);
+    final registrations = <String, bool>{};
+    try {
+      for (final manifest in scan.manifests.values) {
+        registrations[manifest.deviceId] = await webDavSyncDeviceIsRegistered(
+          transport: transport,
+          codec: _codec,
+          root: scan.root,
+          deviceId: manifest.deviceId,
+        );
+      }
+    } finally {
+      transport.close();
+    }
     return List<WebDavSyncDeviceSummary>.unmodifiable(
       scan.manifests.values
           .map(
             (manifest) => WebDavSyncDeviceSummary(
               deviceId: manifest.deviceId,
               lastSeenMs: manifest.updatedAtMs,
+              isRegistered: registrations[manifest.deviceId]!,
               isThisDevice: manifest.deviceId == scan.namespace.deviceId,
             ),
           )

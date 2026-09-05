@@ -73,9 +73,10 @@ void main() {
     required bool enabled,
     WebDavSyncActivationController? activation,
     bool settle = true,
+    Size size = const Size(1280, 720),
   }) async {
     final theme = AppThemes.byId('spotlight');
-    await tester.binding.setSurfaceSize(const Size(1280, 720));
+    await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
@@ -134,10 +135,106 @@ void main() {
     await store.promoteStaged(active.id);
   }
 
+  for (final size in [const Size(390, 844), const Size(800, 360)]) {
+    testWidgets('sync settings and logout remain usable at $size', (
+      tester,
+    ) async {
+      await installActiveBinding();
+      await pumpPage(
+        tester,
+        enabled: true,
+        activation: _FakeActivation(store),
+        size: size,
+      );
+      expect(tester.takeException(), isNull);
+      for (final label in [
+        'Sync now',
+        'Connected devices',
+        'Log out',
+        'Sync channels now',
+        'Save backup to WebDAV',
+      ]) {
+        await tester.ensureVisible(find.text(label));
+        await tester.pumpAndSettle();
+        expect(find.text(label).hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+      await tester.ensureVisible(find.text('Log out'));
+      await tester.tap(find.text('Log out'));
+      await tester.pumpAndSettle();
+      expect(find.text('Cancel').hitTestable(), findsOneWidget);
+      expect(
+        find.widgetWithText(FilledButton, 'Log out').hitTestable(),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+    });
+  }
+
+  testWidgets('logout requires confirmation and returns to connect', (
+    tester,
+  ) async {
+    await installActiveBinding();
+    final activation = _FakeActivation(store);
+    await pumpPage(tester, enabled: true, activation: activation);
+    await tester.ensureVisible(find.text('Log out'));
+    await tester.tap(find.text('Log out'));
+    await tester.pumpAndSettle();
+    expect(activation.logouts, 0);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(activation.logouts, 0);
+    await tester.tap(find.text('Log out'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Log out'));
+    await tester.pumpAndSettle();
+    expect(activation.logouts, 1);
+    expect(find.text('Connect WebDAV'), findsOneWidget);
+    expect(find.text('Log out'), findsNothing);
+    expect((await store.load()).bindings, isEmpty);
+  });
+
+  testWidgets('failed logout presents a retry and disables sync', (
+    tester,
+  ) async {
+    await installActiveBinding();
+    final activation = _FakeActivation(store)..failLogout = true;
+    await pumpPage(tester, enabled: true, activation: activation);
+    await tester.ensureVisible(find.text('Log out'));
+    await tester.tap(find.text('Log out'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Log out'));
+    await tester.pumpAndSettle();
+    expect(find.text('Retry logout'), findsOneWidget);
+    expect(WebDavSyncBindingStore.logoutPending(await store.load()), isTrue);
+    expect(
+      tester
+          .widget<SettingsTile>(
+            find
+                .ancestor(
+                  of: find.text('Sync now'),
+                  matching: find.byType(SettingsTile),
+                )
+                .first,
+          )
+          .enabled,
+      isFalse,
+    );
+    activation.failLogout = false;
+    await tester.ensureVisible(find.text('Retry logout'));
+    await tester.tap(find.text('Retry logout'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Log out'));
+    await tester.pumpAndSettle();
+    expect(find.text('Connect WebDAV'), findsOneWidget);
+  });
+
   testWidgets('M3 setup stays hidden behind its rollout gate', (tester) async {
     await pumpPage(tester, enabled: false);
 
-    expect(find.text('Enable WebDAV Sync'), findsNothing);
+    expect(find.text('Connect WebDAV'), findsNothing);
     expect(find.text('Save backup to WebDAV'), findsOneWidget);
   });
 
@@ -148,7 +245,7 @@ void main() {
     authorization.adminError = StateError('Admin required');
     await pumpPage(tester, enabled: true, activation: activation);
 
-    await tester.tap(find.text('Enable WebDAV Sync'));
+    await tester.tap(find.text('Connect WebDAV'));
     await tester.pumpAndSettle();
 
     expect(activation.pauses, 0);
@@ -164,7 +261,7 @@ void main() {
     );
     await pumpPage(tester, enabled: true);
 
-    await tester.tap(find.text('Enable WebDAV Sync'));
+    await tester.tap(find.text('Connect WebDAV'));
     await tester.pumpAndSettle();
 
     expect(find.text('Ready to initialize WebDAV Sync'), findsOneWidget);
@@ -192,7 +289,7 @@ void main() {
     ).encode();
     await pumpPage(tester, enabled: true);
 
-    await tester.tap(find.text('Enable WebDAV Sync'));
+    await tester.tap(find.text('Connect WebDAV'));
     await tester.pumpAndSettle();
 
     expect(find.text('WebDAV account verified'), findsOneWidget);
@@ -233,7 +330,7 @@ void main() {
     await store.markError(active.id, StateError('credentials expired'));
     await pumpPage(tester, enabled: true);
 
-    await tester.tap(find.text('Re-enter WebDAV password'));
+    await tester.tap(find.text('Update password'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -251,6 +348,72 @@ void main() {
     );
   });
 
+  testWidgets('pending logout exposes a staged binding for credential repair', (
+    tester,
+  ) async {
+    await installActiveBinding();
+    final old = (await store.load()).activeBinding!;
+    final namespace = (await store.load()).namespaceFor(old)!;
+    final staged = await store.stageBinding(
+      location: WebDavSyncFolderLocation.fromConfig(
+        const WebDavConfig(
+          id: 'next',
+          name: 'Second server',
+          baseUrl: 'https://second.test/dav',
+          username: 'alice',
+          password: 'old-password',
+        ),
+        'Next',
+      ),
+      config: const WebDavConfig(
+        id: 'next',
+        name: 'Second server',
+        baseUrl: 'https://second.test/dav',
+        username: 'alice',
+        password: 'old-password',
+      ),
+      syncPassphrase: 'circle-secret',
+    );
+    final root = await WebDavSyncCodec().openRoot(
+      Uint8List.fromList(namespace.markerBytes!),
+      'circle-secret',
+    );
+    await store.markRootVerified(
+      bindingId: staged.id,
+      root: root.document,
+      markerBytes: namespace.markerBytes!,
+    );
+    transport
+      ..bytes = Uint8List.fromList(namespace.markerBytes!)
+      ..keyBytes = const WebDavSyncRootKeyFile(
+        syncPassphrase: 'circle-secret',
+      ).encode();
+    await store.beginLogout();
+    final before = await store.load();
+    await pumpPage(tester, enabled: true);
+    await tester.tap(find.text('Update password'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose account to repair'), findsOneWidget);
+    await tester.tap(find.textContaining('Second server').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'new-password');
+    await tester.pump();
+    await tester.tap(find.text('Verify'));
+    await tester.pumpAndSettle();
+    final after = await store.load();
+    expect(after.activeBindingId, before.activeBindingId);
+    expect(after.stagedBindingId, staged.id);
+    expect(
+      after.bindings[staged.id]!.lifecycle,
+      before.bindings[staged.id]!.lifecycle,
+    );
+    expect(
+      (await store.readSecrets(after.bindings[staged.id]!)).password,
+      'new-password',
+    );
+    expect(WebDavSyncBindingStore.logoutPending(after), isTrue);
+  });
+
   testWidgets('failed repair Admin check does not resume an unpaused runtime', (
     tester,
   ) async {
@@ -261,7 +424,7 @@ void main() {
     authorization.adminError = StateError('Admin required');
     await pumpPage(tester, enabled: true, activation: activation);
 
-    await tester.tap(find.text('Re-enter WebDAV password'));
+    await tester.tap(find.text('Update password'));
     await tester.pumpAndSettle();
 
     expect(activation.pauses, 0);
@@ -295,8 +458,11 @@ void main() {
 
     await pumpPage(tester, enabled: true, settle: false);
 
-    expect(find.text('Finishing first sync…'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(
+      find.text('Setting up sync. Keep the app open while this finishes.'),
+      findsOneWidget,
+    );
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byType(SnackBar), findsNothing);
   });
 
@@ -336,7 +502,10 @@ void main() {
       activation: activation,
       settle: false,
     );
-    expect(find.text('Finishing first sync…'), findsOneWidget);
+    expect(
+      find.text('Setting up sync. Keep the app open while this finishes.'),
+      findsOneWidget,
+    );
     expect(
       find.text('Finish the first sync before syncing Debrify TV'),
       findsOneWidget,
@@ -348,9 +517,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(activation.statusReads, greaterThanOrEqualTo(2));
-    expect(find.text('Finishing first sync…'), findsNothing);
-    expect(find.text('Sync is active'), findsOneWidget);
-    expect(find.text('Change WebDAV sync account'), findsOneWidget);
+    expect(
+      find.text('Setting up sync. Keep the app open while this finishes.'),
+      findsNothing,
+    );
+    expect(find.text('Connected to Family server'), findsOneWidget);
+    expect(find.text('Change account'), findsOneWidget);
   });
 
   testWidgets(
@@ -392,7 +564,10 @@ void main() {
         activation: activation,
         settle: false,
       );
-      expect(find.text('Finishing first sync…'), findsOneWidget);
+      expect(
+        find.text('Setting up sync. Keep the app open while this finishes.'),
+        findsOneWidget,
+      );
       expect(
         find.text('Finish the first sync before syncing Debrify TV'),
         findsOneWidget,
@@ -404,9 +579,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(activation.statusReads, greaterThanOrEqualTo(2));
-      expect(find.text('Finishing first sync…'), findsNothing);
-      expect(find.text('Sync is active'), findsOneWidget);
-      expect(find.text('Change WebDAV sync account'), findsOneWidget);
+      expect(
+        find.text('Setting up sync. Keep the app open while this finishes.'),
+        findsNothing,
+      );
+      expect(find.text('Connected to Family server'), findsOneWidget);
+      expect(find.text('Change account'), findsOneWidget);
     },
   );
 
@@ -444,7 +622,10 @@ void main() {
     await pumpPage(tester, enabled: true);
 
     expect(find.text('First sync needs a manual retry'), findsOneWidget);
-    expect(find.text('Finishing first sync…'), findsNothing);
+    expect(
+      find.text('Setting up sync. Keep the app open while this finishes.'),
+      findsNothing,
+    );
     expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
@@ -453,10 +634,7 @@ void main() {
 
     expect(
       find.text(
-        'IPTV sources, favorites, history and resume state stay in sync. '
-        'Debrify TV syncs only when run manually — run it after connecting '
-        'another device or importing channels. Each device rebuilds its '
-        'channel and guide caches.',
+        'Channels and saved torrent pools transfer only when you sync them here. Run this on both devices after changing channels.',
       ),
       findsOneWidget,
     );
@@ -496,13 +674,13 @@ void main() {
       ..tvStageRelease = release;
     await pumpPage(tester, enabled: true, activation: activation);
 
-    expect(find.text('DEBRIFY TV'), findsOneWidget);
-    expect(find.text('Sync Debrify TV now'), findsOneWidget);
+    expect(find.text('DEBRIFY TV CHANNELS'), findsOneWidget);
+    expect(find.text('Sync channels now'), findsOneWidget);
     expect(find.text('Changes are waiting for a manual sync'), findsOneWidget);
-    expect(find.textContaining('Debrify TV last synced'), findsOneWidget);
+    expect(find.textContaining('Channels last synced'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Sync Debrify TV now'));
-    await tester.tap(find.text('Sync Debrify TV now'));
+    await tester.ensureVisible(find.text('Sync channels now'));
+    await tester.tap(find.text('Sync channels now'));
     await tester.pump();
     expect(find.text('Syncing Debrify TV'), findsOneWidget);
     expect(find.text('Reading'), findsOneWidget);
@@ -530,7 +708,7 @@ void main() {
       tester
           .widget<SettingsTile>(
             find.ancestor(
-              of: find.text('Sync Debrify TV now'),
+              of: find.text('Sync channels now'),
               matching: find.byType(SettingsTile),
             ),
           )
@@ -573,8 +751,8 @@ void main() {
       ..tvTerminal = terminal;
     await pumpPage(tester, enabled: true, activation: activation);
 
-    await tester.ensureVisible(find.text('Sync Debrify TV now'));
-    await tester.tap(find.text('Sync Debrify TV now'));
+    await tester.ensureVisible(find.text('Sync channels now'));
+    await tester.tap(find.text('Sync channels now'));
     await tester.pump();
     expect(find.text('Reading'), findsOneWidget);
 
@@ -600,9 +778,9 @@ void main() {
     activation.tvAvailabilityReads = 0;
     activation.tvAvailabilityRelease = availabilityRelease;
 
-    await tester.ensureVisible(find.text('Sync Debrify TV now'));
-    await tester.tap(find.text('Sync Debrify TV now'));
-    await tester.tap(find.text('Sync Debrify TV now'));
+    await tester.ensureVisible(find.text('Sync channels now'));
+    await tester.tap(find.text('Sync channels now'));
+    await tester.tap(find.text('Sync channels now'));
     availabilityRelease.complete();
     await tester.pump();
 
@@ -680,7 +858,7 @@ void main() {
       final activation = _FakeActivation(store);
       await pumpPage(tester, enabled: true, activation: activation);
 
-      await tester.tap(find.text('Enable WebDAV Sync'));
+      await tester.tap(find.text('Connect WebDAV'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -694,11 +872,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(activation.connections, 1);
-      expect(find.text('Sync is active'), findsOneWidget);
+      expect(find.text('Connected to Family server'), findsOneWidget);
       expect(find.text('Sync now'), findsOneWidget);
       final tvTile = tester.widget<SettingsTile>(
         find.ancestor(
-          of: find.text('Sync Debrify TV now'),
+          of: find.text('Sync channels now'),
           matching: find.byType(SettingsTile),
         ),
       );
@@ -731,7 +909,7 @@ void main() {
     final activation = _FakeActivation(store);
     await pumpPage(tester, enabled: true, activation: activation);
 
-    await tester.tap(find.text('Change WebDAV sync account'));
+    await tester.tap(find.text('Change account'));
     await tester.pumpAndSettle();
 
     expect(find.text('Use sync data from this account?'), findsNothing);
@@ -740,7 +918,7 @@ void main() {
     final refreshed = await store.load();
     expect(refreshed.activeBindingId, active.id);
     expect(refreshed.activeBinding?.lifecycle, WebDavSyncLifecycle.active);
-    expect(find.text('Change WebDAV sync account'), findsOneWidget);
+    expect(find.text('Change account'), findsOneWidget);
   });
 
   testWidgets(
@@ -802,14 +980,14 @@ void main() {
       );
       await pumpPage(tester, enabled: true, activation: activation);
 
-      await tester.tap(find.text('Enable WebDAV Sync'));
+      await tester.tap(find.text('Connect WebDAV'));
       await tester.pumpAndSettle();
 
       expect(activation.initializations, 1);
       expect(activation.inspections, 0);
       expect(activation.connections, 0);
       expect(find.text('Use sync data from this account?'), findsNothing);
-      expect(find.text('Sync is active'), findsOneWidget);
+      expect(find.text('Connected to Family server'), findsOneWidget);
     },
   );
 
@@ -860,7 +1038,7 @@ void main() {
       final activation = _FakeActivation(store);
       await pumpPage(tester, enabled: true, activation: activation);
 
-      await tester.tap(find.text('Change WebDAV sync account'));
+      await tester.tap(find.text('Change account'));
       await tester.pump(const Duration(milliseconds: 400));
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
@@ -872,7 +1050,7 @@ void main() {
       expect(activation.connections, 0);
       expect(activation.pauses, 1);
       expect(activation.resumes, 1);
-      expect(find.text('Sync is active'), findsOneWidget);
+      expect(find.text('Connected to Old server'), findsOneWidget);
     },
   );
 }
@@ -967,6 +1145,7 @@ final class _FakeActivation
     implements
         WebDavSyncActivationController,
         WebDavSyncManagementController,
+        WebDavSyncLogoutController,
         WebDavSyncTvManualController,
         WebDavSyncReconfigurationController {
   _FakeActivation(this.store, {this.onInitialize});
@@ -974,6 +1153,17 @@ final class _FakeActivation
   final WebDavSyncBindingStore store;
   final Future<WebDavSyncInitializationOutcome> Function(String bindingId)?
   onInitialize;
+  int logouts = 0;
+  bool failLogout = false;
+
+  @override
+  Future<void> logout() async {
+    logouts++;
+    await store.beginLogout();
+    if (failLogout) throw StateError('offline');
+    await store.finishLogout();
+  }
+
   int inspections = 0;
   int connections = 0;
   int initializations = 0;

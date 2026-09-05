@@ -278,9 +278,17 @@ abstract interface class WebDavSyncActivationTransport
   Future<void> deleteDeviceDirectory(String deviceId);
 }
 
+/// Registration is separate from immutable synced data. Logging out retires
+/// this device while its encrypted snapshot remains usable by other devices.
+abstract interface class WebDavSyncRegistrationTransport {
+  Future<WebDavBytesResult?> readRegistration(String deviceId);
+  Future<void> writeRegistration(String deviceId, Uint8List bytes);
+}
+
 final class ProtocolWebDavSyncTransport
     implements
         WebDavSyncActivationTransport,
+        WebDavSyncRegistrationTransport,
         WebDavSyncFileTransport,
         WebDavSyncSectionGcTransport,
         WebDavSyncLinearizabilityProbeTransport {
@@ -533,6 +541,30 @@ final class ProtocolWebDavSyncTransport
       maxBytes: WebDavSyncAuthorityFile.maxBytes,
       ifNoneMatch: '*',
       createParents: false,
+    );
+  }
+
+  @override
+  Future<WebDavBytesResult?> readRegistration(String deviceId) async {
+    _validateDeviceId(deviceId);
+    try {
+      return await _client.getBytes(
+        path: _join(_devices, '$deviceId/registration.enc'),
+        maxBytes: 4096,
+      );
+    } on WebDavException catch (error) {
+      if (error.kind == WebDavErrorKind.notFound) return null;
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> writeRegistration(String deviceId, Uint8List bytes) async {
+    _validateDeviceId(deviceId);
+    await _client.putBytes(
+      path: _join(_devices, '$deviceId/registration.enc'),
+      bytes: bytes,
+      maxBytes: 4096,
     );
   }
 

@@ -533,6 +533,15 @@ final class WebDavSyncSetupService {
       runInBackground: runCryptoInBackground,
     );
     final snapshot = await store.load();
+    if (WebDavSyncBindingStore.logoutPending(snapshot)) {
+      return store.repairLogoutCredentials(
+        bindingId: inspection.location.fingerprint,
+        config: inspection.config,
+        syncPassphrase: inspection.syncPassphrase,
+        authorityBytes: inspection.pinBytes,
+        beforeSave: beforeCommit,
+      );
+    }
     final resumesCommittedCandidate = _matchesCommittedCandidate(
       snapshot,
       inspection.location.fingerprint,

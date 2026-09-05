@@ -83,6 +83,12 @@ class ProfileRestoreCoordinator {
     required PortableProfilePackage package,
     required ProfileAuthorizationContext authorization,
     ProfileDatabaseFileResolver? databaseFileResolver,
+    Future<void> Function(
+      Map<String, String>,
+      Map<String, String>,
+      Map<String, int>,
+    )?
+    beforePublish,
   }) async {
     final actor = await authorization.validate(registry);
     if (actor.role != UserProfileRole.admin ||
@@ -461,6 +467,10 @@ class ProfileRestoreCoordinator {
           profileId: profile.id,
         );
       }
+      await beforePublish?.call(profileIds, restoreResourceIds.byBackupId, {
+        for (final profile in parsedProfiles) profile.id: 1,
+      });
+      await authorization.validate(registry);
       await ProfileAvatarMutation.runExclusiveMany(
         parsedProfiles.map((profile) => profile.id),
         () async {
@@ -592,6 +602,12 @@ class ProfileRestoreCoordinator {
     bool replacePreferences = false,
     bool completeOnboarding = false,
     ProfileDatabaseFileResolver? databaseFileResolver,
+    Future<void> Function(
+      Map<String, String>,
+      Map<String, String>,
+      Map<String, int>,
+    )?
+    beforePublish,
   }) async {
     final actor = await authorization.validate(registry);
     if (actor.id != destinationProfileId) {
@@ -846,6 +862,11 @@ class ProfileRestoreCoordinator {
         );
       }
 
+      await beforePublish?.call(
+        {profileRecord['backupId'] as String: destinationProfileId},
+        restoreResourceIds.byBackupId,
+        {destinationProfileId: staged.generation},
+      );
       // Revalidate the captured role/policy/revision immediately before the
       // one visible-state transaction. The shared avatar queue stays held from
       // live-file installation through registry publication and pruning.

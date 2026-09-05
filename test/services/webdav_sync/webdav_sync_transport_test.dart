@@ -16,6 +16,53 @@ void main() {
     serverName: 'Test',
   );
 
+  test(
+    'registration uses its own bounded file and verifies absence via 404',
+    () async {
+      final paths = <String>[];
+      Uint8List? stored;
+      final transport = ProtocolWebDavSyncTransport(
+        location: location(),
+        credentials: const WebDavCredentials(
+          username: 'alice',
+          password: 'secret',
+        ),
+        client: MockClient((request) async {
+          paths.add(request.url.path);
+          if (request.method == 'MKCOL') return http.Response('', 201);
+          expect(
+            request.url.path,
+            endsWith('/devices/device-a/registration.enc'),
+          );
+          if (request.method == 'PUT') {
+            stored = request.bodyBytes;
+            return http.Response('', 201);
+          }
+          expect(request.method, 'GET');
+          return stored == null
+              ? http.Response('', 404)
+              : http.Response.bytes(stored!, 200);
+        }),
+      );
+      expect(await transport.readRegistration('device-a'), isNull);
+      final bytes = Uint8List.fromList([1, 2, 3]);
+      await transport.writeRegistration('device-a', bytes);
+      expect((await transport.readRegistration('device-a'))!.bytes, bytes);
+      expect(
+        paths.any(
+          (path) =>
+              path.endsWith('manifest.enc') || path.contains('/sections/'),
+        ),
+        isFalse,
+      );
+      await expectLater(
+        transport.writeRegistration('device-a', Uint8List(4097)),
+        throwsA(isA<WebDavException>()),
+      );
+      transport.close();
+    },
+  );
+
   test('section PUT metadata accepts absence and non-empty validators', () {
     validateWebDavSyncSectionWriteMetadata(
       WebDavResponseMetadata(

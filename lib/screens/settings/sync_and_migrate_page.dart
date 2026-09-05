@@ -1,3 +1,4 @@
+import '../../services/webdav_sync/webdav_sync_binding_store.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -56,6 +57,7 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
   WebDavSyncRuntimeStatus? _runtimeStatus;
   String? _syncStateMessage;
   bool _syncBusy = false;
+  bool _logoutPending = false;
   Timer? _statusTimer;
   Future<void>? _statusLoading;
   bool _tvSyncLaunching = false;
@@ -123,6 +125,7 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
       if (!mounted) return;
       setState(() {
         _syncBinding = snapshot.stagedBinding ?? snapshot.activeBinding;
+        _logoutPending = WebDavSyncBindingStore.logoutPending(snapshot);
       });
       unawaited(_loadActiveSyncState());
     } catch (error) {
@@ -165,6 +168,7 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
         if (!mounted) return;
         setState(() {
           _syncBinding = snapshot.stagedBinding ?? snapshot.activeBinding;
+          _logoutPending = WebDavSyncBindingStore.logoutPending(snapshot);
           _runtimeStatus = status;
           _tvManualAvailability = tvAvailability;
           _syncStateMessage =
@@ -176,6 +180,7 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
       if (!mounted) return;
       setState(() {
         _syncBinding = snapshot.stagedBinding ?? snapshot.activeBinding;
+        _logoutPending = WebDavSyncBindingStore.logoutPending(snapshot);
         _runtimeStatus = status;
         _tvManualAvailability = tvAvailability;
         _syncStateMessage = status.adminPruneBlocked
@@ -289,6 +294,79 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
         false;
   }
 
+  WebDavSyncLogoutController? get _logoutController =>
+      _syncActivation is WebDavSyncLogoutController
+      ? _syncActivation as WebDavSyncLogoutController
+      : null;
+
+  Future<void> _logout() async {
+    final controller = _logoutController;
+    if (_syncBusy || controller == null) return;
+    final confirmed = await showSettingsDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        scrollable: true,
+        title: const Text('Log out of WebDAV sync?'),
+        content: const Text(
+          'This device will stop syncing and leave the connected devices list. '
+          'Its saved sync login will be removed.\n\n'
+          'Your profiles and data stay on this device. Already synced data stays '
+          'on WebDAV so you and your other devices can use it later. Changes '
+          'that have not synced stay only on this device.\n\n'
+          'An internet connection is needed to confirm logout. You can connect again at any time.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Log out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _syncBusy = true);
+    try {
+      await runWebDavForegroundSync(
+        context,
+        title: 'Logging out of WebDAV',
+        stage: 'Unregistering this device and removing its saved login…',
+        operation: (_) => controller.logout(),
+      );
+      if (!mounted) return;
+      await _loadSyncState();
+      if (!mounted) return;
+      setState(() {
+        _runtimeStatus = null;
+        _syncStateMessage = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Logged out. Your data is still on this device.'),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      await _loadSyncState();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _logoutPending
+                ? 'Logout could not be confirmed. Sync is paused. Check your connection or update your password, then retry.'
+                : _userFacingSyncError(error),
+          ),
+          action: SnackBarAction(label: 'Retry', onPressed: _logout),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _syncBusy = false);
+    }
+  }
+
   Future<void> _syncNow() async {
     final activation = _syncActivation;
     if (_syncBusy || activation == null) return;
@@ -400,8 +478,6 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
 
   Future<void> _repairCredentials() async {
     if (_syncBusy) return;
-    final binding = _syncBinding;
-    if (binding == null || binding.circleId == null) return;
     setState(() => _syncBusy = true);
     final reconfiguration =
         _syncActivation is WebDavSyncReconfigurationController
@@ -411,7 +487,40 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
     var didPause = false;
     try {
       await _syncAuthorization.requireAdmin();
-      final currentSecrets = await _syncService.store.readSecrets(binding);
+      var binding = _syncBinding;
+      if (_logoutPending) {
+        final snapshot = await _syncService.store.load();
+        if (!mounted) return;
+        final bindings = snapshot.bindings.values
+            .where(
+              (item) =>
+                  item.circleId != null &&
+                  snapshot.namespaceFor(item)?.markerBytes != null,
+            )
+            .toList();
+        binding = await showSettingsDialog<WebDavSyncBinding>(
+          context: context,
+          builder: (dialogContext) => SimpleDialog(
+            title: const Text('Choose account to repair'),
+            children: [
+              for (final item in bindings)
+                SimpleDialogOption(
+                  onPressed: () => Navigator.of(dialogContext).pop(item),
+                  child: Text(
+                    '${item.location.serverName}\n${item.location.endpoint.host} · ${item.location.folderPath}'
+                    '${snapshot.namespaceFor(item)?.values['logoutNeedsAttentionBindingId'] == item.id ? '\nLogout stopped at this account' : ''}',
+                  ),
+                ),
+            ],
+          ),
+        );
+      }
+      final repairBinding = binding;
+      if (repairBinding == null || repairBinding.circleId == null) return;
+
+      final currentSecrets = await _syncService.store.readSecrets(
+        repairBinding,
+      );
       if (!mounted) return;
       final input = await showSettingsDialog<_SyncCredentialInput>(
         context: context,
@@ -426,8 +535,8 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
       }
       final config = WebDavConfig(
         id: 'webdav-sync-credentials',
-        name: binding.location.serverName,
-        baseUrl: binding.location.endpoint.toString(),
+        name: repairBinding.location.serverName,
+        baseUrl: repairBinding.location.endpoint.toString(),
         username: input.username,
         password: input.password,
       );
@@ -436,9 +545,9 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
       ) async {
         final inspection = await _syncService.inspectFolder(
           config: config,
-          folderPath: binding.location.folderPath,
+          folderPath: repairBinding.location.folderPath,
           context: WebDavSyncFolderInspectionContext.repair,
-          repairBindingId: binding.id,
+          repairBindingId: repairBinding.id,
           beforeSend: beforeSend,
         );
         if (inspection is! WebDavSyncFolderExisting) {
@@ -474,39 +583,51 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
     if (management == null || _syncBusy) return;
     setState(() => _syncBusy = true);
     try {
-      final devices = await management.listDevices();
+      final devices = await runWebDavForegroundSync(
+        context,
+        title: 'Loading devices',
+        stage: 'Checking the devices connected to this account…',
+        operation: (_) => management.listDevices(),
+      );
       if (!mounted) return;
       final target = await showSettingsDialog<String>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('Synced devices'),
+          title: const Text('Connected devices'),
           content: SizedBox(
             width: 520,
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: devices.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (_, index) {
-                final device = devices[index];
-                return ListTile(
-                  title: Text(
-                    device.isThisDevice
-                        ? 'This device'
-                        : _shortDeviceId(device.deviceId),
-                  ),
-                  subtitle: Text(
-                    'Last seen ${_formatSyncTime(device.lastSeenMs)}',
-                  ),
-                  trailing: device.isThisDevice
-                      ? null
-                      : TextButton(
-                          onPressed: () =>
-                              Navigator.of(dialogContext).pop(device.deviceId),
-                          child: const Text('Forget'),
+            child: devices.isEmpty
+                ? const Text(
+                    'No devices to show yet. Run Sync now and try again.',
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: devices.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (_, index) {
+                      final device = devices[index];
+                      return ListTile(
+                        title: Text(
+                          device.isThisDevice
+                              ? 'This device'
+                              : 'Other device · ${_shortDeviceId(device.deviceId)}',
                         ),
-                );
-              },
-            ),
+                        subtitle: Text(
+                          device.isRegistered
+                              ? 'Last seen ${_formatSyncTime(device.lastSeenMs)}'
+                              : 'Signed out · saved data retained. Remove to free a device slot.',
+                        ),
+                        trailing: device.isThisDevice
+                            ? null
+                            : TextButton(
+                                onPressed: () => Navigator.of(
+                                  dialogContext,
+                                ).pop(device.deviceId),
+                                child: const Text('Remove'),
+                              ),
+                      );
+                    },
+                  ),
           ),
           actions: [
             TextButton(
@@ -521,12 +642,12 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('Forget this device?'),
+          scrollable: true,
+          title: const Text('Remove this device?'),
           content: const Text(
-            'This removes its server bookkeeping after preserving deletions '
-            'and recovery data. It does not revoke an installed device that '
-            'still has the WebDAV password. Change it on the server to '
-            'revoke access.',
+            'Remove this device from the list while keeping the data needed '
+            'by your other devices. A device that still has your WebDAV '
+            'password can connect again. Log out on that device to stop its sync.',
           ),
           actions: [
             TextButton(
@@ -535,13 +656,18 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Forget device'),
+              child: const Text('Remove device'),
             ),
           ],
         ),
       );
-      if (confirmed != true) return;
-      await management.forgetDevice(target);
+      if (confirmed != true || !mounted) return;
+      await runWebDavForegroundSync(
+        context,
+        title: 'Removing device',
+        stage: 'Removing this device from the list…',
+        operation: (_) => management.forgetDevice(target),
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -622,12 +748,14 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
         _syncBinding?.lifecycle == WebDavSyncLifecycle.awaitingAdoption &&
         _syncBinding?.errorMessage == null;
     final credentialRepairAvailable =
-        _syncBinding?.lifecycle == WebDavSyncLifecycle.error &&
-        _syncBinding?.circleId != null &&
-        _syncBinding?.requiresStateReconnect != true;
+        _logoutPending ||
+        (_syncBinding?.lifecycle == WebDavSyncLifecycle.error &&
+            _syncBinding?.circleId != null &&
+            _syncBinding?.requiresStateReconnect != true);
     final tvControllerAvailable = _tvManualController != null;
     final tvButtonEnabled =
         active &&
+        !_logoutPending &&
         tvControllerAvailable &&
         !_syncBusy &&
         _tvManualAvailability == WebDavSyncTvManualAvailability.available;
@@ -635,8 +763,7 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
       WebDavSyncTvManualAvailability.available
           when _runtimeStatus?.tvChangesPending == true =>
         'Changes are waiting for a manual sync',
-      WebDavSyncTvManualAvailability.available =>
-        'Channels and saved pools sync only when you run this',
+      WebDavSyncTvManualAvailability.available => 'Ready to sync',
       WebDavSyncTvManualAvailability.inactive =>
         'Enable WebDAV Sync to use manual TV sync',
       WebDavSyncTvManualAvailability.firstJoinPending =>
@@ -648,34 +775,63 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
       WebDavSyncTvManualAvailability.tvOsLowMemory =>
         'Apple TV is low on memory; wait a few minutes, then try again',
     };
+    final connectedName = _syncBinding?.location.serverName;
+    final lastSync = _runtimeStatus?.lastSuccessfulSyncMs;
+    final clockMessage = _runtimeStatus == null
+        ? null
+        : _clockStatusMessage(_runtimeStatus!);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SettingsSectionLabel('Sync'),
-        const SizedBox(height: 8),
         SettingsSection(
-          title: '',
+          title: 'WebDAV sync',
+          blurb: active
+              ? 'Your settings, profiles and watch progress sync automatically while the app is open.'
+              : 'Keep your profiles, settings and watch progress together across your devices.',
           children: [
-            SettingsTile(
-              icon: SettingsRows.enableWebDavSync.icon,
-              title: active
-                  ? 'Change WebDAV sync account'
-                  : 'Enable WebDAV Sync',
-              subtitle: _syncStatus(),
-              enabled: !_syncBusy,
-              trailing: _syncBusy || finishingFirstSync
-                  ? const SizedBox.square(
-                      dimension: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : null,
-              onTap: _configureSync,
+            ListTile(
+              leading: Icon(
+                _logoutPending
+                    ? Icons.cloud_off_outlined
+                    : active
+                    ? Icons.cloud_done_outlined
+                    : Icons.cloud_outlined,
+                color: active ? Theme.of(context).colorScheme.primary : null,
+              ),
+              title: Text(
+                _logoutPending
+                    ? 'Logout needs attention'
+                    : active
+                    ? 'Connected to $connectedName'
+                    : 'Not connected',
+              ),
+              subtitle: Text(
+                _logoutPending
+                    ? 'Sync is paused. Retry logout to finish removing this connection.'
+                    : finishingFirstSync
+                    ? 'Setting up sync. Keep the app open while this finishes.'
+                    : active
+                    ? lastSync == null
+                          ? 'Waiting for the first completed sync'
+                          : 'Last synced ${_formatSyncTime(lastSync)}'
+                    : _syncBinding == null
+                    ? 'Connect the same WebDAV account on each device.'
+                    : _syncStatus(),
+              ),
             ),
+            if (!active)
+              SettingsTile(
+                icon: Icons.login_rounded,
+                title: finishingFirstSync ? 'Continue setup' : 'Connect WebDAV',
+                subtitle: 'Use Koofr or another WebDAV provider',
+                enabled: !_syncBusy && !_logoutPending,
+                onTap: _configureSync,
+              ),
             if (credentialRepairAvailable)
               SettingsTile(
                 icon: Icons.key_rounded,
-                title: 'Re-enter WebDAV password',
-                subtitle: 'Verify this WebDAV account again',
+                title: 'Update password',
+                subtitle: 'Restore access to your WebDAV account',
                 enabled: !_syncBusy,
                 onTap: _repairCredentials,
               ),
@@ -683,93 +839,91 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
               SettingsTile(
                 icon: Icons.sync,
                 title: 'Sync now',
-                subtitle: 'Check WebDAV for changes',
-                enabled: !_syncBusy && _syncActivation != null,
+                subtitle: 'Send your changes and check for updates',
+                enabled:
+                    !_syncBusy && !_logoutPending && _syncActivation != null,
                 onTap: _syncNow,
-              ),
-            if (active && _management != null)
-              SettingsTile(
-                icon: Icons.devices_other,
-                title: 'Synced devices',
-                subtitle: 'View or forget server device records',
-                enabled: !_syncBusy,
-                onTap: _manageDevices,
               ),
           ],
         ),
+        if (clockMessage != null || _syncStateMessage != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            clockMessage ?? _syncStateMessage!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ],
+        if (_syncBinding != null) ...[
+          const SizedBox(height: 16),
+          SettingsSection(
+            title: 'Account and devices',
+            children: [
+              if (active && _management != null)
+                SettingsTile(
+                  icon: Icons.devices_other,
+                  title: 'Connected devices',
+                  subtitle: 'Manage devices using this sync account',
+                  enabled: !_syncBusy && !_logoutPending,
+                  onTap: _manageDevices,
+                ),
+              SettingsTile(
+                icon: Icons.manage_accounts_outlined,
+                title: 'Change account',
+                subtitle: 'Use a different WebDAV account',
+                enabled: !_syncBusy && !_logoutPending,
+                onTap: _configureSync,
+              ),
+              if (_logoutController != null)
+                SettingsTile(
+                  icon: Icons.logout_rounded,
+                  title: _logoutPending ? 'Retry logout' : 'Log out',
+                  subtitle: 'Stop syncing and forget this saved login',
+                  enabled: !_syncBusy,
+                  onTap: _logout,
+                ),
+            ],
+          ),
+        ],
         const SizedBox(height: 16),
         SettingsSection(
-          title: 'Debrify TV',
-          blurb: 'A foreground, one-time sync for channels and saved pools.',
+          title: 'Debrify TV channels',
+          blurb:
+              'Channels and saved torrent pools transfer only when you sync them here. Run this on both devices after changing channels.',
           children: [
             SettingsTile(
               icon: Icons.live_tv_rounded,
-              title: 'Sync Debrify TV now',
+              title: 'Sync channels now',
               subtitle: tvControllerAvailable
                   ? tvSubtitle
-                  : 'Manual Debrify TV sync is unavailable',
+                  : 'Connect WebDAV to sync your channels',
               enabled: tvButtonEnabled,
               onTap: _syncDebrifyTv,
             ),
           ],
         ),
-        if (active) ...[
+        if (active && _runtimeStatus?.lastTvSyncMs != null) ...[
           const SizedBox(height: 8),
           Text(
-            _runtimeStatus?.lastTvSyncMs == null
-                ? 'Debrify TV has not been synced manually yet'
-                : 'Debrify TV last synced ${_formatSyncTime(_runtimeStatus!.lastTvSyncMs!)}',
-            style: const TextStyle(fontSize: 12.5),
-          ),
-        ],
-        if (_syncBinding != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            '${active ? 'Connected to' : 'Selected'}: '
-            '${_syncBinding!.location.serverName}',
+            'Channels last synced ${_formatSyncTime(_runtimeStatus!.lastTvSyncMs!)}',
             style: const TextStyle(fontSize: 12.5),
           ),
         ],
         if (active && _runtimeStatus != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            _runtimeStatus!.lastSuccessfulSyncMs == null
-                ? 'No completed sync yet'
-                : 'Last synced ${_formatSyncTime(_runtimeStatus!.lastSuccessfulSyncMs!)}'
-                      ' • ${_runtimeStatus!.peerCount} device record${_runtimeStatus!.peerCount == 1 ? '' : 's'}',
-            style: const TextStyle(fontSize: 12.5),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _pollStatusMessage(_runtimeStatus!),
-            style: const TextStyle(fontSize: 12.5),
-          ),
-        ],
-        if (active &&
-            _runtimeStatus != null &&
-            _clockStatusMessage(_runtimeStatus!) != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            _clockStatusMessage(_runtimeStatus!)!,
-            style: const TextStyle(fontSize: 12.5, color: Colors.amber),
+          const SizedBox(height: 12),
+          ExpansionTile(
+            title: const Text('Sync details'),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            expandedCrossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_pollStatusMessage(_runtimeStatus!)),
+              const SizedBox(height: 8),
+              const Text(
+                'IPTV playlists, favorites and watch history sync automatically. Channel listings and TV guides are downloaded separately on each device.',
+              ),
+            ],
           ),
         ],
-        if (active && _syncStateMessage != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            _syncStateMessage!,
-            style: const TextStyle(fontSize: 12.5, color: Colors.amber),
-          ),
-        ],
-        const SizedBox(height: 20),
-        const Text(
-          'IPTV sources, favorites, history and resume state stay in sync. '
-          'Debrify TV syncs only when run manually — run it after connecting '
-          'another device or importing channels. Each device rebuilds its '
-          'channel and guide caches.',
-          style: TextStyle(fontSize: 12.5),
-        ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -813,7 +967,7 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
   @override
   Widget build(BuildContext context) {
     return SettingsPageScaffold(
-      title: 'Sync and Migrate',
+      title: 'Sync and backup',
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Center(
@@ -823,7 +977,7 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_syncFeatureEnabled) _buildSyncSection(),
-                const SettingsSectionLabel('Migrate'),
+                const SettingsSectionLabel('Manual backups'),
                 const SizedBox(height: 8),
                 SettingsSection(
                   title: '',
@@ -846,8 +1000,8 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
                 const SizedBox(height: 16),
                 const Text(
                   'Backups are encrypted with the passphrase you choose. '
-                  'This is a manual transfer; continuous WebDAV Sync '
-                  'is not enabled by these actions.',
+                  'Save a separate copy or restore one when you need it. '
+                  'These backups do not turn on automatic sync.',
                   style: TextStyle(fontSize: 12.5),
                 ),
               ],

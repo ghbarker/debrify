@@ -1,3 +1,4 @@
+import 'package:debrify/services/webdav_sync/webdav_sync_logout.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -87,6 +88,65 @@ void main() {
         transportFactory: ({required binding, required secrets}) => transport,
         clock: () => now,
       );
+
+  test(
+    'logout of the only device preserves the bootstrap for a fresh login',
+    () async {
+      final oldId = (await store.load()).namespaceFor(binding)!.deviceId;
+      await transport.addPeer(
+        codec: codec,
+        root: root,
+        deviceId: oldId,
+        manifestTime: now,
+        bootstrapTime: now,
+      );
+      final location = binding.location;
+      await WebDavSyncLogout(
+        store: store,
+        codec: codec,
+        transportFactory: (_, _) => transport,
+      ).run(authorize: () async {});
+      expect(
+        await webDavSyncDeviceIsRegistered(
+          transport: transport,
+          codec: codec,
+          root: root,
+          deviceId: oldId,
+        ),
+        isFalse,
+      );
+      binding = await store.stageBinding(
+        location: location,
+        config: const WebDavConfig(
+          id: 'server',
+          name: 'Server',
+          baseUrl: 'https://example.test/dav',
+          username: 'alice',
+          password: 'secret',
+        ),
+        syncPassphrase: 'circle-secret',
+      );
+      binding = await store.markRootVerified(
+        bindingId: binding.id,
+        root: root.document,
+        markerBytes: marker,
+      );
+      final newId = (await store.load()).namespaceFor(binding)!.deviceId;
+      expect(newId, isNot(oldId));
+      final found = await discovery().discover(bindingId: binding.id);
+      expect(found.bootstrap.manifest.deviceId, oldId);
+      expect(found.bootstrap.document.package.profiles, isNotEmpty);
+      expect(
+        await webDavSyncDeviceIsRegistered(
+          transport: transport,
+          codec: codec,
+          root: root,
+          deviceId: newId,
+        ),
+        isTrue,
+      );
+    },
+  );
 
   test(
     'a dormant authentic bootstrap still makes the folder joinable',
@@ -412,7 +472,19 @@ final class _MemoryStateRepository implements WebDavSyncEngineStateRepository {
   ) async => state = update(state);
 }
 
-final class _FakeDiscoveryTransport implements WebDavSyncTransport {
+final class _FakeDiscoveryTransport
+    implements WebDavSyncTransport, WebDavSyncRegistrationTransport {
+  final registrations = <String, Uint8List>{};
+  @override
+  Future<WebDavBytesResult?> readRegistration(String deviceId) async =>
+      registrations[deviceId] == null
+      ? null
+      : WebDavBytesResult(bytes: registrations[deviceId]!, metadata: _metadata);
+  @override
+  Future<void> writeRegistration(String deviceId, Uint8List bytes) async {
+    registrations[deviceId] = bytes;
+  }
+
   _FakeDiscoveryTransport({required this.marker, required this.serverDate});
 
   final Uint8List marker;

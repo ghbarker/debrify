@@ -1136,7 +1136,12 @@ final class WebDavSyncEngineStateStore
     _namespaceDeviceIds[namespaceId] = namespace.deviceId;
     final markerOrLegacy = namespace.values[valueKey];
     final marked = _isFileMarker(markerOrLegacy);
-    if (marked) _knownMarkedNamespaces.add(namespaceId);
+    if (marked) {
+      _knownMarkedNamespaces.add(namespaceId);
+    } else {
+      // Restoring the same circle can assign a new device ID and empty state.
+      _knownMarkedNamespaces.remove(namespaceId);
+    }
     final file = await _stateFile(namespaceId);
     await _recoverInterruptedWindowsReplace(file);
     if (await file.exists()) {
@@ -1235,6 +1240,35 @@ final class WebDavSyncEngineStateStore
         await _writeFile(file, const WebDavSyncEngineState());
         _knownMarkedNamespaces.add(namespaceId);
       });
+
+  Future<void> forgetLoggedOutNamespace(WebDavSyncNamespace namespace) =>
+      _fileLock.synchronized(() async {
+        _namespaceDeviceIds[namespace.id] = namespace.deviceId;
+        final file = await _stateFile(namespace.id);
+        for (final suffix in ['', '.previous', '.next']) {
+          final candidate = File('${file.path}$suffix');
+          if (await candidate.exists()) await candidate.delete();
+        }
+        _namespaceDeviceIds.remove(namespace.id);
+        _knownMarkedNamespaces.remove(namespace.id);
+      });
+
+  /// Prepare a fresh device file before its binding becomes visible. No
+  /// binding-store access here; publication is owned by the caller.
+  Future<void> prepareBackupState(
+    WebDavSyncNamespace namespace, {
+    required Map<String, String> profileIds,
+    required Map<String, String> resourceIds,
+  }) => _fileLock.synchronized(() async {
+    _namespaceDeviceIds[namespace.id] = namespace.deviceId;
+    await _writeFile(
+      await _stateFile(namespace.id),
+      WebDavSyncEngineState(
+        circleToLocalProfiles: profileIds,
+        circleToLocalResources: resourceIds,
+      ),
+    );
+  });
 
   Future<void> _persistFileMarker(String namespaceId) async {
     await bindingStore.updateNamespaceValues(namespaceId, (values) {

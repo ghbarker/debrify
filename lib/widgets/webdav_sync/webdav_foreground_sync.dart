@@ -9,6 +9,7 @@ import '../../services/player_display_controls.dart';
 Future<T> runWebDavForegroundSync<T>(
   BuildContext context, {
   required String stage,
+  String title = 'Syncing with WebDAV',
   required Future<T> Function(ValueChanged<String> updateStage) operation,
   PlayerDisplayControls? displayControls,
   Duration progressLimit = const Duration(seconds: 60),
@@ -20,6 +21,7 @@ Future<T> runWebDavForegroundSync<T>(
     barrierDismissible: false,
     builder: (_) => _ForegroundSyncDialog(
       progress: progress,
+      title: title,
       controls: displayControls ?? PlayerDisplayControls.instance,
       progressLimit: progressLimit,
     ),
@@ -42,10 +44,12 @@ Future<T> runWebDavForegroundSync<T>(
 class _ForegroundSyncDialog extends StatefulWidget {
   const _ForegroundSyncDialog({
     required this.progress,
+    required this.title,
     required this.controls,
     required this.progressLimit,
   });
   final ValueNotifier<String> progress;
+  final String title;
   final PlayerDisplayControls controls;
   final Duration progressLimit;
 
@@ -97,7 +101,11 @@ class _ForegroundSyncDialogState extends State<_ForegroundSyncDialog>
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: Text(
-      _takingLonger ? 'Sync is taking longer' : 'Syncing with WebDAV',
+      _takingLonger
+          ? widget.title == 'Syncing with WebDAV'
+                ? 'Sync is taking longer'
+                : 'Taking longer than expected'
+          : widget.title,
     ),
     scrollable: true,
     content: Column(
@@ -117,7 +125,7 @@ class _ForegroundSyncDialogState extends State<_ForegroundSyncDialog>
           _takingLonger
               ? 'Completion has not been confirmed. You can hide this progress; '
                     'the current attempt will continue. Retry after it finishes if needed.'
-              : 'Keep Debrify open until sync finishes. '
+              : 'Keep Debrify open until this finishes. '
                     'The screen stays awake while this progress is shown.',
         ),
         if (_returned) ...[

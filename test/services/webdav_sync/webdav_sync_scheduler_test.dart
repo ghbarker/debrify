@@ -51,6 +51,33 @@ void main() {
     active: true,
   );
 
+  test('logout clears old save intent before a new account is armed', () {
+    fakeAsync((async) {
+      final runner = _Runner();
+      final feedback = WebDavSyncSaveFeedback();
+      final gate = _Gate();
+      final scheduler = WebDavSyncScheduler(
+        runner: runner,
+        gate: gate,
+        saveFeedback: feedback,
+      );
+      scheduler.arm(() async => context());
+      scheduler.notifyLocalChange('theme');
+      expect(feedback.hasPending, isTrue);
+      scheduler.forgetAccount();
+      expect(feedback.hasPending, isFalse);
+      scheduler.arm(() async => context());
+      async.elapse(const Duration(seconds: 10));
+      async.flushMicrotasks();
+      expect(runner.runs, 0);
+      scheduler.notifyLocalChange('theme');
+      async.elapse(const Duration(seconds: 10));
+      async.flushMicrotasks();
+      expect(runner.runs, 1);
+      scheduler.dispose();
+    });
+  });
+
   test('manual sync waits for a snapshot covering saves at request time', () {
     fakeAsync((async) {
       final older = Completer<void>();

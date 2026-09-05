@@ -11,6 +11,8 @@ import '../../models/profiles/profile_policy.dart';
 import '../../models/profiles/user_profile.dart';
 import '../../models/webdav_item.dart';
 import '../../services/backup_restore_service.dart';
+import '../../services/webdav_sync/webdav_sync_backup.dart';
+import '../../services/webdav_sync/webdav_sync_runtime.dart';
 import '../../services/download_service.dart';
 import '../../services/profiles/connection_resource_service.dart';
 import '../../services/profiles/device_key_provider.dart';
@@ -386,6 +388,8 @@ class ProfileBackupFlows {
                 'are rebuilt after restore, which may need network access. '
                 'Downloads, recordings, active jobs, device paths, and remote '
                 'pairings are not included.\n\n'
+                'Admin backups also include the WebDAV sync login and its on/off state. '
+                'Enabled sync resumes automatically after restore.\n\n'
                 'Older Debrify versions cannot read this file.',
               ),
               const SizedBox(height: 12),
@@ -434,14 +438,19 @@ class ProfileBackupFlows {
       try {
         final result = await _profileBackupProgress<LocalBackupExportResult>(
           'Preparing backup…',
-          (setStage) => exporter.export(
-            context: authorization,
-            staging: staging,
-            allProfiles: allProfiles,
-            scope: allProfiles ? null : ProfileRuntime.capture(),
-            onStage: setStage,
-            onBytes: _byteStageReporter(setStage),
-            cancellation: cancellation,
+          (setStage) => WebDavSyncRuntime.instance.withBackupSnapshot(
+            () => exporter.export(
+              context: authorization,
+              staging: staging,
+              allProfiles: allProfiles,
+              scope: allProfiles ? null : ProfileRuntime.capture(),
+              onStage: setStage,
+              onBytes: _byteStageReporter(setStage),
+              cancellation: cancellation,
+              captureSync: canExportAll
+                  ? WebDavSyncRuntime.instance.captureBackupConnection
+                  : null,
+            ),
           ),
           cancellation: cancellation,
         );
@@ -898,9 +907,22 @@ class ProfileBackupFlows {
         mode: summary.mode,
         profileCount: summary.profileCount,
         omissions: summary.omissions,
+        syncNotice: inspection.manifest.webDavSync == null
+            ? null
+            : inspection.manifest.webDavSync!.connection?['enabled'] == true
+            ? 'This backup restores your WebDAV sync login. Sync resumes automatically after restore.'
+            : 'WebDAV sync stays off, as saved in this backup.',
       );
       if (confirmation == null) return null;
+      if (inspection.manifest.webDavSync != null &&
+          (!confirmation.actor.isAdmin ||
+              !confirmation.actor.allows(ProfileFeature.manageProfiles))) {
+        throw StateError(
+          'Only an Admin can restore a backup containing WebDAV sync settings',
+        );
+      }
 
+      await inspection.manifest.webDavSync?.validate();
       final staging = await LocalBackupScratch.create('restore');
       final cancellation = LocalBackupCancellation();
       LocalBackupRestoreStage? stage;
@@ -920,11 +942,16 @@ class ProfileBackupFlows {
         if (!context.mounted) return null;
         // Cancel remains valid until the staged data enters publication.
         cancellation.throwIfCancelled();
-        return await _performRestore(
-          stage.package,
+        final prepared = stage;
+        Future<ProfileBackupRestoreResult?> restore() => _performRestore(
+          prepared.package,
           confirmation,
-          databaseFileResolver: stage.resolveDatabase,
+          databaseFileResolver: prepared.resolveDatabase,
+          syncBackup: prepared.manifest.webDavSync,
         );
+        return prepared.manifest.webDavSync == null
+            ? await restore()
+            : await WebDavSyncRuntime.instance.withBackupRestore(restore);
       } on LocalBackupCancelledException {
         return null;
       } finally {
@@ -986,6 +1013,7 @@ class ProfileBackupFlows {
     required String mode,
     required int profileCount,
     required Map<String, dynamic> omissions,
+    String? syncNotice,
   }) async {
     final registry = ProfileBootstrap.registry;
     final profile = await registry.getProfile(
@@ -998,6 +1026,7 @@ class ProfileBackupFlows {
         omissions['libraryDatabasesTooLarge'] != null;
     final debrifyTvOmission = DebrifyTvBackupOmission.fromOmissions(omissions);
     final databaseNotices = <String>[
+      if (syncNotice != null) syncNotice,
       if (legacyDatabasesMissing)
         'Warning: this older backup omitted one or more library databases; '
             'those playlists/history rows cannot be recovered from it.',
@@ -1071,6 +1100,7 @@ class ProfileBackupFlows {
     _RestoreConfirmation confirmation, {
     ProfileAsyncAuthorization? migrateAuthorization,
     ProfileDatabaseFileResolver? databaseFileResolver,
+    WebDavSyncBackup? syncBackup,
   }) async {
     final registry = ProfileBootstrap.registry;
     final actor = confirmation.actor;
@@ -1094,9 +1124,21 @@ class ProfileBackupFlows {
             package: package,
             authorization: authorization,
             databaseFileResolver: databaseFileResolver,
+            beforePublish: syncBackup == null
+                ? null
+                : (profiles, resources, generations) =>
+                      WebDavSyncRuntime.instance.prepareBackupRestore(
+                        syncBackup,
+                        profiles,
+                        resources,
+                        generations,
+                      ),
           ),
         ),
       );
+      if (syncBackup != null) {
+        await WebDavSyncRuntime.instance.finishBackupRestore();
+      }
       final result = ProfileBackupRestoreResult.deviceGraph(
         authorizingProfileId: actor.id,
         graphReport: report,
@@ -1128,9 +1170,21 @@ class ProfileBackupFlows {
           authorization: authorization,
           completeOnboarding: completingOnboarding,
           databaseFileResolver: databaseFileResolver,
+          beforePublish: syncBackup == null
+              ? null
+              : (profiles, resources, generations) =>
+                    WebDavSyncRuntime.instance.prepareBackupRestore(
+                      syncBackup,
+                      profiles,
+                      resources,
+                      generations,
+                    ),
         ),
       ),
     );
+    if (syncBackup != null) {
+      await WebDavSyncRuntime.instance.finishBackupRestore();
+    }
     final result = ProfileBackupRestoreResult.singleProfile(
       authorizingProfileId: actor.id,
     );

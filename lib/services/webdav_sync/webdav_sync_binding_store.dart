@@ -108,6 +108,9 @@ final class WebDavSyncBindingStore {
     _requireVault();
     WebDavSyncCodec.validatePassphrase(syncPassphrase);
     final snapshot = await _load(writeLocked: true);
+    if (logoutPending(snapshot)) {
+      throw StateError('Finish logging out before connecting another account');
+    }
     final id = location.fingerprint;
     final existing = snapshot.bindings[id];
     final namespaceId = existing?.namespaceId ?? 'candidate:$id';
@@ -423,7 +426,17 @@ final class WebDavSyncBindingStore {
           WebDavSyncStoreSnapshot(
             activeBindingId: bindingId,
             bindings: bindings,
-            namespaces: snapshot.namespaces,
+            namespaces: {
+              ...snapshot.namespaces,
+              binding.namespaceId: snapshot
+                  .namespaceFor(binding)!
+                  .copyWith(
+                    values: {...snapshot.namespaceFor(binding)!.values}
+                      ..remove('backupRestore')
+                      ..remove('backupRestoreProfileIds')
+                      ..remove('backupRestoreResourceIds'),
+                  ),
+            },
           ),
         );
         return updated;
@@ -521,6 +534,158 @@ final class WebDavSyncBindingStore {
           ),
         );
       });
+
+  /// Local restore creates a new registration. The published profile mapping
+  /// is durable so the first connection can rebuild its engine after restart.
+  Future<void> restoreBackupConnection({
+    required WebDavConfig? config,
+    String? folderPath,
+    String? syncPassphrase,
+    List<int>? authorityBytes,
+    String? authorityContentHash,
+    required bool enabled,
+    required Future<void> Function(WebDavSyncNamespace) prepareState,
+  }) async {
+    final root = config == null
+        ? null
+        : await WebDavSyncCodec().openPinnedAuthority(
+            authorityBytes!,
+            syncPassphrase!,
+            runInBackground: true,
+          );
+    if (config == null) {
+      await _writeLock.synchronized(
+        () => _save(const WebDavSyncStoreSnapshot()),
+      );
+      return;
+    }
+    final location = WebDavSyncFolderLocation.fromConfig(config, folderPath!);
+    final namespaceId = 'circle:${root!.document.circleId}';
+    final namespace = WebDavSyncNamespace(
+      id: namespaceId,
+      deviceId: _uuidV4(),
+      markerBytes: webDavSyncInnerMarker(authorityBytes!),
+      authorityContentHash:
+          authorityContentHash ?? webDavSyncAuthorityHash(authorityBytes),
+      values: {
+        'backupRestore': true,
+        engineStateFileValueKey: const {'version': 1, 'storage': 'file'},
+      },
+    );
+    final binding = WebDavSyncBinding(
+      id: location.fingerprint,
+      location: location,
+      lifecycle: enabled
+          ? WebDavSyncLifecycle.awaitingAdoption
+          : WebDavSyncLifecycle.rootVerified,
+      namespaceId: namespaceId,
+      circleId: root.document.circleId,
+      sealedSecrets: await _sealSecrets(
+        location.fingerprint,
+        WebDavSyncSecrets(
+          username: config.username,
+          password: config.password,
+          syncPassphrase: syncPassphrase!,
+        ),
+      ),
+      updatedAt: _clock().toUtc(),
+    );
+    // File preparation must precede pointer publication, outside the store
+    // lock: state readers take the file lock before reading bindings.
+    await prepareState(namespace);
+    await _writeLock.synchronized(
+      () => _save(
+        WebDavSyncStoreSnapshot(
+          stagedBindingId: binding.id,
+          bindings: {binding.id: binding},
+          namespaces: {namespace.id: namespace},
+        ),
+      ),
+    );
+  }
+
+  /// Replace credentials without changing a retained or staged device identity.
+  Future<WebDavSyncBinding> repairLogoutCredentials({
+    required String bindingId,
+    required WebDavConfig config,
+    required String syncPassphrase,
+    required List<int> authorityBytes,
+    Future<void> Function()? beforeSave,
+  }) => _writeLock.synchronized(() async {
+    final snapshot = await _load(writeLocked: true);
+    final binding = _requireBinding(snapshot, bindingId);
+    final namespace = _requireNamespace(snapshot, binding);
+    if (!logoutPending(snapshot) ||
+        !namespace.matchesAuthority(authorityBytes) ||
+        WebDavSyncFolderLocation.fromConfig(
+              config,
+              binding.location.folderPath,
+            ).fingerprint !=
+            binding.id) {
+      throw StateError('Logout credential repair must preserve the binding');
+    }
+    final existing = await readSecrets(binding);
+    if (existing.syncPassphrase != syncPassphrase) {
+      throw StateError('Logout credential repair cannot replace the sync key');
+    }
+    final updated = binding.copyWith(
+      sealedSecrets: await _sealSecrets(
+        binding.id,
+        WebDavSyncSecrets(
+          username: config.username,
+          password: config.password,
+          syncPassphrase: syncPassphrase,
+        ),
+      ),
+      updatedAt: _clock().toUtc(),
+    );
+    await beforeSave?.call();
+    await _save(
+      WebDavSyncStoreSnapshot(
+        activeBindingId: snapshot.activeBindingId,
+        stagedBindingId: snapshot.stagedBindingId,
+        bindings: {...snapshot.bindings, binding.id: updated},
+        namespaces: snapshot.namespaces,
+      ),
+    );
+    return updated;
+  });
+
+  static const logoutPendingKey = 'logoutPending';
+
+  static bool logoutPending(WebDavSyncStoreSnapshot snapshot) => snapshot
+      .namespaces
+      .values
+      .any((ns) => ns.values[logoutPendingKey] == true);
+
+  /// Stop future automatic work durably before unregistering remotely.
+  Future<WebDavSyncStoreSnapshot> beginLogout() =>
+      _writeLock.synchronized(() async {
+        final snapshot = await _load(writeLocked: true);
+        final namespaces = <String, WebDavSyncNamespace>{
+          for (final entry in snapshot.namespaces.entries)
+            entry.key: entry.value.copyWith(
+              values: {...entry.value.values, logoutPendingKey: true},
+            ),
+        };
+        final pending = WebDavSyncStoreSnapshot(
+          activeBindingId: snapshot.activeBindingId,
+          stagedBindingId: snapshot.stagedBindingId,
+          bindings: snapshot.bindings,
+          namespaces: namespaces,
+        );
+        await _save(pending);
+        return pending;
+      });
+
+  /// Credentials, authority pins and device identities leave in one write.
+  Future<void> finishLogout() => _writeLock.synchronized(() async {
+    final snapshot = await _load(writeLocked: true);
+    if (snapshot.bindings.isNotEmpty && !logoutPending(snapshot)) {
+      throw StateError('Logout has not started');
+    }
+    await _save(const WebDavSyncStoreSnapshot());
+  });
 
   Future<WebDavSyncSecrets> readSecrets(WebDavSyncBinding binding) async {
     _requireVault();

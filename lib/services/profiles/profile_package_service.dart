@@ -298,18 +298,21 @@ class ProfilePackageService {
     bool includeDatabases = true,
     bool includePreferences = true,
     ProfilePackageFileSinks? fileSinks,
+    void Function(ProfileGraphPackageExport)? onIdentities,
   }) async {
     if (fileSinks != null && compactDatabaseSnapshots) {
       throw ArgumentError('File-backed export never compacts Debrify TV');
     }
-    return (await _exportAllProfiles(
+    final exported = await _exportAllProfiles(
       context: context,
       includeSecrets: includeSecrets,
       compactDatabaseSnapshots: compactDatabaseSnapshots,
       includeDatabases: includeDatabases,
       includePreferences: includePreferences,
       fileSinks: fileSinks,
-    )).package;
+    );
+    onIdentities?.call(exported);
+    return exported.package;
   }
 
   /// Full graph export plus the local-to-backup identity correlation needed by

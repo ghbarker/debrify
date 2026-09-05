@@ -813,6 +813,7 @@ class DevicePreferences {
     'profile_gate_style_v1',
     'profile_gate_always_ask_v1',
     'webdav_sync_state_v1',
+    'webdav_sync_backup_restore_v1',
     'webdav_sync_db_adoption_gate_v1',
   };
 

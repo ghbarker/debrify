@@ -2632,7 +2632,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       nav(
         SettingsRows.syncAndMigrate,
-        'Sync and Migrate',
+        'Sync and backup',
         _openSyncAndMigrate,
         keywords: const [
           'webdav',
@@ -5203,7 +5203,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Sync and Migrate becomes available after Profiles setup.',
+              'Sync and backup becomes available after Profiles setup.',
             ),
           ),
         );
@@ -7256,13 +7256,13 @@ const List<SettingsCategoryDefinition> _kAdaptiveSettingsCategories = [
   ),
   SettingsCategoryDefinition(
     icon: Icons.sync_alt_rounded,
-    label: 'Sync and Migrate',
-    subtitle: 'Encrypted WebDAV transfer',
-    eyebrow: 'Sync and Migrate',
-    title: 'Move your profile securely.',
+    label: 'Sync and backup',
+    subtitle: 'Sync across devices and save backups',
+    eyebrow: 'Sync and backup',
+    title: 'Keep your devices in sync.',
     description:
-        'Save or restore an encrypted profile backup through your WebDAV '
-        'server.',
+        'Connect your WebDAV account to sync profiles, settings and watch '
+        'progress, or save a separate backup.',
   ),
   SettingsCategoryDefinition(
     icon: Icons.storage_rounded,
@@ -8171,7 +8171,7 @@ class _SettingsLayout extends StatelessWidget {
                 ],
                 const SizedBox(height: 24),
                 SettingsSection(
-                  title: 'Sync and Migrate',
+                  title: 'Sync and backup',
                   children: [
                     SettingsTile.spec(
                       SettingsRows.syncAndMigrate,

@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import '../../../utils/app_storage.dart';
 import '../../../utils/streamed_file_copy.dart';
 import '../../diagnostic_log.dart';
+import '../../webdav_sync/webdav_sync_backup.dart';
 import '../portable_profile_package.dart';
 import '../profile_authorization.dart';
 import '../profile_database_snapshot.dart';
@@ -55,6 +56,7 @@ class LocalBackupManifest {
     required this.mode,
     required this.package,
     required this.entries,
+    this.webDavSync,
   });
 
   static const String format = 'debrify-local-backup';
@@ -73,6 +75,7 @@ class LocalBackupManifest {
   /// much free space plus the archive itself.
   static const int maxTotalDataBytes = 16 * 1024 * 1024 * 1024;
 
+  final WebDavSyncBackup? webDavSync;
   final DateTime createdAt;
   final String mode;
   final Map<String, dynamic> package;
@@ -87,6 +90,7 @@ class LocalBackupManifest {
       for (final entry in entries) entry.toJson(),
     ],
     'package': package,
+    if (webDavSync != null) 'webDavSync': webDavSync!.toJson(),
   };
 
   static LocalBackupManifest fromJson(Map<String, dynamic> json) {
@@ -110,7 +114,9 @@ class LocalBackupManifest {
     if (createdAt is! String ||
         mode is! String ||
         package is! Map<String, dynamic> ||
-        rawEntries is! List) {
+        rawEntries is! List ||
+        (json['webDavSync'] != null &&
+            json['webDavSync'] is! Map<String, dynamic>)) {
       throw const LocalBackupFormatException('Backup manifest is invalid');
     }
     if (rawEntries.length > maxDataEntries) {
@@ -142,6 +148,11 @@ class LocalBackupManifest {
     return LocalBackupManifest(
       createdAt: DateTime.tryParse(createdAt)?.toUtc() ?? DateTime.utc(1970),
       mode: mode,
+      webDavSync: json['webDavSync'] == null
+          ? null
+          : WebDavSyncBackup.fromJson(
+              Map<String, dynamic>.from(json['webDavSync'] as Map),
+            ),
       package: package,
       entries: List<LocalBackupManifestEntry>.unmodifiable(entries),
     );
@@ -304,6 +315,11 @@ class LocalBackupExporter {
     LocalBackupByteProgress? onBytes,
     LocalBackupCancellation? cancellation,
     DateTime? now,
+    Future<WebDavSyncBackup?> Function(
+      Map<String, String>,
+      Map<String, String>,
+    )?
+    captureSync,
   }) async {
     if (!allProfiles && scope == null) {
       throw ArgumentError('Single-profile export needs a scope');
@@ -428,12 +444,14 @@ class LocalBackupExporter {
     try {
       stage('Preparing backup…');
       cancellation?.throwIfCancelled();
+      ProfileGraphPackageExport? identities;
       final package = await _mapStorageErrors(
         () => allProfiles
             ? service.exportAllProfiles(
                 context: context,
                 includeSecrets: true,
                 fileSinks: sinks,
+                onIdentities: (value) => identities = value,
               )
             : service.exportProfile(
                 context: context,
@@ -448,6 +466,17 @@ class LocalBackupExporter {
       }
       cancellation?.throwIfCancelled();
 
+      final syncBackup = await captureSync?.call(
+        identities?.profileBackupIdsByLocalId ??
+            {scope!.profileId: 'profile-0'},
+        identities?.resourceBackupIdsByLocalId ??
+            {
+              for (final resource in package.resources)
+                if (resource['sourceResourceId'] is String)
+                  resource['sourceResourceId'] as String:
+                      resource['backupId'] as String,
+            },
+      );
       stage('Writing manifest…');
       // Integrity stamping, JSON encoding and hashing of a manifest that can
       // reach tens of megabytes stay off the UI isolate, like the legacy
@@ -459,6 +488,7 @@ class LocalBackupExporter {
         package,
         createdAt: createdAt,
         entries: manifestEntries,
+        webDavSync: syncBackup,
       );
       final manifestBytes = encoded.bytes;
       if (manifestBytes.length > LocalBackupManifest.maxManifestBytes) {
@@ -618,6 +648,7 @@ class LocalBackupExporter {
     PortableProfilePackage package, {
     required DateTime createdAt,
     required List<LocalBackupManifestEntry> entries,
+    WebDavSyncBackup? webDavSync,
   }) {
     return Isolate.run(() async {
       final envelope = await PortableProfilePackage.withIntegrity(package);
@@ -626,6 +657,7 @@ class LocalBackupExporter {
         mode: package.mode,
         package: envelope,
         entries: entries,
+        webDavSync: webDavSync,
       );
       final bytes = utf8.encode(jsonEncode(manifest.toJson()));
       final hasher = StreamedSha256()..add(bytes);

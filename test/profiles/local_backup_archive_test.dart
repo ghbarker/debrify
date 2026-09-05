@@ -1,3 +1,4 @@
+import 'package:debrify/services/webdav_sync/webdav_sync_backup.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -187,6 +188,88 @@ void main() {
     } finally {
       await db.close();
     }
+  }
+
+  for (final allProfiles in [false, true]) {
+    test(
+      'sync snapshot is included in archive integrity and identities (all=$allProfiles)',
+      () async {
+        final authorization = await ProfileAuthorizationContext.capture(
+          registry,
+        );
+        final staging = await LocalBackupScratch.create('sync-backup');
+        addTearDown(() => LocalBackupScratch.delete(staging));
+        var captured = false;
+        final exported = await LocalBackupExporter(service: packages).export(
+          context: authorization,
+          staging: staging,
+          allProfiles: allProfiles,
+          scope: allProfiles ? null : scope,
+          captureSync: (profiles, resources) async {
+            expect(profiles[profileId], 'profile-0');
+            captured = true;
+            return const WebDavSyncBackup();
+          },
+        );
+        expect(captured, isTrue);
+        final inspection = await LocalBackupRestorer.inspect(exported.archive);
+        expect(inspection.manifest.webDavSync, isNotNull);
+        expect(inspection.manifest.webDavSync!.connection, isNull);
+        final restoreStaging = await LocalBackupScratch.create('sync-restore');
+        final stage = await LocalBackupRestorer.stage(
+          archive: exported.archive,
+          staging: restoreStaging,
+          inspection: inspection,
+        );
+        addTearDown(stage.dispose);
+        Map<String, int>? generations;
+        Future<void> prepared(
+          Map<String, String> profiles,
+          Map<String, String> connections,
+          Map<String, int> expected,
+        ) async {
+          expect(profiles.keys, contains('profile-0'));
+          generations = expected;
+          for (final entry in expected.entries) {
+            final before = await registry.getProfile(entry.key);
+            expect(
+              before == null ||
+                  before.lifecycle.name != 'active' ||
+                  before.visibleDataGeneration != entry.value,
+              isTrue,
+            );
+          }
+        }
+
+        final coordinator = ProfileRestoreCoordinator(
+          registry: registry,
+          cipher: cipher,
+        );
+        if (allProfiles) {
+          await coordinator.restoreDeviceGraph(
+            package: stage.package,
+            authorization: authorization,
+            databaseFileResolver: stage.resolveDatabase,
+            beforePublish: prepared,
+          );
+        } else {
+          await coordinator.restore(
+            package: stage.package,
+            destinationProfileId: profileId,
+            authorization: authorization,
+            databaseFileResolver: stage.resolveDatabase,
+            beforePublish: prepared,
+          );
+        }
+        expect(generations, isNotNull);
+        for (final entry in generations!.entries) {
+          expect(
+            (await registry.getProfile(entry.key))!.visibleDataGeneration,
+            entry.value,
+          );
+        }
+      },
+    );
   }
 
   for (final allProfiles in [false, true]) {

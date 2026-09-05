@@ -91,6 +91,24 @@ final class WebDavSyncExistingRootConnector {
       state = await _stateRepository.load(snapshot.namespace.id);
 
       final bootstrapDigest = snapshot.bootstrap.document.semanticDigest;
+      final restoredProfiles =
+          snapshot.namespace.values['backupRestoreProfileIds'];
+      final restoredResources =
+          snapshot.namespace.values['backupRestoreResourceIds'];
+      final legacyRestoreMaps =
+          restoredProfiles is Map && restoredResources is Map;
+      final restoringBackup =
+          snapshot.namespace.values['backupRestore'] == true ||
+          legacyRestoreMaps;
+      if (legacyRestoreMaps && !state.hasAuthenticatedMaps) {
+        state = await _stateRepository.update(
+          snapshot.namespace.id,
+          (current) => current.copyWith(
+            circleToLocalProfiles: Map<String, String>.from(restoredProfiles),
+            circleToLocalResources: Map<String, String>.from(restoredResources),
+          ),
+        );
+      }
       final adoptedBootstrapBelongsToActiveProfiles =
           state.hasAuthenticatedMaps &&
           state.circleToLocalProfiles!.containsValue(
@@ -98,7 +116,9 @@ final class WebDavSyncExistingRootConnector {
           );
       authorityCommitted =
           authorityCommitted || adoptedBootstrapBelongsToActiveProfiles;
-      if (!adoptedBootstrapBelongsToActiveProfiles) {
+      // Restored data is already published locally. Never replace it with a
+      // remote bootstrap: publish the restored records, then perform a merge.
+      if (!restoringBackup && !adoptedBootstrapBelongsToActiveProfiles) {
         await _adoption.adopt(
           WebDavSyncAdoptionRequest(
             namespaceId: snapshot.namespace.id,

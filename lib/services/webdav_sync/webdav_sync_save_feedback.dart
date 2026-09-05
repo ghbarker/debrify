@@ -56,6 +56,14 @@ class WebDavSyncSaveFeedback extends ChangeNotifier {
     notifyListeners();
   }
 
+  void forgetAccount() {
+    revision = 0;
+    confirmedRevision = 0;
+    takingLonger = false;
+    setEnabled(false);
+    _persist();
+  }
+
   void saved(int sequence) {
     revision = sequence;
     _persist();

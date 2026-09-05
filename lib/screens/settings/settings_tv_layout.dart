@@ -335,10 +335,10 @@ const List<_Category> _kCategories = [
   ),
   _Category(
     Icons.sync_alt_rounded,
-    'Sync and Migrate',
-    'Encrypted WebDAV transfer',
-    'Move your profile securely.',
-    'Save or restore an encrypted profile backup through your WebDAV server.',
+    'Sync and backup',
+    'Sync across devices and save backups',
+    'Keep your devices in sync.',
+    'Sync profiles, settings and watch progress, or save a separate backup.',
   ),
   _Category(
     Icons.storage_rounded,

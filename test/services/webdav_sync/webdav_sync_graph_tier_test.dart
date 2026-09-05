@@ -284,7 +284,7 @@ void main() {
     expect(events, <String>['scan']);
   });
 
-  test('forgetDevice verifies only the replacement bootstrap', () async {
+  test('signed-out devices stay visible and safe to remove', () async {
     final codec = WebDavSyncCodec();
     final maps = WebDavSyncIdentityMaps(
       circleToLocalProfiles: <String, String>{'profile-circle': localProfileId},
@@ -346,7 +346,17 @@ void main() {
       payload: targetManifest.toJson(),
       maxBytes: WebDavSyncLimits.maxManifestBytes,
     );
+    final registration = await codec.sealDocument(
+      key: snapshot.root.key,
+      circleId: snapshot.root.document.circleId,
+      deviceId: 'peer-device',
+      logicalName: 'registration',
+      schemaVersion: 1,
+      payload: const {'signedOut': true},
+      maxBytes: 4096,
+    );
     final transport = _ForgetTransport(
+      registration: registration,
       marker: snapshot.markerBytes,
       bootstrap: bootstrapBytes,
       targetManifest: targetBytes,
@@ -364,6 +374,16 @@ void main() {
       active: true,
     );
 
+    final devices = await tier(
+      transportFactory: ({required binding, required secrets}) => transport,
+      codec: codec,
+    ).listDevices();
+    expect(devices, hasLength(2));
+    expect(devices.first.isThisDevice, isTrue);
+    expect(devices.first.isRegistered, isTrue);
+    expect(devices.last.deviceId, 'peer-device');
+    expect(devices.last.isRegistered, isFalse);
+    events.clear();
     await tier(
       contextProvider: () async => context,
       transportFactory: ({required binding, required secrets}) => transport,
@@ -525,13 +545,25 @@ final class _FakeCycleRunner implements WebDavSyncCycleRunner {
   }
 }
 
-final class _ForgetTransport implements WebDavSyncActivationTransport {
+final class _ForgetTransport
+    implements WebDavSyncActivationTransport, WebDavSyncRegistrationTransport {
   const _ForgetTransport({
     required this.marker,
     required this.bootstrap,
     required this.targetManifest,
     required this.events,
+    this.registration,
   });
+
+  final Uint8List? registration;
+  @override
+  Future<WebDavBytesResult?> readRegistration(String deviceId) async =>
+      deviceId == 'peer-device' && registration != null
+      ? WebDavBytesResult(bytes: registration!, metadata: _metadata)
+      : null;
+  @override
+  Future<void> writeRegistration(String deviceId, Uint8List bytes) async =>
+      throw UnimplementedError();
 
   final Uint8List marker;
   final Uint8List bootstrap;

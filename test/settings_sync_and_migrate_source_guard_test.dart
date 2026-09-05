@@ -11,16 +11,16 @@ void main() {
     'lib/screens/settings/sync_and_migrate_page.dart',
   ).readAsStringSync();
 
-  test('adaptive, TV, and search surfaces all register Sync and Migrate', () {
-    expect(adaptive, contains("label: 'Sync and Migrate'"));
+  test('adaptive, TV, and search surfaces all register Sync and backup', () {
+    expect(adaptive, contains("label: 'Sync and backup'"));
     expect(
       adaptive,
-      contains("SettingsRows.syncAndMigrate,\n        'Sync and Migrate'"),
+      contains("SettingsRows.syncAndMigrate,\n        'Sync and backup'"),
     );
-    expect(adaptive, contains("title: 'Sync and Migrate'"));
+    expect(adaptive, contains("title: 'Sync and backup'"));
     expect(
       tv,
-      contains("'Sync and Migrate',\n    'Encrypted WebDAV transfer'"),
+      contains("'Sync and backup',\n    'Sync across devices and save backups'"),
     );
     expect(page, contains('SettingsRows.createWebDavBackup'));
     expect(page, contains('SettingsRows.restoreWebDavBackup'));

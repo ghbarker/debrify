@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:debrify/services/webdav_sync/webdav_sync_backup.dart';
+import 'package:debrify/services/webdav_sync/webdav_sync_codec.dart';
 import 'dart:io';
 import 'dart:async';
 import 'dart:typed_data';
@@ -30,6 +33,164 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  for (final enabled in [false, true]) {
+    test(
+      'backup connection restores enabled=$enabled with a fresh identity and restart-safe intent',
+      () async {
+        final fixture = await _openRuntimeFixture('backup');
+        addTearDown(fixture.dispose);
+        final runtime = WebDavSyncRuntime.instance;
+        final marker = await WebDavSyncCodec().sealRoot(
+          passphrase: 'backup-secret',
+          circleId: 'backup-circle',
+          createdAt: DateTime.utc(2026),
+          memoryKiB: 8,
+          iterations: 1,
+        );
+        final backup = WebDavSyncBackup.fromJson({
+          'version': 1,
+          'connection': {
+            'endpoint': 'https://example.test/dav',
+            'folder': 'Family',
+            'name': 'Server',
+            'username': 'user',
+            'password': 'saved-password',
+            'passphrase': 'backup-secret',
+            'authority': base64Encode(
+              WebDavSyncAuthorityFile(
+                markerBytes: marker,
+                syncPassphrase: 'backup-secret',
+              ).encode(),
+            ),
+            'enabled': enabled,
+          },
+          'profileIds': {'circle-profile': 'profile-0'},
+          'resourceIds': <String, String>{},
+        });
+        await runtime.prepareBackupRestore(
+          backup,
+          {'profile-0': fixture.adminId},
+          {},
+          {fixture.adminId: 1},
+        );
+        final prefs = await SharedPreferences.getInstance();
+        expect(
+          prefs.getString('webdav_sync_backup_restore_v1'),
+          isNot(contains('saved-password')),
+        );
+        // Startup finishes a published restore before any old sync is armed.
+        WebDavSyncFeature.debugOverride = true;
+        await runtime.initialize();
+        final restored = await runtime.bindingStore.load();
+        final binding = restored.stagedBinding!;
+        final namespace = restored.namespaceFor(binding)!;
+        expect(
+          binding.lifecycle,
+          enabled
+              ? WebDavSyncLifecycle.awaitingAdoption
+              : WebDavSyncLifecycle.rootVerified,
+        );
+        expect(restored.activeBindingId, isNull);
+        expect(namespace.values['backupRestore'], isTrue);
+        expect(
+          (await runtime.stateStore.load(namespace.id)).circleToLocalProfiles,
+          {'circle-profile': fixture.adminId},
+        );
+        expect(
+          (await runtime.bindingStore.readSecrets(binding)).password,
+          'saved-password',
+        );
+        expect(prefs.containsKey('webdav_sync_backup_restore_v1'), isFalse);
+        final captured = await runtime.captureBackupConnection({
+          fixture.adminId: 'profile-0',
+        }, {});
+        expect(captured.connection!['enabled'], enabled);
+        expect(captured.profileIds, {'circle-profile': 'profile-0'});
+        expect(
+          captured.connection!['authorityHash'],
+          namespace.pinnedAuthorityHash,
+        );
+        expect(
+          jsonEncode(captured.toJson()),
+          isNot(contains(namespace.deviceId)),
+        );
+        await captured.validate();
+        await runtime.finishBackupRestore();
+        expect(
+          (await runtime.bindingStore.load()).namespaceFor(binding)!.deviceId,
+          namespace.deviceId,
+        );
+        await runtime.stateStore.update(
+          namespace.id,
+          (state) => state.copyWith(
+            circleToLocalProfiles: {'old-circle': 'old-local'},
+            circleToLocalResources: {},
+          ),
+        );
+        await runtime.restoreBackupConnection(
+          backup,
+          profilesByBackupId: {'profile-0': fixture.adminId},
+          resourcesByBackupId: {},
+        );
+        final second = await runtime.bindingStore.load();
+        expect(
+          second.namespaceFor(second.stagedBinding!)!.deviceId,
+          isNot(namespace.deviceId),
+        );
+        expect(
+          (await runtime.stateStore.load(namespace.id)).circleToLocalProfiles,
+          {'circle-profile': fixture.adminId},
+        );
+        await runtime.stateStore.update(
+          namespace.id,
+          (state) => state.copyWith(
+            circleToLocalProfiles: {},
+            circleToLocalResources: {},
+          ),
+        );
+        expect(
+          (await runtime.bindingStore.load())
+              .namespaceFor(second.stagedBinding!)!
+              .values,
+          contains(WebDavSyncBindingStore.engineStateFileValueKey),
+        );
+      },
+    );
+  }
+
+  test('unpublished restore cannot replace the existing connection', () async {
+    final fixture = await _openRuntimeFixture('backup-aborted');
+    addTearDown(fixture.dispose);
+    final runtime = WebDavSyncRuntime.instance;
+    const config = WebDavConfig(
+      id: 'original',
+      name: 'Original',
+      baseUrl: 'https://example.test/dav',
+      username: 'user',
+      password: 'password',
+    );
+    final original = await runtime.bindingStore.stageBinding(
+      location: WebDavSyncFolderLocation.fromConfig(config, 'Original'),
+      config: config,
+      syncPassphrase: 'original-secret',
+    );
+    await runtime.prepareBackupRestore(
+      const WebDavSyncBackup(),
+      {'profile-0': fixture.adminId},
+      {},
+      {fixture.adminId: 999},
+    );
+    WebDavSyncFeature.debugOverride = true;
+    await runtime.initialize();
+    expect((await runtime.bindingStore.load()).stagedBindingId, original.id);
+    expect(
+      (await SharedPreferences.getInstance()).containsKey(
+        'webdav_sync_backup_restore_v1',
+      ),
+      isFalse,
+    );
+  });
 
   test('startup recovers durable onboarding intent after activation', () async {
     SharedPreferences.setMockInitialValues(const <String, Object>{});

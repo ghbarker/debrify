@@ -211,6 +211,58 @@ void main() {
     );
   }
 
+  for (final fileBacked in [false, true]) {
+    test('backup reconnect preserves data (file maps=$fileBacked)', () async {
+      final namespace = await bindingStore.updateNamespaceValues(
+        snapshot.namespace.id,
+        (values) => fileBacked
+            ? {...values, 'backupRestore': true}
+            : {
+                ...values,
+                'backupRestoreProfileIds': {
+                  'profile-circle': authorization.profileId,
+                },
+                'backupRestoreResourceIds': <String, String>{},
+              },
+      );
+      if (fileBacked) {
+        await states.update(
+          namespace.id,
+          (state) => state.copyWith(
+            circleToLocalProfiles: {'profile-circle': authorization.profileId},
+            circleToLocalResources: {},
+          ),
+        );
+      }
+      snapshot = WebDavSyncExistingRootSnapshot(
+        binding: snapshot.binding,
+        namespace: namespace,
+        root: snapshot.root,
+        markerBytes: snapshot.markerBytes,
+        serverNowMs: snapshot.serverNowMs,
+        bootstrap: snapshot.bootstrap,
+        manifests: snapshot.manifests,
+        schemaRatchet: snapshot.schemaRatchet,
+      );
+      final active = await connector().connect(
+        bindingId: binding.id,
+        authorization: authorization,
+        recaptureAuthorization: () async => authorization,
+        replacementConfirmed: true,
+      );
+      expect(active.lifecycle, WebDavSyncLifecycle.active);
+      expect(events, ['discover', 'publish', 'merge']);
+      expect(
+        (await bindingStore.load()).namespaceFor(active)!.values,
+        isNot(
+          contains(fileBacked ? 'backupRestore' : 'backupRestoreProfileIds'),
+        ),
+      );
+      expect((await states.load(namespace.id)).circleToLocalProfiles, {
+        'profile-circle': authorization.profileId,
+      });
+    });
+  }
   test('first connection requires consent before discovery', () async {
     await expectLater(
       connector().connect(

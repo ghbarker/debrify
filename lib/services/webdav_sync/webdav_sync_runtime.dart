@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'webdav_sync_backup.dart';
+import 'webdav_sync_logout.dart';
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -196,6 +199,10 @@ abstract interface class WebDavSyncManagementController {
   Future<void> forgetDevice(String deviceId);
 }
 
+abstract interface class WebDavSyncLogoutController {
+  Future<void> logout();
+}
+
 enum WebDavSyncTvManualAvailability {
   available,
   inactive,
@@ -314,6 +321,7 @@ final class WebDavSyncRuntime
     implements
         WebDavSyncActivationController,
         WebDavSyncManagementController,
+        WebDavSyncLogoutController,
         WebDavSyncTvManualController,
         WebDavSyncReconfigurationController,
         WebDavSyncRuntimeGate {
@@ -436,6 +444,7 @@ final class WebDavSyncRuntime
       MainPageBridge.addPlaybackCheckpointListener(_onPlaybackCheckpoint);
     }
     try {
+      await finishBackupRestore();
       await _recoverAdoptions();
       if (enableRuntime) {
         await recoverWebDavSyncOnboardingIntent(
@@ -524,6 +533,140 @@ final class WebDavSyncRuntime
     }
     await _resumeFirstJoin();
     await _signalAutomatically(WebDavSyncTrigger.launch);
+  }
+
+  Future<T> withBackupSnapshot<T>(Future<T> Function() capture) =>
+      _operations.run(capture);
+
+  Future<WebDavSyncBackup> captureBackupConnection(
+    Map<String, String> profiles,
+    Map<String, String> resources,
+  ) => _operations.run(
+    () => WebDavSyncBackup.capture(
+      store: bindingStore,
+      states: stateStore,
+      profilesByLocalId: profiles,
+      resourcesByLocalId: resources,
+    ),
+  );
+
+  /// Drain old-account work before profile publication, then restart using
+  /// the restored connection only once all imported records are committed.
+  Future<T> withBackupRestore<T>(Future<T> Function() restore) async {
+    await initialize();
+    pauseForReconfiguration();
+    try {
+      return await _operations.run(restore);
+    } finally {
+      await finishBackupRestore();
+      await resumeAfterReconfiguration();
+    }
+  }
+
+  static const _backupRestoreKey = 'webdav_sync_backup_restore_v1';
+
+  Future<void> prepareBackupRestore(
+    WebDavSyncBackup backup,
+    Map<String, String> profiles,
+    Map<String, String> resources,
+    Map<String, int> generations,
+  ) async {
+    final payload = utf8.encode(
+      jsonEncode({
+        'backup': backup.toJson(),
+        'profiles': profiles,
+        'resources': resources,
+        'generations': generations,
+      }),
+    );
+    final sealed = await DeviceKeyProvider.cipher.seal(
+      payload,
+      associatedData: utf8.encode(_backupRestoreKey),
+    );
+    final prefs = await DevicePreferences.instance();
+    if (!await prefs.setString(_backupRestoreKey, sealed)) {
+      throw StateError('Could not prepare WebDAV backup restore');
+    }
+  }
+
+  /// Publication proof survives removal of the restore cleanup journal. A
+  /// staged generation or staging profile must never reconnect an account.
+  Future<void> finishBackupRestore() async {
+    final prefs = await DevicePreferences.instance();
+    final sealed = prefs.getString(_backupRestoreKey);
+    if (sealed == null) return;
+    final payload =
+        jsonDecode(
+              utf8.decode(
+                await DeviceKeyProvider.cipher.open(
+                  sealed,
+                  associatedData: utf8.encode(_backupRestoreKey),
+                ),
+              ),
+            )
+            as Map<String, dynamic>;
+    final generations = Map<String, int>.from(payload['generations'] as Map);
+    var published = generations.isNotEmpty;
+    for (final entry in generations.entries) {
+      final profile = await ProfileBootstrap.registry.getProfile(entry.key);
+      if (profile == null ||
+          profile.lifecycle.name != 'active' ||
+          profile.visibleDataGeneration != entry.value) {
+        published = false;
+      }
+    }
+    if (published) {
+      await restoreBackupConnection(
+        WebDavSyncBackup.fromJson(
+          Map<String, dynamic>.from(payload['backup'] as Map),
+        ),
+        profilesByBackupId: Map<String, String>.from(
+          payload['profiles'] as Map,
+        ),
+        resourcesByBackupId: Map<String, String>.from(
+          payload['resources'] as Map,
+        ),
+      );
+    }
+    if (!await prefs.remove(_backupRestoreKey)) {
+      throw StateError('Could not finish WebDAV backup restore');
+    }
+  }
+
+  Future<void> restoreBackupConnection(
+    WebDavSyncBackup backup, {
+    required Map<String, String> profilesByBackupId,
+    required Map<String, String> resourcesByBackupId,
+  }) async {
+    Map<String, String> project(
+      Map<String, String> source,
+      Map<String, String> ids,
+    ) => {
+      for (final entry in source.entries)
+        if (ids[entry.value] != null) entry.key: ids[entry.value]!,
+    };
+    final connection = backup.connection;
+    await bindingStore.restoreBackupConnection(
+      config: connection == null ? null : backup.config,
+      folderPath: connection?['folder'],
+      syncPassphrase: connection?['passphrase'],
+      authorityBytes: connection == null
+          ? null
+          : base64Decode(connection['authority'] as String),
+      authorityContentHash: connection?['authorityHash'] as String?,
+      enabled: connection?['enabled'] == true,
+      prepareState: (namespace) => stateStore.prepareBackupState(
+        namespace,
+        profileIds: project(backup.profileIds, profilesByBackupId),
+        resourceIds: project(backup.resourceIds, resourcesByBackupId),
+      ),
+    );
+    _scheduler?.forgetAccount();
+    WebDavSyncSaveFeedback.instance.forgetAccount();
+    _firstJoinAutoResume.reset();
+    _cycleRunner?.forgetAccount();
+    _missingStateNamespaces.clear();
+    _clearCachedRoot();
   }
 
   @override
@@ -714,6 +857,33 @@ final class WebDavSyncRuntime
       await _captureManagingAdmin();
       return _graphTier().listDevices();
     });
+  }
+
+  @override
+  Future<void> logout() async {
+    await initialize();
+    _requireInteractiveWorkAllowed();
+    final authorization = await _captureManagingAdmin();
+    pauseForReconfiguration();
+    try {
+      await _operations.run(() async {
+        await WebDavSyncLogout(store: bindingStore).run(
+          forgetLocalNamespace: stateStore.forgetLoggedOutNamespace,
+          authorize: () async {
+            await authorization.validate(ProfileBootstrap.registry);
+          },
+        );
+        _scheduler?.forgetAccount();
+        WebDavSyncSaveFeedback.instance.forgetAccount();
+        _firstJoinAutoResume.reset();
+        _cycleRunner?.forgetAccount();
+        WebDavSyncLibraryMutation.originDeviceId = 'local-device';
+        _missingStateNamespaces.clear();
+        _clearCachedRoot();
+      });
+    } finally {
+      await resumeAfterReconfiguration();
+    }
   }
 
   @override
@@ -909,6 +1079,7 @@ final class WebDavSyncRuntime
     if (_scheduler == null || !_joinForeground || _reconfigurationPaused) {
       return;
     }
+    if (WebDavSyncBindingStore.logoutPending(await bindingStore.load())) return;
     final delay = await _firstJoinAutoResume.retryDelay();
     if (delay == null || !_joinForeground || _reconfigurationPaused) return;
     // Platform holds get a bounded wakeup rather than a zero-delay busy loop.
@@ -941,6 +1112,9 @@ final class WebDavSyncRuntime
           _reconfigurationPaused ||
           playbackActiveOnTelevision ||
           tvOsLowMemory) {
+        return;
+      }
+      if (WebDavSyncBindingStore.logoutPending(await bindingStore.load())) {
         return;
       }
       final outcome = await _operations.run(() async {
@@ -1239,6 +1413,7 @@ final class WebDavSyncRuntime
 
   Future<void> _recoverAdoptions() async {
     final stored = await bindingStore.load();
+    if (WebDavSyncBindingStore.logoutPending(stored)) return;
     var recoveredJournal = false;
     final components = _components();
     final adoption = _adoption(components);
@@ -1296,6 +1471,12 @@ final class WebDavSyncRuntime
       return;
     }
     final stored = await bindingStore.load();
+    if (WebDavSyncBindingStore.logoutPending(stored)) {
+      _disarmScheduler();
+      _maintenanceTimer?.cancel();
+      _maintenanceTimer = null;
+      return;
+    }
     final active = stored.activeBinding;
     if (active == null || active.lifecycle != WebDavSyncLifecycle.active) {
       _clearCachedRoot();
@@ -1380,6 +1561,7 @@ final class WebDavSyncRuntime
 
   Future<WebDavSyncCycleContext?> _activeContext() async {
     final stored = await bindingStore.load();
+    if (WebDavSyncBindingStore.logoutPending(stored)) return null;
     final binding = stored.activeBinding;
     final namespace = binding == null ? null : stored.namespaceFor(binding);
     final marker = namespace?.markerBytes;
@@ -1620,6 +1802,8 @@ final class WebDavSyncAuthenticationFailureTracker {
   void recordSuccess(String bindingId) {
     _consecutiveFailures.remove(bindingId);
   }
+
+  void reset() => _consecutiveFailures.clear();
 }
 
 typedef WebDavSyncHttpClientFactory = http.Client Function();
@@ -1750,6 +1934,11 @@ final class _ProductionCycleRunner
   final WebDavSyncSectionCache _sectionCache = WebDavSyncSectionCache();
 
   void clearSectionCache() => _sectionCache.clear();
+
+  void forgetAccount() {
+    _authenticationFailures.reset();
+    _sectionCache.clear();
+  }
 
   void retainBinding(String bindingId) =>
       _httpClientOwner.retainBinding(bindingId);
