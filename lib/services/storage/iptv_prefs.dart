@@ -15,7 +15,7 @@ import '../secret_vault.dart';
 /// continue-watching prefs. [StorageService] forwards to this store.
 ///
 /// Style keys (`iptv_style`, `iptv_channel_preview_enabled`,
-/// `iptv_player_guide_style`) stay on StorageService until S2-4.
+/// `iptv_player_guide_style`) live on [AppStylePrefs] (S2-4).
 /// Shared startup keys `startup_auto_launch_enabled` / `startup_mode`
 /// stay owned by StorageService. Key names and encodings are frozen.
 class IptvPrefs {

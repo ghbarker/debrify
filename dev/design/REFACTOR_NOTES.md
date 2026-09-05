@@ -266,8 +266,7 @@ behaviour and must be restored, not kept as quirks.
   (same body as `StorageService.profileAllowsAdultContent`) so the stores do
   not import the god file. Call sites use `_profileAllowsAdultContent()`.
 - **Callers still import `StorageService`.** `@Deprecated` waits for Q2.
-- **`debrify_tv_style` / `debrify_tv_player_style` stay on StorageService**
-  (S2-4). Player/IPTV prefs are S2-3.
+- **`debrify_tv_style` / `debrify_tv_player_style` extracted in S2-4.**
 
 ### S2-2 · Provider credential prefs
 
@@ -295,10 +294,10 @@ behaviour and must be restored, not kept as quirks.
 
 ### S2-3 · Player and IPTV prefs
 
-- **Style keys stayed.** `player_dock_style` / `palette` / `size`,
+- **Style keys extracted in S2-4.** `player_dock_style` / `palette` / `size`,
   `play_loader_style`, `tv_player_controls_style`, `debrify_tv_player_style`,
   `iptv_style`, `iptv_channel_preview_enabled`, `iptv_player_guide_style`
-  remain on StorageService for S2-4 (`app_style_prefs`).
+  now live on `AppStylePrefs`.
 - **Completion thresholds stayed.** `movie_completion_threshold`,
   `episode_completion_threshold`, purge/migrate hooks, and
   `_getPlaybackStateMap` stay for S2-6 / S2-7.
@@ -363,6 +362,37 @@ behaviour and must be restored, not kept as quirks.
   `channel_cache_warmer.dart` for `unrestrict['download']` /
   `unrestrict['filesize']` so the filesize read is not a new allowlist
   miss. Same relocate pattern as G1 `cacheExtent` / M1-0 WatchSession.
+
+### S2-4 · App style prefs
+
+- **Discover layout + source keys moved** so Leaves hit 800. They are
+  layout/chrome caches (`discover_layout`, `discover_default_source`,
+  `discover_last_source`), not a later Discover store. Say so if a later
+  slice wants them back.
+- **Launch animation, text brightness, sidebar configuration, TV UI scale,
+  and TV hero artwork** moved with the style-cache family for the same
+  Leaves reason. TV render quality / `getTvLowResRenderActive` stayed
+  (device-level, `DevicePreferences`).
+- **`migrateDefaultsGeneration` stays on StorageService** (S2-7). It now
+  writes through `AppStylePrefs.appThemeKey` / `detailThemeKey` /
+  `detailPageStyleKey` / `tvSidebarStyleKey` / `desktopSidebarStyleKey` /
+  `debrifyTvStyleKey` (same pairing, same literals).
+- **Unknown → origin fallbacks.** Dock `classic`, play-loader `marquee`,
+  TV controls `marquee`, Debrify TV player `cinema`, app theme `legacy`,
+  detail theme `signal`, detail page `console`, Debrify TV style `grid`,
+  IPTV look `command`, IPTV guide `classic` (tvOS unset → `spotlight`),
+  phone nav `classic`, launch ident `ident`, TV sidebar `ghost`, desktop
+  sidebar `rail`. Keep.
+- **Cache publish order is not uniform.** `debrifyTvStyleCached` /
+  `iptvStyleCached` / sidebar / discover publish *before*
+  `ProfilePreferences.instance()`. `themeOverridesCached` and
+  `launchIdentPaletteCached` publish *after* instance(), before the write.
+  Detail page / theme / app theme / launch animation publish *after* the
+  write. Keep.
+- **`two_tier` dock style is still accepted** (legacy synonym of `auto`).
+- **TV UI scale setter writes any int;** only the getter coerces to 90.
+- **Empty `theme_overrides` removes the key.**
+- **Callers still import `StorageService`.** `@Deprecated` waits for Q2.
 
 ### V1-3 · subtitle track controller
 

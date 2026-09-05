@@ -61,7 +61,8 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | S2-1 · stremio/social/TV prefs | merged | `refactor/s2-1-stremio-social-tv-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-0 | **#77.** Leaves −531. Prefixes `engine_tv_` in `byKey`. |
 | S2-2 · provider credential prefs | merged | `refactor/s2-2-provider-credential-prefs` | worker | `storage_service.dart`, `lib/services/storage/**` | S2-1 | **#82.** Leaves −575. Named store 971. CloudSecretPrefs/MDBList skipped. |
 | S2-3 · player + IPTV prefs | merged | `refactor/s2-3-player-iptv-prefs` | worker | `storage_service.dart` [player/IPTV hunks], `lib/services/storage/player_prefs.dart`, `iptv_prefs.dart`, `storage_key_ownership.dart`, tests | S2-2 | **#86.** Leaves −1 067 (style/completion stayed for S2-4 / S2-6). Did not merge parked `refactor/g3-player-prefs`. |
-| S2-4 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-3 | Sequential. Target ≤ 2 800. S2-4 = `app_style_prefs`. |
+| S2-4 · app style prefs | in review | `refactor/s2-4-app-style-prefs` | worker | `storage_service.dart` [style-cache hunks], `lib/services/storage/app_style_prefs.dart`, `storage_key_ownership.dart`, tests | S2-3 | Leaves ≥ 800. Pin predates move. Discover / launch / text-brightness / sidebar-config / TV UI scale / hero taken to hit Leaves. |
+| S2-5 … S2-7 | queued | — | — | `storage_service.dart`, `lib/services/storage/**` | S2-4 | Sequential. Target ≤ 2 800. S2-5 tracking; S2-6 playback progress; S2-7 migrate hooks. |
 | G2 · under 3 000 | merged | `refactor/g2-download-location` | worker | `settings_screen.dart` [download-location hunks], `download_location_controller.dart` | — | **#85.** 3 107 → 2 899 (−208). Target ≤ 3 000 met. |
 | Q1 · layering enforcement | queued | — | — | `tool/check_layering.dart`, `test.yml` | gate 2 | — |
 | Q2 · shim + comment sweep | queued | — | — | per area, assigned at gate 2 | gate 2 | — |

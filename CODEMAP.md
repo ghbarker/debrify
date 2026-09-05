@@ -129,14 +129,15 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   **S2-3:** player A/V / external-player / skip-segment / UI-feedback / network
   tuning live in `lib/services/storage/player_prefs.dart` (`PlayerPrefs`); IPTV
   playlist / decoder / last-live / startup / series-audio / CW-tracking live in
-  `lib/services/storage/iptv_prefs.dart` (`IptvPrefs`). Style keys
-  (`player_dock_*`, `iptv_style`, `tv_player_controls_style`,
-  `debrify_tv_player_style`, …) stay on StorageService until S2-4.
+  `lib/services/storage/iptv_prefs.dart` (`IptvPrefs`).
+  **S2-4:** sync style caches (looks, docks, chrome, launch ident, Discover
+  layout, TV UI scale / hero artwork) live in
+  `lib/services/storage/app_style_prefs.dart` (`AppStylePrefs`).
   Key ownership pin: `lib/services/storage/storage_key_ownership.dart`
   (`byKey` — every declared / inline / interpolated prefs name, one store).
   **Façade rule (S2-0):** `StorageService.x` stays a forwarding façade until callers
   move; `@Deprecated` waits for Q2; encodings and key **strings** are frozen.
-  Remaining domains stay on StorageService until S2-4…S2-7.
+  Remaining domains stay on StorageService until S2-5…S2-7.
 - **`lib/services/torrent_playback_service.dart`** 🔴 — provider-agnostic play/add/bind pipeline.
   Magnet add, hashless bound replay, download-picker lazy URLs, launcher/TV
   unlock, in-app player unlock, and Stremio TV torrent resolve go through
@@ -391,8 +392,9 @@ is an editor mirror, not the source of truth. How to add a provider:
   still import `StorageService` (façade until callers move; `@Deprecated` in Q2).
   `lib/services/storage/player_prefs.dart` (`PlayerPrefs`) and
   `lib/services/storage/iptv_prefs.dart` (`IptvPrefs`) own player + IPTV prefs
-  (S2-3). `debrify_tv_style` / `debrify_tv_player_style` / dock / IPTV look
-  keys stay on StorageService until S2-4.
+  (S2-3). `lib/services/storage/app_style_prefs.dart` (`AppStylePrefs`) owns
+  sync style caches (S2-4): `debrify_tv_style` / `debrify_tv_player_style` /
+  dock / IPTV look / themes / sidebars / launch ident / Discover layout.
 - Collections (imported Nuvio/Xperience-style folder groups → Home rows of folder tiles):
   `lib/models/home_collection.dart` (schema + parser + `collection:<id>` row ids),
   `lib/services/home_collections_store.dart` (`home_collections_v1`, file/URL/paste import, addon
