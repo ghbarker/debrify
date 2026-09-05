@@ -5,15 +5,9 @@ import 'package:debrify/services/cloud/cloud_capabilities.dart';
 import 'package:debrify/services/debrid_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Pins the Magic TV RD/AD HTTP call shapes *before* they move onto a
-/// cloud-port capability. Drives the origin functions / call sites, not a
-/// new adapter file.
-///
-/// After M1-1, `_rdLinkPassesSizeRules` lives in
-/// `lib/services/debrify_tv/channel_cache_warmer.dart`. Source scans that
-/// cover `unrestrict['download']` / `unrestrict['filesize']` read the host
-/// plus that file when present (path identity; same pattern as M1-0
-/// WatchSession / G1 stage `cacheExtent` pins).
+/// Supplemental source/type inventory only, not behavioral origin proof.
+/// The live host pin is magic_tv_provider_watch_origin_test.dart. M1-3 retains
+/// captured-key service bindings; these are not key-rereading cloud ports.
 ///
 /// Quirks:
 /// - [DebridService.unrestrictLink] returns a Map; Magic TV reads
@@ -23,7 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 ///   Magic TV reads `downloadLink`, `torrentId`, `links`.
 /// - [AllDebridService.unlockLink] returns a String URL.
 /// - Magic TV passes `apiKey` as the first argument. The later port hides
-///   that behind [CloudCredentials].
+///   that behind CloudCredentials; M1-3 deliberately retains capture timing.
 /// - Existing [CloudUnlock.unlockPlaybackEntry] / [CloudMagnetAdd.addMagnet]
 ///   / [CloudMagicTvLockedLinks] are different dialects — do not unify.
 String _read(String path) =>
@@ -32,12 +26,41 @@ String _read(String path) =>
 /// Host plus the extracted cache warmer so `unrestrict['filesize']` still
 /// resolves after M1-1 moved `_rdLinkPassesSizeRules`.
 String _magicTvSources() {
-  final buf = StringBuffer(_read('lib/screens/magic_tv_screen.dart'));
-  final moved = File('lib/services/debrify_tv/channel_cache_warmer.dart');
-  if (moved.existsSync()) {
-    buf.writeln(_read(moved.path));
+  var host = _read('lib/screens/magic_tv_screen.dart');
+  const aliases = {
+    'unrestrictLink': 'DebridService.unrestrictLink',
+    'addTorrentPreferVideos': 'DebridService.addTorrentToDebridPreferVideos',
+    'unlockLink': 'AllDebridService.unlockLink',
+  };
+  // Check each exact captured-key tear-off before excluding its registration
+  // from the invocation inventory. No file or call-site exemption.
+  for (final alias in aliases.entries) {
+    final registration = '${alias.key}: ${alias.value},';
+    expect(registration.allMatches(host).length, 1);
+    host = host.replaceFirst(registration, '');
   }
-  return buf.toString();
+  final buf = StringBuffer(host);
+  buf.writeln(_read('lib/services/debrify_tv/channel_cache_warmer.dart'));
+  for (final provider in [
+    'provider', 'real_debrid', 'torbox', 'pikpak', 'premiumize', 'alldebrid',
+  ]) {
+    var flow = _read('lib/screens/debrify_tv/watch/${provider}_watch_flow.dart');
+    for (final alias in aliases.entries) {
+      flow = flow.replaceAll('host.${alias.key}(', '${alias.value}(');
+    }
+    buf.writeln(flow);
+  }
+  // Retain all original assertions below; canonicalize only formatter layout
+  // of these exact calls, never argument expressions, values or call counts.
+  return buf.toString()
+      .replaceAllMapped(
+        RegExp(r'DebridService\.unrestrictLink\(\s*(apiKeyEarly),'),
+        (m) => 'DebridService.unrestrictLink(\n                ${m[1]},',
+      )
+      .replaceAllMapped(
+        RegExp(r'DebridService\.addTorrentToDebridPreferVideos\(\s*(apiKey),\s*(magnetLink),'),
+        (m) => 'DebridService.addTorrentToDebridPreferVideos(\n              ${m[1]},\n              ${m[2]},',
+      );
 }
 
 void main() {

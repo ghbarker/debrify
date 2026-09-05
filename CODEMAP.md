@@ -261,9 +261,11 @@ lane; list them.
 **Still on string matches** (high level; P2 owns the migration, not this lane)
 
 - Magic TV / Debrify TV: `lib/screens/magic_tv_screen.dart` (**P2a**, **M1**) —
-  provider constants, chips, `_watch*` dispatch. Still calls
-  `DebridService.unrestrictLink` / `addTorrentToDebridPreferVideos` and
-  `AllDebridService.unlockLink` directly; the P1b port is ready for M1.
+  provider constants/chips and thin `_watch*` entry wrappers. Provider watch
+  orchestration lives in `lib/screens/debrify_tv/watch/*_watch_flow.dart`.
+  Typed host bindings retain captured-key `DebridService.unrestrictLink` /
+  `addTorrentToDebridPreferVideos` and `AllDebridService.unlockLink` calls;
+  this is not a completed P1b port migration (its ports reread credentials).
 - Stremio TV screen + picker: `lib/screens/stremio_tv/` (**P2b**).
 - Launcher Real-Debrid spellings + bulk-add: `lib/services/video_player_launcher.dart`,
   `lib/services/torrent_bulk_add_service.dart` (**P2c**).
@@ -352,7 +354,16 @@ is an editor mirror, not the source of truth. How to add a provider:
   Existing host seam adapters remain through M1-5/M1-6; review their removal
   after those callers migrate. The flow's YAML cache-read wrapper remains
   the I/O boundary and has no planned expiry. Create/update single-channel
-  dialogs and watch flows stay on the host; M1-3 waits for M1-fix to merge.
+  dialogs remain on the host. M1-3 watch flows: `ProviderWatchFlow` owns Quick
+  Play orchestration; `TorboxWatchFlow`, `PikpakWatchFlow`, `PremiumizeWatchFlow`,
+  `AlldebridWatchFlow`, and `RealDebridWatchFlow` own per-provider/cached paths
+  under `lib/screens/debrify_tv/watch/`. `WatchFlowBindings` keeps live host
+  state, navigation, existing preparation/prefetch/launcher callbacks and
+  captured-key service calls. Ten entry wrappers and typed bindings are retained:
+  review M1-5; remove/review all in M1-6 before phase completion. No pure-port claim.
+  Live origin/runtime orchestration pins: `test/magic_tv_provider_watch_origin_test.dart`
+  (21 cases; actual route requests/next callbacks, not native video playback).
+  `test/cloud_magic_tv_unlock_pin_test.dart` is supplemental inventory only.
   Default pick / overlay strings: `lib/services/cloud/magic_tv_provider.dart`
   (`playbackPrecedence` mapped to `real_debrid`; display stays `Torbox` / `Real Debrid`).
 - Data: `lib/models/debrify_tv/`, `lib/services/debrify_tv_repository.dart`,
