@@ -148,3 +148,7 @@ PR121merged1274476d exact96cd6acc afterLocke187/origin9/body52+C0integration12pa
 
 122merged2bbd9f6d and123397398d5 afterexactall3CIgreen+independent107/47checks/originbodyproofs. Difference:780MagicTV+732searchhostLeaves, dedicatedchannel/hero ownership. More:Androidpositive unproven,7channelwrappersM1-6/21heroaliasesG1'-8 expiry; fullnextgateactiveactual397398d5. Currentcounts9281/11926/4519/4365/2899 vsoriginal19070/16278/10716/9963/7905. No manualpassclaim.
 
+
+## Full automated gate passed: actualmain397398d5/tree65c50171
+Generic5283pass/12exacthistorical/2skip;goldens21exacthistorical after2retries;no unexpected/unused. Native1origin+1current/0skip. Analyzer438/454no new;Python55;layer77normalpass+delta0 firstparent/premerge. Windows158.1s/Android104.2s PASS. Evidence C:/Users/hunth/debrify/debrify-c0-main-3973-gate/.dart_tool/main-gate/gate-summary.json; manualdeferred,video readinessunproven. M15productwaitsgreenpin+typeddesignonly. G17origin6realcases/62suiteindependentlyPASS; standalonecontract stillrequired. C0availableindependentreview, V16paused.
+
