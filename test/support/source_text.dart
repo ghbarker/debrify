@@ -10,22 +10,8 @@ String readSource(String path) =>
 /// Compare a filesystem path as POSIX segments (Windows backslashes).
 String posixPath(String path) => p.posix.normalize(path.replaceAll(r'\', '/'));
 
-/// Delete a temp tree. Windows AV / open handles raise [FileSystemException]
-/// (often [PathAccessException]); retry instead of failing the suite.
+/// Delete only after the caller has closed its resources. An ownership failure
+/// must stay visible; delaying and retrying cannot establish correct teardown.
 Future<void> deleteTempTree(Directory dir) async {
-  Object? last;
-  for (var attempt = 0; attempt < 6; attempt++) {
-    try {
-      if (dir.existsSync()) {
-        dir.deleteSync(recursive: true);
-      }
-      return;
-    } on FileSystemException catch (e) {
-      last = e;
-      await Future<void>.delayed(Duration(milliseconds: 40 * (attempt + 1)));
-    }
-  }
-  if (last != null) {
-    throw last;
-  }
+  if (await dir.exists()) await dir.delete(recursive: true);
 }

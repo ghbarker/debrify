@@ -107,6 +107,8 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   Source edit/add dialogs are `lib/widgets/sources/source_binding_dialogs.dart`
   (`SourceBindingDialogs` — meta + configured cloud/local options → persist /
   torrent+keyword bind callbacks; host `_handleEditOrSelectSource` stays the entry).
+  Cloud route callbacks: `lib/screens/search/source_binding_routes.dart`
+  (`SourceBindingRoutes.cloud`).
   In-tab keyword torrent search is `lib/screens/search/keyword_search_controller.dart`
   (`KeywordSearchController`, `KwPreservedState`) +
   `lib/screens/search/keyword_search_screen.dart` (`KeywordSearchScreen`).
@@ -297,6 +299,8 @@ is an editor mirror, not the source of truth. How to add a provider:
   `VideoPlayerScreen` public constructor stays). Resume:
   `lib/screens/video_player/resume_controller.dart` (`ResumeController` +
   `ResumeContext` / `ResumeSession`; host keeps `_ResumeSession` adapter).
+  Shared player dialog: `lib/widgets/player/spotlight_dialog.dart`
+  (`showSpotlightDialog`, `SpotlightDialogCard`).
   Identify-title sheet: `lib/widgets/player/identify_title_sheet.dart`
   (`showIdentifyTitleSearchSheet` → `StremioMeta?`). Subtitle/track restore,
   persist, diagnostics, and addon fetch:

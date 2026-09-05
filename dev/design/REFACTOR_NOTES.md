@@ -25,8 +25,8 @@ Phase 2 extractions also follow `dev/design/REFACTOR_PLAN_PHASE2.md` (binding as
 `tool/check_layering.dart`: **77** at #72 → **99** pre-#95 → **106** after
 #95/#98 → **90** after **#100** (V1-fix). Ceiling is **90**.
 `--strict` remains Q1. Remaining service offender in the six-file class:
-`channel_import_export.dart` (M1-2, 7). #96 would re-grow if
-`continue_watching_controller.dart` stays under `lib/services/`.
+`channel_import_export.dart` (M1-2, 7). #96 path-moved both CW units to
+`lib/screens/search/` so the count stays 90.
 
 | File | Lane | After #100 |
 |---|---|---|

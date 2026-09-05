@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../utils/platform_util.dart';
+import '../../utils/platform_util.dart';
 
 /// The player's small-confirm grammar (Spotlight): one centered glass card
 /// with hairline border and tvOS pill buttons — replacing the assorted

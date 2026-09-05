@@ -85,6 +85,7 @@ import '../services/imdb_trailer_service.dart';
 import '../services/youtube_service.dart';
 import '../widgets/debrid_action_sheet.dart';
 import '../widgets/sources/source_binding_dialogs.dart';
+import 'search/source_binding_routes.dart';
 import '../widgets/hero_trailer_backdrop.dart';
 import '../widgets/home/card_focus_rise.dart';
 import '../widgets/home/home_theme.dart';
@@ -7754,6 +7755,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       SourceBindingDialogs.showEdit(
         context: context,
         item: item,
+        cloudRoutes: SourceBindingRoutes.cloud,
         initial: initial,
         onRefreshBound: _refreshBoundSources,
         onTorrentSearch: _openBindSources,
@@ -7767,6 +7769,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       SourceBindingDialogs.showAdd(
         context: context,
         item: item,
+        cloudRoutes: SourceBindingRoutes.cloud,
         onRefreshBound: _refreshBoundSources,
         onTorrentSearch: _openBindSources,
         onKeywordSearch: _openKeywordBind,

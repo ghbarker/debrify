@@ -27,6 +27,52 @@ void main() {
     await deleteTempTree(root);
   });
 
+  Future<void> releaseFileImages(WidgetTester tester) async {
+    // Mounting Image does not imply its FileImage codec has finished loading.
+    // Drain that real IO while still pumping the test's frame scheduler before
+    // dropping the last listener and evicting the codec that owns the file.
+    final providers = tester
+        .widgetList<Image>(find.byType(Image))
+        .map((image) => image.image)
+        .toList();
+    for (final provider in providers) {
+      final stream = provider.resolve(ImageConfiguration.empty);
+      var loaded = false;
+      Object? loadError;
+      final listener = ImageStreamListener(
+        (info, _) {
+          info.dispose();
+          loaded = true;
+        },
+        onError: (Object error, StackTrace? stack) {
+          loadError = error;
+          loaded = true;
+        },
+      );
+      stream.addListener(listener);
+      try {
+        for (var attempt = 0; !loaded && attempt < 50; attempt++) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)),
+          );
+          await tester.pump();
+        }
+        expect(loadError, isNull);
+        expect(
+          loaded,
+          isTrue,
+          reason: 'FileImage must finish decoding before teardown',
+        );
+      } finally {
+        stream.removeListener(listener);
+      }
+    }
+    await tester.pumpWidget(const SizedBox.shrink());
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+    await tester.pump();
+  }
+
   Widget harness({
     required String? avatarKey,
     bool focused = false,
@@ -146,6 +192,7 @@ void main() {
       await pumpResolved(tester, harness(avatarKey: key, focused: true));
       expect(find.byType(Image), findsOneWidget);
       expect(find.byKey(ProfileAvatarView.stillFrameKey), findsNothing);
+      await releaseFileImages(tester);
     });
 
     testWidgets('animateWhenIdle plays the GIF without focus (touch)', (
@@ -158,6 +205,7 @@ void main() {
       );
       expect(find.byType(Image), findsOneWidget);
       expect(find.byKey(ProfileAvatarView.stillFrameKey), findsNothing);
+      await releaseFileImages(tester);
     });
 
     testWidgets('the animation switch still outranks animateWhenIdle', (
@@ -187,6 +235,7 @@ void main() {
 
       expect(find.byType(Image), findsOneWidget);
       expect(find.byKey(ProfileAvatarView.stillFrameKey), findsNothing);
+      await releaseFileImages(tester);
     });
 
     test('declares a stable wash colour and bundled asset', () {
@@ -252,6 +301,7 @@ void main() {
 
     expect(find.byType(Image), findsOneWidget);
     expect(find.text('M'), findsNothing);
+    await releaseFileImages(tester);
   });
 
   testWidgets('a parent refresh resolves bytes repaired under the same key', (
@@ -274,6 +324,7 @@ void main() {
 
     expect(find.byType(Image), findsOneWidget);
     expect(find.text('M'), findsNothing);
+    await releaseFileImages(tester);
   });
 
   testWidgets('cache eviction does not dispose images held by mounted tiles', (
@@ -369,7 +420,11 @@ void main() {
     // the scale-down cannot divide by zero.
     for (final art in ProfileArtRegistry.all) {
       if (art.paint == null) continue;
-      for (final size in const <Size>[Size(1, 1), Size(48, 48), Size(320, 96)]) {
+      for (final size in const <Size>[
+        Size(1, 1),
+        Size(48, 48),
+        Size(320, 96),
+      ]) {
         for (var step = 0; step <= 20; step++) {
           final recorder = ui.PictureRecorder();
           final canvas = ui.Canvas(recorder);
