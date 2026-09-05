@@ -13,14 +13,14 @@ Updated by the orchestrator when assignments, blockers, PR checks or merges chan
 - **Controls:** maximum4 active owners for current correction wave; event-driven reports plus hourly fallback; #96 disposal capped at one remaining verification attempt, then explicit debt. No duplicate pin PRs or unassigned feature lanes. Record quota change at each three-slice gate and revise estimate before launching the next batch; no credit redemption authorized.
 
 ### Working now
-- [ ] **CI consistency — Cicero:** verify PR110 + PR111 together using Flutter3.44.8; restore ceiling77 and Windows analyzer enforcement.
+- [ ] **Independent review — Cicero:** CI110 merged; verify final CW integration evidence next. Flutter3.44.8/ceiling77 and both native gates verified.
 - [ ] **Magic TV — Ampere:** PR111 MERGED at0d4ca1a2; live historical cache/watch behavior pins underway. M1-3 still waits for origin debt/gate/upstream strategy.
 - [ ] **Continue Watching — Wegener:** integrate #96 with #104/#105/#107 and prove disposal guard with a real failing regression test.
 - [ ] **Settings safety — Locke:** draft #114 rebased f6764d2a;29/141 admitted named keys covered,5 families and28 exclusions inventoried. S2-5 first complete-domain checkpoint (8 admitted/8 excluded). Decoder #112 PARKED.
 
 ### Next, in order
 - [x] Merge #111 after independent verification and exact-head CI (0d4ca1a2).
-- [ ] Rebase/check/merge #110 on new main; Cicero assigned, no raised baseline.
+- [x] Merge #110 after exact-head test+goldens green; both native builds pass and suite5168/33allowlisted/2skipped. No raised baseline.
 - [ ] Merge #96 only when integrated evidence, compatibility review and CI pass; then eligible G1'-5.
 - [ ] Run corrective full suite, analyzer and both native builds on one pinned Flutter. Record exact commit and remaining failures.
 - [ ] Complete M1/V1 origin-pin debt and S2 restore fixtures before the affected next extraction.
@@ -37,7 +37,7 @@ Updated by the orchestrator when assignments, blockers, PR checks or merges chan
 
 ### Explicit blockers
 - [ ] **SHIELD smoke:** hardware unavailable; no phone-as-TV pass claimed.
-- [ ] **PR110:** seven M1 violations removed by111; awaiting updated branch and exact-head CI.
+- [ ] **Manual gate:** both builds pass; current-build device smoke still required, SHIELD unavailable.
 - [ ] **PR96 disposal:** deterministic mutation pin reported; at most one final SDK verification attempt. If unsuccessful, record debt; no further pin PRs.
 
 
@@ -198,3 +198,5 @@ Latest policy correction: upstream build.yml blob2a48503bcf470fef4affcc606182c90
 Merge111 report: exact head e56863f1 test+goldens green; independent65 M1 tests,40 pre-move origin tests,50 Python tests,9 layering tests, analyzer454/no new; combined ceiling77. Main0d4ca1a2. Did we make a difference? Seven illegal UI imports removed from service with real origin pins. More to do: actual-main gates, remaining seams M1-5/6, origin debt and upstream strategy. God files unchanged by111: search13108, player11926, MagicTV8369, storage6282, settings2899 (verify next gate). In-progress owners unchanged; M1-3 remains gated, no user-input wait.
 
 Verification update: C0 full suite candidate0abc4c8 (tree identical to110 head8bd40543) 5168passed/33exact allowlisted/2skipped, no unexpected/unused; Windows release build pass127.4s. Android SDK/JDK installed with explicit license acceptance, ARM64 build in progress. #110 test CI green, goldens pending. #115 retrospective8-case M1 pin open; successful-engine test batch capped20–30min plus one corrective pass. #114 full fixture expansion estimate8–14 focused hours, checkpoint per domain;29settings is not full coverage.
+
+Merge110/113: exact-head test+goldens passed on8bd40543/7f28c886 respectively. Main0fbfa1d7 includes both. Candidate0abc4c8 tree equals110 build tree; Windows pass127.4s, Android ARM64 pass384.8s (56.2MB). Full suite5168passed/33exactallowlisted/2skipped, no unexpected/unused; analyzer454/no new, layering77. Manual current-build smoke not repeated; SHIELD blocked. Differences: Windows analyzer now runs, upstream SDK pin enforced, original ceiling restored, live roadmap committed. Remaining: CW integration, origin fixtures/pins, device validation.
