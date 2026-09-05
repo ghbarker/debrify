@@ -159,8 +159,10 @@ void main() {
         contains('enum SearchBoardMode { catalog, keyword, lists }'),
       );
       final cwTypes = File(
-        'lib/services/home/continue_watching_controller.dart',
-      );
+        'lib/screens/search/continue_watching_controller.dart',
+      ).existsSync()
+          ? File('lib/screens/search/continue_watching_controller.dart')
+          : File('lib/services/home/continue_watching_controller.dart');
       expect(
         (cwTypes.existsSync()
                 ? cwTypes

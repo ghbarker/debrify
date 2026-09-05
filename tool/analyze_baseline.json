@@ -2245,7 +2245,7 @@
       "severity": "INFO",
       "type": "HINT",
       "code": "DEPRECATED_MEMBER_USE",
-      "path": "lib/widgets/home/continue_watching_row.dart",
+      "path": "lib/screens/search/continue_watching_row.dart",
       "line": 169,
       "column": 17,
       "length": 11,

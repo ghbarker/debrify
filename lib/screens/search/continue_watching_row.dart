@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/stremio_addon.dart';
 import '../../screens/see_all/continue_watching_see_all_screen.dart';
 import '../../screens/see_all/trakt_see_all_screen.dart';
-import '../../services/home/continue_watching_controller.dart';
+import 'continue_watching_controller.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/home/cw_card_menu.dart';
 import '../../widgets/skeleton_poster.dart';

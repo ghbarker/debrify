@@ -26,7 +26,10 @@ String _stageWidgets() =>
 /// G1'-4 moved `CwKind` / `CwRow` onto the controller. Fall back to the
 /// stage part so the G1'-0 pin commit still reads.
 String _cwTypes() {
-  final controller = File('lib/services/home/continue_watching_controller.dart');
+  final controller = File('lib/screens/search/continue_watching_controller.dart')
+          .existsSync()
+      ? File('lib/screens/search/continue_watching_controller.dart')
+      : File('lib/services/home/continue_watching_controller.dart');
   if (controller.existsSync()) return controller.readAsStringSync();
   return _stageWidgets();
 }

@@ -8,7 +8,9 @@ void main() {
 
   setUpAll(() {
     source = File('lib/screens/search_screen.dart').readAsStringSync();
-    final row = File('lib/widgets/home/continue_watching_row.dart');
+    final row = File('lib/screens/search/continue_watching_row.dart').existsSync()
+        ? File('lib/screens/search/continue_watching_row.dart')
+        : File('lib/widgets/home/continue_watching_row.dart');
     cwRow = row.existsSync() ? row.readAsStringSync() : '';
   });
 

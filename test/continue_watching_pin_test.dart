@@ -52,9 +52,14 @@ enum CwKind { local, trakt, simkl, mdblist, iptv }
 /// `_cwVisible` / `_traktReserving`, `_buildContinueWatchingRow`.
 String _origin() {
   final controller = File(
-    'lib/services/home/continue_watching_controller.dart',
-  );
-  final row = File('lib/widgets/home/continue_watching_row.dart');
+    'lib/screens/search/continue_watching_controller.dart',
+  ).existsSync()
+      ? File('lib/screens/search/continue_watching_controller.dart')
+      : File('lib/services/home/continue_watching_controller.dart');
+  final row = File('lib/screens/search/continue_watching_row.dart')
+          .existsSync()
+      ? File('lib/screens/search/continue_watching_row.dart')
+      : File('lib/widgets/home/continue_watching_row.dart');
   if (controller.existsSync() && row.existsSync()) {
     return '${controller.readAsStringSync()}\n${row.readAsStringSync()}';
   }
