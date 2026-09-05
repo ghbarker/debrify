@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:debrify/screens/video_player_screen.dart';
+import 'package:debrify/screens/video_player/widgets/controls.dart';
+import 'package:debrify/screens/video_player/widgets/player_menu_panel.dart';
 import 'package:debrify/services/debrify_tv_database.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/secret_vault.dart';
@@ -24,9 +26,25 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 // 90b77818e951295a12cca8d410384a3a7d5541ed.
 // LIBMPV_LIBRARY_PATH points at an already-installed native library. The window
 // and texture channel fixtures are external platform replies, not player logic.
-// Only audio decoding/host mount/disposal are proven: the zero-width audio source
+// Audio decoding/host mount/disposal and the host's identify-cancel path are proven.
+// The zero-width audio source
 // does NOT satisfy the video startup watchdog. No rendered frame, successful
-// video readiness, resume/identify/subtitle behavior or recording/zap is claimed.
+// video readiness, successful identification, resume/subtitle application or
+// recording/zap is claimed.
+
+class _Routes extends NavigatorObserver {
+  int pushes = 0;
+  int pops = 0;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) => pushes++;
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) => pops++;
+}
+
+Map<String, Object?> _prefsSnapshot(SharedPreferences prefs) => {
+  for (final key in prefs.getKeys()) key: prefs.get(key),
+};
 
 Uint8List _silentWave() {
   const dataSize = 8000 * 2 * 60;
@@ -170,15 +188,17 @@ void main() {
     await root.delete(recursive: true);
   });
 
-  testWidgets('retrospective origin: native audio host mount and disposal', (
+  testWidgets('retrospective origin: actual host identify cancel preserves state', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1280, 720);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    final routes = _Routes();
     await tester.pumpWidget(
       MaterialApp(
+        navigatorObservers: [routes],
         builder: (_, child) =>
             AppThemeScope(theme: AppThemes.byId('spotlight'), child: child!),
         home: VideoPlayerScreen(
@@ -204,15 +224,89 @@ void main() {
     );
     expect(outputCalls, contains('VideoOutputManager.Create'));
     expect(find.byType(VideoPlayerScreen), findsOneWidget);
-    await tester.pumpWidget(const SizedBox.shrink());
-    await _until(tester, () => !VideoOutputLease.isHeld);
-    expect(outputCalls, contains('VideoOutputManager.Dispose'));
-    // NativePlayer open/dispose and startup readiness create timeout futures.
-    // Allow them to expire after unmount; never suppress pending-timer failures.
-    await tester.pump(const Duration(seconds: 15));
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 20)),
-    );
-    await tester.pump(const Duration(seconds: 6));
+
+    try {
+      // Capture callbacks from widgets built by the actual host State. No local
+      // controller/session surrogate, private access or extracted route import.
+      final controls = tester.widget<Controls>(find.byType(Controls));
+      controls.onSpeed();
+      await tester.pump();
+      final menu = tester.widget<PlayerMenuPanel>(find.byType(PlayerMenuPanel));
+      expect(menu.onIdentifyTitle, isNotNull);
+      final identityBefore = [
+        menu.contentImdbId,
+        menu.contentType,
+        menu.contentSeason,
+        menu.contentEpisode,
+        menu.subtitleIdentityLabel,
+        menu.selectedSubtitleId,
+      ];
+      final prefs = await SharedPreferences.getInstance();
+      final prefsBefore = _prefsSnapshot(prefs);
+      final audioBefore = player.state.track.audio.id;
+      final subtitleBefore = player.state.track.subtitle.id;
+      var completed = false;
+      Object? result = Object();
+      final completion = menu.onIdentifyTitle!().then((value) {
+        result = value;
+        completed = true;
+      });
+      await _until(
+        tester,
+        () => find.text('FIX THE TITLE').evaluate().isNotEmpty,
+      );
+      expect(completed, isFalse);
+      expect(
+        routes.pushes,
+        2,
+      ); // Actual player route and actual identify route.
+      expect(routes.pops, 0);
+      await tester.pump(const Duration(milliseconds: 300));
+      final header = find
+          .ancestor(of: find.text('FIX THE TITLE'), matching: find.byType(Row))
+          .first;
+      await tester.tap(
+        find.descendant(of: header, matching: find.byType(IconButton)),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await _until(tester, () => completed);
+      await completion;
+      expect(result, isNull);
+      expect(find.text('FIX THE TITLE'), findsNothing);
+      expect(routes.pops, 1);
+      expect(find.byType(PlayerMenuPanel), findsOneWidget);
+      expect(player.state.track.audio.id, audioBefore);
+      expect(player.state.track.subtitle.id, subtitleBefore);
+      expect(_prefsSnapshot(prefs), prefsBefore);
+      // Reopen from the real host so stale widget configuration cannot hide an
+      // accidental identity/selection mutation behind the cancelled route.
+      tester.widget<PlayerMenuPanel>(find.byType(PlayerMenuPanel)).onClose();
+      await tester.pump();
+      tester.widget<Controls>(find.byType(Controls)).onSpeed();
+      await tester.pump();
+      final reopened = tester.widget<PlayerMenuPanel>(
+        find.byType(PlayerMenuPanel),
+      );
+      expect([
+        reopened.contentImdbId,
+        reopened.contentType,
+        reopened.contentSeason,
+        reopened.contentEpisode,
+        reopened.subtitleIdentityLabel,
+        reopened.selectedSubtitleId,
+      ], identityBefore);
+    } finally {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await _until(tester, () => !VideoOutputLease.isHeld);
+      expect(outputCalls, contains('VideoOutputManager.Dispose'));
+      // NativePlayer open/dispose and startup readiness create timeout futures.
+      // Allow them to expire after unmount; never suppress pending-timer failures.
+      await tester.pump(const Duration(seconds: 15));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump(const Duration(seconds: 6));
+    }
   });
 }
