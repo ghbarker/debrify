@@ -1,14 +1,14 @@
 # Refactor board
 
-## Current checkpoint — 2026-09-05 15:43 UTC (supersedes historical rows below)
-- Latest merged PRs: #125, #126, #127 and #128; main 6aeec78f contains the latest gate record.
-- M1-5b merged #129 at 78be96c1 after independent review and all three corrected-head CI checks. Ampere assigned M1-6 origin-pin feasibility only on refactor/m1-6-queue-prefetch; no production scope yet.
-- G1'-7c merged #130 at 5232013a after independent 86-test/body review and all three exact-head CI checks. 143 host lines removed; zero credit toward standalone Discover. Wegener assigned G1'-7d actual-origin pin feasibility only, branch refactor/g1-7d-playback-selection; no production scope granted.
-- C0 Cicero: approved isolated shape-guard hardening, only shape_manifest_test.dart and its one allowlist identity. Locke: independent G17d real-origin pin review. Wegener: G17d transport-boundary design; no product move authorized.
-- Latest full automated gate PASSED actual main abc74484: 5404 passing generic tests, 12 exact known failures, two skips; 21 exact known golden errors after configured retries; no unexpected/unused entries. Native origin/current passed; Windows/ARM64 builds passed; analyzer 436/452, layering 77.
-- Current merged god lines: search 9126, player 11926, Magic TV 3403, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
-- Open debt: storage shortfall 1565; player native fixture paused; temporary forwarders expire in their recorded lanes. No manual smoke pass claimed; user explicitly deferred it without blocking eligible work.
-- CODEMAP unlocked. No user action required. Awake helper PID3412 expired September 5 at 16:43 UTC; process absent and log active=false verified. No extension or permanent power changes.
+## Current checkpoint — 2026-09-05 17:45 UTC (supersedes historical rows below)
+- Merged: #129 settings owner, #130 lifecycle, #131 guard hardening, #132 playback pins, #133 prefetch, #134 selection owner (75564bbb). Exact-head independent reviews and all CI checks passed for each.
+- Ampere: #135 refactor/m1-6-expiry held at855f0492 after one new CI failure in magic_tv_channel_cache_warmer_pin_test.dart; investigating exact source-guard repair. Goldens/native passed. No blanket allowance or weaker assertion authorized.
+- Wegener: G17e selection owner merged; no next production assignment. Locke: independent review complete. Cicero: available for corrected #135 review and next full gate.
+- Latest full automated gate passed abc74484: 5404 passing generic tests, 12 exact known failures, two skips; 21 exact known golden errors after configured retries; no unexpected/unused entries. Native pair, Windows/ARM64 builds, Python55 passed; analyzer436/452, layering77.
+- Two production merges since that gate (#133/#134); next production merge triggers full integrated gate. Manual smoke deferred, never marked passed.
+- Current god lines: search9033, player11926, MagicTV3403, storage4365, settings2899. Originals19070/16278/10716/9963/7905. Selection93host lines but production+90; zero standalone750credit. Prefetch228code-net remains2short230.
+- CODEMAP unlocked. Phone install alone waits for a working wireless ADB address/connection; verified abc74484 APK is ready. Refactor does not wait on user smoke.
+- Temporary keep-awake expired16:43UTC and remains off; no power/disk changes or extension.
 ## Prior checkpoints and retained evidence
 
 

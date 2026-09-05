@@ -709,3 +709,6 @@ M15a analyzer provenance repair authorized: historical0a0ca9e6 mislabeled origin
 ## Shape guard debt identified during PR129 review
 Independent review of 4ab8e1c confirms only moved-renderer inventory repair, floor490 unchanged. Existing aggregate bare-radius test is allowlisted for tv_sidebar_nav.dart; an additional offender can therefore be masked under the same test identity. Raw mutation failure does not prove fail-closed CI. C0 assigned read-only minimum per-file guard/allowance migration proposal before any new edits. No allowance expanded, no product radius change authorized.
 
+
+PR131 resolved aggregate shape-guard masking via per-file identities and separate sidebar debt cap, with independent actual-parser mutations. PR134 retains32/24line lifecycle adapters and legal owner/legacy library cycle untilrealG17/Q2;93host reduction is not independent Discover closure. No native or escaping-listener runtime proof claimed.
+
