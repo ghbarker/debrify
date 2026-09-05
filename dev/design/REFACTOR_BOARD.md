@@ -12,8 +12,8 @@ Overall completion remains approximately65%, an engineering estimate rather than
 - [x] Installed f75fa016 manual smoke passed by user acceptance for phone and TV behavior. Direct TV hardware execution and later-build smoke are not claimed.
 
 ### Now
-- [ ] #155 repair-owner extraction: independent review passed, CI pending. Proposed259 host lines removed/+30 total production; not counted until merged.
-- [ ] Full integrated gate after #155 merges (#153/#154 already merged): Cicero prepared exact-source harness and forwarder ledger.
+- [x] #155 repair owner merged:259 fewer host lines/+30 total production, seven temporary forwarding methods; existing quirks preserved.
+- [ ] Full integrated gate f4862238 in progress after #153/#154/#155: Cicero running tests/builds/forwarder ledger.
 - [ ] Locke: playlist metadata origin tests, new test file only.
 - [ ] Wegener: review proposed captured-key capability for actual architectural benefit; Ampere proposal ready, no implementation authorization.
 - [ ] Parent: merge exact reviewed green heads, maintain ownership and this roadmap. No user action required.
@@ -21,12 +21,12 @@ Overall completion remains approximately65%, an engineering estimate rather than
 ### Still left
 1. Discover content/actions and standalone dispatch, Search stage layouts and final cleanup. Preserve hidden watchlist/focus behavior until proved.
 2. Player decoder/remaining state and UI separation; timer-only helper rejected because it added code without sufficient benefit.
-3. Storage remaining ownership and Q2 caller migration. Host4106, target2800; pending #155 savings not credited.
+3. Storage remaining ownership and Q2 caller migration. Host3847, target2800; remaining1047 includes783 explicit historical debt.
 4. M1-7 watch flows: five files2283/common1431, total3714; five-file targetbelow800 still unmet. Magic TV size provisional.
 5. Q-phase dependency/rule cleanup and upstream contribution work, then final integrated/device acceptance.
 
 ### Current measured state
-- God hosts Search8614/19070, Player11926/16278, MagicTV3317/10716, Storage4106/9963, Settings2899/7905 (current/original).
+- God hosts Search8614/19070, Player11926/16278, MagicTV3317/10716, Storage3847/9963, Settings2899/7905 (current/original).
 - Latest full-gate a443 forwarders total/single physical line: Storage592/147, Search85/72, Player161/112, MagicTV23/12, Settings0/0. Later deletion153 is separate; recount at next gate.
 - #154 made a difference:26 net production lines removed with194 independent tests; #153 removed18 lines/seven getters. More remains above.
 - Only parent edits BOARD/NOTES; CODEMAP locks serialized and currently released. Parked112/109/56; no disk work or renewed keep-awake authorization.
@@ -326,3 +326,7 @@ Exact349 independent30/scoped/full436452/layer77/union andall3CIpassed. Did we m
 ### Timer pin bounded stop
 Wegener oneauthorizedsecondphase attempt failed equallybc46/current beforelongclock: public15min selection yieldedarmed0. No greencommit/no appregressionclaim, trackedtestrestored. Retainhosttimers; timer-onlygrowthhelper rejected. No furtherattemptauthorized. Scope remains read-onlynextQ2candidate whileproductCIruns.
 
+
+### #155 merged; fullgate f486 dispatched
+Exact882aef39 product/docs/actualunion independentlyPASS andall3CIgreen. Actualmergef4862238612bbfaa51631d51c3f760bbb5edcb86. Did we make a difference?259fewer hostlines (3847), repairlogic reunitedwithstore; wholeproduction+30/sevenfacades remainQ2, not259netdeletion. More remains:1047hostgap/knownprofilequirks. Gods8614/11926/3317/3847/2899 vs19070/16278/10716/9963/7905.
+Cicero fullgate f486IN_PROGRESS allchecks/builds/forwarders. Metadataorigin156reviewPASSawaitCI; fixture d735independentreview; productmappingread-only. Captured-key standalone+36proposal DEFERRED after independentreview: no typedconsumer/deletion, follow-on RDlookup foundno coherent equivalentqueueblock. No implementation/no user blocker. Nextproductionhelduntilf486gatepasses.
