@@ -72,11 +72,11 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | G1'-4 · continue watching | in review | `refactor/g1p-4-continue-watching` | worker `bc-db4ab579` | `search_screen.dart` [CW hunks], `lib/screens/search/continue_watching_controller.dart`, `lib/screens/search/continue_watching_row.dart`, pin | CI on `ec77a1ac` | **#96.** Leaves **1 738**. Rebased onto main. Both units left `lib/services/` / `lib/widgets/` so gate (i) stays 90. Merge `--no-ff` when test+goldens green. Do not start G1'-5. |
 | G1'-5 … G1'-9 | queued | — | — | `search_screen.dart` | #96 | Sequential. Do not start. |
 | V1-0 · PlayerLaunchConfig | merged | `refactor/v1-0-launch-config` | worker | `video_player_screen.dart` [ctor + `widget.*` reads], `lib/screens/video_player/player_launch_config.dart` | — | **#75.** Value object. Leaves +3 ≈ 0. Unblocks V1-1…10. |
-| V1-1 · resume controller | merged | `refactor/v1-1-resume-controller` | worker | `video_player_screen.dart` [resume hunks], `lib/services/playback/resume_controller.dart` | V1-0 | **#79.** Leaves 666. Pin predates move. Adapter still `widget.*`. |
-| V1-2 · identify-title sheet | merged | `refactor/v1-2-identify-title-sheet` | worker | `video_player_screen.dart` [identify-title hunks], `lib/widgets/player/identify_title_sheet.dart` | V1-1 | **#83.** Leaves 527. Sheet + season dialog. Subtitle fetch stays for V1-3. Pin predates move. |
-| V1-3 · subtitle track controller | merged | `refactor/v1-3-subtitle-track-controller` | worker | `video_player_screen.dart` [subtitle/track hunks], `lib/services/playback/subtitle_track_controller.dart` | V1-2 | **#88.** Leaves 943. Pin predates move. Identify sheet not re-extracted. |
-| V1-4 · IPTV recording | merged | `refactor/v1-4-iptv-recording` | worker | `video_player_screen.dart` [recording hunks], `lib/services/playback/iptv_recording_controller.dart` | V1-3 | **#91.** Leaves 704. Pin predates move. Desktop capture `extension: 'ts'`; Android engine-first then tee. Overlay reads notifiers via host getters. |
-| V1-5 · IPTV zap + catch-up | merged | `refactor/v1-5-iptv-zap` | worker | `video_player_screen.dart` [zap/catch-up/prefetch/banner hunks], `lib/services/playback/iptv_zap_controller.dart` | V1-4 | **#94.** Leaves **1 008**. Pin predates move. Controller owns page cache + prefetch; `onSwitch(channel)` stays on host. Overlay reads banner notifiers via host getters. Recording stop on switch kept. After: player 11 926. |
+| V1-1 · resume controller | merged | `refactor/v1-1-resume-controller` | worker | `video_player_screen.dart` [resume hunks], `lib/services/playback/resume_controller.dart` | V1-0 | **#79.** Leaves 666. Pin predates move. Adapter still `widget.*`.  **Leaves accounting:** host reduction only; #100/#102 screen-layer relocations are not logic separation and earn no second Phase 3 credit. |
+| V1-2 · identify-title sheet | merged | `refactor/v1-2-identify-title-sheet` | worker | `video_player_screen.dart` [identify-title hunks], `lib/widgets/player/identify_title_sheet.dart` | V1-1 | **#83.** Leaves 527. Sheet + season dialog. Subtitle fetch stays for V1-3. Pin predates move.  **Leaves accounting:** host reduction only; #100/#102 screen-layer relocations are not logic separation and earn no second Phase 3 credit. |
+| V1-3 · subtitle track controller | merged | `refactor/v1-3-subtitle-track-controller` | worker | `video_player_screen.dart` [subtitle/track hunks], `lib/services/playback/subtitle_track_controller.dart` | V1-2 | **#88.** Leaves 943. Pin predates move. Identify sheet not re-extracted.  **Leaves accounting:** host reduction only; #100/#102 screen-layer relocations are not logic separation and earn no second Phase 3 credit. |
+| V1-4 · IPTV recording | merged | `refactor/v1-4-iptv-recording` | worker | `video_player_screen.dart` [recording hunks], `lib/services/playback/iptv_recording_controller.dart` | V1-3 | **#91.** Leaves 704. Pin predates move. Desktop capture `extension: 'ts'`; Android engine-first then tee. Overlay reads notifiers via host getters.  **Leaves accounting:** host reduction only; #100/#102 screen-layer relocations are not logic separation and earn no second Phase 3 credit. |
+| V1-5 · IPTV zap + catch-up | merged | `refactor/v1-5-iptv-zap` | worker | `video_player_screen.dart` [zap/catch-up/prefetch/banner hunks], `lib/services/playback/iptv_zap_controller.dart` | V1-4 | **#94.** Leaves **1 008**. Pin predates move. Controller owns page cache + prefetch; `onSwitch(channel)` stays on host. Overlay reads banner notifiers via host getters. Recording stop on switch kept. After: player 11 926.  **Leaves accounting:** host reduction only; #100/#102 screen-layer relocations are not logic separation and earn no second Phase 3 credit. |
 | V1-6 … V1-10 | queued | — | — | `video_player_screen.dart` | V1 lib-pin | Sequential. Do not assign V1-6. |
 | V1-fix · split UI-in-services | merged | `refactor/v1-fix-ui-services` | worker | four controllers → `lib/screens/**` | #99 | **#100.** 106 → 90. Resume/subtitle/zap/keyword moved. Catalog play + recording stayed. |
 | C0-gate2 · layering ceiling | merged | `refactor/c0-gate2-layering` | worker | `check_layering.dart`, `layering_baseline.txt`, `ci_layering_delta.py` | — | **#99.** Gate (i). Ceiling now **90** after #100. `--strict` stays Q1. |
@@ -127,3 +127,27 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
 Phase 1 merged. Binding is **#72**. **#73–#100 on main** (#99 C0-gate2, #100 V1-fix). Layering ceiling **90**. **#96** rebased + path-moved (`ec77a1ac`); merge when CI green. **#90** parent-path (h) still unpaid. **#86** shortfall 533 → S2-7. Open: **#96**. **#97** closed. Do not start G1'-5 / V1-6 / S2-6 / M1-3. PR #56 held for Q3. #89 closed.
+
+## Gate 3 audit coverage checklist
+
+- [x] Record user Gate3 exact SHA/platform/SDK/results, qualified as reported. #108 merged with 21 reproduced tests and clean analysis.
+- [x] Assign C0 Windows analyzer repair and same-version verification. PR110 uses unchanged analyzer baseline and ceiling77. Pinned3.44.8 yields454 diagnostics on parent and correction;471 was3.47.2.
+- [ ] Merge M1-fix111 then rebase110 and reproduce exact-head gates. Independent combined verification assigned Cicero.
+- [x] M1 inherited63 physical/34 nonblank forwarder retention decided: dialog hooks M1-5, full temporary seam expiry M1-6. Parse/I/O boundary is permanent.
+- [x] Record V1 relocation honestly per lane.
+- [ ] #96 integration: accounting explained; actual rebuild pin reports single listener. Disposal107 needs effective regression test; Wegener owns. No G1'-5.
+- [x] #109 held outside plan; #56 held toQ3. Every PR keeps both difference/further-work questions.
+- [ ] Permanent fork decision requested; recurring upstream lane conditional on answer, not yet scheduled.
+- [ ] S2 real origin-export/current-restore fixtures assigned Locke after draft decoder112. No synthetic fixture is claimed to prove a real device profile restore.
+- [x] Forwarder cleanup expiry set by lane and Phase3 end; Q2 must migrate callers and remove wrappers, no double counting.
+- [ ] SHIELD per-phase focus/play smoke requested; hardware availability awaiting answer.
+- [ ] Remaining V1 origin-pin debt is queued before V1-6; four existing owners take priority.
+- [x] Orchestrator-only assignment/merge entry restored. Four owners have completion/blocker reporting instructions; five-minute coordination reminder active.
+
+Current main03471d13 god-file line counts (git blobs, not working-tree estimates):
+
+- `lib/screens/search_screen.dart`: 13108 lines.
+- `lib/screens/video_player_screen.dart`: 11926 lines.
+- `lib/screens/magic_tv_screen.dart`: 8369 lines.
+- `lib/services/storage_service.dart`: 6282 lines.
+- `lib/screens/settings_screen.dart`: 2899 lines.
