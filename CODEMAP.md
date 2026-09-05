@@ -335,11 +335,19 @@ is an editor mirror, not the source of truth. How to add a provider:
   Channel cache warmer: `lib/services/debrify_tv/channel_cache_warmer.dart`
   (`ChannelCacheWarmer` — keyword warm, cache read/filter, TorBox window,
   quality filter, playback select; snacks stay on the host).
-  Channel import/export: `lib/services/debrify_tv/channel_import_export.dart`
-  (`ChannelImportExport` + `ChannelImportExportHost` / `ProgressSink`;
-  zip/yaml/text/community/url/share/delete-all). Dialogs:
-  `lib/screens/debrify_tv/import_export_dialogs.dart`. Create/update
-  single-channel dialogs and watch flows stay on the host.
+  Channel import/export flow: `lib/screens/debrify_tv/channel_import_export_flow.dart`
+  (`ChannelImportExport` + `ChannelImportExportHost` / `ProgressSink` owns
+  zip/yaml/text/community/url/share/delete-all UI, I/O and persistence ordering).
+  Parsing/serialization: `lib/services/debrify_tv/channel_import_export.dart`
+  (`parseChannelText`, `serializeChannelYaml`, zip/yaml compute helpers and
+  format/type/name helpers); no widget, screen, host or repository dependency.
+  Dialogs and screen-facing flow export: `lib/screens/debrify_tv/import_export_dialogs.dart`.
+  M1-fix live origin pin: `test/channel_import_export_layering_fix_test.dart`;
+  the older `magic_tv_channel_import_export_pin_test.dart` is inventory only.
+  Existing host seam adapters remain through M1-5/M1-6; review their removal
+  after those callers migrate. The flow's YAML cache-read wrapper remains
+  the I/O boundary and has no planned expiry. Create/update single-channel
+  dialogs and watch flows stay on the host; M1-3 waits for M1-fix to merge.
   Default pick / overlay strings: `lib/services/cloud/magic_tv_provider.dart`
   (`playbackPrecedence` mapped to `real_debrid`; display stays `Torbox` / `Real Debrid`).
 - Data: `lib/models/debrify_tv/`, `lib/services/debrify_tv_repository.dart`,

@@ -33,7 +33,7 @@ import '../services/alldebrid_service.dart';
 import '../services/torrent_service.dart';
 import '../services/engine/engine_registry.dart';
 import '../services/engine/settings_manager.dart';
-import '../services/debrify_tv/channel_import_export.dart';
+import 'debrify_tv/channel_import_export_flow.dart';
 import '../services/main_page_bridge.dart';
 import '../models/profiles/profile_policy.dart';
 import '../services/profiles/profile_policy_guard.dart';
