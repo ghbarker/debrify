@@ -14,6 +14,12 @@ Phase 2 extractions also follow `dev/design/REFACTOR_PLAN_PHASE2.md` (binding as
 - **`refactor/g3-player-prefs` is parked.** Pin+move already exist on that branch
   under the old G3 contract. PlayerPrefs is **S2-3** (with `iptv_prefs`) after
   S2-0…S2-2. Do not merge the parked branch.
+- **#87 M1-1 is not mergeable at −581/850.** Resubmit must also move TorBox
+  cache window, quality-filter helpers, and select-for-playback compute.
+  Create/update UI stays on the host (M1-5). Do not start M1-2 until Leaves ≥ 850.
+- **#87 M1-1 is not mergeable at −581/850.** Resubmit must also move TorBox
+  cache window, quality-filter helpers, and select-for-playback compute.
+  Create/update UI stays on the host (M1-5). Do not start M1-2 until Leaves ≥ 850.
 
 ## Quirks kept, not fixed
 
