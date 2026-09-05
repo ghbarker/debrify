@@ -695,3 +695,7 @@ V1-6 decoder feasibility paused: actualnative syntheticvideo failed beforepositi
 
 G1'-7 readiness: actualDiscover uses20hostcollaborators, not plannedboardRefs seam.56discoverMode tokens/39widgetaccesses currentinventory; privateexecutionbranches targetzero, frozenpubliccompatibilitydispatch exempt. Must approve explicitdata/action lifetime ownership, no hiddenhost/callbackbag. No broadsharedwidget/router edits approved; actualoriginstartup/focuspins next after123merge. M1-5scope core+cohesivehelpers/sharedchip approved; noimport/watchhooks padding, livewrites/resetorder preserved; productwaitnextautomatedgate.
 
+
+## Evidence correction: M1-4 Android-TV host coverage
+MagicTV_loadSettings uses AndroidNativeDownloader.isTelevision, which returnsfalse ondesktop beforechannel; PlatformUtil debugTVoverride does not set host_isAndroidTv. PR122 tests named androidHost=true do NOT exercise hosttrue launcherbranch or Androidbridge-level rejection. Valid coverage remains realdesktop channel switching/capturedkey/nextwrap and hostearlyrejection/Flutterroutecontinuation. Hosttrue/nativepositive/onFinished all unproven. This supersedes earlier stronger coverage wording; no productbug identified. M15mustnotclaim TVfocus from thisoverride; desktopfocus/disposal only. Worker authorized precise merged122PRbody correction.
+
