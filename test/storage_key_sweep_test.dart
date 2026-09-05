@@ -6,6 +6,7 @@ import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:debrify/services/storage/player_prefs.dart';
+import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:debrify/services/storage/social_prefs.dart';
 import 'package:debrify/services/storage/storage_key_ownership.dart';
@@ -38,6 +39,15 @@ const interpolatedPrefsKeys = {
 };
 
 const _aliases = {
+  'PlaybackProgressStore.playbackStateKey': PlaybackProgressStore.playbackStateKey,
+  'PlaybackProgressStore.continueWatchingKey': PlaybackProgressStore.continueWatchingKey,
+  'PlaybackProgressStore.localSeriesCompletionStateKey': PlaybackProgressStore.localSeriesCompletionStateKey,
+  'PlaybackProgressStore.localSeriesCalendarCheckedAtKey': PlaybackProgressStore.localSeriesCalendarCheckedAtKey,
+  'PlaybackProgressStore.localSeriesCalendarAttemptedAtKey': PlaybackProgressStore.localSeriesCalendarAttemptedAtKey,
+  'PlaybackProgressStore.finishedMoviesKey': PlaybackProgressStore.finishedMoviesKey,
+  'PlaybackProgressStore.tvMazeSeriesMappingKey': PlaybackProgressStore.tvMazeSeriesMappingKey,
+  'PlaybackProgressStore.playlistPosterOverridesKey': PlaybackProgressStore.playlistPosterOverridesKey,
+
   'CloudSecretPrefs.torboxApiKey': CloudSecretPrefs.torboxApiKey,
   'CloudSecretPrefs.premiumizeApiKey': CloudSecretPrefs.premiumizeApiKey,
   'CloudSecretPrefs.allDebridApiKey': CloudSecretPrefs.allDebridApiKey,
@@ -115,6 +125,7 @@ Set<String> allDiscoveredPrefsKeys() => {
   ...IptvPrefs.ownedKeys,
   ...AppStylePrefs.ownedKeys,
   ...TrackingPrefs.ownedKeys,
+  ...PlaybackProgressStore.ownedKeys,
   ...inlinePrefsKeysOnStorageService(),
   ...interpolatedPrefsKeys,
 };
@@ -124,6 +135,19 @@ Set<String> unownedDiscoveredPrefsKeys() =>
     allDiscoveredPrefsKeys().difference(StorageKeyOwnership.byKey.keys.toSet());
 
 void main() {
+  test('playback store keys participate in discovery and exact ownership', () {
+    expect(PlaybackProgressStore.ownedKeys,
+        StorageKeyOwnership.keysFor(StorageKeyStore.playbackProgressStore));
+    expect(allDiscoveredPrefsKeys(), containsAll(PlaybackProgressStore.ownedKeys));
+    // These names left the facade entirely: aliases alone cannot cover them.
+    expect(declaredOnStorageService().contains('episode_trakt_progress_v2'), isFalse);
+    expect(allDiscoveredPrefsKeys(), contains('episode_trakt_progress_v2'));
+    final missingPlayback = allDiscoveredPrefsKeys().difference(
+      StorageKeyOwnership.byKey.keys.toSet().difference({'episode_trakt_progress_v2'}),
+    );
+    expect(missingPlayback, {'episode_trakt_progress_v2'});
+  });
+
   test('every declared persisted key is owned by exactly one store', () {
     final fromGodFile = declaredOnStorageService();
     final fromCloud = declaredOnCloudSecretPrefs();
@@ -227,6 +251,7 @@ void main() {
       ...fromIptv,
       ...fromAppStyle,
       ...fromTracking,
+      ...PlaybackProgressStore.ownedKeys,
     };
     final residual = declared.difference(extracted);
     for (final key in residual) {
