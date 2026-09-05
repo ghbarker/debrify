@@ -689,3 +689,6 @@ Superseding user correction: decoder112 is parked scope creep for this refactor;
 ## Storage residual audit (2026-09-05, main b3f518ff)
 Storage4365 exceeds2800target by1565:783explicit shortfalls(433S2-6+350S2-7),782otherresidual. Read-only audit distinguishes1315forwarder methodlines,1755logicmethodlines,137constantlines,662blank,404comments,92otherdeclarations. Proposed progress/metadata/watchlist/quick-filter/repair followons forecast1010–1165 total;400–555would still require authorized Q2caller/facade retirement or targetdecision. These are estimates, not achieved reduction. No new extractions authorized before automatedmini-gate. Do not count historical relocation or same remaininglines twice.
 
+
+V1-6 decoder feasibility paused: actualnative syntheticvideo failed beforepositiveparams evenwith approved2IO-only testingseams; no greenpin/extraction/PR,450Leaves notclaimed. Failedscaffold remains uncommitted only isolated debrify-v1-6-decoder-diagnostics. No furtherhooks permitted. PositiveAndroidfallback also unproven. Newnativetest cannot silentlyship because currentnativejob singlecase; explicitCIregistration required iffuturefeasibilitysucceeds.
+

@@ -135,3 +135,13 @@ S2-7 Locke owns exact app_style_prefs.dart and home_prefs.dart phasedhooks pluss
 
 119merged9958dd1e afterexactf8bd6ce4 all3CIgreen+independent82pass. Difference:3070hostlines removed into typedproviderwatchflows; capturedkey/cancel quirks pinned. More:thinbindings+wrappers retained expiryM1-6, contextdiagnosticvisibility notasyncsafety proof. Godmagic8369to5299 vsoriginal10716; othercurrentcounts unchanged. Fullautomatedgate nowactive, manualdeferred.
 
+
+## Automated gate passed — actualmain9958dd1e, treee6b0e8a1
+Pinned3.44.8/JDK21: generic5263pass/12exactknownfailures/2skip;goldens21exactknownerrors after2retries;0new/unused. Nativeorigin/current1each0skip. Analyzer438/454,0errors/0new;Python55;layering77delta0. Windows167.1s/Android113.2s buildsPASS. Evidence C:/Users/hunth/debrify/debrify-c0-main-9958-gate/.dart_tool/main-gate/gate-summary.json. Manualdeferred NOTpassed. M1-4productmove nowauthorized;C0V1-6readiness/originpins assigned onrefactor/v1-6-decoder-diagnostics. Exactpaths/seamsbeforeedits.
+
+
+M1-4 draft122 head91dadec1 (move6d296c59,pin8efdeaba) independentLockereview/CIpending.780net reported815-35;7wrappersreviewM1-5/expiryM1-6. ActualAndroidpositive remainsunproven; keytestholdskeythroughprepare, exactcooldowncapturetiming sourcepreserved nottested. CommittedLFpin400162d5 exact6origin/currentpass; earlier79eCRLFhashsuperseded. CODEMAPreleasedAmpere. G15 integrated96cd6acc/docsa069b13e; docslockreleased,publicationpendingworkerreport. V16purediagnostics direction approved hostUIrecreationretained;450targetmaymiss, no directoryrelocationfornumbers. C0testonlynativevideo feasibility45min; productionIOseamneeds exactdecision.
+
+
+PR121merged1274476d exact96cd6acc afterLocke187/origin9/body52+C0integration12pass/all3CIgreen. Difference:favourites/focus ownership extracted,1363net (search11376to10013). More:runtimeedgegaps+remainingsearch2513above7500target; no purelogiccreditforUIcontroller. Godcurrentsearch10013/player11926/magic5299/storage4365/settings2899; originals19070/16278/10716/9963/7905. WegenerG1'-6hero assigned freshrefactor/g1-6-hero-presenter,target550,originpinsbeforemove. V16pausednativefixture,nofailedscaffoldmerge.122independentreviewPASS/nativeCIpassed,otherspending. Slice1since9958fullgate.
+
