@@ -297,3 +297,13 @@ Cicero fullgate IN_PROGRESS exacta443: fullgeneric/goldensverdict,analyzer,layer
 ### #145 corrected native pin merged
 Exact4ef87c96 independent corrected origin/current pair and freshall3CIpassed; P2autosave/disposal gap fixed. Did we make a difference?Real speed selection/persistence proof plus explicit pre-unmount checkpoint inequality protects disposal evidence. More remains: decoder/sleep/aspect not proved. TestonlyzeroLeaves; godcounts unchanged8614/11926/3317/4106/2899 vs19070/16278/10716/9963/7905. Fullgate stillexacta443 (does not include145test),generic5499/12known/2skip,analyzer436452/layer77/Python55/native/Windows161.4s/ARM64111.8s passed; goldenspending. Forwarders a443 total/singleline:storage592/147,search85/72,player161/112,Magic23/12,settings0/0. Workers follow-ons remain testonly/prepared pendinggate, no user blocker.
 
+
+### Full integrated gate a443 — PASS
+| Source | Tests and diagnostics | Builds | Forwarders total/single physical line | Result |
+|---|---|---|---|---|
+| a443395b92c31b42eef9780cdb0feddb32655814 treee3b4fc72787f29632ba6ee3152027f907120b773 |5499pass/12exactknown/2skip;goldens21exactknown after2configuredretries;0unexpected/unused;analyzer436/452 exact16unused;layer77delta0;Python55;nativebc46/current1+1unskipped |Windows161.4s68files ZIPaa8f78686910b08dcf5be17d8cecbcf8783627d10de7a320a5dd1462a086052b;ARM64111.8s APK44cd64d9b3330b632422cf922e728d3c3520f1d9e45e553bf3a2240136c37c45 |Storage592/147;Search85/72;Player161/112;MagicTV23/12;Settings0/0 |AutomatedPASS against unchangedbaselines; rawgeneric/goldensfalse disclosed. No newmanualsmoke/install; a443 excludes later145test |
+Report: C:/Users/hunth/debrify/debrify-c0-next-main-gate/.dart_tool/main-gate/REPORT.md. Did we make a difference?Verified integrated presentation/storage/cache changes with no unexpected regressions; more remains: knownfailures, forwardingdebt and unfinished architecture. Godcounts8614/11926/3317/4106/2899 vs19070/16278/10716/9963/7905.
+### Released after a443 gate
+- Ampere after152review: refactor/m1-7-cached-player-presentation, ONLYcommon+TB/PM/PP cachedpresentation4files,26net prepared patch,149pin prerequisite beforemerge. No CODEMAP untilgrant.
+- Wegener: refactor/q2-iptv-launch-view-removal, ONLYcontroller+2testfiles exactprepared18net/7forwarder removal,151prerequisite beforemerge. No host/native/CODEMAP.
+- Cicero independentproductreviews asheadsfreeze; Locke repairmapping read-only pending152independentfixture proof. No user blocker. Productionmergecounter resets0 aftera443gate.
