@@ -1,34 +1,36 @@
 # Refactor board
 
 ## Current roadmap — September 5 (read this section first)
-Overall completion is approximately 65%, an engineering estimate, not a measured acceptance score. File shrinkage is approximately 51%; relocation does not equal finished architecture.
+Overall completion remains approximately65%, an engineering estimate rather than measured acceptance. Relocation is recorded separately from actual deletion.
 
-### Completed and merged
-- Stronger safety net: real origin tests, independent reviews, unchanged-key legacy restore fixtures, adversarial checks, full automated gates and required native CI. Missing native configuration now skips ordinary tests without weakening required CI.
-- Settings split into smaller units; provider identity/capability work and several storage owners established.
-- Search/Home: favourites, continue-watching, hero, Discover lifecycle and selection responsibilities extracted. Discover still depends on the old host.
-- Magic TV: watch session, cache/import/export, channel switching, settings, queue prefetch ownership and expired wrapper cleanup landed. Provider-flow duplication remains.
-- Verified f75fa016 APK installed on the phone; manual smoke PASSED by user acceptance for phone and TV behavior, without claiming direct TV hardware execution.
+### Done and merged
+- [x] Safety gates, origin behavior tests, old-backup restore fixtures, adversarial checks, native CI and dependency ceiling.
+- [x] Settings owners; Search/Home/Discover presentation and lifecycle slices; multiple storage owners; Magic TV state and watch-flow simplifications.
+- [x] #140 Discover presentation; #141 filters; #142/#144/#154 real watch-flow dedup; #146 playlist owner; #153 seven IPTV forwarding getters removed.
+- [x] #143/#145/#147–#152 compatibility tests and fixtures, including corrected speed/disposal proof. Timer attempt was inconclusive and stopped; no timer change.
+- [x] Full integrated automated gate a443 passed unchanged baselines:5499 pass/12known/2skip;goldens21known errors after configured retries;0unexpected/unused;analyzer436/452;layer77;nativepair/Python55/Windows/ARM64 passed.
+- [x] Installed f75fa016 manual smoke passed by user acceptance for phone and TV behavior. Direct TV hardware execution and later-build smoke are not claimed.
 
-### Awaiting merge (reviewed; exact-head CI still required)
-- [x] #140 merged17f0550a: finald1fe independent review and all3CI passed;419 fewer Search host lines. Presentation relocation, not standalone Discover closure.
-- [x] #141 merged: five-filter preference owner,44 fewer host lines; physical JSON/reset quirks pinned.
-- [x] #142 merged: first watch-flow deduplication,30 fewer lines overall; five-provider total2448, targetbelow800 still outstanding.
+### Now
+- [ ] #155 repair-owner extraction: independent review passed, CI pending. Proposed259 host lines removed/+30 total production; not counted until merged.
+- [ ] Full integrated gate after #155 merges (#153/#154 already merged): Cicero prepared exact-source harness and forwarder ledger.
+- [ ] Locke: playlist metadata origin tests, new test file only.
+- [ ] Wegener: review proposed captured-key capability for actual architectural benefit; Ampere proposal ready, no implementation authorization.
+- [ ] Parent: merge exact reviewed green heads, maintain ownership and this roadmap. No user action required.
 
-### Major work remaining
-1. Finish Discover content/action ownership and real standalone dispatch; preserve hidden watchlist/focus effects. Then TV stage layouts and final Search cleanup.
-2. Finish player work: decoder fallback proof remains blocked by native-fixture limitations; timer/speed/aspect, TV guide, tracker progress and overlay separation remain in the plan.
-3. Continue storage ownership and migrate callers away from temporary forwarding APIs. Current host is 1306 lines above target after #146.
-4. M1-7: consolidate provider watch flows below 800 combined lines, while tracking growth in shared code. Current merged five-file total2352; original2556. Shared code growth is included separately. Magic TV size remains provisional.
-5. Q-phase cleanup: remove expired adapters, enforce dependency boundaries, consolidate engineering rules, complete upstream contribution preparation.
-6. Final integrated verification and user acceptance of the final build. Earlier smoke acceptance is not automatically a test of later builds.
+### Still left
+1. Discover content/actions and standalone dispatch, Search stage layouts and final cleanup. Preserve hidden watchlist/focus behavior until proved.
+2. Player decoder/remaining state and UI separation; timer-only helper rejected because it added code without sufficient benefit.
+3. Storage remaining ownership and Q2 caller migration. Host4106, target2800; pending #155 savings not credited.
+4. M1-7 watch flows: five files2283/common1431, total3714; five-file targetbelow800 still unmet. Magic TV size provisional.
+5. Q-phase dependency/rule cleanup and upstream contribution work, then final integrated/device acceptance.
 
-### Current evidence and coordination
-- Latest full gate7f00f969:5442 pass,12 exact known failures,2skip; goldens21 exact known errors after configured retries; zero unexpected/unused. Native pair, Windows/ARM64 builds and Python55 passed; analyzer436/452,layer77. #140 is the first production merge after this gate; later changes do not inherit manual smoke.
-- God-file lines (merged): Search8614,Player11926,MagicTV3317,Storage4106,Settings2899; original total63932. Pending PR savings are not counted.
-- Cicero: independent cursor-product review1d5e162e (191 tests/body audit). Wegener: independent playlist-origin/fixture reviewb53ba5ae (81 tests/provenance). Ampere: cursor PR and minimal CODEMAP update, branch refactor/m1-7-cache-window-pins. Locke: test-only playlist PR, branch refactor/s2-playlist-progress-pins; product move awaits independent proof. All four have bounded assignments; no user action required.
-- CODEMAP locks serialized; parent alone edits this board/notes. Keep-awake expired; no disk work. Parked #112 backup feature, #109 test kit and #56 helper are outside active refactor.
-- Every future gate includes exact-source forwarder counts under the ledger criterion below. Historic entries below are evidence only, not current assignments.
+### Current measured state
+- God hosts Search8614/19070, Player11926/16278, MagicTV3317/10716, Storage4106/9963, Settings2899/7905 (current/original).
+- Latest full-gate a443 forwarders total/single physical line: Storage592/147, Search85/72, Player161/112, MagicTV23/12, Settings0/0. Later deletion153 is separate; recount at next gate.
+- #154 made a difference:26 net production lines removed with194 independent tests; #153 removed18 lines/seven getters. More remains above.
+- Only parent edits BOARD/NOTES; CODEMAP locks serialized and currently released. Parked112/109/56; no disk work or renewed keep-awake authorization.
+
 ## Prior checkpoints and retained evidence
 
 
