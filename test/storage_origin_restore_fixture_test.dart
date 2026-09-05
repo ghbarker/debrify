@@ -27,6 +27,9 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'default_torrent_filter_prefs_origin_test.dart'
     show filterDefaultCases, seedFilterDefaults, expectFilterDefaultReaders;
 
+import 'playlist_progress_map_origin_test.dart'
+    show seedPlaylistProgress, expectPlaylistProgressBuilder, playlistProgressKey;
+
 const _origin = '6d26d7a1a98c7ddd37b4a25815f74123c1e29126';
 const _directory = 'test/fixtures/storage_origin_restore';
 const _passphrase = 'SYNTHETIC fixture only - no account credentials';
@@ -413,31 +416,46 @@ void main() {
       isEmpty,
     );
   });
+  setUpAll(() {
+    final playlist = _recipe['residualDomains']['playlist-progress'] as Map;
+    expect(playlist['origin'], _origin);
+    expect(playlist['namedKeyCount'], 1);
+    expect(playlist['physicalType'], 'String');
+    expect((playlist['values'] as Map).keys, [playlistProgressKey]);
+    expect(playlist['excludedKeys'], isEmpty);
+    expect(_settings.containsKey(playlistProgressKey), isFalse);
+  });
   final scenarios = {
     ..._recipe['scenarios'] as Map,
     'filter-defaults': {'absentKeys': <String>[]},
+    'playlist-progress': {'absentKeys': <String>[]},
   };
   for (final entry in scenarios.entries) {
     final scenario = entry.key as String;
     final isFilter = scenario == 'filter-defaults';
-    final scenarioSettings = isFilter
-        ? Map<String, Object?>.from(residual['values'] as Map)
+    final isPlaylist = scenario == 'playlist-progress';
+    final isResidual = isFilter || isPlaylist;
+    final domain = isPlaylist
+        ? _recipe['residualDomains']['playlist-progress'] as Map
+        : residual;
+    final scenarioSettings = isResidual
+        ? Map<String, Object?>.from(domain['values'] as Map)
         : _settings;
-    final credentialValues = isFilter
+    final credentialValues = isResidual
         ? <String, Object?>{}
         : _credentialEngineValues;
-    final excludedKeys = isFilter ? <String>[] : _excludedInputs.keys.toList();
+    final excludedKeys = isResidual ? <String>[] : _excludedInputs.keys.toList();
     void expectExclusions(
       Map<String, Object?> values, {
       bool includeSecrets = false,
     }) {
-      if (!isFilter) _expectExclusions(values, includeSecrets: includeSecrets);
+      if (!isResidual) _expectExclusions(values, includeSecrets: includeSecrets);
     }
 
     Future<Map<String, Object?>> readScenario(
       Map<String, Object?> values,
     ) async {
-      if (!isFilter) return _readThroughStorageService(values);
+      if (!isResidual) return _readThroughStorageService(values);
       final prefs = await ProfilePreferences.instance();
       return {for (final key in values.keys) key: prefs.get(key)};
     }
@@ -451,9 +469,10 @@ void main() {
     final inputExpected = <String, Object?>{
       ...scenarioSettings,
       ...credentialValues,
-      if (!isFilter)
+      if (!isResidual)
         ...Map<String, Object?>.from(_recipe['inputOverrides'] as Map),
       ...inputOverrides,
+      if (isPlaylist) ...Map<String, Object?>.from(domain['inputValues'] as Map),
     }..removeWhere((key, value) => absent.contains(key));
     final missing = [...absent, ...omitted];
     final expected = <String, Object?>{
@@ -466,6 +485,10 @@ void main() {
         : '$scenario.manifest.json';
 
     Future<void> seedScenario() async {
+      if (isPlaylist) {
+        await seedPlaylistProgress();
+        return;
+      }
       if (isFilter) {
         await seedFilterDefaults(scenarioSettings);
         return;
@@ -491,6 +514,10 @@ void main() {
 
     Future<void> expectProviderReaders([Map<String, Object?>? restored]) async {
       final readerExpected = restored ?? expected;
+      if (isPlaylist) {
+        await expectPlaylistProgressBuilder();
+        return;
+      }
       if (isFilter) {
         await expectFilterDefaultReaders(readerExpected);
         return;
@@ -617,6 +644,7 @@ void main() {
 
     for (final keepDestination in [false, if (missing.isNotEmpty) true]) {
       final destinationValues = <String, Object?>{
+        if (isPlaylist) 'playlist_restore_sentinel': 'untouched',
         if (isFilter) ...{
           'quick_play_honors_filters_v1': false,
           'quick_play_movie_rules_v2': '{"fixture":"movie"}',
@@ -626,7 +654,11 @@ void main() {
         if (keepDestination)
           for (final key in missing) key: 'SYNTHETIC_DESTINATION_$key',
       };
-      final restoredExpected = {...expected, ...destinationValues};
+      final restoredExpected = {
+        ...expected, ...destinationValues,
+        // Real restore rearms imported playback when the old package has no marker.
+        if (isPlaylist) 'resume_ghost_purge_generation': 0,
+      };
       test(
         '$scenario: restore frozen pre-S2 export through real APIs without key or type drift (retain destination: $keepDestination)',
         () async {
@@ -642,7 +674,9 @@ void main() {
                     'value': ['fullHd', 'unknown quality', 'fullHd'],
                   },
                 }
-              : _recipe['mutations'] as Map;
+              : isPlaylist
+                  ? domain['mutations'] as Map
+                  : _recipe['mutations'] as Map;
           expect(['', ...mutations.keys], contains(_mutation));
           final manifest =
               jsonDecode(await File('$_directory/$manifestName').readAsString())
@@ -707,7 +741,7 @@ void main() {
           }
           final prefs = await SharedPreferences.getInstance();
           final other = otherProfileId;
-          if (!isFilter) {
+          if (!isResidual) {
             await prefs.setInt(
               'p.$profileId.g.1.stremio_tv_rotation_minutes',
               91,
@@ -720,6 +754,10 @@ void main() {
               );
               await prefs.setString('p.$other.g.1.$key', '["other profile"]');
             }
+          }
+          if (isPlaylist) {
+            await prefs.setInt('p.$profileId.g.1.resume_ghost_purge_generation', 1);
+            await prefs.setInt('p.$other.g.1.resume_ghost_purge_generation', 1);
           }
           await prefs.setInt('p.$other.g.1.stremio_tv_rotation_minutes', 92);
           await prefs.setString('p.$other.g.1.fixture_sentinel', 'untouched');
@@ -777,7 +815,7 @@ void main() {
           ]) {
             expect(prefs.containsKey('$prefix$key'), false, reason: key);
           }
-          if (!isFilter) {
+          if (!isResidual) {
             expect(
               prefs.getInt('p.$profileId.g.1.stremio_tv_rotation_minutes'),
               91,
@@ -790,6 +828,10 @@ void main() {
               );
               expect(prefs.getString('p.$other.g.1.$key'), '["other profile"]');
             }
+          }
+          if (isPlaylist) {
+            expect(prefs.getInt('p.$profileId.g.1.resume_ghost_purge_generation'), 1);
+            expect(prefs.getInt('p.$other.g.1.resume_ghost_purge_generation'), 1);
           }
           expect(prefs.getInt('p.$other.g.1.stremio_tv_rotation_minutes'), 92);
           expect(prefs.getString('p.$other.g.1.fixture_sentinel'), 'untouched');
@@ -808,7 +850,7 @@ void main() {
           for (final entry in destinationValues.entries) {
             expect(prefs.get('p.$profileId.g.1.${entry.key}'), entry.value);
           }
-          if (!isFilter) {
+          if (!isResidual) {
             expect(await StorageService.getMdblistSavedClones(), {
               101: 201,
               102: 202,
