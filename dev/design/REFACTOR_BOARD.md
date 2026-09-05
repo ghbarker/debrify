@@ -5,10 +5,10 @@ Updated 2026-09-05 after main `d5f8dc4b` (CW merge `e478635e`). Orchestrator own
 ## Live roadmap
 
 ### Working now
-- [ ] **Cicero — merged CW mini-gate:** full suite, exact allowlist, analyzer, layering and Windows/Android ARM64 builds at `e478635e`. Earlier corrective builds passed; this new gate is running.
+- [ ] **Cicero — merged CW mini-gate:** mini-gate at `e478635e`:5199pass/33exactallowlisted/2skip, analyzer454/no-new, layering77, Windows pass130.4s; Android running. Then final114review.
 - [ ] **Wegener — keyword update audit:** read-only check of #90's alleged duplicate rebuild on current code. #96 finished and merged; no new search extraction assigned.
-- [ ] **Ampere — player origin proof:** bounded real-host resume persistence feasibility. Native audio mount/dispose and identify cancel proven on oldest/current; video readiness and other V1 paths remain unproven.
-- [ ] **Locke — storage fixtures (#114):** 109/141 admitted keys and 25/28 exclusions verified. Final S2-1 domain and five dynamic-key families underway; tests only. Exact checkpoint `9563318d`.
+- [ ] **Ampere — player origin proof:** native audio mount/dispose, identify cancel and disposal checkpoint write proven oldest/current with mutation. Preparing dedicated native-test draft; CI runtime dependency unresolved, no full V1 closure.
+- [ ] **Locke — storage fixtures (#114):** 141/141 admitted keys and28/28 exclusions complete; all5 dynamic families finitely sampled (21keys). Exact final `3e30de17` awaiting independent review/CI. Worker now read-only S2-6 planning; no extraction assigned.
 
 ### Next, in order
 - [ ] Finish current merged-code mini-gate and record device smoke separately.
@@ -53,7 +53,7 @@ No worker starts another lane independently. Workers report completion/blockers 
 | Gate 3 user audit | `843d631b`, Windows Flutter 3.47.2 | 471 issues, zero errors; layering 84 unique | 5143 pass / 37 fail (33 baseline + 4 Windows guards) | user reported both pass | accepted with notes, historical report |
 | Corrective integration | `0abc4c8`, tree identical to #110 `8bd40543`; Flutter 3.44.8 | 454 issues, zero new against unchanged 470-entry baseline; layering 77, delta zero vs #72 | 5168 pass / 33 exact allowlisted / 2 skip; zero unexpected or unused | Windows pass 127.4s; ARM64 APK pass 384.8s | automated gate passed; not current CW/manual proof |
 | CW merge check | #96 `3961eee5`; merged tree `fd9b5b6` | 77/ceiling77; no added analyzer allowance, one location relocation | independent 3 disposal/rebuild tests pass; targeted worker evidence + exact-head CI test/goldens pass | prior builds do not cover this new tree | merge conditions passed |
-| Current CW mini-gate | actual merged main `e478635e`, tree `fd9b5b6` | running | running | running | NOT YET COMPLETE; manual smoke pending |
+| Current CW mini-gate | actual merged main `e478635e`, tree `fd9b5b6` |454/no new;77layering,no delta |5199pass/33exactallowlisted/2skip,zero unexpected/unused |Windows pass130.4s;Android running | manual smoke pending |
 
 Flutter follows upstream: **3.44.8**, verified upstream workflow blob `2a48503bcf470fef4affcc606182c90444855511`. Separate local SDK used; no automatic golden regeneration or diagnostic rebaseline. Layering ceiling is **77** from #72, not historical 90. Current analyzer baseline has 470 entries; historical 466 diagnostic count is not its replacement.
 
