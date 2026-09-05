@@ -19,7 +19,7 @@ import '../../../widgets/iptv/iptv_epg_panel.dart';
 import '../../../widgets/iptv/styles/iptv_style.dart';
 import '../../../widgets/tv_text_field.dart';
 import 'player_guide_style.dart';
-import 'spotlight_dialog.dart';
+import '../../../widgets/player/spotlight_dialog.dart';
 
 typedef IptvGuideChannelSelected =
     Future<void> Function(List<IptvChannel> channels, int index);

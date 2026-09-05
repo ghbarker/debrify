@@ -1,17 +1,37 @@
 import 'package:flutter/material.dart';
 
 import '../../models/stremio_addon.dart';
-import '../../screens/alldebrid/alldebrid_files_screen.dart';
-import '../../screens/debrid_downloads_screen.dart';
-import '../../screens/pikpak/pikpak_files_screen.dart';
-import '../../screens/premiumize/premiumize_files_screen.dart';
-import '../../screens/torbox/torbox_downloads_screen.dart';
 import '../../services/local_bound_source_service.dart';
 import '../../services/series_source_service.dart';
 import '../../services/storage_service.dart';
 import '../../theme/app_theme_scope.dart';
 import '../add_source_picker_dialog.dart';
 import '../cloud_provider_chrome.dart';
+
+/// Screen-supplied cloud navigation. The dialog owns availability and saving;
+/// each callback receives the navigator captured before credential reads.
+typedef SourceBindingCloudRoute =
+    Future<void> Function(
+      NavigatorState navigator,
+      StremioMeta item,
+      Future<void> Function(SeriesSource) saveSource,
+    );
+
+class SourceBindingCloudRoutes {
+  const SourceBindingCloudRoutes({
+    required this.onRealDebrid,
+    required this.onTorbox,
+    required this.onPremiumize,
+    required this.onAllDebrid,
+    required this.onPikPak,
+  });
+
+  final SourceBindingCloudRoute onRealDebrid;
+  final SourceBindingCloudRoute onTorbox;
+  final SourceBindingCloudRoute onPremiumize;
+  final SourceBindingCloudRoute onAllDebrid;
+  final SourceBindingCloudRoute onPikPak;
+}
 
 /// Source edit/add dialogs extracted from `search_screen.dart` (G1'-2).
 ///
@@ -33,6 +53,7 @@ class SourceBindingDialogs {
   static Future<void> showEdit({
     required BuildContext context,
     required StremioMeta item,
+    required SourceBindingCloudRoutes cloudRoutes,
     required List<SeriesSource> initial,
     required Future<void> Function() onRefreshBound,
     required void Function(StremioMeta item) onTorrentSearch,
@@ -195,6 +216,7 @@ class SourceBindingDialogs {
                                 showAdd(
                                   context: context,
                                   item: item,
+                                  cloudRoutes: cloudRoutes,
                                   onRefreshBound: onRefreshBound,
                                   onTorrentSearch: onTorrentSearch,
                                   onKeywordSearch: onKeywordSearch,
@@ -313,6 +335,7 @@ class SourceBindingDialogs {
   static Future<void> showAdd({
     required BuildContext context,
     required StremioMeta item,
+    required SourceBindingCloudRoutes cloudRoutes,
     required Future<void> Function() onRefreshBound,
     required void Function(StremioMeta item) onTorrentSearch,
     required void Function(StremioMeta item) onKeywordSearch,
@@ -381,63 +404,19 @@ class SourceBindingDialogs {
           : null,
       localDisabledReason: LocalBoundSourceService.localDisabledReason,
       onRealDebrid: rdEnabled
-          ? () => navigator.push(
-              MaterialPageRoute(
-                builder: (_) => DebridDownloadsScreen(
-                  isPushedRoute: true,
-                  initialSearchQuery: item.name,
-                  selectSourceMode: true,
-                  onSourceSelected: saveSource,
-                ),
-              ),
-            )
+          ? () => cloudRoutes.onRealDebrid(navigator, item, saveSource)
           : null,
       onTorbox: torboxEnabled
-          ? () => navigator.push(
-              MaterialPageRoute(
-                builder: (_) => TorboxDownloadsScreen(
-                  isPushedRoute: true,
-                  initialSearchQuery: item.name,
-                  selectSourceMode: true,
-                  onSourceSelected: saveSource,
-                ),
-              ),
-            )
+          ? () => cloudRoutes.onTorbox(navigator, item, saveSource)
           : null,
       onPremiumize: premiumizeEnabled
-          ? () => navigator.push(
-              MaterialPageRoute(
-                builder: (_) => PremiumizeFilesScreen(
-                  isPushedRoute: true,
-                  initialSearchQuery: item.name,
-                  selectSourceMode: true,
-                  onSourceSelected: saveSource,
-                ),
-              ),
-            )
+          ? () => cloudRoutes.onPremiumize(navigator, item, saveSource)
           : null,
       onAllDebrid: allDebridEnabled
-          ? () => navigator.push(
-              MaterialPageRoute(
-                builder: (_) => AllDebridFilesScreen(
-                  isPushedRoute: true,
-                  initialSearchQuery: item.name,
-                  selectSourceMode: true,
-                  onSourceSelected: saveSource,
-                ),
-              ),
-            )
+          ? () => cloudRoutes.onAllDebrid(navigator, item, saveSource)
           : null,
       onPikPak: pikpakEnabled
-          ? () => navigator.push(
-              MaterialPageRoute(
-                builder: (_) => PikPakFilesScreen(
-                  isPushedRoute: true,
-                  selectSourceMode: true,
-                  onSourceSelected: saveSource,
-                ),
-              ),
-            )
+          ? () => cloudRoutes.onPikPak(navigator, item, saveSource)
           : null,
     );
   }
