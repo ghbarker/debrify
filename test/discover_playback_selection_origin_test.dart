@@ -3,6 +3,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:debrify/models/quick_play_rules.dart';
+import 'package:debrify/models/advanced_search_selection.dart';
+import 'package:debrify/models/play_loader_art.dart';
+import 'package:debrify/screens/catalog_item_detail_screen.dart';
+import 'package:debrify/screens/episodes_screen.dart';
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/services/external_player_service.dart';
 import 'package:debrify/services/main_page_bridge.dart';
@@ -31,6 +35,7 @@ import 'favourites_rows_origin_test.dart'
 // source resolution, launcher persistence, routes and bridge observers are real.
 class PlaybackTransport {
   late Future<void> Function() close;
+  Completer<void>? streamHold;
   final process = Completer<ProcessResult>();
   final requests = <String>[];
   final commands = <List<String>>[];
@@ -45,6 +50,8 @@ class PlaybackTransport {
 Future<PlaybackTransport> preparePlayback(
   WidgetTester tester, {
   bool external = false,
+  bool legacyDetail = false,
+  bool series = false,
 }) async {
   await prepareFavourites(tester);
   final fixture = PlaybackTransport();
@@ -62,6 +69,8 @@ Future<PlaybackTransport> preparePlayback(
     closed = true;
     try {
       await closeFavourites(tester);
+      final hold = fixture.streamHold;
+      if (hold != null && !hold.isCompleted) hold.complete();
       if (!fixture.process.isCompleted) {
         fixture.process.complete(ProcessResult(0, 0, '', ''));
       }
@@ -95,6 +104,7 @@ Future<PlaybackTransport> preparePlayback(
   };
   service.debugStreamHttpClientFactory = () => MockClient((request) async {
     fixture.requests.add(request.url.path);
+    await fixture.streamHold?.future;
     return http.Response(
       jsonEncode({
         'streams': [
@@ -115,11 +125,12 @@ Future<PlaybackTransport> preparePlayback(
     manifestUrl: 'https://addon.invalid/manifest.json',
     baseUrl: 'https://addon.invalid',
     resources: ['stream'],
-    types: ['movie'],
+    types: ['movie', if (series) 'series'],
   );
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString('stremio_addons_v1', jsonEncode([addon.toJson()]));
   await StorageService.setDiscoverDefaultSource('cw');
+  if (legacyDetail) await StorageService.setMergedSeriesPageEnabled(false);
   await StorageService.setHomeContinueWatchingEnabled(true);
   await StorageService.setPlayButtonMode('quick');
   await StorageService.setDefaultPlayerMode(external ? 'external' : 'internal');
@@ -129,10 +140,20 @@ Future<PlaybackTransport> preparePlayback(
     rules.copyWith(sourceMode: QuickPlaySourceMode.addonsOnly),
     isMovie: true,
   );
+  if (series) {
+    final seriesRules = await StorageService.getQuickPlayRules(isMovie: false);
+    await StorageService.setQuickPlayRules(
+      seriesRules.copyWith(
+        sourceMode: QuickPlaySourceMode.addonsOnly,
+        packPreference: QuickPlayPackPreference.exactEpisodeOnly,
+      ),
+      isMovie: false,
+    );
+  }
   await StorageService.saveContinueWatchingItem(
     imdbId: 'tt1234567',
     title: 'Transport origin',
-    contentType: 'movie',
+    contentType: series ? 'series' : 'movie',
   );
   tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   await mountDiscover(tester);
@@ -151,6 +172,168 @@ Future<void> saveReturnMarker() => StorageService.saveContinueWatchingItem(
 );
 
 void main() {
+  testWidgets(
+    'origin same-ID art lookup and empty capture across mounted episode callback',
+    (tester) async {
+      final fixture = await preparePlayback(
+        tester,
+        legacyDetail: true,
+        series: true,
+      );
+      final panel = playbackPanel(tester);
+      panel.onOpen(panel.items.single);
+      await pumpFavourites(tester);
+      final detail = tester.widget<CatalogItemDetailScreen>(
+        find.byType(CatalogItemDetailScreen),
+      );
+      detail.onLoaderArt!(const PlayLoaderArt(certificate: 'SERIES-ART'));
+      detail.onBrowse();
+      await pumpFavourites(tester);
+      final episodes = tester.widget<EpisodesScreen>(
+        find.byType(EpisodesScreen),
+      );
+      // This is an input to the actual mounted episode route's public callback.
+      // It proves host forwarding, not that an episode tile/resume resolver
+      // generated these coordinates or this deliberately different title.
+      final selection = AdvancedSearchSelection(
+        imdbId: episodes.show.imdbId!,
+        isSeries: true,
+        title: 'Different punctuation!',
+        contentType: 'series',
+        season: 2,
+        episode: 3,
+        year: '2024',
+      );
+      fixture.streamHold = Completer<void>();
+      episodes.onQuickPlay!(selection);
+      await pumpFavourites(tester);
+      expect(find.text('SERIES-ART'), findsOneWidget);
+      fixture.streamHold!.complete();
+      await pumpFavourites(tester);
+      final args = fixture.launches.last;
+      expect(args.contentImdbId, episodes.show.imdbId);
+      expect(args.contentTitle, 'Different punctuation!');
+      expect(args.contentType, 'series');
+      expect(args.contentSeason, 2);
+      expect(args.contentEpisode, 3);
+      expect(args.contentYear, '2024');
+      expect(args.addonId, episodes.addon.id);
+      expect(
+        fixture.requests.any(
+          (path) => Uri.decodeComponent(
+            path,
+          ).contains('/stream/series/tt1234567:2:3.json'),
+        ),
+        isTrue,
+      );
+      Navigator.of(
+        tester.element(find.byKey(PlaybackTransport.playerKey)),
+      ).pop();
+      await pumpFavourites(tester);
+
+      // A non-IMDb, artless catalog payload is supplied to the mounted public
+      // callback: CW storage itself always supplies imdbId, so cannot represent
+      // this input. No private host method or copied capture body is invoked.
+      fixture.streamHold = Completer<void>();
+      panel.onQuickPlay!(
+        const StremioMeta(id: 'kitsu:42', type: 'movie', name: 'Artless'),
+      );
+      await pumpFavourites(tester);
+      expect(find.text('Cancel'), findsOneWidget);
+      expect(fixture.launches, hasLength(1));
+      expect(find.text('SERIES-ART'), findsNothing);
+      fixture.streamHold!.complete();
+      await pumpFavourites(tester);
+      expect(fixture.launches.last.contentImdbId, isNull);
+      expect(fixture.launches.last.contentTitle, 'Artless');
+      Navigator.of(
+        tester.element(find.byKey(PlaybackTransport.playerKey)),
+      ).pop();
+      await pumpFavourites(tester);
+
+      // Revisit the first identity without recapturing art: mere mismatch on the
+      // artless play would leave the old art available here; actual clearing does not.
+      StremioService.instance.invalidateCache();
+      fixture.streamHold = Completer<void>();
+      episodes.onQuickPlay!(selection);
+      await pumpFavourites(tester);
+      expect(find.text('SERIES-ART'), findsNothing);
+      expect(find.text('Cancel'), findsOneWidget);
+      expect(fixture.launches, hasLength(2));
+      fixture.streamHold!.complete();
+      await pumpFavourites(tester);
+      expect(fixture.launches.last.contentEpisode, 3);
+      await fixture.close();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('origin detail rich loader art survives sparse catalog capture', (
+    tester,
+  ) async {
+    final fixture = await preparePlayback(tester, legacyDetail: true);
+    final panel = playbackPanel(tester);
+    panel.onOpen(panel.items.single);
+    await pumpFavourites(tester);
+    final detail = tester.widget<CatalogItemDetailScreen>(
+      find.byType(CatalogItemDetailScreen),
+    );
+    // Use the actual detail route's public enrichment sink. This characterizes
+    // the host/art handoff, not the remote detail enrichment transport itself.
+    detail.onLoaderArt!(
+      const PlayLoaderArt(
+        certificate: 'ORIGIN-CERT',
+        runtimeLabel: 'ORIGIN-RUNTIME',
+      ),
+    );
+    fixture.streamHold = Completer<void>();
+    detail.onPlay();
+    await pumpFavourites(tester);
+    expect(fixture.requests, contains('/stream/movie/tt1234567.json'));
+    expect(find.text('ORIGIN-CERT'), findsOneWidget);
+    expect(find.text('ORIGIN-RUNTIME'), findsOneWidget);
+    fixture.streamHold!.complete();
+    await pumpFavourites(tester);
+    expect(fixture.launches.single.contentImdbId, 'tt1234567');
+    expect(fixture.launches.single.contentType, 'movie');
+    expect(fixture.launches.single.contentTitle, 'Transport origin');
+    // Loader art is not part of VideoPlayerLaunchArgs; the rendered loader
+    // above, not these terminal metadata assertions, proves that handoff.
+    await fixture.close();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'origin retained selection callbacks preserve disposed entry errors',
+    (tester) async {
+      final fixture = await preparePlayback(tester);
+      final panel = playbackPanel(tester);
+      panel.onOpen(panel.items.single);
+      await pumpFavourites(tester);
+      final detail = tester.widget<MergedDetailScreen>(
+        find.byType(MergedDetailScreen),
+      );
+      final browse = detail.onItemSelected!;
+      final play = detail.onQuickPlay!;
+      await closeFavourites(tester);
+      const empty = AdvancedSearchSelection(
+        imdbId: '',
+        isSeries: false,
+        title: 'Disposed',
+      );
+      expect(() => browse(empty), returnsNormally);
+      late Future<void> completion;
+      expect(() => completion = play(empty), returnsNormally);
+      await expectLater(completion, throwsA(isA<FlutterError>()));
+      // Future error vs synchronous error is observable. Listener registration /
+      // removal order is not exposed by this assertion and remains source proof.
+      expect(fixture.requests, isEmpty);
+      expect(fixture.launches, isEmpty);
+      await fixture.close();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'Windows transport disposed host ignores held launch completion',
     (tester) async {
