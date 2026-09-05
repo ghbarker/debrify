@@ -6,6 +6,10 @@ import 'dart:typed_data';
 import 'package:debrify/models/debrify_tv_cache.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// Legacy source inventory and copied-helper characterization, NOT M1-fix
+/// behavioral proof. Live origin execution is committed separately in
+/// `channel_import_export_layering_fix_test.dart`.
+///
 /// M1-2 characterisation of channel import/export **before** the move to
 /// `lib/services/debrify_tv/channel_import_export.dart` and
 /// `lib/screens/debrify_tv/import_export_dialogs.dart`.
@@ -54,6 +58,7 @@ String _sources() {
   for (final path in <String>[
     'lib/services/debrify_tv/channel_import_export.dart',
     'lib/screens/debrify_tv/import_export_dialogs.dart',
+    'lib/screens/debrify_tv/channel_import_export_flow.dart',
   ]) {
     final moved = File(path);
     if (moved.existsSync()) {

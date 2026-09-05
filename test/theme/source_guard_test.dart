@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:debrify/theme/app_surfaces.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 
 /// Files inside a still-frozen surface that have been converted to the token
 /// layer ahead of their root's classification flip.
@@ -300,18 +301,21 @@ void main() {
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
-final String _root = Directory.current.path;
+String _posixPath(String path) => p.posix.normalize(path.replaceAll(r'\', '/'));
+
+final String _root = _posixPath(Directory.current.path);
 
 Iterable<File> _libDartFiles() => Directory('lib')
     .listSync(recursive: true)
     .whereType<File>()
     .where((f) => f.path.endsWith('.dart'))
     // Deprecated trees keep dead references; they are not entry points.
-    .where((f) => !f.path.contains('/deprecated/'));
+    .where((f) => !_rel(f).contains('/deprecated/'));
 
-String _rel(File f) => f.path.startsWith(_root)
-    ? f.path.substring(_root.length + 1)
-    : f.path;
+String _rel(File f) {
+  final path = _posixPath(f.path);
+  return path.startsWith('$_root/') ? path.substring(_root.length + 1) : path;
+}
 
 /// File text with line comments stripped, so commented-out code (of which the
 /// deprecated screens left plenty) can't trip a guard.
