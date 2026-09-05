@@ -149,3 +149,74 @@ need their documented matching scenario (provider-null-folder or player-custom).
 - `family-secrets-included.encrypted.json`: 10598 bytes; SHA-256 `beab34dfee5a7c53e8e9cac7f5b882ed71bc92d4b6f189cf24688a60e94fa819`.
 
 Origin and candidate use identical copied bytes and verify these hashes. Random nonce/salt/time mean regenerated ciphertext differs; decoded content must match the independent recipe. Forwarders: none introduced or changed. Expiry: retain until the backed-up format is explicitly retired.
+
+
+## Residual domain: five default torrent filters
+
+`filter-defaults.encrypted.json` adds a separately counted **5-key residual
+preferences domain**. The original S2 inventory remains 141 admitted / 28 excluded
+named keys and 21 finite family samples; this is not a 146-key completion claim.
+The new scenario has no exclusions or resources. Existing encrypted files are unchanged.
+
+The five keys are `default_filter_qualities_v1`, `default_filter_rip_sources_v1`,
+`default_filter_languages_v1`, `default_filter_sizes_v1`, and
+`default_filter_dynamic_ranges_v1`. Each is a physical **String containing JSON**,
+not a SharedPreferences StringList. The independent residual recipe exercises
+ordering, duplicates, unknown names, an empty string and non-ASCII text. Real
+StorageService setters seed the actual pre-S2 exporter; current restore compares
+all five raw types/JSON bytes before invoking the readers, then re-exports.
+Previous-generation and unrelated-profile filter values, the destination's legacy
+honors flag and both movie/series rule strings remain unchanged.
+
+Export origin: `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`.
+Current behavioral origin: `ba527454bb69a6cebb6fc226ed075ee176b24b69`.
+These are deliberately different: pre-S2 reset used one captured preferences
+instance for all six removals. Current reset removes five filters on captured
+preferences and then calls the provider store, which acquires preferences again.
+The new 19-case behavioral pin preserves current semantics, including a profile
+switch after the fifth filter clearing the **new** profile's provider. A switch
+after the first filter instead rejects the stale instance before subsequent work.
+It does not fix that behavior or claim it existed at the export origin.
+
+The behavior tests cover all five absent defaults, exact setter/reader encoding,
+malformed JSON, wrong JSON roots/elements and physical StringList errors; ordered
+reset, failure at each of the six removals, and both held profile-switch points.
+No product extraction, global cache, resource graph or complete-sync claim.
+
+Reproduction (PowerShell, dependencies already resolved to each own checkout):
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# In an isolated checkout at the export origin, copy the two test files and
+# recipe from this pin. This name filter generates ONLY the new artifact pair.
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --plain-name 'filter-defaults: generate' --reporter expanded
+# In the current pin checkout, with the generated pair copied from origin:
+& $flutter test --no-pub test/default_torrent_filter_prefs_origin_test.dart test/storage_origin_restore_fixture_test.dart test/filter_ladder_test.dart test/quick_play_rules_test.dart --reporter json
+& $flutter analyze --no-pub test/default_torrent_filter_prefs_origin_test.dart test/storage_origin_restore_fixture_test.dart
+# Both following commands MUST fail after real restore at the raw-value check:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'filter-defaults: restore' --dart-define=STORAGE_FIXTURE_MUTATION=filter-key --reporter expanded
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'filter-defaults: restore' --dart-define=STORAGE_FIXTURE_MUTATION=filter-type --reporter expanded
+```
+
+Verification: 144 combined tests passed (including all previous fixture cases);
+scoped analysis has no issues. Each mutation exits 1: rename leaves the destination's
+old filter JSON at the expected key, while String-to-StringList produces a list
+instead of JSON text. Mutations rebuild valid package section hashes and pass
+through the real encrypted codec and restore; these are not checksum-failure
+probes. They exist only in memory in the isolated test; normal runs restore the
+unmodified frozen fixture. No production or existing encrypted bytes are mutated.
+
+Both checkouts used the same Flutter 3.44.8 / native Dart installation and identical
+two-test/recipe bytes. Generator asserts exact origin HEAD, clean `lib`, and app
+package resolution to that origin checkout. SDK SHA256: `flutter.bat`
+`f83bfed7ecd10fd1afd8ce19c0b0119d2c80e24fbf26f4ff4f63c1cc5f75dcd5`;
+native `bin/cache/dart-sdk/bin/dart.exe`
+`4daa3455f8844ff2a907dffd68ba511f112ba67f5f6635d69a122e5b60bf91ff`.
+The manifest stores the new encrypted artifact hash and all five exported types/values.
+
+Did we make a difference? Five previously unrepresented residual keys now have
+real old-export/current-restore checks and current reset behavior pins.
+Is there more we could do? Independent review and the parent full gate precede
+any owner move. Failed writes returning false (rather than throwing), wider
+concurrency schedules and every possible filter value remain unproved.
+Forwarder inventory and expiry: no production forwarders introduced; not applicable.

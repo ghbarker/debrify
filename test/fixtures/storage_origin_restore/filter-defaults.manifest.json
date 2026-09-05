@@ -1,0 +1,37 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "recipeVersion": 5,
+  "includeSecrets": false,
+  "scenario": "filter-defaults",
+  "absentKeys": [],
+  "omittedKeys": [],
+  "syntheticOnly": true,
+  "sha256": "709766b666e3d1c7b00f1284e92baabe388414f2ac1b5ef31033fc9801970256",
+  "representedSettings": {
+    "default_filter_qualities_v1": "[\"fullHd\",\"unknown quality\",\"fullHd\"]",
+    "default_filter_rip_sources_v1": "[\"web\",\"bluray\",\"web\"]",
+    "default_filter_languages_v1": "[\"english\",\"日本語\",\"english\"]",
+    "default_filter_sizes_v1": "[\"large\",\"\",\"large\"]",
+    "default_filter_dynamic_ranges_v1": "[\"hdr10\",\"unknown range\",\"hdr10\"]"
+  },
+  "keyTypes": {
+    "default_filter_qualities_v1": "String",
+    "default_filter_rip_sources_v1": "String",
+    "default_filter_languages_v1": "String",
+    "default_filter_sizes_v1": "String",
+    "default_filter_dynamic_ranges_v1": "String"
+  },
+  "excludedKeys": [],
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}
