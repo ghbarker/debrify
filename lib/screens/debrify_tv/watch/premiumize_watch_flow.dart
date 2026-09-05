@@ -1,0 +1,551 @@
+import 'dart:async';
+import 'dart:math';
+import 'package:flutter/material.dart';
+import '../../../models/torrent.dart';
+import '../../../models/debrify_tv/cache_results.dart';
+import '../../../services/storage_service.dart';
+import '../../../services/torrent_service.dart';
+import '../../../services/main_page_bridge.dart';
+import '../../../theme/app_surfaces.dart';
+import '../../../utils/nsfw_filter.dart';
+import '../../video_player_screen.dart';
+import '../../magic_tv_screen.dart'
+    show MagicTvDispatch, MagicTvNextChannelQuirk;
+
+import 'provider_watch_flow.dart';
+
+class PremiumizeWatchFlow {
+  const PremiumizeWatchFlow(this.host);
+  final WatchFlowBindings host;
+
+  Future<void> watchWithPremiumize(
+    List<String> keywords,
+    void Function(String message) log,
+  ) async {
+    final integrationEnabled =
+        await StorageService.getPremiumizeIntegrationEnabled();
+    if (!integrationEnabled) {
+      host.closeProgressDialog();
+      if (!host.mounted) return;
+      host.setState(() {
+        host.status = 'Enable Premiumize in Settings to use this provider.';
+        host.isBusy = false;
+      });
+      host.showSnack(
+        'Enable Premiumize in Settings to use this provider.',
+        color: Colors.orange,
+      );
+      return;
+    }
+
+    final apiKey = await StorageService.getPremiumizeApiKey();
+    if (apiKey == null || apiKey.isEmpty) {
+      host.closeProgressDialog();
+      if (!host.mounted) return;
+      host.setState(() {
+        host.status =
+            'Add your Premiumize API key in Settings to use this provider.';
+        host.isBusy = false;
+      });
+      host.showSnack(
+        'Please add your Premiumize API key in Settings first!',
+        color: Colors.red,
+      );
+      return;
+    }
+
+    log('🌐 Premiumize: searching for cached torrents...');
+    final Map<String, Torrent> dedup = {};
+    final engineStates = await host.cacheWarmer.tvEngineSearchStates();
+    final maxResultsOverrides = host.cacheWarmer.quickPlayMaxResultsOverrides();
+
+    try {
+      final futures = keywords
+          .map(
+            (kw) => TorrentService.searchAllEngines(
+              kw,
+              engineStates: engineStates,
+              maxResultsOverrides: maxResultsOverrides,
+            ),
+          )
+          .toList();
+
+      await for (final result in Stream.fromFutures(futures)) {
+        final torrents =
+            (result['torrents'] as List<Torrent>? ?? const <Torrent>[]);
+
+        List<Torrent> torrentsToProcess = torrents;
+        if (host.quickAvoidNsfw || host.viewerForcesNsfw) {
+          torrentsToProcess = torrents.where((t) {
+            return !NsfwFilter.shouldFilter(t.category, t.name);
+          }).toList();
+        }
+
+        for (final torrent in torrentsToProcess) {
+          final normalizedHash = host.normalizeInfohash(torrent.infohash);
+          if (normalizedHash.isEmpty) continue;
+          dedup.putIfAbsent(normalizedHash, () => torrent);
+        }
+
+        if (dedup.isNotEmpty && host.mounted) {
+          host.setState(() => host.status = 'Checking Premiumize cache...');
+        }
+      }
+
+      final combinedList = host.cacheWarmer.applyQualityFilterToTorrents(
+        dedup.values.toList(),
+        // Search is complete here — an empty match means this search really
+        // has nothing at the requested quality, so degrade rather than fail.
+        allowFallback: true,
+      );
+      if (combinedList.isEmpty) {
+        host.closeProgressDialog();
+        if (host.mounted) {
+          host.setState(
+            () => host.status = 'No results found. Try different keywords.',
+          );
+          host.showSnack(
+            'No results found. Try different keywords.',
+            color: Colors.red,
+          );
+        }
+        return;
+      }
+
+      combinedList.shuffle(Random());
+      if (host.mounted) {
+        host.setState(() => host.status = 'Checking Premiumize cache...');
+      }
+
+      int candidateCursor = 0;
+
+      Future<bool> populateQueue() async {
+        while (true) {
+          if (candidateCursor >= combinedList.length) return false;
+          final window = await host.fetchPremiumizeCacheWindow(
+            candidates: combinedList,
+            startIndex: candidateCursor,
+            apiKey: apiKey,
+          );
+          candidateCursor = window.nextCursor;
+          if (window.cachedTorrents.isEmpty) {
+            if (window.exhausted) return false;
+            continue;
+          }
+          host.queue
+            ..clear()
+            ..addAll(window.cachedTorrents);
+          host.lastQueueSize = host.queue.length;
+          host.lastSearchAt = DateTime.now();
+          if (host.mounted) {
+            host.setState(() {
+              host.status = host.queue.isEmpty
+                  ? ''
+                  : 'Queue has ${host.queue.length} remaining';
+            });
+          }
+          log('✅ Found ${host.queue.length} cached Premiumize torrent(s)');
+          return true;
+        }
+      }
+
+      bool seeded;
+      try {
+        seeded = await populateQueue();
+      } catch (e) {
+        log('❌ Premiumize cache check failed: $e');
+        host.closeProgressDialog();
+        if (host.mounted) {
+          host.setState(
+            () => host.status = 'Premiumize cache check failed. Try again.',
+          );
+          host.showSnack(
+            'Premiumize cache check failed: $e',
+            color: Colors.red,
+          );
+        }
+        return;
+      }
+
+      if (!seeded) {
+        host.closeProgressDialog();
+        if (host.mounted) {
+          host.setState(
+            () => host.status =
+                'Premiumize has no cached results for these keywords.',
+          );
+          host.showSnack(
+            'Premiumize has no cached results for these keywords.',
+            color: Colors.orange,
+          );
+        }
+        return;
+      }
+
+      Future<Map<String, String>?> requestPremiumizeNext() async {
+        if (host.watchCancelled) return null;
+        while (!host.watchCancelled) {
+          if (host.queue.isEmpty) {
+            bool replenished;
+            try {
+              replenished = await populateQueue();
+            } catch (e) {
+              log('❌ Premiumize cache check failed: $e');
+              host.closeProgressDialog();
+              if (host.mounted && !host.watchCancelled) {
+                host.setState(
+                  () =>
+                      host.status = 'Premiumize cache check failed. Try again.',
+                );
+                host.showSnack(
+                  'Premiumize cache check failed: $e',
+                  color: Colors.red,
+                );
+              }
+              return null;
+            }
+            if (!replenished) break;
+          }
+          if (host.queue.isEmpty) break;
+
+          final item = host.queue.removeAt(0);
+          if (host.watchCancelled) break;
+          if (item is! Torrent) continue;
+
+          final result = await host.preparePremiumizeTorrent(
+            candidate: item,
+            apiKey: apiKey,
+            log: log,
+          );
+          if (host.watchCancelled) return null;
+          if (result != null) {
+            if (result.hasMore && !host.watchCancelled) combinedList.add(item);
+            if (host.mounted && !host.watchCancelled) {
+              host.setState(() {
+                host.status = host.queue.isEmpty
+                    ? ''
+                    : 'Queue has ${host.queue.length} remaining';
+              });
+            }
+            if (host.watchCancelled) return null;
+            return {'url': result.streamUrl, 'title': result.title};
+          }
+        }
+        if (host.mounted && !host.watchCancelled) {
+          host.setState(
+            () => host.status = 'No more cached Premiumize streams.',
+          );
+        }
+        return null;
+      }
+
+      final first = await requestPremiumizeNext();
+      if (host.watchCancelled) return;
+      if (first == null) {
+        host.closeProgressDialog();
+        if (host.mounted && !host.watchCancelled) {
+          host.setState(() {
+            host.status =
+                'No playable Premiumize streams found. Try different keywords.';
+          });
+          host.showSnack(
+            'No playable Premiumize streams found. Try different keywords.',
+            color: Colors.red,
+          );
+        }
+        return;
+      }
+
+      host.closeProgressDialog();
+      if (!host.mounted) return;
+
+      if (await host.handOffToExternalPlayer(
+        first['url'] ?? '',
+        first['title'] ?? 'Debrify TV',
+      )) {
+        return;
+      }
+
+      final launchedOnTv = await host.launchPikPakOnAndroidTv(
+        firstStream: first,
+        requestNext: requestPremiumizeNext,
+        showChannelNameOverride: host.quickShowChannelName,
+        channelName: null,
+        channelId: null,
+        channelNumber: null,
+        channelDirectory: null,
+      );
+      if (host.watchCancelled) return;
+      if (launchedOnTv) return;
+
+      if (!host.watchCancelled) {
+        MainPageBridge.notifyPlayerLaunching();
+        await host.navigator().push(
+          FrozenLegacyPageRoute(
+            builder: (_) => VideoPlayerScreen(
+              videoUrl: first['url'] ?? '',
+              title: first['title'] ?? 'Debrify TV',
+              startFromRandom: host.startRandom,
+              randomStartMaxPercent: host.randomStartPercent,
+              hideSeekbar: host.hideSeekbar,
+              showChannelName: host.showChannelName,
+              channelName: null,
+              channelNumber: null,
+              showVideoTitle: host.showVideoTitle,
+              hideOptions: host.hideOptions,
+              requestMagicNext: requestPremiumizeNext,
+              requestNextChannel:
+                  host.channels.length > 1 &&
+                      MagicTvDispatch.allowsNextChannel(
+                        host.quickProvider,
+                        MagicTvNextChannelQuirk.exceptAllDebrid,
+                      )
+                  ? host.requestNextChannel
+                  : null,
+            ),
+          ),
+        );
+      }
+
+      if (host.mounted && !host.watchCancelled) {
+        host.setState(() {
+          host.status = host.queue.isEmpty
+              ? ''
+              : 'Queue has ${host.queue.length} remaining';
+        });
+      }
+    } finally {
+      host.closeProgressDialog();
+      if (host.mounted) host.setState(() => host.isBusy = false);
+    }
+  }
+
+  Future<void> watchPremiumizeWithCachedTorrents(
+    List<Torrent> cachedTorrents, {
+    String? channelName,
+    String? channelId,
+    int? channelNumber,
+  }) async {
+    if (cachedTorrents.isEmpty) {
+      MainPageBridge.notifyAutoLaunchFailed('No cached torrents');
+      host.showSnack(
+        'Cached channel has no torrents yet. Please wait a moment.',
+        color: Colors.orange,
+      );
+      return;
+    }
+
+    final List<Map<String, dynamic>>? channelDirectory =
+        host.channels.isNotEmpty
+        ? host.androidTvChannelMetadata(
+            activeChannelId: channelId ?? host.currentWatchingChannelId,
+          )
+        : null;
+
+    void log(String message) => debugPrint('DebrifyTV/PM: $message');
+
+    final integrationEnabled =
+        await StorageService.getPremiumizeIntegrationEnabled();
+    if (!integrationEnabled) {
+      host.showSnack(
+        'Enable Premiumize in Settings to use this provider.',
+        color: Colors.orange,
+      );
+      return;
+    }
+
+    final apiKey = await StorageService.getPremiumizeApiKey();
+    if (apiKey == null || apiKey.isEmpty) {
+      MainPageBridge.notifyAutoLaunchFailed('No Premiumize API key');
+      host.showSnack(
+        'Please add your Premiumize API key in Settings first!',
+        color: Colors.orange,
+      );
+      return;
+    }
+
+    host.showCachedPlaybackDialog();
+
+    final List<Torrent> candidatePool = List<Torrent>.from(cachedTorrents);
+    candidatePool.shuffle(Random());
+
+    if (host.mounted) {
+      host.setState(() {
+        host.status = 'Checking Premiumize cache...';
+        host.isBusy = true;
+      });
+    }
+
+    int candidateCursor = 0;
+
+    Future<bool> populateQueue() async {
+      while (true) {
+        if (candidateCursor >= candidatePool.length) return false;
+        final TorboxCacheWindowResult window = await host
+            .fetchPremiumizeCacheWindow(
+              candidates: candidatePool,
+              startIndex: candidateCursor,
+              apiKey: apiKey,
+            );
+        candidateCursor = window.nextCursor;
+        if (window.cachedTorrents.isEmpty) {
+          if (window.exhausted) return false;
+          continue;
+        }
+        host.queue
+          ..clear()
+          ..addAll(window.cachedTorrents);
+        host.lastQueueSize = host.queue.length;
+        host.lastSearchAt = DateTime.now();
+        if (host.mounted) {
+          host.setState(() {
+            host.status = host.queue.isEmpty
+                ? ''
+                : 'Queue has ${host.queue.length} remaining';
+          });
+        }
+        log(
+          '✅ Cached Premiumize batch ready with ${host.queue.length} item(s)',
+        );
+        return true;
+      }
+    }
+
+    bool seeded;
+    try {
+      seeded = await populateQueue();
+    } catch (e) {
+      host.closeProgressDialog();
+      host.showSnack('Premiumize cache check failed: $e', color: Colors.orange);
+      if (host.mounted) host.setState(() => host.isBusy = false);
+      return;
+    }
+
+    if (!seeded) {
+      host.closeProgressDialog();
+      host.showSnack(
+        'No cached torrents found on Premiumize. Please refresh the channel.',
+        color: Colors.orange,
+      );
+      if (host.mounted) host.setState(() => host.isBusy = false);
+      return;
+    }
+
+    Future<Map<String, String>?> requestPremiumizeNext() async {
+      while (true) {
+        if (host.queue.isEmpty) {
+          bool replenished;
+          try {
+            replenished = await populateQueue();
+          } catch (e) {
+            host.closeProgressDialog();
+            host.showSnack(
+              'Premiumize cache check failed: $e',
+              color: Colors.orange,
+            );
+            if (host.mounted) host.setState(() => host.isBusy = false);
+            return null;
+          }
+          if (!replenished) break;
+        }
+        if (host.queue.isEmpty) break;
+
+        final next = host.queue.removeAt(0);
+        if (next is! Torrent) continue;
+
+        final prepared = await host.preparePremiumizeTorrent(
+          candidate: next,
+          apiKey: apiKey,
+          log: log,
+        );
+        if (prepared == null) continue;
+        if (prepared.hasMore) candidatePool.add(next);
+        return {'url': prepared.streamUrl, 'title': prepared.title};
+      }
+      return null;
+    }
+
+    try {
+      final first = await requestPremiumizeNext();
+      if (first == null) {
+        host.closeProgressDialog();
+        if (!host.mounted) return;
+        host.setState(() {
+          host.status = 'No playable Premiumize streams found. Try refreshing.';
+          host.isBusy = false;
+        });
+        MainPageBridge.notifyAutoLaunchFailed(
+          'No cached Premiumize streams available',
+        );
+        host.showSnack(
+          'No cached Premiumize streams are playable. Try refreshing the channel.',
+          color: Colors.orange,
+        );
+        return;
+      }
+
+      if (!host.mounted) return;
+      host.closeProgressDialog();
+
+      if (await host.handOffToExternalPlayer(
+        first['url'] ?? '',
+        first['title'] ?? 'Debrify TV',
+      )) {
+        return;
+      }
+
+      final launchedOnTv = await host.launchPikPakOnAndroidTv(
+        firstStream: first,
+        requestNext: requestPremiumizeNext,
+        channelName: channelName,
+        channelId: channelId,
+        channelNumber: channelNumber,
+        channelDirectory: channelDirectory,
+      );
+      if (launchedOnTv) return;
+
+      MainPageBridge.notifyPlayerLaunching();
+
+      await host.navigator().push(
+        FrozenLegacyPageRoute(
+          builder: (_) => VideoPlayerScreen(
+            videoUrl: first['url'] ?? '',
+            title: first['title'] ?? 'Debrify TV',
+            startFromRandom: host.startRandom,
+            randomStartMaxPercent: host.randomStartPercent,
+            hideSeekbar: host.hideSeekbar,
+            showChannelName: host.showChannelName,
+            channelName: channelName,
+            channelNumber: channelNumber,
+            showVideoTitle: host.showVideoTitle,
+            hideOptions: host.hideOptions,
+            requestMagicNext: requestPremiumizeNext,
+            requestNextChannel:
+                host.channels.length > 1 &&
+                    MagicTvDispatch.allowsNextChannel(
+                      host.provider,
+                      MagicTvNextChannelQuirk.exceptAllDebrid,
+                    )
+                ? host.requestNextChannel
+                : null,
+            channelDirectory: channelDirectory,
+            requestChannelById: host.channels.length > 1
+                ? host.requestChannelById
+                : null,
+          ),
+        ),
+      );
+      if (host.mounted) {
+        host.setState(() {
+          host.status = host.queue.isEmpty
+              ? ''
+              : 'Queue has ${host.queue.length} remaining';
+        });
+      }
+    } finally {
+      host.closeProgressDialog();
+      if (!host.mounted) return;
+      host.setState(() => host.isBusy = false);
+    }
+  }
+}
