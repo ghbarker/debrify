@@ -4,7 +4,7 @@
 # Shrink it; do not grow it without a reproduced failure.
 
 test/menu_dpad_repro_test.dart :: subtitles pane roundtrip keeps rail DPAD alive
-test/theme/shape_manifest_test.dart :: no swept file grows a new bare radius
+test/theme/shape_manifest_test.dart :: no swept file grows a new bare radius: lib/widgets/tv_sidebar_nav.dart
 test/series_parser_test.dart :: SeriesParser Tests should NOT treat 4-letter release code as series
 test/series_parser_test.dart :: SeriesParser Tests should NOT treat release code with quality tag as series
 test/series_parser_test.dart :: SeriesParser Tests should NOT treat 4-letter release code mp4 as series
