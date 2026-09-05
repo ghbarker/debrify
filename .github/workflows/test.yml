@@ -56,7 +56,8 @@ jobs:
           python3 -c "import json; print('layering count (HEAD):', json.load(open('/tmp/layering-head.json'))['count'])"
           PARENT="${{ github.workspace }}/layering-parent"
           test -d "$PARENT/lib" || { echo "Missing layering base tree" >&2; exit 1; }
-          dart run tool/check_layering.dart --all --json --root "$PARENT" > /tmp/layering-parent.json
+          test -f "$PARENT/tool/layering_baseline.txt" || { echo "Missing layering base ceiling" >&2; exit 1; }
+          dart run tool/check_layering.dart --all --json --root "$PARENT" --ceiling-file "$PARENT/tool/layering_baseline.txt" > /tmp/layering-parent.json
           python3 tool/ci_layering_delta.py /tmp/layering-parent.json /tmp/layering-head.json
 
       - name: Run refactor contract tests
