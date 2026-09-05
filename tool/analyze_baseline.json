@@ -9,7 +9,7 @@
     "test"
   ],
   "identity": "path|code|message",
-  "count": 470,
+  "count": 454,
   "diagnostics": [
     {
       "severity": "WARNING",
@@ -40,16 +40,6 @@
       "column": 16,
       "length": 17,
       "message": "The declaration '_copyDownloadLink' isn't referenced."
-    },
-    {
-      "severity": "WARNING",
-      "type": "STATIC_WARNING",
-      "code": "UNUSED_IMPORT",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 54,
-      "column": 8,
-      "length": 26,
-      "message": "Unused import: '../utils/file_utils.dart'."
     },
     {
       "severity": "WARNING",
@@ -94,39 +84,9 @@
     {
       "severity": "WARNING",
       "type": "STATIC_WARNING",
-      "code": "UNUSED_FIELD",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 483,
-      "column": 7,
-      "length": 14,
-      "message": "The value of the field '_lastQueueSize' isn't used."
-    },
-    {
-      "severity": "WARNING",
-      "type": "STATIC_WARNING",
-      "code": "UNUSED_FIELD",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 484,
-      "column": 13,
-      "length": 13,
-      "message": "The value of the field '_lastSearchAt' isn't used."
-    },
-    {
-      "severity": "WARNING",
-      "type": "STATIC_WARNING",
-      "code": "UNUSED_FIELD",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 487,
-      "column": 8,
-      "length": 15,
-      "message": "The value of the field '_originalMaxCap' isn't used."
-    },
-    {
-      "severity": "WARNING",
-      "type": "STATIC_WARNING",
       "code": "UNNECESSARY_CAST",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 7267,
+      "path": "lib/screens/debrify_tv/watch/torbox_watch_flow.dart",
+      "line": 572,
       "column": 46,
       "length": 11,
       "message": "Unnecessary cast."
@@ -1235,8 +1195,8 @@
       "severity": "INFO",
       "type": "LINT",
       "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 4307,
+      "path": "lib/screens/debrify_tv/watch/provider_watch_flow.dart",
+      "line": 458,
       "column": 10,
       "length": 4,
       "message": "The local variable '_log' starts with an underscore."
@@ -1245,8 +1205,8 @@
       "severity": "INFO",
       "type": "LINT",
       "code": "PREFER_INTERPOLATION_TO_COMPOSE_STRINGS",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 4310,
+      "path": "lib/screens/debrify_tv/watch/provider_watch_flow.dart",
+      "line": 461,
       "column": 18,
       "length": 17,
       "message": "Use interpolation to compose strings and values."
@@ -1254,19 +1214,9 @@
     {
       "severity": "INFO",
       "type": "LINT",
-      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 4389,
-      "column": 7,
-      "length": 16,
-      "message": "Don't use 'BuildContext's across async gaps."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
       "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 4447,
+      "path": "lib/screens/debrify_tv/watch/provider_watch_flow.dart",
+      "line": 588,
       "column": 14,
       "length": 18,
       "message": "The local variable '_inferTitleFromUrl' starts with an underscore."
@@ -1274,19 +1224,9 @@
     {
       "severity": "INFO",
       "type": "LINT",
-      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 4765,
-      "column": 38,
-      "length": 7,
-      "message": "Don't use 'BuildContext's across async gaps."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
       "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 4889,
+      "path": "lib/screens/debrify_tv/watch/provider_watch_flow.dart",
+      "line": 1032,
       "column": 12,
       "length": 18,
       "message": "The local variable '_inferTitleFromUrl' starts with an underscore."
@@ -1294,39 +1234,9 @@
     {
       "severity": "INFO",
       "type": "LINT",
-      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 5110,
-      "column": 26,
-      "length": 7,
-      "message": "Don't use 'BuildContext's across async gaps."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
-      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 5498,
-      "column": 28,
-      "length": 7,
-      "message": "Don't use 'BuildContext's across async gaps."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
-      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 5778,
-      "column": 28,
-      "length": 7,
-      "message": "Don't use 'BuildContext's across async gaps."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
       "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 5902,
+      "path": "lib/screens/debrify_tv/watch/real_debrid_watch_flow.dart",
+      "line": 103,
       "column": 12,
       "length": 18,
       "message": "The local variable '_inferTitleFromUrl' starts with an underscore."
@@ -1334,20 +1244,10 @@
     {
       "severity": "INFO",
       "type": "LINT",
-      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 6064,
-      "column": 26,
-      "length": 7,
-      "message": "Don't use 'BuildContext's across async gaps."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
       "code": "CONTROL_FLOW_IN_FINALLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 6096,
-      "column": 21,
+      "path": "lib/screens/debrify_tv/watch/real_debrid_watch_flow.dart",
+      "line": 297,
+      "column": 26,
       "length": 7,
       "message": "Use of 'return' in a 'finally' clause."
     },
@@ -1355,8 +1255,8 @@
       "severity": "INFO",
       "type": "LINT",
       "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 6177,
+      "path": "lib/screens/debrify_tv/watch/alldebrid_watch_flow.dart",
+      "line": 358,
       "column": 12,
       "length": 18,
       "message": "The local variable '_inferTitleFromUrl' starts with an underscore."
@@ -1364,60 +1264,30 @@
     {
       "severity": "INFO",
       "type": "LINT",
-      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 6314,
-      "column": 26,
-      "length": 7,
-      "message": "Don't use 'BuildContext's across async gaps."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
       "code": "CONTROL_FLOW_IN_FINALLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 6347,
-      "column": 21,
+      "path": "lib/screens/debrify_tv/watch/alldebrid_watch_flow.dart",
+      "line": 526,
+      "column": 26,
       "length": 7,
       "message": "Use of 'return' in a 'finally' clause."
     },
     {
       "severity": "INFO",
       "type": "LINT",
-      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 7341,
-      "column": 26,
-      "length": 7,
-      "message": "Don't use 'BuildContext's across async gaps."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
       "code": "CONTROL_FLOW_IN_FINALLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 7379,
-      "column": 21,
+      "path": "lib/screens/debrify_tv/watch/torbox_watch_flow.dart",
+      "line": 684,
+      "column": 26,
       "length": 7,
       "message": "Use of 'return' in a 'finally' clause."
     },
     {
       "severity": "INFO",
       "type": "LINT",
-      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 7510,
-      "column": 26,
-      "length": 7,
-      "message": "Don't use 'BuildContext's across async gaps."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
       "code": "CONTROL_FLOW_IN_FINALLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 7548,
-      "column": 21,
+      "path": "lib/screens/debrify_tv/watch/pikpak_watch_flow.dart",
+      "line": 470,
+      "column": 26,
       "length": 7,
       "message": "Use of 'return' in a 'finally' clause."
     },
@@ -1464,52 +1334,22 @@
     {
       "severity": "INFO",
       "type": "LINT",
-      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 9782,
-      "column": 26,
-      "length": 7,
-      "message": "Don't use 'BuildContext's across async gaps."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
       "code": "CONTROL_FLOW_IN_FINALLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 9820,
-      "column": 21,
+      "path": "lib/screens/debrify_tv/watch/premiumize_watch_flow.dart",
+      "line": 547,
+      "column": 26,
       "length": 7,
       "message": "Use of 'return' in a 'finally' clause."
     },
     {
       "severity": "INFO",
       "type": "LINT",
-      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 10075,
-      "column": 28,
-      "length": 7,
-      "message": "Don't use 'BuildContext's across async gaps."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
       "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 10225,
+      "path": "lib/screens/debrify_tv/watch/alldebrid_watch_flow.dart",
+      "line": 128,
       "column": 14,
       "length": 18,
       "message": "The local variable '_inferTitleFromUrl' starts with an underscore."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
-      "code": "USE_BUILD_CONTEXT_SYNCHRONOUSLY",
-      "path": "lib/screens/magic_tv_screen.dart",
-      "line": 10346,
-      "column": 28,
-      "length": 7,
-      "message": "Don't use 'BuildContext's across async gaps."
     },
     {
       "severity": "INFO",
