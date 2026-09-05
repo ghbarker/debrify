@@ -712,3 +712,6 @@ Independent review of 4ab8e1c confirms only moved-renderer inventory repair, flo
 
 PR131 resolved aggregate shape-guard masking via per-file identities and separate sidebar debt cap, with independent actual-parser mutations. PR134 retains32/24line lifecycle adapters and legal owner/legacy library cycle untilrealG17/Q2;93host reduction is not independent Discover closure. No native or escaping-listener runtime proof claimed.
 
+
+User requested per-god-file forwarder counts in every gate row; ledger inventory assigned, historical unmeasured entries must stay unmeasured rather than fabricate counts. Gate4 reported native unset-env failure is developer usability debt; skipping that ordinary run must not relax mandatory native CI evidence.
+
