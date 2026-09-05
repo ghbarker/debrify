@@ -2,7 +2,13 @@
 """Characterization for tool/analyze_baseline.py matching rules."""
 
 import unittest
+import io
+import subprocess
+from contextlib import redirect_stderr, redirect_stdout
 from collections import Counter
+from unittest.mock import patch
+
+import analyze_baseline
 
 from analyze_baseline import (
     diagnostic_key,
@@ -15,6 +21,42 @@ from analyze_baseline import (
 
 
 class AnalyzeBaselineTest(unittest.TestCase):
+    machine = ('WARNING|STATIC_WARNING|UNUSED_ELEMENT|'
+               '/workspace/lib/a.dart|1|2|3|Unused element.\n')
+
+    def run_result(self, code, stdout='', stderr=''):
+        return patch('analyze_baseline.subprocess.run', return_value=
+                     subprocess.CompletedProcess([], code, stdout, stderr))
+
+    def test_run_analyze_parses_diagnostics_for_supported_exit_codes(self):
+        for code in (0, 1, 2, 3):
+            with self.subTest(code=code), self.run_result(code, self.machine):
+                self.assertEqual(analyze_baseline.run_analyze()[0]['code'],
+                                 'UNUSED_ELEMENT')
+
+    def test_run_analyze_empty_success(self):
+        with self.run_result(0):
+            self.assertEqual(analyze_baseline.run_analyze(), [])
+
+    def test_run_analyze_failed_process_cannot_look_clean(self):
+        for code, stdout in ((1, ''), (2, 'invalid options'),
+                             (3, 'malformed|output'), (9, self.machine)):
+            errors = io.StringIO()
+            with self.subTest(code=code), self.run_result(code, stdout, 'failed'), \
+                    redirect_stderr(errors), self.assertRaises(SystemExit) as raised:
+                analyze_baseline.run_analyze()
+            self.assertEqual(raised.exception.code, code)
+            self.assertIn('failed', errors.getvalue())
+
+    def test_main_rejects_duplicate_occurrence_and_allows_shrink(self):
+        record = parse_machine(self.machine)[0]
+        for current, expected in (([record, record], 1), ([], 0)):
+            with self.subTest(current=current), patch(
+                    'analyze_baseline.run_analyze', return_value=current), patch(
+                    'analyze_baseline.load_baseline', return_value=[record]), \
+                    redirect_stdout(io.StringIO()):
+                self.assertEqual(analyze_baseline.main([]), expected)
+
     def test_split_machine_unescapes_pipes(self):
         line = r"INFO|LINT|FOO|/tmp/a\|b.dart|1|2|3|msg \| more"
         parts = split_machine_line(line)
