@@ -6,7 +6,7 @@
 - G1'-7c merged #130 at 5232013a after independent 86-test/body review and all three exact-head CI checks. 143 host lines removed; zero credit toward standalone Discover. Wegener assigned G1'-7d actual-origin pin feasibility only, branch refactor/g1-7d-playback-selection; no production scope granted.
 - C0 Cicero: approved isolated shape-guard hardening, only shape_manifest_test.dart and its one allowlist identity. Locke: independent G17d real-origin pin review. Wegener: G17d transport-boundary design; no product move authorized.
 - Latest full automated gate PASSED actual main abc74484: 5404 passing generic tests, 12 exact known failures, two skips; 21 exact known golden errors after configured retries; no unexpected/unused entries. Native origin/current passed; Windows/ARM64 builds passed; analyzer 436/452, layering 77.
-- Current merged god lines: search 9126, player 11926, Magic TV 3659, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
+- Current merged god lines: search 9126, player 11926, Magic TV 3403, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
 - Open debt: storage shortfall 1565; player native fixture paused; temporary forwarders expire in their recorded lanes. No manual smoke pass claimed; user explicitly deferred it without blocking eligible work.
 - CODEMAP unlocked. No user action required. Awake helper PID3412 expired September 5 at 16:43 UTC; process absent and log active=false verified. No extension or permanent power changes.
 ## Prior checkpoints and retained evidence
@@ -186,3 +186,11 @@ M16 move authorized after independent ac667f9d fourteen-test origin proof: exact
 
 ## Full automated gate PASS abc74484/tree37dc3fa5
 Generic5404pass/12exactknown/2skip;goldens21exactknown after2configuredretries;no unexpected/unused. Native1+1/0skip;analyzer436/452no new;layer77delta0;Python55. Windows+ARM64buildsPASS withchecksums in debrify-c0-main-abc7-gate/.dart_tool/main-gate/REPORT.md andgate-manifest.json. Manualdeferred NOTpassed. 133onlygoldenCIpending exact67a0f5c9; allothermergeconditionspassed. G17e selectionartorigin test-only authorizednewbranch; no productmove, no extraIOhooks. Locke architecture review, C0gatecompleteavailable.
+
+133mergedb3d06549 exact67a0f5c9 afterindependent135/body/state/integration/all3CIgreen andfullabc744gate. Difference: QueuePrefetcher owns backgroundlockedpreparation/state/sharedADresult, preservinglatecompletion/failuretail andlistidentity. 256physicalhostLeaves,228code/declarationnet(two-short230),wholeproduction+51. No expirycleanupcredit. Firstproductionafterabc744gate. Ampereexpiryclosureproposalread-only; LockeG17e58origin/reviseddesignreview; Wegenerpin828de2ce frozen/noownermove. God9126/11926/3403/4365/2899 versusoriginal19070/16278/10716/9963/7905. No userwait.
+
+G17e revised bounded owner move authorized after independent828de2ce58originPASS. Exact newselection_playback_owner/searchhostdeclaredhunks/partSourcesfactory only. Host retains async listener lifecycle and empty-browse entry guard before context; resolver stayshost. Owner futures returned directly, route lookup/read timing preserved. Two substantive adapters >10lines explicitly accepted untilrealG17/Q2; legalowner-to-legacy-library cycle is debt, ZERO750standalonecredit. No otherproductionseams/lifecycle/actions authorized. CODEMAPnotyetlocked.
+
+
+M16 expiry A+B authorized onrefactor/m1-6-expiry: host plusprovider_watch_flow fiveunusedslots only. Existingactualorigin suites reproducedgreen before removal; twoauditablecommits sixforwards/deadslots then18mechanicalaliases. Forecast72host includes34aliaslines, plus42binding, NOTqueue133credit. Preserveallwrites/tearofftiming, two write-onlyfields. Retain11livecallbacks/editor/settingsUIboundaries asQ2compositiondebt; no fullM1closure. CODEMAPwaitserializedgrant. G17e scopesdisjoint.
+

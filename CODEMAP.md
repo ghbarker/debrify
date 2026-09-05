@@ -420,6 +420,14 @@ is an editor mirror, not the source of truth. How to add a provider:
   pins desktop switches, host early rejection, Flutter-route continuation and
   capture-before-held-prepare-completion behavior;
   exact cooldown/key-read order is body-diff evidence, not a timing-test claim.
+  Queue preparation/lifecycle: `lib/services/debrify_tv/queue_prefetcher.dart`
+  (`QueuePrefetcher`, shared `WatchAllDebridPrepared` interface and private AD result).
+  It shares the existing queue/seen sets/settings instance and retains live mounted
+  and request-builder inputs; watch flows keep captured-key calls and live bindings.
+  `test/magic_tv_queue_prefetch_origin_test.dart` pins RD/AD preparation, held-stop
+  completion, failure-tail rotation and channel restart. Preference-read epoch races,
+  competing starts, lookahead edges and native-positive paths remain unproven.
+  This move does not close the wrapper/18-alias expiry review above or claim a pure port.
   Default pick / overlay strings: `lib/services/cloud/magic_tv_provider.dart`
   (`playbackPrecedence` mapped to `real_debrid`; display stays `Torbox` / `Real Debrid`).
 - Data: `lib/models/debrify_tv/`, `lib/services/debrify_tv_repository.dart`,
