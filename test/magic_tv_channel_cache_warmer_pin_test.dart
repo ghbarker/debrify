@@ -915,7 +915,7 @@ void main() {
 
   group('snack/dialog stay on the host', () {
     test('quality fallback snack is host _showSnack', () {
-      expect(host, contains("_showSnack(\n      'No \${_tvFilters.summary()} sources found"));
+      expect(host, contains("_showSnack(\n      'No \${_playbackSettings.tvFilters.summary()} sources found"));
     });
 
     test('create/update progress dialog and snacks stay on the host', () {
