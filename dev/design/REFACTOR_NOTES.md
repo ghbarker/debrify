@@ -299,6 +299,37 @@ behaviour and must be restored, not kept as quirks.
   off** without deleting stored history.
 - **Callers still import `StorageService`.** `@Deprecated` waits for Q2.
 
+### M1-1 · Channel cache warmer
+
+- **No generation / warm-token.** `computeChannelCacheEntry` has no
+  generation counter. Empty `keywordsToWarm` resets `anySuccess` to
+  `accumulator.isNotEmpty`; a failed warm returns
+  `torrents: const <CachedTorrent>[]` (drops leftover accumulator) and
+  `'No torrents found for these keywords yet.'`. First `failureMessage`
+  wins (`??=`). Keep.
+- **Empty cache is a miss.** `ensureCacheEntry` is memory-first and does
+  **not** write a storage miss back into the map (returns null). Keep.
+- **Inclusion-only keyword filter.** `filterCachedTorrentsForKeywords`
+  keeps a torrent if it has any allowed keyword. `merge(keywords: matching)`
+  unions onto the existing list and does **not** strip the others. Keep.
+- **Accumulate override is strict `>`.** Equal seeders keep the old torrent
+  body; keywords/sources still union. Empty infohash is a no-op. Keep.
+- **Quality filter at READ.** Empty match falls back to the unfiltered pool
+  and notifies (snack stays on the host). Playback select filters first;
+  `<= 1000` shuffles the whole pool; empty per-keyword pick takes the first
+  1000 **unshuffled**. Keep.
+- **Quick-play torrent filter is strict** unless `allowFallback` is true
+  (partial rebuilds must not start an off-filter source). Keep.
+- **TorBox window.** Empty API key returns no hits and keeps the start
+  cursor; live walk is chunk 90 / max 2 calls / stop on first hit. Keep.
+- **Edit-prune.** A torrent that carries **any** removed keyword is dropped
+  entirely (even if it also has kept ones). Prune-to-empty marks `failed`
+  and keeps the baseline error (`clearErrorMessage` only when torrents
+  remain). Create/update **dialogs** stay on the host (M1-5). Keep.
+- **RD size-filter session** lives on the warmer (`rdSizeRejections` /
+  `sizeFilterRelaxed`); the relax snack stays injected. Trailer floor
+  (`minVideoSizeBytes`) is passed in. Keep.
+
 ### V1-3 · subtitle track controller
 
 - **Stored `auto` is no-choice.** A persisted subtitle id of `auto` (audio-only

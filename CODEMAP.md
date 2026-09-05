@@ -309,6 +309,9 @@ is an editor mirror, not the source of truth. How to add a provider:
   `_parseKeywords`; per-provider native launch `_launch{RealDebrid,Torbox}OnAndroidTv`).
   Watch session: `lib/screens/debrify_tv/watch_session.dart` (`WatchSession` +
   `ProgressSink`; screen keeps `_queue` / `_isBusy` accessors).
+  Channel cache warmer: `lib/services/debrify_tv/channel_cache_warmer.dart`
+  (`ChannelCacheWarmer` — keyword warm, cache read/filter, TorBox window,
+  quality filter, playback select; snacks stay on the host).
   Default pick / overlay strings: `lib/services/cloud/magic_tv_provider.dart`
   (`playbackPrecedence` mapped to `real_debrid`; display stays `Torbox` / `Real Debrid`).
 - Data: `lib/models/debrify_tv/`, `lib/services/debrify_tv_repository.dart`,
