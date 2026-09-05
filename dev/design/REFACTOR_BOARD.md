@@ -97,3 +97,6 @@ Exact head3e30de17 verified CI test/goldens SUCCESS; independent19case reproduct
 
 S2-6 ownership extension: Locke exclusively owns test/storage_key_sweep_test.dart import/store-discovery/exact-alias additions; assertions must not weaken. CODEMAP storage-routing rows exclusively locked to Locke until commit/release. Current extraction reports1867 net Leaves,433 uncredited deficit. Independent review still required. C0 authorized fast-forward PR116 to24dc0dcb; native Linux execution required before merge.
 
+
+G1'-5 destination decision approved: lib/screens/search/fav_rows_controller.dart and fav_row.dart retain Flutter/focus ownership in screen layer; no new service-layer UI dependency. Wegener starts real-origin pins now; CODEMAP waits only at completion (Locke owns current lock). C0 independent S2-6 checkpoint review assigned while native CI116 executes. PR117 test passed, goldens pending; independent keyword review complete. Awake helper3412 verified running.
+
