@@ -4,6 +4,7 @@ import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/services/storage/cloud_secret_prefs.dart';
 import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
+import 'package:debrify/services/storage/default_torrent_filter_prefs.dart';
 import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:debrify/services/storage/player_prefs.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
@@ -126,6 +127,7 @@ Set<String> allDiscoveredPrefsKeys() => {
   ...AppStylePrefs.ownedKeys,
   ...TrackingPrefs.ownedKeys,
   ...PlaybackProgressStore.ownedKeys,
+  ...DefaultTorrentFilterPrefs.ownedKeys,
   ...inlinePrefsKeysOnStorageService(),
   ...interpolatedPrefsKeys,
 };
@@ -135,6 +137,27 @@ Set<String> unownedDiscoveredPrefsKeys() =>
     allDiscoveredPrefsKeys().difference(StorageKeyOwnership.byKey.keys.toSet());
 
 void main() {
+  test('default filter keys participate in discovery and exact ownership', () {
+    const expected = {
+      'default_filter_qualities_v1',
+      'default_filter_rip_sources_v1',
+      'default_filter_languages_v1',
+      'default_filter_sizes_v1',
+      'default_filter_dynamic_ranges_v1',
+    };
+    expect(DefaultTorrentFilterPrefs.ownedKeys, expected);
+    expect(StorageKeyOwnership.keysFor(StorageKeyStore.defaultTorrentFilterPrefs),
+        expected);
+    expect(declaredOnStorageService().intersection(expected), isEmpty);
+    expect(allDiscoveredPrefsKeys(), containsAll(expected));
+    for (final key in expected) {
+      final missing = allDiscoveredPrefsKeys().difference(
+        StorageKeyOwnership.byKey.keys.toSet().difference({key}),
+      );
+      expect(missing, {key});
+    }
+  });
+
   test('playback store keys participate in discovery and exact ownership', () {
     expect(PlaybackProgressStore.ownedKeys,
         StorageKeyOwnership.keysFor(StorageKeyStore.playbackProgressStore));
@@ -239,6 +262,8 @@ void main() {
     expectStore(fromIptv, StorageKeyStore.iptvPrefs, 'IptvPrefs');
     expectStore(fromAppStyle, StorageKeyStore.appStylePrefs, 'AppStylePrefs');
     expectStore(fromTracking, StorageKeyStore.trackingPrefs, 'TrackingPrefs');
+    expectStore(DefaultTorrentFilterPrefs.ownedKeys,
+        StorageKeyStore.defaultTorrentFilterPrefs, 'DefaultTorrentFilterPrefs');
 
     final extracted = {
       ...fromCloud,
@@ -252,6 +277,7 @@ void main() {
       ...fromAppStyle,
       ...fromTracking,
       ...PlaybackProgressStore.ownedKeys,
+      ...DefaultTorrentFilterPrefs.ownedKeys,
     };
     final residual = declared.difference(extracted);
     for (final key in residual) {

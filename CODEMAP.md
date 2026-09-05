@@ -176,6 +176,13 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   MDBList credentials live in `lib/services/storage/tracking_prefs.dart`
   (`TrackingPrefs`, owns `trackingSourceRevision`). `home_tick_sources` stays
   on HomePrefs; TrackingPrefs bumps the revision after that write.
+  **Residual filters:** `lib/services/storage/default_torrent_filter_prefs.dart`
+  owns five default-filter JSON String keys and ten get/set bodies. Its
+  `clearDefaults(ProfilePreferences)` removes five keys in order on captured
+  preferences; StorageService retains capture and the separate provider reset
+  phase (including the profile-switch quirk and accepted helper-await boundary).
+  Ten public facades expire with Q2 caller migration; this slice removes44 host
+  lines, adds57 production lines overall, and leaves783 explicit S2-6/S2-7 debt.
   Key ownership pin: `lib/services/storage/storage_key_ownership.dart`
   (`byKey` — every declared / inline / interpolated prefs name, one store).
   **Façade rule (S2-0):** `StorageService.x` stays a forwarding façade until callers
