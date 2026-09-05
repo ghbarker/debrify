@@ -4,6 +4,7 @@ import 'package:debrify/services/stremio_service.dart';
 import 'package:debrify/services/series_source_service.dart';
 import 'package:debrify/widgets/catalog_item_tile.dart';
 import 'package:debrify/widgets/see_all/discover_detail_rail.dart';
+import 'package:debrify/widgets/see_all/discover_trailer_stage.dart';
 import 'package:debrify/widgets/see_all/discover_shelf_scope.dart';
 import 'package:debrify/widgets/see_all/see_all_poster_grid.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +17,70 @@ import 'favourites_rows_origin_test.dart'
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  testWidgets(
+    'origin Discover theater waits five seconds and cancels on frames stopping',
+    (tester) async {
+      await prepareFavourites(tester);
+      StremioService.instance.invalidateCache();
+      addTearDown(StremioService.instance.invalidateCache);
+      await StorageService.setDiscoverLayout('grid');
+      await mountDiscover(tester, tv: true);
+      final stage = tester.widget<DiscoverTrailerStage>(
+        find.byType(DiscoverTrailerStage),
+      );
+      final theater = tester
+          .widgetList<ValueListenableBuilder<bool>>(
+            find.ancestor(
+              of: find.byType(DiscoverDetailRail),
+              matching: find.byWidgetPredicate(
+                (w) => w is ValueListenableBuilder<bool>,
+              ),
+            ),
+          )
+          .first
+          .valueListenable;
+      expect(theater.value, isFalse);
+      stage.showing!.value = true;
+      await tester.pump(const Duration(milliseconds: 4999));
+      expect(theater.value, isFalse);
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(theater.value, isTrue);
+      stage.showing!.value = false;
+      expect(theater.value, isFalse);
+      stage.showing!.value = true;
+      await tester.pump(const Duration(seconds: 2));
+      stage.showing!.value = false;
+      await tester.pump(const Duration(seconds: 4));
+      expect(theater.value, isFalse);
+      await closeFavourites(tester);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('origin Discover narrow canvas resets chrome after frame', (
+    tester,
+  ) async {
+    await prepareFavourites(tester);
+    StremioService.instance.invalidateCache();
+    addTearDown(StremioService.instance.invalidateCache);
+    await mountDiscover(tester, tv: true);
+    final stage = tester.widget<DiscoverTrailerStage>(
+      find.byType(DiscoverTrailerStage),
+    );
+    stage.takeover!.value = 0.6;
+    stage.showing!.value = true;
+    expect(MainPageBridge.tvChromeDim.value, 0.6);
+    tester.view.physicalSize = const Size(640, 1080);
+    // Size invalidation itself must not synchronously write shell state.
+    expect(MainPageBridge.tvChromeDim.value, 0.6);
+    await tester.pump();
+    expect(MainPageBridge.tvChromeDim.value, 0);
+    expect(stage.takeover!.value, 0);
+    expect(stage.showing!.value, isFalse);
+    expect(find.byType(DiscoverTrailerStage), findsNothing);
+    await closeFavourites(tester);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('origin Discover bound badge refresh retains source focus', (
     tester,
   ) async {

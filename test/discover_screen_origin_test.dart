@@ -21,6 +21,8 @@ import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/services/stremio_service.dart';
 import 'package:debrify/widgets/see_all/stremio_dropdown.dart';
 import 'package:debrify/widgets/catalog_item_tile.dart';
+import 'package:debrify/widgets/see_all/discover_trailer_stage.dart';
+import 'package:debrify/widgets/see_all/discover_detail_rail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -160,6 +162,159 @@ Future<void> mountDiscover(WidgetTester tester, {bool tv = false}) async {
 }
 
 void main() {
+  testWidgets(
+    'origin Discover first frame uses warm layout before fresh preference',
+    (tester) async {
+      await prepareFavourites(tester);
+      StremioService.instance.invalidateCache();
+      addTearDown(StremioService.instance.invalidateCache);
+      await StorageService.setDiscoverLayout('grid');
+      await mountDiscover(tester, tv: true);
+      expect(
+        tester
+            .widget<DiscoverDetailRail>(find.byType(DiscoverDetailRail))
+            .layout,
+        DiscoverDetailLayout.rail,
+      );
+      await closeFavourites(tester);
+      await StorageService.setDiscoverLayout('stage');
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: SearchScreen(discoverMode: true, isTelevision: true),
+        ),
+      );
+      expect(
+        tester
+            .widget<DiscoverDetailRail>(find.byType(DiscoverDetailRail))
+            .layout,
+        DiscoverDetailLayout.rail,
+      );
+      await pumpFavourites(tester);
+      expect(
+        tester
+            .widget<DiscoverDetailRail>(find.byType(DiscoverDetailRail))
+            .layout,
+        DiscoverDetailLayout.stage,
+      );
+      await closeFavourites(tester);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
+    'origin Discover layout change resets signals before async layout',
+    (tester) async {
+      await prepareFavourites(tester);
+      StremioService.instance.invalidateCache();
+      addTearDown(StremioService.instance.invalidateCache);
+      await StorageService.setDiscoverLayout('grid');
+      await mountDiscover(tester, tv: true);
+      final stage = tester.widget<DiscoverTrailerStage>(
+        find.byType(DiscoverTrailerStage),
+      );
+      final rail = tester.widget<DiscoverDetailRail>(
+        find.byType(DiscoverDetailRail),
+      );
+      final theater = tester
+          .widgetList<ValueListenableBuilder<bool>>(
+            find.ancestor(
+              of: find.byType(DiscoverDetailRail),
+              matching: find.byWidgetPredicate(
+                (w) => w is ValueListenableBuilder<bool>,
+              ),
+            ),
+          )
+          .first
+          .valueListenable;
+      stage.showing!.value = true;
+      await tester.pump(const Duration(seconds: 5));
+      expect(theater.value, isTrue);
+      rail.trailerMeta.value = const StremioMeta(
+        id: 'origin',
+        type: 'movie',
+        name: 'Origin',
+      );
+      stage.loading.value = true;
+      stage.takeover!.value = 0.7;
+      final order = <String>[];
+      rail.trailerMeta.addListener(() => order.add('meta'));
+      stage.loading.addListener(() => order.add('loading'));
+      theater.addListener(() => order.add('theater'));
+      stage.showing!.addListener(() => order.add('showing'));
+      stage.takeover!.addListener(() => order.add('takeover'));
+      await StorageService.setDiscoverLayout('stage');
+      MainPageBridge.discoverLayoutChanged!();
+      expect(order, ['meta', 'loading', 'theater', 'showing', 'takeover']);
+      expect(rail.trailerStreams.value, isNull);
+      expect(rail.trailerMeta.value, isNull);
+      expect(stage.loading.value, isFalse);
+      expect(MainPageBridge.tvChromeDim.value, 0);
+      // The rendered layout is still the old one until the asynchronous read
+      // commits and a frame builds; signal teardown happened synchronously first.
+      expect(
+        tester
+            .widget<DiscoverDetailRail>(find.byType(DiscoverDetailRail))
+            .layout,
+        DiscoverDetailLayout.rail,
+      );
+      await pumpFavourites(tester);
+      expect(
+        tester
+            .widget<DiscoverDetailRail>(find.byType(DiscoverDetailRail))
+            .layout,
+        DiscoverDetailLayout.stage,
+      );
+      await closeFavourites(tester);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'origin old Discover disposal retains newer settings bridge owner',
+    (tester) async {
+      await prepareFavourites(tester);
+      StremioService.instance.invalidateCache();
+      addTearDown(StremioService.instance.invalidateCache);
+      Widget hosts({required bool old, required bool newer}) => MaterialApp(
+        home: Stack(
+          children: [
+            if (old)
+              const SearchScreen(
+                key: ValueKey('old'),
+                discoverMode: true,
+                isTelevision: true,
+              ),
+            if (newer)
+              const SearchScreen(
+                key: ValueKey('new'),
+                discoverMode: true,
+                isTelevision: true,
+              ),
+          ],
+        ),
+      );
+      await tester.pumpWidget(hosts(old: true, newer: false));
+      await pumpFavourites(tester);
+      final oldLayout = MainPageBridge.discoverLayoutChanged;
+      final oldCards = MainPageBridge.discoverCardSettingsChanged;
+      await tester.pumpWidget(hosts(old: true, newer: true));
+      await pumpFavourites(tester);
+      final newLayout = MainPageBridge.discoverLayoutChanged;
+      final newCards = MainPageBridge.discoverCardSettingsChanged;
+      expect(newLayout, isNot(oldLayout));
+      expect(newCards, isNot(oldCards));
+      await tester.pumpWidget(hosts(old: false, newer: true));
+      await pumpFavourites(tester);
+      expect(MainPageBridge.discoverLayoutChanged, newLayout);
+      expect(MainPageBridge.discoverCardSettingsChanged, newCards);
+      newLayout!();
+      newCards!();
+      await pumpFavourites(tester);
+      await closeFavourites(tester);
+      expect(MainPageBridge.discoverLayoutChanged, isNull);
+      expect(MainPageBridge.discoverCardSettingsChanged, isNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
   // New helper contract, not an invocation of the original private host method.
   // Origin _refreshBoundSources only awaited inside its eligible-ID loop, so
   // empty/all-ineligible snapshots reached the clear synchronously.
