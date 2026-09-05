@@ -5,7 +5,7 @@ import '../profiles/profile_preferences.dart';
 /// network-tuning prefs. [StorageService] forwards to this store.
 ///
 /// Style keys (dock, play-loader, TV controls, `debrify_tv_player_style`)
-/// stay on StorageService until S2-4. Completion thresholds /
+/// live on [AppStylePrefs] (S2-4). Completion thresholds /
 /// `_getPlaybackStateMap` stay until S2-6. Key names and encodings are
 /// frozen; do not rename a persisted string.
 class PlayerPrefs {

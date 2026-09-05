@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/services/storage/cloud_secret_prefs.dart';
 import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
@@ -112,6 +113,7 @@ Set<String> allDiscoveredPrefsKeys() => {
   ...ProviderCredentialPrefs.ownedKeys,
   ...PlayerPrefs.ownedKeys,
   ...IptvPrefs.ownedKeys,
+  ...AppStylePrefs.ownedKeys,
   ...inlinePrefsKeysOnStorageService(),
   ...interpolatedPrefsKeys,
 };
@@ -131,6 +133,7 @@ void main() {
     final fromProvider = ProviderCredentialPrefs.ownedKeys;
     final fromPlayer = PlayerPrefs.ownedKeys;
     final fromIptv = IptvPrefs.ownedKeys;
+    final fromAppStyle = AppStylePrefs.ownedKeys;
     final fromInline = {
       ...inlinePrefsKeysOnStorageService(),
       ...interpolatedPrefsKeys,
@@ -208,6 +211,7 @@ void main() {
     );
     expectStore(fromPlayer, StorageKeyStore.playerPrefs, 'PlayerPrefs');
     expectStore(fromIptv, StorageKeyStore.iptvPrefs, 'IptvPrefs');
+    expectStore(fromAppStyle, StorageKeyStore.appStylePrefs, 'AppStylePrefs');
 
     final extracted = {
       ...fromCloud,
@@ -218,6 +222,7 @@ void main() {
       ...fromProvider,
       ...fromPlayer,
       ...fromIptv,
+      ...fromAppStyle,
     };
     final residual = declared.difference(extracted);
     for (final key in residual) {
