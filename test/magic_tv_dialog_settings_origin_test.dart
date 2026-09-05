@@ -435,6 +435,56 @@ void main() {
     },
   );
   testWidgets(
+    'origin keyword Enter add dedups existing case, removes chip and rejects keyword 1001',
+    (tester) async {
+      await tester.runAsync(_seed);
+      await _mount(tester, routes, expectedEditorPaintDiagnostics: 6);
+      await openEditor(tester, edit: true);
+      await tester.enterText(_editorFields.last, 'KEEP');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      expect(find.text('Keywords (2/1000)'), findsOneWidget);
+      expect(
+        tester.widget<EditableText>(_editorFields.last).controller.text,
+        isEmpty,
+      );
+      await tester.tap(find.text('Drop').last);
+      await tester.pump();
+      expect(find.text('Keywords (1/1000)'), findsOneWidget);
+      await tester.enterText(_editorFields.last, 'Added');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      expect(find.text('Keywords (2/1000)'), findsOneWidget);
+      expect(find.text('Added'), findsOneWidget);
+      // Comma-entry is the other actual UI entry to the same Add helper.
+      await tester.enterText(
+        _editorFields.last,
+        List.generate(998, (i) => 'K$i').join(','),
+      );
+      await tester.pump();
+      expect(find.text('Keywords (1000/1000)'), findsOneWidget);
+      expect(
+        find.text('You can add up to 1000 keywords per channel.'),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(_editorFields.last);
+      await tester.enterText(_editorFields.last, 'Rejected1001');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      expect(find.text('Keywords (1000/1000)'), findsOneWidget);
+      expect(find.text('Rejected1001'), findsNothing);
+      expect(
+        find.text('You can add up to 1000 keywords per channel.'),
+        findsOneWidget,
+      );
+      await close(tester, 'Cancel');
+      final stored = await tester.runAsync(
+        () => DebrifyTvRepository.instance.fetchAllChannels(),
+      );
+      expect(stored!.single.keywords, ['Keep', 'Drop']);
+    },
+  );
+  testWidgets(
     'origin setting writes immediately before Done and rebuilds locally',
     (tester) async {
       await _mount(tester, routes, expectedEditorPaintDiagnostics: 2);
