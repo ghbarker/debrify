@@ -1,13 +1,13 @@
 # Refactor board
 
 ## Current checkpoint — 2026-09-05 (supersedes historical rows below)
-- Merged this round: #114, #117, #118, #116, #120, #119, #121.
-- G1'-6 Wegener: draft #123 af1d3112, independent review passed 47 tests/origin 5; exact CI pending. 732 net host lines proposed.
-- M1-4 Ampere: draft #122 corrected 5e9e0aa6; stale source inventory fixed, independent correction review and exact CI pending. 780 net host lines proposed.
-- C0 Cicero: hero independent review complete. Decoder V1-6 paused: native fixture failed; uncommitted experimental seams isolated, never merged.
-- Locke: independently reviewing #122 correction. Storage debt audit complete; no unassigned cleanup.
+- Merged this round: #114, #117, #118, #116, #120, #119, #121, #122, #123.
+- G1'-7 Wegener: origin-only Discover pins assigned; ownership contract required before extraction. #123 merged397398d5,732net.
+- M1-5 Ampere: origin dialog/settings pins assigned; live binding design and automated gate before move. #122 merged2bbd9f6d,780net.
+- C0 Cicero: full actualmain397398d5 automated gate assigned now. Decoder V1-6 paused: native fixture failed; uncommitted experimental seams isolated, never merged.
+- Locke: bounded independent Discover ownership-contract review assigned. Storage debt audit complete; no unassigned cleanup.
 - Latest full automated gate PASSED actual main 9958dd1e: Windows/Android builds, native pair, full suites against unchanged allowlist, analyzer and layering. Manual smoke deferred by user; never marked passed.
-- Current main god lines: search 10013, player 11926, Magic TV 5299, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
+- Current main god lines: search 9281, player 11926, Magic TV 4519, storage 4365, settings 2899. Original: 19070 / 16278 / 10716 / 9963 / 7905.
 - Storage target shortfall 1565, including 783 explicit S2-6/S2-7 debt; no double credit.
 - CODEMAP unlocked. Temporary keep-awake expires September 5 at 16:43 UTC. No permanent power or disk changes.
 
@@ -144,4 +144,7 @@ M1-4 draft122 head91dadec1 (move6d296c59,pin8efdeaba) independentLockereview/CIp
 
 
 PR121merged1274476d exact96cd6acc afterLocke187/origin9/body52+C0integration12pass/all3CIgreen. Difference:favourites/focus ownership extracted,1363net (search11376to10013). More:runtimeedgegaps+remainingsearch2513above7500target; no purelogiccreditforUIcontroller. Godcurrentsearch10013/player11926/magic5299/storage4365/settings2899; originals19070/16278/10716/9963/7905. WegenerG1'-6hero assigned freshrefactor/g1-6-hero-presenter,target550,originpinsbeforemove. V16pausednativefixture,nofailedscaffoldmerge.122independentreviewPASS/nativeCIpassed,otherspending. Slice1since9958fullgate.
+
+
+122merged2bbd9f6d and123397398d5 afterexactall3CIgreen+independent107/47checks/originbodyproofs. Difference:780MagicTV+732searchhostLeaves, dedicatedchannel/hero ownership. More:Androidpositive unproven,7channelwrappersM1-6/21heroaliasesG1'-8 expiry; fullnextgateactiveactual397398d5. Currentcounts9281/11926/4519/4365/2899 vsoriginal19070/16278/10716/9963/7905. No manualpassclaim.
 
