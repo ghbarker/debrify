@@ -24,7 +24,6 @@ import '../models/webdav_item.dart';
 import '../models/android_video_renderer_mode.dart';
 import '../models/tv_hero_artwork_quality.dart';
 import '../models/tracking_source.dart';
-import '../utils/json_isolate.dart';
 import '../utils/platform_util.dart';
 import 'storage/cloud_secret_prefs.dart';
 import 'storage/tracking_prefs.dart';
@@ -166,15 +165,12 @@ class StorageService {
   static const String _batteryOptStatusKey =
       'battery_opt_status_v1'; // granted|denied|never|unknown
 
-  static const String _playbackStateKey = PlaybackProgressStore.playbackStateKey;
-  static const String _continueWatchingKey = PlaybackProgressStore.continueWatchingKey;
   static const String localSeriesCompletionStateKey =
       PlaybackProgressStore.localSeriesCompletionStateKey;
   static const String localSeriesCalendarCheckedAtKey =
       PlaybackProgressStore.localSeriesCalendarCheckedAtKey;
   static const String localSeriesCalendarAttemptedAtKey =
       PlaybackProgressStore.localSeriesCalendarAttemptedAtKey;
-  static const String _finishedMoviesKey = PlaybackProgressStore.finishedMoviesKey;
 
   static const String _supportRemoteConfigCacheKey =
       'support_remote_config_cache_v1';
@@ -200,31 +196,14 @@ class StorageService {
   static const String _updateAutoCheckEnabledKey = 'update_auto_check_enabled';
   static const String _updateIgnoredVersionKey = 'update_ignored_version';
 
-  static const String _movieCompletionThresholdKey =
-      'movie_completion_threshold';
-  static const String _episodeCompletionThresholdKey =
-      'episode_completion_threshold';
-  static const String _playbackCompletionMigrationGenerationKey =
-      'playback_completion_migration_generation';
-  static const int _currentPlaybackCompletionMigrationGeneration = 1;
-  static const String _resumeGhostPurgeGenerationKey =
-      'resume_ghost_purge_generation';
-  static const int _currentResumeGhostPurgeGeneration = 1;
 
   /// Completion thresholds selectable in Settings → Playback. A lower bound
   /// avoids treating a brief accidental play as watched; 95% still lets users
   /// finish a title without waiting through every trailing credit frame.
-  static const List<int> localCompletionThresholdOptions = <int>[
-    50,
-    60,
-    70,
-    75,
-    80,
-    85,
-    90,
-    95,
-  ];
-  static const int defaultLocalCompletionThreshold = 80;
+  static const List<int> localCompletionThresholdOptions =
+      PlaybackProgressStore.localCompletionThresholdOptions;
+  static const int defaultLocalCompletionThreshold =
+      PlaybackProgressStore.defaultLocalCompletionThreshold;
 
 
   // PikPak secret key aliases — CloudSecretPrefs owns the strings.
@@ -1102,8 +1081,6 @@ class StorageService {
   static Future<void> clearContinueWatching() =>
       PlaybackProgressStore.clearContinueWatching();
 
-  static Future<Set<String>> _getFinishedMovieIds() =>
-      PlaybackProgressStore.readFinishedMovieIds();
 
   static Future<Set<String>> getFinishedMovieIds() =>
       PlaybackProgressStore.getFinishedMovieIds();
@@ -1126,14 +1103,10 @@ class StorageService {
   }) =>
       PlaybackProgressStore.setSeriesExplicitlyWatched(imdbId, watched: watched);
 
-  static Future<Map<String, dynamic>> _getPlaybackStateMap() =>
-      PlaybackProgressStore.readPlaybackStateMap();
 
   static Future<void> clearPlaybackStateByImdbId(String imdbId) =>
       PlaybackProgressStore.clearPlaybackStateByImdbId(imdbId);
 
-  static Future<void> _savePlaybackStateMap(Map<String, dynamic> map) =>
-      PlaybackProgressStore.writePlaybackStateMap(map);
 
   static Future<void> saveSeriesPlaybackState({
     required String seriesTitle,
@@ -2236,48 +2209,23 @@ class StorageService {
   static Future<void> setNetworkBufferSize(String value) =>
       PlayerPrefs.setNetworkBufferSize(value);
 
-  static int _normalizeLocalCompletionThreshold(int value) {
-    return localCompletionThresholdOptions.contains(value)
-        ? value
-        : defaultLocalCompletionThreshold;
-  }
 
   /// Percentage of a movie that must be watched before the local player marks
   /// it complete. Tracker-backed sessions retain Trakt/Simkl's own semantics.
-  static Future<int> getMovieCompletionThreshold() async {
-    final prefs = await ProfilePreferences.instance();
-    return _normalizeLocalCompletionThreshold(
-      prefs.getInt(_movieCompletionThresholdKey) ??
-          defaultLocalCompletionThreshold,
-    );
-  }
+  static Future<int> getMovieCompletionThreshold() =>
+      PlaybackProgressStore.getMovieCompletionThreshold();
 
-  static Future<void> setMovieCompletionThreshold(int value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setInt(
-      _movieCompletionThresholdKey,
-      _normalizeLocalCompletionThreshold(value),
-    );
-  }
+  static Future<void> setMovieCompletionThreshold(int value) =>
+      PlaybackProgressStore.setMovieCompletionThreshold(value);
 
   /// Percentage of an episode that must be watched before the local player
   /// marks it complete. Kept separate from movies because users commonly want
   /// a different rule for episode credits.
-  static Future<int> getEpisodeCompletionThreshold() async {
-    final prefs = await ProfilePreferences.instance();
-    return _normalizeLocalCompletionThreshold(
-      prefs.getInt(_episodeCompletionThresholdKey) ??
-          defaultLocalCompletionThreshold,
-    );
-  }
+  static Future<int> getEpisodeCompletionThreshold() =>
+      PlaybackProgressStore.getEpisodeCompletionThreshold();
 
-  static Future<void> setEpisodeCompletionThreshold(int value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setInt(
-      _episodeCompletionThresholdKey,
-      _normalizeLocalCompletionThreshold(value),
-    );
-  }
+  static Future<void> setEpisodeCompletionThreshold(int value) =>
+      PlaybackProgressStore.setEpisodeCompletionThreshold(value);
 
   /// Re-arms the resume-ghost purge for a restore/transfer preference overlay.
   ///
@@ -2294,11 +2242,8 @@ class StorageService {
   /// at the source, so its value is honoured untouched.
   static void rearmGhostPurgeForImportedPlayback(
     Map<String, Object?> preferences,
-  ) {
-    if (!preferences.containsKey(_playbackStateKey)) return;
-    if (preferences.containsKey(_resumeGhostPurgeGenerationKey)) return;
-    preferences[_resumeGhostPurgeGenerationKey] = 0;
-  }
+  ) =>
+      PlaybackProgressStore.rearmGhostPurgeForImportedPlayback(preferences);
 
   /// One-time, per-profile purge of the resume "ghosts" older builds minted
   /// when an episode was unwatched.
@@ -2321,61 +2266,8 @@ class StorageService {
   ///
   /// Rows marked in `finishedEpisodes` are kept: a mark-only watch stores the
   /// dummy 0ms/1ms shape and still means "watched".
-  static Future<void> purgeUnwatchedResumeGhosts() async {
-    final prefs = await ProfilePreferences.instance();
-    final generation = prefs.getInt(_resumeGhostPurgeGenerationKey) ?? 0;
-    if (generation >= _currentResumeGhostPurgeGeneration) return;
-
-    final playback = await _getPlaybackStateMap();
-    var purged = 0;
-
-    for (final stateEntry in playback.values) {
-      if (stateEntry is! Map<String, dynamic> ||
-          stateEntry['type'] != 'series') {
-        continue;
-      }
-      final seasons = stateEntry['seasons'];
-      if (seasons is! Map) continue;
-      final finishedEpisodes = stateEntry['finishedEpisodes'];
-
-      for (final seasonKey in seasons.keys.toList()) {
-        final episodes = seasons[seasonKey];
-        if (episodes is! Map) continue;
-        final seasonFinished = finishedEpisodes is Map
-            ? finishedEpisodes[seasonKey]
-            : null;
-
-        for (final episodeKey in episodes.keys.toList()) {
-          final episodeData = episodes[episodeKey];
-          if (episodeData is! Map) continue;
-          if (seasonFinished is Map && seasonFinished.containsKey(episodeKey)) {
-            continue;
-          }
-          final positionMs = (episodeData['positionMs'] as num?)?.toInt() ?? 0;
-          final durationMs = (episodeData['durationMs'] as num?)?.toInt() ?? 0;
-          // durationMs > 1 skips the mark-only dummy shape, which is already
-          // excluded above whenever its completion record survived.
-          if (positionMs == 0 && durationMs > 1) {
-            episodes.remove(episodeKey);
-            purged++;
-          }
-        }
-        if (episodes.isEmpty) seasons.remove(seasonKey);
-      }
-    }
-
-    if (purged > 0) {
-      await _savePlaybackStateMap(playback);
-      localCompletionRevision.value++;
-      debugPrint(
-        'StorageService: purged $purged unwatched resume ghost(s) from playback state',
-      );
-    }
-    await prefs.setInt(
-      _resumeGhostPurgeGenerationKey,
-      _currentResumeGhostPurgeGeneration,
-    );
-  }
+  static Future<void> purgeUnwatchedResumeGhosts() =>
+      PlaybackProgressStore.purgeUnwatchedResumeGhosts();
 
   /// One-time, per-profile adoption of the local completion thresholds for
   /// playback recorded before threshold-based watched status existed.
@@ -2385,159 +2277,8 @@ class StorageService {
   /// into the existing `finishedEpisodes` structure used by episode ticks.
   /// Tracker data is deliberately untouched; this migration only rewrites the
   /// app's local playback state.
-  static Future<void> migrateExistingPlaybackCompletionThresholds() async {
-    final prefs = await ProfilePreferences.instance();
-    final generation =
-        prefs.getInt(_playbackCompletionMigrationGenerationKey) ?? 0;
-    if (generation >= _currentPlaybackCompletionMigrationGeneration) return;
-
-    final movieThreshold = await getMovieCompletionThreshold();
-    final episodeThreshold = await getEpisodeCompletionThreshold();
-    final playback = await _getPlaybackStateMap();
-    final completedMovieIds = await _getFinishedMovieIds();
-    final newlyCompletedMovieIds = <String>{};
-    final completedMovieStateKeys = <String>{};
-    final completedMovieResumeKeys = <String>{};
-    var completedEpisodeCount = 0;
-    var playbackChanged = false;
-
-    for (final stateEntry in playback.entries) {
-      final rawState = stateEntry.value;
-      if (rawState is! Map<String, dynamic>) continue;
-
-      if (rawState['type'] == 'video') {
-        final imdbId = (rawState['imdbId'] as String?)?.trim().toLowerCase();
-        final positionMs = (rawState['positionMs'] as num?)?.toInt() ?? 0;
-        final durationMs = (rawState['durationMs'] as num?)?.toInt() ?? 0;
-        if (imdbId == null ||
-            imdbId.isEmpty ||
-            durationMs <= 0 ||
-            positionMs <= 0 ||
-            positionMs * 100.0 / durationMs < movieThreshold) {
-          continue;
-        }
-        completedMovieIds.add(imdbId);
-        newlyCompletedMovieIds.add(imdbId);
-        continue;
-      }
-
-      if (rawState['type'] != 'series') continue;
-      final seasons = rawState['seasons'];
-      if (seasons is! Map<String, dynamic>) continue;
-      final finishedEpisodes = rawState['finishedEpisodes'] is Map
-          ? Map<String, dynamic>.from(rawState['finishedEpisodes'] as Map)
-          : <String, dynamic>{};
-
-      for (final seasonEntry in seasons.entries) {
-        final episodesRaw = seasonEntry.value;
-        if (episodesRaw is! Map) continue;
-        final seasonFinished = finishedEpisodes[seasonEntry.key] is Map
-            ? Map<String, dynamic>.from(
-                finishedEpisodes[seasonEntry.key] as Map,
-              )
-            : <String, dynamic>{};
-
-        for (final episodeEntry in episodesRaw.entries) {
-          if (episodeEntry.value is! Map) continue;
-          final episodeData = Map<String, dynamic>.from(
-            episodeEntry.value as Map,
-          );
-          final positionMs = (episodeData['positionMs'] as num?)?.toInt() ?? 0;
-          final durationMs = (episodeData['durationMs'] as num?)?.toInt() ?? 0;
-          if (durationMs <= 0 ||
-              positionMs <= 0 ||
-              positionMs * 100.0 / durationMs < episodeThreshold ||
-              seasonFinished.containsKey(episodeEntry.key)) {
-            continue;
-          }
-
-          seasonFinished[episodeEntry.key.toString()] = {
-            'finishedAt':
-                (episodeData['updatedAt'] as num?)?.toInt() ??
-                DateTime.now().millisecondsSinceEpoch,
-          };
-          // Keep the episode's historical updatedAt so migration does not
-          // reorder a show's "last played" episode.
-          episodeData['positionMs'] = durationMs;
-          episodesRaw[episodeEntry.key] = episodeData;
-          completedEpisodeCount++;
-          playbackChanged = true;
-        }
-
-        if (seasonFinished.isNotEmpty) {
-          finishedEpisodes[seasonEntry.key] = seasonFinished;
-        }
-      }
-      rawState['finishedEpisodes'] = finishedEpisodes;
-    }
-
-    if (newlyCompletedMovieIds.isNotEmpty) {
-      for (final stateEntry in playback.entries) {
-        final state = stateEntry.value;
-        if (state is! Map<String, dynamic> || state['type'] != 'video') {
-          continue;
-        }
-        final imdbId = (state['imdbId'] as String?)?.trim().toLowerCase();
-        if (imdbId != null && newlyCompletedMovieIds.contains(imdbId)) {
-          completedMovieStateKeys.add(stateEntry.key);
-          final resumeKey = (state['title'] as String?)?.trim();
-          if (resumeKey != null && resumeKey.isNotEmpty) {
-            completedMovieResumeKeys.add(resumeKey);
-          }
-        }
-      }
-      playback.removeWhere((key, _) => completedMovieStateKeys.contains(key));
-      playbackChanged = true;
-      await prefs.setStringList(
-        _finishedMoviesKey,
-        completedMovieIds.toList()..sort(),
-      );
-      localCompletionRevision.value++;
-
-      final rawContinueWatching = prefs.getString(_continueWatchingKey);
-      if (rawContinueWatching != null && rawContinueWatching.isNotEmpty) {
-        try {
-          final decoded = await decodeJsonAsync(rawContinueWatching);
-          if (decoded is List) {
-            final items = decoded
-                .whereType<Map<String, dynamic>>()
-                .map(Map<String, dynamic>.from)
-                .where((item) {
-                  final imdbId = (item['imdbId'] as String?)
-                      ?.trim()
-                      .toLowerCase();
-                  return imdbId == null ||
-                      !newlyCompletedMovieIds.contains(imdbId);
-                })
-                .toList();
-            await prefs.setString(_continueWatchingKey, jsonEncode(items));
-          }
-        } catch (_) {
-          // Leave malformed legacy data untouched; the normal CW reader also
-          // treats it as empty, and completion migration can still succeed.
-        }
-      }
-    }
-
-    // The older player resume store uses the playback state's title as its
-    // key. Clear it as part of the same migration so a later rewatch cannot
-    // resurrect a near-credits position after the enhanced state is removed.
-    // Do this before saving the removal so a database failure leaves enough
-    // playback metadata for the next startup to retry the cleanup.
-    for (final resumeKey in completedMovieResumeKeys) {
-      await removeVideoResume(resumeKey);
-    }
-    if (playbackChanged) await _savePlaybackStateMap(playback);
-    await prefs.setInt(
-      _playbackCompletionMigrationGenerationKey,
-      _currentPlaybackCompletionMigrationGeneration,
-    );
-    debugPrint(
-      'StorageService: completion migration marked '
-      '${newlyCompletedMovieIds.length} movies and '
-      '$completedEpisodeCount episodes watched',
-    );
-  }
+  static Future<void> migrateExistingPlaybackCompletionThresholds() =>
+      PlaybackProgressStore.migrateExistingPlaybackCompletionThresholds();
 
   // PikPak API Settings
   static Future<bool> getPikPakEnabled() =>

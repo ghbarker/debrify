@@ -86,6 +86,10 @@ void main() {
           'local_series_completion_v1',
           'local_series_completion_calendar_checked_at_v1',
           'local_series_completion_calendar_attempted_at_v1',
+          'movie_completion_threshold',
+          'episode_completion_threshold',
+          'playback_completion_migration_generation',
+          'resume_ghost_purge_generation',
         },
       );
     },
