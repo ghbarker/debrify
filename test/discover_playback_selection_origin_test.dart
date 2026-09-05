@@ -60,22 +60,27 @@ Future<PlaybackTransport> preparePlayback(
   fixture.close = () async {
     if (closed) return;
     closed = true;
-    await closeFavourites(tester);
-    if (!fixture.process.isCompleted) {
-      fixture.process.complete(ProcessResult(0, 0, '', ''));
+    try {
+      await closeFavourites(tester);
+      if (!fixture.process.isCompleted) {
+        fixture.process.complete(ProcessResult(0, 0, '', ''));
+      }
+      await pumpFavourites(tester);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump(const Duration(seconds: 30));
+    } finally {
+      // Even a failed drain must restore process-wide test dependencies. Let
+      // the original cleanup exception propagate rather than hiding it.
+      MainPageBridge.removeExternalPlayerLaunchListener(fixture.onExternal);
+      MainPageBridge.removePlaybackReturnListener(fixture.onReturned);
+      VideoPlayerLauncher.debugPlayerWidgetBuilder = previousPlayer;
+      WindowsExternalPlayerServiceExtension.debugWindowsProcessRun =
+          previousProcess;
+      service.debugStreamHttpClientFactory = previousStream;
+      StreamUrlValidator.clientFactory = previousValidator;
+      service.invalidateCache();
     }
-    await pumpFavourites(tester);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await tester.pump(const Duration(seconds: 30));
-    MainPageBridge.removeExternalPlayerLaunchListener(fixture.onExternal);
-    MainPageBridge.removePlaybackReturnListener(fixture.onReturned);
-    VideoPlayerLauncher.debugPlayerWidgetBuilder = previousPlayer;
-    WindowsExternalPlayerServiceExtension.debugWindowsProcessRun =
-        previousProcess;
-    service.debugStreamHttpClientFactory = previousStream;
-    StreamUrlValidator.clientFactory = previousValidator;
-    service.invalidateCache();
   };
   addTearDown(fixture.close);
   MainPageBridge.addExternalPlayerLaunchListener(fixture.onExternal);
