@@ -11,7 +11,7 @@ Overall completion is approximately 65%, an engineering estimate, not a measured
 - Verified f75fa016 APK installed on the phone; manual smoke PASSED by user acceptance for phone and TV behavior, without claiming direct TV hardware execution.
 
 ### Awaiting merge (reviewed; exact-head CI still required)
-- [ ] #140 held after CI test failure; owner diagnosing. Proposed419 fewer host lines not counted as merged.
+- [x] #140 merged17f0550a: finald1fe independent review and all3CI passed;419 fewer Search host lines. Presentation relocation, not standalone Discover closure.
 - [x] #141 merged: five-filter preference owner,44 fewer host lines; physical JSON/reset quirks pinned.
 - [x] #142 merged: first watch-flow deduplication,30 fewer lines overall; five-provider total2448, targetbelow800 still outstanding.
 
@@ -24,9 +24,9 @@ Overall completion is approximately 65%, an engineering estimate, not a measured
 6. Final integrated verification and user acceptance of the final build. Earlier smoke acceptance is not automatically a test of later builds.
 
 ### Current evidence and coordination
-- Latest full gate f75fa016: 5413 pass,12 exact known failures,2skip; goldens21 exact known errors after configured retries; no unexpected/unused. Native pair, Windows/ARM64 builds, Python55 passed; analyzer436/452,layer77.
-- God-file lines (merged): Search9033,Player11926,MagicTV3317,Storage4321,Settings2899; original total63932. Pending PR savings are not counted.
-- Ampere: M1-7 follow-on readiness; Locke: filter PR final review complete; Wegener: presentation PR final review complete; Cicero: verification/review coordination. Completed reviewers receive next scoped work as dependencies clear.
+- Latest full gate7f00f969:5442 pass,12 exact known failures,2skip; goldens21 exact known errors after configured retries; zero unexpected/unused. Native pair, Windows/ARM64 builds and Python55 passed; analyzer436/452,layer77. #140 is the first production merge after this gate; later changes do not inherit manual smoke.
+- God-file lines (merged): Search8614,Player11926,MagicTV3317,Storage4321,Settings2899; original total63932. Pending PR savings are not counted.
+- Cicero: independent cursor-product review1d5e162e (191 tests/body audit). Wegener: independent playlist-origin/fixture reviewb53ba5ae (81 tests/provenance). Ampere: cursor PR and minimal CODEMAP update, branch refactor/m1-7-cache-window-pins. Locke: test-only playlist PR, branch refactor/s2-playlist-progress-pins; product move awaits independent proof. All four have bounded assignments; no user action required.
 - CODEMAP locks serialized; parent alone edits this board/notes. Keep-awake expired; no disk work. Parked #112 backup feature, #109 test kit and #56 helper are outside active refactor.
 - Every future gate includes exact-source forwarder counts under the ledger criterion below. Historic entries below are evidence only, not current assignments.
 ## Prior checkpoints and retained evidence
@@ -255,3 +255,8 @@ Locke filterstore production RELEASED exact3prod+keysweep; helperasyncboundary d
 |7f00f969, Flutter3.44.8 Windows|5442pass/12exactknown/2skip;goldens21exactknown after2retries;0unexpected/unused;strictnative1+1 unskipped;Python55|436/452no new;77/77,+0/-0|Windows andARM64 PASS,checksummed|591/147;96/83;161/112;23/12;0/0|Prior f75 acceptance retained; this new build not separately reported |
 Exact report/commands/artifact/forwarder inventories: C:/Users/hunth/debrify/debrify-c0-main-7f00-gate/.dart_tool/main-gate/REPORT.md. Raw known-failure reports retained, not pixel-green claim. No baseline or power changes.
 Cursor dedup product released after independent16origin+4sensitiveprobes+design andfullgate; exactcommon/TB/PMonly, verbatimfourlooporder/livecandidate references.140 corrected d1fe delta review/freshCI remainsrequired beforemerge. Playlist-progress fixture/origin work active separately.
+
+### Coordination refresh after #140
+- #140 merged17f0550a after exactd1fe review and test/goldens/native SUCCESS. Did we make a difference?419 host lines moved into typed presentation units; production grows37 lines, so this is relocation and clearer ownership, not net simplification. More remains: Discover content/actions and standalone dispatch.
+- Review ownership: Cicero cursor1d5; Wegener playlistb53. Author scope remains unchanged. Ampere alone holds the minimal CODEMAP lock; Locke has none. #140 touches neighbouring Search presentation; no overlap with active storage/watch-flow bodies, but final PR integration must include latest main.
+- Current merged sizes vs baseline: Search8614/19070; Player11926/16278; MagicTV3317/10716; Storage4321/9963; Settings2899/7905. Cursor49-net claim remains unmerged pending review. Playlist checkpoint has zero production Leaves.
