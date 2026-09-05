@@ -637,3 +637,5 @@ template for later lanes. Reject any new review PR that omits the table.
 - TV performance gate: SHIELD Home focus/playback smoke once per phase, with rebuild-count tests; phone smoke is not SHIELD evidence. Hardware run remains user-dependent.
 - Permanent-fork versus upstream-integration strategy remains a product decision. No recurring merge automation scheduled without that decision; no upstream merge mixed into extraction lanes.
 - Backup decoder recovered from8d8e5ebd is separately authorized feature work: opt-in strict admission only, no existing caller switches. Draft review first; full sync semantics remain undecided.
+
+User decisions (2026-09-05): aim to contribute the refactor upstream; do not treat this as a permanent fork or schedule its conditional recurring merge lane. SHIELD hardware unavailable: record hardware performance gate blocked, no phone substitution. Independent corrective work continues.

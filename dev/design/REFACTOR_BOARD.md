@@ -137,10 +137,10 @@ Phase 1 merged. Binding is **#72**. **#73–#100 on main** (#99 C0-gate2, #100 V
 - [x] Record V1 relocation honestly per lane.
 - [ ] #96 integration: accounting explained; actual rebuild pin reports single listener. Disposal107 needs effective regression test; Wegener owns. No G1'-5.
 - [x] #109 held outside plan; #56 held toQ3. Every PR keeps both difference/further-work questions.
-- [ ] Permanent fork decision requested; recurring upstream lane conditional on answer, not yet scheduled.
+- [x] User decision: aim to contribute refactor upstream, not a permanent fork. Queue upstream compatibility/review preparation; no recurring permanent-fork merge lane. Avoid more divergence without mapping existing upstream PRs to current seams.
 - [ ] S2 real origin-export/current-restore fixtures assigned Locke after draft decoder112. No synthetic fixture is claimed to prove a real device profile restore.
 - [x] Forwarder cleanup expiry set by lane and Phase3 end; Q2 must migrate callers and remove wrappers, no double counting.
-- [ ] SHIELD per-phase focus/play smoke requested; hardware availability awaiting answer.
+- [ ] SHIELD per-phase focus/play smoke BLOCKED: user has no SHIELD. Automated DPAD/build-count coverage continues; phone smoke is not substituted or marked as SHIELD pass.
 - [ ] Remaining V1 origin-pin debt is queued before V1-6; four existing owners take priority.
 - [x] Orchestrator-only assignment/merge entry restored. Four owners have completion/blocker reporting instructions; five-minute coordination reminder active.
 
