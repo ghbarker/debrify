@@ -3,6 +3,11 @@
 ## Current roadmap — September 5 (read this section first)
 Overall percentage: WITHDRAWN. The repeated65% estimate was not recalculated and is not a reliable completion measure. Report completed acceptance criteria, remaining architectural outcomes and verified changes; relocation is separate from actual deletion.
 
+### Active protocol override — user decision, September 5
+- One PR per slice: first commit contains real origin pins, run green locally before the second move commit. Push the combined result through one final CI/review cycle; no separate pin PR round trip. Changed production after verification still requires relevant checks.
+- Test-only PRs keep author verification and CI, but do not receive duplicate independent test reproduction. Production PRs retain independent verification.
+- Batch board changes into at most one board commit per merge; pending updates stay in this working copy until the next merge. No standalone status-only commits.
+- Remaining player origin pins run concurrently in separate test files/worktrees. Ampere coordinates exact regions with Wegener; shared player production edits remain serialized. No copied implementation or new production seams to make pins pass.
 ### Done and merged
 - [x] Safety gates, origin behavior tests, old-backup restore fixtures, adversarial checks, native CI and dependency ceiling.
 - [x] Settings owners; Search/Home/Discover presentation and lifecycle slices; multiple storage owners; Magic TV state and watch-flow simplifications.
@@ -14,23 +19,35 @@ Overall percentage: WITHDRAWN. The repeated65% estimate was not recalculated and
 ### Now
 - [x] #155 repair owner merged:259 fewer host lines/+30 total production, seven temporary forwarding methods; existing quirks preserved.
 - [x] Full integrated gate f4862238 passed after #153/#154/#155:5526pass/12known/2skip;goldens21known;native/analysis/layer/builds passed.
-- [ ] Locke: released playlist metadata owner extraction after independently passing origin/restore fixtures; two production files only.
-- [ ] Wegener: review proposed captured-key capability for actual architectural benefit; Ampere proposal ready, no implementation authorization.
+- [x] #158 metadata, #163 shared windowed watch queue, #164 Watchlist owner merged. Integrated gate c1cae4c7 complete against unchanged failure allowances.
+- [ ] Ampere V1-10 origin pin4ca7208 complete:3 native pass; proposed partial renderer held because it adds50–140 production lines and retains domain bindings. Pin and C0supportf04af24 retained unmerged; Ampere available for production review. Wegener V1-8 guide pin8aa09dd complete:1 native pass; restricted move held because seven callbacks add50–100 lines while main switch lifecycle stays on host. Both player pins retained for coherent later moves, neither lane complete. No duplicate independent test-only rerun. Discover cutover held on actual shared board navigation/focus runtime, not more helper extraction.
+- [ ] Locke: Q2 origin checkpointb0eeda6 green:18 new/24 combined tests. Production migration RELEASED on refactor/q2-storage-caller-retirement under exact narrowed223 manifest; player receiver/import lock belongs to Locke; CODEMAP edits complete and lock released. Frozen candidate97db3404:223 facades removed,665 host lines removed including3 unused imports; host3498 to2833,33 above target. Whole production592 lines removed. Scoped495 pass; independent production review and final checks running. Nine methods and their callers retained for native compatibility/unavailable Android-positive proof. Caller manifest being narrowed; verified final diff required. Retain getVideoPlaybackState and its callers to preserve identical native pin bytes on bc46/current; included in revised forecast. Android-positive bridge coverage unavailable on Windows: no new seam, affected routes retained unless proven. Production paths locked to narrowed manifest; Ampere performs final independent production review. Baseline edits require separate exact decision. Budget12–20 agent-hours plus CI/review waits; facade-only goal remains open (97 residual members).
 - [ ] Parent: merge exact reviewed green heads, maintain ownership and this roadmap. No user action required.
 
+### Active assignments — latest dispatch
+- Locke: PR165 MERGED79547771, exact97db independently accepted and all three CI checks passed. Production counter1 since c1ca gate. Preparing M1 independent review; no further storage edits.
+- Cicero: V1-9 stopped after bounded correction (1 pass/2 fail, no green commit). Board runtime review invariants prepared; assigned final independent review when ready.
+- Wegener: board runtime production move active on frozen165 base; green origin3 tests/32 combined, pin3a70d434. Exact host/Fav/runtime/rail-type scope plus approved three obsolete fixture bindings.
+- Ampere: M1 shared admission/search production active in five watch files on frozen165 base; six origin pins green, two approved credential receiver adaptations after storage retirement.
+- Board and watch production scopes are disjoint and released; dependency165 has merged. Their frozen97db base is retained in main ancestry. Reviewers do not duplicate test-only verification. Each reports completion/blocker directly; no standalone pin PRs.
 ### Still left
 1. Discover content/actions and standalone dispatch, Search stage layouts and final cleanup. Preserve hidden watchlist/focus behavior until proved.
 2. Player decoder/remaining state and UI separation; timer-only helper rejected because it added code without sufficient benefit.
-3. Storage remaining ownership and Q2 caller migration. Host3498, target2800; remaining698 after168 net host reduction counted once.
-4. M1-7 watch flows: five files2283/common1431, total3714; five-file targetbelow800 still unmet. Magic TV size provisional.
+3. Storage remaining ownership and Q2 caller migration. Host2833, target2800; remaining33 after Q2 retirement. Strict facade-only goal remains open.
+4. M1-7 watch flows: five files2081/common1384 plus shared queue217; five-file targetbelow800 still unmet. Magic TV size provisional.
 5. Q-phase dependency/rule cleanup and upstream contribution work, then final integrated/device acceptance.
 
 ### Current measured state
-- God hosts Search8614/19070, Player11926/16278, MagicTV3317/10716, Storage3498/9963, Settings2899/7905 (current/original).
-- Latest full-gate a443 forwarders total/single physical line: Storage592/147, Search85/72, Player161/112, MagicTV23/12, Settings0/0. Later deletion153 is separate; recount at next gate.
+- God hosts at79547771 Search8615/19070, Player11928/16278, MagicTV3318/10716, Storage2833/9963, Settings2901/7905 (current/original).
+- Latest full-gate c1cae4c7 forwarders total/single physical line: Storage616/147, Search85/72, Player161/112, MagicTV23/12, Settings0/0.
 - #154 made a difference:26 net production lines removed with194 independent tests; #153 removed18 lines/seven getters. More remains above.
-- Only parent edits BOARD/NOTES; CODEMAP locks serialized and currently released. Parked112/109/56; no disk work or renewed keep-awake authorization.
+- Only parent edits BOARD/NOTES; CODEMAP lock serialized and currently released. Parked112/109/56; no disk work or renewed keep-awake authorization.
 
+### Latest integrated gate — c1cae4c7
+- Automated gate accepted: 5575 successes, 12 exact known failures/errors, 2 skips; goldens 21 known errors after configured retries, zero new or unused test allowances. This is not an all-green test or pixel result.
+- Analyzer 436 against 452 baseline, zero new; layering 77 to 77, no added violations; Python 55 pass; native origin/current 1 pass each, unskipped identical pin bytes. Windows and ARM64 builds pass. No new manual smoke claim.
+- Forwarders total/single physical line: Storage616/147, Search85/72, Player161/112, MagicTV23/12, Settings0/0. Production merge counter reset to zero after #158/#163/#164.
+- Evidence: C:/Users/hunth/debrify/debrify-c0-post-158-163-164-gate/.dart_tool/main-gate/REPORT.md. Eligible bounded production work can proceed; no user blocker.
 ## Prior checkpoints and retained evidence
 
 
@@ -374,3 +391,6 @@ C0fullgateactualc1caIN_PROGRESS after158163164; allchecks/builds/forwarderledger
 
 ### Progress reporting correction
 User correctly challenged unchanged65% repeatedover6hours. Estimatewithdrawn, not replaced by anotherunsupportednumber. Future reports must name closed acceptancecriteria and outstanding architectural outcomes; hostshrinkage/testcounts are evidence, notoverallcompletion. Priorpercentageentries are historical and superseded. Prioritize completing coherent architecture over creating more smallPRs.
+
+## Merge165 — September5
+Exact reviewed97db merged as79547771. All3CIchecks passed; independent495focusedpass; generic5593pass/12known/2skip, goldens21known, analyzer436/452 and layering77 unchanged.223facades retired, host665lines fewer, wholeproduction592lines fewer.33targetshortfall and97residual members remain open. Pin-before-move preserved in merge history. One batched board commit for this merge; no new manual smoke claim. Active follow-ons: M1 shared admission and board runtime, independent reviewers assigned. No user blockers; parked112/109/56 unchanged.
