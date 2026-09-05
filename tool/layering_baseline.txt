@@ -1,3 +1,7 @@
 # Layering violation ceiling (Phase 2 gate i). Shrink only.
-# Historical: #72=77; pre-#95=99; after #95/#98=106; after #100 V1-fix=90.
-90
+# Unit: violation occurrences (JSON count), including duplicate identities.
+# Measured with tool/check_layering.dart from 843d631b, identical for both trees:
+# #72 merge efdeaeb084edcfd8fe763f18d4cc9030dc794e35: 77 occurrences, 77 unique.
+# origin/main 843d631b: 84 occurrences, 84 unique. Current debt is not a baseline.
+# The previously recorded 90 ceiling was not the #72 ceiling; restore shrink-only.
+77
