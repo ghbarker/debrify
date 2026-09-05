@@ -180,3 +180,6 @@ M16 move authorized after independent ac667f9d fourteen-test origin proof: exact
 
 131mergedc6a3de16 exacte767b980 all3CIgreen+independent8effectiveorigin/currentmutationcases. Difference: per-file shape failures and separateexisting-sidebar cap stopnewviolations beingmasked byhistoricalaggregateallowance. Oneallowanceidentity migrated, no growth/floorchange/productLeaves. C0availableM16review/nextfullgate. Currentgod9126/11926/3659/4365/2899 vsoriginal19070/16278/10716/9963/7905. G17d55independentPASS, fixturefinallyhardening+latestmainintegration beforedraft; no selectionmove. Nextproductionmerge triggersfullgate, includingtestingseams iftheymergefirst.
 
+
+132mergedabc74484 exact57a07bb8 afterindependent55/defaults/cleanupreview+all3CIgreen. Difference: terminal IO hooks enable real Discover playback orchestration pins; no nativeexecution/hostLeavesclaim. SixWindows-only cases explicit. Thirdproductionslice since04264596: C0 fullactualabc74484 gate assigned after133deltaaudit, manualdeferred. 133integrated67a0f5c9 finalreview/CI pending, mergehelduntilfullgatepasses; no nextproductlane. Godcountsunchanged9126/11926/3659/4365/2899.
+
