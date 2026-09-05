@@ -64,9 +64,8 @@ class ProfileScope {
   }
 
   File fileIn(Directory root, String area, String relativePath) {
-    // POSIX so Windows `..\escape` is still rejected (p.normalize uses `\`).
-    final normalized = p.posix.normalize(relativePath.replaceAll(r'\', '/'));
-    if (p.posix.isAbsolute(normalized) ||
+    final normalized = p.normalize(relativePath);
+    if (p.isAbsolute(normalized) ||
         normalized == '..' ||
         normalized.startsWith('../')) {
       throw ArgumentError.value(relativePath, 'relativePath', 'Unsafe path');

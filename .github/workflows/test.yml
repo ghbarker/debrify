@@ -13,14 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Checkout PR base for layering delta
-        if: github.event_name == 'pull_request'
+      - name: Checkout exact head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      # PR base -> PR head; for pushes, pre-push commit -> pushed head.
+      - name: Checkout base for layering delta
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.before }}
           path: layering-parent
 
       - name: Install native test libraries
@@ -53,10 +55,10 @@ jobs:
           dart run tool/check_layering.dart --all --json > /tmp/layering-head.json
           python3 -c "import json; print('layering count (HEAD):', json.load(open('/tmp/layering-head.json'))['count'])"
           PARENT="${{ github.workspace }}/layering-parent"
-          if [ -d "$PARENT" ]; then
-            dart run tool/check_layering.dart --all --json --root "$PARENT" > /tmp/layering-parent.json
-            python3 tool/ci_layering_delta.py /tmp/layering-parent.json /tmp/layering-head.json
-          fi
+          test -d "$PARENT/lib" || { echo "Missing layering base tree" >&2; exit 1; }
+          test -f "$PARENT/tool/layering_baseline.txt" || { echo "Missing layering base ceiling" >&2; exit 1; }
+          dart run tool/check_layering.dart --all --json --root "$PARENT" --ceiling-file "$PARENT/tool/layering_baseline.txt" > /tmp/layering-parent.json
+          python3 tool/ci_layering_delta.py /tmp/layering-parent.json /tmp/layering-head.json
 
       - name: Run refactor contract tests
         run: flutter test

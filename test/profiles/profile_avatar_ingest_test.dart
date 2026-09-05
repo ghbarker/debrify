@@ -74,6 +74,7 @@ void main() {
     expect(bytes.length, lessThanOrEqualTo(ProfileAvatarIngest.maxBytes));
 
     final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+    addTearDown(buffer.dispose);
     final descriptor = await ui.ImageDescriptor.encoded(buffer);
     addTearDown(descriptor.dispose);
     expect(
