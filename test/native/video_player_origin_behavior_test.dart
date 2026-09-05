@@ -31,6 +31,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 // LIBMPV_LIBRARY_PATH points at an already-installed native library. The window
 // and texture channel fixtures are external platform replies, not player logic.
 // Audio decoding, host identify-cancel, and disposal checkpoint persistence are proven.
+// V1-7 speed pin: the actual host menu selects 1.25x; native rate, rebuilt
+// controls and saved speed are observed. No decoder/video-readiness claim.
 // The zero-width audio source
 // does NOT satisfy the video startup watchdog. No rendered frame, successful
 // video readiness, successful identification, resume restore/subtitle application or
@@ -318,6 +320,36 @@ void main() {
         reopened.subtitleIdentityLabel,
         reopened.selectedSubtitleId,
       ], identityBefore);
+      expect(prefs.get('playback_state_v1'), isNull);
+      expect(
+        await StorageService.getVideoPlaybackState(videoTitle: 'Origin.wav'),
+        isNull,
+      );
+      expect(player.state.rate, 1.0);
+      expect(tester.widget<Controls>(find.byType(Controls)).speed, 1.0);
+      // The menu was opened by the actual Controls.onSpeed callback above.
+      // Select through its host-bound callback, never set the player rate or
+      // invoke a resume writer from the test.
+      reopened.onSpeedSelected(1.25);
+      await _until(tester, () => player.state.rate == 1.25);
+      expect(tester.widget<Controls>(find.byType(Controls)).speed, 1.25);
+      await _until(tester, () {
+        final raw = prefs.getString('playback_state_v1');
+        if (raw == null) return false;
+        final saved = jsonDecode(raw) as Map<String, dynamic>;
+        return saved['video_origin_wav']?['speed'] == 1.25;
+      });
+      final speedRecord = await StorageService.getVideoPlaybackState(
+        videoTitle: 'Origin.wav',
+      );
+      expect(speedRecord!['speed'], 1.25);
+      final speedPositionMs = speedRecord['positionMs'] as int;
+      // Require a later disposal checkpoint so the speed save cannot stand in
+      // for the existing proof that unmount persists the final position.
+      await _until(
+        tester,
+        () => player.state.position.inMilliseconds > speedPositionMs + 100,
+      );
       // Freeze the actual native clock before the real host's disposal save.
       // No resume writer or controller is called directly by this test.
       await tester.runAsync(() => player.pause());
@@ -328,12 +360,16 @@ void main() {
       await tester.pump();
       checkpointMs = player.state.position.inMilliseconds;
       expect(checkpointMs, greaterThan(1000));
+      expect(checkpointMs, greaterThan(speedPositionMs));
       expect(tester.widget<Controls>(find.byType(Controls)).isReady, isTrue);
-      expect(prefs.get('playback_state_v1'), isNull);
-      expect(
-        await StorageService.getVideoPlaybackState(videoTitle: 'Origin.wav'),
-        isNull,
+      // Autosave may have run since the speed selection. Check fresh storage
+      // immediately before unmount, with no intervening pump, so it cannot
+      // supply the final checkpoint in place of the disposal save.
+      final beforeUnmount = await StorageService.getVideoPlaybackState(
+        videoTitle: 'Origin.wav',
       );
+      expect(beforeUnmount!['speed'], 1.25);
+      expect(beforeUnmount['positionMs'], lessThan(checkpointMs));
     } finally {
       await tester.pumpWidget(const SizedBox.shrink());
       await _until(tester, () => !VideoOutputLease.isHeld);
@@ -358,7 +394,7 @@ void main() {
     expect(record['positionMs'], isA<int>());
     expect(record['positionMs'], checkpointMs);
     expect(record['durationMs'], 60000);
-    expect(record['speed'], 1.0);
+    expect(record['speed'], 1.25);
     expect(record['aspect'], 'fitWidth');
     expect(record['updatedAt'], isA<int>());
     expect(
