@@ -1,5 +1,19 @@
 # Refactor board
 
+## Current checkpoint — 2026-09-05 10:39 UTC (supersedes historical rows below)
+- Merged:114,117,118,116,120. Latest120merge a46fa879.
+- G1'-5 Wegener: origin6pins green5d72af7a; type relocation7lines from search_card_widgets.dart approved; extraction active refactor/g1-5-favourites-rows.
+- M1-3 Ampere: PR119 ee79d4fe testCI FAILED; native/goldens pass. Lane fix assigned; no merge.
+- C0 Cicero: independent119failure triage/review; next full mergedmain automated mini-gate after correction.
+- S2 Locke:120merged, read-only remainingstorage/debt audit assigned; no new extraction.
+- Manual smoke explicitly deferred, not blocking; automated gates mandatory. Keepawake PID3412 alive until16:43UTC.
+- Current main godlines: search11376/player11926/magic8369/storage4365/settings2899. Original19070/16278/10716/9963/7905.
+- Storage debt:433S26+350S27=783uncredited; storage still1565 above2800target. Native proof limited audio/cancel/disposal.
+- CODEMAP unlocked; exactworkerlocks required beforeedits.
+
+## Prior checkpoints and retained evidence
+
+
 Updated 2026-09-05 after main `d5f8dc4b` (CW merge `e478635e`). Orchestrator owns this board and NOTES. Binding contracts: [original plan](REFACTOR_PLAN.md), [Phase 2 correction](REFACTOR_PLAN_PHASE2.md), and latest explicit user decisions below. Historical snapshots remain in Git history; they are not current assignments.
 
 ## Live roadmap
