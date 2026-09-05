@@ -149,20 +149,23 @@ void main() {
   test(
     'search result preservation is owned by the mounted profile session',
     () {
-      final source = File('lib/screens/search_screen.dart').readAsStringSync();
+      final host = File('lib/screens/search_screen.dart').readAsStringSync();
+      final source = File(
+        'lib/services/search/keyword_search_controller.dart',
+      ).readAsStringSync();
       expect(
         source,
-        contains('ProfileSessionMemory<_KwPreservedState> _kwPreserved'),
+        contains('ProfileSessionMemory<KwPreservedState> kwPreserved'),
       );
       expect(
-        source,
+        host,
         contains('_profileSessionOwner = ProfileSessionMemory.captureOwner()'),
       );
-      expect(source, contains('_kwPreserved.take('));
-      expect(source, contains('_kwPreserved.store('));
+      expect(source, contains('kwPreserved.take('));
+      expect(source, contains('kwPreserved.store('));
       expect(
         source,
-        isNot(contains('static _KwPreservedState? _kwPreserved')),
+        isNot(contains('static KwPreservedState? kwPreserved')),
         reason: 'Raw screen statics can carry content across profile switches.',
       );
     },
