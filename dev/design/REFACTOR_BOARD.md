@@ -273,3 +273,7 @@ Cicero assigned refactor/v1-7-speed-origin-pin: existing test/native/video_playe
 
 - Wegener follow-on: refactor/g1-home-watchlist-focus-pin, NEW test/home_watchlist_refresh_focus_origin_test.dart only;30-minute real Home public-control characterization attempt, no production seams. Discover full Fav adapter retained by decision; private node/independent-await gaps remain explicit in NOTES. No user action required.
 
+
+### Independent review correction — PR145 held
+Wegener reproduced the speed native pair but identified a disposal-proof gap: autosave during virtual pumping could prewrite the final checkpoint. C0 is tightening the real persisted-position assertion immediately before unmount, same test-only scope, one corrective pair. No app regression observed; old passing run does not establish unchanged disposal sensitivity. PR145 cannot merge until corrected independent review and fresh exact-head CI. Other work continues:146 independently passed awaiting143 dependency;147 independently passed awaitingCI;148 independent review plus bounded captured-key sensitivity experiment in separate worktree. No user blocker.
+
