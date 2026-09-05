@@ -639,3 +639,5 @@ template for later lanes. Reject any new review PR that omits the table.
 - Backup decoder recovered from8d8e5ebd is separately authorized feature work: opt-in strict admission only, no existing caller switches. Draft review first; full sync semantics remain undecided.
 
 User decisions (2026-09-05): aim to contribute the refactor upstream; do not treat this as a permanent fork or schedule its conditional recurring merge lane. SHIELD hardware unavailable: record hardware performance gate blocked, no phone substitution. Independent corrective work continues.
+
+Superseding user correction: decoder112 is parked scope creep for this refactor; only S2 fixture tests continue. Upstream workflow currently pins3.44.8 (blob2a48503bcf470fef4affcc606182c90444855511); SDK alignment follows that evidence. No automatic golden regeneration. Strategy precedes new extraction assignment. Disposal96 has one remaining verification attempt maximum, then explicit unresolved debt if needed. Event-driven worker reporting with hourly fallback.

@@ -4,19 +4,27 @@
 
 Updated by the orchestrator when assignments, blockers, PR checks or merges change. A checked item means completed, not merely assigned. Detailed evidence and ownership follow below.
 
+### Budget and remaining workload
+- **Remaining extraction slices:16** — Search5 (G1′-5..9), Player5 (V1-6..10), MagicTV4 (M1-3..6), Storage2 (S2-6..7).
+- **Phase3:3 lane groups** (Q1/Q2/Q3); Q2 may require per-area PRs. These are additional to the16 slices.
+- **Current correction queue:** #110/#111/#96, S2 fixtures and M1/V1 origin-pin debt. Upstream strategy and full/native/device gates are separate work, not counted as extraction.
+- **Planning estimate:**19 minimum remaining planned lane groups plus roughly4–7 correction/validation work packages; not19 guaranteed PRs or an elapsed-time promise. Re-estimate after every3 merged slices.
+- **Account quota snapshot:**26% used /74% remaining in the weekly Codex window, checked2026-09-05. Shared account usage, not refactor-only spend; no per-task token/cost figures available. A completion percentage or quota-per-lane forecast would be invented until comparable before/after samples exist.
+- **Controls:** maximum4 active owners for current correction wave; event-driven reports plus hourly fallback; #96 disposal capped at one remaining verification attempt, then explicit debt. No duplicate pin PRs or unassigned feature lanes. Record quota change at each three-slice gate and revise estimate before launching the next batch; no credit redemption authorized.
+
 ### Working now
 - [ ] **CI consistency — Cicero:** verify PR110 + PR111 together using Flutter3.44.8; restore ceiling77 and Windows analyzer enforcement.
 - [ ] **Magic TV — Ampere:** PR111 dependency fix in review; live historical cache/watch behavior pins underway. M1-3 waits.
 - [ ] **Continue Watching — Wegener:** integrate #96 with #104/#105/#107 and prove disposal guard with a real failing regression test.
-- [ ] **Backup + settings safety — Locke:** draft decoder PR112 open; implement synthetic pre-refactor export/current-restore fixtures.
+- [ ] **Settings safety — Locke:** tests only: restore actual pre-refactor exports and diff every represented key/type/value. Decoder #112 PARKED; no product work.
 
 ### Next, in order
 - [ ] Merge #111 after independent verification and exact-head CI, then rebase/check/merge #110.
 - [ ] Merge #96 only when integrated evidence, compatibility review and CI pass; then eligible G1'-5.
 - [ ] Run corrective full suite, analyzer and both native builds on one pinned Flutter. Record exact commit and remaining failures.
 - [ ] Complete M1/V1 origin-pin debt and S2 restore fixtures before the affected next extraction.
+- [ ] Prepare upstream contribution strategy and map existing upstream PRs to refactored files BEFORE any further extraction assignment.
 - [ ] Resume eligible sequential lanes: Search G1'-5..9; Player V1-6..10; Magic TV M1-3..6; Storage S2-6..7.
-- [ ] Prepare upstream contribution strategy and map existing upstream PRs to refactored files.
 - [ ] Phase3: remove expired forwarders and migrate callers (Q2), enforce layering (Q1), centralize engineering rules (Q3).
 
 ### Completed in this correction round
@@ -24,12 +32,12 @@ Updated by the orchestrator when assignments, blockers, PR checks or merges chan
 - [x] Diagnose SDK mismatch:3.44.8 gives454 diagnostics on parent/correction; no new issues against unchanged baseline.
 - [x] Recover backup worker scope and commits; open separate opt-in decoder draft112.
 - [x] Record upstream-contribution direction; hold out-of-plan #109 and Phase3-only #56.
-- [x] Restore five-minute worker follow-up and require completion/blocker reports.
+- [x] Worker completion/blocker reports are primary; hourly orchestrator fallback only. Five-minute polling removed.
 
 ### Explicit blockers
 - [ ] **SHIELD smoke:** hardware unavailable; no phone-as-TV pass claimed.
 - [ ] **PR110 ceiling:** current main has seven M1 violations; depends on111.
-- [ ] **PR96 disposal:** candidate exists; effective race regression coverage still being built.
+- [ ] **PR96 disposal:** deterministic mutation pin reported; at most one final SDK verification attempt. If unsuccessful, record debt; no further pin PRs.
 
 
 ## Current orchestration — Gate 3 audit (2026-09-05)
@@ -41,7 +49,7 @@ This section supersedes stale status/ceiling/merge instructions below. Orchestra
 | C0 Gate 3 | in-progress | `refactor/c0-gate3-corrections` | Cicero | analyzer runner/tests, layering ceiling, `.flutter-version` | #110 verification and M1-fix | Ceiling is #72: 77, never current 84/90. Pin dev and CI to 3.44.8; separate local SDK. No baseline growth. |
 | M1-fix | in-progress | `refactor/m1-fix-import-export-layering` | Ampere | channel import/export service, screen flow/dialogs, Magic TV binding, related tests, CODEMAP | real origin pin + independent gate | Service keeps parse/serialize; UI/watch_session belongs in screens. Actual existing test filenames approved. M1-3 blocked until merge. |
 | G1 CW correction | in-progress | `refactor/cw-gate3-integration` | Wegener | CW controller/row, host CW hunks, CW tests; existing #104/#105/#107 patches | disposal mutation-sensitive pin | #96 HOLD. +1118 accounted as +575 production/+494 tests/+49 docs. Current CW row has no second listener; retain required host update, verify actual build count. No speculative listener deletion. |
-| Backup decoder | in-progress | `refactor/backup-feature-review` | Locke | recovered two codec/test files only | draft review | Separate feature, opt-in decoder only; no existing caller switched. Not complete sync. Then synthetic S2 origin-export/restore fixtures in separate branch, tests only. |
+| Backup decoder | parked | `refactor/backup-feature-review` | Locke | recovered two codec/test files only | draft review | User parks #112 as out of refactor scope. Worker continues only S2 origin-export/restore tests; no product changes. |
 | C0 Windows guards | merged | `refactor/c0-tv-marker-windows` | Locke verification complete | two guard tests | — | #108 merged after independent 21-test pass, clean analysis and green CI; no assertion weakening. |
 | Test handoff kit | parked | `codex/test-handoff-kit` | — | none assigned | C0 decision | #109 HOLD; no independent agent stack or out-of-lane merge. |
 
@@ -174,7 +182,7 @@ Phase 1 merged. Binding is **#72**. **#73–#100 on main** (#99 C0-gate2, #100 V
 - [x] Forwarder cleanup expiry set by lane and Phase3 end; Q2 must migrate callers and remove wrappers, no double counting.
 - [ ] SHIELD per-phase focus/play smoke BLOCKED: user has no SHIELD. Automated DPAD/build-count coverage continues; phone smoke is not substituted or marked as SHIELD pass.
 - [ ] Remaining V1 origin-pin debt is queued before V1-6; four existing owners take priority.
-- [x] Orchestrator-only assignment/merge entry restored. Four owners have completion/blocker reporting instructions; five-minute coordination reminder active.
+- [x] Orchestrator-only assignment/merge entry restored. Four owners have completion/blocker reporting instructions; hourly fallback active; event reports primary.
 
 Current main03471d13 god-file line counts (git blobs, not working-tree estimates):
 
@@ -183,3 +191,5 @@ Current main03471d13 god-file line counts (git blobs, not working-tree estimates
 - `lib/screens/magic_tv_screen.dart`: 8369 lines.
 - `lib/services/storage_service.dart`: 6282 lines.
 - `lib/screens/settings_screen.dart`: 2899 lines.
+
+Latest policy correction: upstream build.yml blob2a48503bcf470fef4affcc606182c90444855511 pins Flutter3.44.8 across platforms (verified GitHub API). Keep dev/CI aligned to upstream; do not upgrade or regenerate goldens merely to follow the laptop SDK. #112 parked. Upstream strategy precedes next extractions. Hourly fallback only.
