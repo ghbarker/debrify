@@ -114,6 +114,11 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   `lib/screens/search/keyword_search_screen.dart` (`KeywordSearchScreen`).
   Host `_switchMode` is the thin launcher (policy + query handoff);
   `_openKeywordBind` still pushes `_SourcesScreen` with `keywordSeed`.
+  Tracker + local Continue Watching is `lib/screens/search/continue_watching_controller.dart`
+  (`ContinueWatchingController`, `CwRow`, `CwKind`) +
+  `lib/screens/search/continue_watching_row.dart` (`ContinueWatchingRow`,
+  `CwFocusOwner`, `syncCwNodes`). Host keeps Home board chrome, Discover
+  CW landing, `_addonForContinue`, and thin loader/open wrappers.
   TV Home stage layouts are `lib/screens/search/stages/` (`_CanvasBoardStage` and friends);
   the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted

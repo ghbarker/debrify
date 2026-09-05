@@ -158,8 +158,16 @@ void main() {
         host,
         contains('enum SearchBoardMode { catalog, keyword, lists }'),
       );
+      final cwTypes = File(
+        'lib/screens/search/continue_watching_controller.dart',
+      ).existsSync()
+          ? File('lib/screens/search/continue_watching_controller.dart')
+          : File('lib/services/home/continue_watching_controller.dart');
       expect(
-        File('lib/screens/search/search_stage_widgets.dart').readAsStringSync(),
+        (cwTypes.existsSync()
+                ? cwTypes
+                : File('lib/screens/search/search_stage_widgets.dart'))
+            .readAsStringSync(),
         contains('enum CwKind { local, trakt, simkl, mdblist, iptv }'),
       );
     });
