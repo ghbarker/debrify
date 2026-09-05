@@ -336,7 +336,7 @@ is an editor mirror, not the source of truth. How to add a provider:
 
 ## Debrify TV (keyword channels)
 - `lib/screens/magic_tv_screen.dart` 🔴 (favourites are an unordered `Set`; literal keyword match
-  `_parseKeywords`; per-provider native launch `_launch{RealDebrid,Torbox}OnAndroidTv`).
+  `_parseKeywords`; retained channel-routing/native-launch delegates).
   Watch session: `lib/screens/debrify_tv/watch_session.dart` (`WatchSession` +
   `ProgressSink`; screen keeps `_queue` / `_isBusy` accessors).
   Channel cache warmer: `lib/services/debrify_tv/channel_cache_warmer.dart`
@@ -364,6 +364,17 @@ is an editor mirror, not the source of truth. How to add a provider:
   Live origin/runtime orchestration pins: `test/magic_tv_provider_watch_origin_test.dart`
   (21 cases; actual route requests/next callbacks, not native video playback).
   `test/cloud_magic_tv_unlock_pin_test.dart` is supplemental inventory only.
+  M1-4 channel routing/native handoff: `lib/screens/debrify_tv/channel_switch_flow.dart`
+  (`ChannelSwitchFlow`: `switchToChannel`, `requestNextChannel`, `requestChannelById`,
+  `resolveChannelNumber`, `androidTvChannelMetadata`, and the TorBox/RD/PikPak
+  Android TV launchers). `WatchSession` remains a plain state object. Existing
+  `WatchFlowBindings` adds live `isAndroidTv` / `getChannelKeywords` and write access
+  to the existing current-channel field; cache access uses the same cache-warmer map.
+  Seven host delegates remain for provider-flow and initial-watch callers:
+  review M1-5; remove/review all M1-6 before phase completion. Native-positive
+  launch/onFinished still needs device-runtime proof. `test/magic_tv_channel_switch_origin_test.dart`
+  pins desktop switch/fallback and capture-before-held-prepare-completion behavior;
+  exact cooldown/key-read order is body-diff evidence, not a timing-test claim.
   Default pick / overlay strings: `lib/services/cloud/magic_tv_provider.dart`
   (`playbackPrecedence` mapped to `real_debrid`; display stays `Torbox` / `Real Debrid`).
 - Data: `lib/models/debrify_tv/`, `lib/services/debrify_tv_repository.dart`,
