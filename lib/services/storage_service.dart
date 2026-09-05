@@ -6615,6 +6615,19 @@ class StorageService {
   static void resetProfileCaches() {
     tvKeyboardEnabledCached = !PlatformUtil.isTvOS;
     tvHomeStyleCached = 'canvas';
+    debrifyTvStyleCached = 'grid';
+    detailPageStyleCached = kDetailPageStyleDefault;
+    detailThemeCached = 'signal';
+    appThemeCached = 'legacy';
+    themeOverridesCached = '';
+    parentsGuideStyleCached = 'compass';
+    iptvStyleCached = 'command';
+    discoverLayoutCached = 'stage';
+    launchAnimationCached = 'trace';
+    launchIdentPaletteCached = 'ident';
+    tvSidebarStyleCached = 'ghost';
+    desktopSidebarStyleCached = 'rail';
+    sidebarConfigurationCached = SidebarConfiguration.defaults();
     AppStylePrefs.resetCaches();
     playerStartPortraitCached = false;
     uiSoundsCached = true;
