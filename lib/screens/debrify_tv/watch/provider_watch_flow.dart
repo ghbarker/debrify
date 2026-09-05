@@ -109,14 +109,9 @@ class WatchFlowBindings {
     required this.stopPrefetch,
     required this.syncProviderAvailability,
     required this.watchWithTorbox,
-    required this.watchTorboxWithCachedTorrents,
     required this.watchWithPikPak,
-    required this.watchPikPakWithCachedTorrents,
     required this.watchWithPremiumize,
-    required this.watchPremiumizeWithCachedTorrents,
     required this.watchWithAllDebrid,
-    required this.watchAllDebridWithCachedTorrents,
-    required this.watchWithCachedTorrents,
     required this.navigator,
     required this.messenger,
     required this.showProgressDialog,
@@ -380,57 +375,20 @@ class WatchFlowBindings {
   )
   watchWithTorbox;
   final Future<void> Function(
-    List<Torrent> cachedTorrents, {
-    String? channelName,
-    String? channelId,
-    int? channelNumber,
-  })
-  watchTorboxWithCachedTorrents;
-  final Future<void> Function(
     List<String> keywords,
     void Function(String message) log,
   )
   watchWithPikPak;
-  final Future<void> Function(
-    List<Torrent> cachedTorrents, {
-    String? channelName,
-    String? channelId,
-    int? channelNumber,
-  })
-  watchPikPakWithCachedTorrents;
   final Future<void> Function(
     List<String> keywords,
     void Function(String message) log,
   )
   watchWithPremiumize;
   final Future<void> Function(
-    List<Torrent> cachedTorrents, {
-    String? channelName,
-    String? channelId,
-    int? channelNumber,
-  })
-  watchPremiumizeWithCachedTorrents;
-  final Future<void> Function(
     List<String> keywords,
     void Function(String message) log,
   )
   watchWithAllDebrid;
-  final Future<void> Function(
-    List<Torrent> cachedTorrents, {
-    required bool applyNsfwFilter,
-    String? channelName,
-    String? channelId,
-    int? channelNumber,
-  })
-  watchAllDebridWithCachedTorrents;
-  final Future<void> Function(
-    List<Torrent> cachedTorrents, {
-    required bool applyNsfwFilter,
-    String? channelName,
-    String? channelId,
-    int? channelNumber,
-  })
-  watchWithCachedTorrents;
   final NavigatorState Function() navigator;
   final ScaffoldMessengerState Function() messenger;
   final Future<void> Function({
