@@ -1,5 +1,66 @@
 # Refactor board
 
+## Live roadmap
+
+Updated by the orchestrator when assignments, blockers, PR checks or merges change. A checked item means completed, not merely assigned. Detailed evidence and ownership follow below.
+
+### Budget and remaining workload
+- **Remaining extraction slices:16** — Search5 (G1′-5..9), Player5 (V1-6..10), MagicTV4 (M1-3..6), Storage2 (S2-6..7).
+- **Phase3:3 lane groups** (Q1/Q2/Q3); Q2 may require per-area PRs. These are additional to the16 slices.
+- **Current correction queue:** #110/#111/#96, S2 fixtures and M1/V1 origin-pin debt. Upstream strategy and full/native/device gates are separate work, not counted as extraction.
+- **Planning estimate:**19 minimum remaining planned lane groups plus roughly4–7 correction/validation work packages; not19 guaranteed PRs or an elapsed-time promise. Re-estimate after every3 merged slices.
+- **Account quota snapshot:**26% used /74% remaining in the weekly Codex window, checked2026-09-05. Shared account usage, not refactor-only spend; no per-task token/cost figures available. A completion percentage or quota-per-lane forecast would be invented until comparable before/after samples exist.
+- **Controls:** maximum4 active owners for current correction wave; event-driven reports plus hourly fallback; #96 disposal capped at one remaining verification attempt, then explicit debt. No duplicate pin PRs or unassigned feature lanes. Record quota change at each three-slice gate and revise estimate before launching the next batch; no credit redemption authorized.
+
+### Working now
+- [ ] **CI consistency — Cicero:** verify PR110 + PR111 together using Flutter3.44.8; restore ceiling77 and Windows analyzer enforcement.
+- [ ] **Magic TV — Ampere:** PR111 MERGED at0d4ca1a2; live historical cache/watch behavior pins underway. M1-3 still waits for origin debt/gate/upstream strategy.
+- [ ] **Continue Watching — Wegener:** integrate #96 with #104/#105/#107 and prove disposal guard with a real failing regression test.
+- [ ] **Settings safety — Locke:** tests only: restore actual pre-refactor exports and diff every represented key/type/value. Decoder #112 PARKED; no product work.
+
+### Next, in order
+- [x] Merge #111 after independent verification and exact-head CI (0d4ca1a2).
+- [ ] Rebase/check/merge #110 on new main; Cicero assigned, no raised baseline.
+- [ ] Merge #96 only when integrated evidence, compatibility review and CI pass; then eligible G1'-5.
+- [ ] Run corrective full suite, analyzer and both native builds on one pinned Flutter. Record exact commit and remaining failures.
+- [ ] Complete M1/V1 origin-pin debt and S2 restore fixtures before the affected next extraction.
+- [ ] Prepare upstream contribution strategy and map existing upstream PRs to refactored files BEFORE any further extraction assignment.
+- [ ] Resume eligible sequential lanes: Search G1'-5..9; Player V1-6..10; Magic TV M1-3..6; Storage S2-6..7.
+- [ ] Phase3: remove expired forwarders and migrate callers (Q2), enforce layering (Q1), centralize engineering rules (Q3).
+
+### Completed in this correction round
+- [x] Merge #108: Windows source guards, 21 tests reproduced, clean touched analysis.
+- [x] Diagnose SDK mismatch:3.44.8 gives454 diagnostics on parent/correction; no new issues against unchanged baseline.
+- [x] Recover backup worker scope and commits; open separate opt-in decoder draft112.
+- [x] Record upstream-contribution direction; hold out-of-plan #109 and Phase3-only #56.
+- [x] Worker completion/blocker reports are primary; hourly orchestrator fallback only. Five-minute polling removed.
+
+### Explicit blockers
+- [ ] **SHIELD smoke:** hardware unavailable; no phone-as-TV pass claimed.
+- [ ] **PR110:** seven M1 violations removed by111; awaiting updated branch and exact-head CI.
+- [ ] **PR96 disposal:** deterministic mutation pin reported; at most one final SDK verification attempt. If unsuccessful, record debt; no further pin PRs.
+
+
+## Current orchestration — Gate 3 audit (2026-09-05)
+
+This section supersedes stale status/ceiling/merge instructions below. Orchestrator is the only assignment and merge entry point; workers never edit this board.
+
+| Lane | Status | Branch | Worker | Owns | Blocked on | Decisions |
+|---|---|---|---|---|---|---|
+| C0 Gate 3 | in-progress | `refactor/c0-gate3-corrections` | Cicero | analyzer runner/tests, layering ceiling, `.flutter-version` | #110 verification and M1-fix | Ceiling is #72: 77, never current 84/90. Pin dev and CI to 3.44.8; separate local SDK. No baseline growth. |
+| M1-fix | in-progress | `refactor/m1-fix-import-export-layering` | Ampere | channel import/export service, screen flow/dialogs, Magic TV binding, related tests, CODEMAP | real origin pin + independent gate | Service keeps parse/serialize; UI/watch_session belongs in screens. Actual existing test filenames approved. M1-3 blocked until merge. |
+| G1 CW correction | in-progress | `refactor/cw-gate3-integration` | Wegener | CW controller/row, host CW hunks, CW tests; existing #104/#105/#107 patches | disposal mutation-sensitive pin | #96 HOLD. +1118 accounted as +575 production/+494 tests/+49 docs. Current CW row has no second listener; retain required host update, verify actual build count. No speculative listener deletion. |
+| Backup decoder | parked | `refactor/backup-feature-review` | Locke | recovered two codec/test files only | draft review | User parks #112 as out of refactor scope. Worker continues only S2 origin-export/restore tests; no product changes. |
+| C0 Windows guards | merged | `refactor/c0-tv-marker-windows` | Locke verification complete | two guard tests | — | #108 merged after independent 21-test pass, clean analysis and green CI; no assertion weakening. |
+| Test handoff kit | parked | `codex/test-handoff-kit` | — | none assigned | C0 decision | #109 HOLD; no independent agent stack or out-of-lane merge. |
+
+Gate 3, user-reported at main `843d631b`, Windows Flutter 3.47.2: analyzer 471 issues, zero errors (+5 versus historical 466); 5143 tests passed / 37 failed = 33 allowlisted plus four Windows guards addressed by #108. Both native builds reported passing; no new SHIELD smoke evidence. Status: accepted with notes, corrective gates outstanding; do not describe as unqualified green. Exact post-#108 full rerun remains due.
+
+Layering: user audit 99 -> 84 unique; historical occurrence reports 106 -> 90 were inconsistent. C0 same-checker measurement reports #72 77/77 and current 84/84 (occurrences/unique). Enforce 77; seven M1 violations must disappear. Historical gate records below are not replacement ceilings.
+
+No G1'-5, V1-6, M1-3 or S2-6 assignment until their prior pin/phase gates are satisfied. Forwarder expiry: G1'-9, S2-7 domain debt, then Q2 caller migration and removal before Phase 3 completion; every PR lists exact forwarders. #90 keyword duplicate updates remain separate from disproven #96 double-listen assertion.
+
+
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 **Phase 2 binding plan:** `dev/design/REFACTOR_PLAN_PHASE2.md` (#72). It supersedes
 §4 lanes G1–G5 / T2 and the §10 line targets. Ground rules and gates (a)–(e) still
@@ -52,11 +113,11 @@ Full `flutter test` (Linux, Flutter 3.44.8, this environment): **4316** passed �
 | G1'-4 · continue watching | in review | `refactor/g1p-4-continue-watching` | worker `bc-db4ab579` | `search_screen.dart` [CW hunks], `lib/screens/search/continue_watching_controller.dart`, `lib/screens/search/continue_watching_row.dart`, pin | CI on `ec77a1ac` | **#96.** Leaves **1 738**. Rebased onto main. Both units left `lib/services/` / `lib/widgets/` so gate (i) stays 90. Merge `--no-ff` when test+goldens green. Do not start G1'-5. |
 | G1'-5 … G1'-9 | queued | — | — | `search_screen.dart` | #96 | Sequential. Do not start. |
 | V1-0 · PlayerLaunchConfig | merged | `refactor/v1-0-launch-config` | worker | `video_player_screen.dart` [ctor + `widget.*` reads], `lib/screens/video_player/player_launch_config.dart` | — | **#75.** Value object. Leaves +3 ≈ 0. Unblocks V1-1…10. |
-| V1-1 · resume controller | merged | `refactor/v1-1-resume-controller` | worker | `video_player_screen.dart` [resume hunks], `lib/services/playback/resume_controller.dart` | V1-0 | **#79.** Leaves 666. Pin predates move. Adapter still `widget.*`. |
-| V1-2 · identify-title sheet | merged | `refactor/v1-2-identify-title-sheet` | worker | `video_player_screen.dart` [identify-title hunks], `lib/widgets/player/identify_title_sheet.dart` | V1-1 | **#83.** Leaves 527. Sheet + season dialog. Subtitle fetch stays for V1-3. Pin predates move. |
-| V1-3 · subtitle track controller | merged | `refactor/v1-3-subtitle-track-controller` | worker | `video_player_screen.dart` [subtitle/track hunks], `lib/services/playback/subtitle_track_controller.dart` | V1-2 | **#88.** Leaves 943. Pin predates move. Identify sheet not re-extracted. |
-| V1-4 · IPTV recording | merged | `refactor/v1-4-iptv-recording` | worker | `video_player_screen.dart` [recording hunks], `lib/services/playback/iptv_recording_controller.dart` | V1-3 | **#91.** Leaves 704. Pin predates move. Desktop capture `extension: 'ts'`; Android engine-first then tee. Overlay reads notifiers via host getters. |
-| V1-5 · IPTV zap + catch-up | merged | `refactor/v1-5-iptv-zap` | worker | `video_player_screen.dart` [zap/catch-up/prefetch/banner hunks], `lib/services/playback/iptv_zap_controller.dart` | V1-4 | **#94.** Leaves **1 008**. Pin predates move. Controller owns page cache + prefetch; `onSwitch(channel)` stays on host. Overlay reads banner notifiers via host getters. Recording stop on switch kept. After: player 11 926. |
+| V1-1 · resume controller | merged | `refactor/v1-1-resume-controller` | worker | `video_player_screen.dart` [resume hunks], `lib/services/playback/resume_controller.dart` | V1-0 | **#79.** Leaves 666. Pin predates move. Adapter still `widget.*`.  **Leaves accounting:** host reduction only; #100/#102 screen-layer relocations are not logic separation and earn no second Phase 3 credit. |
+| V1-2 · identify-title sheet | merged | `refactor/v1-2-identify-title-sheet` | worker | `video_player_screen.dart` [identify-title hunks], `lib/widgets/player/identify_title_sheet.dart` | V1-1 | **#83.** Leaves 527. Sheet + season dialog. Subtitle fetch stays for V1-3. Pin predates move.  **Leaves accounting:** host reduction only; #100/#102 screen-layer relocations are not logic separation and earn no second Phase 3 credit. |
+| V1-3 · subtitle track controller | merged | `refactor/v1-3-subtitle-track-controller` | worker | `video_player_screen.dart` [subtitle/track hunks], `lib/services/playback/subtitle_track_controller.dart` | V1-2 | **#88.** Leaves 943. Pin predates move. Identify sheet not re-extracted.  **Leaves accounting:** host reduction only; #100/#102 screen-layer relocations are not logic separation and earn no second Phase 3 credit. |
+| V1-4 · IPTV recording | merged | `refactor/v1-4-iptv-recording` | worker | `video_player_screen.dart` [recording hunks], `lib/services/playback/iptv_recording_controller.dart` | V1-3 | **#91.** Leaves 704. Pin predates move. Desktop capture `extension: 'ts'`; Android engine-first then tee. Overlay reads notifiers via host getters.  **Leaves accounting:** host reduction only; #100/#102 screen-layer relocations are not logic separation and earn no second Phase 3 credit. |
+| V1-5 · IPTV zap + catch-up | merged | `refactor/v1-5-iptv-zap` | worker | `video_player_screen.dart` [zap/catch-up/prefetch/banner hunks], `lib/services/playback/iptv_zap_controller.dart` | V1-4 | **#94.** Leaves **1 008**. Pin predates move. Controller owns page cache + prefetch; `onSwitch(channel)` stays on host. Overlay reads banner notifiers via host getters. Recording stop on switch kept. After: player 11 926.  **Leaves accounting:** host reduction only; #100/#102 screen-layer relocations are not logic separation and earn no second Phase 3 credit. |
 | V1-6 … V1-10 | queued | — | — | `video_player_screen.dart` | V1 lib-pin | Sequential. Do not assign V1-6. |
 | V1-fix · split UI-in-services | merged | `refactor/v1-fix-ui-services` | worker | four controllers → `lib/screens/**` | #99 | **#100.** 106 → 90. Resume/subtitle/zap/keyword moved. Catalog play + recording stayed. |
 | C0-gate2 · layering ceiling | merged | `refactor/c0-gate2-layering` | worker | `check_layering.dart`, `layering_baseline.txt`, `ci_layering_delta.py` | — | **#99.** Gate (i). Ceiling now **90** after #100. `--strict` stays Q1. |
@@ -107,3 +168,31 @@ God-file line counts at baseline `9326eb70` (`wc -l`):
 Plan §0 numbers were from `92b41125` and are slightly stale (search_screen 19 073 → 19 071; magic_tv 10 712 → 10 716; torrent_playback 5 384 → 5 340).
 
 Phase 1 merged. Binding is **#72**. **#73–#100 on main** (#99 C0-gate2, #100 V1-fix). Layering ceiling **90**. **#96** rebased + path-moved (`ec77a1ac`); merge when CI green. **#90** parent-path (h) still unpaid. **#86** shortfall 533 → S2-7. Open: **#96**. **#97** closed. Do not start G1'-5 / V1-6 / S2-6 / M1-3. PR #56 held for Q3. #89 closed.
+
+## Gate 3 audit coverage checklist
+
+- [x] Record user Gate3 exact SHA/platform/SDK/results, qualified as reported. #108 merged with 21 reproduced tests and clean analysis.
+- [x] Assign C0 Windows analyzer repair and same-version verification. PR110 uses unchanged analyzer baseline and ceiling77. Pinned3.44.8 yields454 diagnostics on parent and correction;471 was3.47.2.
+- [ ] Merge M1-fix111 then rebase110 and reproduce exact-head gates. Independent combined verification assigned Cicero.
+- [x] M1 inherited63 physical/34 nonblank forwarder retention decided: dialog hooks M1-5, full temporary seam expiry M1-6. Parse/I/O boundary is permanent.
+- [x] Record V1 relocation honestly per lane.
+- [ ] #96 integration: accounting explained; actual rebuild pin reports single listener. Disposal107 needs effective regression test; Wegener owns. No G1'-5.
+- [x] #109 held outside plan; #56 held toQ3. Every PR keeps both difference/further-work questions.
+- [x] User decision: aim to contribute refactor upstream, not a permanent fork. Queue upstream compatibility/review preparation; no recurring permanent-fork merge lane. Avoid more divergence without mapping existing upstream PRs to current seams.
+- [ ] S2 real origin-export/current-restore fixtures assigned Locke after draft decoder112. No synthetic fixture is claimed to prove a real device profile restore.
+- [x] Forwarder cleanup expiry set by lane and Phase3 end; Q2 must migrate callers and remove wrappers, no double counting.
+- [ ] SHIELD per-phase focus/play smoke BLOCKED: user has no SHIELD. Automated DPAD/build-count coverage continues; phone smoke is not substituted or marked as SHIELD pass.
+- [ ] Remaining V1 origin-pin debt is queued before V1-6; four existing owners take priority.
+- [x] Orchestrator-only assignment/merge entry restored. Four owners have completion/blocker reporting instructions; hourly fallback active; event reports primary.
+
+Current main03471d13 god-file line counts (git blobs, not working-tree estimates):
+
+- `lib/screens/search_screen.dart`: 13108 lines.
+- `lib/screens/video_player_screen.dart`: 11926 lines.
+- `lib/screens/magic_tv_screen.dart`: 8369 lines.
+- `lib/services/storage_service.dart`: 6282 lines.
+- `lib/screens/settings_screen.dart`: 2899 lines.
+
+Latest policy correction: upstream build.yml blob2a48503bcf470fef4affcc606182c90444855511 pins Flutter3.44.8 across platforms (verified GitHub API). Keep dev/CI aligned to upstream; do not upgrade or regenerate goldens merely to follow the laptop SDK. #112 parked. Upstream strategy precedes next extractions. Hourly fallback only.
+
+Merge111 report: exact head e56863f1 test+goldens green; independent65 M1 tests,40 pre-move origin tests,50 Python tests,9 layering tests, analyzer454/no new; combined ceiling77. Main0d4ca1a2. Did we make a difference? Seven illegal UI imports removed from service with real origin pins. More to do: actual-main gates, remaining seams M1-5/6, origin debt and upstream strategy. God files unchanged by111: search13105, player11926, MagicTV8369, storage6282, settings2899 (verify next gate). In-progress owners unchanged; M1-3 remains gated, no user-input wait.
