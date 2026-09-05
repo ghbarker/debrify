@@ -54,15 +54,15 @@ void main() {
       () => scope.file(Directory.systemTemp, p.absolute('escape')),
       throwsArgumentError,
     );
-    if (!Platform.isWindows) {
+    expect(
+      () => scope.file(Directory.systemTemp, '../escape'),
+      throwsArgumentError,
+    );
+    if (Platform.isWindows) {
       expect(
-        () => scope.file(Directory.systemTemp, '../escape'),
+        () => scope.file(Directory.systemTemp, r'..\escape'),
         throwsArgumentError,
       );
     }
-    // Deferred security lane: Windows normalization turns ../escape into
-    // ..\escape, which the restored production prefix guard does not reject.
-    // Cross-platform backslash traversal and drive-relative/UNC coverage need
-    // that separate production correction. Do not pin unsafe acceptance here.
   });
 }
