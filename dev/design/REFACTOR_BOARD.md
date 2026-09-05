@@ -5,15 +5,16 @@ Updated 2026-09-05 after main `d5f8dc4b` (CW merge `e478635e`). Orchestrator own
 ## Live roadmap
 
 ### Working now
+- User authorized continued extraction without manual smoke. Temporary automatic-sleep prevention verified: helper PID3412, expires 2026-09-05 16:43 UTC; permanent power settings unchanged.
 - [ ] **Cicero — native CI plan:** CW automated mini-gate complete; final114 independent19case verification complete. Planning mandatory native runtime CI for draft116, no workflow edits yet.
-- [ ] **Wegener — keyword update audit:** read-only check of #90's alleged duplicate rebuild on current code. #96 finished and merged; no new search extraction assigned.
-- [ ] **Ampere — player origin proof:** native audio mount/dispose, identify cancel and disposal checkpoint write proven oldest/current with mutation. Draft116 open; native CI/analyzer dependency unresolved. M1-3 read-only map complete; worker available, next extraction blocked on manual smoke. No full V1 closure.
-- [ ] **Locke — storage fixtures (#114):** 141/141 admitted keys and28/28 exclusions complete; all5 dynamic families finitely sampled (21keys). Exact final `3e30de17` independent19case review passed; awaiting finalCI. Worker now read-only S2-6 planning; no extraction assigned.
+- [ ] **Wegener — keyword update audit:** keyword pin complete ee9de82b; opening corrective PR, then G1'-5 favourites rows assigned on refactor/g1-5-favourites-rows. Ampere independently reviews pin.
+- [ ] **Ampere — player origin proof:** native audio mount/dispose, identify cancel and disposal checkpoint write proven oldest/current with mutation. Draft116 open; native CI/analyzer dependency unresolved. keyword independent review assigned, then M1-3 assigned on refactor/m1-3-provider-watch-flows; exact file locks due before edits. No full V1 closure.
+- [ ] **Locke — storage fixtures (#114):** 141/141 admitted keys and28/28 exclusions complete; all5 dynamic families finitely sampled (21keys). Exact final `3e30de17` independent19case review passed; merged c5f022de; final CI passed. S2-6 origin characterization assigned on refactor/s2-6-playback-progress-store; 114 merged; extraction authorized after green origin pins. Forecast1750–1950 net vs2300 target; no padding, deficit recorded below.
 
 ### Next, in order
 - [x] Finish current merged-code automated mini-gate.
-- [ ] User manual smoke on exacte478635e artifacts still required (SHIELD unavailable).
-- [ ] Finish/review/merge #114 when all intended key coverage and exact-head CI pass; dynamic families are finite samples, never exhaustive suffix coverage.
+- [ ] Manual smoke explicitly deferred by user at 09:44 UTC September 5: proceed with eligible lanes without it. Automated gates remain mandatory; no manual pass claimed (SHIELD unavailable).
+- [x] #114 merged c5f022de: independent19 tests and exact-head test/goldens passed. Dynamic families are finite samples, never exhaustive suffix coverage.
 - [ ] Resolve remaining origin-test debt and keyword audit without speculative fixes or expanding native scope.
 - [x] Map upstream strategy before more divergence: upstream `db440a8d`, fork at `0d4ca1a2` was 385 ahead/0 behind. Existing upstream PRs #55 then #54 then #56 must refresh/test sequentially; pairwise conflicts identified. No bulk fork submission or upstream messages sent.
 - [ ] Resume eligible sequential slices only after their gates: Search G1'-5..9, Player V1-6..10, Magic TV M1-3..6, Storage S2-6..7.
@@ -30,16 +31,16 @@ Updated 2026-09-05 after main `d5f8dc4b` (CW merge `e478635e`). Orchestrator own
 
 ### Blocked or parked
 - [ ] SHIELD smoke: hardware unavailable. Phone testing is not a substitute pass.
-- [ ] Current merged-build manual smoke: due after mini-gate artifacts are ready. No full-phase pass claimed.
+- [ ] Current merged-build manual smoke deferred by explicit user decision; no longer blocks extraction. No manual pass claimed.
 - [ ] Remaining V1 origin behavior coverage: real player test feasibility underway; source scans/copied bodies do not clear it.
-- [ ] #114 remaining key/family coverage and CI: draft, not ready to merge yet.
+- [x] #114 coverage review and CI complete; merged.
 - **Parked:** #112 backup decoder (feature scope creep), #109 test kit (outside assigned lane), #56 Qwen helper (Phase 3). No product work on #112.
 
 ## Exclusive active ownership
 
 | Work | Status | Branch / checkout | Owner | Writable scope | Next dependency |
 |---|---|---|---|---|---|
-| Current G1 mini-gate | in-progress | detached `e478635e`, `debrify-c0-g1-main-gate` | Cicero | no tracked edits; verification/artifacts only | tests/builds, then device smoke |
+| Current G1 mini-gate | automated complete; manual deferred | detached `e478635e`, `debrify-c0-g1-main-gate` | Cicero | no tracked edits; verification/artifacts only | tests/builds, then device smoke |
 | Keyword duplicate-update audit | in-progress | current main / read-only | Wegener | no edits assigned | evidence before any correction |
 | V1 origin-host proof | in-progress | `refactor/v1-origin-host-pin` | Ampere | new `test/video_player_origin_behavior_test.dart` only | bounded native-audio feasibility, no production seams |
 | S2 origin restore fixtures | in-progress | `codex/storage-origin-restore-fixture` | Locke | `test/storage_origin_restore_fixture_test.dart`, `test/fixtures/storage_origin_restore/**` | final domain, independent review and CI |
@@ -84,3 +85,24 @@ Shortfalls: S2-1 869, S2-2 325, S2-3 533 assigned S2-7; avoid counting later sli
 ## Decisions and history
 
 Aim to contribute upstream, not a permanent fork. Upstream refresh ordering precedes further contribution publication. Scope exclusions and preserved quirks are in [REFACTOR_NOTES.md](REFACTOR_NOTES.md). Historical lane rows and old gate snapshots are available in Git history; they must not override this current board. Phase0/Phase1 registries and corrective follow-ups merged; old G1/G3/G5 work was superseded by the binding Phase2 plan. New lane assignments must use its exact owned files and gates.
+
+## Latest assignment decisions — 2026-09-05 09:44 UTC
+
+Manual smoke is deferred by explicit user instruction; continue eligible work. C0 owns native CI116; Wegener owns G1'-5 host/favourites files after corrective pin PR; Ampere reviews keyword pin then owns M1-3 watch-flow files; Locke owns S2-6 storage files;114 merged. Workers must confirm exact paths before edits. Shared CODEMAP edits require serialized ownership. No ownership of each other's host files.
+
+S2-6 functional scope retained, forecast1750–1950 net against original2300:350–550 potential deficit is outstanding debt pending exact overlap accounting and clearing slice S2-7/Q2; no automatic target waiver or double credit for already-extracted TV/reset code. Origin pins proceed now. Manual testing remains unproven.
+
+### Merge114 — 2026-09-05
+Exact head3e30de17 verified CI test/goldens SUCCESS; independent19case reproduction passed. Merged c5f022de. Difference: real pre-refactor export/current restore compatibility pins for141 named keys,28 exclusions and finite5family samples. More: conditional/dynamic domains remain finite and each new storage slice must pin its own behavior. S2-6 unblocked; other active lanes share no changed production files with114. God counts unchanged from current table (test/fixture-only merge).
+
+S2-6 ownership extension: Locke exclusively owns test/storage_key_sweep_test.dart import/store-discovery/exact-alias additions; assertions must not weaken. CODEMAP storage-routing rows exclusively locked to Locke until commit/release. Current extraction reports1867 net Leaves,433 uncredited deficit. Independent review still required. C0 authorized fast-forward PR116 to24dc0dcb; native Linux execution required before merge.
+
+
+G1'-5 destination decision approved: lib/screens/search/fav_rows_controller.dart and fav_row.dart retain Flutter/focus ownership in screen layer; no new service-layer UI dependency. Wegener starts real-origin pins now; CODEMAP waits only at completion (Locke owns current lock). C0 independent S2-6 checkpoint review assigned while native CI116 executes. PR117 test passed, goldens pending; independent keyword review complete. Awake helper3412 verified running.
+
+
+S2-6 draft PR118 published, frozen609b823550034d58b58dc00127be2067c4ee50e7. C0 independent review active; Locke holding branch stable. Worker reports104core+120consumer+9sweep+12allowlist passes,cleananalysis,77layering; not parent gate credit until reproduced.1867Leaves/433uncredited debt. All67bodydiffs and70method inventory included in PR. CODEMAP lock released. M1-3 quickwatch835line mapping accepted in scope; origin21cases green, sensitivity/pincommit precede move.
+
+
+PR117 merged a0569745 exactee9de82b after independent live-host pin1pass/cleananalysis and CItest/goldensSUCCESS. Difference: tested selection notification coalesces to1host+1child,noextra-frame build; no duplicate-child fix warranted. More: does not cover every asynchronous sequence or prove both listeners necessary. God-file counts unchanged (test-only). G1'-5 neighbouring search lane should integrate before final gate; no production overlap. PR118 independent reproduction complete,CIpending; no merge yet.
+
