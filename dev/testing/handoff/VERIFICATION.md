@@ -80,8 +80,34 @@ These were Flutter test runs only, not duplicate application/platform builds.
 Full Flutter, analyzer, Linux/macOS execution and historical parent-tree execution
 were not run. The POSIX runner fixture is provided but only Windows was verified.
 
-Next useful slice: run `backup-export` in this prepared checkout, then assess
-profile lifecycle/isolation separately. After pending changes merge, inspect their
-new paths and evidence before adding bounded selectors. Native lifecycle and
-setting-attribute synchronization remain coverage discussions, not implementations
-or coverage claims in this kit.
+## Additional bounded runner validation
+
+Tested checkout: `353201953f328afffa8bd83247656962c43a1059` plus the accompanying
+README/manifest wording cleanup. Runner behavior, suite selectors and all
+production code/tests were unchanged. The same Windows host, pinned Flutter
+3.44.8, own-worktree metadata and process environment above were reused. No
+additional dependency preparation, gate-workspace writes or application builds.
+
+```text
+python dev/testing/handoff/run.py backup-export --flutter E:/FlutterSdks/flutter-3.44.8/bin/flutter.bat
+python dev/testing/handoff/run.py profile-lifecycle --flutter E:/FlutterSdks/flutter-3.44.8/bin/flutter.bat
+```
+
+- `backup-export`: **67 passed, 0 failed; raw exit 0** across the five existing
+  files selected by the manifest. Encryption/package contracts, database snapshot
+  behavior, audit privacy, and backup formatting/source guards ran. This does not
+  validate a native file picker or an end-to-end device export.
+- `profile-lifecycle`: **2 passed, 0 failed; raw exit 0** in
+  `test/profiles/profile_lifecycle_test.dart`. Candidate publication ordering and
+  roll-forward after post-commit failure ran against the local registry/runtime.
+  This is VM service integration, not real device process-death coverage.
+
+No retries, suppression or allowlists were used. The catalog cleanup removes
+redundant invariant fields, calls source inspection `inspected_commit`, and
+corrects keyword State evidence. Actual execution results remain canonical here.
+
+Next useful slice: profile isolation or cloud provider behavior through the kit
+when useful to upstream adoption. Inspect later merged paths and their evidence
+before extending bounded selectors; the catalog remains based on the inspected
+base rather than tracking moving PR status. Native lifecycle and setting-attribute
+synchronization remain coverage discussions, not implementations or coverage claims.

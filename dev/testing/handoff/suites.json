@@ -14,12 +14,10 @@
       ],
       "owner_module": "lib/services/profiles/profile_scope.dart",
       "purpose": "Generation-aware native paths and preference keys remain scoped; traversal and drive-relative escapes are rejected.",
-      "invariant": "Generation-aware native paths and preference keys remain scoped; traversal and drive-relative escapes are rejected.",
       "failure_triage": "Read failing input and host path semantics; do not normalize away a Windows-only failure.",
-      "evidence": "Includes main characterization commit 50f576a7. No claim that current main passes every native path pin; pending fixes are excluded.",
+      "evidence": "Includes characterization commit 50f576a7 at the inspected base. See VERIFICATION.md for the exact tested checkout and raw Windows result; this catalog does not track later main or PR status.",
       "run_command": "python dev/testing/handoff/run.py profile-path",
-      "last_verified_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197",
-      "verification_kind": "main path existence and source inspection; not a test-pass attestation"
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
     },
     "profile-lifecycle": {
       "engine": "flutter",
@@ -33,12 +31,10 @@
       ],
       "owner_module": "lib/services/profiles/profile_lifecycle.dart",
       "purpose": "Candidate initialization observes committed publication; post-commit failure rolls forward to the authoritative profile.",
-      "invariant": "Candidate initialization observes committed publication; post-commit failure rolls forward to the authoritative profile.",
       "failure_triage": "Separate SQLite setup errors from ordering failures; inspect registry and ProfileRuntime together. VM integration, not device lifecycle.",
       "evidence": "Existing main tests; historical before/after execution not independently verified by this kit.",
       "run_command": "python dev/testing/handoff/run.py profile-lifecycle",
-      "last_verified_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197",
-      "verification_kind": "main path existence and source inspection; not a test-pass attestation"
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
     },
     "profile-isolation": {
       "engine": "flutter",
@@ -53,12 +49,10 @@
       ],
       "owner_module": "lib/services/profiles",
       "purpose": "Preference classification and live-switch participants do not retain prior profile state.",
-      "invariant": "Preference classification and live-switch participants do not retain prior profile state.",
       "failure_triage": "Read test/profiles/isolation_suite/README.md; source matches do not prove native stores or process-death safety.",
       "evidence": "Existing main tests; historical before/after execution not independently verified by this kit.",
       "run_command": "python dev/testing/handoff/run.py profile-isolation",
-      "last_verified_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197",
-      "verification_kind": "main path existence and source inspection; not a test-pass attestation"
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
     },
     "cloud-core": {
       "engine": "flutter",
@@ -71,12 +65,10 @@
       ],
       "owner_module": "lib/services/cloud",
       "purpose": "Stored/playback provider aliases, precedence and negative-pack cache TTL/cap remain compatible.",
-      "invariant": "Stored/playback provider aliases, precedence and negative-pack cache TTL/cap remain compatible.",
       "failure_triage": "Inspect provider IDs and cache keys/clock; this suite does not contact live providers.",
       "evidence": "Existing main tests; historical before/after execution not independently verified by this kit.",
       "run_command": "python dev/testing/handoff/run.py cloud-core",
-      "last_verified_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197",
-      "verification_kind": "main path existence and source inspection; not a test-pass attestation"
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
     },
     "cloud-provider": {
       "engine": "flutter",
@@ -89,12 +81,10 @@
       ],
       "owner_module": "lib/services/cloud/cloud_provider_registry.dart",
       "purpose": "Missing configuration, empty files, cache misses and malformed HTTP errors remain observable through the registry.",
-      "invariant": "Missing configuration, empty files, cache misses and malformed HTTP errors remain observable through the registry.",
       "failure_triage": "Inspect injected clients and provider adapters before changing expected errors; no live-account validation.",
       "evidence": "Existing main tests; historical before/after execution not independently verified by this kit.",
       "run_command": "python dev/testing/handoff/run.py cloud-provider",
-      "last_verified_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197",
-      "verification_kind": "main path existence and source inspection; not a test-pass attestation"
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
     },
     "keyword-state": {
       "engine": "flutter",
@@ -109,13 +99,11 @@
         "behavioral"
       ],
       "owner_module": "lib/screens/search",
-      "purpose": "Real SearchScreen submit/clear and snapshot restoration, extracted State notifications, filtering and controller bookkeeping stay pinned.",
-      "invariant": "Real SearchScreen submit/clear and snapshot restoration, extracted State notifications, filtering and controller bookkeeping stay pinned.",
+      "purpose": "Real SearchScreen submit/clear, imported results and Name-sort reset, extracted State notifications, filtering and controller bookkeeping stay pinned.",
       "failure_triage": "Distinguish outer SearchScreen from extracted widget/controller; check engine mocks and state notifications.",
       "evidence": "origin_widget is retrospective (#101): source records unchanged execution on pre-move ee33b3cba678ab914ed242e484cc9e5aed15e3c0 and main, not pre-extraction authorship. screen_pin is post-move (#98) and requires extracted classes. This kit has not rerun the historical tree.",
       "run_command": "python dev/testing/handoff/run.py keyword-state",
-      "last_verified_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197",
-      "verification_kind": "main path existence and source inspection; not a test-pass attestation"
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
     },
     "keyword-source": {
       "engine": "flutter",
@@ -129,12 +117,10 @@
       ],
       "owner_module": "lib/screens/search",
       "purpose": "Source-shape expectations and locally reproduced keyword helper examples remain visible.",
-      "invariant": "Source-shape expectations and locally reproduced keyword helper examples remain visible.",
       "failure_triage": "A green result is not a functional pin of real State: this file greps source and reproduces helper logic. Prefer keyword-state for runtime evidence.",
       "evidence": "Original characterization intent is stated in file; source guards and test-local reimplementations are weaker evidence than original production-path execution.",
       "run_command": "python dev/testing/handoff/run.py keyword-source",
-      "last_verified_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197",
-      "verification_kind": "main path existence and source inspection; not a test-pass attestation"
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
     },
     "backup-export": {
       "engine": "flutter",
@@ -153,12 +139,10 @@
       ],
       "owner_module": "lib/services/backup_restore_service.dart; lib/services/profiles",
       "purpose": "Encryption rejects unsafe envelopes; portable packages preserve legacy inventory and digests; database export preserves durable state; audit export omits private data.",
-      "invariant": "Encryption rejects unsafe envelopes; portable packages preserve legacy inventory and digests; database export preserves durable state; audit export omits private data.",
       "failure_triage": "Identify encryption, SQLite, audit privacy or source-contract failure first. backup_restore_page tests helpers and source text, not a rendered widget; no native sharing/file-picker guarantee.",
       "evidence": "Existing main tests; historical before/after execution not independently verified by this kit.",
       "run_command": "python dev/testing/handoff/run.py backup-export",
-      "last_verified_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197",
-      "verification_kind": "main path existence and source inspection; not a test-pass attestation"
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
     },
     "ci-selftests": {
       "engine": "python",
@@ -174,12 +158,10 @@
       ],
       "owner_module": "tool",
       "purpose": "CI matcher and layering-delta self-tests run exactly the three modules selected by the Test workflow.",
-      "invariant": "CI matcher and layering-delta self-tests run exactly the three modules selected by the Test workflow.",
       "failure_triage": "These exercise gate logic only, not app tests, analyzer output or actual layering state.",
       "evidence": "Existing main tests; historical before/after execution not independently verified by this kit.",
       "run_command": "python dev/testing/handoff/run.py ci-selftests",
-      "last_verified_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197",
-      "verification_kind": "main path existence and source inspection; not a test-pass attestation"
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
     },
     "full": {
       "engine": "flutter",
@@ -196,12 +178,10 @@
       ],
       "owner_module": "lib; test",
       "purpose": "Run all Flutter tests discovered under test, including tagged pixel goldens, with raw exit status.",
-      "invariant": "Run all Flutter tests discovered under test, including tagged pixel goldens, with raw exit status.",
       "failure_triage": "Read raw failing test names; goldens may vary by host. No retries, golden updates, baseline suppression or native device tests are added.",
       "evidence": "Directory discovery follows current checkout; classification is mixed, not a claim that every file exercises every type.",
       "run_command": "python dev/testing/handoff/run.py full",
-      "last_verified_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197",
-      "verification_kind": "main path existence and source inspection; not a test-pass attestation"
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
     }
   }
 }

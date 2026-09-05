@@ -45,7 +45,7 @@ build directory between simultaneous workers. No Gradle build is part of this ki
 
 ## What runs
 
-`suites.json` is the catalog: purpose/invariant, owning module, selectors, command,
+`suites.json` is the catalog: purpose, owning module, selectors, command,
 evidence limitations, failure triage and last inspected commit. `--list` verifies
 all selectors. `--dry-run` prints the resolved file inventory and command argument
 array without claiming execution. A folder selector discovers `*_test.dart`
@@ -70,8 +70,9 @@ A successful dry run is not a successful test run.
 - Behavioral tests execute assertions against production code; a `behavioral-model`
   label means examples implemented inside the test, weaker evidence of the app.
 - Widget tests drive Flutter widget/State behavior. `keyword-state` includes real
-  `SearchScreen` submit/clear and snapshot restoration, the extracted widget's
-  controller notifications, and actual controller helpers.
+  `SearchScreen` submit/clear, imported results and Name-sort reset, the extracted
+  widget's controller notifications, and actual controller helpers. It does not
+  establish a separate real-State snapshot-restoration pin.
 - Integration here means multiple services or local SQLite on the Dart VM. It
   does not mean a real device, live provider account, native preference reader,
   OS file picker or process-death exercise.
@@ -90,9 +91,11 @@ rerun or proof that a test was committed before extraction. For new regression
 work, retain the failing reproduction, fix, exact tested commit, platform and
 mutation result in its review. Do not relabel a text guard as functional coverage.
 
-Only fetched-main paths were selected at the manifest's `last_verified_commit`.
-Pending PR #104/#105/#107 paths are not runnable entries. Path verification is
-explicitly not a pass attestation. New setting/attribute auto-sync coverage remains
+Each suite's `inspected_commit` identifies source/path inspection only. The
+catalog uses paths from that fetched-main base; it does not track subsequent
+merges or changing PR status. `VERIFICATION.md` is the canonical record of actual
+run results and tested commits, including profile-path results. No pass/fail
+results are stored in the manifest. New setting/attribute auto-sync coverage remains
 a discussion-only gap: this kit neither implements a policy nor claims automatic
 coverage when a field is added.
 
@@ -103,11 +106,11 @@ coverage when a field is added.
 2. Run it directly with pinned Flutter. Demonstrate that the regression or a
    targeted mutation makes it fail, then that the intended code passes.
 3. Folder suites pick it up automatically. Add an explicit path to a bounded
-   suite only when it shares that suite's invariant; update classification and
+   suite only when it shares that suite's purpose; update classification and
    evidence if needed. Verify `--list` and `--dry-run`, then run the suite.
 4. In review record the tested commit, command, environment and result. Update
-   `last_verified_commit` only after inspecting the selected paths at that commit;
-   do not turn its source-inspection meaning into a historical pass claim.
+   `inspected_commit` only after inspecting the selected paths at that commit;
+   keep actual run results and tested commits in `VERIFICATION.md`.
 
 Use the smallest relevant suite during work, broader existing tests before merge,
 and CI's own workflow as the integration gate. Optional later CI adoption can run
