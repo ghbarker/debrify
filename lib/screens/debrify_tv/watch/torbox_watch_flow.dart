@@ -535,36 +535,13 @@ class TorboxWatchFlow {
       }
 
       // Hide auto-launch overlay before launching player
-      MainPageBridge.notifyPlayerLaunching();
-
-      await host.navigator().push(
-        FrozenLegacyPageRoute(
-          builder: (_) => VideoPlayerScreen(
-            videoUrl: first['url'] ?? '',
-            title: first['title'] ?? 'Debrify TV',
-            startFromRandom: host.startRandom,
-            randomStartMaxPercent: host.randomStartPercent,
-            hideSeekbar: host.hideSeekbar,
-            showChannelName: host.showChannelName,
-            channelName: channelName,
-            channelNumber: channelNumber,
-            showVideoTitle: host.showVideoTitle,
-            hideOptions: host.hideOptions,
-            requestMagicNext: requestTorboxNext,
-            requestNextChannel:
-                host.channels.length > 1 &&
-                    MagicTvDispatch.allowsNextChannel(
-                      host.provider,
-                      MagicTvNextChannelQuirk.exceptAllDebrid,
-                    )
-                ? host.requestNextChannel
-                : null,
-            channelDirectory: channelDirectory,
-            requestChannelById: host.channels.length > 1
-                ? host.requestChannelById
-                : null,
-          ),
-        ),
+      await pushCachedWatchPlayer(
+        host,
+        first,
+        requestTorboxNext,
+        channelName: channelName,
+        channelNumber: channelNumber,
+        channelDirectory: channelDirectory,
       );
       if (host.mounted) {
         host.setState(() {
