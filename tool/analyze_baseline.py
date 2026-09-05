@@ -11,6 +11,7 @@ not; that would hide a regression.
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from collections import Counter
@@ -152,14 +153,42 @@ def record_payload(recs: list[dict[str, Any]], commit: str) -> dict[str, Any]:
     }
 
 
+def dart_executable() -> str:
+    """Use the native SDK on Windows, like check_layering_test.dart.
+
+    CreateProcess cannot launch the PATH dart/flutter batch shims directly.
+    Keep arguments separate and avoid cmd/shell quoting (including SDK spaces).
+    """
+    if sys.platform != "win32":
+        return "dart"
+    for name in ("dart", "flutter"):
+        found = shutil.which(name)
+        if not found:
+            continue
+        launcher = Path(found).resolve()
+        if launcher.name.lower() == "dart.exe" and launcher.is_file():
+            return str(launcher)
+        native = launcher.parent / "cache" / "dart-sdk" / "bin" / "dart.exe"
+        if native.is_file():
+            return str(native)
+    raise SystemExit("Cannot find native Dart SDK; put the Flutter SDK bin on PATH.")
+
+
 def run_analyze() -> list[dict[str, Any]]:
-    proc = subprocess.run(
-        ANALYZE_CMD,
-        cwd=ROOT,
-        check=False,
-        text=True,
-        capture_output=True,
-    )
+    command = [dart_executable(), *ANALYZE_CMD[1:]]
+    try:
+        proc = subprocess.run(
+            command,
+            cwd=ROOT,
+            check=False,
+            text=True,
+            capture_output=True,
+            encoding="utf-8",
+            shell=False,
+        )
+    except OSError as error:
+        print(f"Could not launch Dart analyzer ({command[0]}): {error}", file=sys.stderr)
+        raise SystemExit(2) from error
     text = proc.stdout or ""
     if proc.returncode not in (0, 1, 2, 3):
         print(proc.stderr or proc.stdout, file=sys.stderr)
