@@ -308,14 +308,9 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     stopPrefetch: _queuePrefetcher.stopPrefetch,
     syncProviderAvailability: _syncProviderAvailability,
     watchWithTorbox: _watchWithTorbox,
-    watchTorboxWithCachedTorrents: _watchTorboxWithCachedTorrents,
     watchWithPikPak: _watchWithPikPak,
-    watchPikPakWithCachedTorrents: _watchPikPakWithCachedTorrents,
     watchWithPremiumize: _watchWithPremiumize,
-    watchPremiumizeWithCachedTorrents: _watchPremiumizeWithCachedTorrents,
     watchWithAllDebrid: _watchWithAllDebrid,
-    watchAllDebridWithCachedTorrents: _watchAllDebridWithCachedTorrents,
-    watchWithCachedTorrents: _watchWithCachedTorrents,
     navigator: () => Navigator.of(context),
     messenger: () => ScaffoldMessenger.of(context),
     showProgressDialog: ({required builder, required barrierDismissible}) => showDialog<void>(context: context, builder: builder, barrierDismissible: barrierDismissible),
@@ -1420,7 +1415,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     switch (MagicTvDispatch.watchId(_provider)) {
       case CloudProviderId.torbox:
         debugPrint('🎬 [WATCH] Launching Torbox flow...');
-        await _watchTorboxWithCachedTorrents(
+        await _torboxWatch.watchTorboxWithCachedTorrents(
           cachedTorrents,
           channelName: channel.name,
           channelId: channel.id,
@@ -1428,7 +1423,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         );
       case CloudProviderId.pikpak:
         debugPrint('🎬 [WATCH] Launching PikPak flow...');
-        await _watchPikPakWithCachedTorrents(
+        await _pikpakWatch.watchPikPakWithCachedTorrents(
           cachedTorrents,
           channelName: channel.name,
           channelId: channel.id,
@@ -1436,7 +1431,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         );
       case CloudProviderId.premiumize:
         debugPrint('🎬 [WATCH] Launching Premiumize flow...');
-        await _watchPremiumizeWithCachedTorrents(
+        await _premiumizeWatch.watchPremiumizeWithCachedTorrents(
           cachedTorrents,
           channelName: channel.name,
           channelId: channel.id,
@@ -1444,7 +1439,11 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         );
       case CloudProviderId.alldebrid:
         debugPrint('🎬 [WATCH] Launching AllDebrid flow...');
-        await _watchAllDebridWithCachedTorrents(
+        // AllDebrid channel playback. Mirrors the Real-Debrid cached flow
+        // (sequential add-and-probe, no cache-check API) but resolves each candidate
+        // through AllDebrid's `ready`-flag add (no polling) and lazily unlocks links
+        // on demand. The background prefetcher keeps upcoming items prepared.
+        await _alldebridWatch.watchAllDebridWithCachedTorrents(
           cachedTorrents,
           applyNsfwFilter: channel.avoidNsfw || _viewerForcesNsfw,
           channelName: channel.name,
@@ -1453,7 +1452,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         );
       case CloudProviderId.debrid:
         debugPrint('🎬 [WATCH] Launching RealDebrid flow...');
-        await _watchWithCachedTorrents(
+        await _realDebridWatch.watchWithCachedTorrents(
           cachedTorrents,
           applyNsfwFilter: channel.avoidNsfw || _viewerForcesNsfw,
           channelName: channel.name,
@@ -1469,7 +1468,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     _keywordsController.text = previousKeywords;
   }
 
-  Future<void> _watch() => _providerWatch.watch();
 
   Future<void> _watchWithTorbox(
     List<String> keywords,
@@ -1481,25 +1479,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     void Function(String message) log,
   ) => _pikpakWatch.watchWithPikPak(keywords, log);
 
-  Future<void> _watchWithCachedTorrents(
-    List<Torrent> cachedTorrents, {
-    required bool applyNsfwFilter,
-    String? channelName,
-    String? channelId,
-    int? channelNumber,
-  }) => _realDebridWatch.watchWithCachedTorrents(cachedTorrents, applyNsfwFilter: applyNsfwFilter, channelName: channelName, channelId: channelId, channelNumber: channelNumber);
 
-  /// AllDebrid channel playback. Mirrors the Real-Debrid cached flow
-  /// (sequential add-and-probe, no cache-check API) but resolves each candidate
-  /// through AllDebrid's `ready`-flag add (no polling) and lazily unlocks links
-  /// on demand. The background prefetcher keeps upcoming items prepared.
-  Future<void> _watchAllDebridWithCachedTorrents(
-    List<Torrent> cachedTorrents, {
-    required bool applyNsfwFilter,
-    String? channelName,
-    String? channelId,
-    int? channelNumber,
-  }) => _alldebridWatch.watchAllDebridWithCachedTorrents(cachedTorrents, applyNsfwFilter: applyNsfwFilter, channelName: channelName, channelId: channelId, channelNumber: channelNumber);
 
   Future<bool> _launchTorboxOnAndroidTv({
     required Map<String, String> firstStream,
@@ -1532,19 +1512,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     List<Map<String, dynamic>>? channelDirectory,
   }) => _channelSwitch.launchRealDebridOnAndroidTv(firstStream: firstStream, requestNext: requestNext, channelName: channelName, showChannelNameOverride: showChannelNameOverride, channelId: channelId, channelNumber: channelNumber, channelDirectory: channelDirectory);
 
-  Future<void> _watchTorboxWithCachedTorrents(
-    List<Torrent> cachedTorrents, {
-    String? channelName,
-    String? channelId,
-    int? channelNumber,
-  }) => _torboxWatch.watchTorboxWithCachedTorrents(cachedTorrents, channelName: channelName, channelId: channelId, channelNumber: channelNumber);
 
-  Future<void> _watchPikPakWithCachedTorrents(
-    List<Torrent> cachedTorrents, {
-    String? channelName,
-    String? channelId,
-    int? channelNumber,
-  }) => _pikpakWatch.watchPikPakWithCachedTorrents(cachedTorrents, channelName: channelName, channelId: channelId, channelNumber: channelNumber);
 
   Future<bool> _launchPikPakOnAndroidTv({
     required Map<String, String> firstStream,
@@ -3026,7 +2994,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
                         _quickAvoidNsfw = avoidNsfw;
                         _quickProvider = _provider;
                       });
-                      // Copy keywords from Quick Play controller to main controller for _watch()
+                      // Copy keywords from Quick Play controller to main controller for _providerWatch.watch()
                       _keywordsController.text = keywords;
                     }
 
@@ -3036,7 +3004,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
                     await WidgetsBinding.instance.endOfFrame;
                     await WidgetsBinding.instance.endOfFrame;
                     if (mounted) {
-                      await _watch();
+                      await _providerWatch.watch();
                     }
                   },
                 ),
@@ -3240,12 +3208,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     request: _magicTvLockedRequest(candidate, seenKeys: seenKeys),
   );
 
-  Future<void> _watchPremiumizeWithCachedTorrents(
-    List<Torrent> cachedTorrents, {
-    String? channelName,
-    String? channelId,
-    int? channelNumber,
-  }) => _premiumizeWatch.watchPremiumizeWithCachedTorrents(cachedTorrents, channelName: channelName, channelId: channelId, channelNumber: channelNumber);
 
   Future<void> _watchWithPremiumize(
     List<String> keywords,
