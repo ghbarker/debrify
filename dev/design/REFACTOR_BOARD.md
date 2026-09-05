@@ -1,5 +1,19 @@
 # Refactor board
 
+## Current checkpoint — 2026-09-05 10:39 UTC (supersedes historical rows below)
+- Merged:114,117,118,116,120. Latest120merge a46fa879.
+- G1'-5 Wegener: origin6pins green5d72af7a; type relocation7lines from search_card_widgets.dart approved; extraction active refactor/g1-5-favourites-rows.
+- M1-3 Ampere: PR119 ee79d4fe testCI FAILED; native/goldens pass. Lane fix assigned; no merge.
+- C0 Cicero: independent119failure triage/review; next full mergedmain automated mini-gate after correction.
+- S2 Locke:120merged, read-only remainingstorage/debt audit assigned; no new extraction.
+- Manual smoke explicitly deferred, not blocking; automated gates mandatory. Keepawake PID3412 alive until16:43UTC.
+- Current main godlines: search11376/player11926/magic8369/storage4365/settings2899. Original19070/16278/10716/9963/7905.
+- Storage debt:433S26+350S27=783uncredited; storage still1565 above2800target. Native proof limited audio/cancel/disposal.
+- CODEMAP unlocked; exactworkerlocks required beforeedits.
+
+## Prior checkpoints and retained evidence
+
+
 Updated 2026-09-05 after main `d5f8dc4b` (CW merge `e478635e`). Orchestrator owns this board and NOTES. Binding contracts: [original plan](REFACTOR_PLAN.md), [Phase 2 correction](REFACTOR_PLAN_PHASE2.md), and latest explicit user decisions below. Historical snapshots remain in Git history; they are not current assignments.
 
 ## Live roadmap
@@ -105,4 +119,16 @@ S2-6 draft PR118 published, frozen609b823550034d58b58dc00127be2067c4ee50e7. C0 i
 
 
 PR117 merged a0569745 exactee9de82b after independent live-host pin1pass/cleananalysis and CItest/goldensSUCCESS. Difference: tested selection notification coalesces to1host+1child,noextra-frame build; no duplicate-child fix warranted. More: does not cover every asynchronous sequence or prove both listeners necessary. God-file counts unchanged (test-only). G1'-5 neighbouring search lane should integrate before final gate; no production overlap. PR118 independent reproduction complete,CIpending; no merge yet.
+
+
+M1-3 decision: Ampere owns narrow cloud_magic_tv_unlock_pin_test.dart host+sixflow inventory/exactcaptured-keyalias update; preserve assertions, no broad exemptions, source checks supplemental only. Tenentrywrappers+100physical typedbinding retained for credential timing;reviewM1-5,expiryreview/removalM1-6. Reported3070net pendingfinalaudit (3226grossminus156). CODEMAP MagicTV rows exclusively locked to Ampere untilcommit/release. Baselinegrowth forbidden; C0 only location reconciliation with evidence.
+
+
+MERGED1188ecc6323 and116532fd360: exactheadCIgreen; S2 independent104/120/9/12checks+analysis/bodycomparison passed.116origin/current Linuxnative1each no skips, parent runner5tests passed. Difference: playbackstorage logic extracted with frozenkeys, mandatorynative origin/current gate added. More:433storageLeavesdebt, fullvideo readiness/manualsmoke unproven. Current godcounts search11376,player11926,magic8369,storage4415,settings2899 versus original19070/16278/10716/9963/7905. S2-7 readiness/originpins assignedLocke; exactstorelocks beforeedits. M1/G1 active branches must integrate newnativeCI beforefinalgate. C0 owns M1baseline mapping. Remaining extraction slices15 (S2-6merged).
+
+
+S2-7 Locke owns exact app_style_prefs.dart and home_prefs.dart phasedhooks plusstoragehost/neworigin test; preserve interleaving/capturedprefs. Productmove waits concrete API/net review: actualmigration~72lines cannot meet400; no scopepadding or433debt doublecredit. M1-3 C0 baseline decision approved470to454:13exactseverity/code/message locationmatches,16observeddisappeared. Fullanalyzer454to438.12asynccontext warnings hidden through bindings are NOT asyncsafety improvement. C0 baselineonly commit then119integration/nativeCI.
+
+
+119 corrected headf8bd6ce44 independent review inprogress; exact newCI required.20guard adversarialcases plus62lane passed worker, no production/baseline relaxation. Locke residual audit complete1565above storage target=783explicit+782other; proposed followons recordedNOTES, not assigned before automatedmini-gate. C0 will run actualmergedmain fullgate after119merge. CODEMAPfree.
 

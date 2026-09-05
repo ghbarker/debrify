@@ -685,3 +685,7 @@ template for later lanes. Reject any new review PR that omits the table.
 User decisions (2026-09-05): aim to contribute the refactor upstream; do not treat this as a permanent fork or schedule its conditional recurring merge lane. SHIELD hardware unavailable: record hardware performance gate blocked, no phone substitution. Independent corrective work continues.
 
 Superseding user correction: decoder112 is parked scope creep for this refactor; only S2 fixture tests continue. Upstream workflow currently pins3.44.8 (blob2a48503bcf470fef4affcc606182c90444855511); SDK alignment follows that evidence. No automatic golden regeneration. Strategy precedes new extraction assignment. Disposal96 has one remaining verification attempt maximum, then explicit unresolved debt if needed. Event-driven worker reporting with hourly fallback.
+
+## Storage residual audit (2026-09-05, main b3f518ff)
+Storage4365 exceeds2800target by1565:783explicit shortfalls(433S2-6+350S2-7),782otherresidual. Read-only audit distinguishes1315forwarder methodlines,1755logicmethodlines,137constantlines,662blank,404comments,92otherdeclarations. Proposed progress/metadata/watchlist/quick-filter/repair followons forecast1010–1165 total;400–555would still require authorized Q2caller/facade retirement or targetdecision. These are estimates, not achieved reduction. No new extractions authorized before automatedmini-gate. Do not count historical relocation or same remaininglines twice.
+

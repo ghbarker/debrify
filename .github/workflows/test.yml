@@ -31,7 +31,7 @@ jobs:
           sudo apt-get install -y libsqlite3-dev libsqlite3-0
 
       - name: Test CI allowlist and analyze-baseline matchers
-        run: python3 -m unittest ci_test_allowlist_test.py analyze_baseline_test.py ci_layering_delta_test.py
+        run: python3 -m unittest ci_test_allowlist_test.py analyze_baseline_test.py ci_layering_delta_test.py run_native_player_test_test.py
         working-directory: tool
 
       - name: Setup Flutter
@@ -96,7 +96,7 @@ jobs:
       # Historical Linux failures are listed in test/BASELINE_ALLOWLIST.txt;
       # only new failures fail the job. Unused allowlist entries also fail.
       - name: Run app tests against baseline allowlist
-        run: python3 tool/ci_test_allowlist.py
+        run: python3 tool/run_native_player_test.py generic
 
   # Pixel goldens rasterize differently on GitHub ubuntu than the checked-in
   # PNGs. Do not delete goldens and do not skip the tag wholesale: run them
@@ -119,4 +119,89 @@ jobs:
         run: flutter pub get
 
       - name: Run golden tests with Linux tolerance
-        run: python3 tool/ci_test_allowlist.py --tags golden --retries 2
+        run: python3 tool/run_native_player_test.py generic --tags golden --retries 2
+
+  # Required by the orchestrator merge gate, including drafts. No path filters,
+  # allowlist, retries, continue-on-error, or native prerequisite skips.
+  native-player:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+
+      # Same builder blob as official upstream at immutable db440a8d2e7a0c5c2d74bfdcd43027db7819bc59:
+      # https://github.com/varunsalian/debrify/blob/db440a8d2e7a0c5c2d74bfdcd43027db7819bc59/dev/scripts/build_linux_libmpv.sh
+      # The builder pins mpv-build, mpv, FFmpeg, libass and libplacebo commits.
+      - name: Verify runtime builder provenance
+        run: test "$(git hash-object dev/scripts/build_linux_libmpv.sh)" = c34e459e8f58ede79683d85f5af5f7c349a82295
+
+      - name: Install existing Linux build dependencies and software audio
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential git pkg-config ninja-build python3-pip nasm yasm \
+            autoconf automake libtool-bin libssl-dev zlib1g-dev libasound2-dev libpulse-dev \
+            libva-dev libvdpau-dev libgl-dev libegl-dev libx11-dev libxext-dev libxrandr-dev \
+            libxss-dev libxpresent-dev libdrm-dev libgbm-dev libwayland-dev wayland-protocols \
+            libxkbcommon-dev libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev \
+            python3-jinja2 python3-docutils libsqlite3-dev libsqlite3-0 pulseaudio pulseaudio-utils
+          python3 -m pip install meson==1.7.0
+
+      - name: Restore pinned private runtime
+        id: mpv-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/native-libmpv
+          key: native-libmpv-ubuntu22-x64-meson1.7.0-c34e459e8f58ede79683d85f5af5f7c349a82295-v1
+
+      - name: Build pinned private runtime
+        if: steps.mpv-cache.outputs.cache-hit != 'true'
+        run: bash dev/scripts/build_linux_libmpv.sh "$RUNNER_TEMP/native-libmpv"
+
+      - name: Start clocked software audio and verify runtime
+        run: |
+          mkdir -p "$RUNNER_TEMP/native-evidence"
+          test -s "$RUNNER_TEMP/native-libmpv/libmpv.so.2"
+          ldd "$RUNNER_TEMP/native-libmpv/libmpv.so.2" | tee "$RUNNER_TEMP/native-evidence/ldd.txt"
+          ! grep -q 'not found' "$RUNNER_TEMP/native-evidence/ldd.txt"
+          sha256sum "$RUNNER_TEMP/native-libmpv/libmpv.so.2" > "$RUNNER_TEMP/native-evidence/runtime.sha256"
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=native_gate
+          pactl set-default-sink native_gate
+          pactl info | tee "$RUNNER_TEMP/native-evidence/audio.txt"
+          pactl list short sinks | tee -a "$RUNNER_TEMP/native-evidence/audio.txt"
+          echo 'PULSE_SINK=native_gate' >> "$GITHUB_ENV"
+
+      - name: Prepare pinned origin with identical tagged test
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/native-origin" bc46babab2e1f1b367c3e5d89505dee1d0b64b93
+          mkdir -p "$RUNNER_TEMP/native-origin/test/native"
+          cp test/native/video_player_origin_behavior_test.dart "$RUNNER_TEMP/native-origin/test/native/"
+          cmp test/native/video_player_origin_behavior_test.dart "$RUNNER_TEMP/native-origin/test/native/video_player_origin_behavior_test.dart"
+          flutter pub get --enforce-lockfile
+          cd "$RUNNER_TEMP/native-origin"
+          flutter pub get --enforce-lockfile
+
+      - name: Require actual native origin and current behavior without skips
+        run: |
+          python3 tool/run_native_player_test.py --current "$GITHUB_WORKSPACE" \
+            --origin "$RUNNER_TEMP/native-origin" --flutter-root "$FLUTTER_ROOT" \
+            --library "$RUNNER_TEMP/native-libmpv/libmpv.so.2" --output "$RUNNER_TEMP/native-evidence"
+
+      - name: Upload native provenance and both machine reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-player-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/native-evidence
+          if-no-files-found: error
