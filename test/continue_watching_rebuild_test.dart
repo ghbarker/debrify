@@ -1,12 +1,12 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:debrify/screens/search/continue_watching_row.dart';
 import 'package:debrify/screens/search_screen.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_session_memory.dart';
-import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/services/secret_vault.dart';
+import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -100,13 +100,14 @@ void main() {
     await save('tt0000001', 'First movie');
     await save('tt0000002', 'Second movie');
 
-    Future<void> settle() async {
+    // Poster placeholders can keep ticking. Measure across a bounded window,
+    // including subsequent frames, rather than waiting for all animations.
+    Future<void> pumpFrames() async {
       for (var i = 0; i < 10; i++) {
         await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 5)),
         );
         await tester.pump(const Duration(milliseconds: 100));
-        if (!tester.binding.hasScheduledFrame) return;
       }
     }
 
@@ -120,13 +121,13 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 100));
       }
-      await settle();
+      await pumpFrames();
       final rowFinder = find.byType(ContinueWatchingRow);
       expect(rowFinder, findsOneWidget);
       ContinueWatchingRow row() => tester.widget(rowFinder);
       final firstNode = row().row.nodes.first;
       firstNode.requestFocus();
-      await settle();
+      await pumpFrames();
       expect(firstNode.hasFocus, isTrue);
 
       var hostBuilds = 0;
@@ -140,8 +141,9 @@ void main() {
       // No copied loader, fake host, or private-State method invocation.
       await save('tt0000002', 'Updated movie');
       StorageService.localCompletionRevision.value++;
-      await settle();
+      await pumpFrames();
       expect(row().row.items.first.name, 'Updated movie');
+      expect(find.text('Updated movie'), findsWidgets);
       expect(hostBuilds, 1);
       expect(rowBuilds, 1);
       expect(row().row.nodes.first, same(firstNode));
@@ -149,7 +151,7 @@ void main() {
 
       // Real DPAD still traverses the surviving row after the refresh.
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-      await settle();
+      await pumpFrames();
       expect(row().row.nodes[1].hasFocus, isTrue);
 
       // Host notification is also needed when the last row disappears.
@@ -157,7 +159,7 @@ void main() {
       rowBuilds = 0;
       await StorageService.setHomeContinueWatchingEnabled(false);
       StorageService.localCompletionRevision.value++;
-      await settle();
+      await pumpFrames();
       expect(rowFinder, findsNothing);
       expect(hostBuilds, 1);
       expect(rowBuilds, 0);
@@ -165,7 +167,7 @@ void main() {
     } finally {
       debugOnRebuildDirtyWidget = previousRebuild;
       await tester.pumpWidget(const SizedBox.shrink());
-      await settle();
+      await pumpFrames();
       // Let the image cache's delayed housekeeping finish after unmount.
       await tester.pump(const Duration(seconds: 11));
       await tester.runAsync(

@@ -118,6 +118,10 @@ void syncCwNodes(
 /// catalog rows, plus a bottom progress bar and an optional type tag. Vertical
 /// navigation resolves [homeRowId] against the live global order.
 ///
+/// The host subscribes to CW changes and rebuilds this row with a fresh [row].
+/// Keep notification ownership there: it also updates rail visibility, order,
+/// and cross-row focus wiring. This widget does not subscribe independently.
+///
 /// Host cells pass `showWatchedBadge: false`: a Continue Watching progress bar
 /// describes the active viewing session, and a global "watched once" check
 /// from another tracker reads as contradictory here, especially during a
