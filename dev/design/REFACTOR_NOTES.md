@@ -318,6 +318,26 @@ behaviour and must be restored, not kept as quirks.
   keeps `_currentPlaybackTitleForIdentity` and
   `_currentSeasonEpisodeForIdentity`.
 
+### V1-4 · IPTV recording
+
+- **Engine first on Android.** When the engine flag is on and the stream has
+  a recordable URL, `LiveRecordingService.start` runs before the tee. Tee
+  fallback is only `engine_unsupported` / `fgs_not_allowed` / `missing_plugin`
+  on a non-committed profile.
+- **Desktop never falls through to the tee.** `DesktopRecordingService.instance.isSupported`
+  + `extension: 'ts'`. HLS / no record URL shows the desktop-HLS snack and
+  returns; mpv muxers are absent on media_kit's stock libs.
+- **Committed profile + no engine URL aborts.** "This stream cannot be
+  recorded safely" — no tee fallback.
+- **Dispose does not await stop.** `finalizeOnDispose` bumps the start-gen,
+  clears tee state, and chains MediaStore publish after `stream-record` is
+  cleared. Desktop captures are left running (hub / service owned).
+- **Resource lookup prefers a fresh playlist read.** Launch-payload revision
+  is fallback only (`source_playlist_id` → `series_playlist_id` →
+  `widget.iptvSourceId`).
+- **Zap / catch-up / overlay Stack stayed on the host.** Call sites still
+  invoke `_stopRecording`; the body moved.
+
 ## Process
 
 Gate check **(c)** is tightened (plan §6): the pinning test must be committed

@@ -284,6 +284,11 @@ is an editor mirror, not the source of truth. How to add a provider:
   `lib/services/playback/subtitle_track_controller.dart`
   (`SubtitleTrackController` + `SubtitleTrackSession`; host keeps
   `_SubtitleTrackSession` adapter and title/season resolvers).
+  IPTV recording (libmpv tee, Android engine, desktop capture):
+  `lib/services/playback/iptv_recording_controller.dart`
+  (`IptvRecordingController` + `IptvRecordingSession`; host keeps
+  `_IptvRecordingSession` adapter; overlay reads `supported` / `active`
+  notifiers).
   Controls overlay:
   `lib/screens/video_player/widgets/controls.dart`. Track/source sheets: `lib/screens/video_player/widgets/`.
 - Launch + native TV: `lib/services/video_player_launcher.dart` 🔴 (`_launchOnAndroidTv`, `_push`),
