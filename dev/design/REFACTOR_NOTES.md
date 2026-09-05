@@ -195,6 +195,15 @@ then. Same class of debt on S2-1 (869) and S2-2 (325) — also S2-7.
 - **Host keeps** Home board chrome, favourites, hero, Discover CW landing,
   `_addonForContinue`, `_openItem` / `_onCatalogPlay` / `_playSelection`,
   and thin loader wrappers. Leftover wrappers listed as G1'-9 debt.
+- **§2.2 `_cw*` getters + load wrappers → G1'-9.** `_cwMovies` /
+  `_cwSeries` / `_cwAll` / `_cwIds` / node lists / `_cwMergeTrakt` /
+  `_iptvCwByKey` / Trakt / Simkl / MDBList maps / `_cwRows` /
+  `_cwVisible` / `_traktReserving`, plus `_loadContinueWatching` and
+  the tracker load/open thunks. More than ~10 lines; Decisions on #96.
+- **Double rebuild.** `_cw.addListener(_onContinueWatchingChanged)` →
+  host `setState`, and the controller already notifies the extracted
+  row. Same pattern as #90 `_onKeywordChanged`. Keep until **G1'-9**.
+  Do not fix in this PR.
 - **Source-scan pins follow the types.** `search_public_types_pin_test` and
   the G1'-2 Mode/CwKind check read `continue_watching_controller.dart`.
   `home_expanded_card_settings_test` counts host builders plus the two
