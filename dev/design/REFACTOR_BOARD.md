@@ -277,3 +277,7 @@ Cicero assigned refactor/v1-7-speed-origin-pin: existing test/native/video_playe
 ### Independent review correction — PR145 held
 Wegener reproduced the speed native pair but identified a disposal-proof gap: autosave during virtual pumping could prewrite the final checkpoint. C0 is tightening the real persisted-position assertion immediately before unmount, same test-only scope, one corrective pair. No app regression observed; old passing run does not establish unchanged disposal sensitivity. PR145 cannot merge until corrected independent review and fresh exact-head CI. Other work continues:146 independently passed awaiting143 dependency;147 independently passed awaitingCI;148 independent review plus bounded captured-key sensitivity experiment in separate worktree. No user blocker.
 
+
+### #143 merged — playlist compatibility checkpoint
+Exactb53 independent81/scopedanalysis and all3CI passed; test-only143 merged. Real old-export/current-restore/builder proof includes derived marker distinction; zero production Leaves. Did we make a difference? Yes, compatibility safety improved; more remains:146 actual owner extraction and Q2 facade removal. Locke retargeting146 to main and integrating; Cicero finaldelta reviewer after145 correction.144 test/nativepassed, goldenspending. God sizes remain Search8614/19070,Player11926/16278,Magic3317/10716,Storage4321/9963,Settings2899/7905. No user blocker.
+
