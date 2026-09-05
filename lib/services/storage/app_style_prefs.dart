@@ -971,4 +971,69 @@ class AppStylePrefs {
       for (final i in indices) '$i',
     ]);
   }
+  /// Generation 1 theme/detail phase; the coordinator supplies captured prefs.
+  static Future<void> migrateDefaultsGeneration1Theme(
+    ProfilePreferences prefs,
+  ) async {
+    // Dormant prefs are written too (desktop pill on a phone, TV home
+    // style off-TV): harmless where they don't apply, correct if the
+    // device class — or a window size — ever changes.
+    //
+    // The theme and its `detail_theme` mirror move as a PAIR, in the
+    // controller's write-through order (mirror first — old builds read
+    // only the mirror, and Showcase resolves its palette from it). The
+    // pairing also means an explicit legacy pick (app_theme stored, no
+    // mirror by design) keeps its details page untouched.
+    if (!prefs.containsKey(appThemeKey)) {
+      if (!prefs.containsKey(detailThemeKey)) {
+        await prefs.setString(detailThemeKey, 'spotlight');
+      }
+      await prefs.setString(appThemeKey, 'spotlight');
+    }
+    if (!prefs.containsKey(detailPageStyleKey)) {
+      await prefs.setString(detailPageStyleKey, 'showcase');
+    }
+  }
+
+  /// Runs after the generation 1 Home phase, preserving the original sequence.
+  static Future<void> migrateDefaultsGeneration1Sidebars(
+    ProfilePreferences prefs,
+  ) async {
+    const bundle = <String, String>{
+      tvSidebarStyleKey: 'pill',
+      desktopSidebarStyleKey: 'pill',
+    };
+    for (final entry in bundle.entries) {
+      if (!prefs.containsKey(entry.key)) {
+        await prefs.setString(entry.key, entry.value);
+      }
+    }
+  }
+
+  /// Generation 3 reads the raw theme adopted by earlier phases.
+  static Future<void> migrateDefaultsGeneration3TvStyle(
+    ProfilePreferences prefs,
+  ) async {
+    // Debrify TV joins the flagship bundle. Raw prefs only — this runs
+    // before any mirror is warmed, so `app_theme` is read directly rather
+    // than through `appThemeCached`. The gen<1 block above has already
+    // written `app_theme` for anyone who never chose, including a fresh
+    // install, so this read is never against an absent key on a migrated
+    // install.
+    //
+    // NOT unconditional the way generation 1 was: this key has never
+    // existed, so `!containsKey` is true for every install on earth, and a
+    // blanket 'spotlight' would restyle every Classic user AND flip their
+    // Presets picker to Custom (Classic pins this key). The proxy is the
+    // THEME, not Look activity — a Custom mix that kept the Spotlight
+    // theme adopts the layout the theme implies; everyone else keeps grid.
+    if (!prefs.containsKey(debrifyTvStyleKey)) {
+      final theme = prefs.getString(appThemeKey);
+      await prefs.setString(
+        debrifyTvStyleKey,
+        theme == 'spotlight' ? 'spotlight' : 'grid',
+      );
+    }
+  }
+
 }

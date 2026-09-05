@@ -141,73 +141,23 @@ class StorageService {
     final gen = prefs.getInt(_defaultsGenerationKey) ?? 0;
     if (gen >= _currentDefaultsGeneration) return;
     if (gen < 1) {
-      // Dormant prefs are written too (desktop pill on a phone, TV home
-      // style off-TV): harmless where they don't apply, correct if the
-      // device class — or a window size — ever changes.
-      //
-      // The theme and its `detail_theme` mirror move as a PAIR, in the
-      // controller's write-through order (mirror first — old builds read
-      // only the mirror, and Showcase resolves its palette from it). The
-      // pairing also means an explicit legacy pick (app_theme stored, no
-      // mirror by design) keeps its details page untouched.
-      if (!prefs.containsKey(AppStylePrefs.appThemeKey)) {
-        if (!prefs.containsKey(AppStylePrefs.detailThemeKey)) {
-          await prefs.setString(AppStylePrefs.detailThemeKey, 'spotlight');
-        }
-        await prefs.setString(AppStylePrefs.appThemeKey, 'spotlight');
-      }
-      const bundle = <String, String>{
-        AppStylePrefs.detailPageStyleKey: 'showcase',
-        HomePrefs.tvHomeStyleKey: 'spotlight',
-        AppStylePrefs.tvSidebarStyleKey: 'pill',
-        AppStylePrefs.desktopSidebarStyleKey: 'pill',
-      };
-      for (final entry in bundle.entries) {
-        if (!prefs.containsKey(entry.key)) {
-          await prefs.setString(entry.key, entry.value);
-        }
-      }
+      await AppStylePrefs.migrateDefaultsGeneration1Theme(prefs);
+      await HomePrefs.migrateDefaultsGeneration1TvHome(prefs);
+      await AppStylePrefs.migrateDefaultsGeneration1Sidebars(prefs);
     }
     if (gen < 2) {
-      // Both ambient trailer surfaces, for installs whose form factor used to
-      // default one of them off. An explicit off — the toggles write
-      // unconditionally, so a stored `false` is always a real choice — is left
-      // alone: this turns trailers on for people who never had an opinion, not
-      // for people who said no.
-      const trailers = <String, bool>{
-        'home_hero_trailer_enabled': true,
-        'detail_trailer_autoplay_enabled': true,
-      };
-      for (final entry in trailers.entries) {
-        if (!prefs.containsKey(entry.key)) {
-          await prefs.setBool(entry.key, entry.value);
-        }
+      await HomePrefs.migrateDefaultsGeneration2Trailers(prefs);
+      // This residual key remains host-owned; explicit false is preserved.
+      if (!prefs.containsKey('detail_trailer_autoplay_enabled')) {
+        await prefs.setBool('detail_trailer_autoplay_enabled', true);
       }
     }
     if (gen < 3) {
-      // Debrify TV joins the flagship bundle. Raw prefs only — this runs
-      // before any mirror is warmed, so `app_theme` is read directly rather
-      // than through `appThemeCached`. The gen<1 block above has already
-      // written `app_theme` for anyone who never chose, including a fresh
-      // install, so this read is never against an absent key on a migrated
-      // install.
-      //
-      // NOT unconditional the way generation 1 was: this key has never
-      // existed, so `!containsKey` is true for every install on earth, and a
-      // blanket 'spotlight' would restyle every Classic user AND flip their
-      // Presets picker to Custom (Classic pins this key). The proxy is the
-      // THEME, not Look activity — a Custom mix that kept the Spotlight
-      // theme adopts the layout the theme implies; everyone else keeps grid.
-      if (!prefs.containsKey(AppStylePrefs.debrifyTvStyleKey)) {
-        final theme = prefs.getString(AppStylePrefs.appThemeKey);
-        await prefs.setString(
-          AppStylePrefs.debrifyTvStyleKey,
-          theme == 'spotlight' ? 'spotlight' : 'grid',
-        );
-      }
+      await AppStylePrefs.migrateDefaultsGeneration3TvStyle(prefs);
     }
     await prefs.setInt(_defaultsGenerationKey, _currentDefaultsGeneration);
   }
+
 
   static const String _torboxApiKey = CloudSecretPrefs.torboxApiKey;
   static const String _premiumizeApiKey = CloudSecretPrefs.premiumizeApiKey;
