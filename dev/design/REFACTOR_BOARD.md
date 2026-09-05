@@ -307,3 +307,9 @@ Report: C:/Users/hunth/debrify/debrify-c0-next-main-gate/.dart_tool/main-gate/RE
 - Ampere after152review: refactor/m1-7-cached-player-presentation, ONLYcommon+TB/PM/PP cachedpresentation4files,26net prepared patch,149pin prerequisite beforemerge. No CODEMAP untilgrant.
 - Wegener: refactor/q2-iptv-launch-view-removal, ONLYcontroller+2testfiles exactprepared18net/7forwarder removal,151prerequisite beforemerge. No host/native/CODEMAP.
 - Cicero independentproductreviews asheadsfreeze; Locke repairmapping read-only pending152independentfixture proof. No user blocker. Productionmergecounter resets0 aftera443gate.
+
+### #149/#150/#151 origin pins merged
+Exact3e594/cf6de/494 independently reproduced and eachall3CIpassed.149threeactualcachedpresentationoptionscases,15013newrepairfailurecases,151threeactualIPTVlive-sessioncases. Did we make a difference?Safetyproofs precede changes; zero production Leaves. More remains:livebuildertiming/repairinterleavings/nativeIPTV notclaimed. Godsizes8614/11926/3317/4106/2899 vs19070/16278/10716/9963/7905 unchanged.
+### Current scoped releases
+Ampere cachedpresentation product4files plus explicit4sourceguardcountadaptations (PP/PM/TB2to1/common2to3, alladversarialchecksretained). Wegener153Q2productreviewPASS checkinglatestunion/CI; C0independentreviews. Locke repair-owner released exact8methods/4registryrows and approved6privatebridge+3obsoletealiaslines; forecast258host/+31whole,7facades, existingquirks unchanged, no mergebefore152fixture. No CODEMAP locks granted yet for newproducts. No user blocker; a443fullgatepassed, productioncounter0.
+
