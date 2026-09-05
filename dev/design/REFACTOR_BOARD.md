@@ -21,12 +21,12 @@ Overall completion remains approximately65%, an engineering estimate rather than
 ### Still left
 1. Discover content/actions and standalone dispatch, Search stage layouts and final cleanup. Preserve hidden watchlist/focus behavior until proved.
 2. Player decoder/remaining state and UI separation; timer-only helper rejected because it added code without sufficient benefit.
-3. Storage remaining ownership and Q2 caller migration. Host3847, target2800; remaining1047 includes783 explicit historical debt.
+3. Storage remaining ownership and Q2 caller migration. Host3666, target2800; remaining866 includes783 explicit historical debt.
 4. M1-7 watch flows: five files2283/common1431, total3714; five-file targetbelow800 still unmet. Magic TV size provisional.
 5. Q-phase dependency/rule cleanup and upstream contribution work, then final integrated/device acceptance.
 
 ### Current measured state
-- God hosts Search8614/19070, Player11926/16278, MagicTV3317/10716, Storage3847/9963, Settings2899/7905 (current/original).
+- God hosts Search8614/19070, Player11926/16278, MagicTV3317/10716, Storage3666/9963, Settings2899/7905 (current/original).
 - Latest full-gate a443 forwarders total/single physical line: Storage592/147, Search85/72, Player161/112, MagicTV23/12, Settings0/0. Later deletion153 is separate; recount at next gate.
 - #154 made a difference:26 net production lines removed with194 independent tests; #153 removed18 lines/seven getters. More remains above.
 - Only parent edits BOARD/NOTES; CODEMAP locks serialized and currently released. Parked112/109/56; no disk work or renewed keep-awake authorization.
@@ -345,3 +345,7 @@ Exactbd10 independent17/33/scopedPASS andall3CIgreen. Did we make a difference?R
 ### #157 merged
 Exactd735 independent91twice/scoped/keytypepostrestoremutants andall3CIgreen. Did we make a difference?Two physicalmetadataStringkeys restoreexactlyfromoldexport andactualAPIs; more remains158owner+Q2callers. ZeroLeaves/gods8614/11926/3317/3847/2899 vs19070/16278/10716/9963/7905 unchanged.158product/docsPASS latestunion/CIpending;allCODEMAPlocksreleased. Wegenercontentrefreshoriginpin newtestonly underway;Amperewatchcontractdesign;C0review. No user blocker.
 
+
+### #158/#159 merged
+158exact381 independent17+91+18/scoped/full436452/layer77/finalunion/all3CIpassed. Did we make a difference?Metadataowner co-locates actualkey/CRUD/identity logic,181fewer hostlines (3666),wholeproduction+44/10facadesQ2. More remains866gap=783historical+83other, notnet181deletion.159exact99b independent29/all3CIgreen protectsactualreturnrefresh/latebounddisposal,zeroLeaves; +52ownerproposalDEFERRED untilconcretestandalonecompositionadoption. Gods8614/11926/3317/3666/2899 vs19070/16278/10716/9963/7905. Productioncounter1sincef486.
+CurrentWindowednext origin3197reviewC0/mapAmpere/read-onlyriskWegener; Locke boundedstorage residualclassification. No user blocker,allCODEMAPlocksreleased.
