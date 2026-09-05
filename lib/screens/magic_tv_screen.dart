@@ -12,7 +12,6 @@ import 'package:flutter/services.dart';
 import 'package:collection/collection.dart';
 
 import '../models/torrent.dart';
-import '../models/torrent_filter_state.dart';
 import '../widgets/torrent_result_row.dart' show qualityTierForName;
 import '../models/debrify_tv_cache.dart';
 import '../models/torbox_file.dart';
@@ -54,7 +53,6 @@ import 'debrify_tv/channel_switch_flow.dart';
 import '../services/debrify_tv/channel_cache_warmer.dart';
 import 'debrify_tv/layouts/debrify_tv_view.dart';
 import 'debrify_tv/layouts/spotlight_layout.dart';
-import 'debrify_tv/widgets/random_start_slider.dart';
 import 'debrify_tv/widgets/switch_row.dart';
 import 'debrify_tv/widgets/tv_focusable_button.dart';
 import 'debrify_tv/widgets/tv_focusable_card.dart';
@@ -63,7 +61,8 @@ import 'debrify_tv/dialogs/channel_creation_dialog.dart';
 import 'debrify_tv/dialogs/external_player_notice_dialog.dart';
 import 'debrify_tv/dialogs/spotlight_dialog.dart';
 import 'debrify_tv/dialogs/channel_editor_dialog.dart';
-import 'debrify_tv/widgets/spotlight_choice_chip.dart';
+import 'debrify_tv/dialogs/channel_playback_settings.dart';
+import 'debrify_tv/channel_playback_settings_state.dart';
 
 /// Magic TV provider-string dispatch. Persisted chip ids stay
 /// [CloudProviderId.magicTvId] (`real_debrid`, not playback `debrid`).
@@ -157,7 +156,8 @@ enum MagicTvNextChannelQuirk {
   allKnown,
 }
 
-const int _randomStartPercentDefault = 20;
+const int _randomStartPercentDefault =
+    ChannelPlaybackSettingsState.randomStartPercentDefault;
 const int _randomStartPercentMin = 10;
 const int _randomStartPercentMax = 90;
 
@@ -187,8 +187,6 @@ int _parseRandomStartPercent(dynamic value) {
   }
   return _randomStartPercentDefault;
 }
-
-enum _SettingsScope { quickPlay, channels }
 
 enum _DebrifyTvTopMenuAction { import, export, add, deleteAll, settings }
 
@@ -361,25 +359,42 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   set _currentWatchingChannelId(String? value) =>
       _watchSession.currentWatchingChannelId = value;
 
+  final ChannelPlaybackSettingsState _playbackSettings =
+      ChannelPlaybackSettingsState();
+
   // Advanced options
-  bool _startRandom = true;
-  int _randomStartPercent = _randomStartPercentDefault;
-  bool _hideSeekbar = true;
-  bool _showChannelName = true;
-  bool _showVideoTitle = true;
-  bool _hideOptions = false;
-  bool _hideBackButton = false;
-  String _provider = CloudProviderId.debrid.magicTvId;
+  bool get _startRandom => _playbackSettings.startRandom;
+  set _startRandom(bool value) => _playbackSettings.startRandom = value;
+  int get _randomStartPercent => _playbackSettings.randomStartPercent;
+  set _randomStartPercent(int value) => _playbackSettings.randomStartPercent = value;
+  bool get _hideSeekbar => _playbackSettings.hideSeekbar;
+  set _hideSeekbar(bool value) => _playbackSettings.hideSeekbar = value;
+  bool get _showChannelName => _playbackSettings.showChannelName;
+  set _showChannelName(bool value) => _playbackSettings.showChannelName = value;
+  bool get _showVideoTitle => _playbackSettings.showVideoTitle;
+  set _showVideoTitle(bool value) => _playbackSettings.showVideoTitle = value;
+  bool get _hideOptions => _playbackSettings.hideOptions;
+  set _hideOptions(bool value) => _playbackSettings.hideOptions = value;
+  set _hideBackButton(bool value) => _playbackSettings.hideBackButton = value;
+  String get _provider => _playbackSettings.provider;
+  set _provider(String value) => _playbackSettings.provider = value;
 
   // Quick play options
-  bool _quickStartRandom = true;
-  int _quickRandomStartPercent = _randomStartPercentDefault;
-  bool _quickHideSeekbar = true;
-  bool _quickShowChannelName = true;
-  bool _quickShowVideoTitle = true;
-  bool _quickHideOptions = false;
-  bool _quickHideBackButton = false;
-  bool _quickAvoidNsfw = true;
+  bool get _quickStartRandom => _playbackSettings.quickStartRandom;
+  set _quickStartRandom(bool value) => _playbackSettings.quickStartRandom = value;
+  int get _quickRandomStartPercent => _playbackSettings.quickRandomStartPercent;
+  set _quickRandomStartPercent(int value) => _playbackSettings.quickRandomStartPercent = value;
+  bool get _quickHideSeekbar => _playbackSettings.quickHideSeekbar;
+  set _quickHideSeekbar(bool value) => _playbackSettings.quickHideSeekbar = value;
+  bool get _quickShowChannelName => _playbackSettings.quickShowChannelName;
+  set _quickShowChannelName(bool value) => _playbackSettings.quickShowChannelName = value;
+  bool get _quickShowVideoTitle => _playbackSettings.quickShowVideoTitle;
+  set _quickShowVideoTitle(bool value) => _playbackSettings.quickShowVideoTitle = value;
+  bool get _quickHideOptions => _playbackSettings.quickHideOptions;
+  set _quickHideOptions(bool value) => _playbackSettings.quickHideOptions = value;
+  set _quickHideBackButton(bool value) => _playbackSettings.quickHideBackButton = value;
+  bool get _quickAvoidNsfw => _playbackSettings.quickAvoidNsfw;
+  set _quickAvoidNsfw(bool value) => _playbackSettings.quickAvoidNsfw = value;
 
   /// The viewer-scoped, role-locked NSFW rail: forced for a child profile
   /// regardless of any channel's stored flag or dialog toggle. Evaluated
@@ -387,13 +402,15 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   bool get _viewerForcesNsfw =>
       !ProfilePolicyGuard.allowsSync(ProfileFeature.allowAdultContent);
   bool _rdSkipBlockedTorrents = true;
-  String _quickProvider = CloudProviderId.debrid.magicTvId;
+  String get _quickProvider => _playbackSettings.quickProvider;
+  set _quickProvider(String value) => _playbackSettings.quickProvider = value;
 
   // Debrify TV playback filters. Shared by channels and quick play (one
   // Debrify TV feed preference, unlike provider/NSFW which are per-scope).
   // Quality narrows torrents by release name; size narrows FILES once a
   // provider has returned them. See DebrifyTvFilters for why they split.
-  DebrifyTvFilters _tvFilters = const DebrifyTvFilters.empty();
+  DebrifyTvFilters get _tvFilters => _playbackSettings.tvFilters;
+  set _tvFilters(DebrifyTvFilters value) => _playbackSettings.tvFilters = value;
   // Rate-limits the "filter relaxed" snackbar to once per playback session.
   bool _qualityFallbackNotified = false;
   // Real-Debrid only: consecutive links rejected purely on size, and the
@@ -1023,184 +1040,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   /// Quality + size pickers for Debrify TV playback. One shared setting for
   /// both channels and quick play, so the same feed rules apply wherever you
   /// start watching. Nothing selected in a row = that facet is off.
-  Widget _tvFilterChips({StateSetter? dialogSetState}) {
-    void applyFilters(DebrifyTvFilters next) {
-      setState(() => _tvFilters = next);
-      // "At your quality" is computed WITH the filter; stale memos would
-      // keep the old filter's count while playback uses the new one.
-      _invalidateSpotlightStats();
-      dialogSetState?.call(() {});
-    }
-
-    void toggleQuality(QualityTier quality) {
-      final next = Set<QualityTier>.from(_tvFilters.qualities);
-      if (!next.remove(quality)) next.add(quality);
-      applyFilters(DebrifyTvFilters(qualities: next, sizes: _tvFilters.sizes));
-      unawaited(
-        StorageService.setDebrifyTvFilterQualities(
-          next.map((e) => e.name).toList(),
-        ),
-      );
-    }
-
-    void toggleSize(SizeBucket bucket) {
-      final next = Set<SizeBucket>.from(_tvFilters.sizes);
-      if (!next.remove(bucket)) next.add(bucket);
-      applyFilters(
-        DebrifyTvFilters(qualities: _tvFilters.qualities, sizes: next),
-      );
-      unawaited(
-        StorageService.setDebrifyTvFilterSizes(
-          next.map((e) => e.name).toList(),
-        ),
-      );
-    }
-
-    final labelStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-      color: AppThemeScope.of(context).debrifyTv.textMeta,
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Playback filters',
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          'Applies to channels and quick play. If nothing matches, Debrify TV '
-          'plays what it can rather than showing an empty channel.',
-          style: labelStyle,
-        ),
-        const SizedBox(height: 10),
-        Text('Quality', style: labelStyle),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final quality in QualityTier.values)
-              SpotlightChoiceChip(
-                label: DebrifyTvFilters.qualityLabel(quality),
-                selected: _tvFilters.qualities.contains(quality),
-                enabled: !_isBusy,
-                onPressed: () => toggleQuality(quality),
-              ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Text('File size (per episode/movie)', style: labelStyle),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final bucket in SizeBucket.values)
-              SpotlightChoiceChip(
-                label: DebrifyTvFilters.sizeLabel(bucket),
-                selected: _tvFilters.sizes.contains(bucket),
-                enabled: !_isBusy,
-                onPressed: () => toggleSize(bucket),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _providerChoiceChips(
-    _SettingsScope scope, {
-    StateSetter? dialogSetState,
-  }) {
-    final bool isQuickScope = scope == _SettingsScope.quickPlay;
-    final String currentProvider = isQuickScope ? _quickProvider : _provider;
-
-    void handleSelection(String value) {
-      if (!_isProviderSelectable(value)) {
-        return;
-      }
-      if (isQuickScope) {
-        if (_quickProvider == value) {
-          return;
-        }
-        setState(() {
-          _quickProvider = value;
-        });
-        dialogSetState?.call(() {});
-        return;
-      }
-
-      if (_provider == value) {
-        return;
-      }
-      setState(() {
-        _provider = value;
-      });
-      dialogSetState?.call(() {});
-      unawaited(StorageService.saveDebrifyTvProvider(value));
-    }
-
-    Widget providerChip({
-      required String value,
-      required String label,
-      required bool available,
-      required String unavailableMessage,
-    }) {
-      return Tooltip(
-        message: available ? 'Use $label for Debrify TV' : unavailableMessage,
-        child: SpotlightChoiceChip(
-          label: label,
-          selected: currentProvider == value,
-          enabled: available && !_isBusy,
-          onPressed: () => handleSelection(value),
-        ),
-      );
-    }
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        providerChip(
-          value: CloudProviderId.debrid.magicTvId,
-          label: 'Real Debrid',
-          available: _rdAvailable,
-          unavailableMessage:
-              'Enable Real Debrid and add an API key in Settings.',
-        ),
-        providerChip(
-          value: CloudProviderId.torbox.magicTvId,
-          label: 'Torbox',
-          available: _torboxAvailable,
-          unavailableMessage: 'Enable Torbox and add an API key in Settings.',
-        ),
-        providerChip(
-          value: CloudProviderId.pikpak.magicTvId,
-          label: 'PikPak',
-          available: _pikpakAvailable,
-          unavailableMessage: 'Log in to PikPak in Settings.',
-        ),
-        providerChip(
-          value: CloudProviderId.premiumize.magicTvId,
-          label: 'Premiumize',
-          available: _premiumizeAvailable,
-          unavailableMessage:
-              'Enable Premiumize and add an API key in Settings.',
-        ),
-        providerChip(
-          value: CloudProviderId.alldebrid.magicTvId,
-          label: 'AllDebrid',
-          available: _allDebridAvailable,
-          unavailableMessage:
-              'Enable AllDebrid and add an API key in Settings.',
-        ),
-      ],
-    );
-  }
-
   Future<DebrifyTvChannel?> _openChannelDialog({
     DebrifyTvChannel? existing,
   }) => ChannelEditorDialog.open(
@@ -3078,249 +2917,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     );
   }
 
-  Widget _buildSettingsCard({
-    required _SettingsScope scope,
-    required bool includeNsfwToggle,
-    required String title,
-    StateSetter? dialogSetState,
-  }) {
-    final app = AppThemeScope.of(context);
-    final tv = app.debrifyTv;
-    final bool isQuickScope = scope == _SettingsScope.quickPlay;
-
-    final bool startRandom = isQuickScope ? _quickStartRandom : _startRandom;
-    void setStartRandom(bool value) {
-      setState(() {
-        if (isQuickScope) {
-          _quickStartRandom = value;
-        } else {
-          _startRandom = value;
-        }
-      });
-      dialogSetState?.call(() {});
-      if (!isQuickScope) {
-        unawaited(StorageService.saveDebrifyTvStartRandom(value));
-      }
-    }
-
-    final int randomStartPercent = isQuickScope
-        ? _quickRandomStartPercent
-        : _randomStartPercent;
-    void setRandomStartPercent(int value) {
-      setState(() {
-        if (isQuickScope) {
-          _quickRandomStartPercent = value;
-        } else {
-          _randomStartPercent = value;
-        }
-      });
-      dialogSetState?.call(() {});
-      if (!isQuickScope) {
-        unawaited(StorageService.saveDebrifyTvRandomStartPercent(value));
-      }
-    }
-
-    final bool showChannelName = isQuickScope
-        ? _quickShowChannelName
-        : _showChannelName;
-    void setShowChannelName(bool value) {
-      setState(() {
-        if (isQuickScope) {
-          _quickShowChannelName = value;
-        } else {
-          _showChannelName = value;
-        }
-      });
-      dialogSetState?.call(() {});
-      if (!isQuickScope) {
-        unawaited(StorageService.saveDebrifyTvShowChannelName(value));
-      }
-    }
-
-    final bool showVideoTitle = isQuickScope
-        ? _quickShowVideoTitle
-        : _showVideoTitle;
-    void setShowVideoTitle(bool value) {
-      setState(() {
-        if (isQuickScope) {
-          _quickShowVideoTitle = value;
-        } else {
-          _showVideoTitle = value;
-        }
-      });
-      dialogSetState?.call(() {});
-      if (!isQuickScope) {
-        unawaited(StorageService.saveDebrifyTvShowVideoTitle(value));
-      }
-    }
-
-    // Hardcoded to false - no longer changeable
-    const bool hideOptions = false;
-    void setHideOptions(bool value) {
-      // No-op: hideOptions is now hardcoded to false
-      // Keep function for compatibility but it doesn't do anything
-    }
-
-    // Hardcoded to false - no longer changeable
-    const bool hideBackButton = false;
-    void setHideBackButton(bool value) {
-      // No-op: hideBackButton is now hardcoded to false
-      // Keep function for compatibility but it doesn't do anything
-    }
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 900),
-      child: Container(
-        decoration: BoxDecoration(
-          color: tv.fillWeak.withValues(alpha: .55),
-          borderRadius: app.shape.br(20),
-          border: Border.all(color: tv.hairline, width: 1),
-        ),
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Text(
-                  title.toUpperCase(),
-                  style: TextStyle(
-                    color: tv.textFaint,
-                    fontFamily: 'JetBrainsMono',
-                    fontSize: 9,
-                    letterSpacing: 1.6,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Content provider',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            _providerChoiceChips(scope, dialogSetState: dialogSetState),
-            const SizedBox(height: 16),
-            SwitchRow(
-              title: 'Start from random timestamp',
-              subtitle: 'Each Debrify TV video starts at a random point',
-              value: startRandom,
-              onChanged: (v) => setStartRandom(v),
-            ),
-            if (startRandom) ...[
-              const SizedBox(height: 8),
-              RandomStartSlider(
-                value: randomStartPercent,
-                isAndroidTv: _isAndroidTv,
-                onChanged: (next) => setRandomStartPercent(next),
-                onChangeEnd: isQuickScope
-                    ? null
-                    : (next) =>
-                          StorageService.saveDebrifyTvRandomStartPercent(next),
-              ),
-            ],
-            // Removed Hide all options and Hide back button settings
-            // These are now hardcoded to false (visible by default)
-            if (includeNsfwToggle && isQuickScope) ...[
-              const SizedBox(height: 8),
-              SwitchRow(
-                title: 'Avoid NSFW content',
-                subtitle: _viewerForcesNsfw
-                    ? 'Always on for this profile'
-                    : 'Filter adult/inappropriate torrents • Best effort, not 100% accurate',
-                value: _viewerForcesNsfw || _quickAvoidNsfw,
-                onChanged: (v) {
-                  // Role-locked: a child session cannot loosen it.
-                  if (_viewerForcesNsfw) return;
-                  setState(() {
-                    _quickAvoidNsfw = v;
-                  });
-                  dialogSetState?.call(() {});
-                },
-              ),
-            ],
-            const SizedBox(height: 16),
-            // Kept LAST (above Reset) on purpose: these are ~14 focusable
-            // chips, and placing them higher would push every existing switch
-            // that many extra D-pad presses away on TV.
-            _tvFilterChips(dialogSetState: dialogSetState),
-            const SizedBox(height: 16),
-            DebrifyTvDialogButton(
-              expand: true,
-              icon: Icons.restore_rounded,
-              label: 'Reset to defaults',
-              onPressed: () async {
-                final defaultProvider = _determineDefaultProvider(
-                  null,
-                  _rdAvailable,
-                  _torboxAvailable,
-                  _pikpakAvailable,
-                  _premiumizeAvailable,
-                  _allDebridAvailable,
-                );
-
-                setState(() {
-                  if (isQuickScope) {
-                    _quickStartRandom = true;
-                    _quickRandomStartPercent = _randomStartPercentDefault;
-                    _quickHideSeekbar = true;
-                    _quickShowChannelName = true;
-                    _quickShowVideoTitle = true;
-                    _quickHideOptions = false; // Hardcoded to false
-                    _quickHideBackButton = false; // Hardcoded to false
-                    _quickAvoidNsfw = true;
-                    _quickProvider = defaultProvider;
-                  } else {
-                    _startRandom = true;
-                    _randomStartPercent = _randomStartPercentDefault;
-                    _hideSeekbar = true;
-                    _showChannelName = true;
-                    _showVideoTitle = true;
-                    _hideOptions = false; // Hardcoded to false
-                    _hideBackButton = false; // Hardcoded to false
-                    _provider = defaultProvider;
-                  }
-                  // Playback filters are shared by both scopes, so reset
-                  // them from either one.
-                  _tvFilters = const DebrifyTvFilters.empty();
-                });
-                _invalidateSpotlightStats();
-                dialogSetState?.call(() {});
-
-                await StorageService.setDebrifyTvFilterQualities(const []);
-                await StorageService.setDebrifyTvFilterSizes(const []);
-
-                if (!isQuickScope) {
-                  await StorageService.saveDebrifyTvStartRandom(true);
-                  await StorageService.saveDebrifyTvHideSeekbar(true);
-                  await StorageService.saveDebrifyTvShowChannelName(true);
-                  await StorageService.saveDebrifyTvShowVideoTitle(true);
-                  // No longer saving hideOptions and hideBackButton - they're hardcoded to false
-                  await StorageService.saveDebrifyTvProvider(defaultProvider);
-                }
-
-                if (!mounted) {
-                  return;
-                }
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Reset to defaults successful'),
-                    backgroundColor: Colors.green,
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<void> _showQuickPlayDialog() async {
     if (_isBusy) {
       return;
@@ -3462,42 +3058,34 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     controller.dispose();
   }
 
-  Future<void> _showGlobalSettingsDialog() async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return DebrifyTvSpotlightDialog(
-              eyebrow: 'Debrify TV · applies to every channel',
-              title: 'Channel playback',
-              subtitle:
-                  'Choose the provider, filters, and starting behavior used when a channel tunes.',
-              icon: Icons.settings_rounded,
-              maxWidth: 920,
-              maxHeightFactor: .94,
-              child: _buildSettingsCard(
-                scope: _SettingsScope.channels,
-                includeNsfwToggle: false,
-                title: 'Playback rules',
-                dialogSetState: setDialogState,
-              ),
-              actions: [
-                DebrifyTvDialogButton(
-                  autofocus: true,
-                  label: 'Done',
-                  icon: Icons.check_rounded,
-                  tone: DebrifyTvDialogButtonTone.primary,
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
+  Future<void> _showGlobalSettingsDialog() => showChannelPlaybackSettings(
+    context,
+    _playbackSettings,
+    rebuildHost: setState,
+    invalidateStats: _invalidateSpotlightStats,
+    showResetSuccess: () {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Reset to defaults successful'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    },
+    isBusy: () => _isBusy,
+    isAndroidTv: () => _isAndroidTv,
+    readAvailability: () => MagicTvProvider.availability(
+      realDebrid: _rdAvailable,
+      torbox: _torboxAvailable,
+      pikpak: _pikpakAvailable,
+      premiumize: _premiumizeAvailable,
+      allDebrid: _allDebridAvailable,
+    ),
+  );
 
   Future<Map<String, String>?> _resolveTorboxQueuedFile({
     required Map<String, dynamic> entry,

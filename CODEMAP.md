@@ -379,9 +379,16 @@ is an editor mirror, not the source of truth. How to add a provider:
   helper: `lib/screens/debrify_tv/dialogs/channel_editor_dialog.dart`
   (`ChannelEditorDialog.open`, live TV/profile/mounted reads; keyword limit 1000).
   Shared editor/settings chip: `lib/screens/debrify_tv/widgets/spotlight_choice_chip.dart`.
-  Create/update persistence and settings card/global dialog remain on the host.
-  M1-5a origin UI pins: `test/magic_tv_dialog_settings_origin_test.dart` (desktop;
-  no TV-focus claim). M1-5b settings ownership is still pending. M1-3 watch flows: `ProviderWatchFlow` owns Quick
+  Create/update persistence and load/provider-sync/quick/watch timing remain on the host.
+  Playback settings owner: `lib/screens/debrify_tv/channel_playback_settings_state.dart`
+  (`ChannelPlaybackSettingsState`, 18 values, no I/O/automatic notification).
+  Settings renderer: `lib/screens/debrify_tv/dialogs/channel_playback_settings.dart`
+  (`showChannelPlaybackSettings`, six explicit UI/runtime capabilities).
+  Eighteen temporary host aliases (16 read/write, two write-only) and the retained
+  Reset completion boundary require removal/review M1-6/Q2. Shared filter identity
+  and serial persistence order are preserved. Origin UI/helper pins:
+  `test/magic_tv_dialog_settings_origin_test.dart` (desktop; no TV-focus or dead
+  quick-card coverage claim). M1-3 watch flows: `ProviderWatchFlow` owns Quick
   Play orchestration; `TorboxWatchFlow`, `PikpakWatchFlow`, `PremiumizeWatchFlow`,
   `AlldebridWatchFlow`, and `RealDebridWatchFlow` own per-provider/cached paths
   under `lib/screens/debrify_tv/watch/`. `WatchFlowBindings` keeps live host
