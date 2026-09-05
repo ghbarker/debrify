@@ -1868,6 +1868,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // lists against the lists already in memory (no refetch needed — the data
     // is the same, only which slot renders it changes).
     await _cw.reloadMergeFlags();
+    if (!mounted) return;
     // Off-TV the hero-trailer prefs ride this same signal — Settings is a
     // pushed route here, so nothing else tells a surviving Home about them.
     if (!widget.isTelevision) {
