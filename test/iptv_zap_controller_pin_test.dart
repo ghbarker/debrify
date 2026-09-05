@@ -59,7 +59,7 @@ void main() {
         const ['b'],
       );
       expect(_originEffectiveChannels(override: null, launch: null), isNull);
-      expect(origin, contains('_iptvChannelsOverride ?? widget.iptvChannels'));
+      expect(origin, contains('_iptvChannelsOverride ?? session.launchChannels'));
     });
 
     test('banner owns identity only for a live current channel', () {

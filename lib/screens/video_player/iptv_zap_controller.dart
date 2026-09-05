@@ -134,23 +134,6 @@ class IptvCatchupRequestGate {
   }
 }
 
-/// Launch-payload façade so moved bodies keep `widget.iptv*` reads (gate g:
-/// this is not the host widget).
-/// Origin `widget.iptv*` launch payload the moved bodies still read.
-class IptvZapLaunchView {
-  IptvZapLaunchView(this.session);
-  final IptvZapSession session;
-
-  List<IptvChannel>? get iptvChannels => session.launchChannels;
-  String? get iptvSourceId => session.iptvSourceId;
-  String? get iptvSourceName => session.iptvSourceName;
-  List<String>? get iptvCategories => session.iptvCategories;
-  String? get iptvSelectedCategory => session.iptvSelectedCategory;
-  String? get iptvContentType => session.iptvContentType;
-  Future<Map<String, dynamic>?> Function(Map<String, dynamic>)?
-  get iptvBrowseProvider => session.iptvBrowseProvider;
-}
-
 /// Origin `_controlsVisible.value` reads.
 class _ControlsVisibleFacade {
   const _ControlsVisibleFacade(this.value);
@@ -162,10 +145,9 @@ class _ControlsVisibleFacade {
 /// Bodies moved from `_VideoPlayerScreenState`. Mutations go through
 /// [IptvZapSession]. Overlay reads banner [ValueNotifier]s via host getters.
 class IptvZapController {
-  IptvZapController(this.session) : widget = IptvZapLaunchView(session);
+  IptvZapController(this.session);
 
   final IptvZapSession session;
-  final IptvZapLaunchView widget;
 
   bool get mounted => session.isMounted;
   BuildContext get context => session.hostContext;
@@ -247,7 +229,7 @@ class IptvZapController {
   /// request. Playback always reads this effective list so the selected row,
   /// resume key, title, headers, and later episode navigation stay aligned.
   List<IptvChannel>? get _effectiveIptvChannels =>
-      _iptvChannelsOverride ?? widget.iptvChannels;
+      _iptvChannelsOverride ?? session.launchChannels;
 
   /// Live IPTV presents its identity in the bottom zap banner, so the corner
   /// title/channel badges stand down: they said the same thing twice, and the
@@ -295,7 +277,7 @@ class IptvZapController {
     final current = _iptvGuideContextOverride;
     final nextCategories =
         categories ??
-        (current?.categories ?? widget.iptvCategories ?? const <String>[]);
+        (current?.categories ?? session.iptvCategories ?? const <String>[]);
     if (current != null &&
         current.selectedCategory == category &&
         listEquals(nextCategories, current.categories)) {
@@ -304,11 +286,11 @@ class IptvZapController {
     setState(() {
       _iptvGuideContextOverride = IptvGuideContext(
         categories: nextCategories,
-        sourceId: current?.sourceId ?? widget.iptvSourceId,
+        sourceId: current?.sourceId ?? session.iptvSourceId,
         // Same fallback the sheet applies to a nameless source.
-        sourceName: current?.sourceName ?? widget.iptvSourceName ?? 'IPTV',
+        sourceName: current?.sourceName ?? session.iptvSourceName ?? 'IPTV',
         selectedCategory: category,
-        contentType: current?.contentType ?? widget.iptvContentType ?? 'live',
+        contentType: current?.contentType ?? session.iptvContentType ?? 'live',
       );
     });
   }
@@ -514,7 +496,7 @@ class IptvZapController {
     IptvChannel channel, {
     required int switchTicket,
   }) async {
-    final provider = widget.iptvBrowseProvider;
+    final provider = session.iptvBrowseProvider;
     if (provider == null || !channel.isLive) return;
     if (switchTicket != _iptvSwitchTicket) return;
     final category = channel.group?.trim();
@@ -524,7 +506,7 @@ class IptvZapController {
     try {
       result = await provider({
         'action': 'zapPage',
-        'sourceId': _iptvGuideContextOverride?.sourceId ?? widget.iptvSourceId,
+        'sourceId': _iptvGuideContextOverride?.sourceId ?? session.iptvSourceId,
         'contentType': 'live',
         'category': (category == null || category.isEmpty) ? null : category,
         'query': '',
@@ -582,7 +564,7 @@ class IptvZapController {
       _iptvZapSourceId =
           page.sourceId ??
           _iptvGuideContextOverride?.sourceId ??
-          widget.iptvSourceId;
+          session.iptvSourceId;
       _iptvZapCategory = page.category;
       if (page.categories.isNotEmpty) _iptvZapCategories = page.categories;
       _iptvZapPagingActive = true;
@@ -692,7 +674,7 @@ class IptvZapController {
   /// press after a lost bootstrap arms the ladder for the channel it landed on.
   void _ensureIptvZapPagingArmed() {
     if (_iptvZapPagingActive || _iptvZapArmingPaging) return;
-    if (widget.iptvBrowseProvider == null) return;
+    if (session.iptvBrowseProvider == null) return;
     final channel = _currentIptvChannel;
     if (channel == null || !channel.isLive) return;
     _iptvZapArmingPaging = true;
@@ -755,7 +737,7 @@ class IptvZapController {
     required int offset,
     bool fromEnd = false,
   }) async {
-    final provider = widget.iptvBrowseProvider;
+    final provider = session.iptvBrowseProvider;
     if (provider == null || _iptvZapRequestInFlight) return null;
     final ticket = ++_iptvZapRequestTicket;
     final contextGeneration = _iptvGuideContextGeneration;
@@ -769,7 +751,7 @@ class IptvZapController {
         'sourceId':
             _iptvZapSourceId ??
             _iptvGuideContextOverride?.sourceId ??
-            widget.iptvSourceId,
+            session.iptvSourceId,
         'contentType': 'live',
         'category': (category == null || category.isEmpty) ? null : category,
         'query': '',
@@ -1119,7 +1101,7 @@ class IptvZapController {
     final sourceId =
         channel.attributes['source_playlist_id'] ??
         _iptvGuideContextOverride?.sourceId ??
-        widget.iptvSourceId;
+        session.iptvSourceId;
     final replay = IptvChannel(
       name: programme.title,
       url: url,

@@ -45,8 +45,8 @@ void main() {
     expect(zap.bannerOwnsIdentity, isTrue);
     expect(zap.canZap, isFalse);
     expect(zap.pagingActive, isFalse);
-    expect(zap.widget.iptvSourceId, 'src');
-    expect(zap.widget.iptvChannels, [live]);
+    expect(zap.session.iptvSourceId, 'src');
+    expect(zap.effectiveChannels, [live]);
 
     expect(
       zap.infoPanelSignature(
