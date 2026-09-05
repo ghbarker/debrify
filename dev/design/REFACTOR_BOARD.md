@@ -14,7 +14,7 @@ Updated by the orchestrator when assignments, blockers, PR checks or merges chan
 
 ### Working now
 - [ ] **Independent review — Cicero:** CI110 merged; verify final CW integration evidence next. Flutter3.44.8/ceiling77 and both native gates verified.
-- [ ] **Magic TV — Ampere:** PR111 MERGED at0d4ca1a2; live historical cache/watch behavior pins underway. M1-3 still waits for origin debt/gate/upstream strategy.
+- [ ] **Player feasibility — Ampere:** Magic TV #115 MERGED (9 retrospective live-origin cases); bounded actual native-player mount proof finalizing, no broad V1 expansion authorized.
 - [ ] **Continue Watching — Wegener:** integrate #96 with #104/#105/#107 and prove disposal guard with a real failing regression test.
 - [ ] **Settings safety — Locke:** draft #114 rebased f6764d2a;29/141 admitted named keys covered,5 families and28 exclusions inventoried. S2-5 first complete-domain checkpoint (8 admitted/8 excluded). Decoder #112 PARKED.
 
@@ -200,3 +200,5 @@ Merge111 report: exact head e56863f1 test+goldens green; independent65 M1 tests,
 Verification update: C0 full suite candidate0abc4c8 (tree identical to110 head8bd40543) 5168passed/33exact allowlisted/2skipped, no unexpected/unused; Windows release build pass127.4s. Android SDK/JDK installed with explicit license acceptance, ARM64 build in progress. #110 test CI green, goldens pending. #115 retrospective8-case M1 pin open; successful-engine test batch capped20–30min plus one corrective pass. #114 full fixture expansion estimate8–14 focused hours, checkpoint per domain;29settings is not full coverage.
 
 Merge110/113: exact-head test+goldens passed on8bd40543/7f28c886 respectively. Main0fbfa1d7 includes both. Candidate0abc4c8 tree equals110 build tree; Windows pass127.4s, Android ARM64 pass384.8s (56.2MB). Full suite5168passed/33exactallowlisted/2skipped, no unexpected/unused; analyzer454/no new, layering77. Manual current-build smoke not repeated; SHIELD blocked. Differences: Windows analyzer now runs, upstream SDK pin enforced, original ceiling restored, live roadmap committed. Remaining: CW integration, origin fixtures/pins, device validation.
+
+Merge115: main21d871d8, exact d151104a test/goldens green; C0 independently ran9/9 on pinned3.44.8 and reviewed4 mutation failures, both restored historical9case suites and exact diagnostic/count guard. Retrospective evidence, not historic pin-before-move compliance. God files unchanged (search13108/player11926/MagicTV8369/storage6282/settings2899) versus original board19070/16278/10716/9963/7905. Difference: real engine threshold/hash merge/cancel/cache tests, no production edits. Further work: remaining native/queue behaviors not claimed. C0 now reviews114; Locke expands S2-3; Wegener prepares96; Ampere finalizes bounded V1 feasibility. No routine user approval wait.
