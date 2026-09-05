@@ -3,12 +3,15 @@
 // Default (gate i): exit 1 only if the violation count exceeds the committed
 // ceiling in tool/layering_baseline.txt. Pass --strict to fail on any
 // violation (lane Q1). --over-ceiling probes the growth gate (ceiling-1).
+// Human output caps at 40 rows unless --all. --json dumps every violation
+// with stable ids. --root PATH checks another tree with this checker.
 //
 // models:     no Flutter, no services
 // services:   no Flutter widgets, no lib/widgets
 // widgets:    never screens
 // screens:    never another screen's private parts
 
+import 'dart:convert';
 import 'dart:io';
 
 enum Layer { models, services, widgets, screens, other }
@@ -338,6 +341,7 @@ String modeLabel({
 void report(
   List<Violation> violations, {
   required bool strict,
+  required bool all,
   required int ceiling,
   required int effective,
   required bool overCeiling,
@@ -361,11 +365,14 @@ void report(
     stdout.writeln('  ${byRule[rule]}  $rule');
   }
   const cap = 40;
-  for (final v in violations.take(cap)) {
+  final shown = all ? violations : violations.take(cap);
+  for (final v in shown) {
     stdout.writeln('  $v');
   }
-  if (violations.length > cap) {
-    stdout.writeln('  … ${violations.length - cap} more');
+  if (!all && violations.length > cap) {
+    stdout.writeln(
+      '  … ${violations.length - cap} more (pass --all to print every row)',
+    );
   }
   if (!strict && count > effective) {
     stdout.writeln(
@@ -376,16 +383,40 @@ void report(
   }
 }
 
+Map<String, Object> toJson(List<Violation> violations, {int? ceiling}) => {
+  'count': violations.length,
+  if (ceiling != null) 'ceiling': ceiling,
+  'violations': [
+    for (final v in violations)
+      {
+        'file': v.file,
+        'import': v.importSpec,
+        'rule': v.rule,
+        'detail': v.detail,
+        'id': '${v.file}|${v.rule}|${v.importSpec}',
+      },
+  ],
+};
+
+String? _namedArg(List<String> args, String name) {
+  final prefix = '$name=';
+  for (var i = 0; i < args.length; i++) {
+    if (args[i] == name && i + 1 < args.length) return args[i + 1];
+    if (args[i].startsWith(prefix)) {
+      return args[i].substring(prefix.length);
+    }
+  }
+  return null;
+}
+
 void main(List<String> args) {
   final strict = args.contains('--strict');
   final overCeiling = args.contains('--over-ceiling');
-  String? ceilingFile;
-  for (var i = 0; i < args.length; i++) {
-    if (args[i] == '--ceiling-file' && i + 1 < args.length) {
-      ceilingFile = args[i + 1];
-    }
-  }
-  final violations = checkRepo();
+  final all = args.contains('--all');
+  final jsonOut = args.contains('--json');
+  final root = _namedArg(args, '--root');
+  final ceilingFile = _namedArg(args, '--ceiling-file');
+  final violations = checkRepo(root: root);
   final ceiling = readCeiling(explicitPath: ceilingFile);
   final count = violations.length;
   final effective = effectiveCeiling(
@@ -393,13 +424,22 @@ void main(List<String> args) {
     count: count,
     overCeiling: overCeiling,
   );
-  report(
-    violations,
-    strict: strict,
-    ceiling: ceiling,
-    effective: effective,
-    overCeiling: overCeiling,
-  );
+  if (jsonOut) {
+    stdout.writeln(
+      const JsonEncoder.withIndent('  ').convert(
+        toJson(violations, ceiling: ceiling),
+      ),
+    );
+  } else {
+    report(
+      violations,
+      strict: strict,
+      all: all,
+      ceiling: ceiling,
+      effective: effective,
+      overCeiling: overCeiling,
+    );
+  }
   exit(
     layeringExitCode(
       count: count,

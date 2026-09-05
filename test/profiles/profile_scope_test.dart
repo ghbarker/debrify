@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:debrify/services/profiles/profile_scope.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
+
+import '../support/source_text.dart';
 
 void main() {
   test('scope produces stable generation-aware keys and paths', () {
@@ -14,8 +17,18 @@ void main() {
     expect(scope.preferencePrefix, 'p.profile-abc_123.g.7.');
     expect(scope.preferenceKey('theme'), 'p.profile-abc_123.g.7.theme');
     expect(
-      scope.file(Directory('/tmp/root'), 'db/catalog.sqlite').path,
-      contains('profiles/profile-abc_123/g/7/data/db/catalog.sqlite'),
+      posixPath(scope.file(Directory('/tmp/root'), 'db/catalog.sqlite').path),
+      contains(
+        p.posix.join(
+          'profiles',
+          'profile-abc_123',
+          'g',
+          '7',
+          'data',
+          'db',
+          'catalog.sqlite',
+        ),
+      ),
     );
   });
 
@@ -35,6 +48,10 @@ void main() {
     );
     expect(
       () => scope.file(Directory('/tmp/root'), '../escape'),
+      throwsArgumentError,
+    );
+    expect(
+      () => scope.file(Directory('/tmp/root'), r'..\escape'),
       throwsArgumentError,
     );
   });

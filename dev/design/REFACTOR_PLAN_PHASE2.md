@@ -177,8 +177,12 @@ To the five checks in `REFACTOR_PLAN.md` §6 add:
 - (g) the new unit compiles with the god file's private members removed (grep for `_`
   members of the host inside the new file: zero), and no new `part of` / `extension on`
   the host State;
-- (h) the pin commit predates the move commit and passes on the parent of the move;
-- (i) `dart tool/check_layering.dart` violation count must not grow vs the committed ceiling. A G1' / V1 extract that adds services → Flutter-widgets / widgets / screens imports is a reject until V1-fix. Full `--strict` remains Q1.
+- (h) the pin commit predates the move commit and **passes on the parent of the
+  move**. The pin must exercise lib on the origin path (widget test driving State,
+  or a test calling the origin function). Source-text greps and test-local
+  re-implementations do not count. A widget pin added *after* the move (e.g. #98
+  on `KeywordSearchScreen`) does not clear this gate for the move PR;
+- (i) `dart tool/check_layering.dart` violation count must not grow vs the committed ceiling (`tool/layering_baseline.txt`). `--all --json` on the PR **and its parent** (same checker): new violation ids = red. A G1' / V1 extract that adds services → Flutter-widgets / widgets / screens imports is a reject until V1-fix. Default human output still caps at 40; `--all` prints every row. Full `--strict` remains Q1.
 
 ## 6. Definition of done (revised)
 

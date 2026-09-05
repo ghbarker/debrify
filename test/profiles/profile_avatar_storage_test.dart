@@ -7,6 +7,8 @@ import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+import '../support/source_text.dart';
+
 void main() {
   late Directory root;
 
@@ -15,7 +17,7 @@ void main() {
   });
 
   tearDown(() async {
-    if (await root.exists()) await root.delete(recursive: true);
+    await deleteTempTree(root);
   });
 
   test('avatars live beside the generations, never inside one', () {
@@ -32,7 +34,7 @@ void main() {
       dataGeneration: 7,
       sessionEpoch: 1,
     );
-    expect(directory.path, isNot(contains(p.join('g', '7'))));
+    expect(posixPath(directory.path), isNot(contains('g/7')));
     expect(
       directory.path,
       isNot(startsWith(scope.generationDirectory(root).path)),

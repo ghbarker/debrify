@@ -16,13 +16,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Checkout PR base for layering delta
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: ${{ runner.temp }}/layering-parent
+
       - name: Install native test libraries
         run: |
           sudo apt-get update
           sudo apt-get install -y libsqlite3-dev libsqlite3-0
 
       - name: Test CI allowlist and analyze-baseline matchers
-        run: python3 -m unittest ci_test_allowlist_test.py analyze_baseline_test.py
+        run: python3 -m unittest ci_test_allowlist_test.py analyze_baseline_test.py ci_layering_delta_test.py
         working-directory: tool
 
       - name: Setup Flutter
@@ -41,7 +48,15 @@ jobs:
         run: python3 tool/analyze_baseline.py
 
       - name: Import layering check (fail on growth (gate i))
-        run: dart run tool/check_layering.dart
+        run: |
+          dart run tool/check_layering.dart --all
+          dart run tool/check_layering.dart --all --json > /tmp/layering-head.json
+          python3 -c "import json; print('layering count (HEAD):', json.load(open('/tmp/layering-head.json'))['count'])"
+          PARENT="${{ runner.temp }}/layering-parent"
+          if [ -d "$PARENT" ]; then
+            dart run tool/check_layering.dart --all --json --root "$PARENT" > /tmp/layering-parent.json
+            python3 tool/ci_layering_delta.py /tmp/layering-parent.json /tmp/layering-head.json
+          fi
 
       - name: Run refactor contract tests
         run: flutter test

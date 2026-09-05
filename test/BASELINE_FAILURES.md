@@ -23,8 +23,9 @@ CI (`.github/workflows/test.yml`):
   `tool/analyze_baseline.json` fail; the JSON may only shrink. Recorded at
   C0 against `main` (470 issues: 0 error, 85 warning, 385 info).
 - runs `dart run tool/check_layering.dart` and fails if the count exceeds
-  `tool/layering_baseline.txt` (gate i). Lane Q1 turns `--strict` on after
-  Phase 2.
+  `tool/layering_baseline.txt` (gate i). On pull requests, also dumps
+  `--all --json` vs the PR parent and fails on **new** violation ids
+  (`tool/ci_layering_delta.py`). Lane Q1 turns `--strict` on after Phase 2.
 - runs the refactor contract tests
 - runs `flutter test test --exclude-tags golden` through
   `tool/ci_test_allowlist.py` (unused allowlist entries still fail)

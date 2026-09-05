@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:debrify/services/profiles/privacy_log.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/source_text.dart';
+
 void main() {
   test(
     'direct SharedPreferences opens stay inside reviewed adapters/stores',
@@ -28,7 +30,7 @@ void main() {
       for (final entity in Directory('lib').listSync(recursive: true)) {
         if (entity is! File || !entity.path.endsWith('.dart')) continue;
         final path = entity.path.replaceAll('\\', '/');
-        final source = entity.readAsStringSync();
+        final source = readSource(entity.path);
         final count = 'SharedPreferences.getInstance()'
             .allMatches(source)
             .length;
@@ -64,7 +66,7 @@ void main() {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
       final path = entity.path.replaceAll('\\', '/');
       if (allowed.contains(path)) continue;
-      final source = entity.readAsStringSync();
+      final source = readSource(entity.path);
       if (source.contains("'debrify_tv.db'") ||
           source.contains("'iptv_catalog.db'")) {
         violations.add(path);
@@ -90,7 +92,7 @@ void main() {
     for (final entity in Directory('lib').listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
       final path = entity.path.replaceAll('\\', '/');
-      final source = entity.readAsStringSync();
+      final source = readSource(entity.path);
       if (!source.contains("import 'package:sqflite")) continue;
       if (source.contains('ON CONFLICT')) {
         violations.add(path);
@@ -107,9 +109,7 @@ void main() {
   });
 
   test('profile editor keeps feature controls hidden behind one switch', () {
-    final source = File(
-      'lib/screens/profiles/edit_profile_screen.dart',
-    ).readAsStringSync();
+    final source = readSource('lib/screens/profiles/edit_profile_screen.dart');
     // The switch moved onto the widget (public, @visibleForTesting) when the
     // save rule was extracted into EditProfileScreen.policyFor.
     expect(
@@ -149,10 +149,10 @@ void main() {
   test(
     'search result preservation is owned by the mounted profile session',
     () {
-      final host = File('lib/screens/search_screen.dart').readAsStringSync();
-      final source = File(
+      final host = readSource('lib/screens/search_screen.dart');
+      final source = readSource(
         'lib/services/search/keyword_search_controller.dart',
-      ).readAsStringSync();
+      );
       expect(
         source,
         contains('ProfileSessionMemory<KwPreservedState> kwPreserved'),
@@ -171,54 +171,48 @@ void main() {
     },
   );
 
-  test(
-    'Android protects recents before pause and notifications stay generic',
-    () {
-      final activity = File(
-        'android/app/src/main/kotlin/com/debrify/app/MainActivity.kt',
-      ).readAsStringSync();
-      final onPause = activity.substring(
-        activity.indexOf('override fun onPause()'),
-        activity.indexOf('override fun onUserLeaveHint()'),
-      );
-      expect(onPause, contains('shouldProtectWhenBackgrounded(this)'));
-      expect(
-        onPause.indexOf('window.addFlags'),
-        lessThan(onPause.indexOf('super.onPause()')),
-        reason: 'FLAG_SECURE must precede Android task-snapshot capture.',
-      );
+  test('Android protects recents before pause and notifications stay generic', () {
+    final activity = readSource(
+      'android/app/src/main/kotlin/com/debrify/app/MainActivity.kt',
+    );
+    final onPause = activity.substring(
+      activity.indexOf('override fun onPause()'),
+      activity.indexOf('override fun onUserLeaveHint()'),
+    );
+    expect(onPause, contains('shouldProtectWhenBackgrounded(this)'));
+    expect(
+      onPause.indexOf('window.addFlags'),
+      lessThan(onPause.indexOf('super.onPause()')),
+      reason: 'FLAG_SECURE must precede Android task-snapshot capture.',
+    );
 
-      final download = File(
-        'android/app/src/main/kotlin/com/debrify/app/download/'
-        'MediaStoreDownloadService.kt',
-      ).readAsStringSync();
-      final recording = File(
-        'android/app/src/main/kotlin/com/debrify/app/recording/'
-        'LiveRecordingService.kt',
-      ).readAsStringSync();
-      final alarm = File(
-        'android/app/src/main/kotlin/com/debrify/app/recording/'
-        'RecordingAlarmReceiver.kt',
-      ).readAsStringSync();
-      expect(download, isNot(contains('.setContentTitle(state.fileName)')));
-      expect(
-        download,
-        isNot(contains('.setSubText(if (completed) null else title)')),
-      );
-      expect(download, isNot(contains('.setSummaryText(title)')));
-      expect(recording, isNot(contains('.setContentTitle(state.channelName)')));
-      expect(
-        recording,
-        isNot(contains('.setSubText(if (completed) null else title)')),
-      );
-      expect(alarm, isNot(contains(r'${schedule.channelName} —')));
-    },
-  );
+    final download = readSource(
+      'android/app/src/main/kotlin/com/debrify/app/download/MediaStoreDownloadService.kt',
+    );
+    final recording = readSource(
+      'android/app/src/main/kotlin/com/debrify/app/recording/LiveRecordingService.kt',
+    );
+    final alarm = readSource(
+      'android/app/src/main/kotlin/com/debrify/app/recording/RecordingAlarmReceiver.kt',
+    );
+    expect(download, isNot(contains('.setContentTitle(state.fileName)')));
+    expect(
+      download,
+      isNot(contains('.setSubText(if (completed) null else title)')),
+    );
+    expect(download, isNot(contains('.setSummaryText(title)')));
+    expect(recording, isNot(contains('.setContentTitle(state.channelName)')));
+    expect(
+      recording,
+      isNot(contains('.setSubText(if (completed) null else title)')),
+    );
+    expect(alarm, isNot(contains(r'${schedule.channelName} —')));
+  });
 
   test('Android low-resolution rendering is strictly TV-only', () {
-    final activity = File(
+    final activity = readSource(
       'android/app/src/main/kotlin/com/debrify/app/MainActivity.kt',
-    ).readAsStringSync();
+    );
     final renderScale = activity.substring(
       activity.indexOf('private fun computeRenderScale('),
       activity.indexOf('/** Rewrites the viewport metrics'),
@@ -233,13 +227,12 @@ void main() {
   });
 
   test('native subtitle fonts follow the active profile scope', () {
-    final fontManager = File(
-      'android/app/src/main/kotlin/com/debrify/app/util/'
-      'SubtitleFontManager.kt',
-    ).readAsStringSync();
-    final settings = File(
+    final fontManager = readSource(
+      'android/app/src/main/kotlin/com/debrify/app/util/SubtitleFontManager.kt',
+    );
+    final settings = readSource(
       'android/app/src/main/kotlin/com/debrify/app/util/SubtitleSettings.kt',
-    ).readAsStringSync();
+    );
 
     expect(
       fontManager,
@@ -270,7 +263,7 @@ void main() {
       r'DebrifyTvDatabase\s*\.\s*instance\s*\.\s*database',
     );
     for (final path in files) {
-      final source = File(path).readAsStringSync();
+      final source = readSource(path);
       expect(
         rawHandle.hasMatch(source),
         isFalse,
@@ -327,7 +320,7 @@ Future<void> leak(Database db) async {
     ];
     final violations = <String>[];
     for (final file in files) {
-      final source = file.readAsStringSync();
+      final source = readSource(file.path);
       if (RegExp(r'\bprint\s*\(').hasMatch(source)) {
         violations.add(file.path);
       }
@@ -337,16 +330,14 @@ Future<void> leak(Database db) async {
       isEmpty,
       reason: 'Service diagnostics must pass through the redacted debug sink.',
     );
-    final main = File('lib/main.dart').readAsStringSync();
+    final main = readSource('lib/main.dart');
     expect(main, contains('PrivacyLog.install();'));
     expect(
       main,
       isNot(contains('attachDiagnosticSink')),
       reason: 'General debugPrint output must never enter support exports.',
     );
-    final diagnostics = File(
-      'lib/services/diagnostic_log.dart',
-    ).readAsStringSync();
+    final diagnostics = readSource('lib/services/diagnostic_log.dart');
     expect(diagnostics, isNot(contains('recordConsole')));
     expect(diagnostics, isNot(contains('error.toString()')));
     expect(diagnostics, isNot(contains('details.context')));
@@ -358,9 +349,9 @@ Future<void> leak(Database db) async {
   });
 
   test('device reset stops and deletes Dart and native diagnostics', () {
-    final reset = File(
+    final reset = readSource(
       'lib/services/profiles/profile_device_reset_service.dart',
-    ).readAsStringSync();
+    );
     expect(
       'DiagnosticLog.instance.clearForDeviceReset'.allMatches(reset).length,
       greaterThanOrEqualTo(2),
@@ -369,10 +360,9 @@ Future<void> leak(Database db) async {
     );
     expect(reset, contains("'diagnostics',"));
 
-    final nativeLog = File(
-      'android/app/src/main/kotlin/com/debrify/app/diagnostics/'
-      'DiagnosticFileLog.kt',
-    ).readAsStringSync();
+    final nativeLog = readSource(
+      'android/app/src/main/kotlin/com/debrify/app/diagnostics/DiagnosticFileLog.kt',
+    );
     final nativeClear = nativeLog.substring(
       nativeLog.indexOf('fun clearForDeviceReset'),
       nativeLog.indexOf('fun recordPreviousProcessExit'),
@@ -390,16 +380,14 @@ Future<void> leak(Database db) async {
       reason: 'Reset must win against the crash-handler write race.',
     );
 
-    final activity = File(
+    final activity = readSource(
       'android/app/src/main/kotlin/com/debrify/app/MainActivity.kt',
-    ).readAsStringSync();
+    );
     expect(activity, contains('"clearForDeviceReset" ->'));
   });
 
   test('diagnostic export is hidden on tvOS until Remote transfer owns it', () {
-    final settings = File(
-      'lib/screens/settings_screen.dart',
-    ).readAsStringSync();
+    final settings = readSource('lib/screens/settings_screen.dart');
     final authorizationCheck = settings.substring(
       settings.indexOf('Future<bool> _activeProfileMayExportDiagnostics()'),
       settings.indexOf('Future<void> _loadSummariesForCurrentProfile()'),

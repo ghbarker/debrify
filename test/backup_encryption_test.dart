@@ -11,6 +11,8 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'support/source_text.dart';
+
 class _FakePathProvider extends PathProviderPlatform {
   _FakePathProvider(this.root);
 
@@ -218,7 +220,7 @@ void main() {
     tearDownAll(() async {
       await DebrifyTvDatabase.instance.closeScope();
       IptvMediaStore.debugResetMigration();
-      await storageRoot.delete(recursive: true);
+      await deleteTempTree(storageRoot);
     });
 
     test('strips account secrets, keeps sharable config', () async {
