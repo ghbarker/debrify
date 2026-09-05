@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:debrify/models/profiles/connection_resource.dart';
@@ -17,9 +18,14 @@ import 'package:debrify/services/profiles/profile_scope.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/services/stremio_service.dart';
 import 'package:debrify/widgets/see_all/stremio_dropdown.dart';
+import 'package:debrify/widgets/catalog_item_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
+
+import 'my_watchlist_loader_origin_test.dart' show HeldWatchlistPreferences;
 
 import 'favourites_rows_origin_test.dart'
     show prepareFavourites, pumpFavourites, closeFavourites;
@@ -229,4 +235,61 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pump(const Duration(seconds: 11));
   });
+
+  testWidgets(
+    'origin Discover playback return waits for preferences then reloads CW and bound data',
+    (tester) async {
+      await prepareFavourites(tester);
+      StremioService.instance.invalidateCache();
+      addTearDown(StremioService.instance.invalidateCache);
+      await StorageService.setDiscoverDefaultSource('cw');
+      await StorageService.setHomeContinueWatchingEnabled(true);
+      await mountDiscover(tester);
+      expect(find.byType(CatalogItemTile), findsNothing);
+      final prefs = await SharedPreferences.getInstance();
+      final data = <String, Object>{
+        for (final key in prefs.getKeys()) 'flutter.$key': prefs.get(key)!,
+        'flutter.continue_watching_v1': jsonEncode([
+          {
+            'imdbId': 'tt1234567',
+            'title': 'Returned title',
+            'contentType': 'movie',
+            'updatedAt': 1,
+          },
+        ]),
+        // A legacy binding read writes its migrated array. The title exists only
+        // in the newly read CW data, so this observes real downstream bound IO.
+        'flutter.series_source_tt1234567': jsonEncode({
+          'torrentHash': 'origin',
+          'torrentName': 'Origin',
+          'debridService': 'real_debrid',
+          'debridTorrentId': 'origin',
+          'boundAt': 1,
+        }),
+      };
+      final previous = SharedPreferencesStorePlatform.instance;
+      final hold = HeldWatchlistPreferences(data);
+      SharedPreferences.resetStatic();
+      SharedPreferencesStorePlatform.instance = hold;
+      addTearDown(() {
+        SharedPreferencesStorePlatform.instance = previous;
+        SharedPreferences.resetStatic();
+      });
+      MainPageBridge.notifyPlaybackReturned();
+      await pumpFavourites(tester);
+      expect(hold.events, ['read']);
+      expect(find.byType(CatalogItemTile), findsNothing);
+      hold.release.complete();
+      await pumpFavourites(tester);
+      expect(hold.events, ['read', 'read complete', 'bound migration']);
+      expect(
+        tester.widget<CatalogItemTile>(find.byType(CatalogItemTile)).item.id,
+        'tt1234567',
+      );
+      // Coverage limit: this shared transport hold blocks other preference users
+      // too. It does not independently kill removal of the watchlist await.
+      await closeFavourites(tester);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
