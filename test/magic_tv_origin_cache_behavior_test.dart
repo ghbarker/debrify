@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:debrify/models/debrify_tv_cache.dart';
@@ -25,6 +26,8 @@ import 'package:debrify/theme/app_theme_scope.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -40,7 +43,7 @@ import 'support/fake_cloud_provider.dart';
 // guards, dynamic private access, or copied production logic are used.
 // Unproven: private session field defaults/identity, queue clearing independently
 // of the cancellation flag, and progress sanitization;
-// successful engine search/merge/threshold batches; large playback sampling;
+// multi-engine/page-limit and concurrent batch boundaries; large playback sampling;
 // multi-window TorBox limits; RD size relaxation; native/player/prefetch success.
 
 class _HeldTorbox extends FakeCloudProvider {
@@ -108,6 +111,48 @@ final _pool = [
   _torrent('both', ['keep', 'drop'], 'Shared.720p.mkv'),
   _torrent('drop', ['drop'], 'Removed.1080p.mkv'),
 ];
+
+// A user-importable engine; only its wire response is supplied by the fixture.
+// Production still constructs requests, parses results and warms/merges cache.
+const _successEngineYaml = '''
+id: origin_success
+display_name: Origin Success
+icon: travel_explore
+categories: [general]
+capabilities:
+  keyword_search: true
+  imdb_search: false
+  series_support: false
+api:
+  base_url: https://origin-success.invalid/search
+  method: GET
+query_params:
+  type: query_params
+  param_name: q
+response_format:
+  type: direct_json
+  results_path: results
+field_mappings:
+  infohash: infohash
+  name: name
+  seeders: seeders
+  size_bytes: size_bytes
+tv_mode:
+  enabled_default: true
+  limits:
+    small: 20
+    large: 20
+    quick_play: 20
+''';
+
+String _hash(int id) => id.toRadixString(16).padLeft(40, '0');
+
+Map<String, Object> _engineRow(int id, {int seeders = 10}) => {
+  'infohash': _hash(id),
+  'name': 'Origin $id seeders $seeders 1080p',
+  'seeders': seeders,
+  'size_bytes': 1000000000,
+};
 
 Future<DebrifyTvChannelCacheEntry> _seed({bool keepOnlyTorrent = true}) async {
   final now = DateTime.utc(2026, 9, 5);
@@ -435,6 +480,92 @@ void main() {
       expect(find.byType(DebrifyTVScreen), findsOneWidget);
       expect(routes.pushes, 3);
       expect(routes.pops, 2);
+    },
+  );
+
+  testWidgets(
+    'retrospective origin: successful engine warm merges hashes and accepts five but rejects four',
+    (tester) async {
+      await tester.runAsync(() async {
+        await LocalEngineStorage.instance.saveEngine(
+          engineId: 'origin_success',
+          fileName: 'origin_success.yaml',
+          yamlContent: _successEngineYaml,
+          displayName: 'Origin Success',
+        );
+        await EngineRegistry.instance.reload();
+      });
+      final responses = {
+        'alpha': [for (var id = 1; id <= 5; id++) _engineRow(id)],
+        'beta': [
+          _engineRow(1, seeders: 80),
+          for (var id = 6; id <= 9; id++) _engineRow(id),
+        ],
+        'thin': [for (var id = 10; id <= 13; id++) _engineRow(id)],
+      };
+      final requests = <Uri>[];
+      await http.runWithClient(
+        () async {
+          await _mount(tester, routes, expectedEditorPaintDiagnostics: 2);
+          _view(tester).onAdd();
+          await _until(
+            tester,
+            () => find.text('Create a channel').evaluate().isNotEmpty,
+          );
+          await tester.pump(const Duration(milliseconds: 300));
+          await tester.enterText(_editorFields.first, 'Successful Origin');
+          await tester.enterText(_editorFields.last, ' Alpha, Beta, Thin, ');
+          await _save(tester, 'Channel "Successful Origin" saved');
+        },
+        () => MockClient((request) async {
+          requests.add(request.url);
+          expect(request.method, 'GET');
+          expect(request.url.host, 'origin-success.invalid');
+          final rows = responses[request.url.queryParameters['q']];
+          expect(rows, isNotNull, reason: 'Unexpected engine query');
+          return http.Response(
+            jsonEncode({'results': rows}),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+      );
+      expect(
+        requests,
+        unorderedEquals([
+          Uri.parse('https://origin-success.invalid/search?q=alpha'),
+          Uri.parse('https://origin-success.invalid/search?q=beta'),
+          Uri.parse('https://origin-success.invalid/search?q=thin'),
+        ]),
+      );
+      final records = await tester.runAsync(
+        DebrifyTvRepository.instance.fetchAllChannels,
+      );
+      expect(records, hasLength(1));
+      expect(records!.single.keywords, ['Alpha', 'Beta', 'Thin']);
+      final stored = await tester.runAsync(
+        () => DebrifyTvCacheService.getEntry(records.single.channelId),
+      );
+      expect(stored!.status, DebrifyTvCacheStatus.ready);
+      expect(stored.errorMessage, isNull);
+      expect(stored.normalizedKeywords, ['alpha', 'beta', 'thin']);
+      expect(stored.torrents.map((t) => t.infohash).toSet(), {
+        for (var id = 1; id <= 9; id++) _hash(id),
+      });
+      expect(stored.torrents, hasLength(9));
+      final merged = stored.torrents.singleWhere((t) => t.infohash == _hash(1));
+      expect(merged.keywords.toSet(), {'alpha', 'beta'});
+      expect(merged.sources, ['origin_success']);
+      expect(merged.seeders, 80);
+      expect(merged.name, 'Origin 1 seeders 80 1080p');
+      expect(stored.keywordStats['alpha']!.totalFetched, 5);
+      expect(stored.keywordStats['beta']!.totalFetched, 5);
+      expect(stored.keywordStats['thin']!.totalFetched, 0);
+      expect(stored.keywordStats.values.map((s) => s.pagesPulled), [1, 1, 1]);
+      expect(routes.pushes, 3);
+      expect(routes.pops, 2);
+      expect(_view(tester).busy, isFalse);
+      expect(torbox.requests, isEmpty);
     },
   );
 
