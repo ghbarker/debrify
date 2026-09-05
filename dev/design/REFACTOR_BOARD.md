@@ -100,3 +100,6 @@ S2-6 ownership extension: Locke exclusively owns test/storage_key_sweep_test.dar
 
 G1'-5 destination decision approved: lib/screens/search/fav_rows_controller.dart and fav_row.dart retain Flutter/focus ownership in screen layer; no new service-layer UI dependency. Wegener starts real-origin pins now; CODEMAP waits only at completion (Locke owns current lock). C0 independent S2-6 checkpoint review assigned while native CI116 executes. PR117 test passed, goldens pending; independent keyword review complete. Awake helper3412 verified running.
 
+
+S2-6 draft PR118 published, frozen609b823550034d58b58dc00127be2067c4ee50e7. C0 independent review active; Locke holding branch stable. Worker reports104core+120consumer+9sweep+12allowlist passes,cleananalysis,77layering; not parent gate credit until reproduced.1867Leaves/433uncredited debt. All67bodydiffs and70method inventory included in PR. CODEMAP lock released. M1-3 quickwatch835line mapping accepted in scope; origin21cases green, sensitivity/pincommit precede move.
+
