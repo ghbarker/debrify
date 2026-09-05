@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -26,11 +27,14 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 // 90b77818e951295a12cca8d410384a3a7d5541ed.
 // LIBMPV_LIBRARY_PATH points at an already-installed native library. The window
 // and texture channel fixtures are external platform replies, not player logic.
-// Audio decoding/host mount/disposal and the host's identify-cancel path are proven.
+// Audio decoding, host identify-cancel, and disposal checkpoint persistence are proven.
 // The zero-width audio source
 // does NOT satisfy the video startup watchdog. No rendered frame, successful
-// video readiness, successful identification, resume/subtitle application or
+// video readiness, successful identification, resume restore/subtitle application or
 // recording/zap is claimed.
+// Future CI must provision libmpv and run this file as a required native job on
+// Flutter 3.44.8 at both revisions. Missing native prerequisites must fail the
+// job, not skip this test or count a non-native suite as behavioral coverage.
 
 class _Routes extends NavigatorObserver {
   int pushes = 0;
@@ -108,9 +112,11 @@ void main() {
     media = File('${root.path}/Origin.wav');
     await media.writeAsBytes(_silentWave());
     outputCalls.clear();
-    mk.MediaKit.ensureInitialized(
-      libmpv: Platform.environment['LIBMPV_LIBRARY_PATH'],
-    );
+    final nativeLibrary = Platform.environment['LIBMPV_LIBRARY_PATH'];
+    if (nativeLibrary == null || !File(nativeLibrary).existsSync()) {
+      throw StateError('Required native gate: LIBMPV_LIBRARY_PATH must exist');
+    }
+    mk.MediaKit.ensureInitialized(libmpv: nativeLibrary);
     binding.defaultBinaryMessenger.setMockMethodCallHandler(windowChannel, (
       call,
     ) async {
@@ -188,7 +194,7 @@ void main() {
     await root.delete(recursive: true);
   });
 
-  testWidgets('retrospective origin: actual host identify cancel preserves state', (
+  testWidgets('retrospective origin: host cancel and disposal checkpoint', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1280, 720);
@@ -225,13 +231,16 @@ void main() {
     expect(outputCalls, contains('VideoOutputManager.Create'));
     expect(find.byType(VideoPlayerScreen), findsOneWidget);
 
+    late int checkpointMs;
     try {
       // Capture callbacks from widgets built by the actual host State. No local
       // controller/session surrogate, private access or extracted route import.
       final controls = tester.widget<Controls>(find.byType(Controls));
       controls.onSpeed();
       await tester.pump();
-      final menu = tester.widget<PlayerMenuPanel>(find.byType(PlayerMenuPanel));
+      final menu = tester.widget<PlayerMenuPanel>(
+        find.byType(PlayerMenuPanel),
+      );
       expect(menu.onIdentifyTitle, isNotNull);
       final identityBefore = [
         menu.contentImdbId,
@@ -263,7 +272,10 @@ void main() {
       expect(routes.pops, 0);
       await tester.pump(const Duration(milliseconds: 300));
       final header = find
-          .ancestor(of: find.text('FIX THE TITLE'), matching: find.byType(Row))
+          .ancestor(
+            of: find.text('FIX THE TITLE'),
+            matching: find.byType(Row),
+          )
           .first;
       await tester.tap(
         find.descendant(of: header, matching: find.byType(IconButton)),
@@ -296,6 +308,22 @@ void main() {
         reopened.subtitleIdentityLabel,
         reopened.selectedSubtitleId,
       ], identityBefore);
+      // Freeze the actual native clock before the real host's disposal save.
+      // No resume writer or controller is called directly by this test.
+      await tester.runAsync(() => player.pause());
+      await _until(tester, () => !player.state.playing);
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
+      await tester.pump();
+      checkpointMs = player.state.position.inMilliseconds;
+      expect(checkpointMs, greaterThan(1000));
+      expect(tester.widget<Controls>(find.byType(Controls)).isReady, isTrue);
+      expect(prefs.get('playback_state_v1'), isNull);
+      expect(
+        await StorageService.getVideoPlaybackState(videoTitle: 'Origin.wav'),
+        isNull,
+      );
     } finally {
       await tester.pumpWidget(const SizedBox.shrink());
       await _until(tester, () => !VideoOutputLease.isHeld);
@@ -308,5 +336,24 @@ void main() {
       );
       await tester.pump(const Duration(seconds: 6));
     }
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.get('playback_state_v1');
+    expect(raw, isA<String>());
+    final stored = jsonDecode(raw! as String) as Map<String, dynamic>;
+    expect(stored.keys, ['video_origin_wav']);
+    final record = stored['video_origin_wav'] as Map<String, dynamic>;
+    expect(record['type'], 'video');
+    expect(record['title'], 'Origin.wav');
+    expect(record['url'], media.uri.toString());
+    expect(record['positionMs'], isA<int>());
+    expect(record['positionMs'], checkpointMs);
+    expect(record['durationMs'], 60000);
+    expect(record['speed'], 1.0);
+    expect(record['aspect'], 'fitWidth');
+    expect(record['updatedAt'], isA<int>());
+    expect(
+      await StorageService.getVideoPlaybackState(videoTitle: 'Origin.wav'),
+      record,
+    );
   });
 }
