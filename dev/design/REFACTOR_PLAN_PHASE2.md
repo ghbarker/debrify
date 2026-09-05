@@ -45,10 +45,13 @@ of the current code:
 
 1. **Every extraction PR names its target file, the origin line range, and the minimum
    net line reduction of the god file.** The PR body shows `wc -l` before and after. A PR
-   under its target is rejected even if everything else passes.
+   under its target is rejected even if everything else passes. A shortfall that
+   the orchestrator keeps must be recorded in `REFACTOR_NOTES.md` with the slice
+   that clears it — "Decisions needed: None" is a reject.
 2. **Forwarders and wrappers left in the god file are a debt line item** in the PR: list
    each one and the lane that deletes it. More than ~10 lines of forwarders per
-   extraction needs a "Decisions needed" entry.
+   extraction needs a "Decisions needed" entry **before merge** (enforce on the
+   open PR; do not merge on Leaves-met alone).
 3. **Extension-on-State part files are not allowed.** Extract to a class or widget that
    takes what it needs through a constructor, a controller, or a small interface
    (`StageHost`, `WatchSession`, `PlayerLaunchConfig` below). If a unit needs more than
@@ -56,9 +59,11 @@ of the current code:
    interface that carries them, as its own PR.
 4. **Pin before move, against the origin.** The pin commit must (a) not import the new
    file and (b) pass on the parent commit. For UI regions the pin is a widget test that
-   drives the State; for pure logic it's a test of the origin function. Then the move
-   commit lands; the pin keeps passing without edits. If the pin has to change, the move
-   changed behaviour — stop and write it up.
+   drives the State; for pure logic it's a test that **calls the origin function in
+   lib**. Source-text greps (`File(...).readAsStringSync()` / `contains('enum …')`)
+   and test-local re-implementations of the moved body do **not** satisfy this
+   gate. Then the move commit lands; the pin keeps passing without edits. If the
+   pin has to change, the move changed behaviour — stop and write it up.
 5. **Origin-diff table stays mandatory**, with the added rule that "scaffolding added"
    lines are listed separately from "moved" lines.
 6. **One extraction per PR**, in the order given below; order exists to avoid rework
@@ -85,7 +90,7 @@ the part-file privacy scope. Leaves ≈ 0; unblocks everything below.
 | G1'-6 | Hero presenter | ~8 585–9 139, flags ~1 542–1 583 | `lib/screens/search/hero_presenter.dart` | 550 | ValueNotifiers to the shell, route callbacks | route awareness via `MainPageBridge` |
 | G1'-7 | Discover screen (real) | ~14 655–15 319, ~1 583–1 693, `_DiscoverStage*` in `search_sources.dart` | `lib/screens/discover/discover_screen.dart` | 750 | takes `HomeBoardController.boardRefs` and a `TitleOpener` | own focus tree; must delete the `discoverMode` branches from the host (count them: 66 → 0 for discover) |
 | G1'-8 | TV stage layouts | seven `extension on _SearchScreenState` files + cell builders ~7 172–8 585 | `lib/screens/search/stages/<name>_stage.dart`, each a widget taking a `StageHost` interface | 1 400 from host, and the seven extension files become widgets | `StageHost` exposes: rails, hero item, fav focus, trailer flags, `onOpen/onQuickPlay`, deferral hooks | highest risk: `_deferStageRight`, `_seedStageFocusOnce`, hold-key; pin with the existing stage widget tests plus a DPAD walk per stage |
-| G1'-9 | Shell cleanup | forwarders from G1 step 1, mode branches | — | 300 | — | delete every forwarder listed as debt |
+| G1'-9 | Shell cleanup | forwarders from G1 step 1, mode branches, **#90 host `_onKeywordChanged` listener** (double rebuild: controller `_emit` → host `setState` + `KeywordSearchScreen` listener), G1'-4 `_cw*` getters | — | 300 | — | delete every forwarder listed as debt |
 
 Sum ≈ 9 300 → screen ≈ 7 700; G1'-9 and the part-file rewrites bring it under 7 500.
 
@@ -173,7 +178,8 @@ extractions per lane, not only at the end, because these PRs are large.
 
 To the five checks in `REFACTOR_PLAN.md` §6 add:
 
-- (f) the god file's `wc -l` delta meets the PR's stated "Leaves" number;
+- (f) the god file's `wc -l` delta meets the PR's stated "Leaves" number
+  (a shortfall is a reject unless NOTES names the clearing slice);
 - (g) the new unit compiles with the god file's private members removed (grep for `_`
   members of the host inside the new file: zero), and no new `part of` / `extension on`
   the host State;
