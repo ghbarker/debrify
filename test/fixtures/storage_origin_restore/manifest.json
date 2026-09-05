@@ -1,0 +1,94 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "recipeVersion": 1,
+  "syntheticOnly": true,
+  "sha256": "e5f7f3afe43b9632f6ac4d8597ca779320d29a25b44a4d0009b9f1281314bb7f",
+  "representedSettings": {
+    "stremio_tv_rotation_minutes": 37,
+    "stremio_tv_auto_refresh": false,
+    "stremio_tv_debrid_provider": "realdebrid",
+    "stremio_tv_catalog_repo_urls_v1": [
+      "https://alpha.example.invalid/catalog.json",
+      "https://beta.example.invalid/catalog.json"
+    ],
+    "reddit_recent_subreddits": [
+      "synthetic_alpha",
+      "synthetic_beta"
+    ],
+    "lemmy_favorite_communities": [
+      "synthetic@example.invalid"
+    ],
+    "youtube_max_height": 720,
+    "debrify_tv_random_start_percent": 13,
+    "debrify_tv_provider": "real_debrid",
+    "real_debrid_file_selection": "all",
+    "torbox_check_cache_before_search": true,
+    "real_debrid_integration_enabled": false,
+    "default_torrent_provider_v1": "torbox",
+    "post_torrent_action": "delete",
+    "player_default_aspect_index": 4,
+    "ui_sounds": false,
+    "player_default_subtitle_language": "es",
+    "network_buffer_size": "huge",
+    "iptv_decoder_mode": "hardware",
+    "iptv_track_continue_watching": false,
+    "app_theme": "spotlight",
+    "theme_overrides": "{\"synthetic\":\"fixture\"}",
+    "phone_nav_style": "floating",
+    "tv_ui_scale_percent": 80,
+    "tracking_scrobble_targets": [
+      "local",
+      "mdblist"
+    ],
+    "watch_progress_source": "simkl",
+    "trakt_sync_catalog_items": true,
+    "simkl_sync_catalog_items": false,
+    "mdblist_sync_catalog_items": true
+  },
+  "keyTypes": {
+    "stremio_tv_rotation_minutes": "int",
+    "stremio_tv_auto_refresh": "bool",
+    "stremio_tv_debrid_provider": "String",
+    "stremio_tv_catalog_repo_urls_v1": "List<String>",
+    "reddit_recent_subreddits": "List<String>",
+    "lemmy_favorite_communities": "List<String>",
+    "youtube_max_height": "int",
+    "debrify_tv_random_start_percent": "int",
+    "debrify_tv_provider": "String",
+    "real_debrid_file_selection": "String",
+    "torbox_check_cache_before_search": "bool",
+    "real_debrid_integration_enabled": "bool",
+    "default_torrent_provider_v1": "String",
+    "post_torrent_action": "String",
+    "player_default_aspect_index": "int",
+    "ui_sounds": "bool",
+    "player_default_subtitle_language": "String",
+    "network_buffer_size": "String",
+    "iptv_decoder_mode": "String",
+    "iptv_track_continue_watching": "bool",
+    "app_theme": "String",
+    "theme_overrides": "String",
+    "phone_nav_style": "String",
+    "tv_ui_scale_percent": "int",
+    "tracking_scrobble_targets": "List<String>",
+    "watch_progress_source": "String",
+    "trakt_sync_catalog_items": "bool",
+    "simkl_sync_catalog_items": "bool",
+    "mdblist_sync_catalog_items": "bool"
+  },
+  "excludedKeys": [
+    "external_player_custom_command"
+  ],
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}
