@@ -1,13 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'package:collection/collection.dart';
 
 import '../models/torrent.dart';
@@ -15,12 +10,10 @@ import '../models/torrent_filter_state.dart';
 import '../widgets/torrent_result_row.dart' show qualityTierForName;
 import '../models/debrify_tv_cache.dart';
 import '../models/torbox_file.dart';
-import '../models/debrify_tv_channel_record.dart';
 import '../models/debrify_tv/channel.dart';
 import '../models/debrify_tv/channel_stats.dart';
 import '../models/debrify_tv/prepared_torrents.dart';
 import '../models/debrify_tv/cache_results.dart';
-import '../models/debrify_tv/import_results.dart';
 import '../services/analytics_service.dart';
 import '../services/android_native_downloader.dart';
 import '../services/android_tv_player_bridge.dart';
@@ -34,27 +27,21 @@ import '../services/debrid_service.dart';
 import '../services/pikpak_tv_service.dart';
 import '../services/storage_service.dart';
 import '../services/video_player_launcher.dart';
-import '../services/debrify_tv_channel_archive_service.dart';
 import '../services/debrify_tv_cache_service.dart';
 import '../services/debrify_tv_repository.dart';
 import '../services/alldebrid_service.dart';
 import '../services/torrent_service.dart';
 import '../services/engine/engine_registry.dart';
 import '../services/engine/settings_manager.dart';
-import '../services/debrify_tv_zip_importer.dart';
-import '../services/community/magnet_yaml_service.dart';
-import '../services/community/community_channel_model.dart';
-import '../services/community/community_channels_service.dart';
+import '../services/debrify_tv/channel_import_export.dart';
 import '../services/main_page_bridge.dart';
 import '../models/profiles/profile_policy.dart';
 import '../services/profiles/profile_policy_guard.dart';
-import '../services/profiles/profile_async_authorization.dart';
 import '../theme/app_surfaces.dart';
 import '../theme/app_theme_scope.dart';
 import '../theme/overlay_theme.dart';
 import '../utils/file_utils.dart';
 import '../utils/nsfw_filter.dart';
-import '../utils/platform_util.dart';
 import '../utils/rd_blocked_filter.dart';
 import '../utils/debrify_tv_filters.dart';
 import '../utils/tv_keys.dart';
@@ -70,12 +57,8 @@ import 'debrify_tv/widgets/tv_focusable_button.dart';
 import 'debrify_tv/widgets/tv_focusable_card.dart';
 import 'debrify_tv/dialogs/cached_loading_dialog.dart';
 import 'debrify_tv/dialogs/channel_creation_dialog.dart';
-import 'debrify_tv/dialogs/community_channels_dialog.dart';
 import 'debrify_tv/dialogs/external_player_notice_dialog.dart';
-import 'debrify_tv/dialogs/export_channels_dialog.dart';
-import 'debrify_tv/dialogs/import_channels_dialog.dart';
 import 'debrify_tv/dialogs/spotlight_dialog.dart';
-import 'settings/profile_backup_flows.dart';
 
 /// Magic TV provider-string dispatch. Persisted chip ids stay
 /// [CloudProviderId.magicTvId] (`real_debrid`, not playback `debrid`).
@@ -204,56 +187,6 @@ enum _SettingsScope { quickPlay, channels }
 
 enum _DebrifyTvTopMenuAction { import, export, add, deleteAll, settings }
 
-enum _ChannelImportOrigin { device, url }
-
-enum _ChannelImportType { zip, yaml, text, debrify }
-
-class _SpotlightMetaPill extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _SpotlightMetaPill({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    final app = AppThemeScope.of(context);
-    final tv = app.debrifyTv;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-      decoration: BoxDecoration(
-        color: tv.fillWeak,
-        borderRadius: app.shape.br(13),
-        border: Border.all(color: tv.hairline),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              color: tv.textFaint,
-              fontFamily: 'JetBrainsMono',
-              fontSize: 8,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.1,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: app.core.tx,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _SpotlightChoiceChip extends StatefulWidget {
   final String label;
   final bool selected;
@@ -371,46 +304,6 @@ class _SpotlightChoiceChipState extends State<_SpotlightChoiceChip> {
   }
 }
 
-String _formatBytes(int bytes) {
-  if (bytes <= 0) {
-    return '0 B';
-  }
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  final exponent = min(units.length - 1, (log(bytes) / log(1024)).floor());
-  final value = bytes / pow(1024, exponent);
-  final formatted = value >= 10
-      ? value.toStringAsFixed(0)
-      : value.toStringAsFixed(1);
-  return '$formatted ${units[exponent]}';
-}
-
-Future<DebrifyTvZipImportResult> _parseZipInBackground(Uint8List bytes) {
-  return compute(_parseZipCompute, bytes);
-}
-
-DebrifyTvZipImportResult _parseZipCompute(Uint8List bytes) {
-  return DebrifyTvZipImporter.parseZip(bytes);
-}
-
-Future<DebrifyTvZipImportedChannel> _parseYamlInBackground(
-  String sourceName,
-  String content,
-) {
-  return compute(_parseYamlCompute, <String, String>{
-    'sourceName': sourceName,
-    'content': content,
-  });
-}
-
-DebrifyTvZipImportedChannel _parseYamlCompute(Map<String, String> payload) {
-  final sourceName = payload['sourceName'] ?? 'channel.yaml';
-  final content = payload['content'] ?? '';
-  return DebrifyTvZipImporter.parseYaml(
-    sourceName: sourceName,
-    content: content,
-  );
-}
-
 class DebrifyTVScreen extends StatefulWidget {
   const DebrifyTVScreen({super.key});
 
@@ -419,7 +312,7 @@ class DebrifyTVScreen extends StatefulWidget {
 }
 
 class _DebrifyTVScreenState extends State<DebrifyTVScreen>
-    implements ProgressSink {
+    implements ProgressSink, ChannelImportExportHost {
   static const String _torboxFileEntryType = 'torbox_file';
   static const int _torboxMinVideoSizeBytes =
       50 * 1024 * 1024; // 50 MB filter threshold
@@ -439,6 +332,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       );
     },
   );
+  late final ChannelImportExport _importExport = ChannelImportExport(host: this);
   // Mixed queue: can contain Torrent items or RD-restricted link maps
   List<dynamic> get _queue => _watchSession.queue;
   bool get _isBusy => _watchSession.isBusy;
@@ -692,11 +586,11 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
 
   @override
   void updateProgress(Iterable<String> messages, {bool replace = false}) {
-    _watchSession.updateProgress(messages, replace: replace);
+    _updateProgress(messages, replace: replace);
   }
 
   void _updateProgress(Iterable<String> messages, {bool replace = false}) {
-    updateProgress(messages, replace: replace);
+    _watchSession.updateProgress(messages, replace: replace);
   }
 
   void _cancelActiveWatch({
@@ -1660,252 +1554,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     return result;
   }
 
-  Future<void> _handleImportChannels() async {
-    if (_isBusy) {
-      return;
-    }
-
-    // Set busy to block interactions during dialog
-    setState(() {
-      _isBusy = true;
-    });
-
-    final mode = await _selectImportMode();
-
-    // Wait for frames to ensure UI has updated and touch events are processed
-    if (mounted) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      await WidgetsBinding.instance.endOfFrame;
-      await WidgetsBinding.instance.endOfFrame;
-    }
-
-    if (mode == null || !mounted) {
-      if (mounted) {
-        setState(() {
-          _isBusy = false;
-        });
-      }
-      return;
-    }
-
-    switch (mode) {
-      case ImportChannelsMode.device:
-        await _handleImportChannelsFromDevice();
-        break;
-      case ImportChannelsMode.url:
-        await _handleImportChannelsFromUrl();
-        break;
-      case ImportChannelsMode.community:
-        await _handleImportChannelsFromCommunity();
-        break;
-    }
-  }
-
-  Future<ImportChannelsMode?> _selectImportMode() async {
-    if (!mounted) {
-      return null;
-    }
-
-    return showDialog<ImportChannelsMode>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return ImportChannelsDialog(isAndroidTv: _isAndroidTv);
-      },
-    );
-  }
-
-  Future<T> _runChannelExportProgress<T>(
-    Future<T> Function(void Function(String) setStage) run,
-  ) async {
-    if (!mounted) {
-      throw StateError('Channel export screen is no longer available');
-    }
-    final stage = ValueNotifier<String>('Reading selected channel pools…');
-    final done = ValueNotifier<bool>(false);
-    final dialog = showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black.withValues(alpha: .72),
-      builder: (_) => ChannelExportProgressDialog(stage: stage, done: done),
-    );
-    try {
-      return await run((value) => stage.value = value);
-    } finally {
-      done.value = true;
-      await dialog;
-      stage.dispose();
-      done.dispose();
-    }
-  }
-
-  Future<void> _showChannelExportUnavailableOnAppleTv() async {
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black.withValues(alpha: .72),
-      builder: (dialogContext) => PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) Navigator.of(dialogContext).pop();
-        },
-        child: DebrifyTvSpotlightDialog(
-          eyebrow: 'Channel export · Apple TV',
-          title: 'Export from another device',
-          subtitle:
-              'Apple TV does not expose a location where Debrify can save a '
-              'portable ZIP. Export the channels from Debrify on a phone or '
-              'computer, or send them through Remote.',
-          icon: Icons.tv_rounded,
-          maxWidth: 580,
-          actions: <Widget>[
-            DebrifyTvDialogButton(
-              autofocus: true,
-              label: 'Close',
-              onPressed: () => Navigator.of(dialogContext).pop(),
-            ),
-          ],
-          child: const SizedBox.shrink(),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _handleExportChannels() async {
-    if (_isBusy || !mounted) return;
-    if (PlatformUtil.isTvOS) {
-      await _showChannelExportUnavailableOnAppleTv();
-      return;
-    }
-
-    setState(() {
-      _isBusy = true;
-      _status = 'Loading channels for export…';
-    });
-
-    try {
-      final capability = await ProfileAsyncAuthorization.capture(
-        ProfileFeature.debrifyTv,
-      );
-      Future<T> runCaptured<T>(Future<T> Function() body) =>
-          capability == null ? body() : capability.runIfCurrent(body);
-
-      final channels = await runCaptured(
-        DebrifyTvRepository.instance.fetchAllChannels,
-      );
-      final health = await runCaptured(DebrifyTvCacheService.loadRailHealth);
-      if (!mounted) return;
-      if (channels.isEmpty) {
-        _showSnack('There are no channels to export.', color: Colors.orange);
-        return;
-      }
-
-      final selectedIds = await showDialog<Set<String>>(
-        context: context,
-        barrierDismissible: false,
-        barrierColor: Colors.black.withValues(alpha: .72),
-        builder: (_) => ExportChannelsDialog(
-          channels: channels,
-          savedHashCounts: <String, int>{
-            for (final entry in health.entries) entry.key: entry.value.pooled,
-          },
-        ),
-      );
-      if (!mounted || selectedIds == null || selectedIds.isEmpty) return;
-
-      setState(() => _status = 'Preparing channel archive…');
-      late List<DebrifyTvChannelArchiveSource> sources;
-      final bytes = await _runChannelExportProgress<Uint8List>((
-        setStage,
-      ) async {
-        sources = await runCaptured(() async {
-          // Re-read after the selection dialog: a channel can be edited or
-          // removed while an overlay is open, and the archive must reflect
-          // the rows that actually exist at export time.
-          final current = await DebrifyTvRepository.instance.fetchAllChannels();
-          final selected = current
-              .where((channel) => selectedIds.contains(channel.channelId))
-              .toList(growable: false);
-          final result = <DebrifyTvChannelArchiveSource>[];
-          for (var index = 0; index < selected.length; index++) {
-            final channel = selected[index];
-            setStage(
-              'Reading channel ${index + 1} of ${selected.length}: '
-              '${channel.name}',
-            );
-            result.add(
-              DebrifyTvChannelArchiveSource(
-                channel: channel,
-                cacheEntry:
-                    await DebrifyTvCacheService.getEntryForPortableExport(
-                      channel.channelId,
-                    ),
-              ),
-            );
-          }
-          return result;
-        });
-        if (sources.isEmpty) {
-          throw StateError('The selected channels are no longer available');
-        }
-        setStage('Compressing ${sources.length} channels into one ZIP…');
-        return DebrifyTvChannelArchiveService.buildZip(sources);
-      });
-      if (!mounted) return;
-      if (bytes.length > DebrifyTvZipImporter.maxPortableFileBytes) {
-        _showSnack(
-          'The ZIP is over 100 MB. Export fewer channels at a time.',
-          color: Colors.orange,
-        );
-        return;
-      }
-
-      if (capability != null) {
-        await capability.runIfCurrent(() async {});
-      }
-      if (!mounted) return;
-      final now = DateTime.now();
-      final stamp = <int>[
-        now.year,
-        now.month,
-        now.day,
-        now.hour,
-        now.minute,
-      ].map((part) => part.toString().padLeft(2, '0')).join();
-      final savedPath = await ProfileBackupFlows(context).saveBackupFile(
-        fileName: 'debrify-tv-channels-$stamp.zip',
-        bytes: bytes,
-        mimeType: 'application/zip',
-        artifactLabel: 'channel archive',
-      );
-      if (!mounted || savedPath == null) return;
-      final hashes = sources.fold<int>(
-        0,
-        (sum, source) => sum + source.savedHashCount,
-      );
-      _showSnack(
-        'Exported ${sources.length} channel${sources.length == 1 ? '' : 's'} '
-        'with $hashes saved hash${hashes == 1 ? '' : 'es'}.',
-        color: Colors.green,
-      );
-    } catch (error) {
-      debugPrint(
-        'DebrifyTV: channel archive export failed (${error.runtimeType})',
-      );
-      if (mounted) {
-        _showSnack('Failed to export channels.', color: Colors.red);
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isBusy = false;
-          _status = '';
-        });
-      }
-    }
-  }
-
   Future<void> _handleAddChannel() async {
     await _syncProviderAvailability();
     final channel = await _openChannelDialog();
@@ -1914,990 +1562,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     }
   }
 
-  Future<void> _handleImportChannelsFromDevice() async {
-    // FileType.any instead of custom: Android has no MimeTypeMap entry for
-    // `yaml`/`yml`/`debrify`, so a custom filter silently greys those files out
-    // in the system picker (and throws "Unsupported filter" outright when every
-    // extension is unmapped). The importer validates the bytes/format below.
-    final selection = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      withData: true,
-      withReadStream: true,
-    );
-
-    if (selection == null || selection.files.isEmpty) {
-      return;
-    }
-
-    final pickedFile = selection.files.first;
-
-    // Reject an implausibly large pick before reading it into memory.
-    if (pickedFile.size > DebrifyTvZipImporter.maxPortableFileBytes) {
-      _showSnack('Selected file is too large to import.', color: Colors.orange);
-      return;
-    }
-    Uint8List bytes;
-    try {
-      bytes = await _readPickedFileBytes(pickedFile);
-    } catch (error) {
-      _showSnack(
-        'Unable to read selected file: ${_formatImportError(error)}',
-        color: Colors.red,
-      );
-      return;
-    }
-
-    if (bytes.isEmpty) {
-      _showSnack('Selected file appears to be empty.', color: Colors.orange);
-      return;
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _isBusy = true;
-      _status = 'Importing channel from local storage…';
-    });
-
-    try {
-      await _safeImportChannelBytes(
-        sourceName: pickedFile.name,
-        bytes: bytes,
-        origin: _ChannelImportOrigin.device,
-      );
-    } catch (error) {
-      _showSnack(
-        'Import failed: ${_formatImportError(error)}',
-        color: Colors.red,
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isBusy = false;
-          _status = '';
-        });
-        _closeProgressDialog();
-      }
-    }
-  }
-
-  Future<void> _handleImportChannelsFromUrl() async {
-    final input = await _promptImportUrl();
-    if (input == null) {
-      if (mounted) {
-        setState(() {
-          _isBusy = false;
-        });
-      }
-      return;
-    }
-
-    final trimmedInput = input.trim();
-
-    // Check if it's a debrify link (pasted directly)
-    if (MagnetYamlService.isMagnetLink(trimmedInput)) {
-      await _importDebrifyLinkDirectly(trimmedInput);
-      return;
-    }
-
-    // Otherwise, treat as URL
-    Uri uri;
-    try {
-      uri = Uri.parse(trimmedInput);
-      if (!uri.hasAbsolutePath ||
-          (uri.scheme != 'http' && uri.scheme != 'https')) {
-        throw const FormatException('invalid');
-      }
-    } catch (_) {
-      _showSnack(
-        'Enter a valid debrify:// link or http(s) URL.',
-        color: Colors.red,
-      );
-      if (mounted) {
-        setState(() {
-          _isBusy = false;
-        });
-      }
-      return;
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _isBusy = true;
-      _status = 'Downloading channel file…';
-    });
-
-    _showChannelCreationDialog('Importing channel…');
-    _updateProgress(['Downloading channel file…']);
-
-    try {
-      final streamedResponse = await http.Request('GET', uri).send();
-      if (streamedResponse.statusCode != 200) {
-        throw FormatException('HTTP ${streamedResponse.statusCode}');
-      }
-
-      final totalBytes = streamedResponse.contentLength ?? 0;
-      int receivedBytes = 0;
-      final builder = BytesBuilder(copy: false);
-
-      await for (final chunk in streamedResponse.stream) {
-        builder.add(chunk);
-        receivedBytes += chunk.length;
-        final percent = totalBytes > 0
-            ? (receivedBytes / totalBytes * 100).clamp(0, 100)
-            : null;
-        final progressMessage = percent != null
-            ? 'Downloading… ${percent.toStringAsFixed(0)}%'
-            : 'Downloading… ${_formatBytes(receivedBytes)}';
-        _updateProgress([progressMessage], replace: true);
-      }
-
-      final bytes = builder.takeBytes();
-      if (bytes.isEmpty) {
-        _updateProgress(['Downloaded file is empty.'], replace: true);
-        _showSnack('Downloaded file is empty.', color: Colors.orange);
-        return;
-      }
-
-      final sourceName = uri.pathSegments.isNotEmpty
-          ? uri.pathSegments.last
-          : 'channel.${_guessExtensionFromHeaders(streamedResponse.headers)}';
-
-      _updateProgress(['Download complete. Processing…'], replace: true);
-
-      await _safeImportChannelBytes(
-        sourceName: sourceName,
-        bytes: bytes,
-        origin: _ChannelImportOrigin.url,
-      );
-    } catch (error) {
-      _showSnack(
-        'Import failed: ${_formatImportError(error)}',
-        color: Colors.red,
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isBusy = false;
-          _status = '';
-        });
-        _closeProgressDialog();
-      }
-    }
-  }
-
-  Future<void> _handleImportChannelsFromCommunity() async {
-    final selectedChannels = await _promptCommunityChannelsDialog();
-    if (selectedChannels == null || selectedChannels.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _isBusy = false;
-        });
-      }
-      return;
-    }
-
-    // Wait for frames to ensure UI has updated and touch events are processed
-    if (mounted) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      await WidgetsBinding.instance.endOfFrame;
-      await WidgetsBinding.instance.endOfFrame;
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _isBusy = true;
-      _status = 'Importing community channels...';
-    });
-
-    _showChannelCreationDialog('Importing community channels...');
-
-    int successCount = 0;
-    int failureCount = 0;
-    final List<String> errors = [];
-
-    for (int i = 0; i < selectedChannels.length; i++) {
-      final channel = selectedChannels[i];
-      _updateProgress([
-        'Downloading channel ${i + 1} of ${selectedChannels.length}...',
-        channel.name,
-      ], replace: true);
-
-      try {
-        // Download the channel file
-        final bytes = await CommunityChannelsService.downloadChannelFile(
-          channel.url,
-        );
-
-        if (bytes.isEmpty) {
-          throw Exception('Downloaded file is empty');
-        }
-
-        // Import using existing method (don't show dialog/summary for each channel)
-        final success = await _importDebrifyBytes(
-          channel.name,
-          bytes,
-          showDialog: false,
-          showSummary: false,
-        );
-
-        if (success) {
-          successCount++;
-        } else {
-          failureCount++;
-          errors.add('${channel.name}: Import failed');
-        }
-      } catch (error) {
-        failureCount++;
-        errors.add('${channel.name}: ${error.toString()}');
-      }
-    }
-
-    _updateProgress([
-      'Import complete!',
-      if (successCount > 0) 'Successfully imported $successCount channel(s)',
-      if (failureCount > 0) 'Failed to import $failureCount channel(s)',
-      ...errors.take(5), // Show first 5 errors
-    ], replace: true);
-
-    // Show summary
-    final Color snackColor = successCount > 0
-        ? (failureCount > 0 ? Colors.orange : Colors.green)
-        : Colors.red;
-
-    final String message = successCount > 0
-        ? 'Imported $successCount channel${successCount > 1 ? 's' : ''}${failureCount > 0 ? ', $failureCount failed' : ''}'
-        : 'Failed to import channels';
-
-    _showSnack(message, color: snackColor);
-
-    // Keep dialog open for 2 seconds to show summary
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (mounted) {
-      setState(() {
-        _isBusy = false;
-        _status = '';
-      });
-      _closeProgressDialog();
-    }
-  }
-
-  Future<List<CommunityChannel>?> _promptCommunityChannelsDialog() async {
-    if (!mounted) {
-      return null;
-    }
-
-    return showDialog<List<CommunityChannel>>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return CommunityChannelsDialog(isAndroidTv: _isAndroidTv);
-      },
-    );
-  }
-
-  Future<Uint8List> _readPickedFileBytes(PlatformFile file) async {
-    if (file.bytes != null && file.bytes!.isNotEmpty) {
-      return Uint8List.fromList(file.bytes!);
-    }
-
-    final stream = file.readStream;
-    if (stream != null) {
-      final builder = BytesBuilder(copy: false);
-      await for (final chunk in stream) {
-        builder.add(chunk);
-      }
-      return builder.takeBytes();
-    }
-
-    throw const FormatException('Unable to access file bytes.');
-  }
-
-  Future<bool> _importChannelBytes({
-    required String sourceName,
-    required Uint8List bytes,
-    required _ChannelImportOrigin origin,
-  }) async {
-    final type = _determineImportType(sourceName, bytes);
-    if (type == null) {
-      _showSnack(
-        'Unsupported file type. Select a .zip, .yaml, .txt, or .debrify file.',
-        color: Colors.orange,
-      );
-      return false;
-    }
-
-    switch (type) {
-      case _ChannelImportType.zip:
-        return await _importZipBytes(bytes, origin);
-      case _ChannelImportType.yaml:
-        return await _importYamlBytes(sourceName, bytes, origin);
-      case _ChannelImportType.text:
-        return await _importTextBytes(sourceName, bytes);
-      case _ChannelImportType.debrify:
-        return await _importDebrifyBytes(sourceName, bytes);
-    }
-  }
-
-  Future<bool> _safeImportChannelBytes({
-    required String sourceName,
-    required Uint8List bytes,
-    required _ChannelImportOrigin origin,
-  }) async {
-    try {
-      return await _importChannelBytes(
-        sourceName: sourceName,
-        bytes: bytes,
-        origin: origin,
-      );
-    } on FormatException catch (error) {
-      _showSnack(error.message, color: Colors.red);
-      return false;
-    } catch (error) {
-      // Corrupt archives throw ArchiveException/RangeError etc., not just
-      // FormatException — surface them the same way instead of leaving the
-      // import flow (and any progress dialog) stuck.
-      _showSnack('Failed to import channel file: $error', color: Colors.red);
-      return false;
-    }
-  }
-
-  _ChannelImportType? _determineImportType(String sourceName, Uint8List bytes) {
-    final lower = sourceName.toLowerCase();
-
-    // Check extension first
-    if (lower.endsWith('.zip')) {
-      return _ChannelImportType.zip;
-    }
-    if (lower.endsWith('.debrify')) {
-      return _ChannelImportType.debrify;
-    }
-    if (lower.endsWith('.yaml') || lower.endsWith('.yml')) {
-      return _ChannelImportType.yaml;
-    }
-    if (lower.endsWith('.txt')) {
-      return _ChannelImportType.text;
-    }
-
-    // Fallback: check file signature for zip
-    if (bytes.length >= 2 && bytes[0] == 0x50 && bytes[1] == 0x4b) {
-      // PK — zip signature
-      return _ChannelImportType.zip;
-    }
-
-    // Smart content detection for unknown extensions
-    try {
-      final content = utf8.decode(bytes).trim();
-      if (content.startsWith('debrify://')) {
-        return _ChannelImportType.debrify;
-      }
-    } catch (_) {
-      // If UTF-8 decode fails, not a text file
-    }
-
-    return null;
-  }
-
-  Future<bool> _importZipBytes(
-    Uint8List bytes,
-    _ChannelImportOrigin origin,
-  ) async {
-    final dialogLabel = origin == _ChannelImportOrigin.device
-        ? 'Importing zip…'
-        : 'Processing zip…';
-
-    _showChannelCreationDialog(dialogLabel);
-    _updateProgress(['Parsing archive…']);
-
-    final parsed = await _parseZipInBackground(bytes);
-    _updateProgress([
-      'Parsed ${parsed.channels.length} channel(s)',
-      'Saving channel data…',
-    ]);
-
-    final persistence = await _persistImportedZipChannels(parsed.channels);
-    _updateProgress([
-      'Saved ${persistence.successes.length} channel(s)',
-      if (persistence.failures.isNotEmpty)
-        '${persistence.failures.length} channel(s) failed',
-    ]);
-
-    await _showZipImportSummary(parsed, persistence);
-    return persistence.successes.isNotEmpty;
-  }
-
-  Future<bool> _importYamlBytes(
-    String sourceName,
-    Uint8List bytes,
-    _ChannelImportOrigin origin,
-  ) async {
-    final content = utf8.decode(bytes);
-    final dialogLabel = origin == _ChannelImportOrigin.device
-        ? 'Importing YAML…'
-        : 'Processing YAML…';
-
-    _showChannelCreationDialog(dialogLabel);
-    _updateProgress(['Parsing YAML…']);
-
-    final channel = await _parseYamlInBackground(sourceName, content);
-
-    final parsed = DebrifyTvZipImportResult(
-      channels: [channel],
-      failures: const [],
-    );
-
-    _updateProgress(['Saving channel…']);
-    final persistence = await _persistImportedZipChannels(parsed.channels);
-    _updateProgress([
-      'Saved ${persistence.successes.length} channel(s)',
-      if (persistence.failures.isNotEmpty)
-        '${persistence.failures.length} channel(s) failed',
-    ]);
-
-    await _showZipImportSummary(parsed, persistence);
-    return persistence.successes.isNotEmpty;
-  }
-
-  Future<bool> _importTextBytes(String sourceName, Uint8List bytes) async {
-    final content = utf8.decode(bytes);
-    final keywords = <String>[];
-    final seen = <String>{};
-
-    final lines = const LineSplitter().convert(content);
-    for (final rawLine in lines) {
-      final parts = rawLine.split(',');
-      for (final part in parts) {
-        final trimmed = part.trim();
-        if (trimmed.isEmpty) {
-          continue;
-        }
-        if (trimmed.length > 120) {
-          throw FormatException(
-            'Keyword exceeds 120 characters: "${trimmed.substring(0, trimmed.length > 40 ? 40 : trimmed.length)}${trimmed.length > 40 ? '…' : ''}"',
-          );
-        }
-        final lower = trimmed.toLowerCase();
-        if (seen.add(lower)) {
-          keywords.add(trimmed);
-        }
-      }
-    }
-
-    if (keywords.isEmpty) {
-      throw const FormatException('No keywords found in the selected file.');
-    }
-    if (keywords.length > 500) {
-      throw const FormatException(
-        'Channel files must contain 500 keywords or fewer.',
-      );
-    }
-
-    final baseName = _stripExtension(sourceName);
-    final lowerExisting = _channels.map((c) => c.name.toLowerCase()).toSet();
-    final channelName = _resolveUniqueChannelName(baseName, lowerExisting);
-    final now = DateTime.now();
-    final channel = DebrifyTvChannel(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      name: channelName,
-      keywords: keywords,
-      avoidNsfw: true,
-      channelNumber: 0,
-      createdAt: now,
-      updatedAt: now,
-    );
-
-    await _createOrUpdateChannel(channel, isEdit: false);
-    _showSnack('Imported "${channel.name}"', color: Colors.green);
-    return true;
-  }
-
-  Future<bool> _importDebrifyBytes(
-    String sourceName,
-    Uint8List bytes, {
-    bool showDialog = true,
-    bool showSummary = true,
-  }) async {
-    final content = utf8.decode(bytes).trim();
-
-    // Validate debrify link format
-    if (!MagnetYamlService.isMagnetLink(content)) {
-      throw const FormatException('Not a valid Debrify link.');
-    }
-
-    if (showDialog) {
-      _showChannelCreationDialog('Importing channel…');
-    }
-    _updateProgress(['Decoding debrify link…']);
-
-    // Decode debrify link
-    final result = MagnetYamlService.decode(content);
-
-    _updateProgress(['Parsing channel data…']);
-
-    // Parse the decoded YAML
-    final channel = await _parseYamlInBackground(
-      result.channelName,
-      result.yamlContent,
-    );
-
-    final parsed = DebrifyTvZipImportResult(
-      channels: [channel],
-      failures: const [],
-    );
-
-    _updateProgress(['Saving channel…']);
-    final persistence = await _persistImportedZipChannels(parsed.channels);
-    _updateProgress([
-      'Saved ${persistence.successes.length} channel(s)',
-      if (persistence.failures.isNotEmpty)
-        '${persistence.failures.length} channel(s) failed',
-    ]);
-
-    if (showSummary) {
-      await _showZipImportSummary(parsed, persistence);
-    }
-    return persistence.successes.isNotEmpty;
-  }
-
-  Future<void> _importDebrifyLinkDirectly(String debrifyLink) async {
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _isBusy = true;
-      _status = 'Decoding debrify link…';
-    });
-
-    try {
-      final bytes = utf8.encode(debrifyLink);
-      await _safeImportChannelBytes(
-        sourceName: 'debrify_link',
-        bytes: Uint8List.fromList(bytes),
-        origin: _ChannelImportOrigin.url,
-      );
-    } catch (error) {
-      _showSnack(
-        'Import failed: ${_formatImportError(error)}',
-        color: Colors.red,
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isBusy = false;
-          _status = '';
-        });
-        _closeProgressDialog();
-      }
-    }
-  }
-
-  String _stripExtension(String name) {
-    final dotIndex = name.lastIndexOf('.');
-    if (dotIndex <= 0) {
-      return name.trim();
-    }
-    return name.substring(0, dotIndex).trim();
-  }
-
-  String _guessExtensionFromHeaders(Map<String, String> headers) {
-    final contentType =
-        headers['content-type'] ?? headers['Content-Type'] ?? 'text/plain';
-    if (contentType.contains('zip')) {
-      return 'zip';
-    }
-    if (contentType.contains('yaml') || contentType.contains('yml')) {
-      return 'yaml';
-    }
-    return 'txt';
-  }
-
-  Future<String?> _promptImportUrl() async {
-    if (!mounted) {
-      return null;
-    }
-
-    final controller = TextEditingController();
-    String? errorText;
-    final FocusNode urlFocusNode = FocusNode(
-      debugLabel: 'ZipUrlField',
-      onKeyEvent: (node, event) {
-        if (event is! KeyDownEvent) {
-          return KeyEventResult.ignored;
-        }
-        final focusContext = node.context;
-        if (focusContext == null) {
-          return KeyEventResult.ignored;
-        }
-        final key = event.logicalKey;
-        if (key == LogicalKeyboardKey.arrowDown) {
-          FocusScope.of(focusContext).nextFocus();
-          return KeyEventResult.handled;
-        }
-        if (key == LogicalKeyboardKey.arrowUp) {
-          FocusScope.of(focusContext).previousFocus();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-    );
-
-    final result = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final app = AppThemeScope.of(context);
-            return DebrifyTvSpotlightDialog(
-              eyebrow: 'Import · from a link',
-              title: 'Paste a channel link',
-              subtitle:
-                  'Use a debrify:// share link or an http(s) URL to a supported channel file.',
-              icon: Icons.link_rounded,
-              maxWidth: 650,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TvTextField(
-                    controller: controller,
-                    accent: app.settings.accent,
-                    keyboardGround: app.youtube.keyboardPanel,
-                    keyboardInk: app.core.tx,
-                    keyboardInkOnAccent: app.inkOn(app.settings.accent),
-                    decoration: InputDecoration(
-                      labelText: 'Debrify link or file URL',
-                      hintText: 'debrify://channel?... or https://...',
-                      errorText: errorText,
-                    ),
-                    autofocus: true,
-                    focusNode: urlFocusNode,
-                    keyboardType: TextInputType.url,
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    'Supported: .zip · .yaml · .txt · .debrify',
-                    style: TextStyle(
-                      fontFamily: 'JetBrainsMono',
-                      fontSize: 10,
-                      color: app.debrifyTv.textFaint,
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                DebrifyTvDialogButton(
-                  label: 'Cancel',
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                ),
-                DebrifyTvDialogButton(
-                  label: 'Import',
-                  icon: Icons.download_rounded,
-                  tone: DebrifyTvDialogButtonTone.primary,
-                  onPressed: () {
-                    final candidate = controller.text.trim();
-                    if (candidate.isEmpty) {
-                      setState(() {
-                        errorText = 'Enter a link or URL to continue.';
-                      });
-                      return;
-                    }
-
-                    // Check if it's a debrify link (valid and accepted)
-                    if (MagnetYamlService.isMagnetLink(candidate)) {
-                      Navigator.of(dialogContext).pop(candidate);
-                      return;
-                    }
-
-                    // Otherwise validate as http(s) URL
-                    try {
-                      final parsed = Uri.parse(candidate);
-                      if (!parsed.hasAbsolutePath ||
-                          (parsed.scheme != 'http' &&
-                              parsed.scheme != 'https')) {
-                        throw const FormatException('invalid');
-                      }
-                    } catch (_) {
-                      setState(() {
-                        errorText =
-                            'Enter a valid debrify:// link or http(s) URL.';
-                      });
-                      return;
-                    }
-
-                    Navigator.of(dialogContext).pop(candidate);
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    controller.dispose();
-    urlFocusNode.dispose();
-    return result;
-  }
-
-  Future<ZipImportPersistenceResult> _persistImportedZipChannels(
-    List<DebrifyTvZipImportedChannel> channels,
-  ) async {
-    if (channels.isEmpty) {
-      return const ZipImportPersistenceResult(successes: [], failures: []);
-    }
-
-    final successes = <ZipImportSuccess>[];
-    final failures = <ZipImportSaveFailure>[];
-
-    final List<DebrifyTvChannel> appendedChannels = [];
-    final Map<String, DebrifyTvChannelCacheEntry> appendedCache = {};
-
-    final Set<String> usedNames = _channels
-        .map((channel) => channel.name.toLowerCase())
-        .toSet();
-
-    for (final channel in channels) {
-      if (channel.normalizedKeywords.length > _maxChannelKeywords) {
-        failures.add(
-          ZipImportSaveFailure(
-            sourceName: channel.sourceName,
-            channelName: channel.channelName,
-            reason:
-                'Channel has ${channel.normalizedKeywords.length} keywords; maximum supported is $_maxChannelKeywords.',
-          ),
-        );
-        continue;
-      }
-
-      final uniqueName = _resolveUniqueChannelName(
-        channel.channelName,
-        usedNames,
-      );
-      final channelId = DateTime.now().microsecondsSinceEpoch.toString();
-      final now = DateTime.now();
-
-      final record = DebrifyTvChannelRecord(
-        channelId: channelId,
-        name: uniqueName,
-        keywords: channel.displayKeywords,
-        avoidNsfw: channel.avoidNsfw,
-        channelNumber: 0,
-        createdAt: now,
-        updatedAt: now,
-      );
-
-      final entry = DebrifyTvChannelCacheEntry(
-        version: 1,
-        channelId: channelId,
-        normalizedKeywords: channel.normalizedKeywords,
-        fetchedAt: now.millisecondsSinceEpoch,
-        status: DebrifyTvCacheStatus.ready,
-        errorMessage: null,
-        torrents: channel.torrents,
-        keywordStats: channel.keywordStats,
-      );
-
-      try {
-        await DebrifyTvRepository.instance.upsertChannel(record);
-        await DebrifyTvCacheService.saveEntry(entry);
-
-        appendedChannels.add(
-          DebrifyTvChannel(
-            id: channelId,
-            name: uniqueName,
-            keywords: const <String>[],
-            avoidNsfw: channel.avoidNsfw,
-            channelNumber: 0,
-            createdAt: now,
-            updatedAt: now,
-          ),
-        );
-        appendedCache[channelId] = entry;
-
-        successes.add(
-          ZipImportSuccess(
-            sourceName: channel.sourceName,
-            channelName: uniqueName,
-            keywordCount: channel.normalizedKeywords.length,
-            torrentCount: channel.torrentCount,
-          ),
-        );
-
-        usedNames.add(uniqueName.toLowerCase());
-      } catch (error) {
-        failures.add(
-          ZipImportSaveFailure(
-            sourceName: channel.sourceName,
-            channelName: uniqueName,
-            reason: _formatImportError(error),
-          ),
-        );
-      }
-    }
-
-    if (appendedChannels.isNotEmpty && mounted) {
-      setState(() {
-        _channels = [..._channels, ...appendedChannels];
-        _channelCache.addAll(appendedCache);
-      });
-      await _loadChannels();
-    }
-
-    return ZipImportPersistenceResult(successes: successes, failures: failures);
-  }
-
-  Future<void> _showZipImportSummary(
-    DebrifyTvZipImportResult parsed,
-    ZipImportPersistenceResult persisted,
-  ) async {
-    if (!mounted) {
-      return;
-    }
-
-    final bool hasSuccess = persisted.successes.isNotEmpty;
-    final List<ZipImportFailureDisplay> failureRows = [
-      ...parsed.failures.map(
-        (failure) => ZipImportFailureDisplay(
-          sourceName: failure.entryName,
-          reason: failure.reason,
-        ),
-      ),
-      ...persisted.failures.map(
-        (failure) => ZipImportFailureDisplay(
-          sourceName: failure.sourceName.isEmpty
-              ? failure.channelName
-              : failure.sourceName,
-          reason: failure.reason,
-        ),
-      ),
-    ];
-
-    if (!hasSuccess && failureRows.isEmpty) {
-      _showSnack(
-        'No channels found in the selected zip.',
-        color: Colors.orange,
-      );
-      return;
-    }
-
-    final String dialogTitle = hasSuccess
-        ? 'Zip import complete'
-        : 'Zip import failed';
-
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        final tv = AppThemeScope.of(dialogContext).debrifyTv;
-        return DebrifyTvSpotlightDialog(
-          eyebrow: 'Import · summary',
-          title: dialogTitle,
-          subtitle: hasSuccess
-              ? 'Your imported channels are ready to tune.'
-              : 'Nothing was changed. Review the issues below and try again.',
-          icon: hasSuccess
-              ? Icons.check_circle_outline_rounded
-              : Icons.error_outline_rounded,
-          maxWidth: 680,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (hasSuccess) ...[
-                Text(
-                  'Imported ${persisted.successes.length} channel${persisted.successes.length == 1 ? '' : 's'}.',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                ...persisted.successes.map(
-                  (success) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    leading: const Icon(Icons.check_circle, size: 20),
-                    title: Text(success.channelName),
-                    subtitle: Text(
-                      '${success.keywordCount} keyword${success.keywordCount == 1 ? '' : 's'} • ${success.torrentCount} torrent${success.torrentCount == 1 ? '' : 's'}',
-                      style: TextStyle(color: tv.textDim),
-                    ),
-                  ),
-                ),
-              ] else ...[
-                const Text('No channels were imported.'),
-              ],
-              if (failureRows.isNotEmpty) ...[
-                if (hasSuccess) const SizedBox(height: 12),
-                Text(
-                  'Issues detected:',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 6),
-                ...failureRows.map(
-                  (failure) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    leading: const Icon(
-                      Icons.error_outline,
-                      color: Colors.orange,
-                      size: 20,
-                    ),
-                    title: Text(failure.sourceName),
-                    subtitle: Text(failure.reason),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          actions: [
-            DebrifyTvDialogButton(
-              autofocus: true,
-              label: 'Close',
-              onPressed: () => Navigator.of(dialogContext).pop(),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (hasSuccess) {
-      final String names = persisted.successes
-          .map((success) => '"${success.channelName}"')
-          .join(', ');
-      _showSnack(
-        'Imported ${persisted.successes.length} channel${persisted.successes.length == 1 ? '' : 's'}: $names',
-        color: Colors.green,
-      );
-    } else if (failureRows.isNotEmpty) {
-      _showSnack(
-        'Zip import failed: ${failureRows.first.reason}',
-        color: Colors.red,
-      );
-    }
-  }
-
-  String _resolveUniqueChannelName(
-    String baseName,
-    Set<String> usedLowerCaseNames,
-  ) {
-    final String trimmed = baseName.trim().isEmpty
-        ? 'Imported Channel'
-        : baseName.trim();
-    String candidate = trimmed;
-    int suffix = 2;
-    while (usedLowerCaseNames.contains(candidate.toLowerCase())) {
-      candidate = '$trimmed ($suffix)';
-      suffix++;
-    }
-    return candidate;
-  }
 
   Future<void> _handleEditChannel(DebrifyTvChannel channel) async {
     await _syncProviderAvailability();
@@ -3017,261 +1681,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     }
   }
 
-  Future<void> _handleShareChannelAsMagnet(DebrifyTvChannel channel) async {
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _isBusy = true;
-      _status = 'Generating channel link…';
-    });
-
-    try {
-      // Generate YAML for sharing (with cached torrents from DB)
-      final yamlContent = await _generateChannelYaml(channel);
-
-      // Encode as magnet link
-      final magnetLink = MagnetYamlService.encode(
-        yamlContent: yamlContent,
-        channelName: channel.name,
-      );
-
-      // Estimate sizes for display
-      final estimatedSize = MagnetYamlService.estimateMagnetLinkSize(
-        yamlContent,
-      );
-      final compressionRatio = MagnetYamlService.getCompressionRatio(
-        yamlContent,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      // Show magnet link dialog
-      await showDialog(
-        context: context,
-        builder: (dialogContext) {
-          final app = AppThemeScope.of(dialogContext);
-          final tv = app.debrifyTv;
-          return DebrifyTvSpotlightDialog(
-            eyebrow:
-                'Share channel · ${channel.channelNumber.toString().padLeft(2, '0')}',
-            title: channel.name,
-            subtitle:
-                'Anyone on Debrify can paste this link to import the channel and its saved pool.',
-            icon: Icons.share_rounded,
-            maxWidth: 720,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: tv.dialogDeep.withValues(alpha: .72),
-                    borderRadius: app.shape.br(16),
-                    border: Border.all(color: tv.hairline),
-                  ),
-                  child: SelectableText(
-                    magnetLink,
-                    style: TextStyle(
-                      color: tv.textDim,
-                      fontSize: 10,
-                      height: 1.5,
-                      fontFamily: 'JetBrainsMono',
-                    ),
-                    maxLines: 6,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _SpotlightMetaPill(
-                      label: 'Link size',
-                      value: _formatBytes(estimatedSize),
-                    ),
-                    _SpotlightMetaPill(
-                      label: 'Compression',
-                      value: '${compressionRatio.toStringAsFixed(1)}×',
-                    ),
-                    _SpotlightMetaPill(
-                      label: 'Keywords',
-                      value: '${channel.keywords.length}',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            actions: [
-              DebrifyTvDialogButton(
-                label: 'Close',
-                onPressed: () => Navigator.of(dialogContext).pop(),
-              ),
-              DebrifyTvDialogButton(
-                autofocus: true,
-                label: 'Copy link',
-                icon: Icons.copy_rounded,
-                tone: DebrifyTvDialogButtonTone.primary,
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: magnetLink));
-                  _showSnack('Channel link copied!', color: Colors.green);
-                  Navigator.of(dialogContext).pop();
-                },
-              ),
-            ],
-          );
-        },
-      );
-    } catch (error) {
-      _showSnack(
-        'Failed to generate channel link: ${_formatImportError(error)}',
-        color: Colors.red,
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isBusy = false;
-          _status = '';
-        });
-      }
-    }
-  }
-
-  Future<String> _generateChannelYaml(DebrifyTvChannel channel) async {
-    // Generate YAML with channel config and torrent data from cache
-    final buffer = StringBuffer();
-    buffer.writeln('channel_name: "${channel.name}"');
-    buffer.writeln('avoid_nsfw: ${channel.avoidNsfw}');
-    buffer.writeln('');
-    buffer.writeln('keywords:');
-
-    // Get cached torrents from database (not in-memory cache)
-    final cacheEntry = await DebrifyTvCacheService.getEntry(channel.id);
-    final cachedTorrents = cacheEntry?.torrents ?? <CachedTorrent>[];
-    for (final keyword in channel.keywords) {
-      buffer.writeln('  $keyword:');
-
-      // Find all torrents that match this keyword (case-insensitive)
-      final keywordLower = keyword.toLowerCase();
-      final matchingTorrents = cachedTorrents
-          .where((t) => t.keywords.contains(keywordLower))
-          .toList();
-
-      // Dedupe by infohash
-      final seen = <String>{};
-      final uniqueTorrents = matchingTorrents.where((t) {
-        if (seen.contains(t.infohash)) return false;
-        seen.add(t.infohash);
-        return true;
-      }).toList();
-
-      if (uniqueTorrents.isEmpty) {
-        buffer.writeln('    torrents: []');
-      } else {
-        buffer.writeln('    torrents:');
-        for (final torrent in uniqueTorrents) {
-          // Output full torrent object for proper import
-          buffer.writeln('      - infohash: ${torrent.infohash}');
-          buffer.writeln('        name: "${_escapeYamlString(torrent.name)}"');
-          buffer.writeln('        size_bytes: ${torrent.sizeBytes}');
-          buffer.writeln('        created_unix: ${torrent.createdUnix}');
-          buffer.writeln('        seeders: ${torrent.seeders}');
-          buffer.writeln('        leechers: ${torrent.leechers}');
-          buffer.writeln('        completed: ${torrent.completed}');
-          buffer.writeln('        scraped_date: ${torrent.scrapedDate}');
-          if (torrent.sources.isNotEmpty) {
-            buffer.writeln(
-              '        sources: [${torrent.sources.map((s) => '"$s"').join(', ')}]',
-            );
-          }
-        }
-      }
-    }
-
-    return buffer.toString();
-  }
-
-  String _escapeYamlString(String value) {
-    // Escape special characters for YAML string
-    return value
-        .replaceAll('\\', '\\\\')
-        .replaceAll('"', '\\"')
-        .replaceAll('\n', '\\n')
-        .replaceAll('\r', '\\r')
-        .replaceAll('\t', '\\t');
-  }
-
-  Future<void> _handleDeleteAllChannels() async {
-    if (_channels.isEmpty) {
-      _showSnack('No channels to delete.', color: Colors.orange);
-      return;
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    // Set busy immediately to block any other interactions
-    setState(() {
-      _isBusy = true;
-    });
-
-    final confirmed = await _showDebrifyTvConfirmation(
-      eyebrow: 'Channel library · ${_channels.length} channels',
-      title: 'Delete every channel?',
-      message:
-          'This removes all ${_channels.length} channels and every cached title pool. This cannot be undone.',
-      confirmLabel: 'Delete all',
-      icon: Icons.delete_sweep_outlined,
-      danger: true,
-    );
-
-    // Wait for TWO frames to ensure UI has fully updated and touch events are processed
-    if (mounted) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      await WidgetsBinding.instance.endOfFrame;
-      await WidgetsBinding.instance.endOfFrame;
-    }
-
-    if (confirmed != true || !mounted) {
-      // Release busy state if cancelled
-      if (mounted) {
-        setState(() {
-          _isBusy = false;
-        });
-      }
-      return;
-    }
-
-    setState(() {
-      _isBusy = true;
-    });
-
-    try {
-      await DebrifyTvRepository.instance.clearAll();
-      await DebrifyTvCacheService.clearAll();
-      setState(() {
-        _channels = const <DebrifyTvChannel>[];
-        _channelCache.clear();
-      });
-      _showSnack('All channels deleted.', color: Colors.orange);
-    } catch (error) {
-      _showSnack(
-        'Failed to delete channels: ${_formatImportError(error)}',
-        color: Colors.red,
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isBusy = false;
-        });
-      }
-    }
-  }
 
   Future<void> _createOrUpdateChannel(
     DebrifyTvChannel channel, {
@@ -7087,12 +5496,12 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       busy: _isBusy,
       onQuickPlay: _showQuickPlayDialog,
       onAdd: _handleAddChannel,
-      onImport: _handleImportChannels,
-      onExport: _handleExportChannels,
+      onImport: _importExport.handleImportChannels,
+      onExport: _importExport.handleExportChannels,
       onSettings: _showGlobalSettingsDialog,
       onWatch: _watchChannel,
       onEdit: _handleEditChannel,
-      onShare: _handleShareChannelAsMagnet,
+      onShare: _importExport.handleShareChannelAsMagnet,
       onDelete: _handleDeleteChannel,
       onToggleFavorite: _toggleChannelFavorite,
       onChannelFocused: _onSpotlightChannelFocused,
@@ -7198,16 +5607,16 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   void _handleTopMenuAction(_DebrifyTvTopMenuAction action) {
     switch (action) {
       case _DebrifyTvTopMenuAction.import:
-        _handleImportChannels();
+        _importExport.handleImportChannels();
         break;
       case _DebrifyTvTopMenuAction.export:
-        _handleExportChannels();
+        _importExport.handleExportChannels();
         break;
       case _DebrifyTvTopMenuAction.add:
         _handleAddChannel();
         break;
       case _DebrifyTvTopMenuAction.deleteAll:
-        _handleDeleteAllChannels();
+        _importExport.handleDeleteAllChannels();
         break;
       case _DebrifyTvTopMenuAction.settings:
         _showGlobalSettingsDialog();
@@ -8033,7 +6442,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
                     } else if (value == 'edit') {
                       _handleEditChannel(channel);
                     } else if (value == 'share') {
-                      _handleShareChannelAsMagnet(channel);
+                      _importExport.handleShareChannelAsMagnet(channel);
                     } else if (value == 'delete') {
                       _handleDeleteChannel(channel);
                     }
@@ -8150,7 +6559,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
                 tag: 'Link',
                 onPressed: () {
                   Navigator.of(dialogContext).pop();
-                  _handleShareChannelAsMagnet(channel);
+                  _importExport.handleShareChannelAsMagnet(channel);
                 },
               ),
               const SizedBox(height: 10),
@@ -9592,14 +8001,66 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     _showSnack(message, color: color);
   }
 
-  String _formatTorboxError(Object error) {
-    return error.toString().replaceFirst('Exception: ', '').trim();
+  @override
+  bool get importExportMounted => mounted;
+
+  @override
+  BuildContext get importExportContext => context;
+
+  @override
+  bool get isAndroidTv => _isAndroidTv;
+
+  @override
+  bool get isBusy => _isBusy;
+
+  @override
+  set isBusy(bool value) => _isBusy = value;
+
+  @override
+  set status(String value) => _status = value;
+
+  @override
+  List<DebrifyTvChannel> get channels => _channels;
+
+  @override
+  set channels(List<DebrifyTvChannel> value) => _channels = value;
+
+  @override
+  Map<String, DebrifyTvChannelCacheEntry> get channelCache => _channelCache;
+
+  @override
+  void applyImportState(VoidCallback fn) {
+    if (!mounted) return;
+    setState(fn);
   }
 
-  String _formatImportError(Object error) {
-    if (error is FormatException) {
-      return error.message;
-    }
+  @override
+  void showImportProgress(String title) {
+    _showChannelCreationDialog(title);
+  }
+
+  @override
+  Future<void> reloadImportedChannels() => _loadChannels();
+
+  @override
+  Future<void> createImportedTextChannel(DebrifyTvChannel channel) {
+    return _createOrUpdateChannel(channel, isEdit: false);
+  }
+
+  @override
+  Future<bool> confirmDeleteAll({required int channelCount}) {
+    return _showDebrifyTvConfirmation(
+      eyebrow: 'Channel library · $channelCount channels',
+      title: 'Delete every channel?',
+      message:
+          'This removes all $channelCount channels and every cached title pool. This cannot be undone.',
+      confirmLabel: 'Delete all',
+      icon: Icons.delete_sweep_outlined,
+      danger: true,
+    );
+  }
+
+  String _formatTorboxError(Object error) {
     return error.toString().replaceFirst('Exception: ', '').trim();
   }
 

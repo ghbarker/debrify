@@ -331,6 +331,11 @@ is an editor mirror, not the source of truth. How to add a provider:
   Channel cache warmer: `lib/services/debrify_tv/channel_cache_warmer.dart`
   (`ChannelCacheWarmer` — keyword warm, cache read/filter, TorBox window,
   quality filter, playback select; snacks stay on the host).
+  Channel import/export: `lib/services/debrify_tv/channel_import_export.dart`
+  (`ChannelImportExport` + `ChannelImportExportHost` / `ProgressSink`;
+  zip/yaml/text/community/url/share/delete-all). Dialogs:
+  `lib/screens/debrify_tv/import_export_dialogs.dart`. Create/update
+  single-channel dialogs and watch flows stay on the host.
   Default pick / overlay strings: `lib/services/cloud/magic_tv_provider.dart`
   (`playbackPrecedence` mapped to `real_debrid`; display stays `Torbox` / `Real Debrid`).
 - Data: `lib/models/debrify_tv/`, `lib/services/debrify_tv_repository.dart`,

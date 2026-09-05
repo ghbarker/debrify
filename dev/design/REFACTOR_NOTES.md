@@ -363,6 +363,29 @@ behaviour and must be restored, not kept as quirks.
   `unrestrict['filesize']` so the filesize read is not a new allowlist
   miss. Same relocate pattern as G1 `cacheExtent` / M1-0 WatchSession.
 
+### M1-2 · Channel import/export
+
+- **Device-picker cancel leaves busy.** After the mode dialog sets
+  `_isBusy`, a cancelled `FilePicker` returns without clearing it.
+  URL / community cancel paths do clear busy. Keep.
+- **Text import cap is 500; persist cap is 1000.** A `.txt` file rejects
+  more than 500 keywords; zip/yaml persist uses `maxChannelKeywords`
+  (1000). Keep both.
+- **Unknown text is not sniffed as yaml/txt.** `_determineImportType`
+  only content-sniffs `debrify://` after extension + PK signature.
+- **YAML `sources` are quoted as-is**, not passed through
+  `_escapeYamlString` (only `name` is escaped). Keep.
+- **Create/update dialogs and watch flows stayed** (M1-5 / M1-3).
+  `_showDebrifyTvConfirmation` stays on the host so single-channel
+  delete can share it; delete-all calls `confirmDeleteAll`.
+- **Shape / analyze path identity.** Three `SORT_CHILD_PROPERTIES_LAST`
+  infos moved to `import_export_dialogs.dart`; three
+  `USE_BUILD_CONTEXT_SYNCHRONOUSLY` infos moved to
+  `channel_import_export.dart`. `import_export_dialogs.dart` added to
+  the shape manifest (residue 0; two `app.shape.br` sites).
+- **`cloud_magic_tv_unlock_pin_test` still scans host + warmer.**
+  Import/export does not touch `unrestrict` / `filesize`.
+
 ### S2-4 · App style prefs
 
 - **Discover layout + source keys moved** so Leaves hit 800. They are
