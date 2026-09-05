@@ -6,6 +6,7 @@ import 'package:debrify/models/profiles/connection_resource.dart';
 import 'package:debrify/models/profiles/profile_policy.dart';
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/search_screen.dart';
+import 'package:debrify/screens/see_all/continue_watching_see_all_screen.dart';
 import 'package:debrify/screens/see_all/mdblist_see_all_screen.dart';
 import 'package:debrify/services/main_page_bridge.dart';
 import 'package:debrify/services/profiles/connection_resource_service.dart';
@@ -26,9 +27,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import 'my_watchlist_loader_origin_test.dart' show HeldWatchlistPreferences;
-
 import 'favourites_rows_origin_test.dart'
     show prepareFavourites, pumpFavourites, closeFavourites;
+
+// Holds only the actual legacy binding migration write, after the bound reader
+// has begun. Other preference reads are not held by this transport.
+class HeldBoundMigration extends InMemorySharedPreferencesStore {
+  HeldBoundMigration(super.data) : super.withData();
+  final entered = Completer<void>();
+  final release = Completer<void>();
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (key == 'flutter.series_source_tt1234567') {
+      entered.complete();
+      await release.future;
+    }
+    return super.setValue(valueType, key, value);
+  }
+}
 
 // Existing manifest IO seam only. The actual mounted SearchScreen owns source
 // revision, preference writes and handoff priority; none is reproduced here.
@@ -143,6 +159,82 @@ Future<void> mountDiscover(WidgetTester tester, {bool tv = false}) async {
 }
 
 void main() {
+  for (final dispose in [false, true]) {
+    testWidgets('origin Discover held bound completion dispose=$dispose', (
+      tester,
+    ) async {
+      final previousPrint = debugPrint;
+      final messages = <String>[];
+      debugPrint = (message, {wrapWidth}) {
+        if (message != null) messages.add(message);
+      };
+      addTearDown(() => debugPrint = previousPrint);
+      await prepareFavourites(tester);
+      StremioService.instance.invalidateCache();
+      addTearDown(StremioService.instance.invalidateCache);
+      await StorageService.setDiscoverDefaultSource('cw');
+      await StorageService.setHomeContinueWatchingEnabled(true);
+      await StorageService.saveContinueWatchingItem(
+        imdbId: 'tt1234567',
+        title: 'Bound origin',
+        contentType: 'movie',
+      );
+      await mountDiscover(tester);
+      final item = tester
+          .widget<CatalogItemTile>(find.byType(CatalogItemTile))
+          .item;
+      // This public widget callback closes over the actual host's live bound
+      // map. Retaining it lets disposal coverage observe cache writes too.
+      final isBound = tester
+          .widget<ContinueWatchingSeeAllScreen>(
+            find.byType(ContinueWatchingSeeAllScreen),
+          )
+          .isBound!;
+      expect(isBound(item), isFalse);
+      final prefs = await SharedPreferences.getInstance();
+      final hold = HeldBoundMigration({
+        for (final key in prefs.getKeys()) 'flutter.$key': prefs.get(key)!,
+        'flutter.series_source_tt1234567': jsonEncode({
+          'torrentHash': 'origin',
+          'torrentName': 'Origin',
+          'debridService': 'real_debrid',
+          'debridTorrentId': 'origin',
+          'boundAt': 1,
+        }),
+      });
+      final previous = SharedPreferencesStorePlatform.instance;
+      SharedPreferences.resetStatic();
+      SharedPreferencesStorePlatform.instance = hold;
+      addTearDown(() {
+        SharedPreferencesStorePlatform.instance = previous;
+        SharedPreferences.resetStatic();
+      });
+      MainPageBridge.notifyPlaybackReturned();
+      await pumpFavourites(tester);
+      expect(hold.entered.isCompleted, isTrue);
+      expect(isBound(item), isFalse);
+      if (dispose) await tester.pumpWidget(const SizedBox.shrink());
+      hold.release.complete();
+      await pumpFavourites(tester);
+      expect(isBound(item), !dispose);
+      // Refresh errors are caught by the host. Observe that channel too so a
+      // forbidden setState attempt cannot hide behind the existing catch.
+      expect(
+        messages.where((m) => m.contains('post-playback refresh failed')),
+        isEmpty,
+      );
+      if (!dispose) {
+        expect(
+          tester
+              .widget<CatalogItemTile>(find.byType(CatalogItemTile))
+              .hasBoundSource,
+          isTrue,
+        );
+      }
+      await closeFavourites(tester);
+      expect(tester.takeException(), isNull);
+    });
+  }
   TestWidgetsFlutterBinding.ensureInitialized();
   testWidgets(
     'origin hydrated Discover default applies when no newer intent exists',
