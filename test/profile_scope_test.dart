@@ -23,7 +23,10 @@ void main() {
     final relative = p.join('db', 'catalog.sqlite');
     expect(
       scope.fileIn(Directory.systemTemp, 'data', relative).path,
-      p.join(scope.storageDirectory(Directory.systemTemp, 'data').path, relative),
+      p.join(
+        scope.storageDirectory(Directory.systemTemp, 'data').path,
+        relative,
+      ),
     );
   });
 }

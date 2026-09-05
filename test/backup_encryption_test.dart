@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:debrify/services/backup_restore_service.dart';
+import 'package:debrify/services/iptv_catalog_db.dart';
 import 'package:debrify/services/debrify_tv_database.dart';
 import 'package:debrify/services/iptv_media_store.dart';
 import 'package:debrify/services/secret_vault.dart';
@@ -219,6 +220,8 @@ void main() {
 
     tearDownAll(() async {
       await DebrifyTvDatabase.instance.closeScope();
+      // Building the IPTV payload also opens the catalog's separate WAL handle.
+      await IptvCatalogDb.closeScope();
       IptvMediaStore.debugResetMigration();
       await deleteTempTree(storageRoot);
     });
