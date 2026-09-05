@@ -47,8 +47,8 @@ import 'package:flutter_test/flutter_test.dart';
 ///   (url/community cancel paths do clear it).
 /// * Delete-all on an empty library snacks and returns without a
 ///   confirm dialog.
-/// * Create/update single-channel dialogs and watch flows stay on the
-///   host (M1-5 / M1-3).
+/// * Create/update single-channel dialogs and initial watch stay on the host;
+///   channel switching delegates to ChannelSwitchFlow after M1-4.
 String _host() => File(
   'lib/screens/magic_tv_screen.dart',
 ).readAsStringSync().replaceAll('\r\n', '\n');
@@ -587,7 +587,7 @@ void main() {
     });
   });
 
-  group('create/update and watch flows stay on the host', () {
+  group('create/update and watch routing ownership', () {
     test('single-channel create/update dialogs are not this move', () {
       expect(host, contains('Future<void> _handleAddChannel()'));
       expect(host, contains('Future<void> _handleEditChannel('));
@@ -596,9 +596,22 @@ void main() {
       expect(host, contains('Future<void> _handleDeleteChannel('));
     });
 
-    test('watch flows stay on the host (M1-3)', () {
+    test('host watch delegates channel switching to the M1-4 flow', () {
+      // Supplemental source inventory, not executable origin behavior proof.
       expect(host, contains('_watchChannel('));
-      expect(host, contains('Future<Map<String, dynamic>?> _switchToChannel('));
+      final flow = File('lib/screens/debrify_tv/channel_switch_flow.dart')
+          .readAsStringSync();
+      const signature = 'Future<Map<String, dynamic>?> switchToChannel(';
+      bool hasSwitchMethod(String source) => source.contains(signature);
+      expect(hasSwitchMethod(flow), isTrue);
+      expect(host, contains('ChannelSwitchFlow(_watchBindings)'));
+      expect(host, contains('_channelSwitch.requestNextChannel()'));
+      expect(host, contains('_channelSwitch.requestChannelById(channelId)'));
+      expect(host, contains('requestNextChannel: _requestNextChannel,'));
+      expect(host, contains('requestChannelById: _requestChannelById,'));
+      // Removing the actual method must fail the same presence guard, even
+      // while its call sites and the host delegates still exist.
+      expect(hasSwitchMethod(flow.replaceFirst(signature, '')), isFalse);
     });
   });
 }
