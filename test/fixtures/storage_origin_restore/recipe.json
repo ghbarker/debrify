@@ -710,6 +710,81 @@
           "value": "{\"video_movie\":{\"type\":\"video\",\"positionMs\":25.0,\"durationMs\":100,\"updatedAt\":2},\"series_clean_show\":{\"type\":\"series\",\"title\":\"Clean Show\",\"finishedEpisodes\":{\"1\":{\"1\":false}},\"seasons\":{\"1\":{\"1\":{\"positionMs\":95,\"durationMs\":100,\"updatedAt\":4},\"2\":{\"positionMs\":25,\"durationMs\":100,\"updatedAt\":5}}},\"executionSamples\":[{}]},\"series_clean_show_s01_1080p\":{\"type\":\"series\",\"title\":\"Clean.Show.S01.1080p\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":80,\"durationMs\":100,\"updatedAt\":9}}}},\"series_full_only_s01_1080p\":{\"type\":\"series\",\"title\":\"Full Only\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":50,\"durationMs\":100,\"updatedAt\":6}}}},\"series_partial_first\":{\"type\":\"series\",\"title\":\"Partial\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":10,\"durationMs\":100,\"updatedAt\":7}}}},\"series_partial_second\":{\"type\":\"series\",\"title\":\"Partial Show\",\"seasons\":{\"1\":{\"1\":{\"positionMs\":90,\"durationMs\":100,\"updatedAt\":8}}}}}"
         }
       }
+    },
+    "repair": {
+      "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+      "namedKeyCount": 7,
+      "excludedKeys": [],
+      "values": {
+        "movie_completion_threshold": 90,
+        "episode_completion_threshold": 75,
+        "playback_state_v1": "{\"video_done\":{\"type\":\"video\",\"title\":\"Done\",\"imdbId\":\"tt-done\",\"positionMs\":90,\"durationMs\":100,\"updatedAt\":3},\"video_alias\":{\"type\":\"video\",\"title\":\"Done Alias\",\"imdbId\":\" TT-DONE \",\"positionMs\":5,\"durationMs\":100,\"updatedAt\":2},\"video_partial\":{\"type\":\"video\",\"title\":\"Partial\",\"imdbId\":\"tt-partial\",\"positionMs\":89,\"durationMs\":100,\"updatedAt\":4},\"series\":{\"type\":\"series\",\"title\":\"Repair Series\",\"imdbId\":\"tt-series\",\"finishedEpisodes\":{\"1\":{\"3\":false,\"4\":null}},\"seasons\":{\"1\":{\"1\":{\"positionMs\":75,\"durationMs\":100,\"updatedAt\":5},\"2\":{\"positionMs\":0,\"durationMs\":100,\"updatedAt\":9},\"3\":{\"positionMs\":0,\"durationMs\":100,\"updatedAt\":8},\"4\":{\"positionMs\":0,\"durationMs\":1,\"updatedAt\":7},\"5\":{\"positionMs\":74,\"durationMs\":100,\"updatedAt\":6}}},\"executionSamples\":[{}]}}",
+        "finished_movies_v1": [
+          "tt-existing"
+        ],
+        "continue_watching_v1": "[{\"imdbId\":\" TT-DONE \",\"title\":\"Done\"},{\"imdbId\":\"tt-partial\",\"title\":\"Partial\"}]",
+        "playback_completion_migration_generation": 0,
+        "resume_ghost_purge_generation": 0
+      },
+      "inputValues": {
+        "playback_state_v1": "{\"video_done\":{\"type\":\"video\",\"title\":\"Done\",\"imdbId\":\"tt-done\",\"positionMs\":90,\"durationMs\":100,\"updatedAt\":3,\"url\":\"https://example.invalid/never-play\",\"headers\":{\"Synthetic\":\"not-a-secret\"},\"localPath\":\"SYNTHETIC_PATH\"},\"video_alias\":{\"type\":\"video\",\"title\":\"Done Alias\",\"imdbId\":\" TT-DONE \",\"positionMs\":5,\"durationMs\":100,\"updatedAt\":2},\"video_partial\":{\"type\":\"video\",\"title\":\"Partial\",\"imdbId\":\"tt-partial\",\"positionMs\":89,\"durationMs\":100,\"updatedAt\":4},\"series\":{\"type\":\"series\",\"title\":\"Repair Series\",\"imdbId\":\"tt-series\",\"finishedEpisodes\":{\"1\":{\"3\":false,\"4\":null}},\"seasons\":{\"1\":{\"1\":{\"positionMs\":75,\"durationMs\":100,\"updatedAt\":5,\"videoUrl\":\"https://example.invalid/never-episode\"},\"2\":{\"positionMs\":0,\"durationMs\":100,\"updatedAt\":9},\"3\":{\"positionMs\":0,\"durationMs\":100,\"updatedAt\":8},\"4\":{\"positionMs\":0,\"durationMs\":1,\"updatedAt\":7},\"5\":{\"positionMs\":74,\"durationMs\":100,\"updatedAt\":6}}},\"executionSamples\":[{\"streamUrl\":\"https://example.invalid/never-stream\",\"httpHeaders\":{\"Synthetic\":\"x\"},\"localUri\":\"SYNTHETIC_URI\",\"filePath\":\"SYNTHETIC_FILE\"}]}}"
+      },
+      "markerKeys": [
+        "playback_completion_migration_generation",
+        "resume_ghost_purge_generation"
+      ],
+      "repairOrder": [
+        "migrateExistingPlaybackCompletionThresholds",
+        "purgeUnwatchedResumeGhosts"
+      ],
+      "afterMigration": {
+        "movie_completion_threshold": 90,
+        "episode_completion_threshold": 75,
+        "playback_state_v1": "{\"video_partial\":{\"type\":\"video\",\"title\":\"Partial\",\"imdbId\":\"tt-partial\",\"positionMs\":89,\"durationMs\":100,\"updatedAt\":4},\"series\":{\"type\":\"series\",\"title\":\"Repair Series\",\"imdbId\":\"tt-series\",\"finishedEpisodes\":{\"1\":{\"3\":false,\"4\":null,\"1\":{\"finishedAt\":5}}},\"seasons\":{\"1\":{\"1\":{\"positionMs\":100,\"durationMs\":100,\"updatedAt\":5},\"2\":{\"positionMs\":0,\"durationMs\":100,\"updatedAt\":9},\"3\":{\"positionMs\":0,\"durationMs\":100,\"updatedAt\":8},\"4\":{\"positionMs\":0,\"durationMs\":1,\"updatedAt\":7},\"5\":{\"positionMs\":74,\"durationMs\":100,\"updatedAt\":6}}},\"executionSamples\":[{}]}}",
+        "finished_movies_v1": [
+          "tt-done",
+          "tt-existing"
+        ],
+        "continue_watching_v1": "[{\"imdbId\":\"tt-partial\",\"title\":\"Partial\"}]",
+        "playback_completion_migration_generation": 1,
+        "resume_ghost_purge_generation": 0
+      },
+      "afterPurge": {
+        "movie_completion_threshold": 90,
+        "episode_completion_threshold": 75,
+        "playback_state_v1": "{\"video_partial\":{\"type\":\"video\",\"title\":\"Partial\",\"imdbId\":\"tt-partial\",\"positionMs\":89,\"durationMs\":100,\"updatedAt\":4},\"series\":{\"type\":\"series\",\"title\":\"Repair Series\",\"imdbId\":\"tt-series\",\"finishedEpisodes\":{\"1\":{\"3\":false,\"4\":null,\"1\":{\"finishedAt\":5}}},\"seasons\":{\"1\":{\"1\":{\"positionMs\":100,\"durationMs\":100,\"updatedAt\":5},\"3\":{\"positionMs\":0,\"durationMs\":100,\"updatedAt\":8},\"4\":{\"positionMs\":0,\"durationMs\":1,\"updatedAt\":7},\"5\":{\"positionMs\":74,\"durationMs\":100,\"updatedAt\":6}}},\"executionSamples\":[{}]}}",
+        "finished_movies_v1": [
+          "tt-done",
+          "tt-existing"
+        ],
+        "continue_watching_v1": "[{\"imdbId\":\"tt-partial\",\"title\":\"Partial\"}]",
+        "playback_completion_migration_generation": 1,
+        "resume_ghost_purge_generation": 1
+      },
+      "sqliteResumeKeys": [
+        "Done",
+        "Done Alias",
+        "Partial"
+      ],
+      "mutations": {
+        "repair-key": {
+          "key": "movie_completion_threshold",
+          "operation": "rename"
+        },
+        "repair-type": {
+          "key": "episode_completion_threshold",
+          "operation": "replace",
+          "value": "75"
+        }
+      },
+      "negativeInputs": {
+        "marker-type": {
+          "resume_ghost_purge_generation": "1"
+        },
+        "episode-type": {
+          "playback_state_v1": "{\"video_done\":{\"type\":\"video\",\"title\":\"Done\",\"imdbId\":\"tt-done\",\"positionMs\":90,\"durationMs\":100,\"updatedAt\":3},\"video_alias\":{\"type\":\"video\",\"title\":\"Done Alias\",\"imdbId\":\" TT-DONE \",\"positionMs\":5,\"durationMs\":100,\"updatedAt\":2},\"video_partial\":{\"type\":\"video\",\"title\":\"Partial\",\"imdbId\":\"tt-partial\",\"positionMs\":89,\"durationMs\":100,\"updatedAt\":4},\"series\":{\"type\":\"series\",\"title\":\"Repair Series\",\"imdbId\":\"tt-series\",\"finishedEpisodes\":{\"1\":{\"3\":false,\"4\":null}},\"seasons\":{\"1\":{\"1\":{\"positionMs\":\"75\",\"durationMs\":100,\"updatedAt\":5},\"2\":{\"positionMs\":0,\"durationMs\":100,\"updatedAt\":9},\"3\":{\"positionMs\":0,\"durationMs\":100,\"updatedAt\":8},\"4\":{\"positionMs\":0,\"durationMs\":1,\"updatedAt\":7},\"5\":{\"positionMs\":74,\"durationMs\":100,\"updatedAt\":6}}},\"executionSamples\":[{}]}}"
+        }
+      }
     }
   }
 }
