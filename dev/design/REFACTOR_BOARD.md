@@ -354,3 +354,8 @@ CurrentWindowednext origin3197reviewC0/mapAmpere/read-onlyriskWegener; Locke bou
 160exact3197 independent24/scoped/all3CIpassed. Did we make a difference?Eightlaterrefillcases improvefiniteproof; more remainsquickdequeue/reentrant/cast/nativegaps,zeroLeaves.163productfrozen121/docs7638 draft:19net/202leaf,24retainedbindingsQ2expiry; exact5prod+1inventorypath authorized. CItestfailedpendingverifiedcast-diagnostic relocation; no addedallowance/baselinewritegrantedyet,C0review. Gods8614/11926/3317/3666/2899 vs19070/16278/10716/9963/7905 unchanged.
 Watchlistownerreleased3prod+keysweep,161162prerequisite; debugannotationonly movedstorefield removal explicitlyapproved,hostcompat annotationsretained. No CODEMAPlocksheld. No user blocker.
 
+
+### #161 merged; Windowed baseline relocation authorized
+161exact74d independent40/scoped/provenance/all3CIpassed. Did we make a difference?17actualWatchlistcases protectduplicates/cap/errorquirks; more remains162fixture/164owner. ZeroLeaves/gods8614/11926/3317/3666/2899 vs19070/16278/10716/9963/7905 unchanged.
+163C0independentlyverified436diagnosticmultisetidentical. AuthorizedONLY tool/analyze_baseline.json diagnostics[5] path/line/column oldTBmetadata572:46(actual466) toWindowed192:44;452entries/allotherfieldsunchanged. Ampere separate10329297/final63889 appliesrelocation, no extraallowance/castfix; freshCIpending/fullreview.164Watchlistownerreviewpending/e006+docs2dda;allCODEMAPlocksreleased. No user blocker.
+
