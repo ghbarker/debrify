@@ -10,6 +10,7 @@ import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:debrify/services/storage/social_prefs.dart';
 import 'package:debrify/services/storage/storage_key_ownership.dart';
 import 'package:debrify/services/storage/stremio_tv_prefs.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Value-only consts on StorageService that are not persisted key names.
@@ -42,7 +43,6 @@ const _aliases = {
   'CloudSecretPrefs.allDebridApiKey': CloudSecretPrefs.allDebridApiKey,
   'CloudSecretPrefs.pikpakEmail': CloudSecretPrefs.pikpakEmail,
   'CloudSecretPrefs.pikpakPassword': CloudSecretPrefs.pikpakPassword,
-  'TrackingScrobblePreferences.key': 'tracking_scrobble_targets',
   'TvOsRecoveryLimits.myWatchlistPreferenceKey': 'my_watchlist_v1',
 };
 
@@ -114,6 +114,7 @@ Set<String> allDiscoveredPrefsKeys() => {
   ...PlayerPrefs.ownedKeys,
   ...IptvPrefs.ownedKeys,
   ...AppStylePrefs.ownedKeys,
+  ...TrackingPrefs.ownedKeys,
   ...inlinePrefsKeysOnStorageService(),
   ...interpolatedPrefsKeys,
 };
@@ -134,6 +135,7 @@ void main() {
     final fromPlayer = PlayerPrefs.ownedKeys;
     final fromIptv = IptvPrefs.ownedKeys;
     final fromAppStyle = AppStylePrefs.ownedKeys;
+    final fromTracking = TrackingPrefs.ownedKeys;
     final fromInline = {
       ...inlinePrefsKeysOnStorageService(),
       ...interpolatedPrefsKeys,
@@ -212,6 +214,7 @@ void main() {
     expectStore(fromPlayer, StorageKeyStore.playerPrefs, 'PlayerPrefs');
     expectStore(fromIptv, StorageKeyStore.iptvPrefs, 'IptvPrefs');
     expectStore(fromAppStyle, StorageKeyStore.appStylePrefs, 'AppStylePrefs');
+    expectStore(fromTracking, StorageKeyStore.trackingPrefs, 'TrackingPrefs');
 
     final extracted = {
       ...fromCloud,
@@ -223,6 +226,7 @@ void main() {
       ...fromPlayer,
       ...fromIptv,
       ...fromAppStyle,
+      ...fromTracking,
     };
     final residual = declared.difference(extracted);
     for (final key in residual) {

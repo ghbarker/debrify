@@ -46,6 +46,11 @@ enum StorageKeyStore {
 
   /// Sync style caches ([AppStylePrefs]): looks, docks, chrome, launch ident.
   appStylePrefs,
+
+  /// Tracking source policy, catalog-sync switches, and Trakt / Simkl /
+  /// MDBList credentials ([TrackingPrefs]). Owns `trackingSourceRevision`.
+  /// [home_tick_sources] stays on [homePrefs].
+  trackingPrefs,
 }
 
 class StorageKeyOwnership {
@@ -54,8 +59,8 @@ class StorageKeyOwnership {
   /// Persisted name → owning store. The key set is the pin.
   static const Map<String, StorageKeyStore> byKey = {
     'explicitly_watched_series_v1': StorageKeyStore.storageService,
-    'tracking_scrobble_targets': StorageKeyStore.storageService,
-    'watch_progress_source': StorageKeyStore.storageService,
+    'tracking_scrobble_targets': StorageKeyStore.trackingPrefs,
+    'watch_progress_source': StorageKeyStore.trackingPrefs,
     'home_tick_sources': StorageKeyStore.homePrefs,
     'defaults_generation': StorageKeyStore.storageService,
     'real_debrid_endpoint': StorageKeyStore.providerCredentialPrefs,
@@ -249,14 +254,14 @@ class StorageKeyOwnership {
     'play_button_mode': StorageKeyStore.storageService,
     'auto_bind_series_packs_on_play': StorageKeyStore.storageService,
     'series_auto_pin_on_play': StorageKeyStore.storageService,
-    'trakt_access_token': StorageKeyStore.storageService,
-    'trakt_refresh_token': StorageKeyStore.storageService,
-    'trakt_username': StorageKeyStore.storageService,
-    'trakt_token_expiry': StorageKeyStore.storageService,
-    'simkl_access_token': StorageKeyStore.storageService,
-    'simkl_username': StorageKeyStore.storageService,
-    'mdblist_api_key': StorageKeyStore.storageService,
-    'mdblist_username': StorageKeyStore.storageService,
+    'trakt_access_token': StorageKeyStore.trackingPrefs,
+    'trakt_refresh_token': StorageKeyStore.trackingPrefs,
+    'trakt_username': StorageKeyStore.trackingPrefs,
+    'trakt_token_expiry': StorageKeyStore.trackingPrefs,
+    'simkl_access_token': StorageKeyStore.trackingPrefs,
+    'simkl_username': StorageKeyStore.trackingPrefs,
+    'mdblist_api_key': StorageKeyStore.trackingPrefs,
+    'mdblist_username': StorageKeyStore.trackingPrefs,
     'remote_control_enabled': StorageKeyStore.storageService,
     'remote_intro_shown': StorageKeyStore.storageService,
     'remote_tv_device_name': StorageKeyStore.storageService,
@@ -291,8 +296,8 @@ class StorageKeyOwnership {
     'tv_sidebar_style': StorageKeyStore.appStylePrefs,
     'desktop_sidebar_style': StorageKeyStore.appStylePrefs,
     'sidebar_configuration_v1': StorageKeyStore.appStylePrefs,
-    'mdblist_saved_clones': StorageKeyStore.storageService,
-    'mdblist_sync_checkpoint_v1': StorageKeyStore.storageService,
+    'mdblist_saved_clones': StorageKeyStore.trackingPrefs,
+    'mdblist_sync_checkpoint_v1': StorageKeyStore.trackingPrefs,
     'download_tree_uri_v1': StorageKeyStore.storageService,
     'download_tree_display_name_v1': StorageKeyStore.storageService,
     'download_dir_path_v1': StorageKeyStore.storageService,
@@ -323,10 +328,10 @@ class StorageKeyOwnership {
     'stremio_addon_hub_enabled': StorageKeyStore.storageService,
     'detail_trailer_autoplay_enabled': StorageKeyStore.storageService,
     'tv_trailer_underlay_enabled': StorageKeyStore.storageService,
-    'tracking_progress_fallback_notice': StorageKeyStore.storageService,
-    'trakt_sync_catalog_items': StorageKeyStore.storageService,
-    'simkl_sync_catalog_items': StorageKeyStore.storageService,
-    'mdblist_sync_catalog_items': StorageKeyStore.storageService,
+    'tracking_progress_fallback_notice': StorageKeyStore.trackingPrefs,
+    'trakt_sync_catalog_items': StorageKeyStore.trackingPrefs,
+    'simkl_sync_catalog_items': StorageKeyStore.trackingPrefs,
+    'mdblist_sync_catalog_items': StorageKeyStore.trackingPrefs,
     'debrify_tv_keyword_threshold': StorageKeyStore.debrifyTvPrefs,
     'debrify_tv_min_torrents_per_keyword': StorageKeyStore.debrifyTvPrefs,
     'detail_trailer_audio_enabled': StorageKeyStore.storageService,

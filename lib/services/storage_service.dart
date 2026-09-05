@@ -5,11 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:synchronized/synchronized.dart';
 import 'dart:convert';
 import 'debrid_service.dart';
-import 'hide_watched_prefs.dart';
 import 'iptv_channel_order.dart';
 import 'iptv_media_store.dart';
 import 'profiles/profile_preferences.dart';
-import 'profiles/profile_credential_facade.dart';
 import 'profiles/profile_collection_resource_facade.dart';
 import 'profiles/connection_resource_service.dart';
 import 'profiles/profile_authorization.dart';
@@ -30,8 +28,8 @@ import '../models/tv_hero_artwork_quality.dart';
 import '../models/tracking_source.dart';
 import '../utils/json_isolate.dart';
 import '../utils/platform_util.dart';
-import 'tracking_scrobble_preferences.dart';
 import 'storage/cloud_secret_prefs.dart';
+import 'storage/tracking_prefs.dart';
 import 'storage/debrify_tv_prefs.dart';
 import 'storage/home_prefs.dart';
 import 'storage/social_prefs.dart';
@@ -73,12 +71,14 @@ enum TvRenderQuality {
 class StorageService {
   static const String _explicitlyWatchedSeriesKey =
       'explicitly_watched_series_v1';
-  static const String trackingScrobbleTargetsKey =
-      TrackingScrobblePreferences.key;
-  static const String watchProgressSourceKey = 'watch_progress_source';
+  static String get trackingScrobbleTargetsKey =>
+      TrackingPrefs.trackingScrobbleTargetsKey;
+  static String get watchProgressSourceKey =>
+      TrackingPrefs.watchProgressSourceKey;
 
   /// Invalidates policy consumers that keep an in-memory snapshot.
-  static final ValueNotifier<int> trackingSourceRevision = ValueNotifier(0);
+  static ValueNotifier<int> get trackingSourceRevision =>
+      TrackingPrefs.trackingSourceRevision;
 
   /// Tracker/account watched-title invalidation. Kept separate from local
   /// playback so finishing an episode never reloads entire remote histories.
@@ -360,22 +360,6 @@ class StorageService {
   /// key's value — a `false` there was the packs toggle bleeding through, never
   /// an auto-pin choice (no UI ever wrote it directly).
   static const String _seriesAutoPinOnPlayKey = 'series_auto_pin_on_play';
-
-  // Trakt settings
-  static const String _traktAccessTokenKey = 'trakt_access_token';
-  static const String _traktRefreshTokenKey = 'trakt_refresh_token';
-  static const String _traktUsernameKey = 'trakt_username';
-  static const String _traktTokenExpiryKey = 'trakt_token_expiry';
-
-  // Simkl settings. No refresh-token/expiry keys — PIN-issued Simkl tokens
-  // don't expire (see SimklService).
-  static const String _simklAccessTokenKey = 'simkl_access_token';
-  static const String _simklUsernameKey = 'simkl_username';
-
-  // MDBList settings. Auth is a single API key (from mdblist.com/preferences),
-  // so there's no token/expiry — just the key and a cached display username.
-  static const String _mdblistApiKeyKey = 'mdblist_api_key';
-  static const String _mdblistUsernameKey = 'mdblist_username';
 
   // Remote Control Settings
   static const String _remoteControlEnabledKey = 'remote_control_enabled';
@@ -933,140 +917,20 @@ class StorageService {
   static Future<void> deleteAllDebridApiKey() =>
       CloudSecretPrefs.delete(_allDebridApiKey);
 
-  // MDBList API key + cached username helpers
-  static Future<String?> getMdblistApiKey({
-    bool forRemoteTransfer = false,
-  }) async {
-    if (forRemoteTransfer) {
-      final credential = await ProfileCredentialFacade.readForRemoteTransfer(
-        _mdblistApiKeyKey,
-      );
-      if (credential.handled) return credential.value;
-    }
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _mdblistApiKeyKey);
-  }
-
-  static Future<bool> hasMdblistCredential() =>
-      _credentialConfigured(_mdblistApiKeyKey, () => getMdblistApiKey());
-
-  static Future<bool> _credentialConfigured(
-    String key,
-    Future<String?> Function() legacyRead,
-  ) async {
-    final presence = await ProfileCredentialFacade.isConfigured(key);
-    if (presence.handled) return presence.configured;
-    final value = await legacyRead();
-    return value != null && value.isNotEmpty;
-  }
-
-  static Future<void> saveMdblistApiKey(String apiKey) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _mdblistApiKeyKey, apiKey);
-  }
-
-  static Future<String?> getMdblistUsername() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_mdblistUsernameKey);
-  }
-
-  static Future<void> setMdblistUsername(String? username) async {
-    final prefs = await ProfilePreferences.instance();
-    if (username == null || username.isEmpty) {
-      await prefs.remove(_mdblistUsernameKey);
-    } else {
-      await prefs.setString(_mdblistUsernameKey, username);
-    }
-  }
-
-  /// Clears all stored MDBList auth (key + cached username).
-  static Future<void> clearMdblistAuth() async {
-    final prefs = await ProfilePreferences.instance();
-    if (!await ProfileCredentialFacade.disconnect(_mdblistApiKeyKey)) {
-      await prefs.remove(_mdblistApiKeyKey);
-    }
-    await prefs.remove(_mdblistUsernameKey);
-    await prefs.remove(_mdblistSavedClonesKey);
-    await prefs.remove(_mdblistSyncCheckpointKey);
-    await fallbackDisconnectedProgressSource(TrackingSource.mdblist);
-  }
-
-  // Maps a source MDBList list id -> the id of the static list we CLONED it
-  // into on the user's account (the "Save" action). Lets the Save button know a
-  // list is already saved and which clone to delete on un-save. JSON object of
-  // {"<sourceId>": clonedId}.
-  static const String _mdblistSavedClonesKey = 'mdblist_saved_clones';
-
-  static Future<Map<int, int>> getMdblistSavedClones() async {
-    final prefs = await ProfilePreferences.instance();
-    final raw = prefs.getString(_mdblistSavedClonesKey);
-    if (raw == null || raw.isEmpty) return {};
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map) return {};
-      final out = <int, int>{};
-      decoded.forEach((k, v) {
-        final sid = int.tryParse(k.toString());
-        final cid = v is int ? v : (v is num ? v.toInt() : null);
-        if (sid != null && cid != null) out[sid] = cid;
-      });
-      return out;
-    } catch (_) {
-      return {};
-    }
-  }
-
-  static Future<void> setMdblistSavedClone(int sourceId, int clonedId) async {
-    final prefs = await ProfilePreferences.instance();
-    final map = await getMdblistSavedClones();
-    map[sourceId] = clonedId;
-    await prefs.setString(
-      _mdblistSavedClonesKey,
-      jsonEncode(map.map((k, v) => MapEntry(k.toString(), v))),
-    );
-  }
-
-  static Future<void> removeMdblistSavedClone(int sourceId) async {
-    final prefs = await ProfilePreferences.instance();
-    final map = await getMdblistSavedClones();
-    map.remove(sourceId);
-    await prefs.setString(
-      _mdblistSavedClonesKey,
-      jsonEncode(map.map((k, v) => MapEntry(k.toString(), v))),
-    );
-  }
-
-  /// Retire the old clone-as-like UI bookkeeping. Remote lists are deliberately
-  /// untouched: an old clone is now simply a normal user-owned list.
-  static Future<void> retireMdblistSavedCloneMarkers() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_mdblistSavedClonesKey);
-  }
-
-  static const String _mdblistSyncCheckpointKey = 'mdblist_sync_checkpoint_v1';
-
-  static Future<Map<String, dynamic>?> getMdblistSyncCheckpoint() async {
-    final prefs = await ProfilePreferences.instance();
-    final raw = prefs.getString(_mdblistSyncCheckpointKey);
-    if (raw == null || raw.isEmpty) return null;
-    try {
-      final value = jsonDecode(raw);
-      return value is Map<String, dynamic> ? value : null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  static Future<void> setMdblistSyncCheckpoint(
-    Map<String, dynamic>? value,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    if (value == null) {
-      await prefs.remove(_mdblistSyncCheckpointKey);
-    } else {
-      await prefs.setString(_mdblistSyncCheckpointKey, jsonEncode(value));
-    }
-  }
+  // MDBList — forwarding façade; bodies live on TrackingPrefs.
+  static Future<String?> getMdblistApiKey({bool forRemoteTransfer = false}) =>
+      TrackingPrefs.getMdblistApiKey(forRemoteTransfer: forRemoteTransfer);
+  static Future<bool> hasMdblistCredential() => TrackingPrefs.hasMdblistCredential();
+  static Future<void> saveMdblistApiKey(String apiKey) => TrackingPrefs.saveMdblistApiKey(apiKey);
+  static Future<String?> getMdblistUsername() => TrackingPrefs.getMdblistUsername();
+  static Future<void> setMdblistUsername(String? username) => TrackingPrefs.setMdblistUsername(username);
+  static Future<void> clearMdblistAuth() => TrackingPrefs.clearMdblistAuth();
+  static Future<Map<int, int>> getMdblistSavedClones() => TrackingPrefs.getMdblistSavedClones();
+  static Future<void> setMdblistSavedClone(int sourceId, int clonedId) => TrackingPrefs.setMdblistSavedClone(sourceId, clonedId);
+  static Future<void> removeMdblistSavedClone(int sourceId) => TrackingPrefs.removeMdblistSavedClone(sourceId);
+  static Future<void> retireMdblistSavedCloneMarkers() => TrackingPrefs.retireMdblistSavedCloneMarkers();
+  static Future<Map<String, dynamic>?> getMdblistSyncCheckpoint() => TrackingPrefs.getMdblistSyncCheckpoint();
+  static Future<void> setMdblistSyncCheckpoint(Map<String, dynamic>? value) => TrackingPrefs.setMdblistSyncCheckpoint(value);
 
   static Future<bool> getAllDebridIntegrationEnabled() =>
       ProviderCredentialPrefs.getAllDebridIntegrationEnabled();
@@ -4392,135 +4256,19 @@ class StorageService {
       SocialPrefs.setRedditHiddenFromNav(value);
 
 
-  // Tracking source policy -------------------------------------------------
-
-  /// Reads the new master scrobble switches. On first read, adopt the retired
-  /// per-tracker catalog switches once. An absent legacy value means ON: that
-  /// matches interactive connection and old Trakt/Simkl restore behavior.
-  static Future<Set<TrackingSource>> getTrackingScrobbleTargets() =>
-      TrackingScrobblePreferences.readCurrent();
-
-  static Future<void> setTrackingScrobbleTargets(
-    Set<TrackingSource> value,
-  ) async {
-    await TrackingScrobblePreferences.writeCurrent(value);
-    trackingSourceRevision.value++;
-  }
-
-  /// Turns on scrobbling for a newly connected tracker without disturbing the
-  /// user's choices for any other tracker. Connection flows call this after
-  /// authentication succeeds so reconnecting restores the provider's default
-  /// ON state even when it had previously been unticked.
-  static Future<void> enableTrackingScrobbleTarget(
-    TrackingSource source,
-  ) async {
-    final changed = await TrackingScrobblePreferences.enableCurrent(source);
-    if (changed) trackingSourceRevision.value++;
-  }
-
-  static Future<WatchProgressSource> getWatchProgressSource() async {
-    final prefs = await ProfilePreferences.instance();
-    final stored = prefs.getString(watchProgressSourceKey);
-    return WatchProgressSource.values.firstWhere(
-      (source) => source.name == stored,
-      orElse: () => WatchProgressSource.smart,
-    );
-  }
-
-  static Future<void> setWatchProgressSource(WatchProgressSource value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(watchProgressSourceKey, value.name);
-    trackingSourceRevision.value++;
-  }
-
-  static Future<bool> fallbackDisconnectedProgressSource(
-    TrackingSource disconnected,
-  ) async {
-    final current = await getWatchProgressSource();
-    final owns = switch (current) {
-      WatchProgressSource.trakt => disconnected == TrackingSource.trakt,
-      WatchProgressSource.simkl => disconnected == TrackingSource.simkl,
-      WatchProgressSource.mdblist => disconnected == TrackingSource.mdblist,
-      _ => false,
-    };
-    if (!owns) return false;
-    await setWatchProgressSource(WatchProgressSource.smart);
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool('tracking_progress_fallback_notice', true);
-    return true;
-  }
-
-  static Future<bool> takeTrackingProgressFallbackNotice() async {
-    final prefs = await ProfilePreferences.instance();
-    final pending = prefs.getBool('tracking_progress_fallback_notice') ?? false;
-    if (pending) await prefs.remove('tracking_progress_fallback_notice');
-    return pending;
-  }
-
-  static Future<Set<TrackingSource>> getHomeTickSources() =>
-      HomePrefs.getHomeTickSources();
-
-  static Future<void> setHomeTickSources(Set<TrackingSource> value) async {
-    await HomePrefs.setHomeTickSources(value);
-    trackingSourceRevision.value++;
-  }
-
-  static Future<Map<String, dynamic>> buildTrackingPreferencesPayload() async {
-    final scrobble = await getTrackingScrobbleTargets();
-    final progress = await getWatchProgressSource();
-    final ticks = await getHomeTickSources();
-    return <String, dynamic>{
-      'scrobble_targets': scrobble
-          .map((source) => source.storageName)
-          .toList(growable: false),
-      'progress_source': progress.name,
-      'home_tick_sources': ticks
-          .map((source) => source.storageName)
-          .toList(growable: false),
-      'hide_watched': await HideWatchedPrefs.read(),
-    };
-  }
-
-  /// Re-adopts the legacy per-tracker switches after restoring an OLD backup
-  /// with no tracking payload. The masters were already seeded on first policy
-  /// read at app start, so without this the restored legacy values — notably an
-  /// MDBList sync-catalog OFF — would be silently ignored.
-  static Future<void> reseedTrackingScrobbleTargetsFromLegacy() async {
-    await TrackingScrobblePreferences.reseedCurrentFromLegacy();
-    trackingSourceRevision.value++;
-  }
-
-  /// Applies only explicitly present new-format preferences. Old backups omit
-  /// this object; [reseedTrackingScrobbleTargetsFromLegacy] runs on that
-  /// restore path instead so the restored legacy switches are re-adopted by
-  /// [getTrackingScrobbleTargets], preserving the absent-key migration rule.
-  static Future<void> applyTrackingPreferencesPayload(
-    Map<dynamic, dynamic> payload,
-  ) async {
-    final scrobble = payload['scrobble_targets'];
-    if (scrobble is List) {
-      await setTrackingScrobbleTargets(<TrackingSource>{
-        for (final value in scrobble.whereType<String>())
-          if (TrackingSourceStorageName.parse(value) case final source?) source,
-      });
-    }
-    final progress = payload['progress_source'];
-    if (progress is String) {
-      final parsed = WatchProgressSource.values
-          .where((source) => source.name == progress)
-          .firstOrNull;
-      if (parsed != null) await setWatchProgressSource(parsed);
-    }
-    final ticks = payload['home_tick_sources'];
-    if (ticks is List) {
-      await setHomeTickSources(<TrackingSource>{
-        for (final value in ticks.whereType<String>())
-          if (TrackingSourceStorageName.parse(value) case final source?) source,
-      });
-    }
-    final hideWatched = payload['hide_watched'];
-    if (hideWatched is bool) await HideWatchedPrefs.setEnabled(hideWatched);
-  }
+  // Tracking source policy — forwarding façade; bodies live on TrackingPrefs.
+  static Future<Set<TrackingSource>> getTrackingScrobbleTargets() => TrackingPrefs.getTrackingScrobbleTargets();
+  static Future<void> setTrackingScrobbleTargets(Set<TrackingSource> value) => TrackingPrefs.setTrackingScrobbleTargets(value);
+  static Future<void> enableTrackingScrobbleTarget(TrackingSource source) => TrackingPrefs.enableTrackingScrobbleTarget(source);
+  static Future<WatchProgressSource> getWatchProgressSource() => TrackingPrefs.getWatchProgressSource();
+  static Future<void> setWatchProgressSource(WatchProgressSource value) => TrackingPrefs.setWatchProgressSource(value);
+  static Future<bool> fallbackDisconnectedProgressSource(TrackingSource disconnected) => TrackingPrefs.fallbackDisconnectedProgressSource(disconnected);
+  static Future<bool> takeTrackingProgressFallbackNotice() => TrackingPrefs.takeTrackingProgressFallbackNotice();
+  static Future<Set<TrackingSource>> getHomeTickSources() => TrackingPrefs.getHomeTickSources();
+  static Future<void> setHomeTickSources(Set<TrackingSource> value) => TrackingPrefs.setHomeTickSources(value);
+  static Future<Map<String, dynamic>> buildTrackingPreferencesPayload() => TrackingPrefs.buildTrackingPreferencesPayload();
+  static Future<void> reseedTrackingScrobbleTargetsFromLegacy() => TrackingPrefs.reseedTrackingScrobbleTargetsFromLegacy();
+  static Future<void> applyTrackingPreferencesPayload(Map<dynamic, dynamic> payload) => TrackingPrefs.applyTrackingPreferencesPayload(payload);
 
   static Future<String?> getRedditLastSubreddit() =>
       SocialPrefs.getRedditLastSubreddit();
@@ -4531,153 +4279,32 @@ class StorageService {
   static Future<void> clearRedditAuth() => SocialPrefs.clearRedditAuth();
 
 
-  // Trakt Settings
-  static Future<bool> getTraktSyncCatalogItems() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool('trakt_sync_catalog_items') ?? false;
-  }
-
-  static Future<void> setTraktSyncCatalogItems(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool('trakt_sync_catalog_items', value);
-  }
-
-  static Future<String?> getTraktAccessToken({
-    bool forRemoteTransfer = false,
-  }) async {
-    if (forRemoteTransfer) {
-      final credential = await ProfileCredentialFacade.readForRemoteTransfer(
-        _traktAccessTokenKey,
-      );
-      if (credential.handled) return credential.value;
-    }
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _traktAccessTokenKey);
-  }
-
-  static Future<bool> hasTraktCredential() =>
-      _credentialConfigured(_traktAccessTokenKey, () => getTraktAccessToken());
-
-  static Future<void> setTraktAccessToken(String token) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _traktAccessTokenKey, token);
-  }
-
-  static Future<String?> getTraktRefreshToken({
-    bool forRemoteTransfer = false,
-  }) async {
-    if (forRemoteTransfer) {
-      final credential = await ProfileCredentialFacade.readForRemoteTransfer(
-        _traktRefreshTokenKey,
-      );
-      if (credential.handled) return credential.value;
-    }
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _traktRefreshTokenKey);
-  }
-
-  static Future<void> setTraktRefreshToken(String token) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _traktRefreshTokenKey, token);
-  }
-
-  static Future<String?> getTraktUsername() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_traktUsernameKey);
-  }
-
-  static Future<void> setTraktUsername(String username) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_traktUsernameKey, username);
-  }
-
-  static Future<int?> getTraktTokenExpiry() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getInt(_traktTokenExpiryKey);
-  }
-
-  static Future<void> setTraktTokenExpiry(int expiryMs) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setInt(_traktTokenExpiryKey, expiryMs);
-  }
-
-  /// Clears the local Trakt connection first and reports whether this profile
-  /// was its unshared owner. Only that disposition may revoke the upstream
-  /// token; a borrower must never invalidate the account for other profiles.
-  static Future<bool> clearTraktAuth() async {
-    final prefs = await ProfilePreferences.instance();
-    final disposition = await ProfileCredentialFacade.disconnectWithDisposition(
-      _traktAccessTokenKey,
-    );
-    if (!disposition.handled) {
-      await prefs.remove(_traktAccessTokenKey);
-      await prefs.remove(_traktRefreshTokenKey);
-    }
-    await prefs.remove(_traktUsernameKey);
-    await prefs.remove(_traktTokenExpiryKey);
-    await fallbackDisconnectedProgressSource(TrackingSource.trakt);
-    return !disposition.handled || disposition.shouldRevokeRemote;
-  }
-
-  static Future<void> setSimklSyncCatalogItems(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool('simkl_sync_catalog_items', value);
-  }
-
-  static Future<bool> getSimklSyncCatalogItems() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool('simkl_sync_catalog_items') ?? false;
-  }
-
-  static Future<void> setMdblistSyncCatalogItems(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool('mdblist_sync_catalog_items', value);
-  }
-
-  static Future<bool> getMdblistSyncCatalogItems() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool('mdblist_sync_catalog_items') ?? false;
-  }
-
-  static Future<String?> getSimklAccessToken({
-    bool forRemoteTransfer = false,
-  }) async {
-    if (forRemoteTransfer) {
-      final credential = await ProfileCredentialFacade.readForRemoteTransfer(
-        _simklAccessTokenKey,
-      );
-      if (credential.handled) return credential.value;
-    }
-    final prefs = await ProfilePreferences.instance();
-    return SecretVault.getString(prefs, _simklAccessTokenKey);
-  }
-
-  static Future<bool> hasSimklCredential() =>
-      _credentialConfigured(_simklAccessTokenKey, () => getSimklAccessToken());
-
-  static Future<void> setSimklAccessToken(String token) async {
-    final prefs = await ProfilePreferences.instance();
-    await SecretVault.setString(prefs, _simklAccessTokenKey, token);
-  }
-
-  static Future<String?> getSimklUsername() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_simklUsernameKey);
-  }
-
-  static Future<void> setSimklUsername(String username) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_simklUsernameKey, username);
-  }
-
-  static Future<void> clearSimklAuth() async {
-    final prefs = await ProfilePreferences.instance();
-    if (!await ProfileCredentialFacade.disconnect(_simklAccessTokenKey)) {
-      await prefs.remove(_simklAccessTokenKey);
-    }
-    await prefs.remove(_simklUsernameKey);
-    await fallbackDisconnectedProgressSource(TrackingSource.simkl);
-  }
+  // Trakt / Simkl / MDBList catalog + credentials — TrackingPrefs façade.
+  static Future<bool> getTraktSyncCatalogItems() => TrackingPrefs.getTraktSyncCatalogItems();
+  static Future<void> setTraktSyncCatalogItems(bool value) => TrackingPrefs.setTraktSyncCatalogItems(value);
+  static Future<String?> getTraktAccessToken({bool forRemoteTransfer = false}) =>
+      TrackingPrefs.getTraktAccessToken(forRemoteTransfer: forRemoteTransfer);
+  static Future<bool> hasTraktCredential() => TrackingPrefs.hasTraktCredential();
+  static Future<void> setTraktAccessToken(String token) => TrackingPrefs.setTraktAccessToken(token);
+  static Future<String?> getTraktRefreshToken({bool forRemoteTransfer = false}) =>
+      TrackingPrefs.getTraktRefreshToken(forRemoteTransfer: forRemoteTransfer);
+  static Future<void> setTraktRefreshToken(String token) => TrackingPrefs.setTraktRefreshToken(token);
+  static Future<String?> getTraktUsername() => TrackingPrefs.getTraktUsername();
+  static Future<void> setTraktUsername(String username) => TrackingPrefs.setTraktUsername(username);
+  static Future<int?> getTraktTokenExpiry() => TrackingPrefs.getTraktTokenExpiry();
+  static Future<void> setTraktTokenExpiry(int expiryMs) => TrackingPrefs.setTraktTokenExpiry(expiryMs);
+  static Future<bool> clearTraktAuth() => TrackingPrefs.clearTraktAuth();
+  static Future<void> setSimklSyncCatalogItems(bool value) => TrackingPrefs.setSimklSyncCatalogItems(value);
+  static Future<bool> getSimklSyncCatalogItems() => TrackingPrefs.getSimklSyncCatalogItems();
+  static Future<void> setMdblistSyncCatalogItems(bool value) => TrackingPrefs.setMdblistSyncCatalogItems(value);
+  static Future<bool> getMdblistSyncCatalogItems() => TrackingPrefs.getMdblistSyncCatalogItems();
+  static Future<String?> getSimklAccessToken({bool forRemoteTransfer = false}) =>
+      TrackingPrefs.getSimklAccessToken(forRemoteTransfer: forRemoteTransfer);
+  static Future<bool> hasSimklCredential() => TrackingPrefs.hasSimklCredential();
+  static Future<void> setSimklAccessToken(String token) => TrackingPrefs.setSimklAccessToken(token);
+  static Future<String?> getSimklUsername() => TrackingPrefs.getSimklUsername();
+  static Future<void> setSimklUsername(String username) => TrackingPrefs.setSimklUsername(username);
+  static Future<void> clearSimklAuth() => TrackingPrefs.clearSimklAuth();
 
   static Future<List<String>> getRedditRecentSubreddits() =>
       SocialPrefs.getRedditRecentSubreddits();
