@@ -623,3 +623,17 @@ template for later lanes. Reject any new review PR that omits the table.
 - **PR #56** (Qwen helper) edits `.cursor/**` (Q3) and is held until Phase 3.
 - **PRs #36–#43** (stacked TorBox / web download port) are superseded by **G4**
   (cloud file screens). Close rather than rebase through the refactor.
+
+## Gate 3 decisions — 2026-09-05
+
+- Gate 3 evidence is user-reported at 843d631b: Windows/Flutter 3.47.2, 471 analyzer diagnostics (0 errors), 5143 passed/37 failed. #108 independently verified 21 targeted tests and merged; full corrective gate still due. Both native builds reported pass; SHIELD smoke not evidenced.
+- #100/#102 V1 controller directory changes are accepted as honest screen-layer placement, not dependency separation. V1-1 Leaves 666, V1-2 527, V1-3 943, V1-4 704, V1-5 1008 are host reductions; relocated widget-building units do not become pure logic merely by moving directories. Phase 3 must not count directory relocation again as extraction.
+- Restore #72 layering ceiling 77; do not ratchet it upward. M1-fix removes the seven channel_import_export service-to-UI dependencies; M1-3 waits.
+- #96 original total +1118 = production +575, tests +494, docs +49; host Leaves 1738 measures only the host and does not measure repository shrinkage. Integration adds a disposal guard, so candidate host Leaves 1737. Candidate build pin reports one host build and one row build; row has no second listener. Preserve required host notification. Disposal race coverage still needs a mutation-sensitive real lib test. Keyword #90 double-update finding is separate.
+- #109 held outside plan; adoption requires C0 decision. All worker assignment/merges go through orchestrator.
+- Canonical Flutter is existing CI 3.44.8 for both dev and CI; no silent analyzer rebaseline to diagnostics from3.47.2. SDK alignment and comparison assigned C0.
+- S2 requires synthetic fixture produced by real pre-refactor export and restored through current lib APIs, comparing keys/types/values and profile isolation once per storage lane. Current snapshot tests are not proof of complete profile restore compatibility.
+- Forwarders expire with named G1'-9/S2-7 cleanup and Q2 caller migration, before Phase 3 completion. No indefinite wrappers.
+- TV performance gate: SHIELD Home focus/playback smoke once per phase, with rebuild-count tests; phone smoke is not SHIELD evidence. Hardware run remains user-dependent.
+- Permanent-fork versus upstream-integration strategy remains a product decision. No recurring merge automation scheduled without that decision; no upstream merge mixed into extraction lanes.
+- Backup decoder recovered from8d8e5ebd is separately authorized feature work: opt-in strict admission only, no existing caller switches. Draft review first; full sync semantics remain undecided.

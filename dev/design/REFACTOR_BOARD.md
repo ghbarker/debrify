@@ -1,5 +1,25 @@
 # Refactor board
 
+## Current orchestration — Gate 3 audit (2026-09-05)
+
+This section supersedes stale status/ceiling/merge instructions below. Orchestrator is the only assignment and merge entry point; workers never edit this board.
+
+| Lane | Status | Branch | Worker | Owns | Blocked on | Decisions |
+|---|---|---|---|---|---|---|
+| C0 Gate 3 | in-progress | `refactor/c0-gate3-corrections` | Cicero | analyzer runner/tests, layering ceiling, `.flutter-version` | #110 verification and M1-fix | Ceiling is #72: 77, never current 84/90. Pin dev and CI to 3.44.8; separate local SDK. No baseline growth. |
+| M1-fix | in-progress | `refactor/m1-fix-import-export-layering` | Ampere | channel import/export service, screen flow/dialogs, Magic TV binding, related tests, CODEMAP | real origin pin + independent gate | Service keeps parse/serialize; UI/watch_session belongs in screens. Actual existing test filenames approved. M1-3 blocked until merge. |
+| G1 CW correction | in-progress | `refactor/cw-gate3-integration` | Wegener | CW controller/row, host CW hunks, CW tests; existing #104/#105/#107 patches | disposal mutation-sensitive pin | #96 HOLD. +1118 accounted as +575 production/+494 tests/+49 docs. Current CW row has no second listener; retain required host update, verify actual build count. No speculative listener deletion. |
+| Backup decoder | in-progress | `refactor/backup-feature-review` | Locke | recovered two codec/test files only | draft review | Separate feature, opt-in decoder only; no existing caller switched. Not complete sync. Then synthetic S2 origin-export/restore fixtures in separate branch, tests only. |
+| C0 Windows guards | merged | `refactor/c0-tv-marker-windows` | Locke verification complete | two guard tests | — | #108 merged after independent 21-test pass, clean analysis and green CI; no assertion weakening. |
+| Test handoff kit | parked | `codex/test-handoff-kit` | — | none assigned | C0 decision | #109 HOLD; no independent agent stack or out-of-lane merge. |
+
+Gate 3, user-reported at main `843d631b`, Windows Flutter 3.47.2: analyzer 471 issues, zero errors (+5 versus historical 466); 5143 tests passed / 37 failed = 33 allowlisted plus four Windows guards addressed by #108. Both native builds reported passing; no new SHIELD smoke evidence. Status: accepted with notes, corrective gates outstanding; do not describe as unqualified green. Exact post-#108 full rerun remains due.
+
+Layering: user audit 99 -> 84 unique; historical occurrence reports 106 -> 90 were inconsistent. C0 same-checker measurement reports #72 77/77 and current 84/84 (occurrences/unique). Enforce 77; seven M1 violations must disappear. Historical gate records below are not replacement ceilings.
+
+No G1'-5, V1-6, M1-3 or S2-6 assignment until their prior pin/phase gates are satisfied. Forwarder expiry: G1'-9, S2-7 domain debt, then Q2 caller migration and removal before Phase 3 completion; every PR lists exact forwarders. #90 keyword duplicate updates remain separate from disproven #96 double-listen assertion.
+
+
 Edited by the orchestrator only. See `REFACTOR_PLAN.md` §6 for the protocol.
 **Phase 2 binding plan:** `dev/design/REFACTOR_PLAN_PHASE2.md` (#72). It supersedes
 §4 lanes G1–G5 / T2 and the §10 line targets. Ground rules and gates (a)–(e) still
