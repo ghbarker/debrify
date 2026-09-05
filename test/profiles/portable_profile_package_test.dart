@@ -94,6 +94,30 @@ void main() {
     };
   }
 
+  test('generic decrypt retains historical nondefault and numeric KDF costs', () async {
+    final source = await package();
+    for (final costs in [(8, 1, 1), (16, 1, 2)]) {
+      final envelope = await PortableProfilePackage.encrypt(
+        source, 'correct horse',
+        memory: costs.$1, iterations: costs.$2, parallelism: costs.$3,
+      );
+      final restored = await PortableProfilePackage.decrypt(envelope, 'correct horse');
+      expect(restored.profiles, source.profiles);
+      // Existing decoder truncates numeric costs. Strict admission must be opt-in.
+      final numeric = <String, dynamic>{
+        ...envelope,
+        'kdf': <String, dynamic>{
+          ...envelope['kdf'] as Map,
+          'memory': costs.$1 + 0.5,
+          'iterations': costs.$2 + 0.5,
+          'parallelism': costs.$3 + 0.5,
+        },
+      };
+      expect((await PortableProfilePackage.decrypt(numeric, 'correct horse')).profiles,
+          source.profiles);
+    }
+  });
+
   test('sensitive v4 package round-trips only through encryption', () async {
     final source = await package(
       preferences: const <String, Object?>{'account_label': 'private'},
