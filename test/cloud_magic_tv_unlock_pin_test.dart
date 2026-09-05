@@ -9,9 +9,15 @@ import 'package:flutter_test/flutter_test.dart';
 /// cloud-port capability. Drives the origin functions / call sites, not a
 /// new adapter file.
 ///
+/// After M1-1, `_rdLinkPassesSizeRules` lives in
+/// `lib/services/debrify_tv/channel_cache_warmer.dart`. Source scans that
+/// cover `unrestrict['download']` / `unrestrict['filesize']` read the host
+/// plus that file when present (path identity; same pattern as M1-0
+/// WatchSession / G1 stage `cacheExtent` pins).
+///
 /// Quirks:
 /// - [DebridService.unrestrictLink] returns a Map; Magic TV reads
-///   `unrestrict['download']` and `_rdLinkPassesSizeRules` reads
+///   `unrestrict['download']` and the size-rules helper reads
 ///   `unrestrict['filesize']`.
 /// - [DebridService.addTorrentToDebridPreferVideos] returns a Map;
 ///   Magic TV reads `downloadLink`, `torrentId`, `links`.
@@ -20,6 +26,20 @@ import 'package:flutter_test/flutter_test.dart';
 ///   that behind [CloudCredentials].
 /// - Existing [CloudUnlock.unlockPlaybackEntry] / [CloudMagnetAdd.addMagnet]
 ///   / [CloudMagicTvLockedLinks] are different dialects — do not unify.
+String _read(String path) =>
+    File(path).readAsStringSync().replaceAll('\r\n', '\n');
+
+/// Host plus the extracted cache warmer so `unrestrict['filesize']` still
+/// resolves after M1-1 moved `_rdLinkPassesSizeRules`.
+String _magicTvSources() {
+  final buf = StringBuffer(_read('lib/screens/magic_tv_screen.dart'));
+  final moved = File('lib/services/debrify_tv/channel_cache_warmer.dart');
+  if (moved.existsSync()) {
+    buf.writeln(_read(moved.path));
+  }
+  return buf.toString();
+}
+
 void main() {
   late String debridSrc;
   late String alldebridSrc;
@@ -27,12 +47,10 @@ void main() {
   late String capabilitiesSrc;
 
   setUpAll(() {
-    String read(String path) =>
-        File(path).readAsStringSync().replaceAll('\r\n', '\n');
-    debridSrc = read('lib/services/debrid_service.dart');
-    alldebridSrc = read('lib/services/alldebrid_service.dart');
-    magicTvSrc = read('lib/screens/magic_tv_screen.dart');
-    capabilitiesSrc = read('lib/services/cloud/cloud_capabilities.dart');
+    debridSrc = _read('lib/services/debrid_service.dart');
+    alldebridSrc = _read('lib/services/alldebrid_service.dart');
+    magicTvSrc = _magicTvSources();
+    capabilitiesSrc = _read('lib/services/cloud/cloud_capabilities.dart');
   });
 
   test('RD unrestrictLink is (apiKey, link) → Map with download', () {

@@ -329,6 +329,11 @@ behaviour and must be restored, not kept as quirks.
 - **RD size-filter session** lives on the warmer (`rdSizeRejections` /
   `sizeFilterRelaxed`); the relax snack stays injected. Trailer floor
   (`minVideoSizeBytes`) is passed in. Keep.
+- **P1b unlock pin path identity.**
+  `test/cloud_magic_tv_unlock_pin_test.dart` now scans host +
+  `channel_cache_warmer.dart` for `unrestrict['download']` /
+  `unrestrict['filesize']` so the filesize read is not a new allowlist
+  miss. Same relocate pattern as G1 `cacheExtent` / M1-0 WatchSession.
 
 ### V1-3 · subtitle track controller
 
