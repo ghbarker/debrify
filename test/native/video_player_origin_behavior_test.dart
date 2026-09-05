@@ -362,6 +362,14 @@ void main() {
       expect(checkpointMs, greaterThan(1000));
       expect(checkpointMs, greaterThan(speedPositionMs));
       expect(tester.widget<Controls>(find.byType(Controls)).isReady, isTrue);
+      // Autosave may have run since the speed selection. Check fresh storage
+      // immediately before unmount, with no intervening pump, so it cannot
+      // supply the final checkpoint in place of the disposal save.
+      final beforeUnmount = await StorageService.getVideoPlaybackState(
+        videoTitle: 'Origin.wav',
+      );
+      expect(beforeUnmount!['speed'], 1.25);
+      expect(beforeUnmount['positionMs'], lessThan(checkpointMs));
     } finally {
       await tester.pumpWidget(const SizedBox.shrink());
       await _until(tester, () => !VideoOutputLease.isHeld);
