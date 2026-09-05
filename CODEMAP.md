@@ -384,17 +384,18 @@ is an editor mirror, not the source of truth. How to add a provider:
   (`ChannelPlaybackSettingsState`, 18 values, no I/O/automatic notification).
   Settings renderer: `lib/screens/debrify_tv/dialogs/channel_playback_settings.dart`
   (`showChannelPlaybackSettings`, six explicit UI/runtime capabilities).
-  Eighteen temporary host aliases (16 read/write, two write-only) and the retained
-  Reset completion boundary require removal/review M1-6/Q2. Shared filter identity
-  and serial persistence order are preserved. Origin UI/helper pins:
+  The 18 temporary host aliases are removed; callers access the same settings owner.
+  Editor/settings UI boundaries, including Reset completion, remain Q2 composition
+  debt. Shared filter identity and serial persistence order are preserved. Origin UI/helper pins:
   `test/magic_tv_dialog_settings_origin_test.dart` (desktop; no TV-focus or dead
   quick-card coverage claim). M1-3 watch flows: `ProviderWatchFlow` owns Quick
   Play orchestration; `TorboxWatchFlow`, `PikpakWatchFlow`, `PremiumizeWatchFlow`,
   `AlldebridWatchFlow`, and `RealDebridWatchFlow` own per-provider/cached paths
   under `lib/screens/debrify_tv/watch/`. `WatchFlowBindings` keeps live host
   state, navigation, existing preparation/prefetch/launcher callbacks and
-  captured-key service calls. Ten entry wrappers and typed bindings are retained:
-  review M1-5; remove/review all in M1-6 before phase completion. No pure-port claim.
+  captured-key service calls. Six entry wrappers and five dead cached binding slots
+  are removed. Four live quick-entry callbacks remain Q2 composition debt alongside
+  typed bindings; direct construction-time tearoffs would cycle initialization. No pure-port claim.
   Live origin/runtime orchestration pins: `test/magic_tv_provider_watch_origin_test.dart`
   (21 cases; actual route requests/next callbacks, not native video playback).
   `test/cloud_magic_tv_unlock_pin_test.dart` is supplemental inventory only.
@@ -404,8 +405,8 @@ is an editor mirror, not the source of truth. How to add a provider:
   Android TV launchers). `WatchSession` remains a plain state object. Existing
   `WatchFlowBindings` adds live `isAndroidTv` / `getChannelKeywords` and write access
   to the existing current-channel field; cache access uses the same cache-warmer map.
-  Seven host delegates remain for provider-flow and initial-watch callers:
-  review M1-5; remove/review all M1-6 before phase completion. Host-true/bridge/native-positive
+  Seven live host delegates remain for provider-flow and initial-watch callers as
+  Q2 composition debt. Host-true/bridge/native-positive
   launch/onFinished still needs device-runtime proof. `test/magic_tv_channel_switch_origin_test.dart`
   pins desktop switches, host early rejection, Flutter-route continuation and
   capture-before-held-prepare-completion behavior;
@@ -417,7 +418,8 @@ is an editor mirror, not the source of truth. How to add a provider:
   `test/magic_tv_queue_prefetch_origin_test.dart` pins RD/AD preparation, held-stop
   completion, failure-tail rotation and channel restart. Preference-read epoch races,
   competing starts, lookahead edges and native-positive paths remain unproven.
-  This move does not close the wrapper/18-alias expiry review above or claim a pure port.
+  The remaining 11 live callbacks and UI boundaries require Q2 composition review;
+  this expiry slice does not close all M1 debt or claim a pure port.
   Default pick / overlay strings: `lib/services/cloud/magic_tv_provider.dart`
   (`playbackPrecedence` mapped to `real_debrid`; display stays `Torbox` / `Real Debrid`).
 - Data: `lib/models/debrify_tv/`, `lib/services/debrify_tv_repository.dart`,
