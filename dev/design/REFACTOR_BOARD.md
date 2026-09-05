@@ -9,12 +9,12 @@ Updated 2026-09-05 after main `d5f8dc4b` (CW merge `e478635e`). Orchestrator own
 - [ ] **Cicero — native CI plan:** CW automated mini-gate complete; final114 independent19case verification complete. Planning mandatory native runtime CI for draft116, no workflow edits yet.
 - [ ] **Wegener — keyword update audit:** keyword pin complete ee9de82b; opening corrective PR, then G1'-5 favourites rows assigned on refactor/g1-5-favourites-rows. Ampere independently reviews pin.
 - [ ] **Ampere — player origin proof:** native audio mount/dispose, identify cancel and disposal checkpoint write proven oldest/current with mutation. Draft116 open; native CI/analyzer dependency unresolved. keyword independent review assigned, then M1-3 assigned on refactor/m1-3-provider-watch-flows; exact file locks due before edits. No full V1 closure.
-- [ ] **Locke — storage fixtures (#114):** 141/141 admitted keys and28/28 exclusions complete; all5 dynamic families finitely sampled (21keys). Exact final `3e30de17` independent19case review passed; awaiting finalCI. S2-6 origin characterization assigned on refactor/s2-6-playback-progress-store; extraction waits114merge only. Forecast1750–1950 net vs2300 target; no padding, deficit recorded below.
+- [ ] **Locke — storage fixtures (#114):** 141/141 admitted keys and28/28 exclusions complete; all5 dynamic families finitely sampled (21keys). Exact final `3e30de17` independent19case review passed; merged c5f022de; final CI passed. S2-6 origin characterization assigned on refactor/s2-6-playback-progress-store; 114 merged; extraction authorized after green origin pins. Forecast1750–1950 net vs2300 target; no padding, deficit recorded below.
 
 ### Next, in order
 - [x] Finish current merged-code automated mini-gate.
 - [ ] Manual smoke explicitly deferred by user at 09:44 UTC September 5: proceed with eligible lanes without it. Automated gates remain mandatory; no manual pass claimed (SHIELD unavailable).
-- [ ] Finish/review/merge #114 when all intended key coverage and exact-head CI pass; dynamic families are finite samples, never exhaustive suffix coverage.
+- [x] #114 merged c5f022de: independent19 tests and exact-head test/goldens passed. Dynamic families are finite samples, never exhaustive suffix coverage.
 - [ ] Resolve remaining origin-test debt and keyword audit without speculative fixes or expanding native scope.
 - [x] Map upstream strategy before more divergence: upstream `db440a8d`, fork at `0d4ca1a2` was 385 ahead/0 behind. Existing upstream PRs #55 then #54 then #56 must refresh/test sequentially; pairwise conflicts identified. No bulk fork submission or upstream messages sent.
 - [ ] Resume eligible sequential slices only after their gates: Search G1'-5..9, Player V1-6..10, Magic TV M1-3..6, Storage S2-6..7.
@@ -33,7 +33,7 @@ Updated 2026-09-05 after main `d5f8dc4b` (CW merge `e478635e`). Orchestrator own
 - [ ] SHIELD smoke: hardware unavailable. Phone testing is not a substitute pass.
 - [ ] Current merged-build manual smoke deferred by explicit user decision; no longer blocks extraction. No manual pass claimed.
 - [ ] Remaining V1 origin behavior coverage: real player test feasibility underway; source scans/copied bodies do not clear it.
-- [ ] #114 remaining key/family coverage and CI: draft, not ready to merge yet.
+- [x] #114 coverage review and CI complete; merged.
 - **Parked:** #112 backup decoder (feature scope creep), #109 test kit (outside assigned lane), #56 Qwen helper (Phase 3). No product work on #112.
 
 ## Exclusive active ownership
@@ -88,6 +88,9 @@ Aim to contribute upstream, not a permanent fork. Upstream refresh ordering prec
 
 ## Latest assignment decisions — 2026-09-05 09:44 UTC
 
-Manual smoke is deferred by explicit user instruction; continue eligible work. C0 owns native CI116; Wegener owns G1'-5 host/favourites files after corrective pin PR; Ampere reviews keyword pin then owns M1-3 watch-flow files; Locke owns S2-6 storage files after114 merges. Workers must confirm exact paths before edits. Shared CODEMAP edits require serialized ownership. No ownership of each other's host files.
+Manual smoke is deferred by explicit user instruction; continue eligible work. C0 owns native CI116; Wegener owns G1'-5 host/favourites files after corrective pin PR; Ampere reviews keyword pin then owns M1-3 watch-flow files; Locke owns S2-6 storage files;114 merged. Workers must confirm exact paths before edits. Shared CODEMAP edits require serialized ownership. No ownership of each other's host files.
 
 S2-6 functional scope retained, forecast1750–1950 net against original2300:350–550 potential deficit is outstanding debt pending exact overlap accounting and clearing slice S2-7/Q2; no automatic target waiver or double credit for already-extracted TV/reset code. Origin pins proceed now. Manual testing remains unproven.
+
+### Merge114 — 2026-09-05
+Exact head3e30de17 verified CI test/goldens SUCCESS; independent19case reproduction passed. Merged c5f022de. Difference: real pre-refactor export/current restore compatibility pins for141 named keys,28 exclusions and finite5family samples. More: conditional/dynamic domains remain finite and each new storage slice must pin its own behavior. S2-6 unblocked; other active lanes share no changed production files with114. God counts unchanged from current table (test/fixture-only merge).
