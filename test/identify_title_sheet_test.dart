@@ -1,5 +1,7 @@
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/widgets/player/identify_title_sheet.dart';
+import 'package:debrify/utils/platform_util.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -132,4 +134,59 @@ void main() {
     expect(popped?.name, 'Picked');
   });
 
+  for (final tv in [false, true]) {
+    testWidgets('Spotlight episode validation, apply and cancel (TV=$tv)', (
+      tester,
+    ) async {
+      PlatformUtil.debugSetAndroidTvCached(tv);
+      addTearDown(() => PlatformUtil.debugSetAndroidTvCached(null));
+      SeasonEpisodeSelection? result;
+      var completed = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                result = await requestSeasonEpisodeForIdentity(
+                  context,
+                  'Pinned show',
+                );
+                completed = true;
+              },
+              child: const Text('episode'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('episode'));
+      await tester.pumpAndSettle();
+      expect(find.text('Which episode?'), findsOneWidget);
+      expect(find.text('Pinned show'), findsOneWidget);
+      if (tv) {
+        // The real Spotlight recommended action must autofocus and handle OK.
+        await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      } else {
+        await tester.tap(find.text('Apply'));
+      }
+      await tester.pumpAndSettle();
+      expect(find.text('Enter a valid season and episode.'), findsOneWidget);
+      expect(completed, isFalse);
+      await tester.enterText(find.byType(TextField).at(0), ' 2 ');
+      await tester.enterText(find.byType(TextField).at(1), ' 3 ');
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Apply'));
+      await tester.pumpAndSettle();
+      expect(completed, isTrue);
+      expect(result!.season, 2);
+      expect(result!.episode, 3);
+      completed = false;
+      await tester.tap(find.text('episode'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(completed, isTrue);
+      expect(result, isNull);
+    });
+  }
 }
