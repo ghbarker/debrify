@@ -312,8 +312,10 @@ class ChannelImportExport {
         return;
       }
 
+      final exportContext = host.importExportContext;
+      if (!exportContext.mounted) return;
       final selectedIds = await showDialog<Set<String>>(
-        context: host.importExportContext,
+        context: exportContext,
         barrierDismissible: false,
         barrierColor: Colors.black.withValues(alpha: .72),
         builder: (_) => ExportChannelsDialog(
@@ -386,7 +388,9 @@ class ChannelImportExport {
         now.hour,
         now.minute,
       ].map((part) => part.toString().padLeft(2, '0')).join();
-      final savedPath = await ProfileBackupFlows(host.importExportContext)
+      final exportContext = host.importExportContext;
+      if (!exportContext.mounted) return;
+      final savedPath = await ProfileBackupFlows(exportContext)
           .saveBackupFile(
             fileName: 'debrify-tv-channels-$stamp.zip',
             bytes: bytes,
@@ -1168,8 +1172,10 @@ class ChannelImportExport {
         return;
       }
 
+      final shareContext = host.importExportContext;
+      if (!shareContext.mounted) return;
       await showShareChannelLinkDialog(
-        context: host.importExportContext,
+        context: shareContext,
         channel: channel,
         magnetLink: magnetLink,
         linkSizeLabel: formatBytes(estimatedSize),

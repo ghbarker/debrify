@@ -379,10 +379,12 @@ behaviour and must be restored, not kept as quirks.
   `_showDebrifyTvConfirmation` stays on the host so single-channel
   delete can share it; delete-all calls `confirmDeleteAll`.
 - **Shape / analyze path identity.** Three `SORT_CHILD_PROPERTIES_LAST`
-  infos moved to `import_export_dialogs.dart`; three
-  `USE_BUILD_CONTEXT_SYNCHRONOUSLY` infos moved to
-  `channel_import_export.dart`. `import_export_dialogs.dart` added to
-  the shape manifest (residue 0; two `app.shape.br` sites).
+  infos moved to `import_export_dialogs.dart`. The three
+  `USE_BUILD_CONTEXT_SYNCHRONOUSLY` rows stay on the host — those
+  origin hits were not the import sites; the new file uses a local
+  `BuildContext` + `context.mounted` so it does not add diagnostics.
+  `import_export_dialogs.dart` added to the shape manifest (residue 0;
+  two `app.shape.br` sites).
 - **`cloud_magic_tv_unlock_pin_test` still scans host + warmer.**
   Import/export does not touch `unrestrict` / `filesize`.
 
