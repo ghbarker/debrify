@@ -165,7 +165,8 @@ void main() {
             expect(ProfileSessionMemory.captureOwner(), ownerBeforeRelease);
             expect(find.text('Replacement'), findsOneWidget);
             expect(find.byType(_ObservedHome), findsNothing);
-            // The disposed host must also have removed its broadcast binding.
+            // A later notification must not start more preference IO. This does
+            // not prove listener removal: the mounted guard also suppresses IO.
             MainPageBridge.notifyHomeSettingsChanged();
             await tester.pumpAndSettle();
             expect(reached, ['local', 'trakt', 'simkl', 'mdblist']);
