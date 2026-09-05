@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../models/torrent.dart';
-import '../../../models/debrify_tv/cache_results.dart';
 import '../../../services/storage_service.dart';
 import '../../../services/torrent_service.dart';
 import '../../../services/main_page_bridge.dart';
@@ -104,42 +103,16 @@ class TorboxWatchFlow {
         });
       }
 
-      int candidateCursor = 0;
-
-      Future<bool> populateQueue() async {
-        while (true) {
-          if (candidateCursor >= combinedList.length) {
-            return false;
-          }
-          final TorboxCacheWindowResult window = await host.cacheWarmer
-              .fetchTorboxCacheWindow(
-                candidates: combinedList,
-                startIndex: candidateCursor,
-                apiKey: apiKey,
-              );
-          candidateCursor = window.nextCursor;
-          if (window.cachedTorrents.isEmpty) {
-            if (window.exhausted) {
-              return false;
-            }
-            continue;
-          }
-          host.queue
-            ..clear()
-            ..addAll(window.cachedTorrents);
-          host.lastQueueSize = host.queue.length;
-          host.lastSearchAt = DateTime.now();
-          if (host.mounted) {
-            host.setState(() {
-              host.status = host.queue.isEmpty
-                  ? ''
-                  : 'Queue has ${host.queue.length} remaining';
-            });
-          }
-          log('✅ Found ${host.queue.length} cached Torbox torrent(s)');
-          return true;
-        }
-      }
+      final populateQueue = CachedWatchQueueCursor(
+        host: host,
+        candidates: combinedList,
+        fetchWindow: (startIndex) => host.cacheWarmer.fetchTorboxCacheWindow(
+          candidates: combinedList,
+          startIndex: startIndex,
+          apiKey: apiKey,
+        ),
+        batchReady: (count) => log('✅ Found $count cached Torbox torrent(s)'),
+      ).populate;
 
       bool seeded;
       try {
@@ -417,42 +390,17 @@ class TorboxWatchFlow {
       });
     }
 
-    int candidateCursor = 0;
-
-    Future<bool> populateQueue() async {
-      while (true) {
-        if (candidateCursor >= candidatePool.length) {
-          return false;
-        }
-        final TorboxCacheWindowResult window = await host.cacheWarmer
-            .fetchTorboxCacheWindow(
-              candidates: candidatePool,
-              startIndex: candidateCursor,
-              apiKey: apiKey,
-            );
-        candidateCursor = window.nextCursor;
-        if (window.cachedTorrents.isEmpty) {
-          if (window.exhausted) {
-            return false;
-          }
-          continue;
-        }
-        host.queue
-          ..clear()
-          ..addAll(window.cachedTorrents);
-        host.lastQueueSize = host.queue.length;
-        host.lastSearchAt = DateTime.now();
-        if (host.mounted) {
-          host.setState(() {
-            host.status = host.queue.isEmpty
-                ? ''
-                : 'Queue has ${host.queue.length} remaining';
-          });
-        }
-        log('✅ Cached Torbox batch ready with ${host.queue.length} item(s)');
-        return true;
-      }
-    }
+    final populateQueue = CachedWatchQueueCursor(
+      host: host,
+      candidates: candidatePool,
+      fetchWindow: (startIndex) => host.cacheWarmer.fetchTorboxCacheWindow(
+        candidates: candidatePool,
+        startIndex: startIndex,
+        apiKey: apiKey,
+      ),
+      batchReady: (count) =>
+          log('✅ Cached Torbox batch ready with $count item(s)'),
+    ).populate;
 
     bool seeded;
     try {
