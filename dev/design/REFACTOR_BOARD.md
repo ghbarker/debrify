@@ -18,14 +18,14 @@ Overall completion is approximately 65%, an engineering estimate, not a measured
 ### Major work remaining
 1. Finish Discover content/action ownership and real standalone dispatch; preserve hidden watchlist/focus effects. Then TV stage layouts and final Search cleanup.
 2. Finish player work: decoder fallback proof remains blocked by native-fixture limitations; timer/speed/aspect, TV guide, tracker progress and overlay separation remain in the plan.
-3. Continue storage ownership and migrate callers away from temporary forwarding APIs. Current host is 1521 lines above target after #141.
+3. Continue storage ownership and migrate callers away from temporary forwarding APIs. Current host is 1306 lines above target after #146.
 4. M1-7: consolidate provider watch flows below 800 combined lines, while tracking growth in shared code. Current merged five-file total2352; original2556. Shared code growth is included separately. Magic TV size remains provisional.
 5. Q-phase cleanup: remove expired adapters, enforce dependency boundaries, consolidate engineering rules, complete upstream contribution preparation.
 6. Final integrated verification and user acceptance of the final build. Earlier smoke acceptance is not automatically a test of later builds.
 
 ### Current evidence and coordination
 - Latest full gate7f00f969:5442 pass,12 exact known failures,2skip; goldens21 exact known errors after configured retries; zero unexpected/unused. Native pair, Windows/ARM64 builds and Python55 passed; analyzer436/452,layer77. #140 is the first production merge after this gate; later changes do not inherit manual smoke.
-- God-file lines (merged): Search8614,Player11926,MagicTV3317,Storage4321,Settings2899; original total63932. Pending PR savings are not counted.
+- God-file lines (merged): Search8614,Player11926,MagicTV3317,Storage4106,Settings2899; original total63932. Pending PR savings are not counted.
 - Cicero: independent cursor-product review1d5e162e (191 tests/body audit). Wegener: independent playlist-origin/fixture reviewb53ba5ae (81 tests/provenance). Ampere: cursor PR and minimal CODEMAP update, branch refactor/m1-7-cache-window-pins. Locke: test-only playlist PR, branch refactor/s2-playlist-progress-pins; product move awaits independent proof. All four have bounded assignments; no user action required.
 - CODEMAP locks serialized; parent alone edits this board/notes. Keep-awake expired; no disk work. Parked #112 backup feature, #109 test kit and #56 helper are outside active refactor.
 - Every future gate includes exact-source forwarder counts under the ledger criterion below. Historic entries below are evidence only, not current assignments.
@@ -289,3 +289,7 @@ Exact53184 independently reviewed191pass/analyzer436452/layer77 and all3CIgreen;
 ### #147 and #148 merged — finite safety improvements
 Both exact heads2d2ce8e/d21814c independently reproduced and all3CIpassed.147 proves Home focus before bound completion, not Discover/independent-await.148 proves10actualcaptured-key paths including successful PreferVideos; removed-key mutant actualwirekill only, changed-key mutation confounded and not counted. Did we make a difference?Yes, observable compatibility pins improve safety; more remains as explicitly limited above. Zero production Leaves; godcounts unchanged8614/11926/3317/4321/2899 vs19070/16278/10716/9963/7905.146awaitinggoldens thenfullgate;145correctedreviewpassed awaitinggoldens;149reviewpassed awaitingCI. C0repairpin review,Lockerepairtest publication,WegenerQ2live-sessionpin,Amperepresentationmap ready heldfullgate. No user action needed.
 
+
+### #146 merged; full gate dispatched
+Actualmaina443395b92c31b42eef9780cdb0feddb32655814. Exact724 independent117/analyzer/layer/finalunionPASS, complete exact-head CIrun33988787257 all3SUCCESS (duplicateoldergoldenstillrunning, not used). Did we make a difference?219-line playlist body belongs to PlaybackProgressStore,215 fewer host lines; wholeproduction+5,one4-line facade expiresQ2. More remains:1306host target deficit and caller migration. Godcounts8614/11926/3317/4106/2899 vs19070/16278/10716/9963/7905.
+Cicero fullgate IN_PROGRESS exacta443: fullgeneric/goldensverdict,analyzer,layer,nativepair,Python,Windows/ARM64 builds and all5forwarderledger. No nextproductionrelease untilpass; no newmanualsmokeclaimed. Locke repairfixture tests,Ampere Q2pinreview,Wegener Q2pinpublication; presentation26net proposalready awaitinggate. No user blocker.
