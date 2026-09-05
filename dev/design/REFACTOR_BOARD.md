@@ -142,3 +142,6 @@ Pinned3.44.8/JDK21: generic5263pass/12exactknownfailures/2skip;goldens21exactkno
 
 M1-4 draft122 head91dadec1 (move6d296c59,pin8efdeaba) independentLockereview/CIpending.780net reported815-35;7wrappersreviewM1-5/expiryM1-6. ActualAndroidpositive remainsunproven; keytestholdskeythroughprepare, exactcooldowncapturetiming sourcepreserved nottested. CommittedLFpin400162d5 exact6origin/currentpass; earlier79eCRLFhashsuperseded. CODEMAPreleasedAmpere. G15 integrated96cd6acc/docsa069b13e; docslockreleased,publicationpendingworkerreport. V16purediagnostics direction approved hostUIrecreationretained;450targetmaymiss, no directoryrelocationfornumbers. C0testonlynativevideo feasibility45min; productionIOseamneeds exactdecision.
 
+
+PR121merged1274476d exact96cd6acc afterLocke187/origin9/body52+C0integration12pass/all3CIgreen. Difference:favourites/focus ownership extracted,1363net (search11376to10013). More:runtimeedgegaps+remainingsearch2513above7500target; no purelogiccreditforUIcontroller. Godcurrentsearch10013/player11926/magic5299/storage4365/settings2899; originals19070/16278/10716/9963/7905. WegenerG1'-6hero assigned freshrefactor/g1-6-hero-presenter,target550,originpinsbeforemove. V16pausednativefixture,nofailedscaffoldmerge.122independentreviewPASS/nativeCIpassed,otherspending. Slice1since9958fullgate.
+
