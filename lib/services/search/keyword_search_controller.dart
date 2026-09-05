@@ -277,6 +277,10 @@ class KeywordSearchController extends ChangeNotifier {
   }) {
     if (!modeIsKeyword) return;
     if (kwQuery.isNotEmpty && kwResults.isNotEmpty && !kwSearching) {
+      // A still-streaming search is NOT preserved — only a completed
+      // query + its final result list. Mid-stream state would restore
+      // as a frozen prefix without the engine still running.
+      //
       // Fold a parked (pill) final set into the snapshot — pure field updates,
       // safe in dispose — so restore doesn't resurrect a stale subset while
       // silently dropping the authoritative result.
