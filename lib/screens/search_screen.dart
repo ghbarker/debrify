@@ -10,10 +10,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../models/advanced_search_selection.dart';
 import '../theme/app_theme_scope.dart';
-import '../theme/artwork_accent.dart';
 import '../utils/home_rail_metrics.dart';
 import '../utils/platform_util.dart';
-import '../utils/tvos_device.dart';
 import '../models/home_collection.dart';
 import '../models/iptv_playlist.dart';
 import '../models/play_loader_art.dart';
@@ -43,6 +41,7 @@ import 'search/continue_watching_controller.dart';
 import 'search/continue_watching_row.dart';
 import 'search/fav_rows_controller.dart';
 import 'search/fav_row.dart';
+import 'search/hero_presenter.dart';
 import '../services/filtered_catalog_pager.dart';
 import '../services/hide_watched_prefs.dart';
 import '../services/watched_filter.dart';
@@ -77,7 +76,6 @@ import '../utils/torrent_filter_matcher.dart';
 import '../utils/tv_keys.dart';
 import '../utils/tv_search_focus_handoff.dart';
 import '../services/app_route_observer.dart';
-import '../services/imdb_trailer_service.dart';
 import '../services/youtube_service.dart';
 import '../widgets/sources/source_binding_dialogs.dart';
 import 'search/source_binding_routes.dart';
@@ -753,124 +751,41 @@ class _SearchScreenState extends State<SearchScreenHost>
         catalogSearching: _catalogSearching,
       );
 
-  // Hero state. Driven by ValueNotifiers so focus-driven hero swaps rebuild
-  // only the spotlight, never the whole board (important on low-power TVs).
-  final ValueNotifier<StremioMeta?> _heroItem = ValueNotifier<StremioMeta?>(
-    null,
+  late final HeroPresenter _hero = HeroPresenter(
+    environment: () => HeroEnvironment(
+      isTelevision: widget.isTelevision,
+      searchMode: widget.searchMode,
+      discoverMode: widget.discoverMode,
+      catalogQuery: _catalogQuery,
+      stageActive: _stageActive,
+      stagePublishesShellArt: _stagePublishesShellArt,
+      stageWantsAmbient: _stageWantsAmbient,
+      homeStyle: _homeStyleEffective,
+      hasFavouriteFocus: _canvasFavFocus.value != null,
+    ),
+    isMounted: () => mounted,
+    hostContext: () => context,
+    updateHost: (change) => setState(change),
+    clearFavouriteFocus: () => _canvasFavFocus.value = null,
+    showingHeroId: () => _spotlightKey.currentState?.currentHeroId,
   );
-  final ValueNotifier<StremioMeta?> _heroEnriched = ValueNotifier<StremioMeta?>(
-    null,
-  );
-  int _heroReqId = 0;
-  Timer? _heroTimer;
 
-  /// Settle debounce for the hero SWAP itself (260ms): while DPAD focus flies
-  /// across cards only the card visuals update; the spotlight (backdrop
-  /// decode, logo, meta, tint cascade) follows once focus rests.
-  Timer? _heroSwapTimer;
-
-  // Hero ambient trailer (Home board, TV only): once DPAD focus RESTS on a
-  // card, its trailer crossfades into the hero backdrop — same living-backdrop
-  // treatment (and the same HeroTrailerBackdrop machinery: single decoder,
-  // route/background pausing) as the detail page. Notifier-driven so a trailer
-  // arriving rebuilds only the hero's video layer, never the board.
-  final ValueNotifier<YoutubeResolvedStreams?> _heroTrailer =
-      ValueNotifier<YoutubeResolvedStreams?>(null);
-  Timer? _heroTrailerTimer;
-  int _heroTrailerReq = 0;
-
-  /// True from the moment the rest-debounce commits to loading a trailer until
-  /// either frames are on screen or the attempt dies (no trailer / resolve
-  /// failed / hero moved on) — drives the hero's little "Trailer" pill.
-  final ValueNotifier<bool> _heroTrailerLoading = ValueNotifier<bool>(false);
-
-  /// True while trailer frames are actually on screen. The spotlight fades its
-  /// static backdrop image out on this signal (the video plays in the board
-  /// layer BENEATH the spotlight, so the image must yield to reveal it — the
-  /// crossfade the video's own opacity used to provide when it sat on top).
-  final ValueNotifier<bool> _heroTrailerShowing = ValueNotifier<bool>(false);
-
-  /// Takeover progress (0 ambient → 1 full-board), published by
-  /// [_HeroTrailerLayer] as its promote animation runs. The board content and
-  /// the sidebar rail fade fully OUT on it while the compact info overlay
-  /// fades in — the film takes the room.
-  final ValueNotifier<double> _heroTrailerTakeover = ValueNotifier<double>(0);
-
-  // Live IPTV favourite hero preview: when DPAD focus rests on an "IPTV" row
-  // card, its stream plays in the SAME boxed video region as the catalog
-  // trailer above — reusing HeroTrailerBackdrop's `live: true` mode, exactly
-  // like the IPTV page's own inline channel preview
-  // (IptvResultsView._buildPreviewStage). Painted as a layer above
-  // [_HeroTrailerLayer] so the two never need to swap types; whichever one
-  // actually has a URL to show wins (see [_setHeroLiveIptv]).
-  final ValueNotifier<String?> _heroLiveUrl = ValueNotifier<String?>(null);
-
-  /// Set the INSTANT an IPTV favourite gains focus — well before its stream
-  /// (if a Stremio-addon channel) finishes resolving. [_HeroLiveLayer] uses
-  /// this to occlude the region with the channel's OWN art immediately, so
-  /// the previously-focused catalog title's Cinemeta poster never shows
-  /// through the resolve/buffer gap underneath.
-  final ValueNotifier<IptvChannel?> _heroLiveChannel =
-      ValueNotifier<IptvChannel?>(null);
-
-  /// Boolean mirror of [_heroLiveChannel] for [_HeroSpotlight.liveTakeover] —
-  /// the spotlight fades its (now-stale) colour field and identity text on
-  /// this, and has no other reason to know the IPTV-specific channel type.
-  final ValueNotifier<bool> _heroLiveTakeover = ValueNotifier<bool>(false);
-  int _heroLiveReq = 0;
-
-  /// Candidate ladder for the live IPTV favourite when it's a Stremio-addon
-  /// channel (several upstream links to try in order) — mirrors the IPTV
-  /// page's own ladder (IptvResultsView._onPreviewPlaybackFailed). Null for a
-  /// plain M3U/Xtream favourite, which has just the one URL.
-  List<String>? _heroLiveCandidates;
-
-  /// Set when real content playback launches (any path — in-app route,
-  /// native TV activity, external app): the ambient trailer must not resume
-  /// behind or after the feature (the behavior ef5f555 shipped; the
-  /// backdrop's own per-instance latch dies with the widget when the route
-  /// cover kills the trailer, so the host has to remember). Cleared when a
-  /// NEW title takes the spotlight or the board reloads.
-  bool _heroTrailerSuppressed = false;
-
-  /// The item the last hero-trailer schedule was for — what the suppression
-  /// lift above compares against.
-  String? _heroTrailerScheduledItemId;
-
-  /// Settings → Home Page toggles, read once per screen life (on TV a tab
-  /// switch rebuilds the screen, so Settings changes are picked up on return).
-  bool _heroTrailerEnabled = false;
-
-  /// Ambient volume (0–100) for the hero trailer; 0 when the sound toggle is
-  /// off. Applied at engine open, so it's also read once per screen life.
-  double _heroTrailerVolume = 0;
-
-  /// Trailers only on the TV Home board's full spotlight — never the Search
-  /// tab's compact strip (too small, and results should dominate) or off-TV
-  /// (the hero itself isn't rendered there). Low-memory Apple TV generations
-  /// are excluded outright: an mpv trailer engine alongside the board's
-  /// artwork is exactly the load that jetsam-kills a 3 GB first-gen 4K, and
-  /// the probe is warmed pre-runApp so this getter stays constant for the
-  /// State's lifetime (the init/dispose registrations must agree).
-  bool get _heroTrailerActive =>
-      widget.isTelevision &&
-      !widget.searchMode &&
-      !widget.discoverMode &&
-      !TvosDevice.isLowMemoryCached;
-
-  /// The hero trailer off-TV: the Spotlight home board's reel, rendered on
-  /// phones/tablets/desktop. Deliberately SEPARATE from [_heroTrailerActive]
-  /// — that getter is the whole TV shell lifecycle (glass scaffold, sidebar
-  /// relays, hardware-key takeover, ambient publish), none of which belongs
-  /// on a phone. This one means exactly "this instance may resolve and paint
-  /// a hero trailer"; the enabled pref (platform-defaulted: TV/desktop on,
-  /// phone/tablet off) gates it at schedule time.
-  bool get _heroTrailerOffTvEligible =>
-      !widget.isTelevision && !widget.searchMode && !widget.discoverMode;
-
-  /// May THIS instance resolve/render a hero trailer at all.
-  bool get _heroTrailerRenderable =>
-      _heroTrailerActive || _heroTrailerOffTvEligible;
+  // Stage-part compatibility aliases; removal lane: G1'-8 StageHost conversion.
+  ValueNotifier<StremioMeta?> get _heroItem => _hero.heroItem;
+  ValueNotifier<StremioMeta?> get _heroEnriched => _hero.heroEnriched;
+  ValueNotifier<YoutubeResolvedStreams?> get _heroTrailer => _hero.trailer;
+  ValueNotifier<bool> get _heroTrailerLoading => _hero.trailerLoading;
+  ValueNotifier<bool> get _heroTrailerShowing => _hero.trailerShowing;
+  ValueNotifier<double> get _heroTrailerTakeover => _hero.trailerTakeover;
+  ValueNotifier<String?> get _heroLiveUrl => _hero.liveUrl;
+  ValueNotifier<IptvChannel?> get _heroLiveChannel => _hero.liveChannel;
+  ValueNotifier<bool> get _heroLiveTakeover => _hero.liveTakeover;
+  ValueNotifier<Color?> get _heroTint => _hero.tint;
+  bool get _heroTrailerEnabled => _hero.trailerEnabled;
+  double get _heroTrailerVolume => _hero.trailerVolume;
+  bool get _heroTrailerActive => _hero.trailerActive;
+  bool get _heroTrailerRenderable => _hero.trailerRenderable;
+  bool get _heroActive => _hero.active;
 
   // Discover tab: the active source key (CW / tracker / `a:{addonId}`) + its
   // DPAD focus node (the "Source" dropdown is the leading filter of whichever
@@ -1220,55 +1135,7 @@ class _SearchScreenState extends State<SearchScreenHost>
         unawaited(StorageService.setDiscoverLastSource(_discMdblist));
       }
     }
-    // Ambient hero trailer gates (Home board TV only) — read before the board
-    // loads so the seeded first spotlight can already schedule its trailer.
-    if (_heroTrailerActive) {
-      // The hero doesn't change when the user steps out to the SIDEBAR, so
-      // the rest-debounce (or a playing trailer) would happily continue under
-      // the expanded rail. Kill it on sidebar enter; re-arm the current
-      // spotlight on exit so browsing resumes its normal rest-to-play.
-      MainPageBridge.addTvSidebarFocusListener(_onTvSidebarFocusChanged);
-      // Relay the takeover arc to the app shell so the sidebar rail hides in
-      // lock-step with the board.
-      _heroTrailerTakeover.addListener(_relayChromeDim);
-      // Relay the ambient lights-off state too: the rail dims with the rows
-      // while a trailer plays instead of glowing beside the darkened stage.
-      _heroTrailerShowing.addListener(_relayLightsOff);
-      // Deliberately NO sidebar tint relay any more: the "colour floods the
-      // chrome while the trailer plays" move read as noise, not mood (user
-      // call). Playback now dims the stage neutrally instead ("lights down");
-      // the rail just stays its quiet dark self. (dispose() already resets
-      // the shell's tvHeroTint post-frame, so no stale colour can survive.)
-      // Real content playback (from a detail page, Quick Play, anywhere)
-      // suppresses the trailer for this spotlight — see _heroTrailerSuppressed.
-      MainPageBridge.addPlayerLaunchListener(_onContentPlayerLaunch);
-      // While the takeover owns the screen the board is invisible — ANY key
-      // must bring it back, even ones that don't change the hero (fav-row
-      // tiles, a same-title card in another row). Observe-only: the key still
-      // performs its normal action (SELECT opens the showcased title).
-      HardwareKeyboard.instance.addHandler(_onTakeoverKey);
-      Future.wait([
-        StorageService.getHomeHeroTrailerEnabled(),
-        StorageService.getAmbientTrailerAudioEnabled(
-          AmbientTrailerSurface.homeHero,
-        ),
-        StorageService.getAmbientTrailerVolume(AmbientTrailerSurface.homeHero),
-      ]).then((values) {
-        if (!mounted) return;
-        final enabled = values[0] as bool;
-        setState(() {
-          _heroTrailerEnabled = enabled;
-          _heroTrailerVolume = (values[1] as bool)
-              ? (values[2] as int).toDouble()
-              : 0;
-        });
-        if (!enabled) return;
-        // The board usually seeds the hero before this read lands — kick the
-        // current spotlight so the billboard still starts on cold open.
-        final current = _heroItem.value;
-        if (current != null) _scheduleHeroTrailer(current);
-      });
-    }
+    _hero.registerTv();
     // Discover on TV: relay the trailer takeover to the sidebar chrome-dim so
     // the rail hides when the trailer goes fullscreen. The showing listener
     // arms the theater timer (deep lights-off a few seconds into playback).
@@ -1352,8 +1219,8 @@ class _SearchScreenState extends State<SearchScreenHost>
         // Hero trailer prefs for the OFF-TV Spotlight reel. Only the pieces
         // that mean "resolve and paint a video" — none of the TV shell
         // machinery the _heroTrailerActive block registers.
-        MainPageBridge.addPlayerLaunchListener(_onContentPlayerLaunch);
-        unawaited(_reloadOffTvHeroTrailerPrefs());
+        MainPageBridge.addPlayerLaunchListener(_hero.onContentPlayerLaunch);
+        unawaited(_hero.reloadOffTvTrailerPrefs());
       }
     }
     // Unified (non-TV) layout: drive the catalog Sources bar off search-field
@@ -1464,36 +1331,6 @@ class _SearchScreenState extends State<SearchScreenHost>
       });
     }
     return true;
-  }
-
-  /// Off-TV hero trailer prefs — read at init and RE-read whenever Settings
-  /// fires the home-settings bridge, because off-TV Settings is a pushed
-  /// route over a surviving Home: without the re-read, flipping the toggle
-  /// would do nothing until the tab was recreated. setState because the
-  /// board's `trailersEnabled` is a constructor param — its dwell clock only
-  /// learns the pref through a rebuild.
-  ///
-  /// Sound/volume read the DETAIL surface keys off-TV: that is the pair the
-  /// settings page has always shown on these platforms, so a stored "sound
-  /// off" keeps meaning what it meant. Writes go to both surfaces now, so
-  /// the pairs converge on first change.
-  Future<void> _reloadOffTvHeroTrailerPrefs() async {
-    final values = await Future.wait([
-      StorageService.getHomeHeroTrailerEnabled(),
-      StorageService.getAmbientTrailerAudioEnabled(
-        AmbientTrailerSurface.detail,
-      ),
-      StorageService.getAmbientTrailerVolume(AmbientTrailerSurface.detail),
-    ]);
-    if (!mounted) return;
-    final enabled = values[0] as bool;
-    setState(() {
-      _heroTrailerEnabled = enabled;
-      _heroTrailerVolume = (values[1] as bool)
-          ? (values[2] as int).toDouble()
-          : 0;
-    });
-    if (!enabled) _clearHeroTrailer();
   }
 
   /// Off-TV Home's Back (via the bridge, tab key 'home'): close the Spotlight
@@ -1652,7 +1489,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       // Same closure that registered — the bridge's mid-transition contract.
       MainPageBridge.unregisterTabBackHandler('home', _handleHomeBack);
       _searchFocusNode.removeListener(_onSearchFocusLatchSheet);
-      MainPageBridge.removePlayerLaunchListener(_onContentPlayerLaunch);
+      MainPageBridge.removePlayerLaunchListener(_hero.onContentPlayerLaunch);
     }
     // Safe no-op in the variants that never registered it.
     FocusManager.instance.removeListener(_onGlobalFocusChange);
@@ -1684,53 +1521,9 @@ class _SearchScreenState extends State<SearchScreenHost>
     _atriumFocusedRailKey.dispose();
     _tonightCard.dispose();
     _stageCol.dispose();
-    MainPageBridge.removeTvSidebarFocusListener(_onTvSidebarFocusChanged);
-    if (_heroTrailerActive) {
-      _heroTrailerTakeover.removeListener(_relayChromeDim);
-      _heroTrailerShowing.removeListener(_relayLightsOff);
-      MainPageBridge.removePlayerLaunchListener(_onContentPlayerLaunch);
-      HardwareKeyboard.instance.removeHandler(_onTakeoverKey);
-      appRouteObserver.unsubscribe(this);
-      // Reset the shell notifiers AFTER this frame: dispose can run inside
-      // finalizeTree (tab switch mid-takeover) while the tree is locked, and
-      // a synchronous write would markNeedsBuild the sidebar's listener
-      // mid-unmount.
-      if (MainPageBridge.tvChromeDim.value != 0) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          MainPageBridge.tvChromeDim.value = 0;
-        });
-      }
-      if (MainPageBridge.tvHeroTint.value != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          MainPageBridge.tvHeroTint.value = null;
-        });
-      }
-      if (MainPageBridge.tvAmbientArt.value != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          MainPageBridge.tvAmbientArt.value = null;
-        });
-      }
-      if (MainPageBridge.tvStageLightsOff.value) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          MainPageBridge.tvStageLightsOff.value = false;
-        });
-      }
-    }
+    _hero.detachShell(unsubscribeRoute: () => appRouteObserver.unsubscribe(this));
     _catalogDebounce?.cancel();
-    _heroTimer?.cancel();
-    _heroSwapTimer?.cancel();
-    _heroTrailerTimer?.cancel();
-    _tintTimer?.cancel();
-    _heroItem.dispose();
-    _heroEnriched.dispose();
-    _heroTrailer.dispose();
-    _heroTrailerLoading.dispose();
-    _heroTrailerShowing.dispose();
-    _heroTrailerTakeover.dispose();
-    _heroLiveUrl.dispose();
-    _heroLiveChannel.dispose();
-    _heroLiveTakeover.dispose();
-    _heroTint.dispose();
+    _hero.dispose();
     _searchController.dispose();
     _catalogSourcesHideTimer?.cancel();
     _searchFocusNode.removeListener(_onSearchFocusForSources);
@@ -1839,7 +1632,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // Off-TV the hero-trailer prefs ride this same signal — Settings is a
     // pushed route here, so nothing else tells a surviving Home about them.
     if (!widget.isTelevision) {
-      unawaited(_reloadOffTvHeroTrailerPrefs());
+      unawaited(_hero.reloadOffTvTrailerPrefs());
     }
     await _loadHomeDefaultView();
     if (!mounted) return;
@@ -2585,10 +2378,10 @@ class _SearchScreenState extends State<SearchScreenHost>
       _heroEnriched.value = null;
       // Outside the null-check: a board that reloads EMPTY must clear the
       // shell stage too (null item → null art), not keep the last title's.
-      _publishAmbientArt(first, null);
+      _hero.publishAmbientArt(first, null);
       if (first != null) {
-        _enrichHero(first);
-        _updateHeroTint(first);
+        _hero.enrich(first);
+        _hero.updateTint(first);
         // Billboard effect: the seeded spotlight starts its trailer too, so
         // opening Home settles into a living hero without any DPAD input.
         // A board reload is a fresh visit — lift any after-the-feature
@@ -2596,16 +2389,16 @@ class _SearchScreenState extends State<SearchScreenHost>
         // (a reload landing while a favourite held focus would otherwise
         // keep its stale art/title on the stage — or resume its stream —
         // with no cell focused, and let the seeded trailer start beneath).
-        _heroTrailerSuppressed = false;
+        _hero.trailerSuppressed = false;
         _canvasFavFocus.value = null;
-        _clearHeroLiveIptv();
-        _scheduleHeroTrailer(first);
+        _hero.clearLiveIptv();
+        _hero.scheduleTrailer(first);
       } else {
-        _clearHeroTrailer();
+        _hero.clearTrailer();
         // Clear the COLOUR too, not just the art — an empty reload otherwise
         // left the departed title's tint on the shell stage + sidebar glass.
         _heroTint.value = null;
-        _publishHeroTintToShell(null);
+        _hero.publishTintToShell(null);
       }
     }
   }
@@ -3171,7 +2964,7 @@ class _SearchScreenState extends State<SearchScreenHost>
 
   /// Whether this layout's ground is the title's ART, edge to edge — the only
   /// case where lighting the app shell behind the ghost rail continues the
-  /// board instead of cutting across it. See [_publishAmbientArt].
+  /// board instead of cutting across it. See [_hero.publishAmbientArt].
   bool get _stagePublishesShellArt => switch (_homeStyleEffective) {
     // Spotlight's hero IS the ground, edge to edge, so lighting the shell
     // behind the rail continues the board rather than cutting across it.
@@ -3305,13 +3098,13 @@ class _SearchScreenState extends State<SearchScreenHost>
   void _applyStageTransition(String style) {
     // Tear the live players down BEFORE the relayout: the underlay engine
     // widget must never be re-parented into a different geometry mid-play.
-    _clearHeroTrailer();
-    _clearHeroLiveIptv();
+    _hero.clearTrailer();
+    _hero.clearLiveIptv();
     _resetStageNavigation();
     // The shell's ambient art is per-layout (ink-ground layouts publish
     // none), so clear it rather than leaving the old layout's lighting in
     // the strip behind the ghost rail.
-    _ambientArtItemId = null;
+    _hero.resetAmbientArtIdentity();
     if (MainPageBridge.tvAmbientArt.value != null) {
       MainPageBridge.tvAmbientArt.value = null;
     }
@@ -3322,8 +3115,8 @@ class _SearchScreenState extends State<SearchScreenHost>
     // some unrelated hero change happens to refresh it.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _publishAmbientArt(_heroItem.value, _heroEnriched.value);
-      _publishHeroTintToShell(_heroTint.value);
+      _hero.publishAmbientArt(_heroItem.value, _heroEnriched.value);
+      _hero.publishTintToShell(_heroTint.value);
     });
   }
 
@@ -3412,12 +3205,12 @@ class _SearchScreenState extends State<SearchScreenHost>
     // ever live in Tonight's RAIL zone, never its Continue queue.
     _atriumFocusedRailKey.value = railKey;
     _tonightZoneIsQueue = false;
-    _heroSwapTimer?.cancel();
-    _clearHeroTrailer();
+    _hero.cancelPendingSwap();
+    _hero.clearTrailer();
     if (liveChannel != null && _stageWantsLivePreview) {
-      _setHeroLiveIptv(liveChannel);
+      _hero.setLiveIptv(liveChannel);
     } else {
-      _clearHeroLiveIptv();
+      _hero.clearLiveIptv();
     }
     _canvasFavFocus.value = focus;
   }
@@ -5688,379 +5481,13 @@ class _SearchScreenState extends State<SearchScreenHost>
     );
   }
 
-  // ── Hero ─────────────────────────────────────────────────────────────────
-
-  /// Whether the hero spotlight is live for the current tab/state: TV-only, on
-  /// the board always and on the dedicated Search tab once there are results
-  /// (hidden on the blank "type to search" prompt). Single source of truth for
-  /// seeding ([_applySections]), focus tracking ([_setHero]) and rendering
-  /// ([_buildBoard]) so they can't drift.
-  bool get _heroActive =>
-      widget.isTelevision && (!widget.searchMode || _catalogQuery.isNotEmpty);
-
-  void _setHero(StremioMeta item) {
-    // Off-TV / blank search prompt the hero isn't rendered, so don't track focus
-    // or fire the per-item backdrop-enrichment /meta fetch behind it.
-    if (!_heroActive) return;
-    // A folder tile has no /meta, trailer or playback, so the hero keeps
-    // showing the last real title.
-    if (item.type == 'folder') return;
-    // A catalog/CW card owns the stage again — drop any Canvas favourites
-    // override so its art/identity yield to the hero pipeline.
-    _canvasFavFocus.value = null;
-    // A catalog/CW card just took focus (possibly straight from the IPTV
-    // favourites row, which has no row in between) — drop any live IPTV feed
-    // so the boxed video region falls back to this item's own trailer.
-    _clearHeroLiveIptv();
-    if (_heroItem.value?.id == item.id) {
-      // Back on the current hero (a vertical move within the column, or an
-      // A→B→A jiggle inside the swap debounce): drop any pending swap to a
-      // neighbour focus merely passed through — and RE-ARM the trailer when
-      // the move away already tore it down and nothing is resolving. Without
-      // the re-arm, a quick jiggle left the hero permanently trailer-less
-      // (cleared on the first keypress, never rescheduled — "some cards
-      // never even show the loading pill"). A trailer that's already playing
-      // or resolving is left completely alone.
-      _heroSwapTimer?.cancel();
-      if (_heroTrailer.value == null && !_heroTrailerLoading.value) {
-        _scheduleHeroTrailer(item);
-      }
-      return;
-    }
-    // Instant + cheap on EVERY move: kill any trailer (timer cancels and
-    // notifier flips) so the lights-off veils start lifting with the
-    // keypress, even though the hero swap itself waits for the rest below.
-    _clearHeroTrailer();
-    // First hero (board just landed) shows instantly. After that, the swap
-    // waits for a short DPAD rest — holding a direction across a row costs
-    // only the card focus visuals (ring + scale), never a spotlight rebuild
-    // plus a backdrop decode per step. This is the Nuvio/Netflix billboard
-    // settle debounce from the approved Concept-5 foundations, and the
-    // second half of the "navigation feels heavy" fix (the first was the
-    // tint cache publishing synchronously).
-    if (_heroItem.value == null) {
-      _applyHero(item);
-      return;
-    }
-    _heroSwapTimer?.cancel();
-    _heroSwapTimer = Timer(const Duration(milliseconds: 260), () {
-      if (mounted) _applyHero(item);
-    });
-  }
-
-  /// The real hero swap — everything downstream of "focus has RESTED here".
-  void _applyHero(StremioMeta item) {
-    _heroItem.value = item;
-    _heroEnriched.value = null;
-    _publishAmbientArt(item, null);
-    _enrichHero(item);
-    _updateHeroTint(item);
-    // A NEW title in the spotlight lifts the after-the-feature suppression —
-    // fresh context, fresh trailer.
-    _heroTrailerSuppressed = false;
-    _scheduleHeroTrailer(item);
-  }
-
-  /// The hero id the shell stage's current art belongs to — lets a re-seed of
-  /// the SAME title (board reloads: See-All return, Home Rows change,
-  /// integrations refresh) keep the enriched backdrop on screen instead of
-  /// downgrading to the poster for the ~300ms until enrichment re-lands
-  /// (which was a prominent full-screen double-crossfade).
-  String? _ambientArtItemId;
-
-  /// Publish the focused title's key art to the app shell's glass stage
-  /// (TvAmbientArtStage — the blurred backdrop BEHIND the sidebar and this
-  /// board's transparent scaffold). Rest-cadence only: called from
-  /// [_applyHero] (260ms settle) and the enrichment landing, never per
-  /// keypress. TV Home board only; other modes leave the shell alone.
-  void _publishAmbientArt(StremioMeta? item, StremioMeta? enriched) {
-    if (!_heroTrailerActive) return;
-    // Layouts whose own ground is INK (Atrium's panel, Deck's and Tonight's
-    // fields, Mosaic's veiled wash) must not light the shell: the shell art
-    // only shows in the 64px strip behind the ghost rail, so a bright blurred
-    // sliver would butt straight into the board's flat ground and read as a
-    // seam. Publishing null leaves the shell on its flat page ink, which is
-    // exactly what those boards continue.
-    if (_stageActive && !_stagePublishesShellArt) {
-      _ambientArtItemId = null;
-      if (MainPageBridge.tvAmbientArt.value != null) {
-        MainPageBridge.tvAmbientArt.value = null;
-      }
-      return;
-    }
-    final backdrop = item?.background?.isNotEmpty == true
-        ? item!.background
-        : (enriched?.background?.isNotEmpty == true
-              ? enriched!.background
-              : null);
-    // Same title, no backdrop in hand (only the poster fallback), and the
-    // stage already shows SOMETHING for it → keep what's showing; the
-    // enrichment landing republishes the real backdrop moments later.
-    if (backdrop == null &&
-        item?.id != null &&
-        item!.id == _ambientArtItemId &&
-        MainPageBridge.tvAmbientArt.value != null) {
-      return;
-    }
-    final art = backdrop ?? item?.poster;
-    _ambientArtItemId = item?.id;
-    MainPageBridge.tvAmbientArt.value = (art == null || art.isEmpty)
-        ? null
-        : art;
-  }
-
-  /// Debounced ambient-trailer load for the spotlighted title. The previous
-  /// trailer is torn down IMMEDIATELY on any hero change (a playing trailer
-  /// under the wrong title is worse than the static backdrop), then a new one
-  /// only starts once focus has RESTED on the card — flying across a row costs
-  /// nothing but a timer reset, never a resolve or a decoder spin-up. Both
-  /// lookups (Cinemeta /meta for the YouTube id, then the stream resolve) are
-  /// cached in their services, so re-resting on a recent card starts fast.
-  void _scheduleHeroTrailer(StremioMeta item, {bool fromSpotlight = false}) {
-    // Off-TV nothing ever calls _applyHero (the TV paths that lift the
-    // after-playback suppression), so a NEW title arriving through the
-    // spotlight dwell lifts it here — fresh context, fresh trailer, the same
-    // rule _applyHero implements for TV.
-    if (_heroTrailerSuppressed &&
-        fromSpotlight &&
-        item.id != _heroTrailerScheduledItemId) {
-      _heroTrailerSuppressed = false;
-    }
-    if (!_heroTrailerRenderable ||
-        !_heroTrailerEnabled ||
-        _heroTrailerSuppressed) {
-      return;
-    }
-    _heroTrailerScheduledItemId = item.id;
-    // Spotlight owns its own hero cadence, so the shared scheduler must not
-    // also drive it — two systems interleaving on one hero is how a trailer
-    // starts under the wrong title.
-    //
-    // The guard lives HERE rather than at the call sites: scheduling reaches
-    // this method from init, section loads, focus changes, `_applyHero`,
-    // route return and sidebar return, and a per-site exclusion would miss
-    // one. `_heroTrailerActive` is deliberately left style-blind — it governs
-    // listener registration across an asynchronously loaded style, and gating
-    // it leaks or double-registers listeners.
-    if (_homeStyleEffective == 'spotlight' && !fromSpotlight) return;
-    // A layout with no place to put moving picture (Mosaic) never resolves a
-    // trailer at all — the resolve is a network + engine cost for something
-    // that would be invisible under its veil.
-    if (_stageActive && !_stageWantsAmbient) return;
-    // A Canvas favourite owns the stage (or its live feed does): a catalog
-    // trailer must never start beneath it. The next catalog/CW focus goes
-    // through _setHero, which clears both and reschedules. Safe to skip the
-    // reset lines below: every fav-focus path already ran _clearHeroTrailer.
-    if (_canvasFavFocus.value != null || _heroLiveChannel.value != null) {
-      return;
-    }
-    _heroTrailerTimer?.cancel();
-    final req = ++_heroTrailerReq;
-    if (_heroTrailer.value != null) _heroTrailer.value = null;
-    if (_heroTrailerLoading.value) _heroTrailerLoading.value = false;
-    if (_heroTrailerShowing.value) _heroTrailerShowing.value = false;
-    // Spotlight has already decided that this hero owns the stage. Begin the
-    // useful network/decoder work immediately there; other layouts keep the
-    // shared 2.4s focus-rest debounce so flying across their rows stays cheap.
-    final resolveDelay = fromSpotlight
-        ? Duration.zero
-        : const Duration(milliseconds: 2400);
-    _heroTrailerTimer = Timer(resolveDelay, () async {
-      if (!mounted || req != _heroTrailerReq) return;
-      // The layout may have changed during the dwell — a stage with nowhere
-      // to put moving picture must not spin up an engine.
-      if (_stageActive && !_stageWantsAmbient) return;
-      // Covered by ANY modal (bottom sheet, dialog — which never reach the
-      // PageRoute-only route observer) or a pushed page: a trailer must not
-      // start under it. The cover's dismissal path re-arms where relevant
-      // (didPopNext for pages); sheets simply wait for the next hero rest.
-      if (ModalRoute.of(context)?.isCurrent != true) return;
-      // From here the attempt is committed — surface the pill. Every exit
-      // below (no trailer, failed resolve, hero moved on) clears it; success
-      // keeps it up until the backdrop reports frames (_onHeroTrailerPlaying).
-      _heroTrailerLoading.value = true;
-      void fail() {
-        if (mounted && req == _heroTrailerReq) {
-          _heroTrailerLoading.value = false;
-        }
-      }
-
-      // YouTube id: catalog rows rarely carry it, so fall back to the /meta
-      // details (the same fetch — and cache — the hero enrichment uses).
-      final imdb = item.imdbId ?? (item.id.startsWith('tt') ? item.id : null);
-      String? ytId = item.trailerYtId;
-      if (ytId == null || ytId.isEmpty) {
-        if (imdb == null) return fail();
-        try {
-          final full = await _stremio.fetchMetaDetails(
-            imdbId: imdb,
-            type: item.type,
-          );
-          ytId = full?.trailerYtId;
-        } catch (_) {
-          // Meta fetch failed — the IMDb backup below may still carry it.
-        }
-      }
-      if (!mounted || req != _heroTrailerReq) return;
-      // Ambient hero backdrop: resolve at a low cap (small region, weak TV).
-      var streams = (ytId != null && ytId.isNotEmpty)
-          ? await YoutubeService.resolveStreams(
-              ytId,
-              maxHeightOverride: YoutubeService.ambientTrailerMaxHeight,
-              preferVp9: true,
-            )
-          : null;
-      // Backup source: IMDb hosts its own trailer MP4s, so a YouTube block
-      // (or a title with no YouTube id at all) still gets a moving hero.
-      if ((streams == null || !streams.hasPlayable) && imdb != null) {
-        if (!mounted || req != _heroTrailerReq) return;
-        streams = await ImdbTrailerService.resolveTrailer(
-          imdb,
-          maxHeight: YoutubeService.ambientTrailerMaxHeight,
-        );
-      }
-      if (!mounted || req != _heroTrailerReq) return;
-      if (streams == null || !streams.hasPlayable) return fail();
-      _heroTrailer.value = streams;
-      // Failsafe: a dead/bot-blocked stream can error inside the engine
-      // before ever producing a frame, in which case onPlayingChanged never
-      // fires (it only reports real transitions) — don't let the pill spin
-      // forever on a trailer that will never come.
-      Timer(const Duration(seconds: 15), fail);
-    });
-  }
-
-  /// The hero backdrop's playing signal: frames on screen (true) or engine
-  /// teardown/error (false). Ends the loading pill either way, and drives the
-  /// spotlight's image-yield crossfade.
-  void _onHeroTrailerPlaying(bool playing) {
-    if (_heroTrailerLoading.value) _heroTrailerLoading.value = false;
-    if (_heroTrailerShowing.value != playing) {
-      _heroTrailerShowing.value = playing;
-    }
-  }
-
-  /// Kill any pending/playing hero trailer (hero cleared, board reloading).
-  void _clearHeroTrailer() {
-    _heroTrailerTimer?.cancel();
-    _heroTrailerReq++;
-    if (_heroTrailer.value != null) _heroTrailer.value = null;
-    if (_heroTrailerLoading.value) _heroTrailerLoading.value = false;
-    if (_heroTrailerShowing.value) _heroTrailerShowing.value = false;
-  }
-
-  /// DPAD focus rested on an IPTV favourite card — retune the boxed hero video
-  /// region to that channel's live stream. A plain M3U/Xtream favourite's URL
-  /// is already playable; a Stremio-addon favourite resolves candidates first
-  /// (same async ladder [IptvResultsView] uses for its own inline preview),
-  /// guarded by [_heroLiveReq] so a fast DPAD move past it can't land a stale
-  /// resolve on top of whatever channel focus has since moved to.
-  void _setHeroLiveIptv(IptvChannel channel) {
-    if (!_heroTrailerActive) return;
-    if (_heroLiveChannel.value?.url == channel.url) return;
-    _heroLiveChannel.value = channel;
-    if (!_heroLiveTakeover.value) _heroLiveTakeover.value = true;
-    _heroLiveCandidates = null;
-    final req = ++_heroLiveReq;
-    // A live feed pre-empts whatever catalog trailer is mid-flight/playing —
-    // instant teardown, same as any other hero change.
-    _clearHeroTrailer();
-    _heroLiveUrl.value = null;
-    // The shell's glass-stage backdrop and sidebar tint are ALSO the stale
-    // catalog title's art (published by [_publishAmbientArt]/
-    // [_publishHeroTintToShell], neither of which this focus path runs) —
-    // blank them too rather than leaving that art behind everything,
-    // including the sidebar, while an unrelated channel plays.
-    MainPageBridge.tvAmbientArt.value = null;
-    MainPageBridge.tvHeroTint.value = null;
-    if (!StremioIptvService.isStremioChannelUrl(channel.url)) {
-      _heroLiveUrl.value = channel.url;
-      return;
-    }
-    StremioIptvService.instance.resolveCandidates(channel.url).then((found) {
-      if (!mounted || req != _heroLiveReq || found.isEmpty) return;
-      _heroLiveCandidates = [for (final c in found) c.url];
-      _heroLiveUrl.value = _heroLiveCandidates!.first;
-    });
-  }
-
-  /// DPAD focus left the IPTV favourites row (another favourites row, or a
-  /// catalog/CW card) — drop the live feed so the boxed region falls back to
-  /// whatever catalog trailer [_heroItem] owns.
-  void _clearHeroLiveIptv() {
-    _heroLiveReq++;
-    final wasLive = _heroLiveChannel.value != null;
-    if (wasLive) _heroLiveChannel.value = null;
-    if (_heroLiveTakeover.value) _heroLiveTakeover.value = false;
-    _heroLiveCandidates = null;
-    if (_heroLiveUrl.value != null) _heroLiveUrl.value = null;
-    // The unmounting live backdrop can never report playing:false (its
-    // dispose doesn't notify), and when the trailer path declines to re-arm
-    // (trailers off / suppressed) nothing else resets these — a stuck
-    // showing=true kept canvas theater re-firing over a static stage and
-    // held the shell's lights off.
-    if (wasLive) {
-      if (_heroTrailerShowing.value) _heroTrailerShowing.value = false;
-      if (_heroTrailerLoading.value) _heroTrailerLoading.value = false;
-    }
-    // Restore the shell's glass-stage backdrop/tint for whatever catalog
-    // title the hero already holds. Needed even when DPAD focus returns to
-    // the SAME card it was on before IPTV took over: _setHero's "back on the
-    // current hero" branch doesn't re-run _publishAmbientArt/
-    // _publishHeroTintToShell (no item change to react to), so without this
-    // the shell would stay on the blank/neutral state _setHeroLiveIptv left
-    // it in.
-    if (wasLive && _heroTrailerActive) {
-      _publishAmbientArt(_heroItem.value, _heroEnriched.value);
-      // Through the GATE, not straight at the bridge: the ink-ground layouts
-      // publish no shell tint, and restoring one here would leave a coloured
-      // sidebar sitting on a flat board until something else cleared it.
-      _publishHeroTintToShell(_heroTint.value);
-    }
-  }
-
-  /// The boxed hero region's live IPTV feed genuinely failed (refused to
-  /// open, errored, or stalled past the first-frame timeout) — step down its
-  /// candidate ladder, mirroring the IPTV page's own inline preview
-  /// (IptvResultsView._onPreviewPlaybackFailed). No-op for a plain M3U/Xtream
-  /// favourite (single URL, no ladder) or once every candidate is exhausted.
-  void _onHeroLivePlaybackFailed() {
-    final candidates = _heroLiveCandidates;
-    final current = _heroLiveUrl.value;
-    if (candidates == null || current == null) return;
-    final next = candidates.indexOf(current) + 1;
-    if (next <= 0 || next >= candidates.length) {
-      // Every candidate is dead: forget the cached list so a later attempt
-      // re-resolves fresh links instead of replaying the same dead ones for
-      // the rest of the 5-minute cache window.
-      final channel = _heroLiveChannel.value;
-      if (channel != null) StremioIptvService.instance.invalidate(channel.url);
-      _heroLiveUrl.value = null;
-      return;
-    }
-    _heroLiveUrl.value = candidates[next];
-  }
-
-  /// Mirror the takeover arc onto the app-shell notifier (sidebar rail hide).
-  void _relayChromeDim() {
-    MainPageBridge.tvChromeDim.value = _heroTrailerTakeover.value;
-  }
-
-  /// Mirror the ambient trailer's lights-off state onto the app-shell
-  /// notifier — the shell veils the sidebar rail in lock-step with the
-  /// board's own row/hero veils, so the whole room goes dark together.
-  void _relayLightsOff() {
-    MainPageBridge.tvStageLightsOff.value = _heroTrailerShowing.value;
-  }
-
-  // ── Route awareness (Home board trailer only) ────────────────────────────
-  // The trailer schedule is time-driven, so without this a pushed route
-  // (detail page, player) would let the 2.4s debounce fire UNDER the cover
-  // and start a trailer behind it — the backdrop's own RouteAware pause can't
-  // help because it mounts after the cover was already pushed and never sees
-  // a didPushNext. Kill everything when covered; re-arm the spotlight when
-  // the cover pops so browsing resumes its normal rest-to-play.
-
+  // Callback aliases shared with existing stage parts; expire in G1'-8.
+  void _setHero(StremioMeta item) => _hero.setHero(item);
+  void _onHeroTrailerPlaying(bool playing) => _hero.onTrailerPlaying(playing);
+  void _clearHeroTrailer() => _hero.clearTrailer();
+  void _onHeroLivePlaybackFailed() => _hero.onLivePlaybackFailed();
+  void _scheduleHeroTrailer(StremioMeta item, {bool fromSpotlight = false}) =>
+      _hero.scheduleTrailer(item, fromSpotlight: fromSpotlight);
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -6071,10 +5498,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   }
 
   @override
-  void didPushNext() {
-    if (!_heroTrailerActive) return;
-    _clearHeroTrailer();
-  }
+  void didPushNext() => _hero.didPushNext();
 
   @override
   void didPopNext() {
@@ -6083,163 +5507,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // and no focus event re-fires it on the way back — re-run the dead check
     // now that the board is the top route again.
     _onGlobalFocusChange();
-    if (!_heroTrailerActive || !_heroTrailerEnabled) return;
-    final item = _heroItem.value;
-    if (item != null) _scheduleHeroTrailer(item);
-  }
-
-  /// Content playback launched (see the listener registration in
-  /// [initState]): kill the trailer NOW (native activity launches never push
-  /// a Flutter route, so RouteAware alone can't catch them all) and keep it
-  /// off for this spotlight — it must not resume behind or after the feature.
-  void _onContentPlayerLaunch() {
-    if (!_heroTrailerRenderable || !mounted) return;
-    _heroTrailerSuppressed = true;
-    // The suppression baseline is the hero SHOWING at launch, not the last
-    // dwell's item — playback can start before the first dwell (cold open →
-    // open a card immediately), or after paging A→B with B's dwell still
-    // pending. Without this snapshot the stored id is stale/null and the
-    // just-watched title's own dwell would read as "new" and lift the
-    // suppression it was meant to hold.
-    final showing = _spotlightKey.currentState?.currentHeroId;
-    if (showing != null) _heroTrailerScheduledItemId = showing;
-    _clearHeroTrailer();
-  }
-
-  /// Any key while the takeover owns the screen restores the board — the UI
-  /// is at opacity 0, so this can't be left to hero-change detection alone
-  /// (fav-row tiles and same-title cards never change the hero). Observe-only
-  /// (always returns false): the key still does its normal job, so SELECT
-  /// both restores the board and opens the showcased title.
-  bool _onTakeoverKey(KeyEvent event) {
-    if (event is! KeyDownEvent) return false;
-    if (_heroTrailerTakeover.value <= 0.02) return false;
-    _clearHeroTrailer();
-    return false;
-  }
-
-  /// Sidebar focus enter/exit (see the listener registration in [initState]).
-  void _onTvSidebarFocusChanged(bool focused) {
-    if (!_heroTrailerActive || !_heroTrailerEnabled || !mounted) return;
-    if (focused) {
-      _clearHeroTrailer();
-    } else {
-      final item = _heroItem.value;
-      if (item != null) _scheduleHeroTrailer(item);
-    }
-  }
-
-  // ── Dynamic per-title tint ────────────────────────────────────────────────
-  // The hero scrim takes on the focused title's dominant poster color, so the
-  // screen shifts mood as you browse. Extraction is debounced (only after
-  // focus SETTLES — never per card while flying across a row), cached per
-  // title, and decodes a 32px thumbnail — negligible on the TV chip.
-  final ValueNotifier<Color?> _heroTint = ValueNotifier<Color?>(null);
-  final Map<String, Color?> _tintCache = {};
-  Timer? _tintTimer;
-  int _tintReq = 0;
-
-  void _updateHeroTint(StremioMeta item) {
-    _tintTimer?.cancel();
-    final req = ++_tintReq;
-    // ALWAYS defer — cache hits and empty posters included. Publishing a
-    // cached tint synchronously here meant every DPAD step over already-
-    // visited cards re-rastered every tint consumer (the full-screen mood
-    // field, the hero stage, the 450ms scrim tween, the art feathers) — the
-    // "navigation feels heavy" regression. The tint is scenery: it only
-    // needs to land once focus RESTS, never while scrubbing a row. (Short
-    // now that the 260ms hero-swap settle already ran before this fires.)
-    _tintTimer = Timer(const Duration(milliseconds: 120), () async {
-      final poster = item.poster;
-      if (poster == null || poster.isEmpty) {
-        _heroTint.value = null;
-        _publishHeroTintToShell(null);
-        return;
-      }
-      if (_tintCache.containsKey(item.id)) {
-        _heroTint.value = _tintCache[item.id];
-        _publishHeroTintToShell(_tintCache[item.id]);
-        return;
-      }
-      // Via the shared cache: the Home hero re-extracts on every focus rest,
-      // and the same posters come back constantly as the user arrows around.
-      final color = await DominantColorCache.of(
-        poster,
-        CachedNetworkImageProvider(poster),
-      );
-      if (!mounted || req != _tintReq) return; // focus moved on — stale
-      // Unbounded growth guard; a full clear is fine, extraction is cheap.
-      if (_tintCache.length > 300) _tintCache.clear();
-      _tintCache[item.id] = color;
-      _heroTint.value = color;
-      _publishHeroTintToShell(color);
-    });
-  }
-
-  /// Relay the settled tint to the app shell — the sidebar's glass blends it
-  /// in and the shell's art stage tints its washes with it. Rest-cadence and
-  /// CONSTANT across trailer start/stop, so there's no colour flooding in or
-  /// out at playback edges (the old complaint); the room simply wears the
-  /// focused film's hue while browsing. TV Home board only.
-  void _publishHeroTintToShell(Color? color) {
-    if (!_heroTrailerActive) return;
-    // The tint exists to make the sidebar read as glass over the SHELL ART.
-    // Layouts that publish no art (ink grounds — see [_publishAmbientArt])
-    // would just get a coloured rail floating on flat ink, so they stay
-    // neutral.
-    MainPageBridge.tvHeroTint.value = (_stageActive && !_stagePublishesShellArt)
-        ? null
-        : color;
-  }
-
-  /// Title-treatment art URL derivable SYNCHRONOUSLY from an IMDb id — the
-  /// same metahub image Cinemeta's /meta `logo` field points at. Lets the
-  /// hero start fetching the logo the moment focus settles instead of after
-  /// the /meta roundtrip — the roundtrip gap is what flashed the text title
-  /// for a beat before the art swapped in over it (the "title comes as text
-  /// then updates to image" complaint). A dead URL (title has no logo art)
-  /// falls back to the text title inside [_HeroTitleArt].
-  String? _derivedHeroLogo(StremioMeta item) {
-    final imdb = item.imdbId ?? (item.id.startsWith('tt') ? item.id : null);
-    if (imdb == null) return null;
-    return 'https://images.metahub.space/logo/medium/$imdb/img';
-  }
-
-  /// Debounced backdrop/description enrichment. Catalog list items usually
-  /// omit `background`/`description` (they come from the /meta endpoint), so
-  /// fetch them lazily — cached in [StremioService], and guarded against the
-  /// focus moving on (req id) so a slow fetch never clobbers a newer hero.
-  void _enrichHero(StremioMeta item) {
-    _heroTimer?.cancel();
-    final needsBg = item.background == null || item.background!.isEmpty;
-    final needsDesc = item.description == null || item.description!.isEmpty;
-    final needsRating = item.imdbRating == null;
-    // Catalog list items almost never carry runtime, so without this the /meta
-    // fetch (its only source) would be skipped whenever bg+desc+rating are
-    // already present — and the hero/takeover runtime would stay blank.
-    final needsRuntime = item.runtime == null;
-    // Same for the logo title-treatment: catalog items basically never carry
-    // it, and without this an item that happens to have bg+desc+rating+runtime
-    // (e.g. Continue Watching) would skip the fetch and stay text-titled.
-    final needsLogo = item.logo == null || item.logo!.isEmpty;
-    if (!needsBg && !needsDesc && !needsRating && !needsRuntime && !needsLogo) {
-      return;
-    }
-    final imdb = item.imdbId ?? (item.id.startsWith('tt') ? item.id : null);
-    if (imdb == null) return;
-    final reqId = ++_heroReqId;
-    // Short: on the board this only fires after the 260ms hero-swap settle.
-    _heroTimer = Timer(const Duration(milliseconds: 140), () async {
-      final details = await _stremio.fetchMetaDetails(
-        imdbId: imdb,
-        type: item.type,
-      );
-      if (!mounted || reqId != _heroReqId || details == null) return;
-      _heroEnriched.value = details;
-      // The enrichment usually carries the real backdrop a catalog item
-      // lacked — upgrade the shell stage from the poster-blur to it.
-      _publishAmbientArt(item, details);
-    });
+    _hero.didPopNext();
   }
 
   // ── Search field ─────────────────────────────────────────────────────────
@@ -8862,7 +8130,7 @@ class _SearchScreenState extends State<SearchScreenHost>
             // APP SHELL now (TvAmbientArtStage in main.dart) so it also
             // fills the strip behind the sidebar rail; this board's
             // scaffold is transparent over it and publishes the art/tint
-            // via MainPageBridge (see _publishAmbientArt).
+            // via MainPageBridge (see _hero.publishAmbientArt).
             // (The old "ambient colour bleed" — a tinted wash flooding the
             // rows while the trailer played, then draining out on stop — is
             // gone by user call. Playback now reads as LIGHTS DOWN instead:
@@ -8912,7 +8180,7 @@ class _SearchScreenState extends State<SearchScreenHost>
                                   ? item.logo
                                   : (enriched?.logo?.isNotEmpty == true
                                         ? enriched!.logo
-                                        : _derivedHeroLogo(item)),
+                                        : _hero.derivedLogo(item)),
                               compact: widget.searchMode,
                               isTelevision: tv,
                               height: heroH,
@@ -8936,7 +8204,7 @@ class _SearchScreenState extends State<SearchScreenHost>
                               // land AFTER first paint (or never trigger a
                               // rebuild), flipping the hero mid-session; now
                               // it only gates whether a video actually plays
-                              // in the region (see _scheduleHeroTrailer).
+                              // in the region (see _hero.scheduleTrailer).
                               // Trailers-off users keep the same stage — the
                               // region simply always shows the key art.
                               boxedTrailer: _heroTrailerActive,
@@ -9081,7 +8349,7 @@ class _SearchScreenState extends State<SearchScreenHost>
                   heroHeight: heroH,
                   volume: _heroTrailerVolume,
                   onPlayingChanged: _onHeroTrailerPlaying,
-                  onPlaybackFailed: _onHeroLivePlaybackFailed,
+                  onPlaybackFailed: _hero.onLivePlaybackFailed,
                 ),
               ),
             // While the film owns the board, only the showcased title's
@@ -9972,8 +9240,8 @@ class _SearchScreenState extends State<SearchScreenHost>
     captionBand: _homeArtPosterCaptionBand,
     onUp: _favourites.favRowOnUp,
     onDown: _favourites.favRowOnDown,
-    clearHero: _clearHeroLiveIptv,
-    setLiveHero: _setHeroLiveIptv,
+    clearHero: _hero.clearLiveIptv,
+    setLiveHero: _hero.setLiveIptv,
     tag: (title, {icon}) => _CategoryTag(title, icon: icon),
   );
 
