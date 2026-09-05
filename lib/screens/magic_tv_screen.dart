@@ -209,12 +209,12 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   final WatchSession _watchSession = WatchSession();
   late final ChannelCacheWarmer _cacheWarmer = ChannelCacheWarmer(
     viewerForcesNsfw: () => _viewerForcesNsfw,
-    filters: () => _tvFilters,
+    filters: () => _playbackSettings.tvFilters,
     minVideoSizeBytes: _torboxMinVideoSizeBytes,
     onQualityFallback: _notifyQualityFallback,
     onSizeFallback: () {
       _showSnack(
-        'Few ${_tvFilters.summary()} files here — playing other sizes too.',
+        'Few ${_playbackSettings.tvFilters.summary()} files here — playing other sizes too.',
         color: Colors.orange,
       );
     },
@@ -232,8 +232,8 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   // M1-3 retained host bindings; review at M1-5, expire/review-remove in M1-6.
   late final _watchBindings = WatchFlowBindings(
     allDebridAvailable: WatchValue(() => _allDebridAvailable),
-    hideOptions: WatchValue(() => _hideOptions),
-    hideSeekbar: WatchValue(() => _hideSeekbar),
+    hideOptions: WatchValue(() => _playbackSettings.hideOptions),
+    hideSeekbar: WatchValue(() => _playbackSettings.hideSeekbar),
     isAndroidTv: WatchValue(() => _isAndroidTv),
     getChannelKeywords: _getChannelKeywords,
     isBusy: WatchValue(() => _isBusy, (value) => _isBusy = value),
@@ -243,31 +243,31 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     premiumizeAvailable: WatchValue(() => _premiumizeAvailable),
     progressOpen: WatchValue(() => _progressOpen, (value) => _progressOpen = value),
     qualityFallbackNotified: WatchValue(() => _qualityFallbackNotified, (value) => _qualityFallbackNotified = value),
-    quickAvoidNsfw: WatchValue(() => _quickAvoidNsfw),
-    quickHideOptions: WatchValue(() => _quickHideOptions),
-    quickHideSeekbar: WatchValue(() => _quickHideSeekbar),
-    quickShowChannelName: WatchValue(() => _quickShowChannelName),
-    quickShowVideoTitle: WatchValue(() => _quickShowVideoTitle),
-    quickStartRandom: WatchValue(() => _quickStartRandom),
+    quickAvoidNsfw: WatchValue(() => _playbackSettings.quickAvoidNsfw),
+    quickHideOptions: WatchValue(() => _playbackSettings.quickHideOptions),
+    quickHideSeekbar: WatchValue(() => _playbackSettings.quickHideSeekbar),
+    quickShowChannelName: WatchValue(() => _playbackSettings.quickShowChannelName),
+    quickShowVideoTitle: WatchValue(() => _playbackSettings.quickShowVideoTitle),
+    quickStartRandom: WatchValue(() => _playbackSettings.quickStartRandom),
     rdAvailable: WatchValue(() => _rdAvailable),
     rdSkipBlockedTorrents: WatchValue(() => _rdSkipBlockedTorrents),
-    showChannelName: WatchValue(() => _showChannelName),
-    showVideoTitle: WatchValue(() => _showVideoTitle),
-    startRandom: WatchValue(() => _startRandom),
+    showChannelName: WatchValue(() => _playbackSettings.showChannelName),
+    showVideoTitle: WatchValue(() => _playbackSettings.showVideoTitle),
+    startRandom: WatchValue(() => _playbackSettings.startRandom),
     torboxAvailable: WatchValue(() => _torboxAvailable),
     viewerForcesNsfw: WatchValue(() => _viewerForcesNsfw),
     watchCancelled: WatchValue(() => _watchCancelled, (value) => _watchCancelled = value),
     activeProvider: WatchValue(() => _queuePrefetcher.activeProvider, (value) => _queuePrefetcher.activeProvider = value),
-    provider: WatchValue(() => _provider),
-    quickProvider: WatchValue(() => _quickProvider),
+    provider: WatchValue(() => _playbackSettings.provider),
+    quickProvider: WatchValue(() => _playbackSettings.quickProvider),
     status: WatchValue(() => _watchSession.status, (value) => _watchSession.status = value),
     torboxFileEntryType: WatchValue(() => _torboxFileEntryType),
     activeApiKey: WatchValue(() => _queuePrefetcher.activeApiKey, (value) => _queuePrefetcher.activeApiKey = value),
     currentWatchingChannelId: WatchValue(() => _currentWatchingChannelId, (value) => _currentWatchingChannelId = value),
     lastQueueSize: WatchValue(() => _lastQueueSize, (value) => _lastQueueSize = value),
     quickPlayMaxKeywords: WatchValue(() => _quickPlayMaxKeywords),
-    quickRandomStartPercent: WatchValue(() => _quickRandomStartPercent),
-    randomStartPercent: WatchValue(() => _randomStartPercent),
+    quickRandomStartPercent: WatchValue(() => _playbackSettings.quickRandomStartPercent),
+    randomStartPercent: WatchValue(() => _playbackSettings.randomStartPercent),
     originalMaxCap: WatchValue(() => _originalMaxCap, (value) => _originalMaxCap = value),
     lastSearchAt: WatchValue(() => _lastSearchAt, (value) => _lastSearchAt = value),
     cacheWarmer: WatchValue(() => _cacheWarmer),
@@ -279,7 +279,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     queue: WatchValue(() => _queue),
     seenLinkWithTorrentId: WatchValue(() => _seenLinkWithTorrentId),
     seenRestrictedLinks: WatchValue(() => _seenRestrictedLinks),
-    tvFilters: WatchValue(() => _tvFilters),
+    tvFilters: WatchValue(() => _playbackSettings.tvFilters),
     mounted: WatchValue(() => mounted),
     androidTvChannelMetadata: _androidTvChannelMetadata,
     cancelActiveWatch: _cancelActiveWatch,
@@ -368,38 +368,8 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       ChannelPlaybackSettingsState();
 
   // Advanced options
-  bool get _startRandom => _playbackSettings.startRandom;
-  set _startRandom(bool value) => _playbackSettings.startRandom = value;
-  int get _randomStartPercent => _playbackSettings.randomStartPercent;
-  set _randomStartPercent(int value) => _playbackSettings.randomStartPercent = value;
-  bool get _hideSeekbar => _playbackSettings.hideSeekbar;
-  set _hideSeekbar(bool value) => _playbackSettings.hideSeekbar = value;
-  bool get _showChannelName => _playbackSettings.showChannelName;
-  set _showChannelName(bool value) => _playbackSettings.showChannelName = value;
-  bool get _showVideoTitle => _playbackSettings.showVideoTitle;
-  set _showVideoTitle(bool value) => _playbackSettings.showVideoTitle = value;
-  bool get _hideOptions => _playbackSettings.hideOptions;
-  set _hideOptions(bool value) => _playbackSettings.hideOptions = value;
-  set _hideBackButton(bool value) => _playbackSettings.hideBackButton = value;
-  String get _provider => _playbackSettings.provider;
-  set _provider(String value) => _playbackSettings.provider = value;
 
   // Quick play options
-  bool get _quickStartRandom => _playbackSettings.quickStartRandom;
-  set _quickStartRandom(bool value) => _playbackSettings.quickStartRandom = value;
-  int get _quickRandomStartPercent => _playbackSettings.quickRandomStartPercent;
-  set _quickRandomStartPercent(int value) => _playbackSettings.quickRandomStartPercent = value;
-  bool get _quickHideSeekbar => _playbackSettings.quickHideSeekbar;
-  set _quickHideSeekbar(bool value) => _playbackSettings.quickHideSeekbar = value;
-  bool get _quickShowChannelName => _playbackSettings.quickShowChannelName;
-  set _quickShowChannelName(bool value) => _playbackSettings.quickShowChannelName = value;
-  bool get _quickShowVideoTitle => _playbackSettings.quickShowVideoTitle;
-  set _quickShowVideoTitle(bool value) => _playbackSettings.quickShowVideoTitle = value;
-  bool get _quickHideOptions => _playbackSettings.quickHideOptions;
-  set _quickHideOptions(bool value) => _playbackSettings.quickHideOptions = value;
-  set _quickHideBackButton(bool value) => _playbackSettings.quickHideBackButton = value;
-  bool get _quickAvoidNsfw => _playbackSettings.quickAvoidNsfw;
-  set _quickAvoidNsfw(bool value) => _playbackSettings.quickAvoidNsfw = value;
 
   /// The viewer-scoped, role-locked NSFW rail: forced for a child profile
   /// regardless of any channel's stored flag or dialog toggle. Evaluated
@@ -407,15 +377,11 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   bool get _viewerForcesNsfw =>
       !ProfilePolicyGuard.allowsSync(ProfileFeature.allowAdultContent);
   bool _rdSkipBlockedTorrents = true;
-  String get _quickProvider => _playbackSettings.quickProvider;
-  set _quickProvider(String value) => _playbackSettings.quickProvider = value;
 
   // Debrify TV playback filters. Shared by channels and quick play (one
   // Debrify TV feed preference, unlike provider/NSFW which are per-scope).
   // Quality narrows torrents by release name; size narrows FILES once a
   // provider has returned them. See DebrifyTvFilters for why they split.
-  DebrifyTvFilters get _tvFilters => _playbackSettings.tvFilters;
-  set _tvFilters(DebrifyTvFilters value) => _playbackSettings.tvFilters = value;
   // Rate-limits the "filter relaxed" snackbar to once per playback session.
   bool _qualityFallbackNotified = false;
   // Real-Debrid only: consecutive links rejected purely on size, and the
@@ -773,32 +739,32 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
 
     if (mounted) {
       setState(() {
-        _startRandom = startRandom;
-        _randomStartPercent = _clampRandomStartPercent(randomStartPercent);
-        _hideSeekbar = hideOptions;
-        _showChannelName = showChannelName;
-        _showVideoTitle = showVideoTitle;
-        _hideOptions = false; // Hardcoded to false
-        _hideBackButton = false; // Hardcoded to false
+        _playbackSettings.startRandom = startRandom;
+        _playbackSettings.randomStartPercent = _clampRandomStartPercent(randomStartPercent);
+        _playbackSettings.hideSeekbar = hideOptions;
+        _playbackSettings.showChannelName = showChannelName;
+        _playbackSettings.showVideoTitle = showVideoTitle;
+        _playbackSettings.hideOptions = false; // Hardcoded to false
+        _playbackSettings.hideBackButton = false; // Hardcoded to false
         _rdAvailable = rdAvailable;
         _torboxAvailable = torboxAvailable;
         _pikpakAvailable = pikpakAvailable;
         _premiumizeAvailable = premiumizeAvailable;
         _allDebridAvailable = allDebridAvailable;
-        _provider = defaultProvider;
+        _playbackSettings.provider = defaultProvider;
         _isAndroidTv = isTv;
 
-        _quickStartRandom = startRandom;
-        _quickRandomStartPercent = _clampRandomStartPercent(randomStartPercent);
-        _quickHideSeekbar = hideOptions;
-        _quickShowChannelName = showChannelName;
-        _quickShowVideoTitle = showVideoTitle;
-        _quickHideOptions = false; // Hardcoded to false
-        _quickHideBackButton = false; // Hardcoded to false
-        _quickAvoidNsfw = avoidNsfw;
+        _playbackSettings.quickStartRandom = startRandom;
+        _playbackSettings.quickRandomStartPercent = _clampRandomStartPercent(randomStartPercent);
+        _playbackSettings.quickHideSeekbar = hideOptions;
+        _playbackSettings.quickShowChannelName = showChannelName;
+        _playbackSettings.quickShowVideoTitle = showVideoTitle;
+        _playbackSettings.quickHideOptions = false; // Hardcoded to false
+        _playbackSettings.quickHideBackButton = false; // Hardcoded to false
+        _playbackSettings.quickAvoidNsfw = avoidNsfw;
         _rdSkipBlockedTorrents = rdSkipBlocked;
-        _quickProvider = defaultProvider;
-        _tvFilters = tvFilters;
+        _playbackSettings.quickProvider = defaultProvider;
+        _playbackSettings.tvFilters = tvFilters;
         // The filter is an INPUT to the memoised stage numbers: anything
         // computed before this load landed used the empty default.
         _spotlightStats.clear();
@@ -954,7 +920,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         torboxIntegrationEnabled && torboxKey != null && torboxKey.isNotEmpty;
 
     final nextChannelProvider = _determineDefaultProvider(
-      _provider,
+      _playbackSettings.provider,
       rdAvailable,
       torboxAvailable,
       pikpakAvailable,
@@ -962,7 +928,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       allDebridAvailable,
     );
     final nextQuickProvider = _determineDefaultProvider(
-      _quickProvider,
+      _playbackSettings.quickProvider,
       rdAvailable,
       torboxAvailable,
       pikpakAvailable,
@@ -971,15 +937,15 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     );
 
     if (!mounted) return;
-    final providerChanged = nextChannelProvider != _provider;
+    final providerChanged = nextChannelProvider != _playbackSettings.provider;
     setState(() {
       _rdAvailable = rdAvailable;
       _torboxAvailable = torboxAvailable;
       _pikpakAvailable = pikpakAvailable;
       _premiumizeAvailable = premiumizeAvailable;
       _allDebridAvailable = allDebridAvailable;
-      _provider = nextChannelProvider;
-      _quickProvider = nextQuickProvider;
+      _playbackSettings.provider = nextChannelProvider;
+      _playbackSettings.quickProvider = nextQuickProvider;
     });
 
     if (providerChanged) {
@@ -1018,7 +984,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     if (_qualityFallbackNotified) return;
     _qualityFallbackNotified = true;
     _showSnack(
-      'No ${_tvFilters.summary()} sources found — playing anything available.',
+      'No ${_playbackSettings.tvFilters.summary()} sources found — playing anything available.',
       color: Colors.orange,
     );
   }
@@ -1335,18 +1301,18 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     debugPrint('✅ [WATCH] Keywords: ${keywords.length}');
 
     await _syncProviderAvailability();
-    final bool providerReady = _isProviderSelectable(_provider);
+    final bool providerReady = _isProviderSelectable(_playbackSettings.provider);
     if (!providerReady) {
-      debugPrint('❌ [WATCH] Provider not ready: $_provider');
+      debugPrint('❌ [WATCH] Provider not ready: $_playbackSettings.provider');
       MainPageBridge.notifyAutoLaunchFailed('Provider not configured');
-      final providerName = _providerDisplay(_provider);
+      final providerName = _providerDisplay(_playbackSettings.provider);
       _showSnack(
         'Enable $providerName in Settings to watch this channel',
         color: Colors.orange,
       );
       return;
     }
-    debugPrint('✅ [WATCH] Provider ready: $_provider');
+    debugPrint('✅ [WATCH] Provider ready: $_playbackSettings.provider');
 
     final cacheEntry = await _cacheWarmer.ensureCacheEntry(channel.id);
     if (cacheEntry == null) {
@@ -1412,7 +1378,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       '✅ [WATCH] Selected ${cachedTorrents.length} torrents for playback',
     );
 
-    switch (MagicTvDispatch.watchId(_provider)) {
+    switch (MagicTvDispatch.watchId(_playbackSettings.provider)) {
       case CloudProviderId.torbox:
         debugPrint('🎬 [WATCH] Launching Torbox flow...');
         await _torboxWatch.watchTorboxWithCachedTorrents(
@@ -1670,14 +1636,14 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
                 builder: (_) => VideoPlayerScreen(
                   videoUrl: videoUrl,
                   title: next.name,
-                  startFromRandom: _quickStartRandom,
-                  randomStartMaxPercent: _quickRandomStartPercent,
-                  hideSeekbar: _quickHideSeekbar,
-                  showChannelName: _quickShowChannelName,
+                  startFromRandom: _playbackSettings.quickStartRandom,
+                  randomStartMaxPercent: _playbackSettings.quickRandomStartPercent,
+                  hideSeekbar: _playbackSettings.quickHideSeekbar,
+                  showChannelName: _playbackSettings.quickShowChannelName,
                   channelName: null,
                   channelNumber: null,
-                  showVideoTitle: _quickShowVideoTitle,
-                  hideOptions: _quickHideOptions,
+                  showVideoTitle: _playbackSettings.quickShowVideoTitle,
+                  hideOptions: _playbackSettings.quickHideOptions,
                 ),
               ),
             );
@@ -2883,7 +2849,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       return;
     }
 
-    bool avoidNsfw = _quickAvoidNsfw;
+    bool avoidNsfw = _playbackSettings.quickAvoidNsfw;
     String? error;
     // Create a separate controller for Quick Play to avoid sharing state with edit dialog
     final TextEditingController controller = TextEditingController();
@@ -2984,15 +2950,15 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
 
                     if (mounted) {
                       setState(() {
-                        _quickStartRandom = _startRandom;
-                        _quickRandomStartPercent = _randomStartPercent;
-                        _quickHideSeekbar = _hideSeekbar;
-                        _quickShowChannelName = _showChannelName;
-                        _quickShowVideoTitle = _showVideoTitle;
-                        _quickHideOptions = false; // Always false now
-                        _quickHideBackButton = false; // Always false now
-                        _quickAvoidNsfw = avoidNsfw;
-                        _quickProvider = _provider;
+                        _playbackSettings.quickStartRandom = _playbackSettings.startRandom;
+                        _playbackSettings.quickRandomStartPercent = _playbackSettings.randomStartPercent;
+                        _playbackSettings.quickHideSeekbar = _playbackSettings.hideSeekbar;
+                        _playbackSettings.quickShowChannelName = _playbackSettings.showChannelName;
+                        _playbackSettings.quickShowVideoTitle = _playbackSettings.showVideoTitle;
+                        _playbackSettings.quickHideOptions = false; // Always false now
+                        _playbackSettings.quickHideBackButton = false; // Always false now
+                        _playbackSettings.quickAvoidNsfw = avoidNsfw;
+                        _playbackSettings.quickProvider = _playbackSettings.provider;
                       });
                       // Copy keywords from Quick Play controller to main controller for _providerWatch.watch()
                       _keywordsController.text = keywords;
@@ -3183,8 +3149,8 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     torrent: candidate,
     log: log,
     seenKeys: _seenLinkWithTorrentId,
-    sizeMatchesBytes: _tvFilters.sizeMatchesBytes,
-    hasSizeFilter: _tvFilters.hasSize,
+    sizeMatchesBytes: _playbackSettings.tvFilters.sizeMatchesBytes,
+    hasSizeFilter: _playbackSettings.tvFilters.hasSize,
     minVideoSizeBytes: _torboxMinVideoSizeBytes,
   );
 
@@ -3195,8 +3161,8 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     torrent: candidate,
     log: (message) => debugPrint(message),
     seenKeys: seenKeys ?? _seenRestrictedLinks,
-    sizeMatchesBytes: _tvFilters.sizeMatchesBytes,
-    hasSizeFilter: _tvFilters.hasSize,
+    sizeMatchesBytes: _playbackSettings.tvFilters.sizeMatchesBytes,
+    hasSizeFilter: _playbackSettings.tvFilters.hasSize,
     minVideoSizeBytes: _torboxMinVideoSizeBytes,
   );
 
