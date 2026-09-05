@@ -35,11 +35,14 @@ class LayeringDeltaTest(unittest.TestCase):
         return result, output.getvalue()
 
     def compare_payloads(self, parent, head):
+        return self.compare_raw(json.dumps(parent), json.dumps(head))
+
+    def compare_raw(self, parent, head):
         paths = [self.root / "parent.json", self.root / "head.json"]
         output, errors = io.StringIO(), io.StringIO()
         try:
             for path, payload in zip(paths, [parent, head]):
-                path.write_text(json.dumps(payload), encoding="utf-8")
+                path.write_text(payload, encoding="utf-8")
             with redirect_stdout(output), redirect_stderr(errors):
                 result = ci_layering_delta.main(["x", *map(str, paths)])
             return result, output.getvalue(), errors.getvalue()
@@ -47,6 +50,49 @@ class LayeringDeltaTest(unittest.TestCase):
             # Unlink even on rejection: open handles would fail here on Windows.
             for path in paths:
                 path.unlink(missing_ok=True)
+
+    def assert_duplicate_rejected(self, raw, member):
+        # Use the last-wins interpretation on the other side: permissive
+        # decoding would hide the malformed report behind an equal comparison.
+        valid = json.dumps(json.loads(raw))
+        for side in ("parent", "head"):
+            with self.subTest(side=side, raw=raw):
+                result, output, errors = self.compare_raw(
+                    raw if side == "parent" else valid,
+                    raw if side == "head" else valid,
+                )
+                self.assertEqual(result, 2, output)
+                self.assertIn(f"{side}.json", errors)
+                self.assertIn("Invalid layering report", errors)
+                self.assertIn(f"duplicate member {member!r}", errors)
+                self.assertNotIn("gate (i) pass", output)
+
+    def test_reject_duplicate_count_and_violations_hiding_occurrence(self):
+        self.assert_duplicate_rejected(
+            '{"count":1,"violations":[{"id":"new|r|i"}],"count":0,"violations":[]}',
+            "count",
+        )
+
+    def test_reject_each_duplicate_top_level_member(self):
+        self.assert_duplicate_rejected(
+            '{"count":1,"count":0,"violations":[]}', "count",
+        )
+        self.assert_duplicate_rejected(
+            '{"count":0,"violations":[{"id":"new|r|i"}],"violations":[]}',
+            "violations",
+        )
+
+    def test_reject_duplicate_row_id_replacing_new_with_old(self):
+        self.assert_duplicate_rejected(
+            '{"count":1,"violations":[{"id":"new|r|i","id":"old|r|i"}]}',
+            "id",
+        )
+
+    def test_reject_duplicate_members_in_nested_metadata(self):
+        self.assert_duplicate_rejected(
+            '{"count":0,"violations":[],"metadata":{"nested":{"x":1,"x":2}}}',
+            "x",
+        )
 
     def assert_invalid(self, payload):
         valid = {"count": 0, "violations": []}
