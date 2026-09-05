@@ -8,6 +8,7 @@ import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/search_screen.dart';
 import 'package:debrify/screens/search/search_content_data.dart';
 import 'package:debrify/screens/see_all/continue_watching_see_all_screen.dart';
+import 'package:debrify/screens/see_all/catalog_see_all_screen.dart';
 import 'package:debrify/screens/see_all/mdblist_see_all_screen.dart';
 import 'package:debrify/services/main_page_bridge.dart';
 import 'package:debrify/services/profiles/connection_resource_service.dart';
@@ -162,6 +163,69 @@ Future<void> mountDiscover(WidgetTester tester, {bool tv = false}) async {
 }
 
 void main() {
+  testWidgets(
+    'origin Discover integration refresh changes eligibility but skips local CW',
+    (tester) async {
+      await prepareFavourites(tester);
+      StremioService.instance.invalidateCache();
+      addTearDown(StremioService.instance.invalidateCache);
+      await StorageService.setDiscoverDefaultSource('cw');
+      await StorageService.setHomeContinueWatchingEnabled(true);
+      await StorageService.setPikPakEnabled(false);
+      await StorageService.saveContinueWatchingItem(
+        imdbId: 'origin-before-integration',
+        title: 'Before integration',
+        contentType: 'movie',
+      );
+      await mountDiscover(tester, tv: true);
+      ContinueWatchingSeeAllScreen panel() =>
+          tester.widget<ContinueWatchingSeeAllScreen>(
+            find.byType(ContinueWatchingSeeAllScreen),
+          );
+      final host = tester.state(find.byType(SearchScreenHost));
+      final sourceNode = discoverSource(tester).focusNode!;
+      sourceNode.requestFocus();
+      await tester.pump();
+      expect(panel().items.map((m) => m.id), ['origin-before-integration']);
+      expect(panel().onQuickPlay, isNotNull);
+
+      // Change real persisted CW after startup. A forbidden integration reload
+      // would expose this title; the eligibility change proves the listener ran.
+      await StorageService.saveContinueWatchingItem(
+        imdbId: 'origin-after-integration',
+        title: 'After integration',
+        contentType: 'movie',
+      );
+      await StorageService.setPikPakEnabled(true);
+      MainPageBridge.notifyIntegrationChanged();
+      await pumpFavourites(tester);
+      expect(
+        identical(tester.state(find.byType(SearchScreenHost)), host),
+        isTrue,
+      );
+      expect(panel().onQuickPlay, isNull);
+      expect(panel().items.map((m) => m.id), ['origin-before-integration']);
+      expect(sourceNode.hasFocus, isTrue);
+
+      await StorageService.setPikPakEnabled(false);
+      MainPageBridge.notifyIntegrationChanged();
+      await pumpFavourites(tester);
+      expect(panel().onQuickPlay, isNotNull);
+      expect(panel().items.map((m) => m.id), ['origin-before-integration']);
+      // Positive reload control through the existing real widget callback:
+      // the pending title is readable and was not merely an ineffective write.
+      final reloaded = await panel().onReload!();
+      await pumpFavourites(tester);
+      expect(reloaded.map((m) => m.id), contains('origin-after-integration'));
+      expect(
+        panel().items.map((m) => m.id),
+        contains('origin-after-integration'),
+      );
+      expect(sourceNode.hasFocus, isTrue);
+      await closeFavourites(tester);
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'origin Discover first frame uses warm layout before fresh preference',
     (tester) async {
@@ -431,6 +495,23 @@ void main() {
       await pumpFavourites(tester);
       expect(discoverSource(tester).value, hold.source);
       expect(await StorageService.getDiscoverLastSource(), hold.source);
+      final renderedAddon = tester
+          .widget<CatalogSeeAllScreen>(find.byType(CatalogSeeAllScreen))
+          .addon;
+      MainPageBridge.notifyIntegrationChanged();
+      await pumpFavourites(tester);
+      expect(discoverSource(tester).value, hold.source);
+      expect(
+        identical(
+          tester
+              .widget<CatalogSeeAllScreen>(find.byType(CatalogSeeAllScreen))
+              .addon,
+          renderedAddon,
+        ),
+        isTrue,
+      );
+      // This is the actual rendered addon reference across integration refresh,
+      // not evidence of private map identity or later manifest replacement.
       await closeFavourites(tester);
       expect(tester.takeException(), isNull);
     },
