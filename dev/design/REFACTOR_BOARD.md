@@ -248,3 +248,10 @@ Physical single-line declaration subset at current: storage147/search83/player11
 Locke filterstore production RELEASED exact3prod+keysweep; helperasyncboundary documented, capturedfilterprefs/providerseparatephase preserved. Ampere M17 firstshared58lineTB/PP accumulator production authorized afterindependent6origin/mutations; exactcommon/TB/PP scope, no newasync/guards/cancelpolicy. Wegener presentation move+exactunusedaliases/shapeinventoryupdates authorized;136 integratesnewmain139 forfreshstrictCI, oldorigin600shangnotfixed/overridden. C0 availableindependentreview. No overlappingfiles exceptserializedCODEMAP.
 
 141mergedf24c5a2c/142merged7f00f969 afterindependentreviews+exactall3CI. Difference:5filterownerrawencoding/resetpreserved(-44host,+57production),2quicksearchduplicateshared(-30total,five2448/common1341). More:10newfaçadesQ2/783explicitstoragedebtunchanged/M17targetnotclosed. Fullactual7f00gateC0active afterthreeprod137141142, includeexactforwarderledger.140CItestfailedheldWegenerdiagnosis. Currentgod9033/11926/3317/4321/2899. No userblocker.
+
+## Full gate — actual 7f00f969
+| Source | Automated tests | Analyzer / layering | Builds | Forwarders total/single physical line (storage/search/player/Magic/settings) | Manual |
+|---|---|---|---|---|---|
+|7f00f969, Flutter3.44.8 Windows|5442pass/12exactknown/2skip;goldens21exactknown after2retries;0unexpected/unused;strictnative1+1 unskipped;Python55|436/452no new;77/77,+0/-0|Windows andARM64 PASS,checksummed|591/147;96/83;161/112;23/12;0/0|Prior f75 acceptance retained; this new build not separately reported |
+Exact report/commands/artifact/forwarder inventories: C:/Users/hunth/debrify/debrify-c0-main-7f00-gate/.dart_tool/main-gate/REPORT.md. Raw known-failure reports retained, not pixel-green claim. No baseline or power changes.
+Cursor dedup product released after independent16origin+4sensitiveprobes+design andfullgate; exactcommon/TB/PMonly, verbatimfourlooporder/livecandidate references.140 corrected d1fe delta review/freshCI remainsrequired beforemerge. Playlist-progress fixture/origin work active separately.
