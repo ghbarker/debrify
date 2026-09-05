@@ -225,4 +225,171 @@ void main() {
       expect(identical(local, StorageService.localCompletionRevision), isTrue);
     },
   );
+
+  test(
+    'continue watching insert is case-sensitive but removal is normalized',
+    () async {
+      final prefs = await SharedPreferences.getInstance();
+      await StorageService.saveContinueWatchingItem(
+        imdbId: 'TT1',
+        title: 'Upper',
+        contentType: 'movie',
+      );
+      await StorageService.saveContinueWatchingItem(
+        imdbId: 'tt1',
+        title: 'Lower',
+        contentType: 'movie',
+      );
+      expect((await StorageService.getContinueWatchingItems()).length, 2);
+      final raw = jsonDecode(prefs.getString('continue_watching_v1')!) as List;
+      expect(raw.first, containsPair('posterUrl', null));
+      expect(raw.first['updatedAt'], isA<int>());
+      await StorageService.removeContinueWatchingItem(' TT1 ');
+      expect(await StorageService.getContinueWatchingItems(), isEmpty);
+      await prefs.setString(
+        'continue_watching_v1',
+        jsonEncode([
+          for (var i = 0; i < 51; i++) {'imdbId': 'tt$i', 'updatedAt': i},
+        ]),
+      );
+      await StorageService.saveContinueWatchingItem(
+        imdbId: 'new',
+        title: 'New',
+        contentType: 'series',
+      );
+      final items = await StorageService.getContinueWatchingItems();
+      expect(items.length, 50);
+      expect(items.first['imdbId'], 'new');
+      expect(items.any((row) => row['imdbId'] == 'tt50'), isFalse);
+      await StorageService.clearContinueWatching();
+      expect(prefs.containsKey('continue_watching_v1'), isFalse);
+    },
+  );
+
+  test(
+    'explicit series completion stores sorted strings and only notifies changes',
+    () async {
+      final prefs = await SharedPreferences.getInstance();
+      final revision = StorageService.localCompletionRevision;
+      final start = revision.value;
+      await StorageService.setSeriesExplicitlyWatched(' TT2 ', watched: true);
+      await StorageService.setSeriesExplicitlyWatched('tt1', watched: true);
+      await StorageService.setSeriesExplicitlyWatched('TT2', watched: true);
+      await StorageService.setSeriesExplicitlyWatched(' ', watched: true);
+      expect(prefs.getStringList('explicitly_watched_series_v1'), [
+        'tt1',
+        'tt2',
+      ]);
+      expect(await StorageService.getExplicitlyWatchedSeriesIds(), {
+        'tt1',
+        'tt2',
+      });
+      expect(revision.value - start, 2);
+      await StorageService.setSeriesExplicitlyWatched('tt1', watched: false);
+      await StorageService.setSeriesExplicitlyWatched('tt2', watched: false);
+      expect(prefs.containsKey('explicitly_watched_series_v1'), isFalse);
+      expect(revision.value - start, 4);
+    },
+  );
+
+  test(
+    'poster and IMDb use different provider precedence and preserve existing IMDb',
+    () async {
+      await StorageService.savePlaylistItemsRaw([
+        {
+          'provider': 'torbox',
+          'torboxTorrentId': 7,
+          'title': 'Torbox',
+          'imdbId': 'tt-old',
+        },
+        {
+          'provider': 'premiumize',
+          'torrent_hash': 'ABC',
+          'title': 'Premiumize',
+        },
+        {
+          'provider': 'pikpak',
+          'pikpakFileIds': ['first', 'second'],
+        },
+        {
+          'provider': 'webdav',
+          'webdavServerId': 'SERVER',
+          'webdavPath': '/Case',
+        },
+      ]);
+      expect(
+        await StorageService.updatePlaylistItemPoster(
+          'synthetic-poster',
+          torboxTorrentId: '7',
+          premiumizeHash: 'abc',
+        ),
+        isTrue,
+      );
+      expect(
+        await StorageService.updatePlaylistItemImdbId(
+          'tt-new',
+          torboxTorrentId: '7',
+          premiumizeHash: 'abc',
+        ),
+        isTrue,
+      );
+      var rows = await StorageService.getPlaylistItemsRaw();
+      expect(rows[0]['posterUrl'], 'synthetic-poster');
+      expect(rows[0]['imdbId'], 'tt-old');
+      expect(rows[1]['imdbId'], 'tt-new');
+      expect(
+        await StorageService.updatePlaylistItemImdbId(
+          'tt-replacement',
+          torboxTorrentId: '7',
+        ),
+        isTrue,
+      );
+      expect(
+        (await StorageService.getPlaylistItemsRaw())[0]['imdbId'],
+        'tt-old',
+      );
+      expect(
+        await StorageService.updatePlaylistItemImdbId(
+          'tt-replacement',
+          torboxTorrentId: '7',
+          force: true,
+        ),
+        isTrue,
+      );
+      expect(
+        await StorageService.updatePlaylistItemPoster(
+          'miss',
+          pikpakCollectionId: 'second',
+        ),
+        isFalse,
+      );
+      expect(
+        await StorageService.updatePlaylistItemPoster(
+          'hit',
+          pikpakCollectionId: 'first',
+        ),
+        isTrue,
+      );
+      expect(
+        await StorageService.updatePlaylistItemPoster(
+          'web',
+          webDavServerId: 'server',
+          webDavPath: '/Case',
+        ),
+        isTrue,
+      );
+      expect(
+        await StorageService.updatePlaylistItemPoster(
+          'miss',
+          webDavServerId: 'server',
+          webDavPath: '/case',
+        ),
+        isFalse,
+      );
+      rows = await StorageService.getPlaylistItemsRaw();
+      expect(rows[0]['imdbId'], 'tt-replacement');
+      expect(rows[2]['posterUrl'], 'hit');
+      expect(rows[3]['posterUrl'], 'web');
+    },
+  );
 }
