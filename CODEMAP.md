@@ -173,7 +173,7 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   `social_prefs.dart` (`SocialPrefs`), and `debrify_tv_prefs.dart` (`DebrifyTvPrefs`);
   StorageService forwards.   **S2-2:** provider-credential *settings* live in
   `lib/services/storage/provider_credential_prefs.dart` (`ProviderCredentialPrefs`);
-  CloudSecretPrefs still owns RD/TB/PM/AD/PikPak secret keys.
+  Q2 callers use ProviderCredentialPrefs directly; CloudSecretPrefs still owns RD/TB/PM/AD/PikPak secret keys.
   **S2-3:** player A/V / external-player / skip-segment / UI-feedback / network
   tuning live in `lib/services/storage/player_prefs.dart` (`PlayerPrefs`); IPTV
   playlist / decoder / last-live / startup / series-audio / CW-tracking live in
@@ -540,7 +540,7 @@ is an editor mirror, not the source of truth. How to add a provider:
   prefs, and WebDAV. `lib/services/storage/cloud_secret_prefs.dart` owns
   credential keys; `lib/services/storage/storage_key_ownership.dart` `byKey` asserts
   each declared / inline / interpolated prefs name has exactly one owner. Callers
-  still import `StorageService` (façade until callers move; `@Deprecated` in Q2).
+  use ProviderCredentialPrefs directly after Q2; other domain facades remain until their callers move.
   `lib/services/storage/player_prefs.dart` (`PlayerPrefs`) and
   `lib/services/storage/iptv_prefs.dart` (`IptvPrefs`) own player + IPTV prefs
   (S2-3).   `lib/services/storage/app_style_prefs.dart` (`AppStylePrefs`) owns
@@ -588,9 +588,10 @@ update this file in the same PR. Line counts come from `wc -l`, not estimates._
 
 - `lib/services/storage/my_watchlist_store.dart` (`MyWatchlistStore`) owns My Watchlist identity, legacy-row reads, ordering, cap eviction and playback removal for `my_watchlist_v1`. `StorageService` retains eight direct non-async method facades until Q2 caller migration, the cap constant alias and annotated debug-override getter/setter backed by one nullable store field. Captured preferences, later row-read reacquisition and failure behavior remain unchanged; this is owner separation, not a profile-safety or serialization fix.
 
-- `lib/services/storage/playback_progress_store.dart` owns continue-watching, local completion and playback JSON, tracker snapshot writes, track preferences, playlist metadata (TVMaze mappings, poster overrides and their shared item identity) and `buildPlaylistProgressMap` (title matching and derived progress); `StorageService.buildPlaylistProgressMap` retains a direct forwarding facade until Q2 caller migration. `StorageService` retains ten direct non-async metadata facades (nine CRUD/batch APIs and one identity accessor) until Q2 caller migration; the two obsolete metadata key aliases are removed. `localCompletionRevision` is one shared notifier; `readPlaybackStateMap` always reads fresh preferences.
-- `PlaybackProgressStore` also owns local completion thresholds, imported-playback rearming, ghost purge and completion migration. `StorageService` retains seven direct non-async repair/threshold facades (Q2 caller-migration expiry) and public constant aliases; the three obsolete private repair bridges are removed. Captured preferences, later reacquisition and failure/notification ordering are preserved, not a profile-safety fix. The remote `movieFinishedRevision`, defaults migration orchestration and `IptvMediaStore` SQLite resume backend retain their existing owners. Key strings remain frozen in `storage_key_ownership.dart`.
+- `lib/services/storage/playback_progress_store.dart` owns continue-watching, local completion and playback JSON, tracker snapshot writes, track preferences, playlist metadata (TVMaze mappings, poster overrides and their shared item identity) and `buildPlaylistProgressMap` (title matching and derived progress); Q2 callers now use PlaybackProgressStore directly for progress assembly and all ten metadata APIs. The two obsolete metadata key aliases remain removed. `localCompletionRevision` is one shared notifier; `readPlaybackStateMap` always reads fresh preferences.
+- `PlaybackProgressStore` also owns local completion thresholds, imported-playback rearming, ghost purge and completion migration. Q2 retires the seven repair/threshold method facades; `StorageService` retains the public constant aliases. The three obsolete private repair bridges remain removed. Captured preferences, later reacquisition and failure/notification ordering are preserved, not a profile-safety fix. The remote `movieFinishedRevision`, defaults migration orchestration and `IptvMediaStore` SQLite resume backend retain their existing owners. Key strings remain frozen in `storage_key_ownership.dart`.
 - Origin compatibility: `test/playback_progress_store_origin_compatibility_test.dart`; store/facade identity: `test/playback_progress_store_test.dart`.
+- **Q2 caller retirement:** 77 PlaybackProgressStore, 98 ProviderCredentialPrefs and 48 IptvPrefs method facades retire; their callers use the unchanged owners. Retain `getVideoPlaybackState` and every caller for strict identical native-origin/current test bytes. Retain eight Android bridge APIs and every caller: `setIptvChannelFavorited`, `setIptvChannelInList`, `getIptvListsForChannel`, `recordIptvWatch`, `getIptvResumePositions`, `getIptvDecoderMode`, `setIptvSeriesAudioLanguage`, `setIptvLastLiveChannel`. These nine expire only after separately accepted Android-positive/native-origin compatibility proof; bridge wire strings stay frozen. `localCompletionRevision`, startup cache accessors, constants and SQLite facades retain their existing identities. Host 3498 -> 2833 (-662 method lines, -3 unused imports); whole production -592. The 2800 target remains open by33 and strict facade-only ownership remains open; the 97 residual members are not waived.
 
 ### Defaults migration routing (S2-7)
 
