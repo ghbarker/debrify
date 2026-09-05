@@ -722,6 +722,10 @@ class VideoPlayerLaunchArgs {
 }
 
 class VideoPlayerLauncher {
+  /// Substitutes only the terminal decoder widget; route orchestration stays real.
+  @visibleForTesting
+  static Widget Function(VideoPlayerLaunchArgs)? debugPlayerWidgetBuilder;
+
   /// Select the single URL handed to an external player.
   ///
   /// External-player intents, URL schemes, and generic commands cannot
@@ -1348,7 +1352,9 @@ class VideoPlayerLauncher {
     // keeps it (and every dialog/sheet it opens) on today's look under any
     // app theme.
     final result = await Navigator.of(context).push<Map<String, dynamic>?>(
-      FrozenLegacyPageRoute(builder: (_) => args.toWidget()),
+      FrozenLegacyPageRoute(
+        builder: (_) => debugPlayerWidgetBuilder?.call(args) ?? args.toWidget(),
+      ),
     );
 
     if (result?['startupSourcesExhausted'] == true &&

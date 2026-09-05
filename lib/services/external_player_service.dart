@@ -825,6 +825,11 @@ class WindowsExternalPlayerLaunchResult {
 
 /// Extension methods for Windows external player support
 extension WindowsExternalPlayerServiceExtension on ExternalPlayerService {
+  /// Substitutes explorer.exe IO, including custom commands using explorer.exe.
+  @visibleForTesting
+  static Future<ProcessResult> Function(String, List<String>)?
+      debugWindowsProcessRun;
+
   /// Check if a Windows player is installed
   /// Uses `where` command (Windows equivalent of `which`)
   /// Also checks common installation paths for players not typically in PATH
@@ -1003,7 +1008,8 @@ extension WindowsExternalPlayerServiceExtension on ExternalPlayerService {
       // For explorer.exe (system default), use Process.run as it spawns and exits quickly
       // For media players, use Process.start detached so they run independently
       if (executable == 'explorer.exe') {
-        final result = await Process.run(executable, args);
+        final result = await (debugWindowsProcessRun?.call(executable, args) ??
+            Process.run(executable, args));
         if (result.exitCode == 0 || result.exitCode == 1) {
           // explorer.exe may return 1 even on success for URL launching
           return WindowsExternalPlayerLaunchResult.succeeded(player);
