@@ -106,3 +106,6 @@ S2-6 draft PR118 published, frozen609b823550034d58b58dc00127be2067c4ee50e7. C0 i
 
 PR117 merged a0569745 exactee9de82b after independent live-host pin1pass/cleananalysis and CItest/goldensSUCCESS. Difference: tested selection notification coalesces to1host+1child,noextra-frame build; no duplicate-child fix warranted. More: does not cover every asynchronous sequence or prove both listeners necessary. God-file counts unchanged (test-only). G1'-5 neighbouring search lane should integrate before final gate; no production overlap. PR118 independent reproduction complete,CIpending; no merge yet.
 
+
+M1-3 decision: Ampere owns narrow cloud_magic_tv_unlock_pin_test.dart host+sixflow inventory/exactcaptured-keyalias update; preserve assertions, no broad exemptions, source checks supplemental only. Tenentrywrappers+100physical typedbinding retained for credential timing;reviewM1-5,expiryreview/removalM1-6. Reported3070net pendingfinalaudit (3226grossminus156). CODEMAP MagicTV rows exclusively locked to Ampere untilcommit/release. Baselinegrowth forbidden; C0 only location reconciliation with evidence.
+
