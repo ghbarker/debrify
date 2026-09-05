@@ -2770,4 +2770,229 @@ abstract final class PlaybackProgressStore {
   }
 
   // ========================================================================
+  /// Get a unique key for a playlist item based on available identifiers
+  static String _getPlaylistItemUniqueKey(Map<String, dynamic> playlistItem) {
+    final provider = ((playlistItem['provider'] as String?) ?? 'realdebrid')
+        .toLowerCase();
+
+    if (provider == 'webdav') {
+      return computePlaylistDedupeKey(playlistItem);
+    }
+
+    // Try different identifiers in order of preference
+    if (playlistItem['rdTorrentId'] != null) {
+      return 'rd_${playlistItem['rdTorrentId']}';
+    }
+    if (playlistItem['torrent_hash'] != null) {
+      return 'hash_${playlistItem['torrent_hash']}';
+    }
+    if (playlistItem['torboxTorrentId'] != null) {
+      return 'torbox_${playlistItem['torboxTorrentId']}';
+    }
+    if (playlistItem['pikpakFileId'] != null) {
+      return 'pikpak_${playlistItem['pikpakFileId']}';
+    }
+    // Fallback to title if nothing else is available
+    final title =
+        (playlistItem['title'] as String?)?.toLowerCase().replaceAll(
+          RegExp(r'[^a-z0-9]'),
+          '_',
+        ) ??
+        'unknown';
+    return 'title_$title';
+  }
+
+  static Future<void> saveTVMazeSeriesMapping({
+    required Map<String, dynamic> playlistItem,
+    required int tvmazeShowId,
+    required String showName,
+  }) async {
+    final prefs = await ProfilePreferences.instance();
+    final mappingsJson = prefs.getString(tvMazeSeriesMappingKey);
+
+    Map<String, dynamic> mappings = {};
+    if (mappingsJson != null) {
+      try {
+        mappings = jsonDecode(mappingsJson) as Map<String, dynamic>;
+      } catch (e) {
+        debugPrint('Error parsing TVMaze series mappings: $e');
+      }
+    }
+
+    final key = _getPlaylistItemUniqueKey(playlistItem);
+    mappings[key] = {
+      'tvmazeShowId': tvmazeShowId,
+      'showName': showName,
+      'savedAt': DateTime.now().millisecondsSinceEpoch,
+    };
+
+    await prefs.setString(tvMazeSeriesMappingKey, jsonEncode(mappings));
+    debugPrint(
+      '✅ Saved TVMaze mapping for $key -> Show ID: $tvmazeShowId ($showName)',
+    );
+  }
+
+  static Future<Map<String, dynamic>?> getTVMazeSeriesMapping(
+    Map<String, dynamic> playlistItem,
+  ) async {
+    final prefs = await ProfilePreferences.instance();
+    final mappingsJson = prefs.getString(tvMazeSeriesMappingKey);
+
+    if (mappingsJson == null) return null;
+
+    try {
+      final mappings = jsonDecode(mappingsJson) as Map<String, dynamic>;
+      final key = _getPlaylistItemUniqueKey(playlistItem);
+      final mapping = mappings[key];
+
+      if (mapping != null && mapping is Map<String, dynamic>) {
+        debugPrint(
+          '✅ Found TVMaze mapping for $key -> Show ID: ${mapping['tvmazeShowId']} (${mapping['showName']})',
+        );
+        return mapping;
+      }
+    } catch (e) {
+      debugPrint('Error reading TVMaze series mappings: $e');
+    }
+
+    return null;
+  }
+
+  static Future<void> clearTVMazeSeriesMapping(
+    Map<String, dynamic> playlistItem,
+  ) async {
+    final prefs = await ProfilePreferences.instance();
+    final mappingsJson = prefs.getString(tvMazeSeriesMappingKey);
+
+    if (mappingsJson == null) return;
+
+    try {
+      final mappings = jsonDecode(mappingsJson) as Map<String, dynamic>;
+      final key = _getPlaylistItemUniqueKey(playlistItem);
+
+      if (mappings.containsKey(key)) {
+        mappings.remove(key);
+        await prefs.setString(tvMazeSeriesMappingKey, jsonEncode(mappings));
+        debugPrint('✅ Cleared TVMaze mapping for $key');
+      }
+    } catch (e) {
+      debugPrint('Error clearing TVMaze series mapping: $e');
+    }
+  }
+
+  static Future<void> clearAllTVMazeSeriesMappings() async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.remove(tvMazeSeriesMappingKey);
+    debugPrint('✅ Cleared all TVMaze series mappings');
+  }
+
+  static Future<void> savePlaylistPosterOverride({
+    required Map<String, dynamic> playlistItem,
+    required String posterUrl,
+  }) async {
+    final prefs = await ProfilePreferences.instance();
+    final overridesJson = prefs.getString(playlistPosterOverridesKey);
+
+    Map<String, dynamic> overrides = {};
+    if (overridesJson != null) {
+      try {
+        overrides = jsonDecode(overridesJson) as Map<String, dynamic>;
+      } catch (e) {
+        debugPrint('Error parsing playlist poster overrides: $e');
+      }
+    }
+
+    final key = _getPlaylistItemUniqueKey(playlistItem);
+    overrides[key] = {
+      'posterUrl': posterUrl,
+      'savedAt': DateTime.now().millisecondsSinceEpoch,
+    };
+
+    await prefs.setString(playlistPosterOverridesKey, jsonEncode(overrides));
+    debugPrint('✅ Saved poster override for $key -> $posterUrl');
+  }
+
+  static Future<String?> getPlaylistPosterOverride(
+    Map<String, dynamic> playlistItem,
+  ) async {
+    final prefs = await ProfilePreferences.instance();
+    final overridesJson = prefs.getString(playlistPosterOverridesKey);
+
+    if (overridesJson == null) return null;
+
+    try {
+      final overrides = jsonDecode(overridesJson) as Map<String, dynamic>;
+      final key = _getPlaylistItemUniqueKey(playlistItem);
+      final override = overrides[key];
+
+      if (override != null && override is Map<String, dynamic>) {
+        final posterUrl = override['posterUrl'] as String?;
+        if (posterUrl != null && posterUrl.isNotEmpty) {
+          return posterUrl;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error reading playlist poster override: $e');
+    }
+
+    return null;
+  }
+
+  static Future<Map<String, String>> getAllPlaylistPosterOverrides() async {
+    final prefs = await ProfilePreferences.instance();
+    final overridesJson = prefs.getString(playlistPosterOverridesKey);
+    if (overridesJson == null) return {};
+
+    try {
+      final overrides = jsonDecode(overridesJson) as Map<String, dynamic>;
+      final result = <String, String>{};
+      for (final entry in overrides.entries) {
+        if (entry.value is Map<String, dynamic>) {
+          final posterUrl =
+              (entry.value as Map<String, dynamic>)['posterUrl'] as String?;
+          if (posterUrl != null && posterUrl.isNotEmpty) {
+            result[entry.key] = posterUrl;
+          }
+        }
+      }
+      return result;
+    } catch (e) {
+      debugPrint('Error reading playlist poster overrides: $e');
+      return {};
+    }
+  }
+
+  static String getPlaylistItemUniqueKey(Map<String, dynamic> item) =>
+      _getPlaylistItemUniqueKey(item);
+
+  static Future<void> clearPlaylistPosterOverride(
+    Map<String, dynamic> playlistItem,
+  ) async {
+    final prefs = await ProfilePreferences.instance();
+    final overridesJson = prefs.getString(playlistPosterOverridesKey);
+
+    if (overridesJson == null) return;
+
+    try {
+      final overrides = jsonDecode(overridesJson) as Map<String, dynamic>;
+      final key = _getPlaylistItemUniqueKey(playlistItem);
+
+      if (overrides.containsKey(key)) {
+        overrides.remove(key);
+        await prefs.setString(
+          playlistPosterOverridesKey,
+          jsonEncode(overrides),
+        );
+        debugPrint('✅ Cleared poster override for $key');
+      }
+    } catch (e) {
+      debugPrint('Error clearing playlist poster override: $e');
+    }
+  }
+
+  static Future<void> clearAllPlaylistPosterOverrides() async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.remove(playlistPosterOverridesKey);
+    debugPrint('✅ Cleared all playlist poster overrides');
+  }
 }
