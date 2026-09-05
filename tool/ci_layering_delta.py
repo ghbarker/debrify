@@ -50,9 +50,21 @@ def _occurrences(payload: object) -> Counter[str]:
     return out
 
 
+def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate member {key!r}")
+        result[key] = value
+    return result
+
+
 def _read_occurrences(path: str) -> Counter[str]:
     try:
-        return _occurrences(json.loads(Path(path).read_text(encoding="utf-8")))
+        return _occurrences(json.loads(
+            Path(path).read_text(encoding="utf-8"),
+            object_pairs_hook=_unique_object,
+        ))
     except (OSError, UnicodeError, ValueError) as error:
         raise ValueError(f"Invalid layering report {path}: {error}") from error
 
