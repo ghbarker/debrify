@@ -50,11 +50,11 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 ### Current work — latest verified checkpoint
 
-- **Locke / Storage:** #212 merged; read-only remaining eligible facade and ownership inventory assigned while full gate runs.
-- **Cicero / Review:** full actual-main 98cae882 gate assigned after #210/#211/#212; previous 9ae gate passed with native retry note.
+- **Locke / Storage:** #212 merged; AppStyle25-method/27-file proposal prepared, unchanged13-suite origin checkpoint released; production remains unapplied pending review.
+- **Cicero / Review:** full actual-main 98cae882 gate PASSED; reviewing next bounded AppStyle proposal.
 - **Ampere / Search and upstream:** local upstream catalog trial independently accepted, unpublished. Search final composition and Atrium remain open; no new implementation assignment claimed.
 - **Wegener / Player:** presentation #201 and transport #205 merged; remaining decoder/state/UI work open, bounded unsuccessful experiments retained as debt.
-- **Parent:** #212 merged at 98cae882. Three production merges since completed 9ae gate; integrated gate now assigned, no further production merge until its result. No user/manual-smoke blocker.
+- **Parent:** #212 merged at 98cae882. Full98ca gate passed; production counter reset to zero. No user/manual-smoke blocker.
 ### Next steps — working checklist
 
 - [x] Merge #199/#204/#206 and pass their full integrated gate896a168d.
@@ -66,6 +66,9 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - [ ] Run final integrated acceptance only after the remaining architectural outcomes are fulfilled.
 
 ### Latest completed milestones
+
+- **Full98cae882 gate PASSED:** nativeoriginal/current FIRSTPAIRPASS;6095PASS/12exactknown/2skip;goldens21exactknown/configured2retries/helpers0/unexpected0unused0;analyzer431/449zeroNew/Python55/layer77+0-0. Windows160.2s68files ZIP567bd402931127b21129198870a958bba463aa3a6eb6a43700a2278833612025; ARM64APK173f055b4e2ed85035aca1fff54abfefcd913dfb68f675740e23eb19bf30c3f1. AST Storage246/Search133/Player161/Magic23/Settings0:115Storage removals, zero additions; other identities unchanged. LegacySearch60 separate. No new device smoke or finalarchitecture closure claim. Counter reset0; AppStyle bounded origin preparation released.
+
 
 - #212 merged **98cae882**, exact1779088, independent180PASS, exact42-file integration union and allthree CI checks green. Tracking46facades removed; host-51/whole-production-41,14livehostdependencies removed. Actualold-export tick fixture accepted; initial432 analyzer unusedimport failure recorded and corrected to431 without behavior rerun. Did we make a difference? Tracking callers reach their existing domain owner directly; native/auth/coordinator exceptions remain. Third210/211/212 merge triggers fullactual-main gate98cae with AST ledger; Cicero assigned, Locke read-only closeout inventory assigned.
 
