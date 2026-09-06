@@ -543,15 +543,24 @@ is an editor mirror, not the source of truth. How to add a provider:
   Captured credentials, late builder eligibility, catch asymmetry and unmounted
   finally-return suppression remain origin quirks; native/early-entry debt stays open.
   Its 24 binding/tear-off lines are retained for Q2 composition review/removal before
-  Phase 2 completion. These shared phases do not complete the five-flow dedup target. `WatchFlowBindings` keeps live host
-  state, navigation, existing preparation/prefetch/launcher callbacks and
-  captured-key service calls. Six entry wrappers and five dead cached binding slots
+  Phase 2 completion. The provider-leaf target is achieved: four remaining leaves
+  total627, below800; shared owners and the distinct155-line walkers count separately.
+  `WatchFlowBindings` keeps live host state, navigation and existing preparation/
+  prefetch/launcher callbacks. Its three concrete captured-key function bindings are
+  replaced by two typed fixed-adapter dependencies, `CloudMagicTvCapturedRdUnlock`
+  and `CloudMagicTvCapturedAdUnlock` in `lib/services/cloud/cloud_magic_tv_unlock.dart`.
+  RD `unrestrictLinkWithKey` / `addTorrentPreferVideosWithKey` and AD `unlockLinkWithKey`
+  are consumed at ten watch call sites. Three nonasync adapter arrows return the same
+  service Futures with the same captured keys; fixed const adapter selection preserves
+  independence from the prepare registry. Whole production+26 is charged, not Leaves.
+  Existing key-rereading APIs and the direct host Android PreferVideos call remain
+  outside this boundary; no autonomous-provider or native-coverage claim. Six entry wrappers and five dead cached binding slots
   are removed. Four provider-specific quick-dispatch dependencies now belong to
   `ProviderWatchFlow`; their host forwarders and shared binding slots are removed,
   not the dependencies. The lazy owner evaluates bindings before cached leaf tearoffs.
   First owner access may allocate all four side-effect-free leaf objects earlier;
   construction invokes no playback, I/O or credential reads. No identical allocation
-  timing or pure-port claim; captured-key and UI composition debt remains.
+  timing or UI-autonomy claim; UI composition debt remains.
   Live origin/runtime orchestration pins: `test/magic_tv_provider_watch_origin_test.dart`
   (21 cases; actual route requests/next callbacks, not native video playback).
   `test/cloud_magic_tv_unlock_pin_test.dart` is supplemental inventory only.
