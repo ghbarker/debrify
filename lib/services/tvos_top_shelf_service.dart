@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/ambient_trailer_prefs.dart' show AmbientTrailerPrefs;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -218,7 +219,7 @@ class TvosTopShelfService {
     try {
       final preferences = await Future.wait<Object>([
         StorageService.getHomeHeroTrailerEnabled(),
-        StorageService.getAmbientTrailerAudioEnabled(
+        AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(
           AmbientTrailerSurface.homeHero,
         ),
       ]);

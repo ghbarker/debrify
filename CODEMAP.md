@@ -291,9 +291,17 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   **Ambient trailer policy:** `lib/services/storage/ambient_trailer_prefs.dart`
   owns two detail audio/volume keys and five preference bodies; HomePrefs keeps
   the two home keys. StorageService re-exports the same AmbientTrailerSurface
-  enum and retains four nonasync facades (14 declaration / 18 physical lines),
-  expiring at separately scoped Q2 caller retirement. Host -69 includes moved
-  docs/separators; whole production +32. Strict ownership closure remains OPEN.
+  enum for public type compatibility; Q2 retired four facades and routes
+  consumers directly to AmbientTrailerPrefs. Retirement removes15 host lines
+  (14 declarations + import), whole production -10; prior owner move -69 host
+  included docs/separators and added32 whole. Strict ownership remains OPEN.
+  **TV keyboard policy:** AppStylePrefs owns the profile bool/generation pair,
+  two migration/access bodies and one synchronous keyboard cache. StorageService
+  retains two nonasync APIs and sync cache accessors; its original first reset
+  assignment and AppStylePrefs.resetCaches are unchanged. Only the owner tvOs
+  parameter loses its testing annotation for forwarding; the host retains it.
+  Host -37 includes docs; whole production +13. Q2 compatibility and strict
+  Storage ownership closure remain open; no native keyboard proof is claimed.
   **Download destinations:** `lib/services/storage/download_destination_prefs.dart`
   owns three profile-scoped String keys and seven persistence bodies; OS grants
   remain with callers. Q2 retired all seven StorageService APIs; callers route
@@ -472,6 +480,12 @@ is an editor mirror, not the source of truth. How to add a provider:
   `lib/screens/video_player/subtitle_track_controller.dart`
   (`SubtitleTrackController` + `SubtitleTrackSession`; host keeps
   `_SubtitleTrackSession` adapter and title/season resolvers).
+  Decoder diagnostics: `lib/services/playback/decoder_diagnostics.dart`
+  (`DecoderDiagnostics`) owns four state fields, debounce timer, matching polls
+  and report deduplication. Six explicit live capabilities retain host coupling;
+  shared media generation, renderer recovery and native diagnostic sink stay in
+  the host, with interleaved reset ordering preserved. Host -191 lines / whole
+  production +61; partial ownership, not independent logic or full V1-6 closure.
   IPTV recording (libmpv tee, Android engine, desktop capture):
   `lib/services/playback/iptv_recording_controller.dart`
   (`IptvRecordingController` + `IptvRecordingSession`; host keeps

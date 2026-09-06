@@ -1,8 +1,9 @@
+import 'package:debrify/services/storage/ambient_trailer_prefs.dart' show AmbientTrailerPrefs;
 import 'dart:async';
 
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage_service.dart' show AmbientTrailerSurface;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
@@ -122,10 +123,10 @@ void main() {
         install({});
         final before = await backend.durable();
         expect(
-          await StorageService.getAmbientTrailerAudioEnabled(surface),
+          await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(surface),
           isTrue,
         );
-        expect(await StorageService.getAmbientTrailerVolume(surface), 70);
+        expect(await AmbientTrailerPrefs.getAmbientTrailerVolume(surface), 70);
         expect(await backend.durable(), before);
         expect(backend.attempts, isEmpty);
       },
@@ -146,7 +147,7 @@ void main() {
           install({..._initial, volume: pair.$1});
           final before = await backend.durable();
           expect(
-            await StorageService.getAmbientTrailerVolume(surface),
+            await AmbientTrailerPrefs.getAmbientTrailerVolume(surface),
             pair.$2,
           );
           expect((await SharedPreferences.getInstance()).get(volume), pair.$1);
@@ -167,7 +168,7 @@ void main() {
           install({..._initial, audio: value});
           final before = await backend.durable();
           await expectLater(
-            StorageService.getAmbientTrailerAudioEnabled(surface),
+            AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(surface),
             throwsA(isA<TypeError>()),
           );
           expect(await backend.durable(), before);
@@ -181,7 +182,7 @@ void main() {
           install({..._initial, volume: value});
           final before = await backend.durable();
           await expectLater(
-            StorageService.getAmbientTrailerVolume(surface),
+            AmbientTrailerPrefs.getAmbientTrailerVolume(surface),
             throwsA(isA<TypeError>()),
           );
           expect(await backend.durable(), before);
@@ -200,20 +201,20 @@ void main() {
           (100, 100),
           (1000, 100),
         ]) {
-          await StorageService.setAmbientTrailerVolume(surface, pair.$1);
+          await AmbientTrailerPrefs.setAmbientTrailerVolume(surface, pair.$1);
           final prefs = await SharedPreferences.getInstance();
           expect(prefs.get(volume), pair.$2);
           expect(prefs.get(volume), isA<int>());
           expect(
-            await StorageService.getAmbientTrailerVolume(surface),
+            await AmbientTrailerPrefs.getAmbientTrailerVolume(surface),
             pair.$2,
           );
         }
         for (final value in [true, false]) {
-          await StorageService.setAmbientTrailerAudioEnabled(surface, value);
+          await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(surface, value);
           expect((await SharedPreferences.getInstance()).get(audio), value);
           expect(
-            await StorageService.getAmbientTrailerAudioEnabled(surface),
+            await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(surface),
             value,
           );
         }
@@ -231,11 +232,11 @@ void main() {
       final key = isAudio ? audio : volume;
       final Object updated = isAudio ? true : 100;
       Future<void> write() => isAudio
-          ? StorageService.setAmbientTrailerAudioEnabled(surface, true)
-          : StorageService.setAmbientTrailerVolume(surface, 1000);
+          ? AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(surface, true)
+          : AmbientTrailerPrefs.setAmbientTrailerVolume(surface, 1000);
       Future<Object> read() async => isAudio
-          ? await StorageService.getAmbientTrailerAudioEnabled(surface)
-          : await StorageService.getAmbientTrailerVolume(surface);
+          ? await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(surface)
+          : await AmbientTrailerPrefs.getAmbientTrailerVolume(surface);
 
       for (final outcome in ['ok', 'false', 'throw']) {
         test(
