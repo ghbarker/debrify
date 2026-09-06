@@ -60,6 +60,7 @@ const _watchFlowPaths = <String>[
   'lib/screens/debrify_tv/watch/windowed_watch_queue.dart',
   'lib/screens/debrify_tv/watch/quick_windowed_watch_programme.dart',
   'lib/screens/debrify_tv/watch/cached_windowed_watch_programme.dart',
+  'lib/screens/debrify_tv/watch/cached_locked_watch_programme.dart',
 ];
 
 List<String?> _providerLiteralHits(String source) {
