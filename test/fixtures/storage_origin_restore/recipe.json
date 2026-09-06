@@ -1255,6 +1255,35 @@
         "download_tree_display_name_v1",
         "download_dir_path_v1"
       ]
+    },
+    "ambient-trailer": {
+      "values": {
+        "home_hero_trailer_audio_enabled": false,
+        "home_hero_trailer_volume": -9,
+        "detail_trailer_audio_enabled": true,
+        "detail_trailer_volume": 137
+      },
+      "publicReads": {
+        "home_hero_trailer_audio_enabled": false,
+        "home_hero_trailer_volume": 10,
+        "detail_trailer_audio_enabled": true,
+        "detail_trailer_volume": 100
+      },
+      "excludedKeys": [],
+      "mutations": {
+        "ambient-key": {
+          "operation": "rename",
+          "key": "detail_trailer_audio_enabled"
+        },
+        "ambient-type": {
+          "operation": "replace",
+          "key": "detail_trailer_volume",
+          "value": "137"
+        },
+        "ambient-surfaces": {
+          "operation": "swap-surfaces"
+        }
+      }
     }
   }
 }

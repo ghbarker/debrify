@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/download_destination_prefs.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
@@ -77,9 +77,9 @@ void main() {
     sessionEpoch: 3,
   );
   final readers = <String, Future<String?> Function()>{
-    _uri: StorageService.getDownloadTreeUri,
-    _name: StorageService.getDownloadTreeDisplayName,
-    _path: StorageService.getDownloadDirPath,
+    _uri: DownloadDestinationPrefs.getDownloadTreeUri,
+    _name: DownloadDestinationPrefs.getDownloadTreeDisplayName,
+    _path: DownloadDestinationPrefs.getDownloadDirPath,
   };
   final operations =
       <
@@ -93,7 +93,7 @@ void main() {
         (
           label: 'set tree',
           keys: [_uri, _name],
-          run: () => StorageService.setDownloadTreeUri(
+          run: () => DownloadDestinationPrefs.setDownloadTreeUri(
             _updated[_uri]!,
             _updated[_name]!,
           ),
@@ -102,19 +102,19 @@ void main() {
         (
           label: 'clear tree',
           keys: [_uri, _name],
-          run: StorageService.clearDownloadTreeUri,
+          run: DownloadDestinationPrefs.clearDownloadTreeUri,
           clear: true,
         ),
         (
           label: 'set path',
           keys: [_path],
-          run: () => StorageService.setDownloadDirPath(_updated[_path]!),
+          run: () => DownloadDestinationPrefs.setDownloadDirPath(_updated[_path]!),
           clear: false,
         ),
         (
           label: 'clear path',
           keys: [_path],
-          run: StorageService.clearDownloadDirPath,
+          run: DownloadDestinationPrefs.clearDownloadDirPath,
           clear: true,
         ),
       ];
@@ -171,8 +171,8 @@ void main() {
   }
 
   test('empty strings are physically written rather than removed', () async {
-    await StorageService.setDownloadTreeUri('', '');
-    await StorageService.setDownloadDirPath('');
+    await DownloadDestinationPrefs.setDownloadTreeUri('', '');
+    await DownloadDestinationPrefs.setDownloadDirPath('');
     final prefs = await SharedPreferences.getInstance();
     for (final key in _keys) {
       expect(prefs.containsKey(key), isTrue);
