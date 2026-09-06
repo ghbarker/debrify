@@ -6,7 +6,8 @@ import 'package:debrify/screens/search/discover_screen.dart';
 import 'package:debrify/screens/search/search_screen_shells.dart';
 import 'package:debrify/screens/search_screen.dart';
 import 'package:debrify/services/storage_service.dart';
-import 'discover_screen_origin_test.dart' show mountDiscover;
+import 'package:debrify/services/main_page_bridge.dart';
+import 'discover_screen_origin_test.dart' show mountDiscover, discoverSource;
 import 'favourites_rows_origin_test.dart'
     show prepareFavourites, closeFavourites;
 
@@ -23,12 +24,27 @@ Widget _shell({
 void main() {
   testWidgets('Discover dispatch mounts its composition without legacy host',
       (tester) async {
+    final previousTab = MainPageBridge.activeTvTabIndex;
+    addTearDown(() => MainPageBridge.setActiveTvTab(previousTab));
     await prepareFavourites(tester);
     await mountDiscover(tester);
     expect(find.byType(SearchScreenHost), findsNothing);
     expect(tester.state(find.byWidgetPredicate(
           (widget) => widget.runtimeType.toString() == '_DiscoverComposition')).mounted, isTrue);
+    // The public bridge is not platform-gated: the actual non-TV Source node
+    // must remain reachable even though the API retains its TV-oriented name.
+    final source = discoverSource(tester);
+    expect(source.isTelevision, isFalse);
+    final sourceNode = source.focusNode!;
+    sourceNode.unfocus();
+    await tester.pump();
+    expect(sourceNode.hasFocus, isFalse);
+    MainPageBridge.setActiveTvTab(18);
+    expect(MainPageBridge.requestTvContentFocus(), isTrue);
+    await tester.pump();
+    expect(sourceNode.hasFocus, isTrue);
     await closeFavourites(tester);
+    expect(MainPageBridge.requestTvContentFocus(), isFalse);
   });
 
   group('searchMode vs discoverMode vs Home tab / variant', () {

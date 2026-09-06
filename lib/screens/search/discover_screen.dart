@@ -189,12 +189,10 @@ class _DiscoverScreenState extends State<_DiscoverComposition>
     WidgetsBinding.instance.addObserver(this);
     _profileSessionOwner = ProfileSessionMemory.captureOwner();
     AnalyticsService.screenView(widget.analyticsName);
-    if (widget.isTelevision) {
-      MainPageBridge.registerTvContentFocusHandler(
-        widget.tabIndex,
-        focusContent,
-      );
-    }
+    MainPageBridge.registerTvContentFocusHandler(
+      widget.tabIndex,
+      focusContent,
+    );
     final pending = MainPageBridge.pendingMdblistListOpen;
     if (pending != null) {
       MainPageBridge.pendingMdblistListOpen = null;
