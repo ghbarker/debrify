@@ -9,6 +9,8 @@
 /// [StorageKeyStore] ownership when a domain store is extracted; they must
 /// not change the string.
 enum StorageKeyStore {
+  /// Installation-wide remote device preferences (RemoteDevicePrefs).
+  remoteDevicePrefs,
   /// Onboarding readiness compatibility flag (ProfileOnboardingState).
   profileOnboardingState,
   /// Movie/series Quick Play policy and legacy mirrors (QuickPlayPolicyPrefs).
@@ -274,10 +276,10 @@ class StorageKeyOwnership {
     'simkl_username': StorageKeyStore.trackingPrefs,
     'mdblist_api_key': StorageKeyStore.trackingPrefs,
     'mdblist_username': StorageKeyStore.trackingPrefs,
-    'remote_control_enabled': StorageKeyStore.storageService,
-    'remote_intro_shown': StorageKeyStore.storageService,
-    'remote_tv_device_name': StorageKeyStore.storageService,
-    'remote_last_device': StorageKeyStore.storageService,
+    'remote_control_enabled': StorageKeyStore.remoteDevicePrefs,
+    'remote_intro_shown': StorageKeyStore.remoteDevicePrefs,
+    'remote_tv_device_name': StorageKeyStore.remoteDevicePrefs,
+    'remote_last_device': StorageKeyStore.remoteDevicePrefs,
     'tvos_keyboard_default_generation': StorageKeyStore.storageService,
     'tv_low_res_render': StorageKeyStore.storageService,
     'tv_hero_artwork_quality': StorageKeyStore.appStylePrefs,
