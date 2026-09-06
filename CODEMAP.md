@@ -146,7 +146,18 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   Favourites state, loaders and action flows live in
   `lib/screens/search/fav_rows_controller.dart` (`FavRowsController`,
   `FavouritesIptvListRow`); classic rows render through
-  `lib/screens/search/fav_row.dart` (`FavRow`). These retain screen/UI dependencies.
+  `lib/screens/search/fav_row.dart` (`FavRow`). Shared `FavArtCell` / `ArtPoster`
+  and their single caption-metrics owner live in `search/favourite_art_cell.dart`;
+  classic rows import these directly, and the host re-exports the same public types.
+  `search/stages/stage_favourite_cells.dart` (`StageFavouriteCells`) owns the shared
+  235-line stage builder, used by six existing stage call/tearoff sites without a
+  host builder forwarder. Four live capabilities retain lazy controller/title reads,
+  rail switching and host focus publication for review at final composition / phase
+  completion. The plain holder allocates when Tonight first captures its build
+  tearoff; no controller read or callback is invoked by construction. Host 6539 ->
+  6291 (**-248**); whole production **+45**, relocation/ownership rather than algorithm
+  deletion or Search closure. Borrowed focus, host preview/lifetime and controller
+  ownership remain; live IPTV focus/native transition is unproven. These retain UI dependencies.
   Session wires live actual-State context/update and shared runtime cross-row callbacks;
   compositions dispose favourites nodes in the existing order. The full Fav adapter is retained,
   including hidden Discover watchlist effects; private-node/independent-await proof remains absent.
