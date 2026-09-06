@@ -2,6 +2,7 @@ import 'search/board_cell.dart';
 import 'search/stage_visuals.dart';
 import 'search/stages/deck_board_stage.dart';
 import 'search/stages/mosaic_board_stage.dart';
+import 'search/stages/promenade_board_stage.dart';
 import 'search/stages/tonight_board_stage.dart';
 import 'search/stages/tonight_stage_content.dart';
 import 'search/stages/stage_shelf_content.dart';
@@ -118,7 +119,7 @@ part 'search/search_card_widgets.dart';
 part 'search/search_hero_widgets.dart';
 part 'search/search_stage_widgets.dart';
 part 'search/stages/canvas_board_stage.dart';
-part 'search/stages/promenade_board_stage.dart';
+
 part 'search/stages/atrium_board_stage.dart';
 
 
@@ -341,14 +342,8 @@ double _atriumLabelHeight(BuildContext context) =>
 // the identity block that must stay clear of them read the same numbers.
 const double _kPromLabelFontSize = 12.0;
 
-/// Gap between the centred rail label and the strip below it.
-const double _kPromLabelGap = 14;
 
-/// Trailing spacer under the strip.
-const double _kPromStripTail = 24;
 
-/// Air between the identity block and the label row under it.
-const double _kPromIdentityGap = 26;
 
 /// Dim painted over every strip cell that isn't focused, so the centre-locked
 /// cell reads as the lit one. A flat fill inside the card's own clip (see
@@ -2943,6 +2938,49 @@ class _SearchScreenState extends State<SearchScreenHost>
     return false;
   }
 
+  late final PromenadeStageBindings _promenadeBindings = (
+    resolveRail: _resolveStageRail,
+    seedFocus: _seedStageFocusOnce,
+    favouriteCount: _canvasFavItemCount,
+    readTheater: () => _canvasTheater,
+    readTrailerActive: () => _heroTrailerActive,
+    cacheWidth: () => _tvHeroArtworkCacheWidth,
+    cacheHeight: () => _tvHeroArtworkCacheHeight,
+    heroItem: _heroItem,
+    enriched: _heroEnriched,
+    favourite: _canvasFavFocus,
+    trailerShowing: _heroTrailerShowing,
+    buildTrailer: (boardH) => _HeroTrailerLayer(
+      trailer: _heroTrailer,
+      isTelevision: widget.isTelevision,
+      heroHeight: boardH,
+      fullBleed: true,
+      volume: _heroTrailerVolume,
+      loading: _heroTrailerLoading,
+      onPlayingChanged: _onHeroTrailerPlaying,
+      takeover: _heroTrailerTakeover,
+    ),
+    buildLive: (boardH) => _HeroLiveLayer(
+      channel: _heroLiveChannel,
+      streamUrl: _heroLiveUrl,
+      heroHeight: boardH,
+      fullBleed: true,
+      volume: _heroTrailerVolume,
+      onPlayingChanged: _onHeroTrailerPlaying,
+      onPlaybackFailed: _onHeroLivePlaybackFailed,
+    ),
+    buildScrims: (theater) => _CanvasScrims(
+      theater: theater,
+      variant: _StageScrimVariant.centered,
+    ),
+    railBoxHeight: _stageRailBoxH,
+    favouriteWidth: _stageFavW,
+    labelHeight: _promenadeLabelHeight,
+    railLabel: _promenadeLabel,
+    favouriteCell: _canvasFavCell,
+    cell: _promenadeCell,
+  );
+
   late final MosaicStageBindings _mosaicBindings = (
     readTheme: () => AppThemeScope.of(context),
     resolveRail: _resolveStageRail,
@@ -5242,7 +5280,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       case 'mosaic':
         return MosaicStage(bindings: _mosaicBindings, isTelevision: widget.isTelevision);
       case 'promenade':
-        return _PromenadeBoardStage(host: this);
+        return PromenadeStage(bindings: _promenadeBindings, isTelevision: widget.isTelevision);
       case 'deck':
         return DeckStage(bindings: _deckBindings, isTelevision: widget.isTelevision);
       case 'tonight':
