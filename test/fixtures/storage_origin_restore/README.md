@@ -1073,3 +1073,69 @@ Optional standalone origin-test copying reverses13 Ambient receivers and removes
 the owner import, retaining the host import show AmbientTrailerSurface. No new
 package generation or assertions are necessary; this is namespace adaptation,
 not a claim that the complete old/current harness is byte-identical.
+
+
+## Device maintenance: four device-global exclusions
+
+Fresh unchanged actual pre-S2 exporter `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`
+in `C:/Users/hunth/debrify/debrify-device-maintenance-fixture-origin` generated
+`device-maintenance-exclusion.encrypted.json` and its manifest. Current restore
+runs in `C:/Users/hunth/debrify/debrify-s2-device-maintenance-prefs` at main base
+`bbc6113f285fb278006d92676df1b9bff10e9427`, after green public origin
+`a2fcd5812230f8d53987ff11609a070e3b7154dd` (34 finite actual API cases).
+
+Zero admitted domain keys, four exclusions: support_remote_config_cache_v1
+String, dismissed_donation_campaign_ids_v1 StringList, update_auto_check_enabled
+bool, update_ignored_version String. Synthetic source globals include opaque
+malformed JSON, duplicate/case/whitespace IDs, false and a padded version.
+Every same-named source profile key has a String shadow. Actual encrypted
+export/decode yields an empty settings section and no resources. This is not
+sanitized-sharing, installation, native permission or portable identity proof.
+
+Current actual merge restore publishes generation2, retains the different four
+destination globals with exact physical types/values, and public getters return
+them without rewriting. Old profile generation1, another profile, generation7
+and destination sentinel are checked. Re-export with secrets false/true still
+excludes all four names and preserves the sentinel. Profile shadow assertions
+cover those explicit old/other scopes, not every possible restore interleaving.
+
+Old lib is unchanged; generator verifies HEAD/lib plus local app package path.
+Copied loader removes seven absent-owner imports and reverses same-method
+receivers: IptvPrefs3, PlaybackProgressStore14, ProviderCredentialPrefs19,
+TorrentSearchHistoryStore2, MyWatchlistStore2, DownloadDestinationPrefs5,
+AmbientTrailerPrefs6. Filter helper removes its DefaultTorrentFilterPrefs import
+and reverses10tearoffs; playlist helper removes its PlaybackProgressStore import
+and reverses4receivers. Recipe/new domain code identical; maintenance public
+APIs still reside on old StorageService. This is not identical-whole-harness
+proof and does not backport owners. Both package configs resolve own app and
+pinned Flutter/test3.44.8. Later keyboard/catalog fixture unions need explicit
+preservation; they are not in this generation base.
+
+All44 prior artifact Git blobs unchanged (normalized Git comparison, not a
+raw CRLF/LF identity claim). New pair gives46 artifacts plus recipe/README48files.
+Previous recipe entries are equal. New pair copied byte-for-byte from old output.
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# In fresh unchanged old checkout with the adapters above:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --plain-name 'device-maintenance-exclusion: generate' --reporter json
+# In current candidate:
+& $flutter test --no-pub test/device_maintenance_prefs_origin_test.dart test/storage_origin_restore_fixture_test.dart --reporter json
+& 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/cache/dart-sdk/bin/dart.exe' analyze test/storage_origin_restore_fixture_test.dart
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'device-maintenance-exclusion: actual restore' --dart-define=STORAGE_FIXTURE_MUTATION=maintenance-forbidden-key --reporter json
+```
+
+Generation1PASS; combined84PASS=34origin+50fixture, zero errors; scopedloader0.
+Negative control rebuilds the preferences-section hash, encrypts/decrypts a
+valid package containing one forbidden support-cache key, confirms that key
+survived the codec, then exits1 at declared exclusion429/call488. This proves
+the package exclusion assertion; it intentionally fails BEFORE restore and
+makes no claim that destination globals were mutated. No production mutation.
+
+Ciphertext SHA256:
+`be6902e56414c291e390d714668fc9ad5059b1d0940b74fb09ee1aa8ab12fa72`.
+
+Did we make a difference? Actual old export/current restore now distinguishes
+four installation-global maintenance preferences from portable profile state.
+Is there more we could do? A separately granted eight-body owner move remains
+pending; no production or strict Storage closure credit is earned here.

@@ -1284,6 +1284,33 @@
           "operation": "swap-surfaces"
         }
       }
+    },
+    "device-maintenance-exclusion": {
+      "excludedKeys": [
+        "support_remote_config_cache_v1",
+        "dismissed_donation_campaign_ids_v1",
+        "update_auto_check_enabled",
+        "update_ignored_version"
+      ],
+      "sourceGlobals": {
+        "support_remote_config_cache_v1": "{synthetic-source",
+        "dismissed_donation_campaign_ids_v1": [
+          "A",
+          " A ",
+          "A"
+        ],
+        "update_auto_check_enabled": false,
+        "update_ignored_version": " source-version "
+      },
+      "destinationGlobals": {
+        "support_remote_config_cache_v1": "{synthetic-destination",
+        "dismissed_donation_campaign_ids_v1": [
+          "dest",
+          "dest"
+        ],
+        "update_auto_check_enabled": true,
+        "update_ignored_version": " destination-version "
+      }
     }
   }
 }
