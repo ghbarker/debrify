@@ -714,7 +714,7 @@ void main() {
         );
 
         // The first idle probe is answered with 429: a server-requested backoff
-        // of one idle period that deliberately survives completed cycles.
+        // of sixty seconds that deliberately survives completed cycles.
         async.elapse(idlePollPeriod);
         async.flushMicrotasks();
         expect(transport.probedDeviceIds, hasLength(1));
@@ -728,7 +728,7 @@ void main() {
         expect(transport.probedDeviceIds, hasLength(1));
 
         // ...and exactly one at the deadline the server asked for.
-        async.elapse(idlePollPeriod - warmPollPeriod);
+        async.elapse(remotePollFailureFloor - warmPollPeriod);
         async.flushMicrotasks();
         expect(transport.probedDeviceIds, hasLength(2));
       });
@@ -1060,20 +1060,20 @@ void main() {
 
       async.elapse(const Duration(minutes: 2, seconds: 50));
       async.flushMicrotasks();
-      expect(transport.probeSeconds.last, 177);
-      final warmProbeCount = transport.probeSeconds.length;
-
-      // Warmth expires at t=182. That boundary re-arms the idle cadence,
-      // whose next probe is sixty seconds later without another event.
+      expect(transport.probeSeconds.take(3), <int>[7, 17, 32]);
+      expect(transport.probeSeconds.last, 167);
+      // Expiring warmth must not reset a timer and push detection past 15s.
       async.elapse(const Duration(seconds: 5));
       async.flushMicrotasks();
-      expect(transport.probeSeconds, hasLength(warmProbeCount));
-      async.elapse(const Duration(seconds: 59));
+      expect(transport.probeSeconds.last, 182);
+      async.elapse(const Duration(seconds: 15));
       async.flushMicrotasks();
-      expect(transport.probeSeconds, hasLength(warmProbeCount));
-      async.elapse(const Duration(seconds: 1));
+      expect(transport.probeSeconds.last, 197);
+      // Fresh activity immediately restores the 5-second interval.
+      scheduler.extendWarmSession();
+      async.elapse(const Duration(seconds: 5));
       async.flushMicrotasks();
-      expect(transport.probeSeconds.last, 242);
+      expect(transport.probeSeconds.last, 202);
       scheduler.dispose();
     });
   });
@@ -1160,7 +1160,7 @@ void main() {
       expect(runner.triggers, <WebDavSyncTrigger?>[
         WebDavSyncTrigger.remoteChange,
       ]);
-      expect(transport.probeSeconds, <int>[60, 65]);
+      expect(transport.probeSeconds, <int>[15, 20, 30, 45, 60]);
       scheduler.dispose();
     });
   });
@@ -1197,7 +1197,7 @@ void main() {
       async.elapse(const Duration(minutes: 5));
       async.flushMicrotasks();
 
-      expect(transport.probedDeviceIds, hasLength(5));
+      expect(transport.probedDeviceIds, hasLength(20));
       expect(runner.runs, 0);
       scheduler.dispose();
     });
@@ -1277,20 +1277,21 @@ void main() {
         async.flushMicrotasks();
       }
 
-      advanceTo(60);
+      advanceTo(15);
       expect(scheduler.pollState, WebDavSyncPollState.pausedBackoff);
       expect(scheduler.automaticSyncActive, isFalse);
-      advanceTo(120);
-      advanceTo(180);
-      advanceTo(240);
-      advanceTo(480);
-      advanceTo(960);
-      advanceTo(1860);
-      expect(transport.probeSeconds, <int>[60, 120, 240, 480, 960, 1860]);
+      advanceTo(74);
+      expect(transport.probeSeconds, <int>[15]);
+      advanceTo(75);
+      advanceTo(195);
+      advanceTo(435);
+      advanceTo(915);
+      advanceTo(1815);
+      expect(transport.probeSeconds, <int>[15, 75, 195, 435, 915, 1815]);
       expect(scheduler.pollState, WebDavSyncPollState.active);
 
-      advanceTo(1920);
-      expect(transport.probeSeconds.last, 1920);
+      advanceTo(1830);
+      expect(transport.probeSeconds.last, 1830);
       expect(
         runner.triggers.where(
           (trigger) => trigger == WebDavSyncTrigger.remoteChange,
@@ -1345,9 +1346,9 @@ void main() {
       expect(transport.probeSeconds, <int>[5, 65]);
       expect(scheduler.pollState, WebDavSyncPollState.active);
 
-      async.elapse(const Duration(seconds: 5));
+      async.elapse(const Duration(seconds: 10));
       async.flushMicrotasks();
-      expect(transport.probeSeconds, <int>[5, 65, 70]);
+      expect(transport.probeSeconds, <int>[5, 65, 75]);
       scheduler.dispose();
     });
   });
@@ -1402,6 +1403,63 @@ void main() {
       scheduler.dispose();
     });
   });
+
+  test(
+    'quick resume before first warm probe restores polling without duplicates',
+    () {
+      fakeAsync((async) {
+        final start = DateTime.utc(2026, 9, 1);
+        final transport = _PollTransport(
+          clock: () => start.add(async.elapsed),
+          probes: <String, WebDavSyncManifestProbe>{
+            'device-b': const WebDavSyncManifestProbe(
+              exists: true,
+              validator: WebDavSyncManifestValidator.etag('"v1"'),
+            ),
+          },
+        );
+        final scheduler = WebDavSyncScheduler(
+          runner: _Runner(),
+          gate: _Gate(),
+          clock: () => start.add(async.elapsed),
+        );
+        scheduler.arm(
+          () async => context(),
+          remotePollContextProvider: () async => WebDavSyncRemotePollContext(
+            transport: transport,
+            peerDeviceIds: const <String>['device-b'],
+            validators: const <String, WebDavSyncManifestValidator>{
+              'device-b': WebDavSyncManifestValidator.etag('"v1"'),
+            },
+          ),
+        );
+
+        scheduler.extendWarmSession();
+        async.elapse(const Duration(seconds: 1));
+        scheduler.pauseRemotePolling();
+        async.elapse(const Duration(seconds: 1));
+        scheduler.resumeRemotePolling();
+        async.elapse(const Duration(seconds: 4));
+        async.flushMicrotasks();
+        expect(transport.probeSeconds, isEmpty);
+        async.elapse(const Duration(seconds: 1));
+        async.flushMicrotasks();
+        expect(transport.probeSeconds, <int>[7]);
+        async.elapse(const Duration(seconds: 25));
+        async.flushMicrotasks();
+        expect(transport.probeSeconds, <int>[7, 17, 32]);
+        // Polling must continue beyond warmth expiry at t=182.
+        async.elapse(const Duration(seconds: 165));
+        async.flushMicrotasks();
+        expect(transport.probeSeconds.last, 197);
+        expect(
+          transport.probeSeconds.toSet().length,
+          transport.probeSeconds.length,
+        );
+        scheduler.dispose();
+      });
+    },
+  );
 
   test('disabled poll define gate wins over every warm trigger', () {
     fakeAsync((async) {
@@ -2369,7 +2427,7 @@ void main() {
         async.flushMicrotasks();
         final atExpiry = probes;
         expect(atExpiry, greaterThanOrEqualTo(35));
-        async.elapse(const Duration(seconds: 59));
+        async.elapse(const Duration(seconds: 14));
         async.flushMicrotasks();
         expect(probes, atExpiry);
         async.elapse(const Duration(seconds: 1));

@@ -28,7 +28,9 @@ const bool webDavSyncRemotePollEnabled = bool.fromEnvironment(
 );
 
 const Duration warmPollPeriod = Duration(seconds: 5);
-const Duration idlePollPeriod = Duration(seconds: 60);
+const Duration idlePollPeriod = Duration(seconds: 15);
+// Server failures retain the existing cooldown independently of idle polling.
+const Duration remotePollFailureFloor = Duration(seconds: 60);
 const Duration warmDuration = Duration(minutes: 3);
 
 enum WebDavSyncPollState { active, pausedBackoff, disabledNoValidators, gated }
@@ -106,6 +108,7 @@ final class WebDavSyncScheduler {
   DateTime? _lastStartedAt;
   DateTime? _nextRemotePollAt;
   DateTime? _warmUntil;
+  int _unchangedRemotePolls = 0;
   bool _running = false;
   Completer<({WebDavSyncCycleReport report, int? sequence})>?
   _activeCycleResult;
@@ -189,6 +192,7 @@ final class WebDavSyncScheduler {
     // the sink was dark) must not wait for an unrelated trigger.
     if (_pendingLocalChangeSequence != null) _scheduleLocalChange();
     _warmUntil = null;
+    _unchangedRemotePolls = 0;
     _resetPollBackoff();
     _pollGeneration++;
     _periodic = Timer.periodic(period, (_) => unawaited(_signalPeriodic()));
@@ -454,7 +458,7 @@ final class WebDavSyncScheduler {
     final delay = backoffUntil != null && now.isBefore(backoffUntil)
         ? backoffUntil.difference(now)
         : _isWarm(now)
-        ? warmPollPeriod
+        ? warmPollPeriod * (1 + _unchangedRemotePolls.clamp(0, 2))
         : idlePollPeriod;
     final timerGeneration = _pollTimerGeneration;
     _remotePollTimer = Timer(delay, () {
@@ -485,10 +489,16 @@ final class WebDavSyncScheduler {
   void _rearmWarmPolling() {
     final now = _clock();
     final wasWarm = _isWarm(now);
+    final wasSlower = _unchangedRemotePolls > 0;
+    _unchangedRemotePolls = 0;
     _warmUntil = now.add(warmDuration);
     _warmExpiryTimer?.cancel();
     _warmExpiryTimer = Timer(warmDuration, _expireWarmPolling);
-    if (!wasWarm) _armRemotePollTimer();
+    // A quick background/resume can cancel the timer before any warm probe.
+    // Warmth alone does not mean a poll is still scheduled.
+    if (!wasWarm || wasSlower || _remotePollTimer == null) {
+      _armRemotePollTimer();
+    }
   }
 
   void _expireWarmPolling() {
@@ -500,7 +510,8 @@ final class WebDavSyncScheduler {
     }
     _warmExpiryTimer = null;
     _warmUntil = null;
-    _armRemotePollTimer();
+    // Existing timer is already capped at 15s; resetting it here could delay
+    // the next check beyond that cap.
   }
 
   Future<void> _pollForRemoteChanges() async {
@@ -581,6 +592,7 @@ final class WebDavSyncScheduler {
         await signal(WebDavSyncTrigger.remoteChange);
         return;
       }
+      if (_unchangedRemotePolls < 2) _unchangedRemotePolls++;
       if (completedOutcomes.any(
         (outcome) => outcome.probe!.exists && outcome.probe!.validator == null,
       )) {
@@ -607,7 +619,7 @@ final class WebDavSyncScheduler {
     _pollBackoffHoldsThroughCycles =
         error is WebDavException && error.statusCode != null;
     _consecutivePollFailures++;
-    var delayMs = idlePollPeriod.inMilliseconds;
+    var delayMs = remotePollFailureFloor.inMilliseconds;
     for (var index = 1; index < _consecutivePollFailures; index++) {
       delayMs *= 2;
       if (delayMs >= period.inMilliseconds) {
