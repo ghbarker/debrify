@@ -137,6 +137,33 @@ void _expectPromenadeSource(String host, String stage) {
   expect(_methodBody(stage, 'build'), contains('bindings.seedFocus();'));
 }
 
+const _canvasDispatch =
+    'return CanvasStage(bindings: _canvasBindings, isTelevision: widget.isTelevision);';
+
+String _canvasSource() =>
+    File('lib/screens/search/stages/canvas_board_stage.dart')
+        .readAsStringSync().replaceAll('\r\n', '\n');
+
+const _canvasEmptyGuard = '''if (view == null) {
+      // First batch still streaming (or every loaded row is empty) — hold
+      // the brand stage rather than an empty black canvas.
+      return BrandLoadingStage(isTelevision: isTelevision);
+    }''';
+
+void _expectCanvasEmpty(String stage) {
+  final body = _methodBody(stage, 'build');
+  expect(body, contains('bindings.resolveRail()'));
+  expect(body, contains(_canvasEmptyGuard));
+}
+
+void _expectCanvasSource(String host, String stage) {
+  expect(_homeSwitchChunk(host), contains(_canvasDispatch));
+  expect(stage, contains('class CanvasStage extends StatelessWidget'));
+  expect(_methodBody(stage, 'build'), contains('return LayoutBuilder('));
+  _expectCanvasEmpty(stage);
+  expect(_methodBody(stage, 'build'), contains('bindings.seedFocus();'));
+}
+
 void main() {
   late String host;
   late String layouts;
@@ -240,7 +267,7 @@ void main() {
       );
       expect(chunk, isNot(contains('_buildDiscoverStage')));
       expect(chunk, isNot(contains("case 'classic':")));
-      expect(chunk, contains('return _CanvasBoardStage(host: this);'));
+      expect(chunk, contains(_canvasDispatch));
       expect(chunk, contains('return _AtriumBoardStage(host: this);'));
       expect(chunk, contains(_mosaicDispatch));
       expect(chunk, contains(_promenadeDispatch));
@@ -262,6 +289,24 @@ void main() {
   });
 
   group('stage builders (source pin)', () {
+    test('Canvas source inventory rejects dispatch, empty guard and seed removal', () {
+      final stage = _canvasSource();
+      _expectCanvasSource(host, stage);
+      // Finite source-copy controls, not runtime or origin behavior evidence.
+      expect(
+        () => _expectCanvasSource(host.replaceFirst(_canvasDispatch, ''), stage),
+        throwsA(isA<TestFailure>()),
+      );
+      expect(_canvasEmptyGuard.allMatches(stage), hasLength(1));
+      expect(
+        () => _expectCanvasSource(host, stage.replaceFirst(_canvasEmptyGuard, '')),
+        throwsA(isA<TestFailure>()),
+      );
+      expect(
+        () => _expectCanvasSource(host, stage.replaceFirst('bindings.seedFocus();', '')),
+        throwsA(isA<TestFailure>()),
+      );
+    });
     test('Promenade source inventory rejects dispatch, empty guard and seed removal', () {
       final stage = _promenadeSource();
       _expectPromenadeSource(host, stage);
@@ -330,6 +375,10 @@ void main() {
     });
     test('all seven Home stage builders exist', () {
       for (final name in kTvHomeStageBuilderNames) {
+        if (name == '_buildCanvasBoard') {
+          expect(_methodBody(_canvasSource(), 'build'), contains('return LayoutBuilder('));
+          continue;
+        }
         if (name == '_buildPromenadeBoard') {
           expect(_methodBody(_promenadeSource(), 'build'), contains('return LayoutBuilder('));
           continue;
@@ -365,7 +414,7 @@ void main() {
 
     test('each board is its own widget under search/stages/', () {
       const widgets = [
-        '_CanvasBoardStage',
+        'CanvasStage',
         '_AtriumBoardStage',
         'MosaicStage',
         'PromenadeStage',
@@ -392,6 +441,10 @@ void main() {
           '_buildPromenadeBoard',
           '_buildDeckBoard',
         ]) {
+          if (name == '_buildCanvasBoard') {
+            _expectCanvasEmpty(_canvasSource());
+            continue;
+          }
           if (name == '_buildPromenadeBoard') {
             _expectPromenadeEmpty(_promenadeSource());
             continue;
@@ -505,6 +558,10 @@ void main() {
           '_buildMosaicBoard',
           '_buildDeckBoard',
         ]) {
+          if (name == '_buildCanvasBoard') {
+            expect(_methodBody(_canvasSource(), 'build'), contains('bindings.seedFocus();'));
+            continue;
+          }
           if (name == '_buildPromenadeBoard') {
             expect(_methodBody(_promenadeSource(), 'build'), contains('bindings.seedFocus();'));
             continue;
