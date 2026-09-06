@@ -374,7 +374,7 @@ abstract final class SettingsRows {
   static const exportDiagnosticLogs = SettingsRowContent(
     icon: Icons.bug_report_outlined,
     title: 'Export Diagnostic Logs',
-    subtitle: 'Save privacy-filtered logs from the last 2 hours',
+    subtitle: 'Save recent logs (2h) and critical events (24h)',
   );
   static const resetDebrify = SettingsRowContent(
     icon: Icons.warning_rounded,
