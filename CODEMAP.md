@@ -100,7 +100,7 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
 
 ## Cross-cutting hubs (touched by many features)
 - **`lib/screens/search_screen.dart`** 🔴 — Home board host (`SearchScreenHost`): continue-watching rows, catalog rows,
-  favourites rows, the D-pad `_BoardCell` focus grid, poster sizing (`_railPosterW`), bind-sources entry.
+  favourites rows, the D-pad `BoardCell` focus grid, poster sizing (`_railPosterW`), bind-sources entry.
   Public `SearchScreen` is a G4-style wrapper (`main.dart` constructors unchanged). Search tab is
   `lib/screens/search/catalog_search_screen.dart` (`CatalogSearchScreen`, MainTab 17); Discover is
   `lib/screens/search/discover_screen.dart` (`DiscoverScreen`, MainTab 18). Discover is a Stateless
@@ -202,6 +202,14 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   Host 7053 -> 6830 (**223 net Leaves**); whole production **+92**, including neutral types.
   Ten typed content operations and four frame actions remain explicit coupling; no pure-logic credit.
   Six stage parts and their shared focus/deferral/Hero aliases remain; the 1400 target is not closed.
+  Shared renderer `lib/screens/search/board_cell.dart` owns public `BoardCell`, its
+  private card/State and poster-flight shuttle (product 2ab2b6d1). Seven direct
+  constructors: host Promenade/Atrium/Mosaic/shared Deck-Tonight shelf/catalog/CW,
+  plus Canvas. The existing 27-field API, borrowed nodes and card lifetime remain.
+  **669 declaration lines relocated; 0 host Leaves; whole production +17.**
+  The CW red constant has one owner and one retained private host alias for other
+  card/Hero consumers. No host import from the renderer; both legacy widget parts
+  remain. This removes shared renderer coupling, not the remaining stage bindings.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
