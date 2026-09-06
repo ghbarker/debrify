@@ -1284,6 +1284,39 @@
           "operation": "swap-surfaces"
         }
       }
+    },
+    "catalog-search": {
+      "values": {
+        "catalog_search_disabled_addons_v1": "[\" z \",\"b\",\" z \",\"\",\"B\",\"b\"]"
+      },
+      "expectedPublicRead": [
+        " z ",
+        "b",
+        "",
+        "B"
+      ],
+      "excludedKeys": [],
+      "mutations": {
+        "catalog-key": {
+          "operation": "rename",
+          "key": "catalog_search_disabled_addons_v1"
+        },
+        "catalog-type": {
+          "operation": "replace",
+          "key": "catalog_search_disabled_addons_v1",
+          "value": [
+            " z ",
+            "b",
+            "",
+            "B"
+          ]
+        },
+        "catalog-order": {
+          "operation": "replace",
+          "key": "catalog_search_disabled_addons_v1",
+          "value": "[\"b\",\" z \",\" z \",\"\",\"B\",\"b\"]"
+        }
+      }
     }
   }
 }
