@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/torrent_filter_state.dart';
-import '../../services/storage_service.dart';
+import '../../services/storage/default_torrent_filter_prefs.dart';
 import '../../services/analytics_service.dart';
 import '../../utils/platform_util.dart';
 import '../../utils/tv_keys.dart';
@@ -96,11 +96,11 @@ class _FilterSettingsPageState extends State<FilterSettingsPage> {
 
   Future<void> _loadSettings() async {
     try {
-      final qualities = await StorageService.getDefaultFilterQualities();
-      final sources = await StorageService.getDefaultFilterRipSources();
-      final languages = await StorageService.getDefaultFilterLanguages();
-      final sizes = await StorageService.getDefaultFilterSizes();
-      final ranges = await StorageService.getDefaultFilterDynamicRanges();
+      final qualities = await DefaultTorrentFilterPrefs.getDefaultFilterQualities();
+      final sources = await DefaultTorrentFilterPrefs.getDefaultFilterRipSources();
+      final languages = await DefaultTorrentFilterPrefs.getDefaultFilterLanguages();
+      final sizes = await DefaultTorrentFilterPrefs.getDefaultFilterSizes();
+      final ranges = await DefaultTorrentFilterPrefs.getDefaultFilterDynamicRanges();
 
       setState(() {
         // Convert stored strings back to enums
@@ -196,31 +196,31 @@ class _FilterSettingsPageState extends State<FilterSettingsPage> {
   }
 
   Future<void> _saveQualities() async {
-    await StorageService.setDefaultFilterQualities(
+    await DefaultTorrentFilterPrefs.setDefaultFilterQualities(
       _selectedQualities.map((e) => e.name).toList(),
     );
   }
 
   Future<void> _saveSources() async {
-    await StorageService.setDefaultFilterRipSources(
+    await DefaultTorrentFilterPrefs.setDefaultFilterRipSources(
       _selectedSources.map((e) => e.name).toList(),
     );
   }
 
   Future<void> _saveLanguages() async {
-    await StorageService.setDefaultFilterLanguages(
+    await DefaultTorrentFilterPrefs.setDefaultFilterLanguages(
       _selectedLanguages.map((e) => e.name).toList(),
     );
   }
 
   Future<void> _saveSizes() async {
-    await StorageService.setDefaultFilterSizes(
+    await DefaultTorrentFilterPrefs.setDefaultFilterSizes(
       _selectedSizes.map((e) => e.name).toList(),
     );
   }
 
   Future<void> _saveRanges() async {
-    await StorageService.setDefaultFilterDynamicRanges(
+    await DefaultTorrentFilterPrefs.setDefaultFilterDynamicRanges(
       _selectedRanges.map((e) => e.name).toList(),
     );
   }

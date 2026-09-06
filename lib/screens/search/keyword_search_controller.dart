@@ -9,6 +9,7 @@ import '../../models/torrent_filter_state.dart';
 import '../../services/cloud/cloud_provider_registry.dart';
 import '../../services/profiles/profile_policy_guard.dart';
 import '../../services/profiles/profile_session_memory.dart';
+import '../../services/storage/default_torrent_filter_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../services/torrent_service.dart';
 import '../../utils/torrent_filter_matcher.dart';
@@ -348,11 +349,11 @@ class KeywordSearchController extends ChangeNotifier {
   /// least one default is configured so an empty default keeps filters off.
   Future<void> loadDefaultFilters() async {
     try {
-      final qualities = await StorageService.getDefaultFilterQualities();
-      final sources = await StorageService.getDefaultFilterRipSources();
-      final languages = await StorageService.getDefaultFilterLanguages();
-      final sizes = await StorageService.getDefaultFilterSizes();
-      final ranges = await StorageService.getDefaultFilterDynamicRanges();
+      final qualities = await DefaultTorrentFilterPrefs.getDefaultFilterQualities();
+      final sources = await DefaultTorrentFilterPrefs.getDefaultFilterRipSources();
+      final languages = await DefaultTorrentFilterPrefs.getDefaultFilterLanguages();
+      final sizes = await DefaultTorrentFilterPrefs.getDefaultFilterSizes();
+      final ranges = await DefaultTorrentFilterPrefs.getDefaultFilterDynamicRanges();
       if (!_live) return;
 
       final qualitySet = <QualityTier>{};
