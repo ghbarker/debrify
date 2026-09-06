@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main 2f995724
+## Current roadmap — September 6, main 55f44442
 
 ### God-file line counts — original → current merged main
 
-- **Search:** 19,070 → **6,292** (12,778 fewer)
+- **Search:** 19,070 → **6,293** (12,777 fewer)
 - **Player:** 16,278 → **11,535** (4,743 fewer)
 - **Magic TV:** 10,716 → **3,322** (7,394 fewer)
-- **Storage:** 9,963 → **1,927** (8,036 fewer)
-- **Settings:** 7,905 → **2,904** (5,001 fewer)
+- **Storage:** 9,963 → **1,853** (8,110 fewer)
+- **Settings:** 7,905 → **2,905** (5,000 fewer)
 
-Counted from actual merged main 2f995724. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
+Counted from actual merged main 55f44442. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
 
 ### The same six outcomes — stable roadmap
 
@@ -50,11 +50,11 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 ### Current work — latest verified checkpoint
 
-- **Locke / Storage:** #210 merged; integrate independently accepted Home #211 onto main, then Tracking #212. Tracking author and independent 180 tests passed; fresh integration and CI remain.
+- **Locke / Storage:** #211 merged; integrate independently accepted Tracking #212 onto main. Tracking author and independent 180 tests passed; fresh integration and CI remain.
 - **Cicero / Review:** full 9ae5395a gate passed with native retry note; #211 and #212 production reviews accepted. Review integration deltas without repeating unchanged suites.
 - **Ampere / Search and upstream:** local upstream catalog trial independently accepted, unpublished. Search final composition and Atrium remain open; no new implementation assignment claimed.
 - **Wegener / Player:** presentation #201 and transport #205 merged; remaining decoder/state/UI work open, bounded unsuccessful experiments retained as debt.
-- **Parent:** #210 merged at 2f995724. One production merge since completed 9ae gate; next integrated gate after three. No user/manual-smoke blocker.
+- **Parent:** #211 merged at 55f44442. Two production merges since completed 9ae gate; #212 will trigger the next integrated gate. No user/manual-smoke blocker.
 ### Next steps — working checklist
 
 - [x] Merge #199/#204/#206 and pass their full integrated gate896a168d.
@@ -66,6 +66,9 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - [ ] Run final integrated acceptance only after the remaining architectural outcomes are fulfilled.
 
 ### Latest completed milestones
+
+- #211 merged **55f44442**, exact2e894429, independent221PASS, exact50-file integration union and allthree CI checks green. Home37facades removed; host-74/whole-production-64, fourlivehostdependencies removed. Actualpre-refactor Home21-entry fixture retained; no native-sensitive closure claim. Did we make a difference? Callers use the Home owner directly; Tracking #212 remains to integrate. Second production merge since9ae gate.
+
 
 - #210 merged **2f995724**, exact ab2977f6, independent208PASS and all three CI checks green. Thirty-two Debrify TV forwarders removed; host-69/whole-production-66. Did we make a difference? Existing domain ownership now reaches callers directly. More remains: Home #211 and Tracking #212 are independently accepted but unmerged, native-sensitive obligations stay open.
 - **Full 9ae5395a gate PASS WITH NOTE:** 6093PASS/12 exact known/2skip; goldens21 known, no unexpected or unused allowances; analyzer431/449, Python55, layering77. Windows and ARM64 builds passed. Original native attempt exited79 with incomplete test; one isolated origin retry passed, current build passed first try. Cause remains unknown. AST forwarders Storage361/Search133/Player161/Magic23/Settings0 at this gate, before #210. ZIP a9b7fe39ddaac7e17d55c3bb40b78d8c1979fc9f45948392462389f29b64b0a1; APK 0c7c4bd9024be5688db12c6a2b1285767f9ab5eca1b5174aad83317433713eee. No fresh device proof.
