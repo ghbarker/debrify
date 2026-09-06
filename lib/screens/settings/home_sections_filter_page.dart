@@ -539,6 +539,9 @@ class _HomeSectionsFilterPageState extends State<HomeSectionsFilterPage> {
     for (final r in widget.extraRows) {
       if (!modelIds.contains(r.id)) extras.add(r);
     }
+    // A collection can temporarily own/hide an addon leaf. Preserve saved
+    // choices which this screen could not edit, including disabled folders.
+    out.addAll(widget.disabled.where((id) => !modelIds.contains(id)));
     await StorageService.setHomeDisabledSections(out);
     await StorageService.setHomeExtraRows(extras);
     await StorageService.setHomeRowOrder(_orderIds);

@@ -1,0 +1,85 @@
+# Collections hardening review — PR #54
+
+Reviewed against `webdav-sync` at `93b92cafcf3b8e71d7333fa28ae84848ab7e4226`,
+after the contributor branch incorporated the conflict resolution at
+`27992115e6db2886fe3fcf7faf1c188631332e46`. The repair retains the import format
+and Home/folder integration and replaces the unsafe persistence and paging
+behavior. The PR remains based on `webdav-sync`; it is not merged into that
+branch by this work.
+
+## Five review rounds
+
+1. **Profile storage and import integrity.** Reproduced the original failures,
+   then verified profile-switch cancellation, concurrent imports, imports racing
+   a sync apply, refused device-budget writes, corrupt data protection, legacy
+   array migration, backup round trips, retained deletions, explicit reorder,
+   reimport visibility, full-content signatures, and storage/identity bounds.
+   Imports now use the profile mutation barrier for the entire read/update/write.
+2. **Recurring sync and deletion.** Replaced the collection-list scalar with
+   individual stamped records and an order record. Tests cover independent
+   device imports, durable deletion, Home refresh dispatch, and a two-engine
+   encrypted publish/merge/apply scenario, including an engine restart and an
+   intentional later reimport. Existing WebDAV engine, codec, profile, graph,
+   tombstone, adoption and runtime tests were included in broad verification.
+3. **Catalog browsing and navigation.** Verified fallback resolution against the
+   requested browsable catalog, filtered-empty pages, overlapping catalog pages,
+   same-ID movie/series separation, serving-addon propagation, transport failure
+   and retry, raw exhaustion, bounded no-progress behavior and concurrency.
+   TV Tabs now uses the attached grid key. Retry retains tab B, successfully
+   loads its results and moves TV focus from Retry into content. Folder requests
+   are retired on configuration/folder changes; All gets a fresh grid key.
+4. **Responsive UI and live changes.** Rows and Tabs were exercised at 320×568,
+   568×320, 768×1024, 1280×720 and 1920×1080 with long names and unavailable
+   artwork. Tests open the phone Filters sheet and select All, check merged
+   deduplication/source identity, and remove the collection while the folder is
+   open. Settings dialogs use 1.5× text at phone portrait/landscape and TV sizes.
+   Paste import is exercised with a landscape keyboard inset. This round found
+   and fixed narrow-sheet dropdown overflow, scrollability gaps, and stale open
+   settings. Initial and retry rail batches are bounded to four requests.
+5. **Integration and final audit.** Ran the combined collections, WebDAV, Home,
+   backup, sorting and shared filter/dropdown suites. An existing source guard
+   expected four Home browser routes; its expectation now includes the fifth
+   collection route, which also applies the existing expanded-card settings.
+   Analyzed every Dart file changed by the PR or repairs and built the complete
+   application Dart bundle. Reviewed the final diff and documentation for the
+   inventory migration, retained deletions and practical size limits.
+
+## Reproduction commands
+
+```sh
+flutter test --no-pub \
+  test/home_collections_test.dart \
+  test/home_collections_regression_test.dart \
+  test/home_collections_storage_test.dart \
+  test/home_collections_responsive_test.dart \
+  test/collection_catalog_pager_test.dart \
+  test/services/webdav_sync \
+  test/home_row_focus_test.dart test/home_row_order_test.dart \
+  test/home_sections_filter_page_test.dart test/home_layout_policy_test.dart \
+  test/home_catalog_refresh_test.dart test/home_extra_rows_test.dart \
+  test/home_expanded_card_settings_test.dart test/home_hero_source_test.dart \
+  test/backup_encryption_test.dart test/profile_backup_migrate_source_guard_test.dart \
+  test/see_all_added_sort_test.dart test/see_all_filter_bar_test.dart \
+  test/stremio_dropdown_sections_test.dart
+flutter build bundle --debug --no-pub
+```
+
+Static analysis of the PR and repair files reports no errors or warnings and
+25 informational notices already recorded on the pre-repair branch. The Dart
+bundle build succeeds. The final combined command above passes **736 tests**.
+
+## Verification limits
+
+These are unit/widget tests and an encrypted in-memory WebDAV transport; they
+are not a physical-TV playback session or a live WebDAV-server soak test. The
+bundle build compiles application Dart, not each native release package. No
+claim of universally bug-free playback, addon behavior, animated-art performance
+or every possible device size is made.
+
+Concurrent edits to the same collection retain the existing last-writer stamp
+semantics. Different collections merge independently. The 128 KiB/1,024-identity
+local growth bounds retain deletion records; the existing shared 1 MiB WebDAV
+hot-document ceiling still applies after aggregation with other profile data.
+Legacy array preferences upgrade on mutation, so devices editing this feature
+should run the repaired implementation. The import UI remains an importer and
+manager, not a collection authoring editor.

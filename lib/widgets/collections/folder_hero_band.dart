@@ -25,8 +25,11 @@ class FolderHeroBand extends StatelessWidget {
     if (backdrop == null && logo == null) return const SizedBox.shrink();
     final app = AppThemeScope.of(context);
     final bg = app.seeAll.bg;
-    final height = isTelevision ? 150.0 : 110.0;
-    final logoHeight = isTelevision ? 56.0 : 44.0;
+    final height = (MediaQuery.sizeOf(context).height * 0.18).clamp(
+      0.0,
+      isTelevision ? 150.0 : 110.0,
+    );
+    final logoHeight = (height * 0.5).clamp(0.0, isTelevision ? 56.0 : 44.0);
 
     return SizedBox(
       height: height,
@@ -84,6 +87,8 @@ class FolderHeroBand extends StatelessWidget {
 
   Widget _title(AppTheme app) => Text(
     folder.title,
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
     style: TextStyle(
       color: app.core.tx,
       fontSize: isTelevision ? 26 : 22,

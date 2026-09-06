@@ -3,11 +3,15 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 
+import '../../models/home_collection_inventory.dart';
 import 'webdav_sync_codec.dart';
 import 'webdav_sync_hot_models.dart';
 import '../playlist_dedupe_key.dart';
 
 abstract final class WebDavSyncRecordKey {
+  static String homeCollection(String id) => 'homecollection/${_part(id)}';
+  static const String homeCollectionOrder = 'homecollections/items';
+
   static String playback(String alias) => 'playback/record/${_part(alias)}';
 
   static String playbackMeta(String alias) => 'playback/meta/${_part(alias)}';
@@ -502,6 +506,7 @@ abstract final class WebDavSyncHotMerge {
       'mdblist_sync_checkpoint_v1';
 
   static const Set<String> _specialKeys = <String>{
+    HomeCollectionInventory.prefsKey,
     playbackPreference,
     continueWatchingPreference,
     finishedMoviesPreference,
@@ -642,6 +647,18 @@ abstract final class WebDavSyncHotMerge {
       input.identityMaps,
       playlistDedupeMap,
     );
+
+    final collectionRaw =
+        input.portablePreferences[HomeCollectionInventory.prefsKey];
+    if (collectionRaw != null) {
+      final inventory = HomeCollectionInventory.decode(collectionRaw);
+      for (final entry in inventory.records.entries) {
+        portableRecords[WebDavSyncRecordKey.homeCollection(entry.key)] = entry
+            .value
+            ?.toJson();
+      }
+      orderKeys[WebDavSyncRecordKey.homeCollectionOrder] = inventory.order;
+    }
 
     final wireRecords = <String, WebDavSyncStampedValue>{};
     for (final entry in portableRecords.entries) {
@@ -988,10 +1005,16 @@ abstract final class WebDavSyncHotMerge {
     final series = <String>{};
     final playlist = <String, Map<String, Object?>>{};
     final favorites = <String>{};
+    final collections = <String, Object?>{};
 
     for (final entry in document.watchState.records.entries) {
       final parts = entry.key.split('/');
-      if (parts.length >= 3 && parts[0] == 'playback') {
+      if (parts.length == 2 && parts[0] == 'homecollection') {
+        collections[WebDavSyncRecordKey.decodePart(parts[1])] = chosen(
+          entry.key,
+          entry.value,
+        );
+      } else if (parts.length >= 3 && parts[0] == 'playback') {
         final alias = WebDavSyncRecordKey.decodePart(parts[2]);
         if (parts[1] == 'record' && parts.length == 3) {
           final value = chosen(entry.key, entry.value);
@@ -1053,6 +1076,34 @@ abstract final class WebDavSyncHotMerge {
           favorites.add(key);
         }
       }
+    }
+
+    // Keep deletion markers in local storage so a subsequent local build
+    // cannot forget them when an offline peer rejoins.
+    if (collections.isNotEmpty ||
+        document.watchState.orders.containsKey(
+          WebDavSyncRecordKey.homeCollectionOrder,
+        )) {
+      final preferred =
+          document
+              .watchState
+              .orders[WebDavSyncRecordKey.homeCollectionOrder]
+              ?.keys ??
+          const <String>[];
+      final order = <String>[
+        for (final id in preferred)
+          if (collections.containsKey(id)) id,
+        for (final id in (collections.keys.toList()..sort()))
+          if (!preferred.contains(id)) id,
+      ];
+      final inventory = HomeCollectionInventory.decode({
+        'version': 2,
+        'records': collections,
+        'order': order,
+      });
+      output[HomeCollectionInventory.prefsKey] = WebDavSyncCodec.canonicalJson(
+        inventory.toJson(),
+      );
     }
 
     if (playback.isNotEmpty ||
@@ -1322,7 +1373,9 @@ abstract final class WebDavSyncHotMerge {
     Map<String, WebDavSyncStampedValue> records,
   ) {
     late final String prefix;
-    if (orderKey == WebDavSyncRecordKey.playlistOrder) {
+    if (orderKey == WebDavSyncRecordKey.homeCollectionOrder) {
+      prefix = 'homecollection/';
+    } else if (orderKey == WebDavSyncRecordKey.playlistOrder) {
       prefix = 'playlist/item/';
     } else if (orderKey == WebDavSyncRecordKey.playlistFavoriteOrder) {
       prefix = 'playlist/favorite/';

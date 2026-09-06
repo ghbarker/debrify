@@ -7,6 +7,8 @@ import '../../models/home_collection.dart';
 import '../../models/stremio_addon.dart';
 import '../../services/analytics_service.dart';
 import '../../services/collection_folder_loader.dart';
+import '../../services/collection_catalog_pager.dart';
+import '../../services/main_page_bridge.dart';
 import '../../services/home_collections_store.dart';
 import '../../services/storage_service.dart';
 import '../../services/stremio_service.dart';
@@ -76,7 +78,28 @@ const int _kAllTab = -1;
 /// One catalog list inside the folder: its resolved addon/catalog, the pages
 /// loaded so far, and the focus plumbing for its rail.
 class _Rail {
-  _Rail({required this.source, required this.addon, required this.catalog});
+  _Rail({
+    required this.source,
+    required this.addon,
+    required this.catalog,
+    required StremioService stremio,
+  }) {
+    pager = CollectionCatalogPager(
+      addon: addon,
+      catalog: catalog,
+      genre: source.genre,
+      fetch: (a, c, {skip = 0, genre, onRawCount}) => stremio.fetchCatalog(
+        a,
+        c,
+        skip: skip,
+        genre: genre,
+        onRawCount: onRawCount,
+        forceRefresh: forceRefresh,
+      ),
+    );
+  }
+  late final CollectionCatalogPager pager;
+  bool forceRefresh = false;
 
   final CollectionCatalogSource source;
   final StremioAddon addon;
@@ -85,10 +108,11 @@ class _Rail {
   final GlobalKey containerKey = GlobalKey();
   final FocusNode seeAllNode = FocusNode(debugLabel: 'collection_rail_seeall');
   final List<StremioMeta> items = [];
-  int nextSkip = 0;
+  int get nextSkip => pager.skip;
   bool loadingInitial = true;
   bool loadingMore = false;
-  bool exhausted = false;
+  bool get exhausted => pager.exhausted;
+  String? get error => pager.error;
 
   /// "Popular Movies · Action" — the Home row title plus the source's genre.
   String get title {
@@ -123,10 +147,10 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   List<_Rail> _rails = const [];
   List<String> _unresolved = const [];
   final ScrollController _railsScroll = ScrollController();
-  final GlobalKey<SeeAllPosterGridState> _tabGridKey = GlobalKey();
+  GlobalKey<SeeAllPosterGridState> _tabGridKey = GlobalKey();
 
   // The All (merged grid) view, shared by both layouts.
-  final GlobalKey<SeeAllPosterGridState> _allGridKey = GlobalKey();
+  GlobalKey<SeeAllPosterGridState> _allGridKey = GlobalKey();
   CollectionFolderLoader? _loader;
   final List<StremioMeta> _allItems = [];
   bool _allStarted = false;
@@ -145,7 +169,9 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   final FocusNode _sortNode = FocusNode(debugLabel: 'collection_sort');
   final FocusNode _retryNode = FocusNode(debugLabel: 'collection_retry');
 
-  HomeCollection get _collection => widget.collection;
+  late HomeCollection _collection;
+  int _configurationToken = 0;
+  String? _configurationError;
   bool get _hasFolders => _collection.folders.isNotEmpty;
   HomeCollectionFolder get _folder => _collection.folders[_folderIndex];
   bool get _tabs => _layout == CollectionFolderLayout.tabs;
@@ -168,6 +194,9 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   void initState() {
     super.initState();
     AnalyticsService.screenView('collection_folder');
+    _collection = widget.collection;
+    MainPageBridge.addHomeSettingsListener(_onConfigurationChanged);
+    _stremio.addAddonsChangedListener(_onConfigurationChanged);
     final count = _collection.folders.length;
     _folderIndex = count == 0
         ? 0
@@ -175,25 +204,57 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
     unawaited(_boot());
   }
 
-  Future<void> _boot() async {
+  void _onConfigurationChanged() => unawaited(_boot(refreshCollection: true));
+
+  Future<void> _boot({bool refreshCollection = false}) async {
+    final generation = ++_configurationToken;
+    ++_reqToken;
+    final session = HomeCollectionsStore.captureSession();
     try {
-      _addons = await _stremio.getCatalogAddons();
-    } catch (_) {
-      _addons = const [];
+      final addons = await _stremio.getCatalogAddons();
+      final disabled = await StorageService.getHomeDisabledSections();
+      final layout = await HomeCollectionsStore.instance.getFolderLayout();
+      HomeCollection? updated;
+      if (refreshCollection) {
+        final collections = await HomeCollectionsStore.instance
+            .getCollections();
+        for (final c in collections) {
+          if (c.id == _collection.id && c.enabled) updated = c;
+        }
+      }
+      if (!mounted || generation != _configurationToken) return;
+      HomeCollectionsStore.checkSession(session);
+      final folderId = _hasFolders ? _folder.id : null;
+      _addons = addons;
+      _disabled = disabled;
+      _layout = layout;
+      if (refreshCollection) {
+        _collection =
+            updated ??
+            HomeCollection(id: _collection.id, title: _collection.title);
+        final index = _collection.folders.indexWhere((f) => f.id == folderId);
+        _folderIndex = index < 0 ? 0 : index;
+      }
+      _configurationError = null;
+      _booted = true;
+      _rebuildFolder(
+        autoFocus: !refreshCollection,
+        preserveSelection: refreshCollection,
+      );
+    } catch (e) {
+      if (!mounted || generation != _configurationToken) return;
+      setState(() {
+        _configurationError =
+            'Could not load this collection. Retry to continue.';
+        _booted = true;
+      });
     }
-    try {
-      _disabled = await StorageService.getHomeDisabledSections();
-    } catch (_) {
-      _disabled = const {};
-    }
-    _layout = await HomeCollectionsStore.instance.getFolderLayout();
-    if (!mounted) return;
-    _booted = true;
-    _rebuildFolder(autoFocus: true);
   }
 
   @override
   void dispose() {
+    MainPageBridge.removeHomeSettingsListener(_onConfigurationChanged);
+    _stremio.removeAddonsChangedListener(_onConfigurationChanged);
     for (final r in _rails) {
       r.dispose();
     }
@@ -211,7 +272,12 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
 
   /// Resolve the current folder's enabled lists into rails and fetch their
   /// first pages. The All view is built lazily on first switch.
-  void _rebuildFolder({bool autoFocus = false}) {
+  void _rebuildFolder({
+    bool autoFocus = false,
+    bool preserveSelection = false,
+  }) {
+    final oldSource = preserveSelection ? _tabRail?.source.key : null;
+    final wasAll = preserveSelection && _showingAll;
     final token = ++_reqToken;
     for (final r in _rails) {
       r.dispose();
@@ -232,7 +298,9 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
           );
           continue;
         }
-        rails.add(_Rail(source: s, addon: addon, catalog: catalog));
+        rails.add(
+          _Rail(source: s, addon: addon, catalog: catalog, stremio: _stremio),
+        );
       }
     }
     setState(() {
@@ -244,85 +312,143 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
       _allLoadingInitial = false;
       _allLoadingMore = false;
       _allExhausted = false;
-      _tab = 0;
+      final index = rails.indexWhere((r) => r.source.key == oldSource);
+      _tab = wasAll && _collection.showAllTab && rails.length > 1
+          ? _kAllTab
+          : (index < 0 ? 0 : index);
+      _tabGridKey = GlobalKey();
+      _allGridKey = GlobalKey();
       if (!_collection.showAllTab || rails.length < 2) _view = _View.lists;
     });
-    for (final r in rails) {
-      unawaited(_loadRail(r, token));
-    }
+    unawaited(_loadInitialRails(rails, token));
     if (_showingAll) unawaited(_startAll(token));
     if (autoFocus && widget.isTelevision) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || token != _reqToken) return;
-        _enterContent();
+        _folderNode.requestFocus();
       });
+    }
+  }
+
+  Future<void> _loadInitialRails(List<_Rail> rails, int token) async {
+    for (
+      var start = 0;
+      start < rails.length;
+      start += CollectionFolderLoader.maxConcurrent
+    ) {
+      if (!mounted || token != _reqToken) return;
+      await Future.wait(
+        rails
+            .skip(start)
+            .take(CollectionFolderLoader.maxConcurrent)
+            .map((rail) => _loadRail(rail, token)),
+      );
     }
   }
 
   Future<void> _loadRail(_Rail r, int token) async {
-    try {
-      var rawCount = 0;
-      final items = await _stremio.fetchCatalog(
-        r.addon,
-        r.catalog,
-        genre: r.source.genre,
-        onRawCount: (c) => rawCount = c,
-      );
-      if (!mounted || token != _reqToken) return;
-      setState(() {
-        r.items.addAll(items);
-        r.nextSkip = rawCount > 0 ? rawCount : items.length;
-        r.exhausted = items.isEmpty;
-        r.loadingInitial = false;
-      });
-    } catch (_) {
-      if (!mounted || token != _reqToken) return;
-      setState(() {
-        r.loadingInitial = false;
-        r.exhausted = true;
-      });
-    }
+    final page = await r.pager.nextPage();
+    if (!mounted || token != _reqToken) return;
+    setState(() {
+      r.items.addAll(page);
+      r.loadingInitial = false;
+    });
   }
 
   Future<void> _loadMoreRail(_Rail r) async {
-    if (r.loadingInitial || r.loadingMore || r.exhausted) return;
+    if (r.loadingInitial || r.loadingMore || r.exhausted || r.error != null) {
+      return;
+    }
     final token = _reqToken;
     setState(() => r.loadingMore = true);
-    try {
-      var rawCount = 0;
-      final page = await _stremio.fetchCatalog(
-        r.addon,
-        r.catalog,
-        skip: r.nextSkip,
-        genre: r.source.genre,
-        onRawCount: (c) => rawCount = c,
+    final page = await r.pager.nextPage();
+    if (!mounted || token != _reqToken) return;
+    setState(() {
+      r.items.addAll(page);
+      r.loadingMore = false;
+    });
+  }
+
+  Future<void> _retryRail(_Rail r) async {
+    if (r.loadingInitial || r.loadingMore) return;
+    if (r.items.isEmpty && r.exhausted) r.pager.reset();
+    r.forceRefresh = true;
+    final restoreFocus = _retryNode.hasFocus;
+    final token = _reqToken;
+    setState(() => r.loadingMore = true);
+    final page = await r.pager.nextPage();
+    if (!mounted || token != _reqToken) return;
+    setState(() {
+      r.items.addAll(page);
+      r.loadingMore = false;
+    });
+    _restoreRetryFocus(restoreFocus, token);
+  }
+
+  void _restoreRetryFocus(bool restore, int token) {
+    if (!restore || !widget.isTelevision) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted &&
+          token == _reqToken &&
+          !_showingEmpty &&
+          ModalRoute.of(context)?.isCurrent == true) {
+        _enterContent();
+      }
+    });
+  }
+
+  Future<void> _retryRails() async {
+    final token = _reqToken;
+    final retry = _rails
+        .where((r) => r.error != null || r.items.isEmpty)
+        .toList();
+    for (
+      var start = 0;
+      start < retry.length;
+      start += CollectionFolderLoader.maxConcurrent
+    ) {
+      if (!mounted || token != _reqToken) return;
+      await Future.wait(
+        retry
+            .skip(start)
+            .take(CollectionFolderLoader.maxConcurrent)
+            .map(_retryRail),
       );
-      if (!mounted || token != _reqToken) return;
-      final seen = r.items.map((m) => m.id).toSet();
-      final fresh = page.where((m) => seen.add(m.id)).toList();
-      setState(() {
-        r.nextSkip += rawCount > 0 ? rawCount : page.length;
-        if (fresh.isEmpty) {
-          r.exhausted = true;
-        } else {
-          r.items.addAll(fresh);
-        }
-        r.loadingMore = false;
-      });
-    } catch (_) {
-      if (!mounted || token != _reqToken) return;
-      setState(() => r.loadingMore = false);
+    }
+  }
+
+  void _retryCurrent() {
+    if (_configurationError != null || _rails.isEmpty) {
+      unawaited(_boot());
+      return;
+    }
+    if (_showingAll) {
+      if (_allLoadingInitial || _allLoadingMore) return;
+      if (_loader == null || _allExhausted) {
+        _allStarted = false;
+        _allItems.clear();
+        unawaited(_startAll(_reqToken, forceRefresh: true));
+      } else {
+        unawaited(_loadMoreAll(retry: true));
+      }
+    } else if (_tabs) {
+      final r = _tabRail;
+      if (r != null) unawaited(_retryRail(r));
+    } else {
+      unawaited(_retryRails());
     }
   }
 
   // ── All (merged grid) ──────────────────────────────────────────────────
 
-  Future<void> _startAll(int token) async {
+  Future<void> _startAll(int token, {bool forceRefresh = false}) async {
     if (_allStarted) return;
     _allStarted = true;
+    final restoreFocus = _retryNode.hasFocus;
     final loader = CollectionFolderLoader(
       folder: _folder.copyWith(sources: _enabledSources),
       installedAddons: _addons,
+      forceRefresh: forceRefresh,
     );
     setState(() {
       _loader = loader;
@@ -336,6 +462,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
         _allExhausted = loader.exhausted;
         _allLoadingInitial = false;
       });
+      _restoreRetryFocus(restoreFocus, token);
     } catch (_) {
       if (!mounted || token != _reqToken) return;
       setState(() {
@@ -345,15 +472,17 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
     }
   }
 
-  Future<void> _loadMoreAll() async {
+  Future<void> _loadMoreAll({bool retry = false}) async {
     final loader = _loader;
     if (loader == null ||
         _allLoadingInitial ||
         _allLoadingMore ||
-        _allExhausted) {
+        _allExhausted ||
+        (!retry && loader.hasErrors)) {
       return;
     }
     final token = _reqToken;
+    final restoreFocus = retry && _retryNode.hasFocus;
     setState(() => _allLoadingMore = true);
     try {
       final page = await loader.nextPage();
@@ -363,6 +492,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
         _allExhausted = loader.exhausted;
         _allLoadingMore = false;
       });
+      _restoreRetryFocus(restoreFocus, token);
     } catch (_) {
       if (!mounted || token != _reqToken) return;
       setState(() {
@@ -409,7 +539,10 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
 
   void _onTabChanged(int tab) {
     if (tab == _tab) return;
-    setState(() => _tab = tab);
+    setState(() {
+      _tab = tab;
+      _tabGridKey = GlobalKey();
+    });
     if (tab == _kAllTab) unawaited(_startAll(_reqToken));
   }
 
@@ -459,6 +592,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
       if (_offersAll) _viewNode,
       if (_view == _View.all) _sortNode,
     ],
+    if (_hasVisibleLoadError) _retryNode,
   ];
 
   bool get _showingEmpty {
@@ -564,6 +698,17 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
                 isTelevision: widget.isTelevision,
               ),
             _buildFilterBar(),
+            if (_hasVisibleLoadError)
+              Focus(
+                canRequestFocus: false,
+                onKeyEvent: _handleFilterKeys,
+                child: TextButton.icon(
+                  focusNode: _retryNode,
+                  onPressed: _retryCurrent,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Some lists could not load · Retry'),
+                ),
+              ),
             Expanded(child: _buildBody()),
           ],
         ),
@@ -655,10 +800,23 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
     return DiscoverShelfMetrics(cardHeight: posterW * 1.5, hPad: 24);
   }
 
+  bool get _hasVisibleLoadError {
+    if (_configurationError != null) return false;
+    if (_showingAll) {
+      return _allItems.isNotEmpty && (_loader?.hasErrors ?? false);
+    }
+    if (_tabs) {
+      return (_tabRail?.items.isNotEmpty ?? false) && _tabRail?.error != null;
+    }
+    return _rails.any((r) => r.items.isNotEmpty) &&
+        _rails.any((r) => r.error != null);
+  }
+
   Widget _buildBody() {
     if (!_booted) {
       return SkeletonPosterGrid(isTelevision: widget.isTelevision);
     }
+    if (_configurationError != null) return _buildEmpty();
     if (_showingAll) return _buildAll();
     if (_tabs) return _buildTab();
     return _buildLists();
@@ -702,7 +860,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              RowTagPill(r.addon.name),
+              Flexible(child: RowTagPill(r.addon.name)),
               const Spacer(),
               RailSeeAllPill(
                 node: r.seeAllNode,
@@ -755,7 +913,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
     return SeeAllPosterGrid(
       // Keyed per list so switching tabs remounts the grid (fresh scroll and
       // focus memory) instead of morphing one list into another.
-      key: ValueKey('collection-tab-${r.source.key}'),
+      key: _tabGridKey,
       items: _sorted(r.items),
       isTelevision: widget.isTelevision,
       loadingMore: r.loadingMore,
@@ -797,7 +955,10 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
     final app = AppThemeScope.of(context);
     final String title;
     final String detail;
-    if (!_hasFolders) {
+    if (_configurationError != null) {
+      title = 'Could not load collection';
+      detail = _configurationError!;
+    } else if (!_hasFolders) {
       title = 'This collection has no folders';
       detail = 'Import a file that lists folders with catalog sources.';
     } else if (_folder.sources.isEmpty) {
@@ -823,68 +984,70 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
                 'missing an addon:\n${_unresolved.toSet().join('\n')}'
           : 'The catalogs may be empty, or the addon failed to respond.';
     }
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.folder_open_rounded,
-                size: 44,
-                color: app.fade(app.core.tx, 0.25),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: app.fade(app.core.tx, 0.7),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
+    return SingleChildScrollView(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.folder_open_rounded,
+                  size: 44,
+                  color: app.fade(app.core.tx, 0.25),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                detail,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: app.fade(app.core.tx, 0.4),
-                  fontSize: 13,
+                const SizedBox(height: 14),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: app.fade(app.core.tx, 0.7),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 18),
-              Focus(
-                onKeyEvent: (_, event) {
-                  if (widget.isTelevision &&
-                      event is KeyDownEvent &&
-                      event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                    _gridExitNode.requestFocus();
-                    return KeyEventResult.handled;
-                  }
-                  return KeyEventResult.ignored;
-                },
-                child: OutlinedButton.icon(
-                  focusNode: _retryNode,
-                  onPressed: () => _rebuildFolder(autoFocus: true),
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Retry'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: app.core.tx,
-                    side: BorderSide(color: app.seeAll.accentBorder),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: app.shape.br(11),
+                const SizedBox(height: 6),
+                Text(
+                  detail,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: app.fade(app.core.tx, 0.4),
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Focus(
+                  onKeyEvent: (_, event) {
+                    if (widget.isTelevision &&
+                        event is KeyDownEvent &&
+                        event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                      _gridExitNode.requestFocus();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: OutlinedButton.icon(
+                    focusNode: _retryNode,
+                    onPressed: _retryCurrent,
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Retry'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: app.core.tx,
+                      side: BorderSide(color: app.seeAll.accentBorder),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: app.shape.br(11),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

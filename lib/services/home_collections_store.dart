@@ -1,9 +1,14 @@
+import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:crypto/crypto.dart';
+
 import 'package:http/http.dart' as http;
 
 import '../models/home_collection.dart';
+import '../models/home_collection_inventory.dart';
+import 'profiles/profile_runtime.dart';
+import 'profiles/profile_scope.dart';
 import '../models/stremio_addon.dart';
 import 'profiles/profile_preferences.dart';
 
@@ -36,16 +41,16 @@ class HomeCollectionImportResult {
 /// pipeline (file / URL / paste) and the addon-resolution helpers the board,
 /// the folder browser and the settings pages share.
 ///
-/// Persists one JSON string under `home_collections_v1` with the same
-/// conventions as the Home-row stores in `StorageService`: `prefs.remove` on
-/// empty, decode failures swallowed to a safe default.
+/// Persists an atomic inventory under `home_collections_v1`. Deleted IDs
+/// remain as null records for sync; corrupt inventories surface an error
+/// instead of being silently replaced. Legacy JSON arrays remain readable.
 class HomeCollectionsStore {
   HomeCollectionsStore({http.Client Function()? httpClientFactory})
     : _httpClientFactory = httpClientFactory ?? http.Client.new;
 
   static final HomeCollectionsStore instance = HomeCollectionsStore();
 
-  static const String prefsKey = 'home_collections_v1';
+  static const String prefsKey = HomeCollectionInventory.prefsKey;
 
   /// Folder layout preference (`rows` | `tabs`), profile-scoped.
   static const String folderLayoutKey = 'home_collections_folder_layout';
@@ -59,82 +64,125 @@ class HomeCollectionsStore {
 
   // ── Read / write ───────────────────────────────────────────────────────
 
-  Future<List<HomeCollection>> getCollections() async {
-    final prefs = await ProfilePreferences.instance();
-    final json = prefs.getString(prefsKey);
-    if (json == null || json.isEmpty) return const [];
-    try {
-      final decoded = jsonDecode(json);
-      if (decoded is! List) return const [];
-      final seen = <String>{};
-      return [
-        for (final raw in decoded)
-          if (HomeCollection.fromJson(raw) case final c?)
-            if (seen.add(c.id)) c,
-      ];
-    } catch (e) {
-      debugPrint('HomeCollectionsStore: error reading collections: $e');
-      return const [];
+  /// Call before opening a picker/downloading, so completion cannot change
+  /// the profile which owns an import. Also captures legacy -> profile changes.
+  static ({ProfileScope? scope, ProfileScope? active, bool committed})
+  captureSession() => (
+    scope: ProfileRuntime.isProfileCommitted ? ProfileRuntime.capture() : null,
+    active: ProfileRuntime.scope.value,
+    committed: ProfileRuntime.isProfileCommitted,
+  );
+
+  static void checkSession(
+    ({ProfileScope? scope, ProfileScope? active, bool committed}) session,
+  ) {
+    if (session != captureSession()) {
+      throw StateError('The profile changed. Import the collections again.');
     }
   }
 
-  /// Only the collections the board should show.
+  Future<List<HomeCollection>> getCollections() async {
+    final prefs = await ProfilePreferences.instance();
+    return HomeCollectionInventory.decode(
+      prefs.getString(prefsKey),
+    ).collections;
+  }
+
   Future<List<HomeCollection>> getEnabledCollections() async => [
     for (final c in await getCollections())
       if (c.enabled && c.folders.isNotEmpty) c,
   ];
 
-  Future<void> saveCollections(List<HomeCollection> collections) async {
+  Future<T> _mutate<T>(
+    ({ProfileScope? scope, ProfileScope? active, bool committed}) session,
+    T Function(HomeCollectionInventory current) update,
+  ) async {
+    checkSession(session);
     final prefs = await ProfilePreferences.instance();
-    if (collections.isEmpty) {
-      await prefs.remove(prefsKey);
-      return;
+    checkSession(session);
+    late T result;
+    final saved = await prefs.mutateStringAtomically(prefsKey, (old) {
+      checkSession(session);
+      final current = HomeCollectionInventory.decode(old);
+      final previousSize = utf8.encode(current.encode()).length;
+      final previousCount = current.records.length;
+      result = update(current);
+      current.validate();
+      final encoded = current.encode();
+      final size = utf8.encode(encoded).length;
+      // Permit reduction of an older/merged oversized inventory, but never
+      // increase one. Deletions remain records to survive offline peers.
+      if ((size > HomeCollectionInventory.maxStoredBytes &&
+              size > previousSize) ||
+          (current.records.length > HomeCollectionInventory.maxRecords &&
+              current.records.length > previousCount)) {
+        throw const FormatException(
+          'Collections exceed the profile storage limit (128 KiB). Remove a collection or import a smaller file.',
+        );
+      }
+      return encoded;
+    });
+    if (!saved) {
+      throw StateError(
+        'Could not save collections: device storage limit reached.',
+      );
     }
-    await prefs.setString(
-      prefsKey,
-      jsonEncode([for (final c in collections) c.toJson()]),
-    );
+    return result;
   }
 
-  /// Cheap change token for the Home board's settings-changed listener, which
-  /// reloads only when this differs from what it last built from.
-  static String signatureOf(List<HomeCollection> collections) => [
-    for (final c in collections)
-      '${c.id}:${c.enabled ? 1 : 0}:${c.importedAtMs ?? 0}:${c.folders.length}',
-  ].join('|');
+  Future<void> saveCollections(List<HomeCollection> collections) =>
+      _mutate<void>(captureSession(), (current) {
+        final ids = collections.map((c) => c.id).toSet();
+        for (final id in current.records.keys.toList()) {
+          if (!ids.contains(id)) current.remove(id);
+        }
+        for (final c in collections) {
+          current.put(c);
+        }
+        final deletedIds = current.order
+            .where((id) => !ids.contains(id))
+            .toList();
+        current.order
+          ..clear()
+          ..addAll(ids)
+          ..addAll(deletedIds);
+      });
 
-  Future<void> remove(String collectionId) async {
-    final current = await getCollections();
-    await saveCollections([
-      for (final c in current)
-        if (c.id != collectionId) c,
-    ]);
-  }
+  static String signatureOf(List<HomeCollection> collections) => sha256
+      .convert(
+        utf8.encode(jsonEncode([for (final c in collections) c.toJson()])),
+      )
+      .toString();
 
-  Future<void> setEnabled(String collectionId, bool enabled) async {
-    final current = await getCollections();
-    await saveCollections([
-      for (final c in current)
-        if (c.id == collectionId) c.copyWith(enabled: enabled) else c,
-    ]);
-  }
+  Future<void> remove(String id) =>
+      _mutate<void>(captureSession(), (current) => current.remove(id));
 
-  Future<void> clear() => saveCollections(const []);
+  Future<void> setEnabled(String id, bool enabled) =>
+      _mutate<void>(captureSession(), (current) {
+        final c = current.records[id];
+        if (c != null) current.put(c.copyWith(enabled: enabled));
+      });
 
-  // ── Folder layout ──────────────────────────────────────────────────────
+  Future<void> clear() => _mutate<void>(captureSession(), (current) {
+    for (final id in current.records.keys.toList()) {
+      current.remove(id);
+    }
+  });
 
   Future<CollectionFolderLayout> getFolderLayout() async {
-    try {
-      final prefs = await ProfilePreferences.instance();
-      return CollectionFolderLayout.parse(prefs.getString(folderLayoutKey));
-    } catch (_) {
-      return CollectionFolderLayout.rows;
-    }
+    final prefs = await ProfilePreferences.instance();
+    return CollectionFolderLayout.parse(prefs.getString(folderLayoutKey));
   }
 
   Future<void> setFolderLayout(CollectionFolderLayout layout) async {
+    final session = captureSession();
     final prefs = await ProfilePreferences.instance();
-    await prefs.setString(folderLayoutKey, layout.storageValue);
+    checkSession(session);
+    if (!await prefs.setString(folderLayoutKey, layout.storageValue)) {
+      throw StateError(
+        'Could not save folder layout: device storage limit reached.',
+      );
+    }
   }
 
   // ── Import ─────────────────────────────────────────────────────────────
@@ -147,37 +195,31 @@ class HomeCollectionsStore {
     bool replaceExisting = false,
     List<StremioAddon> installedAddons = const [],
   }) async {
+    final session = captureSession();
     final now = DateTime.now().millisecondsSinceEpoch;
-    final current = replaceExisting
-        ? <HomeCollection>[]
-        : List<HomeCollection>.of(await getCollections());
-    final byId = {for (final c in current) c.id: c};
-
-    final added = <HomeCollection>[];
-    final replaced = <HomeCollection>[];
-    for (final c in incoming) {
-      final existing = byId[c.id];
-      final stamped = c.copyWith(
-        importedAtMs: now,
-        enabled: existing?.enabled ?? c.enabled,
-      );
-      if (existing != null) {
-        final i = current.indexWhere((e) => e.id == c.id);
-        current[i] = stamped;
-        replaced.add(stamped);
-      } else {
-        current.add(stamped);
-        added.add(stamped);
+    return _mutate(session, (current) {
+      final added = <HomeCollection>[];
+      final replaced = <HomeCollection>[];
+      if (replaceExisting) {
+        for (final id in current.records.keys.toList()) {
+          current.remove(id);
+        }
       }
-      byId[c.id] = stamped;
-    }
-    await saveCollections(current);
-
-    return HomeCollectionImportResult(
-      added: added,
-      replaced: replaced,
-      unresolvedAddonIds: unresolvedAddonIds(incoming, installedAddons),
-    );
+      for (final c in incoming) {
+        final existing = current.records[c.id];
+        final stamped = c.copyWith(
+          importedAtMs: now,
+          enabled: existing?.enabled ?? c.enabled,
+        );
+        current.put(stamped);
+        (existing == null ? added : replaced).add(stamped);
+      }
+      return HomeCollectionImportResult(
+        added: added,
+        replaced: replaced,
+        unresolvedAddonIds: unresolvedAddonIds(incoming, installedAddons),
+      );
+    });
   }
 
   /// Parse and import a JSON document (file contents, pasted text, or a
@@ -187,7 +229,7 @@ class HomeCollectionsStore {
     bool replaceExisting = false,
     List<StremioAddon> installedAddons = const [],
   }) {
-    if (jsonText.length > maxImportBytes) {
+    if (utf8.encode(jsonText).length > maxImportBytes) {
       throw const FormatException('That file is too large to be a collection.');
     }
     final parsed = HomeCollectionParser.parse(jsonText);
@@ -205,25 +247,34 @@ class HomeCollectionsStore {
     bool replaceExisting = false,
     List<StremioAddon> installedAddons = const [],
   }) async {
+    final session = captureSession();
     final uri = Uri.tryParse(url.trim());
     if (uri == null || !(uri.isScheme('http') || uri.isScheme('https'))) {
       throw const FormatException('Enter an http(s) link to a JSON file.');
     }
     final client = _httpClientFactory();
     try {
-      final response = await client.get(uri).timeout(_fetchTimeout);
-      if (response.statusCode != 200) {
-        throw FormatException(
-          'The server answered ${response.statusCode} for that link.',
-        );
-      }
-      if (response.bodyBytes.length > maxImportBytes) {
-        throw const FormatException(
-          'That file is too large to be a collection.',
-        );
-      }
+      final bytes = await (() async {
+        final response = await client.send(http.Request('GET', uri));
+        if (response.statusCode != 200) {
+          throw FormatException(
+            'The server answered ${response.statusCode} for that link.',
+          );
+        }
+        final bytes = <int>[];
+        await for (final chunk in response.stream) {
+          if (bytes.length + chunk.length > maxImportBytes) {
+            throw const FormatException(
+              'That file is too large to be a collection.',
+            );
+          }
+          bytes.addAll(chunk);
+        }
+        return bytes;
+      })().timeout(_fetchTimeout);
+      checkSession(session);
       return await importJson(
-        utf8.decode(response.bodyBytes, allowMalformed: true),
+        utf8.decode(bytes),
         replaceExisting: replaceExisting,
         installedAddons: installedAddons,
       );
@@ -278,12 +329,10 @@ class HomeCollectionsStore {
     List<StremioAddon> installed,
   ) {
     for (final a in installed) {
-      if (a.id == source.addonId) return a;
+      if (a.id == source.addonId && resolveCatalog(source, a) != null) return a;
     }
     for (final a in installed) {
-      if (a.catalogs.any(
-        (c) => c.id == source.catalogId && c.type == source.type,
-      )) {
+      if (resolveCatalog(source, a) != null) {
         return a;
       }
     }
@@ -296,7 +345,9 @@ class HomeCollectionsStore {
     StremioAddon addon,
   ) {
     for (final c in addon.catalogs) {
-      if (c.id == source.catalogId && c.type == source.type) return c;
+      if (c.id == source.catalogId && c.type == source.type && c.isBrowsable) {
+        return c;
+      }
     }
     return null;
   }

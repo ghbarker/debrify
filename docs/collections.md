@@ -18,7 +18,12 @@ Settings → **Home Screen** → **Collections**:
 Imports **merge**: a collection whose `id` already exists is replaced in place
 (keeping its show/hide state); new ids are appended. Tapping a collection
 offers hide-from-Home and delete; "Remove all" is under Danger Zone. Documents
-over 8 MB are refused.
+over 8 MiB are refused. Persisted collection definitions have a 128 KiB
+aggregate limit per profile, including retained deletion records, and a maximum
+of 1,024 collection identities. An import that would grow beyond either limit
+fails before saving. This leaves space for the profile's other sync data.
+Profile changes during a picker or download cancel the import; failed storage
+writes are reported as failures.
 
 Collections are per profile and are included in **Backup & Restore**
 (`homeCollections` in the backup payload).
@@ -90,7 +95,8 @@ Each source names an addon by its Stremio manifest id (`addonId`) plus a
 catalog `type` and `catalogId`. On the device the source is resolved against
 the installed catalog addons:
 
-1. an addon whose manifest id equals `addonId`, else
+1. an addon whose manifest id equals `addonId` and serves the requested
+   browsable catalog, else
 2. any installed addon that serves a catalog with the same `type` and
    `catalogId` (a file made against a different deployment of the same addon
    still works).
@@ -129,12 +135,42 @@ detail page and Quick Play of the addon that served them.
   than under its addon in Home Rows. Hiding the collection (Settings → Home
   Screen → Collections) returns those catalogs to the board.
 
+## Persistence and WebDAV sync
+
+The local `home_collections_v1` preference now contains a version-2 inventory:
+`{ "version": 2, "records": { "collection-id": { … } }, "order": [ … ] }`.
+Existing array preferences are read and upgraded on the next mutation. Legacy
+backup exports remain Nuvio-compatible arrays of present collections.
+
+Mutations read and write within the profile preference mutation barrier. WebDAV
+sync stores one stamped record per collection ID, with a separate order record.
+Independent imports on different devices merge; simultaneous edits to the same
+collection use the existing sync stamp ordering. Deleting a collection retains
+a null record, so an offline peer cannot restore it accidentally. A deliberate
+later reimport may restore it. Deletion identities are retained rather than
+expired by time; they count toward the inventory limits.
+
+Incoming sync changes refresh Home, an open folder, and collection settings.
+The limit on local growth also allows an older or merged oversized inventory
+to be reduced. The shared WebDAV hot-document limit still applies to the whole
+profile; this feature does not remove that existing aggregate limit. Use the
+updated implementation on each device that edits collections; the original PR's
+array-only store cannot read the upgraded inventory.
+
+Catalog paging advances by the raw response count, including filtered-out or
+overlapping results. Only an empty raw catalog response means the end. Failed
+requests and addons that make no progress show a retryable state. Initial rail
+loads and the merged view use bounded concurrency; retries retain the selected
+list and TV focus returns to content when it becomes available.
+
 ## Code map
 
 | Piece | File |
 |---|---|
 | Schema, parser, row-id grammar | `lib/models/home_collection.dart` |
 | Store (`home_collections_v1`), import (file/URL/paste), addon resolution | `lib/services/home_collections_store.dart` |
+| Atomic inventory and durable deletions | `lib/models/home_collection_inventory.dart` |
+| Per-catalog raw cursor and retry state | `lib/services/collection_catalog_pager.dart` |
 | Merged multi-catalog paging | `lib/services/collection_folder_loader.dart` |
 | Home row section (`HomeCollectionSection`) | `lib/services/home_collection_rows.dart` |
 | Folder browser screen | `lib/screens/collections/collection_folder_screen.dart` |
@@ -144,4 +180,4 @@ detail page and Quick Play of the addon that served them.
 | Board wiring | `lib/screens/search_screen.dart` — `_buildCollectionSections`, `_openCollectionFolder`, `_openCollectionScreen` |
 | Home Rows manager group | `lib/screens/settings/home_sections_filter_page.dart` |
 | Backup / restore | `lib/services/backup_restore_service.dart` (`homeCollections`) |
-| Tests | `test/home_collections_test.dart` |
+| Tests | `test/home_collections*_test.dart`, `test/collection_catalog_pager_test.dart`, WebDAV engine tests |

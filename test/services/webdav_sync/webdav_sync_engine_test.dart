@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:debrify/models/home_collection.dart';
+import 'package:debrify/models/home_collection_inventory.dart';
 import 'package:debrify/models/profiles/connection_resource.dart';
 import 'package:debrify/models/profiles/profile_policy.dart';
 import 'package:debrify/models/profiles/user_profile.dart';
@@ -104,6 +106,80 @@ void main() {
     );
     return WebDavSyncManifest.fromJson(payload);
   }
+
+  test('collections converge across devices, deletion and restart', () async {
+    Map<String, Object?> initial(String id) => {
+      HomeCollectionInventory.prefsKey: jsonEncode([
+        HomeCollection(id: id, title: id).toJson(),
+      ]),
+    };
+    final a = _FakeLocalAdapter(initial('a'));
+    final b = _FakeLocalAdapter(initial('b'));
+    final aStates = _MemoryStateRepository();
+    final bStates = _MemoryStateRepository();
+    var cycleTime = now;
+    WebDavSyncEngine makeEngine(
+      _FakeLocalAdapter adapter,
+      _MemoryStateRepository repository,
+    ) => WebDavSyncEngine(
+      stateRepository: repository,
+      localAdapter: adapter,
+      transportFactory: (_) => transport,
+      codec: codec,
+      clock: () => cycleTime,
+    );
+    var ae = makeEngine(a, aStates);
+    final be = makeEngine(b, bStates);
+    WebDavSyncCycleContext ctx(String device) => WebDavSyncCycleContext(
+      namespaceId: 'circle:circle-1',
+      deviceId: device,
+      markerPin: marker,
+      root: root,
+      circleToLocalProfiles: const {'profile-circle': 'local-profile'},
+      circleToLocalResources: const {},
+    );
+    Future<void> cycle(WebDavSyncEngine engine, String device) async {
+      cycleTime = cycleTime.add(const Duration(seconds: 1));
+      transport.serverDate = cycleTime;
+      final report = await engine.runCycle(ctx(device), allowPreActivation: true);
+      expect(report.disposition, WebDavSyncCycleDisposition.completed);
+    }
+    HomeCollectionInventory inventory(_FakeLocalAdapter adapter) =>
+        HomeCollectionInventory.decode(
+          adapter.preferences[HomeCollectionInventory.prefsKey],
+        );
+    void save(_FakeLocalAdapter adapter, HomeCollectionInventory value) {
+      adapter.preferences[HomeCollectionInventory.prefsKey] = value.encode();
+    }
+
+    await cycle(ae, 'device-a');
+    await cycle(be, 'device-b');
+    await cycle(ae, 'device-a');
+    await cycle(be, 'device-b');
+    expect(inventory(a).collections.map((c) => c.id), unorderedEquals(['a', 'b']));
+    expect(inventory(b).collections.map((c) => c.id), unorderedEquals(['a', 'b']));
+
+    // B stays offline while A deletes. Recreate A's engine to exercise its
+    // persisted state rather than relying on a merge object's memory.
+    save(a, inventory(a)..remove('a'));
+    await cycle(ae, 'device-a');
+    ae = makeEngine(a, aStates);
+    await cycle(ae, 'device-a');
+    await cycle(be, 'device-b');
+    await cycle(ae, 'device-a');
+    for (final adapter in [a, b]) {
+      expect(inventory(adapter).collections.map((c) => c.id), ['b']);
+      expect(inventory(adapter).records.containsKey('a'), true);
+      expect(inventory(adapter).records['a'], isNull);
+    }
+
+    // An explicit later reimport is an edit, so it may restore the record.
+    save(b, inventory(b)..put(const HomeCollection(id: 'a', title: 'Restored')));
+    await cycle(be, 'device-b');
+    await cycle(ae, 'device-a');
+    expect(inventory(a).records['a']!.title, 'Restored');
+    expect(inventory(a).records['b'], isNotNull);
+  });
 
   for (final malformedEnvelope in [true, false]) {
     test(

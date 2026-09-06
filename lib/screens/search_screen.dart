@@ -2472,7 +2472,7 @@ class _SearchScreenState extends State<SearchScreen>
     final extras = await StorageService.getHomeExtraRows();
     final rowOrder = await StorageService.getHomeRowOrder();
     final heroSource = await StorageService.getHomeHeroSource();
-    final collections = await HomeCollectionsStore.instance.getCollections();
+    final collections = await _readHomeCollections();
     if (!mounted) return;
     final collectionsSig = HomeCollectionsStore.signatureOf(collections);
     final collectionsUnchanged = collectionsSig == _homeCollectionsSig;
@@ -2590,7 +2590,7 @@ class _SearchScreenState extends State<SearchScreen>
       final extras = await StorageService.getHomeExtraRows();
       final rowOrder = await StorageService.getHomeRowOrder();
       final heroSource = await StorageService.getHomeHeroSource();
-      final collections = await HomeCollectionsStore.instance.getCollections();
+      final collections = await _readHomeCollections();
       // Commit the prefs and (crucially) start the tracker fan-out only if
       // this load still owns the board — a superseded run kicking off its own
       // resolve would double the concurrent tracker requests beside the
@@ -4482,6 +4482,15 @@ class _SearchScreenState extends State<SearchScreen>
       return;
     }
     _onCatalogPlay(item, section.addon);
+  }
+
+  Future<List<HomeCollection>> _readHomeCollections() async {
+    try {
+      return await HomeCollectionsStore.instance.getCollections();
+    } catch (_) {
+      debugPrint('Home: saved collections could not be loaded');
+      return const [];
+    }
   }
 
   /// Every enabled imported collection as a board row (hidden rows skipped).

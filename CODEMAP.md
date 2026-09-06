@@ -101,7 +101,9 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 - Collections (imported Nuvio/Xperience-style folder groups → Home rows of folder tiles):
   `models/home_collection.dart` (schema + parser + `collection:<id>` row ids),
   `services/home_collections_store.dart` (`home_collections_v1`, file/URL/paste import, addon
-  resolution), `services/collection_folder_loader.dart` (merged multi-catalog paging),
+  resolution), `models/home_collection_inventory.dart` (atomic inventory and durable
+  deletions), `services/collection_catalog_pager.dart` (raw cursor and retry state),
+  `services/collection_folder_loader.dart` (merged multi-catalog paging),
   `services/home_collection_rows.dart` (`HomeCollectionSection`), browser
   `screens/collections/collection_folder_screen.dart` (+ `widgets/collections/rail_see_all_pill.dart`),
   settings `screens/settings/collections_settings_page.dart` (+ `widgets/text_prompt_dialog.dart`).

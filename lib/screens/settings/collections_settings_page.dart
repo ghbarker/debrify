@@ -35,6 +35,9 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
 
   bool _loading = true;
   bool _busy = false;
+  bool _refreshPending = false;
+  int _loadToken = 0;
+  String? _loadError;
   List<HomeCollection> _collections = const [];
   List<StremioAddon> _addons = const [];
   CollectionFolderLayout _layout = CollectionFolderLayout.rows;
@@ -43,48 +46,79 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
   void initState() {
     super.initState();
     AnalyticsService.screenView('collections_settings');
+    MainPageBridge.addHomeSettingsListener(_onHomeSettingsChanged);
     unawaited(_load());
   }
 
   @override
   void dispose() {
+    MainPageBridge.removeHomeSettingsListener(_onHomeSettingsChanged);
     _firstTileFocusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _load() async {
-    final collections = await _store.getCollections();
-    final layout = await _store.getFolderLayout();
-    List<StremioAddon> addons = const [];
-    try {
-      addons = await StremioService.instance.getCatalogAddons();
-    } catch (_) {
-      // Addons only feed the "missing addon" hints; the page works without.
+  void _onHomeSettingsChanged() {
+    if (_busy) {
+      _refreshPending = true;
+    } else {
+      unawaited(_load(requestFocus: false));
     }
-    if (!mounted) return;
-    setState(() {
-      _collections = collections;
-      _addons = addons;
-      _layout = layout;
-      _loading = false;
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _firstTileFocusNode.context != null) {
-        _firstTileFocusNode.requestFocus();
+  }
+
+  Future<void> _load({bool requestFocus = true}) async {
+    final token = ++_loadToken;
+    final session = HomeCollectionsStore.captureSession();
+    try {
+      final collections = await _store.getCollections();
+      final layout = await _store.getFolderLayout();
+      List<StremioAddon> addons = const [];
+      try {
+        addons = await StremioService.instance.getCatalogAddons();
+      } catch (_) {
+        // Addons only feed the "missing addon" hints; the page works without.
       }
-    });
+      if (!mounted || token != _loadToken) return;
+      HomeCollectionsStore.checkSession(session);
+      setState(() {
+        _collections = collections;
+        _addons = addons;
+        _layout = layout;
+        _loading = false;
+        _loadError = null;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (requestFocus &&
+            mounted &&
+            token == _loadToken &&
+            _firstTileFocusNode.context != null) {
+          _firstTileFocusNode.requestFocus();
+        }
+      });
+    } catch (_) {
+      if (mounted && token == _loadToken) {
+        setState(() {
+          _loading = false;
+          _loadError = 'Could not read collections. Restore a backup or retry.';
+        });
+      }
+    }
   }
 
   // ── Import paths ───────────────────────────────────────────────────────
 
   Future<void> _importFromFile() => _guarded(() async {
+    final session = HomeCollectionsStore.captureSession();
     final result = await FilePicker.platform.pickFiles(
       type: FileType.any,
       allowMultiple: false,
-      withData: true,
+      withData: false,
     );
-    if (result == null || result.files.isEmpty) return;
+    if (result == null || result.files.isEmpty || !mounted) return;
+    HomeCollectionsStore.checkSession(session);
     final file = result.files.first;
+    if (file.size > HomeCollectionsStore.maxImportBytes) {
+      throw const FormatException('That file is too large to be a collection.');
+    }
     final List<int> bytes;
     if (file.bytes != null) {
       bytes = file.bytes!;
@@ -96,15 +130,15 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
     if (bytes.length > HomeCollectionsStore.maxImportBytes) {
       throw const FormatException('That file is too large to be a collection.');
     }
+    if (!mounted) return;
+    HomeCollectionsStore.checkSession(session);
     await _runImport(
-      () => _store.importJson(
-        utf8.decode(bytes, allowMalformed: true),
-        installedAddons: _addons,
-      ),
+      () => _store.importJson(utf8.decode(bytes), installedAddons: _addons),
     );
   });
 
   Future<void> _importFromUrl() => _guarded(() async {
+    final session = HomeCollectionsStore.captureSession();
     final url = await _prompt(
       title: 'Import from link',
       hint: 'https://…/collections.json',
@@ -113,10 +147,12 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
       action: 'Import',
     );
     if (url == null || url.trim().isEmpty || !mounted) return;
+    HomeCollectionsStore.checkSession(session);
     await _runImport(() => _store.importFromUrl(url, installedAddons: _addons));
   });
 
   Future<void> _importFromPaste() => _guarded(() async {
+    final session = HomeCollectionsStore.captureSession();
     final text = await _prompt(
       title: 'Paste collection JSON',
       hint: '[ { "title": "Streaming", "folders": [ … ] } ]',
@@ -125,13 +161,15 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
       action: 'Import',
     );
     if (text == null || text.trim().isEmpty || !mounted) return;
+    HomeCollectionsStore.checkSession(session);
     await _runImport(() => _store.importJson(text, installedAddons: _addons));
   });
 
   /// Runs an import flow unless one is already in progress, surfacing any
   /// failure as a snackbar ([FormatException]s carry user-readable text).
   Future<void> _guarded(Future<void> Function() flow) async {
-    if (_busy) return;
+    if (_busy || !mounted) return;
+    setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
       await flow();
@@ -139,42 +177,48 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
       _showError(messenger, e.message);
     } catch (e) {
       _showError(messenger, e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+        if (_refreshPending) {
+          _refreshPending = false;
+          await _load(requestFocus: false);
+        }
+      }
     }
   }
 
   Future<void> _runImport(
     Future<HomeCollectionImportResult> Function() run,
   ) async {
-    setState(() => _busy = true);
-    try {
-      final result = await run();
-      if (!mounted) return;
-      MainPageBridge.notifyHomeSettingsChanged();
-      await _load();
-      if (!mounted) return;
-      await _showImportResult(result);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+    final result = await run();
+    if (!mounted) return;
+    MainPageBridge.notifyHomeSettingsChanged();
+    await _load();
+    if (mounted) await _showImportResult(result);
   }
 
-  Future<void> _setTabbed(bool tabbed) async {
+  Future<void> _setTabbed(bool tabbed) => _guarded(() async {
     final layout = tabbed
         ? CollectionFolderLayout.tabs
         : CollectionFolderLayout.rows;
-    setState(() => _layout = layout);
     await _store.setFolderLayout(layout);
-  }
+    if (!mounted) return;
+    setState(() => _layout = layout);
+    MainPageBridge.notifyHomeSettingsChanged();
+  });
 
   // ── Per-collection actions ─────────────────────────────────────────────
 
   Future<void> _openCollectionActions(HomeCollection c) async {
+    final session = HomeCollectionsStore.captureSession();
     final unresolved = HomeCollectionsStore.unresolvedAddonIds([c], _addons);
     final action = await showDialog<String>(
       context: context,
       builder: (context) => Theme(
         data: settingsPageTheme(context),
         child: AlertDialog(
+          scrollable: true,
           title: Text(c.title),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -221,6 +265,7 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
       ),
     );
     if (!mounted || action == null) return;
+    HomeCollectionsStore.checkSession(session);
     switch (action) {
       case 'toggle':
         await _store.setEnabled(c.id, !c.enabled);
@@ -235,6 +280,7 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
           action: 'Delete',
         );
         if (confirmed && mounted) {
+          HomeCollectionsStore.checkSession(session);
           await _store.remove(c.id);
           MainPageBridge.notifyHomeSettingsChanged();
           await _load();
@@ -243,6 +289,7 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
   }
 
   Future<void> _removeAll() async {
+    final session = HomeCollectionsStore.captureSession();
     if (_collections.isEmpty) return;
     final confirmed = await _confirm(
       title: 'Remove all collections?',
@@ -250,6 +297,7 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
       action: 'Remove all',
     );
     if (!confirmed || !mounted) return;
+    HomeCollectionsStore.checkSession(session);
     await _store.clear();
     MainPageBridge.notifyHomeSettingsChanged();
     await _load();
@@ -311,6 +359,7 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
       builder: (context) => Theme(
         data: settingsPageTheme(context),
         child: AlertDialog(
+          scrollable: true,
           title: Text(title),
           content: Text(body),
           actions: [
@@ -348,6 +397,7 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
       builder: (context) => Theme(
         data: settingsPageTheme(context),
         child: AlertDialog(
+          scrollable: true,
           title: Text(
             'Imported ${r.collectionCount} collection'
             '${r.collectionCount == 1 ? '' : 's'}',
@@ -366,6 +416,7 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
   }
 
   void _showError(ScaffoldMessengerState messenger, String message) {
+    if (!messenger.mounted) return;
     messenger.showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
@@ -379,6 +430,22 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
       return const SettingsPageScaffold(
         title: 'Collections',
         body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_loadError != null) {
+      return SettingsPageScaffold(
+        title: 'Collections',
+        body: Center(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(_loadError!, textAlign: TextAlign.center),
+                TextButton(onPressed: _load, child: const Text('Retry')),
+              ],
+            ),
+          ),
+        ),
       );
     }
     return SettingsPageScaffold(
@@ -468,7 +535,7 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
                         title: c.title,
                         subtitle: _subtitle(c),
                         tag: c.pinToTop ? 'PINNED' : null,
-                        onTap: () => _openCollectionActions(c),
+                        onTap: () => _guarded(() => _openCollectionActions(c)),
                       ),
                     if (_collections.isEmpty)
                       const Padding(
@@ -490,7 +557,7 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
                         title: 'Remove all collections',
                         subtitle: 'Delete every imported collection',
                         destructive: true,
-                        onTap: _removeAll,
+                        onTap: () => _guarded(_removeAll),
                       ),
                     ],
                   ),

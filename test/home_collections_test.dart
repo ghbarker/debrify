@@ -352,7 +352,10 @@ void main() {
         installedAddons: [addon],
         fetch: (a, c, {skip = 0, genre, onRawCount}) async {
           calls.add('${c.id}:$skip:${genre ?? ''}');
-          if (skip > 0) return const [];
+          if (skip > 0) {
+            onRawCount?.call(0);
+            return const [];
+          }
           onRawCount?.call(2);
           return c.id == 'popular'
               ? [_meta('tt1'), _meta('tt2')]

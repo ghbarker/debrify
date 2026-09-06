@@ -46,6 +46,7 @@ class _TextPromptDialogState extends State<TextPromptDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      scrollable: true,
       title: Text(widget.title),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
