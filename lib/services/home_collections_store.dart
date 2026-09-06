@@ -334,7 +334,10 @@ class HomeCollectionsStore {
     List<StremioAddon> installed,
   ) {
     for (final a in installed) {
-      if (a.id == source.addonId && resolveCatalog(source, a) != null) return a;
+      if ((a.manifestId ?? a.id) == source.addonId &&
+          resolveCatalog(source, a) != null) {
+        return a;
+      }
     }
     return null;
   }

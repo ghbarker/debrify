@@ -82,6 +82,13 @@ class ProfileCollectionResourceFacade {
         ...secret,
         'enabled':
             localSettings?.enabled ?? (secret['enabled'] as bool? ?? true),
+        // Preserve the provider identity before exposing the configuration's
+        // resource identity to existing Home, Discover and cache consumers.
+        if (resource.type == ConnectionResourceType.stremioAddon &&
+            secret['manifest_id'] == null &&
+            secret['id'] != resource.id &&
+            secret['id'] is String)
+          'manifest_id': secret['id'],
         'id': resource.id,
         '_connectionResourceId': resource.id,
         '_connectionResourceRevision': resource.authorizationRevision,
