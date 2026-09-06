@@ -18,18 +18,18 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 1. **Finish Search stage layouts and final shared composition — IN PROGRESS.**
    Done: standalone Discover, Spotlight, Tonight and shared BoardCell merged.
-   Deck/shared visuals (#195), Mosaic (#196) and Promenade (#198) are now merged. Left: Canvas, Atrium and final shared composition. Atrium remains held on its origin rendering failure. The older Mosaic cell-owner proposal remains held; #196 is a different actual stage-boundary extraction.
+   Deck/shared visuals (#195), Mosaic (#196), Promenade (#198), Canvas (#200) and shared favourites (#203) are merged. Left: Atrium and final shared composition. Atrium remains held after two failing origin rendering attempts; stage extraction is 638 lines short of its existing target. The retained Mosaic policy is not another pending wrapper move.
    Next: a bounded composition change that removes dependencies rather than adding more forwarding callbacks. Close against the existing Search lane criteria, not merely a smaller host file.
 
 2. **Complete player decoder/state/UI separation — IN PROGRESS, CURRENT PIN BLOCKER.**
-   Done: earlier slices, retained overlay/guide pins, terminal test seam (#190) and diagnostic state ownership (#193).
+   Done: earlier slices, retained overlay/guide pins, terminal test seam (#190), diagnostic state ownership (#193), presentation (#201) and transport (#205).
    Left: remaining decoder/state/UI separation and tracker pin debt. Recent tracker attempts did not reach the behavior being tested; no completion credit.
-   Next: bounded V1-7 speed/aspect design and public origin-test path. Renderer experiments remain held. This remains the least advanced outcome.
+   Next: a finite proposal resolving remaining tracker/renderer evidence or cohesive state ownership before any further runtime. Renderer retries remain held; scrub ownership still spans eleven invalidation transitions. This remains the least advanced outcome.
 
 3. **Finish storage business-logic ownership and eligible temporary facade removal — IN PROGRESS.**
    Done: storage size target reached, multiple domain owners and pre-refactor restore fixtures merged, earlier223 facades retired.
    Left: remaining domain logic and eligible forwarding APIs; native-sensitive exceptions remain explicit.
-   History/watchlist, filter, download and Ambient caller retirements are merged. Keyboard (#194) merged. Next: catalog-search (#197), indexer (#199), then engine reset, device maintenance, adult access and remaining scalar policy. Cross-owner coordinators and native APIs retain explicit evidence requirements.
+   History/watchlist, filter, download, Ambient, keyboard, catalog (#197), indexer (#199), device (#202), scalar (#204), adult (#206) and caller retirements #207–#214 are merged. Next: reconcile remaining eligible routing with accepted coordinator/cache/native retention decisions. Five coordinators remain explicitly retained; size does not establish strict ownership closure.
 
 4. **Finish M1-7 genuine common-flow dedup and dependency cleanup — COMPLETE against the agreed finite scope.**
    Done: shared flow programmes merged, provider-leaf target met (627 current lines versus under800), two cached-entry wrappers removed.
@@ -38,11 +38,11 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 5. **Q-phase dependency/rule cleanup, compatibility expiry and upstream contribution work — PARTLY STARTED.**
    Done: compatibility retirements advance with outcomes3/4; canonical rules (#188) merged; upstream contribution intent established.
-   Left: remaining Q1/Q2/Q3 work and upstream-ready contribution work.
-   Next: continue eligible cleanup alongside lanes. Shared PRs may advance multiple outcomes, but count their benefit once.
+   Left: strict Q1 closure, remaining eligible Q2 work and upstream-ready contribution work. The defined Q3 canonical-rule migration (#188) and provider guide (#192) are complete.
+   Next: continue eligible cleanup and decide publication of the independently tested local upstream catalog candidate. That candidate remains unpublished; do not repeat candidate surveys. Shared benefit is counted once.
 
 6. **Final integrated acceptance of completed architecture — PENDING COMPLETION OF THE ABOVE.**
-   Done: repeated intermediate full gates; latest dcdc8385 PASSED with exact known failures and both native builds.
+   Done: repeated intermediate full gates; latest 98cae882 PASSED with exact known failures, native first-pair success and both builds. Later #213/#214 have individual review and CI evidence but are not in those gate artifacts.
    Left: final gate on the completed architecture. Earlier builds and device smoke are not the final acceptance build.
    Next: keep intermediate gates running; no new manual-smoke blocker is added against the user's standing instruction.
 
