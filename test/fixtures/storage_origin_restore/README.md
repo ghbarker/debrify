@@ -512,3 +512,90 @@ actual old-export/current-restore and read-only canonicalization evidence.
 Is there more we could do? Independent review and explicit product scope remain
 required. Zero Leaves/debt credit; no complete-sync claim. Forwarder inventory
 unchanged; expiry not applicable to this test-only fixture checkpoint.
+
+## Quick Play policy: separate seven-key domain
+
+Two synthetic packages use the actual unchanged pre-S2 exporter at
+`6d26d7a1a98c7ddd37b4a25815f74123c1e29126`: `quick-play-policy` represents
+seven keys; `quick-play-policy-legacy` represents five with both v2 rule keys
+absent. This is a separate seven-key union, not an expansion of the 141-key
+S2-1..5 completeness claim. No existing package or manifest is rewritten.
+
+Physical keys: `quick_play_honors_filters_v1` (bool),
+`quick_play_try_multiple_torrents` (bool), `quick_play_max_retries` (int),
+`play_button_mode` (String), `auto_bind_series_packs_on_play` (bool), and
+`quick_play_movie_rules_v2` / `quick_play_series_rules_v2` (String JSON).
+All seven are admitted without secrets or special value sanitization. The v2
+package preserves different movie/series values, every represented rule field,
+JSON encoding and repeated source-priority entries. The legacy package proves
+actual post-restore fallback with both v2 keys still absent. Public reads must
+not persist migrated or normalized JSON. Re-export remains exact.
+
+Real restore publishes generation2, then assertions inspect physical types and
+values before public reads. Old generation/other profile and the destination
+sentinels remain unchanged. Independent auto-pin, VR mode and timeout are only
+noninterference sentinels, not moved ownership or coverage of those features.
+No real user data, resources, credentials, native transport, tvOS recovery or
+complete-profile-sync claim is made.
+
+`quick_play_policy_prefs_origin_test.dart` drives unchanged public storage APIs
+at `5d509e0ff0dfa99c6ec589e46cd2bb75d39f92ef`. Its28 cases cover malformed
+physical/JSON types and no read normalization, sibling snapshot/containsKey
+quirks, all five write-failure prefixes, false writes, real SDK cache versus
+durable transport, held-write stale scope, both reset reacquisition boundaries,
+ordered clear/failure/captured scope, and distinct legacy/model clamp behavior.
+The seven keys'13 bodies match pre-S2 exactly; export provenance and the current
+public failure/ordering pin are nonetheless recorded separately. There is no
+new synchronization, rollback, profile-safety or all-interleavings claim.
+
+Generation uses an isolated exact-origin checkout and a copied test harness.
+Because current unrelated fixture routes use extracted stores absent in pre-S2,
+the generator copy removes only those three store imports and routes identical
+method calls back to the actual old StorageService; the copied playlist helper
+receives the same receiver adaptation. No production file is copied or changed.
+The QuickPlay assertions/recipe are unchanged in the copy. Generation checks
+exact HEAD, clean lib and app package resolution into that origin checkout.
+Both trees use Flutter3.44.8 and its native Dart sibling; no global SDK change.
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# Own exact pre-S2 checkout, adapted generator copy as described above:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --name '^quick-play-policy.*: generate' --reporter json
+# Copy ONLY the two new package/manifest pairs into the current branch.
+& $flutter test --no-pub test/quick_play_policy_prefs_origin_test.dart test/storage_origin_restore_fixture_test.dart test/quick_play_rules_test.dart test/quick_play_settings_page_test.dart test/quick_play_settings_dpad_test.dart --reporter json
+& $flutter analyze --no-pub test/quick_play_policy_prefs_origin_test.dart test/storage_origin_restore_fixture_test.dart
+# Valid incoming-package mutants must fail AFTER actual restore:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'quick-play-policy: restore' --dart-define=STORAGE_FIXTURE_MUTATION=quick-policy-key --reporter json
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'quick-play-policy: restore' --dart-define=STORAGE_FIXTURE_MUTATION=quick-policy-type --reporter json
+```
+
+Two additional isolated source mutants fail the actual public origin pins:
+move sibling snapshot after the held selected write (expected retry3, actual9),
+and swap the first two clear removals (expected try then max, actual max then
+try). Original production bytes are restored before final checks/commit.
+Package rename leaves old destination JSON and the type mutant restores String
+`"3"` instead of int3; neither failure relies on codec/hash rejection.
+
+Did we make a difference? Seven previously unrepresented policy keys now have
+actual old-export/current-restore evidence, plus public failure/order pins.
+Is there more we could do? The13-body owner move requires explicit scope release
+and independent final production verification in this same combined PR. No
+production move or line/debt credit is earned by this checkpoint. Forwarder
+inventory remains unchanged; no new forwarder or expiry is introduced here.
+
+Final checkpoint evidence: origin generation2PASS; current combined129PASS
+(28 new public-origin,39 fixture including4 new cases,52 rules,8 settings-page,
+2 DPAD), zero failure/skip; scoped2file analysis0. Four mutants each exit1 with
+one expected assertion failure; final129 passes after exact source restoration.
+All28 prior encrypted/manifest Git blobs and all old recipe sections are
+unchanged. This test-only checkpoint earns zero host/whole-production reduction.
+
+Final ciphertext SHA256:
+- quick-play-policy: `391a3194699fe23a461441802217086fd4a28a2e963a03030bf513465c2d45a7`
+- quick-play-policy-legacy: `e3f9cbaaae3c0c33c1a43535b9b16b077f793e66882c6d76dd793626f7642f95`
+
+SDK byte hashes (same executable files for both checkouts): Flutter.bat
+`f83bfed7ecd10fd1afd8ce19c0b0119d2c80e24fbf26f4ff4f63c1cc5f75dcd5`;
+native Dart.exe `4daa3455f8844ff2a907dffd68ba511f112ba67f5f6635d69a122e5b60bf91ff`.
+Origin tree: `C:/Users/hunth/debrify/debrify-quickplay-fixture-origin`;
+current tree: `C:/Users/hunth/debrify/debrify-s2-quick-play-policy-prefs`.

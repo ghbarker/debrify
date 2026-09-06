@@ -1,0 +1,40 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "recipeVersion": 5,
+  "includeSecrets": false,
+  "scenario": "quick-play-policy-legacy",
+  "absentKeys": [
+    "quick_play_movie_rules_v2",
+    "quick_play_series_rules_v2"
+  ],
+  "omittedKeys": [],
+  "syntheticOnly": true,
+  "sha256": "e3f9cbaaae3c0c33c1a43535b9b16b077f793e66882c6d76dd793626f7642f95",
+  "representedSettings": {
+    "quick_play_honors_filters_v1": false,
+    "quick_play_try_multiple_torrents": false,
+    "quick_play_max_retries": 3,
+    "play_button_mode": "smart",
+    "auto_bind_series_packs_on_play": false
+  },
+  "keyTypes": {
+    "quick_play_honors_filters_v1": "bool",
+    "quick_play_try_multiple_torrents": "bool",
+    "quick_play_max_retries": "int",
+    "play_button_mode": "String",
+    "auto_bind_series_packs_on_play": "bool"
+  },
+  "excludedKeys": [],
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "recipeVersion": 5,
+  "includeSecrets": false,
+  "scenario": "quick-play-policy",
+  "absentKeys": [],
+  "omittedKeys": [],
+  "syntheticOnly": true,
+  "sha256": "391a3194699fe23a461441802217086fd4a28a2e963a03030bf513465c2d45a7",
+  "representedSettings": {
+    "quick_play_honors_filters_v1": false,
+    "quick_play_try_multiple_torrents": false,
+    "quick_play_max_retries": 3,
+    "play_button_mode": "smart",
+    "auto_bind_series_packs_on_play": false,
+    "quick_play_movie_rules_v2": "{\"preset\":\"custom\",\"sourceMode\":\"addonsThenTorrents\",\"ranking\":\"smallest\",\"useFilters\":false,\"relaxFilters\":true,\"tryNextOnFailure\":true,\"maxAttempts\":7,\"allowDirectLinks\":true,\"validateDirectLinks\":true,\"preferSeriesPacks\":false,\"packPreference\":\"widestFirst\",\"preserveLegacyCombinedPackSearch\":false,\"searchTimeoutSeconds\":0,\"addonTimeoutSeconds\":15,\"failedPackCacheHours\":6,\"sourcePriority\":[\"engine:synthetic\",\"stremio:example\",\"engine:synthetic\"]}",
+    "quick_play_series_rules_v2": "{\"preset\":\"custom\",\"sourceMode\":\"torrentsThenAddons\",\"ranking\":\"exactOrder\",\"useFilters\":false,\"relaxFilters\":true,\"tryNextOnFailure\":false,\"maxAttempts\":2,\"allowDirectLinks\":true,\"validateDirectLinks\":true,\"preferSeriesPacks\":true,\"packPreference\":\"widestFirst\",\"preserveLegacyCombinedPackSearch\":true,\"searchTimeoutSeconds\":20,\"addonTimeoutSeconds\":45,\"failedPackCacheHours\":24}"
+  },
+  "keyTypes": {
+    "quick_play_honors_filters_v1": "bool",
+    "quick_play_try_multiple_torrents": "bool",
+    "quick_play_max_retries": "int",
+    "play_button_mode": "String",
+    "auto_bind_series_packs_on_play": "bool",
+    "quick_play_movie_rules_v2": "String",
+    "quick_play_series_rules_v2": "String"
+  },
+  "excludedKeys": [],
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}

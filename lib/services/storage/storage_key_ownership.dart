@@ -9,6 +9,8 @@
 /// [StorageKeyStore] ownership when a domain store is extracted; they must
 /// not change the string.
 enum StorageKeyStore {
+  /// Movie/series Quick Play policy and legacy mirrors (QuickPlayPolicyPrefs).
+  quickPlayPolicyPrefs,
   /// Local movie/series watchlist persistence (MyWatchlistStore).
   myWatchlistStore,
   /// Playback history and playlist persistence ([PlaybackProgressStore]).
@@ -247,7 +249,7 @@ class StorageKeyOwnership {
     'default_filter_languages_v1': StorageKeyStore.defaultTorrentFilterPrefs,
     'default_filter_sizes_v1': StorageKeyStore.defaultTorrentFilterPrefs,
     'default_filter_dynamic_ranges_v1': StorageKeyStore.defaultTorrentFilterPrefs,
-    'quick_play_honors_filters_v1': StorageKeyStore.storageService,
+    'quick_play_honors_filters_v1': StorageKeyStore.quickPlayPolicyPrefs,
     'default_torrent_provider_v1': StorageKeyStore.providerCredentialPrefs,
     'indexer_manager_configs_v1': StorageKeyStore.storageService,
     'quick_play_vr_mode': StorageKeyStore.storageService,
@@ -255,12 +257,12 @@ class StorageKeyOwnership {
     'quick_play_vr_default_stereo_mode': StorageKeyStore.storageService,
     'quick_play_vr_auto_detect_format': StorageKeyStore.storageService,
     'quick_play_vr_show_dialog': StorageKeyStore.storageService,
-    'quick_play_try_multiple_torrents': StorageKeyStore.storageService,
-    'quick_play_max_retries': StorageKeyStore.storageService,
-    'quick_play_movie_rules_v2': StorageKeyStore.storageService,
-    'quick_play_series_rules_v2': StorageKeyStore.storageService,
-    'play_button_mode': StorageKeyStore.storageService,
-    'auto_bind_series_packs_on_play': StorageKeyStore.storageService,
+    'quick_play_try_multiple_torrents': StorageKeyStore.quickPlayPolicyPrefs,
+    'quick_play_max_retries': StorageKeyStore.quickPlayPolicyPrefs,
+    'quick_play_movie_rules_v2': StorageKeyStore.quickPlayPolicyPrefs,
+    'quick_play_series_rules_v2': StorageKeyStore.quickPlayPolicyPrefs,
+    'play_button_mode': StorageKeyStore.quickPlayPolicyPrefs,
+    'auto_bind_series_packs_on_play': StorageKeyStore.quickPlayPolicyPrefs,
     'series_auto_pin_on_play': StorageKeyStore.storageService,
     'trakt_access_token': StorageKeyStore.trackingPrefs,
     'trakt_refresh_token': StorageKeyStore.trackingPrefs,
