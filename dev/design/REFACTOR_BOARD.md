@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main 91325ed4
+## Current roadmap — September 6, main d621d936 (production 9a2cbb67)
 
 ### God-file line counts — original → current merged main
 
-- **Search:** 19,070 → **6,539** (12,531 fewer)
+- **Search:** 19,070 → **6,291** (12,779 fewer)
 - **Player:** 16,278 → **11,534** (4,744 fewer)
 - **Magic TV:** 10,716 → **3,321** (7,395 fewer)
 - **Storage:** 9,963 → **2,275** (7,688 fewer)
 - **Settings:** 7,905 → **2,903** (5,002 fewer)
 
-Counted from actual merged main 91325ed4. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
+Counted from actual merged main d621d936. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
 
 ### The same six outcomes — stable roadmap
 
@@ -67,6 +67,10 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - [ ] Run the next full integrated gate after three additional production merges.
 
 ### Latest completed milestones
+
+- #203 merged **9a2cbb67**, exactbfb4, independent135PASS/1known plus6path-correctiontests, finalCIallgreen. Shared favourite builder/public primitives remove realFavRow host dependency; host-248/whole+45/fourlazycapabilities. Did we make a difference? Yes: six consumers share one owner; Atrium remains held, Search stage target still638short. CI stale-source-reader failure preserved and narrowlycorrected. Thirdproductionmerge triggersfull9a2gate.
+
+- #192 provider guide merged **d621d936**, exact94932, independentfulltext+two-prose-correctionreview/allCIgreen. Fourcredential surfaces/defaultprovider exceptions documented accurately. Documentation only, no god-line orproductioncounter credit. #204/#206 exactCI nowgreen but heldnextgate; #199 native timeout stillunresolved.
 
 - #205 merged **91325ed4**, exactbff3, independent46PASS/finalunion/allCIgreen. Transport visibility timer/latch/menu state has an owner; host-80/whole+53/fourlazycapabilities and fourborrowedresources. Did we make a difference? Real timer/rearm ownership with publiccontrol pins; full input/scrub/renderer scope staysopen. #203 path-only sourceguard correction awaitsCI; #204 one staleadversarialowner expectation correction authorized; #206 independent44PASS/unionaccepted awaitingCI. Nextproductionmerge triggersfullgate.
 
@@ -126,7 +130,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Gate pinned analyzer431/449, zero errors/new issues; layering77→77; Python55 passed; originalbc46/current native pair passed first try. Initial wrong-PATH analyzer output retained separately and corrected using pinned SDK; no baseline edit.
 - Windows226.2s/68files and ARM64171.9s builds passed. ZIP SHA256b96b7a4bd0b98a4f9de799ef3242bebf18a150d3c49c0113ad0566d10f1d729f; APK80811b556495c20078920091643b91cbcde5bc236d89737bd3bed7d1479e8cb5. No fresh manual/device smoke claimed.
 - #181 BoardCell mergedc7a332bd exact932 after independent140 passes plus the exact known sidebar failure, final integration review and all3CI green. Shared renderer owns card state/shuttle; 669 declaration lines relocated, whole production+17, zero host-file reduction. Did we make a difference? Removed private host-library access at real consumers; remaining stage navigation/composition is still open.
-- Production merge counter: **2 since completed gate42d71343** (#202, #205). Next production merge triggers a full gate.
+- Production merge counter: **3 since completed gate42d71343** (#202, #205, #203). Full gate9a2cbb67 assigned; further production merges held. Docs192 does not increment the counter.
 
 ### Forwarders at the latest full gate9fd6c24f
 
