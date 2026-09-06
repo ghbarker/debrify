@@ -485,6 +485,16 @@ is an editor mirror, not the source of truth. How to add a provider:
   Pins: `test/magic_tv_quick_windowed_programme_origin_test.dart` (8 real-host cases).
   Runtime/guard evidence union227 is not one green run; two Windows golden failures
   remain explicit. No native-positive, physical-modal or actual channel-switch proof.
+  `runCachedWindowedWatch` in `lib/screens/debrify_tv/watch/cached_windowed_watch_programme.dart`
+  now owns the full TB/PM cached async entries; PP/AD/RD programmes remain distinct.
+  Net110 whole-production deletion: five flows1180, common1551 unchanged, quick183
+  unchanged and cached208 separately charged (3232->3122). Under-800 and dependency
+  closure remain open. The two cached entry bindings retain their public signatures
+  and eight-line direct invocations for review/removal before Phase 2/Q2 composition
+  completion. Seven awaits and the finally-return disposal-error suppression remain
+  origin behavior, not safety fixes. Pins: `test/magic_tv_cached_windowed_programme_origin_test.dart`
+  (4 real-host mounted/disposed error cases); early leaf guards/storage-read failures
+  and native-positive behavior remain unproven.
   Its 24 binding/tear-off lines are retained for Q2 composition review/removal before
   Phase 2 completion. These shared phases do not complete the five-flow dedup target. `WatchFlowBindings` keeps live host
   state, navigation, existing preparation/prefetch/launcher callbacks and
