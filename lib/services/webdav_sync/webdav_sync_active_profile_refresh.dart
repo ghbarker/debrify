@@ -5,6 +5,7 @@ import '../engine/local_engine_storage.dart';
 import '../main_page_bridge.dart';
 import '../play_loader_style.dart';
 import '../storage_service.dart';
+import '../stream_badges_service.dart';
 import '../stremio_service.dart';
 import '../text_brightness.dart';
 import '../tv_hero_artwork_quality_controller.dart';
@@ -86,6 +87,11 @@ final class DefaultWebDavSyncActiveProfileRefresher
     if (changedKeys.contains('tv_hero_artwork_quality') ||
         changedKeys.contains('tv_low_res_render')) {
       await guarded(TvHeroArtworkQualityController.warm);
+    }
+
+    if (changedKeys.contains(StreamBadgesService.sourcesKey) ||
+        changedKeys.contains(StreamBadgesService.enabledKey)) {
+      await guarded(StreamBadgesService.instance.refreshFromPreferences);
     }
 
     final discoverChanged = changedKeys.any(

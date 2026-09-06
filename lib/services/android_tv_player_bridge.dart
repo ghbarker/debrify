@@ -1,3 +1,5 @@
+import 'stream_badges_service.dart';
+import 'stream_badge_matcher.dart';
 import 'player_visibility.dart';
 import 'dart:async';
 import 'dart:io';
@@ -290,6 +292,51 @@ class AndroidTvPlayerBridge {
     }
     _channel.setMethodCallHandler((call) async {
       switch (call.method) {
+        case 'requestStreamBadges':
+          final args = call.arguments;
+          final session = _sourcePersistenceSession;
+          if (args is! Map ||
+              session == null ||
+              args['sourcePersistenceSessionId'] != session.id ||
+              args['name'] is! String) {
+            return null;
+          }
+          final scope = ProfileRuntime.scope.value;
+          await StreamBadgesService.instance.warmUp();
+          if (!identical(session, _sourcePersistenceSession) ||
+              scope != ProfileRuntime.scope.value) {
+            return null;
+          }
+          final activeMatcher = StreamBadgesService.instance.matcher.value;
+          final result = await activeMatcher.matchResultFor(
+            name: args['name'] as String,
+            description: args['description'] is String
+                ? args['description'] as String
+                : null,
+          );
+          if (!identical(session, _sourcePersistenceSession) ||
+              scope != ProfileRuntime.scope.value ||
+              !identical(
+                activeMatcher,
+                StreamBadgesService.instance.matcher.value,
+              )) {
+            return null;
+          }
+          if (result.status != StreamBadgeMatchStatus.resolved) return null;
+          return [
+            for (final rule in result.badges)
+              {
+                'label': rule.name,
+                if (rule.imageUrl != null) 'imageUrl': rule.imageUrl,
+                'textColor': rule.textColor?.toARGB32() ?? 0xFFFFFFFF,
+                'fillColor':
+                    (rule.style.fills ? rule.tagColor?.toARGB32() : null) ??
+                    0xFF2A2A2A,
+                if (rule.style.borders)
+                  'borderColor': (rule.borderColor ?? rule.tagColor)?.toARGB32(),
+              },
+          ];
+
         case 'requestTorboxNext':
         case 'requestRealDebridNext':
         case 'requestStreamNext':

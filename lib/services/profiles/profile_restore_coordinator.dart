@@ -846,6 +846,7 @@ class ProfileRestoreCoordinator {
                 iptvPlaylists: false,
                 iptvFavorites: true,
                 iptvLists: true,
+                streamBadges: true,
                 // Tracking prefs are profile-scoped plain prefs like the IPTV
                 // favorites above — they ride the legacy follow-up, not the
                 // staged-resource path, or a profile import silently resets
@@ -1039,6 +1040,7 @@ class ProfileRestoreCoordinator {
                 iptvPlaylists: false,
                 iptvFavorites: false,
                 iptvLists: false,
+                streamBadges: false,
               ),
               refreshEngineRuntime: restoringActive,
             ),

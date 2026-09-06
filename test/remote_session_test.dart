@@ -108,6 +108,27 @@ void main() {
       expect(s.sidB64, r.sidB64);
     });
 
+    for (final versions in [(7, 6), (6, 7)]) {
+      test(
+        'v${versions.$1}/v${versions.$2} peers retain pairing and TCP capabilities',
+        () async {
+          final pair = await _bridge(
+            _manager(
+              'Phone',
+              protocolVersion: versions.$1,
+              transferPort: 43123,
+            ),
+            _manager('TV', protocolVersion: versions.$2, transferPort: 43124),
+          );
+          expect(pair.senderSession?.peerProtocolVersion, versions.$2);
+          expect(pair.receiverSession?.peerProtocolVersion, versions.$1);
+          expect(pair.senderSession?.peerTransferPort, 43124);
+          expect(pair.receiverSession?.peerTransferPort, 43123);
+          expect(pair.senderSession!.keys.c2s, pair.receiverSession!.keys.c2s);
+        },
+      );
+    }
+
     test('handshake records the peer capability version', () async {
       final result = await _bridge(
         _manager('Phone', protocolVersion: 5),

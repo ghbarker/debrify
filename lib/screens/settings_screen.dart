@@ -5930,6 +5930,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         '${s.iptvListChannelCount} channels)',
       );
     }
+    if (s.streamBadgeSourceCount > 0) {
+      lines.add('Stream badge rulesets (${s.streamBadgeSourceCount})');
+    }
     return lines;
   }
 
@@ -5966,6 +5969,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     if (r.iptvListChannelsImported > 0) {
       parts.add('${r.iptvListChannelsImported} list channel(s)');
+    }
+    if (r.streamBadgeSourcesImported > 0) {
+      parts.add('${r.streamBadgeSourcesImported} badge ruleset(s)');
     }
 
     if (parts.isEmpty && !r.hasAnyFailure) {
