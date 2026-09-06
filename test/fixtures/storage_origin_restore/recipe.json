@@ -946,6 +946,108 @@
           "value": 7
         }
       }
+    },
+    "quick-play-policy": {
+      "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+      "namedKeyCount": 7,
+      "excludedKeys": [],
+      "values": {
+        "quick_play_honors_filters_v1": false,
+        "quick_play_try_multiple_torrents": false,
+        "quick_play_max_retries": 3,
+        "play_button_mode": "smart",
+        "auto_bind_series_packs_on_play": false,
+        "quick_play_movie_rules_v2": "{\"preset\":\"custom\",\"sourceMode\":\"addonsThenTorrents\",\"ranking\":\"smallest\",\"useFilters\":false,\"relaxFilters\":true,\"tryNextOnFailure\":true,\"maxAttempts\":7,\"allowDirectLinks\":true,\"validateDirectLinks\":true,\"preferSeriesPacks\":false,\"packPreference\":\"widestFirst\",\"preserveLegacyCombinedPackSearch\":false,\"searchTimeoutSeconds\":0,\"addonTimeoutSeconds\":15,\"failedPackCacheHours\":6,\"sourcePriority\":[\"engine:synthetic\",\"stremio:example\",\"engine:synthetic\"]}",
+        "quick_play_series_rules_v2": "{\"preset\":\"custom\",\"sourceMode\":\"torrentsThenAddons\",\"ranking\":\"exactOrder\",\"useFilters\":false,\"relaxFilters\":true,\"tryNextOnFailure\":false,\"maxAttempts\":2,\"allowDirectLinks\":true,\"validateDirectLinks\":true,\"preferSeriesPacks\":true,\"packPreference\":\"widestFirst\",\"preserveLegacyCombinedPackSearch\":true,\"searchTimeoutSeconds\":20,\"addonTimeoutSeconds\":45,\"failedPackCacheHours\":24}"
+      },
+      "expectedReads": {
+        "movie": {
+          "preset": "custom",
+          "sourceMode": "addonsThenTorrents",
+          "ranking": "smallest",
+          "useFilters": false,
+          "relaxFilters": true,
+          "tryNextOnFailure": true,
+          "maxAttempts": 7,
+          "allowDirectLinks": true,
+          "validateDirectLinks": true,
+          "preferSeriesPacks": false,
+          "packPreference": "widestFirst",
+          "preserveLegacyCombinedPackSearch": false,
+          "searchTimeoutSeconds": 0,
+          "addonTimeoutSeconds": 15,
+          "failedPackCacheHours": 6,
+          "sourcePriority": [
+            "engine:synthetic",
+            "stremio:example",
+            "engine:synthetic"
+          ]
+        },
+        "series": {
+          "preset": "custom",
+          "sourceMode": "torrentsThenAddons",
+          "ranking": "exactOrder",
+          "useFilters": false,
+          "relaxFilters": true,
+          "tryNextOnFailure": false,
+          "maxAttempts": 2,
+          "allowDirectLinks": true,
+          "validateDirectLinks": true,
+          "preferSeriesPacks": true,
+          "packPreference": "widestFirst",
+          "preserveLegacyCombinedPackSearch": true,
+          "searchTimeoutSeconds": 20,
+          "addonTimeoutSeconds": 45,
+          "failedPackCacheHours": 24
+        }
+      },
+      "legacyExpectedReads": {
+        "movie": {
+          "preset": "custom",
+          "sourceMode": "torrentsThenAddons",
+          "ranking": "exactOrder",
+          "useFilters": false,
+          "relaxFilters": true,
+          "tryNextOnFailure": false,
+          "maxAttempts": 3,
+          "allowDirectLinks": true,
+          "validateDirectLinks": true,
+          "preferSeriesPacks": false,
+          "packPreference": "widestFirst",
+          "preserveLegacyCombinedPackSearch": false,
+          "searchTimeoutSeconds": 0,
+          "addonTimeoutSeconds": 15,
+          "failedPackCacheHours": 6
+        },
+        "series": {
+          "preset": "custom",
+          "sourceMode": "torrentsThenAddons",
+          "ranking": "exactOrder",
+          "useFilters": false,
+          "relaxFilters": true,
+          "tryNextOnFailure": false,
+          "maxAttempts": 3,
+          "allowDirectLinks": true,
+          "validateDirectLinks": true,
+          "preferSeriesPacks": false,
+          "packPreference": "widestFirst",
+          "preserveLegacyCombinedPackSearch": true,
+          "searchTimeoutSeconds": 0,
+          "addonTimeoutSeconds": 15,
+          "failedPackCacheHours": 6
+        }
+      },
+      "mutations": {
+        "quick-policy-key": {
+          "key": "quick_play_movie_rules_v2",
+          "operation": "rename"
+        },
+        "quick-policy-type": {
+          "key": "quick_play_max_retries",
+          "operation": "replace",
+          "value": "3"
+        }
+      }
     }
   }
 }

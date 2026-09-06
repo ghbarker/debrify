@@ -434,6 +434,8 @@ void main() {
     'playlist-progress': {'absentKeys': <String>[]},
     'playlist-metadata': {'absentKeys': <String>[]},
     'my-watchlist': {'absentKeys': <String>[]},
+    'quick-play-policy': {'absentKeys': <String>[]},
+    'quick-play-policy-legacy': {'absentKeys': ['quick_play_movie_rules_v2', 'quick_play_series_rules_v2']},
     'repair': {'absentKeys': ['playback_completion_migration_generation', 'resume_ghost_purge_generation']},
     'repair-markers-zero': {'absentKeys': <String>[]},
     'repair-markers-one': {'absentKeys': <String>[]},
@@ -445,8 +447,11 @@ void main() {
     final isRepair = scenario == 'repair' || scenario.startsWith('repair-markers-');
     final isMetadata = scenario == 'playlist-metadata';
     final isWatchlist = scenario == 'my-watchlist';
-    final isResidual = isFilter || isPlaylist || isRepair || isMetadata || isWatchlist;
-    final domain = isWatchlist
+    final isQuickPolicy = scenario == 'quick-play-policy' || scenario == 'quick-play-policy-legacy';
+    final isResidual = isQuickPolicy || isFilter || isPlaylist || isRepair || isMetadata || isWatchlist;
+    final domain = isQuickPolicy
+        ? _recipe['residualDomains']['quick-play-policy'] as Map
+        : isWatchlist
         ? _recipe['residualDomains']['my-watchlist'] as Map
         : isMetadata
         ? _recipe['residualDomains']['playlist-metadata'] as Map
@@ -507,6 +512,19 @@ void main() {
         : '$scenario.manifest.json';
 
     Future<void> seedScenario() async {
+      if (isQuickPolicy) {
+        expect(domain['origin'], _origin);
+        expect(domain['namedKeyCount'], 7);
+        expect(domain['excludedKeys'], isEmpty);
+        expect(scenarioSettings.keys, unorderedEquals([
+          'quick_play_honors_filters_v1', 'quick_play_try_multiple_torrents',
+          'quick_play_max_retries', 'play_button_mode', 'auto_bind_series_packs_on_play',
+          'quick_play_movie_rules_v2', 'quick_play_series_rules_v2',
+        ]));
+        expect(scenarioSettings.keys.toSet().intersection(_settings.keys.toSet()), isEmpty);
+        await _writeValues(inputExpected);
+        return;
+      }
       if (isWatchlist) {
         expect(domain['origin'], _origin);
         expect(domain['namedKeyCount'], 1);
@@ -565,6 +583,21 @@ void main() {
 
     Future<void> expectProviderReaders([Map<String, Object?>? restored]) async {
       final readerExpected = restored ?? expected;
+      if (isQuickPolicy) {
+        final prefs = await ProfilePreferences.instance();
+        final before = {for (final key in prefs.getKeys()) key: prefs.get(key)};
+        final reads = domain[scenario == 'quick-play-policy-legacy'
+            ? 'legacyExpectedReads' : 'expectedReads'] as Map;
+        expect((await StorageService.getQuickPlayRules(isMovie: true)).toJson(), reads['movie']);
+        expect((await StorageService.getQuickPlayRules(isMovie: false)).toJson(), reads['series']);
+        expect(await StorageService.getQuickPlayHonorsFilters(), false);
+        expect(await StorageService.getQuickPlayTryMultipleTorrents(), false);
+        expect(await StorageService.getQuickPlayMaxRetries(), 3);
+        expect(await StorageService.getPlayButtonMode(), 'smart');
+        expect({for (final key in prefs.getKeys()) key: prefs.get(key)}, before,
+            reason: 'Public reads must not persist migrated/normalized rules');
+        return;
+      }
       if (isWatchlist) {
         final prefs = await ProfilePreferences.instance();
         final before = prefs.get('my_watchlist_v1');
@@ -737,12 +770,18 @@ void main() {
     );
 
     for (final repairFailure in ['none', if (scenario == 'repair') ...['marker-type', 'episode-type']]) {
-    for (final keepDestination in [false, if (missing.isNotEmpty && !isRepair) true]) {
+    for (final keepDestination in [false, if (missing.isNotEmpty && !isRepair && !isQuickPolicy) true]) {
       final destinationValues = <String, Object?>{
         if (isPlaylist) 'playlist_restore_sentinel': 'untouched',
         if (isRepair) 'repair_restore_sentinel': 'untouched',
         if (isMetadata) 'metadata_restore_sentinel': 'untouched',
         if (isWatchlist) 'watchlist_restore_sentinel': 'untouched',
+        if (isQuickPolicy) ...{
+          'quick_policy_restore_sentinel': 'untouched',
+          'series_auto_pin_on_play': false,
+          'quick_play_vr_mode': 'auto',
+          'quick_play_search_timeout': 42,
+        },
         if (isFilter) ...{
           'quick_play_honors_filters_v1': false,
           'quick_play_movie_rules_v2': '{"fixture":"movie"}',
@@ -774,7 +813,7 @@ void main() {
                     'value': ['fullHd', 'unknown quality', 'fullHd'],
                   },
                 }
-              : isPlaylist || isRepair || isMetadata || isWatchlist
+              : isPlaylist || isRepair || isMetadata || isWatchlist || isQuickPolicy
                   ? domain['mutations'] as Map
                   : _recipe['mutations'] as Map;
           expect(['', ...mutations.keys], contains(_mutation));
@@ -890,6 +929,8 @@ void main() {
             final key = 'p.$profileId.g.1.${entry.key}';
             if (entry.value is bool) {
               await prefs.setBool(key, entry.value! as bool);
+            } else if (isQuickPolicy && entry.value is int) {
+              await prefs.setInt(key, entry.value! as int);
             } else {
               await prefs.setString(key, entry.value! as String);
             }
