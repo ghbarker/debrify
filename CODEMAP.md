@@ -456,7 +456,7 @@ is an editor mirror, not the source of truth. How to add a provider:
   `test/magic_tv_dialog_settings_origin_test.dart` (desktop; no TV-focus or dead
   quick-card coverage claim). M1-3 watch flows: `ProviderWatchFlow` owns Quick
   Play orchestration; `TorboxWatchFlow`, `PikpakWatchFlow`, `PremiumizeWatchFlow`,
-  `AlldebridWatchFlow`, and `RealDebridWatchFlow` own per-provider/cached paths
+  and `AlldebridWatchFlow` own per-provider/cached paths
   under `lib/screens/debrify_tv/watch/`. `QuickWatchSearchAccumulator` in
   `provider_watch_flow.dart` synchronously shares TorBox/PikPak result accumulation;
   each invocation keeps its own dedup map, while leaves retain awaits, cancellation
@@ -510,10 +510,14 @@ is an editor mirror, not the source of truth. How to add a provider:
   `runCachedLockedWatch` in `lib/screens/debrify_tv/watch/cached_locked_watch_programme.dart`
   shares RD/AD full cached setup, presentation and cleanup; their 90/65-line walkers
   remain distinct (155 lines relocated, not algorithm deduplication). Whole production
-  net125: RD305->24, AD447->215, new owner388 fully charged. Five leaves667;
-  common1551/quick183/cached-windowed208 unchanged, combined3122->2997.
-  Two16-line direct entry bindings retain typed host coupling temporarily for
-  Q2/phase-completion review/removal. Below800 leaf size does not close dependencies.
+  net125 at the programme move, with new owner388 fully charged. The subsequent
+  Q2 cached-entry cutover routes both host branches directly to this programme,
+  retires the two cached forwarding APIs and removes the RD wrapper/holder;
+  AllDebrid Quick Play and its callback remain unchanged. Cutover whole production
+  -37: host +3, AD -16, RD -24; provider leaves667->627. Shared owner388,
+  common1551/quick183/cached-windowed208/Windowed217 remain unchanged.
+  The two temporary entry bindings have reached their Q2 expiry; strict dependency
+  closure remains OPEN because live host/UI coupling is retained for Q2 composition.
   Captured credentials, late builder eligibility, catch asymmetry and unmounted
   finally-return suppression remain origin quirks; native/early-entry debt stays open.
   Its 24 binding/tear-off lines are retained for Q2 composition review/removal before
