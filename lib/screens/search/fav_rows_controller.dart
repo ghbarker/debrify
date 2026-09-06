@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
@@ -728,7 +729,7 @@ class FavRowsController {
     if (remove != true || !mounted) return;
 
     try {
-      await StorageService.setMyWatchlistItem(item, false);
+      await MyWatchlistStore.setMyWatchlistItem(item, false);
       if (!mounted) return;
       HapticFeedback.mediumImpact();
       await loadMyWatchlist();

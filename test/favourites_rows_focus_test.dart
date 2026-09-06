@@ -1,7 +1,7 @@
+import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/search_screen.dart';
 import 'package:debrify/services/main_page_bridge.dart';
-import 'package:debrify/services/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,7 +17,7 @@ void main() {
       (tester) async {
         await prepareFavourites(tester);
         if (cancel) {
-          await StorageService.setMyWatchlistItem(
+          await MyWatchlistStore.setMyWatchlistItem(
             const StremioMeta(
               id: 'other',
               type: 'movie',
@@ -30,7 +30,7 @@ void main() {
             () => Future<void>.delayed(const Duration(milliseconds: 2)),
           );
         }
-        await StorageService.setMyWatchlistItem(
+        await MyWatchlistStore.setMyWatchlistItem(
           const StremioMeta(
             id: 'movie',
             type: 'movie',
@@ -57,7 +57,7 @@ void main() {
           expect(movedTo, isNot(same(origin)));
         }
         // A real playback-return refresh makes a previously absent row arrive.
-        await StorageService.setMyWatchlistItem(
+        await MyWatchlistStore.setMyWatchlistItem(
           const StremioMeta(
             id: 'series',
             type: 'series',
@@ -94,11 +94,11 @@ void main() {
       name: 'Last',
       poster: '',
     );
-    await StorageService.setMyWatchlistItem(last, true);
+    await MyWatchlistStore.setMyWatchlistItem(last, true);
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 2)),
     );
-    await StorageService.setMyWatchlistItem(first, true);
+    await MyWatchlistStore.setMyWatchlistItem(first, true);
     await mountFavourites(tester);
     final posters = tester
         .widgetList<ArtPoster>(find.byType(ArtPoster))
@@ -107,7 +107,7 @@ void main() {
     final survivor = posters.first.focusNode;
     posters.last.focusNode.requestFocus();
     await pumpFavourites(tester);
-    await StorageService.setMyWatchlistItem(last, false);
+    await MyWatchlistStore.setMyWatchlistItem(last, false);
     MainPageBridge.notifyPlaybackReturned();
     await pumpFavourites(tester);
     final remaining = tester.widget<ArtPoster>(find.byType(ArtPoster));

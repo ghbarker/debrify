@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:debrify/services/debrify_tv_database.dart';
 import 'package:debrify/services/iptv_media_store.dart';
@@ -169,7 +170,7 @@ void main() {
       type: 'movie',
       name: 'Watchlist Movie',
     );
-    await StorageService.setMyWatchlistItem(item, true);
+    await MyWatchlistStore.setMyWatchlistItem(item, true);
 
     expect(
       await StorageService.removeMyWatchlistItemForPlayback(
@@ -179,7 +180,7 @@ void main() {
       ),
       isTrue,
     );
-    expect(await StorageService.getMyWatchlistItems(), isEmpty);
+    expect(await MyWatchlistStore.getMyWatchlistItems(), isEmpty);
   });
 
   test(
