@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:debrify/services/remote_control/remote_device_prefs.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme_controller.dart';
 import '../theme/app_surfaces.dart';
@@ -367,10 +368,10 @@ class _AppInitializerState extends State<AppInitializer>
 
   Future<void> _startTvListenerEarly() async {
     try {
-      final remoteEnabled = await StorageService.getRemoteControlEnabled();
+      final remoteEnabled = await RemoteDevicePrefs.getRemoteControlEnabled();
       if (!remoteEnabled) return;
 
-      var deviceName = await StorageService.getRemoteTvDeviceName();
+      var deviceName = await RemoteDevicePrefs.getRemoteTvDeviceName();
       deviceName ??= await PlatformUtil.getDeviceName();
       deviceName ??= 'Debrify TV';
 

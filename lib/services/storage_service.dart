@@ -6,7 +6,6 @@ export 'storage/ambient_trailer_prefs.dart' show AmbientTrailerSurface;
 
 import 'package:flutter/foundation.dart';
 import 'debrid_service.dart';
-import 'remote_control/remote_device_prefs.dart';
 import 'iptv_media_store.dart';
 import 'profiles/profile_preferences.dart';
 import 'profiles/profile_onboarding_state.dart';
@@ -1627,44 +1626,26 @@ class StorageService {
   // ============================================================================
 
   /// Get whether remote control feature is enabled
-  static Future<bool> getRemoteControlEnabled() =>
-      RemoteDevicePrefs.getRemoteControlEnabled();
 
 
 
 
 
   /// Set whether remote control feature is enabled
-  static Future<void> setRemoteControlEnabled(bool enabled) =>
-      RemoteDevicePrefs.setRemoteControlEnabled(enabled);
 
   /// Get whether remote intro dialog has been shown
-  static Future<bool> getRemoteIntroShown() =>
-      RemoteDevicePrefs.getRemoteIntroShown();
 
   /// Set whether remote intro dialog has been shown
-  static Future<void> setRemoteIntroShown(bool shown) =>
-      RemoteDevicePrefs.setRemoteIntroShown(shown);
 
   /// Get TV device name for remote control (TV only)
-  static Future<String?> getRemoteTvDeviceName() =>
-      RemoteDevicePrefs.getRemoteTvDeviceName();
 
   /// Set TV device name for remote control (TV only)
-  static Future<void> setRemoteTvDeviceName(String name) =>
-      RemoteDevicePrefs.setRemoteTvDeviceName(name);
 
   /// Get last connected device info (Mobile only)
-  static Future<Map<String, dynamic>?> getRemoteLastDevice() =>
-      RemoteDevicePrefs.getRemoteLastDevice();
 
   /// Save last connected device info (Mobile only)
-  static Future<void> setRemoteLastDevice(Map<String, dynamic> device) =>
-      RemoteDevicePrefs.setRemoteLastDevice(device);
 
   /// Clear last connected device info
-  static Future<void> clearRemoteLastDevice() =>
-      RemoteDevicePrefs.clearRemoteLastDevice();
 
   // Stremio TV Settings — forwarding façade; bodies live on StremioTvPrefs.
 

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../services/android_native_downloader.dart';
 import '../../services/remote_control/remote_control_state.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/remote_control/remote_device_prefs.dart';
 import '../../utils/platform_util.dart';
 import 'remote_control_screen.dart';
 import 'remote_pairing_dialog.dart';
@@ -56,7 +56,7 @@ class _RemoteRolePickerScreenState extends State<RemoteRolePickerScreen> {
       final isTv = await AndroidNativeDownloader.isTelevision();
       final state = RemoteControlState();
       if (isTv) {
-        var name = await StorageService.getRemoteTvDeviceName();
+        var name = await RemoteDevicePrefs.getRemoteTvDeviceName();
         name ??= await PlatformUtil.getDeviceName();
         name ??= 'Debrify TV';
         await state.switchToReceiverMode(name);
@@ -83,7 +83,7 @@ class _RemoteRolePickerScreenState extends State<RemoteRolePickerScreen> {
 
   Future<void> _openReceiver() async {
     HapticFeedback.mediumImpact();
-    var name = await StorageService.getRemoteTvDeviceName();
+    var name = await RemoteDevicePrefs.getRemoteTvDeviceName();
     name ??= await PlatformUtil.getDeviceName();
     name ??= 'This device';
     final state = RemoteControlState();

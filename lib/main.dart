@@ -63,6 +63,7 @@ import 'services/secret_vault.dart';
 import 'services/play_loader_style.dart';
 import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/services/storage/device_maintenance_prefs.dart';
+import 'package:debrify/services/remote_control/remote_device_prefs.dart';
 import 'services/storage_service.dart';
 import 'services/tv_hero_artwork_quality_controller.dart';
 import 'services/tvos_top_shelf_service.dart';
@@ -1965,7 +1966,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
   Future<void> _initializeRemoteControl(bool isTv) async {
     if (!_allowsProfileFeature(ProfileFeature.remoteControl)) return;
     // Check if remote control is enabled
-    _remoteControlEnabled = await StorageService.getRemoteControlEnabled();
+    _remoteControlEnabled = await RemoteDevicePrefs.getRemoteControlEnabled();
     if (!_remoteControlEnabled) return;
 
     if (isTv) {
@@ -1974,7 +1975,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
       // RemoteControlState.startTvListener so phones/desktops that switch
       // to receive mode mid-session via the Remote picker also work.
       // Priority: 1. User-set custom name, 2. Actual device name, 3. Fallback
-      var deviceName = await StorageService.getRemoteTvDeviceName();
+      var deviceName = await RemoteDevicePrefs.getRemoteTvDeviceName();
       deviceName ??= await PlatformUtil.getDeviceName();
       deviceName ??= 'Debrify TV';
       await RemoteControlState().startTvListener(deviceName);
