@@ -469,13 +469,22 @@ is an editor mirror, not the source of truth. How to add a provider:
   1384 (-47), new owner 217 and model growth 13 fully charged; no host reduction.
   `runQuickWatchSearch` in `provider_watch_flow.dart` shares TB/PM/AD/PP quick
   admission and search; migrated settings receivers, captured keys, distinct result
-  cancellation and progressive publication remain. Four provider continuations own
-  their preparation/launch bodies and original cleanup; review this retained
+  cancellation and progressive publication remain. At that checkpoint, four provider
+  continuations owned preparation/launch bodies and original cleanup; review retained
   composition before Phase 2 completion. Admission removes 135 net production lines
   (302 leaf deletion - 167 common growth): five flows 1782, common 1551; Windowed
   owner remains 217. Under-800 and dependency closure remain open. New live PM/AD
   pins: `test/magic_tv_watch_admission_origin_test.dart`; error/read-failure,
   reentrancy and native-positive coverage remain incomplete.
+  `runQuickWindowedWatch` in `lib/screens/debrify_tv/watch/quick_windowed_watch_programme.dart`
+  now owns the full TB/PM quick cache-to-player continuations using the unchanged
+  `WindowedWatchRun`; cached paths and PP/AD/RD programmes remain distinct. Net101
+  production deletion: five flows1498, common1551 unchanged, new owner183 separately
+  charged (3333->3232); under-800/dependency closure remain open. Two seven-line direct
+  invocation sites retain typed host coupling for review before Phase 2 completion.
+  Pins: `test/magic_tv_quick_windowed_programme_origin_test.dart` (8 real-host cases).
+  Runtime/guard evidence union227 is not one green run; two Windows golden failures
+  remain explicit. No native-positive, physical-modal or actual channel-switch proof.
   Its 24 binding/tear-off lines are retained for Q2 composition review/removal before
   Phase 2 completion. These shared phases do not complete the five-flow dedup target. `WatchFlowBindings` keeps live host
   state, navigation, existing preparation/prefetch/launcher callbacks and
