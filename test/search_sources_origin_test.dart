@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:debrify/models/advanced_search_selection.dart';
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/search_screen.dart' show buildSearchSources;
+import 'package:debrify/screens/search_screen.dart' show SearchScreen;
 import 'package:debrify/services/engine/engine_registry.dart';
 import 'package:debrify/services/engine/local_engine_storage.dart';
 import 'package:debrify/services/series_source_service.dart';
@@ -272,6 +273,8 @@ void main() {
     (tester) => _faultCase(tester, throws: false));
   testWidgets('origin Sources thrown write escapes and finally permits another bind',
     (tester) => _faultCase(tester, throws: true));
+  testWidgets('origin public catalog Sources persists eligible addon toggle across reopen',
+    (tester) => _catalogRoundtrip(tester));
 }
 
 // Additional finite fault outcomes. The accepted three-case helper above stays
@@ -479,4 +482,122 @@ Future<void> _faultCase(WidgetTester tester, {required bool throws}) async {
   expect(errors, throws ? [same(backend.failure)] : isEmpty);
   expect(tester.takeException(), isNull);
   expect({...finalPhysical!}..remove(_physicalKey), {...initial}..remove(_physicalKey));
+}
+
+const _catalogPhysicalKey = 'flutter.catalog_search_disabled_addons_v1';
+
+class _CatalogStore extends InMemorySharedPreferencesStore {
+  _CatalogStore(super.data) : super.withData();
+  final writes = <(String, String, Object)>[];
+  @override
+  Future<bool> setValue(String type, String key, Object value) {
+    if (key == _catalogPhysicalKey) writes.add((type, key, value));
+    return super.setValue(type, key, value);
+  }
+  Future<Map<String, Object>> physical() => super.getAllWithParameters(
+    GetAllParameters(filter: PreferencesFilter(prefix: 'flutter.')),
+  );
+}
+
+Future<void> _catalogRoundtrip(WidgetTester tester) async {
+  await prepareFavourites(tester);
+  final previousStore = SharedPreferencesStorePlatform.instance;
+  final service = StremioService.instance;
+  final previousClient = service.debugStreamHttpClientFactory;
+  final unexpected = <Uri>[];
+  final client = MockClient((request) async {
+    unexpected.add(request.url);
+    throw StateError('Unexpected empty-query catalog fixture HTTP');
+  });
+  final eligible = StremioAddon(
+    id: 'catalog.eligible', name: 'Eligible catalog origin',
+    manifestUrl: 'https://eligible.invalid/manifest.json',
+    baseUrl: 'https://eligible.invalid', resources: ['catalog'], types: ['movie'],
+    catalogs: const [StremioAddonCatalog(id: 'search', type: 'movie',
+      name: 'Search', extraSupported: ['search'],
+      extras: [StremioExtraParam(name: 'search', isRequired: true)])],
+  );
+  final ineligible = StremioAddon(
+    id: 'catalog.ineligible', name: 'Nonsearchable catalog origin',
+    manifestUrl: 'https://ineligible.invalid/manifest.json',
+    baseUrl: 'https://ineligible.invalid', resources: ['catalog'], types: ['movie'],
+    catalogs: const [StremioAddonCatalog(id: 'browse', type: 'movie', name: 'Browse')],
+  );
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('stremio_addons_v1', jsonEncode([
+    eligible.toJson(), ineligible.toJson(),
+  ]));
+  await prefs.setString('catalog_origin_sentinel', 'unchanged');
+  final backend = _CatalogStore({
+    for (final key in prefs.getKeys()) 'flutter.$key': prefs.get(key)!,
+  });
+  final initial = await backend.physical();
+  try {
+    SharedPreferences.resetStatic();
+    SharedPreferencesStorePlatform.instance = backend;
+    service.invalidateCache();
+    service.debugStreamHttpClientFactory = () => client;
+    await http.runWithClient(() async {
+      await tester.pumpWidget(const MaterialApp(home: SearchScreen(searchMode: true)));
+      await pumpFavourites(tester);
+      expect(find.text('Search movies & shows'), findsOneWidget);
+      expect(initial.containsKey(_catalogPhysicalKey), isFalse);
+      await tester.tap(find.text('Sources'));
+      await pumpFavourites(tester);
+      final dialog = find.byType(Dialog);
+      Finder inside(Finder child) => find.descendant(of: dialog, matching: child);
+      expect(dialog, findsOneWidget);
+      expect(inside(find.text('Eligible catalog origin')), findsOneWidget);
+      expect(inside(find.text('Nonsearchable catalog origin')), findsNothing);
+      expect(inside(find.byIcon(Icons.check_circle_rounded)), findsOneWidget);
+      expect(inside(find.byIcon(Icons.block_rounded)), findsNothing);
+      expect(backend.writes, isEmpty);
+      await tester.tap(inside(find.text('Eligible catalog origin')));
+      await pumpFavourites(tester);
+      expect(dialog, findsOneWidget);
+      expect(inside(find.byIcon(Icons.block_rounded)), findsOneWidget);
+      expect(backend.writes, hasLength(1));
+      expect(backend.writes.single.$1, 'String');
+      expect(backend.writes.single.$2, _catalogPhysicalKey);
+      expect(backend.writes.single.$3, '["catalog.eligible"]');
+      final physical = await backend.physical();
+      expect(physical[_catalogPhysicalKey], '["catalog.eligible"]');
+      expect(physical['flutter.stremio_addons_v1'], initial['flutter.stremio_addons_v1']);
+      expect(physical['flutter.catalog_origin_sentinel'], 'unchanged');
+      await tester.tap(inside(find.text('Done')));
+      await pumpFavourites(tester);
+      expect(dialog, findsNothing);
+      expect(find.text('Search movies & shows'), findsOneWidget);
+      // Discard the optimistic SDK instance before reopening the actual dialog.
+      SharedPreferences.resetStatic();
+      await tester.tap(find.text('Sources'));
+      await pumpFavourites(tester);
+      expect(dialog, findsOneWidget);
+      expect(inside(find.text('Eligible catalog origin')), findsOneWidget);
+      expect(inside(find.text('Nonsearchable catalog origin')), findsNothing);
+      expect(inside(find.byIcon(Icons.block_rounded)), findsOneWidget);
+      expect(inside(find.byIcon(Icons.check_circle_rounded)), findsNothing);
+      expect(backend.writes, hasLength(1));
+      expect((await backend.physical())[_catalogPhysicalKey], '["catalog.eligible"]');
+      await tester.tap(inside(find.text('Done')));
+      await pumpFavourites(tester);
+      expect(tester.takeException(), isNull);
+    }, () => client);
+  } finally {
+    try {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await pumpFavourites(tester);
+    } finally {
+      service.debugStreamHttpClientFactory = previousClient;
+      service.invalidateCache();
+      SharedPreferencesStorePlatform.instance = previousStore;
+      SharedPreferences.resetStatic();
+      client.close();
+    }
+  }
+  expect(service.debugStreamHttpClientFactory, same(previousClient));
+  expect(SharedPreferencesStorePlatform.instance, same(previousStore));
+  expect(unexpected, isEmpty);
+  expect(tester.takeException(), isNull);
+  // Empty query only: no nonempty-query restart or keyword-dialog claim.
 }
