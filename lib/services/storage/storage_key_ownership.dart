@@ -9,6 +9,8 @@
 /// [StorageKeyStore] ownership when a domain store is extracted; they must
 /// not change the string.
 enum StorageKeyStore {
+  /// Onboarding readiness compatibility flag (ProfileOnboardingState).
+  profileOnboardingState,
   /// Movie/series Quick Play policy and legacy mirrors (QuickPlayPolicyPrefs).
   quickPlayPolicyPrefs,
   /// Local movie/series watchlist persistence (MyWatchlistStore).
@@ -241,7 +243,7 @@ class StorageKeyOwnership {
     'playlist_view_modes_v1': StorageKeyStore.playbackProgressStore,
     'playlist_favorites_v1': StorageKeyStore.playbackProgressStore,
     'my_watchlist_v1': StorageKeyStore.myWatchlistStore,
-    'initial_setup_complete_v1': StorageKeyStore.storageService,
+    'initial_setup_complete_v1': StorageKeyStore.profileOnboardingState,
     'torrent_search_history_v1': StorageKeyStore.storageService,
     'torrent_search_history_enabled': StorageKeyStore.storageService,
     'default_filter_qualities_v1': StorageKeyStore.defaultTorrentFilterPrefs,
