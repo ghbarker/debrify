@@ -1509,3 +1509,68 @@ those alone is not a complete old-suite harness: eight already import HomePrefs
 and contain preexisting owner dependencies. The actual old export uses only
 the copied fixture loader and its two existing adapted helpers. No universal
 27-test old6d26 compatibility or identical whole-harness claim is made.
+
+
+### Home tracking tick sources: one-key portable compatibility gap
+
+Actual origin `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`, fresh detached
+`C:/Users/hunth/debrify/debrify-home-tick-fixture-origin`, exports unchanged lib.
+Current `C:/Users/hunth/debrify/debrify-q2-tracking-prefs-callers` starts from
+#211 `f5f584c640ec4e2f2b7fcb945e2bfae6ccd333a4`. Both own package configs use
+Flutter3.44.8 `C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat` and
+native sibling Dart `bin/cache/dart-sdk/bin/dart.exe`. Execution waited for C0's
+explicit post-gate runtime clearance; no concurrent native/build trial.
+
+The recipe seeds raw ProfilePreferences StringList `home_tick_sources` with
+`['simkl',' local ','local','SIMKL','simkl','','trakt','mdblist','trakt']`.
+Actual encrypted export admits the exact list. Current restore verifies physical
+key/type/list order before reading the real public getter; independent expected
+public order is `['simkl','local','trakt','mdblist']`. Reading does not rewrite
+physical contents or increment the notifier captured after restore. This is not
+a claim that restore itself preserves revision, or that clear/restore transport
+ordering was observed. Both reexports and profile/generation/sentinel isolation
+are checked. No setter, auth, cache, reset or native implementation changes.
+Absent/default-all and explicit-empty cases are outside this finite fixture.
+No sanitized-sharing or comprehensive Tracking authority claim.
+
+Fresh old copied-loader receiver adapters: HomePrefs19, DebrifyTvPrefs4,
+StremioTvPrefs8, SocialPrefs6, QuickPlayPolicyPrefs9, AmbientTrailerPrefs6,
+TorrentSearchHistoryStore2, MyWatchlistStore2, IptvPrefs3,
+PlaybackProgressStore14, ProviderCredentialPrefs19, DownloadDestinationPrefs5;
+remove those owner imports. Existing helper adapters remain Filter10 and
+Playback4. The new getter already calls old StorageService: no new owner
+adapter in this checkpoint. Before this domain the loader had14proposed Tracking
+receiver sites; it now has15. If those are later migrated to TrackingPrefs,
+the old copied loader must reverse exactly15same-method sites and remove that
+owner import. This conditional adapter is not claimed to have been applied now.
+No identical-whole-harness claim or owner backport.
+
+All56prior artifact raw hashes and prior recipe entries remain unchanged,
+including the Home21 fixture. Newpair yields58artifacts+README/recipe=60files.
+Ciphertext SHA256:
+`5bdcb0c2cf8b17685dfa34476012a6b31837daa44e2634655dd0302ce81918c7`.
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# Own unchanged old6d26 checkout, with copied-harness adapters above:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --plain-name 'home-tick-sources: generate' --reporter json
+# Current checkout:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'home-tick-sources: restore' --reporter json
+& 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/cache/dart-sdk/bin/dart.exe' analyze test/storage_origin_restore_fixture_test.dart
+foreach ($variant in @('tick-key', 'tick-type', 'tick-list-order')) {
+  & $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'home-tick-sources: restore' "--dart-define=STORAGE_FIXTURE_MUTATION=$variant" --reporter json
+}
+```
+
+Old generation1PASS7986ms; current focused1PASS7548ms; scopedold/current0.
+Three valid mutants rebuild section integrity, encrypt/decrypt and restore
+successfully before failure at loader632/_expectSettings161: renamed key leaves
+the destination sentinel, JSON String replaces StringList, and first valid-source
+list order is swapped. All exit1 at physical assertion, not codec/earlypackage
+validation or JSON object member ordering. No broader origin or fullfixture run.
+
+Did we make a difference? The missing one-key actual portable proof now covers
+rawlist preservation, independent public normalization and getter side effects.
+Is there more we could do? Tracking receiver retirement remains separately gated;
+this finite input does not prove credential authority or every interleaving.
+Zero production or Leaves credit; pending PRs remain pending.

@@ -1525,6 +1525,54 @@
           "value": "[\"a\",\"b\",\"b\",\"\",4,\" a \"]"
         }
       }
+    },
+    "home-tick-sources": {
+      "values": {
+        "home_tick_sources": [
+          "simkl",
+          " local ",
+          "local",
+          "SIMKL",
+          "simkl",
+          "",
+          "trakt",
+          "mdblist",
+          "trakt"
+        ]
+      },
+      "expectedPublicRead": [
+        "simkl",
+        "local",
+        "trakt",
+        "mdblist"
+      ],
+      "excludedKeys": [],
+      "mutations": {
+        "tick-key": {
+          "operation": "rename",
+          "key": "home_tick_sources"
+        },
+        "tick-type": {
+          "operation": "replace",
+          "key": "home_tick_sources",
+          "value": "[\"simkl\",\" local \",\"local\",\"SIMKL\",\"simkl\",\"\",\"trakt\",\"mdblist\",\"trakt\"]"
+        },
+        "tick-list-order": {
+          "operation": "replace",
+          "key": "home_tick_sources",
+          "value": [
+            "local",
+            " local ",
+            "simkl",
+            "SIMKL",
+            "simkl",
+            "",
+            "trakt",
+            "mdblist",
+            "trakt"
+          ]
+        }
+      }
     }
   }
 }

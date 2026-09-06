@@ -1,0 +1,36 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "scenario": "home-tick-sources",
+  "syntheticOnly": true,
+  "sha256": "5bdcb0c2cf8b17685dfa34476012a6b31837daa44e2634655dd0302ce81918c7",
+  "includeSecrets": false,
+  "representedSettings": {
+    "home_tick_sources": [
+      "simkl",
+      " local ",
+      "local",
+      "SIMKL",
+      "simkl",
+      "",
+      "trakt",
+      "mdblist",
+      "trakt"
+    ]
+  },
+  "keyTypes": {
+    "home_tick_sources": "List<String>"
+  },
+  "excludedKeys": [],
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}
