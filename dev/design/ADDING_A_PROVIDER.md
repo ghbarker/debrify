@@ -52,9 +52,12 @@ existing adapters in `lib/services/cloud/`.
   out of the enum). `displayName` is `TorBox`; `overlayTitle` is `Torbox`.
 - **Credential reads** go through `CloudCredentials`
   (`lib/services/cloud/cloud_credentials.dart`):
-  `configured(id, CloudConfiguredCheck)` with dialects `playback` / `magnet` /
-  `stremioPicker`. Magnets also require the integration-enabled toggle.
-  `StremioTvResolveGate.canAttempt` is not a fourth `configured()` flavour.
+  `configured(id, CloudSurface)` has four surfaces: `playback`, `magnet`,
+  `stremioPicker` and `stremioResolve`. `CloudConfiguredCheck` is a deprecated
+  alias. Magnet checks require the integration toggle plus key for RD/TB/PM/AD;
+  PikPak uses its enabled flag. `stremioResolve` checks only the integration
+  toggle for PM/AD. `StremioTvResolveGate.canAttempt` delegates those checks and
+  separately handles per-torrent skips (blocked RD and auto TorBox cache).
 - **Registry helpers already used by TPS / player / Stremio TV / Magic TV
   prepare:** `unlockPlayerScreenEntry` (wraps HTTP; incomplete Premiumize does
   not fall through to RD), `resolveStremioTorrent` (`realdebrid` via
@@ -230,8 +233,12 @@ The host builds page specifications for the existing `SettingsPageRegistry`.
 ## 8. Default provider picker
 
 - **Edit:** `lib/screens/settings/provider_settings_page.dart`
-  (`DefaultProviderDispatch`). Gate on key + integration enabled, add the
-  radio `_ProviderOption` (stores playback id e.g. `'premiumize'`).
+  (`DefaultProviderDispatch`). For RD/TB/PM/AD, `isAvailable` awaits the
+  integration-enabled toggle first and, only when enabled, proceeds to the
+  `StorageService.has*Credential` check; preserve that order and credential
+  presence semantics. PikPak uses `PikPakApiService.instance.isAuthenticated()`,
+  not its enabled flag. Add the radio `_ProviderOption` (stores playback id
+  e.g. `'premiumize'`).
 
 ---
 
