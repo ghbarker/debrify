@@ -1,3 +1,4 @@
+import '../home_row_refresh.dart';
 import '../iptv_channel_order.dart';
 import '../iptv_media_store.dart';
 import '../main_page_bridge.dart';
@@ -107,6 +108,7 @@ abstract final class WebDavSyncUiRefresh {
   /// neither fail sync nor prevent another independent surface from updating.
   static void dispatch(Set<String> appliedKeys) {
     if (appliedKeys.isEmpty) return;
+    HomeRowRefreshSignal.dispatch(appliedKeys);
     final targets = <_WebDavSyncUiRefreshTarget>{};
     for (final key in appliedKeys) {
       final mapped = _targetsByKey[key];
