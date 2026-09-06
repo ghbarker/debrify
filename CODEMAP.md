@@ -37,9 +37,9 @@ Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.
 `search_screen_shells.dart` (tab/variant/landing/dropdown contracts),
 `keyword_search_controller.dart` + `keyword_search_screen.dart` (in-tab keyword
 torrent search; G1'-3).
-TV Home stages (five remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
-— `_CanvasBoardStage`, `_AtriumBoardStage`, `_MosaicBoardStage`, `_PromenadeBoardStage`,
-`_DeckBoardStage`. Tonight uses public `TonightStage`, `TonightStageContent` in
+TV Home stages (four remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
+— `_CanvasBoardStage`, `_AtriumBoardStage`, `_MosaicBoardStage`, `_PromenadeBoardStage`.
+Deck uses public `DeckStage` in `deck_board_stage.dart` and shared `search/stage_visuals.dart`. Tonight uses public `TonightStage`, `TonightStageContent` in
 `tonight_stage_content.dart`, and `TonightQueueRow`/State, `TonightCardInfo` and
 `TonightQueueEntry` in `tonight_stage_widgets.dart`. Neutral `StageRailView` lives
 beside `CanvasRail` in `search_board_runtime.dart`. Spotlight uses public `SpotlightStage` plus
@@ -231,6 +231,16 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   `buildRailLabel` callback retain host-context lookup until final composition /
   phase-completion review. This is partial shared-cell ownership, not whole Deck
   or closure of the 1400 stage target.
+  Public `stage_visuals.dart` now owns the 15 shared visual declarations and the
+  original private processwide failed-backdrop memo; actual `DeckStage` owns its
+  full layout/peeks, removing its State extension and part dependency.
+  Host 6480 -> 6457 (**23 net Leaves**); whole production **+105**, including moved
+  attached documentation and optional `super.key` on three public constructors
+  (existing callers retain null keys). This is not native/cache-algorithm coverage.
+  `DeckStageBindings` retains 22 live/reference members, including two lazy native
+  constructor closures on the host; these and the label boundaries above expire
+  for removal/review at final composition / phase completion. Four stage parts and
+  the aggregate stage target remain open; prior shared-shelf accounting is separate.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
@@ -257,9 +267,10 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   **Ambient trailer policy:** `lib/services/storage/ambient_trailer_prefs.dart`
   owns two detail audio/volume keys and five preference bodies; HomePrefs keeps
   the two home keys. StorageService re-exports the same AmbientTrailerSurface
-  enum and retains four nonasync facades (14 declaration / 18 physical lines),
-  expiring at separately scoped Q2 caller retirement. Host -69 includes moved
-  docs/separators; whole production +32. Strict ownership closure remains OPEN.
+  enum for public type compatibility; Q2 retired four facades and routes
+  consumers directly to AmbientTrailerPrefs. Retirement removes15 host lines
+  (14 declarations + import), whole production -10; prior owner move -69 host
+  included docs/separators and added32 whole. Strict ownership remains OPEN.
   **Download destinations:** `lib/services/storage/download_destination_prefs.dart`
   owns three profile-scoped String keys and seven persistence bodies; OS grants
   remain with callers. Q2 retired all seven StorageService APIs; callers route
@@ -438,6 +449,12 @@ is an editor mirror, not the source of truth. How to add a provider:
   `lib/screens/video_player/subtitle_track_controller.dart`
   (`SubtitleTrackController` + `SubtitleTrackSession`; host keeps
   `_SubtitleTrackSession` adapter and title/season resolvers).
+  Decoder diagnostics: `lib/services/playback/decoder_diagnostics.dart`
+  (`DecoderDiagnostics`) owns four state fields, debounce timer, matching polls
+  and report deduplication. Six explicit live capabilities retain host coupling;
+  shared media generation, renderer recovery and native diagnostic sink stay in
+  the host, with interleaved reset ordering preserved. Host -191 lines / whole
+  production +61; partial ownership, not independent logic or full V1-6 closure.
   IPTV recording (libmpv tee, Android engine, desktop capture):
   `lib/services/playback/iptv_recording_controller.dart`
   (`IptvRecordingController` + `IptvRecordingSession`; host keeps

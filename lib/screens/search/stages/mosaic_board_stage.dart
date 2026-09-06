@@ -60,7 +60,7 @@ extension on _SearchScreenState {
         return Stack(
           fit: StackFit.expand,
           children: [
-            _CanvasArtLayer(
+            CanvasArtLayer(
               item: _heroItem,
               enriched: _heroEnriched,
               fav: _canvasFavFocus,
@@ -134,17 +134,17 @@ extension on _SearchScreenState {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: ValueListenableBuilder<_CanvasFavFocus?>(
+                          child: ValueListenableBuilder<CanvasFavFocus?>(
                             valueListenable: _canvasFavFocus,
                             builder: (context, fav, _) => Align(
                               alignment: Alignment.bottomLeft,
                               child: fav != null
-                                  ? _StageFavIdentity(fav: fav)
-                                  : _CanvasIdentity(
+                                  ? StageFavIdentity(fav: fav)
+                                  : CanvasIdentity(
                                       item: _heroItem,
                                       enriched: _heroEnriched,
                                       trailerShowing: _heroTrailerShowing,
-                                      variant: _StageIdentityVariant.headline,
+                                      variant: StageIdentityVariant.headline,
                                       maxWidth: max(1.0, gridW * 0.5),
                                     ),
                             ),

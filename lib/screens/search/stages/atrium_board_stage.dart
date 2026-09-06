@@ -80,7 +80,7 @@ extension on _SearchScreenState {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  _CanvasArtLayer(
+                  CanvasArtLayer(
                     item: _heroItem,
                     enriched: _heroEnriched,
                     fav: _canvasFavFocus,
@@ -174,11 +174,11 @@ extension on _SearchScreenState {
                         },
                       ),
                       const SizedBox(height: 22),
-                      ValueListenableBuilder<_CanvasFavFocus?>(
+                      ValueListenableBuilder<CanvasFavFocus?>(
                         valueListenable: _canvasFavFocus,
                         builder: (context, fav, _) => fav != null
-                            ? _StageFavIdentity(fav: fav)
-                            : _CanvasIdentity(
+                            ? StageFavIdentity(fav: fav)
+                            : CanvasIdentity(
                                 item: _heroItem,
                                 enriched: _heroEnriched,
                                 trailerShowing: _heroTrailerShowing,
@@ -187,9 +187,9 @@ extension on _SearchScreenState {
                                 // text scale).
                                 variant:
                                     boardH - 64 >=
-                                        _stageNarrowIdentityH(context) + 90
-                                    ? _StageIdentityVariant.narrow
-                                    : _StageIdentityVariant.headline,
+                                        stageNarrowIdentityH(context) + 90
+                                    ? StageIdentityVariant.narrow
+                                    : StageIdentityVariant.headline,
                                 maxWidth: (splitX - _kAtriumPanelPad * 2).clamp(
                                   120.0,
                                   520.0,

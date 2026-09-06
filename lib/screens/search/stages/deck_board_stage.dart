@@ -1,18 +1,52 @@
-part of '../../search_screen.dart';
+import 'dart:math';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../../models/stremio_addon.dart';
+import '../../../theme/app_theme.dart';
+import '../../../widgets/skeleton_poster.dart';
+import '../fav_row_ref.dart';
+import '../search_board_runtime.dart';
+import '../stage_visuals.dart';
+import 'stage_shelf_content.dart';
 
-/// DECK: trailer plays in a rounded card, next titles stacked behind it.
-///
-/// Host owns `_homeStyleEffective`, rails, and focus. Layout only.
-class _DeckBoardStage extends StatelessWidget {
-  const _DeckBoardStage({required this.host});
+typedef DeckStageBindings = ({
+  AppTheme Function() readTheme,
+  StageRailView? Function() resolveRail,
+  VoidCallback seedFocus,
+  int Function(FavRowRef) favouriteCount,
+  bool Function() readTheater,
+  bool Function() readTrailerActive,
+  int Function() cacheWidth,
+  int Function() cacheHeight,
+  ValueListenable<int> column,
+  ValueListenable<CanvasFavFocus?> favourite,
+  ValueListenable<StremioMeta?> heroItem,
+  ValueListenable<StremioMeta?> enriched,
+  ValueListenable<bool> trailerShowing,
+  double Function(BuildContext, double, {required double maxH}) railBoxHeight,
+  double Function(BuildContext) labelHeight,
+  double Function(BuildContext, double) favouriteWidth,
+  double Function(double) posterWidth,
+  Widget Function(FavRowRef, String, int) favouriteCell,
+  Widget Function(StageRailView) railLabel,
+  Widget Function(double) buildTrailer,
+  Widget Function(double) buildLive,
+  StageShelfContent shelf,
+});
 
-  final _SearchScreenState host;
+// DECK metrics.
+const double _kDeckPanelPad = 48;
+const double _kDeckCardRightPad = 36;
+const double _kDeckCardRadius = 22;
+const double _kDeckRailGap = 18;
+const double _kDeckRailTail = 26;
 
-  @override
-  Widget build(BuildContext context) => host._buildDeckBoard();
-}
+class DeckStage extends StatelessWidget {
+  const DeckStage({super.key, required this.bindings, required this.isTelevision});
+  final DeckStageBindings bindings;
+  final bool isTelevision;
 
-extension on _SearchScreenState {
   // ── DECK view ────────────────────────────────────────────────────────────
 
   /// DECK: the trailer stops being wallpaper and becomes an OBJECT — a
@@ -20,19 +54,20 @@ extension on _SearchScreenState {
   /// behind it. The hole follows the card's laid-out rect (Canvas proved that
   /// needs no native work); the rounded corners are four ink wedges painted
   /// ABOVE the layers, because a clip would put a saveLayer over the hole.
-  Widget _buildDeckBoard() {
-    final app = AppThemeScope.of(context);
-    final view = _resolveStageRail();
+  @override
+  Widget build(BuildContext context) {
+    final app = bindings.readTheme();
+    final view = bindings.resolveRail();
     if (view == null) {
-      return BrandLoadingStage(isTelevision: widget.isTelevision);
+      return BrandLoadingStage(isTelevision: isTelevision);
     }
-    _seedStageFocusOnce();
+    bindings.seedFocus();
     final rail = view.rail;
     final railKey = view.key;
     final favRail = rail.favKind != null;
     final items = view.items;
     final nodes = view.nodes;
-    final count = favRail ? _canvasFavItemCount(rail.favKind!) : items.length;
+    final count = favRail ? bindings.favouriteCount(rail.favKind!) : items.length;
 
     return LayoutBuilder(
       builder: (context, cons) {
@@ -41,14 +76,14 @@ extension on _SearchScreenState {
         // RESERVE THE RAIL FIRST, then let the card have what is left — the
         // other way round, a tall card on a short board silently pushes the
         // rail off the bottom edge.
-        final railBoxH = _stageRailBoxH(
+        final railBoxH = bindings.railBoxHeight(
           context,
           boardH * 0.24,
           maxH: boardH * 0.34,
         );
         final railZoneH =
-            _atriumLabelHeight(context) +
-            _kAtriumLabelGap +
+            bindings.labelHeight(context) +
+            10 +
             railBoxH +
             _kDeckRailTail;
         final cardTop = boardH * 0.11;
@@ -89,7 +124,7 @@ extension on _SearchScreenState {
             // Listens to the focused column so the stack DEALS as you move;
             // only this subtree rebuilds.
             ValueListenableBuilder<int>(
-              valueListenable: _stageCol,
+              valueListenable: bindings.column,
               builder: (context, focusedCol, _) => Stack(
                 children: _deckPeeks(
                   items: items,
@@ -111,40 +146,23 @@ extension on _SearchScreenState {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  _CanvasArtLayer(
-                    item: _heroItem,
-                    enriched: _heroEnriched,
-                    fav: _canvasFavFocus,
-                    cacheWidth: _tvHeroArtworkCacheWidth,
-                    cacheHeight: _tvHeroArtworkCacheHeight,
+                  CanvasArtLayer(
+                    item: bindings.heroItem,
+                    enriched: bindings.enriched,
+                    fav: bindings.favourite,
+                    cacheWidth: bindings.cacheWidth(),
+                    cacheHeight: bindings.cacheHeight(),
                   ),
-                  if (_heroTrailerActive)
-                    _HeroTrailerLayer(
-                      trailer: _heroTrailer,
-                      isTelevision: widget.isTelevision,
-                      heroHeight: cardH,
-                      fullBleed: true,
-                      volume: _heroTrailerVolume,
-                      loading: _heroTrailerLoading,
-                      onPlayingChanged: _onHeroTrailerPlaying,
-                      takeover: _heroTrailerTakeover,
-                    ),
-                  if (_heroTrailerActive)
-                    _HeroLiveLayer(
-                      channel: _heroLiveChannel,
-                      streamUrl: _heroLiveUrl,
-                      heroHeight: cardH,
-                      fullBleed: true,
-                      volume: _heroTrailerVolume,
-                      onPlayingChanged: _onHeroTrailerPlaying,
-                      onPlaybackFailed: _onHeroLivePlaybackFailed,
-                    ),
+                  if (bindings.readTrailerActive())
+                    bindings.buildTrailer(cardH),
+                  if (bindings.readTrailerActive())
+                    bindings.buildLive(cardH),
                   // Rounded corners WITHOUT a clip: four ink wedges painted
                   // over the layers. A ClipRRect here would wrap the punch
                   // hole in a saveLayer and break the blend.
                   IgnorePointer(
                     child: CustomPaint(
-                      painter: const _CornerWedges(
+                      painter: const CornerWedges(
                         radius: _kDeckCardRadius,
                         color: Color(0xFF0C0A16),
                       ),
@@ -176,19 +194,19 @@ extension on _SearchScreenState {
               child: IgnorePointer(
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: ValueListenableBuilder<_CanvasFavFocus?>(
-                    valueListenable: _canvasFavFocus,
+                  child: ValueListenableBuilder<CanvasFavFocus?>(
+                    valueListenable: bindings.favourite,
                     builder: (context, fav, _) => fav != null
-                        ? _StageFavIdentity(fav: fav)
-                        : _CanvasIdentity(
-                            item: _heroItem,
-                            enriched: _heroEnriched,
-                            trailerShowing: _heroTrailerShowing,
+                        ? StageFavIdentity(fav: fav)
+                        : CanvasIdentity(
+                            item: bindings.heroItem,
+                            enriched: bindings.enriched,
+                            trailerShowing: bindings.trailerShowing,
                             variant:
                                 boardH - railZoneH >=
-                                    _stageNarrowIdentityH(context)
-                                ? _StageIdentityVariant.narrow
-                                : _StageIdentityVariant.headline,
+                                    stageNarrowIdentityH(context)
+                                ? StageIdentityVariant.narrow
+                                : StageIdentityVariant.headline,
                             maxWidth: (cardLeft - _kDeckPanelPad - 40).clamp(
                               140.0,
                               560.0,
@@ -205,14 +223,14 @@ extension on _SearchScreenState {
               right: 0,
               bottom: 0,
               child: AnimatedSlide(
-                offset: _canvasTheater ? const Offset(0, 0.12) : Offset.zero,
-                duration: _canvasTheater
+                offset: bindings.readTheater() ? const Offset(0, 0.12) : Offset.zero,
+                duration: bindings.readTheater()
                     ? const Duration(milliseconds: 900)
                     : const Duration(milliseconds: 250),
                 curve: Curves.easeOut,
                 child: AnimatedOpacity(
-                  opacity: _canvasTheater ? 0.0 : 1.0,
-                  duration: _canvasTheater
+                  opacity: bindings.readTheater() ? 0.0 : 1.0,
+                  duration: bindings.readTheater()
                       ? const Duration(milliseconds: 900)
                       : const Duration(milliseconds: 250),
                   curve: Curves.easeOut,
@@ -222,9 +240,9 @@ extension on _SearchScreenState {
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(right: _kDeckPanelPad),
-                        child: _deckRailLabel(view),
+                        child: bindings.railLabel(view),
                       ),
-                      const SizedBox(height: _kAtriumLabelGap),
+                      const SizedBox(height: 10),
                       SizedBox(
                         height: railBoxH,
                         child: ListView.builder(
@@ -238,17 +256,17 @@ extension on _SearchScreenState {
                             child: Center(
                               child: SizedBox(
                                 width: favRail
-                                    ? _stageFavW(context, railBoxH)
-                                    : _stagePosterW(railBoxH),
+                                    ? bindings.favouriteWidth(context, railBoxH)
+                                    : bindings.posterWidth(railBoxH),
                                 child: favRail
-                                    ? _canvasFavCell(
+                                    ? bindings.favouriteCell(
                                         rail.favKind!,
                                         railKey,
                                         col,
                                       )
                                     : SizedBox(
                                         height: railBoxH,
-                                        child: _stageShelf.cell(
+                                        child: bindings.shelf.cell(
                                           rail,
                                           railKey,
                                           items,
@@ -271,5 +289,70 @@ extension on _SearchScreenState {
         );
       },
     );
+  }
+
+  /// The two cards stacked behind the hero — the NEXT two titles on this
+  /// rail, drawn from the focused column so moving along the rail deals them
+  /// forward. Static art, no focus, no video.
+  List<Widget> _deckPeeks({
+    required List<StremioMeta> items,
+    required bool favRail,
+    required int focused,
+    required double left,
+    required double top,
+    required double width,
+    required double height,
+  }) {
+    // Favourites rails have no StremioMeta to draw from — the deck simply
+    // shows the single card, which is correct: a favourite has no "next".
+    if (favRail || items.isEmpty) return const [];
+    final at = focused.clamp(0, items.length - 1);
+    final peeks = <Widget>[];
+    // Painted far-to-near so the nearer card overlaps the farther one.
+    for (final spec in const [
+      (step: 2, dx: 0.19, scale: 0.87, alpha: 0.30),
+      (step: 1, dx: 0.10, scale: 0.94, alpha: 0.52),
+    ]) {
+      final i = at + spec.step;
+      if (i >= items.length) continue;
+      final art = wideArtUrl(items[i]);
+      if (art == null || art.isEmpty) continue;
+      peeks.add(
+        Positioned(
+          left: left,
+          top: top,
+          width: width,
+          height: height,
+          child: IgnorePointer(
+            child: AnimatedOpacity(
+              opacity: spec.alpha,
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              child: AnimatedSlide(
+                offset: Offset(spec.dx, 0),
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                child: Transform.scale(
+                  scale: spec.scale,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(_kDeckCardRadius),
+                    child: CachedNetworkImage(
+                      key: ValueKey('deck-peek-${spec.step}-$art'),
+                      imageUrl: art,
+                      fit: BoxFit.cover,
+                      memCacheWidth: 480,
+                      fadeInDuration: Duration.zero,
+                      fadeOutDuration: Duration.zero,
+                      errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return peeks;
   }
 }
