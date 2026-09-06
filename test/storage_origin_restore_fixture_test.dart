@@ -32,6 +32,7 @@ import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/services/storage/device_maintenance_prefs.dart';
+import 'package:debrify/services/remote_control/remote_device_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -1493,10 +1494,10 @@ void main() {
       final raw = await SharedPreferences.getInstance();
       _expectSettings({for (final key in values.keys) key as String: raw.get(key)},
           Map<String, Object?>.from(values));
-      expect(await StorageService.getRemoteControlEnabled(), values['remote_control_enabled']);
-      expect(await StorageService.getRemoteIntroShown(), values['remote_intro_shown']);
-      expect(await StorageService.getRemoteTvDeviceName(), values['remote_tv_device_name']);
-      expect(await StorageService.getRemoteLastDevice(), jsonDecode(values['remote_last_device'] as String));
+      expect(await RemoteDevicePrefs.getRemoteControlEnabled(), values['remote_control_enabled']);
+      expect(await RemoteDevicePrefs.getRemoteIntroShown(), values['remote_intro_shown']);
+      expect(await RemoteDevicePrefs.getRemoteTvDeviceName(), values['remote_tv_device_name']);
+      expect(await RemoteDevicePrefs.getRemoteLastDevice(), jsonDecode(values['remote_last_device'] as String));
     }
 
     Future<void> seedScenario() async {

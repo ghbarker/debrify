@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/remote_control/remote_device_prefs.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
@@ -25,22 +25,22 @@ final _cases =
         key: 'remote_control_enabled',
         fallback: true,
         value: false,
-        read: StorageService.getRemoteControlEnabled,
-        write: (v) => StorageService.setRemoteControlEnabled(v as bool),
+        read: RemoteDevicePrefs.getRemoteControlEnabled,
+        write: (v) => RemoteDevicePrefs.setRemoteControlEnabled(v as bool),
       ),
       (
         key: 'remote_intro_shown',
         fallback: false,
         value: true,
-        read: StorageService.getRemoteIntroShown,
-        write: (v) => StorageService.setRemoteIntroShown(v as bool),
+        read: RemoteDevicePrefs.getRemoteIntroShown,
+        write: (v) => RemoteDevicePrefs.setRemoteIntroShown(v as bool),
       ),
       (
         key: 'remote_tv_device_name',
         fallback: null,
         value: '  Synthetic TV  ',
-        read: StorageService.getRemoteTvDeviceName,
-        write: (v) => StorageService.setRemoteTvDeviceName(v as String),
+        read: RemoteDevicePrefs.getRemoteTvDeviceName,
+        write: (v) => RemoteDevicePrefs.setRemoteTvDeviceName(v as String),
       ),
       (
         key: 'remote_last_device',
@@ -50,9 +50,9 @@ final _cases =
           'port': 17,
           'extra': [true, null],
         },
-        read: StorageService.getRemoteLastDevice,
+        read: RemoteDevicePrefs.getRemoteLastDevice,
         write: (v) =>
-            StorageService.setRemoteLastDevice(v as Map<String, dynamic>),
+            RemoteDevicePrefs.setRemoteLastDevice(v as Map<String, dynamic>),
       ),
     ];
 
@@ -223,15 +223,15 @@ void main() {
   ]) {
     test('remembered JSON $raw returns null without normalization', () async {
       await install({'remote_last_device': raw});
-      expect(await StorageService.getRemoteLastDevice(), isNull);
+      expect(await RemoteDevicePrefs.getRemoteLastDevice(), isNull);
       expect((await backend.getAll())['flutter.remote_last_device'], raw);
       expect(backend.attempts, isEmpty);
     });
   }
   test('device name preserves empty and whitespace strings', () async {
     for (final name in ['', '  ', ' Synthetic TV ']) {
-      await StorageService.setRemoteTvDeviceName(name);
-      expect(await StorageService.getRemoteTvDeviceName(), name);
+      await RemoteDevicePrefs.setRemoteTvDeviceName(name);
+      expect(await RemoteDevicePrefs.getRemoteTvDeviceName(), name);
       expect((await backend.getAll())['flutter.remote_tv_device_name'], name);
     }
   });
@@ -243,13 +243,13 @@ void main() {
         'name': '  ',
         'unknown': {'x': 2},
       };
-      await StorageService.setRemoteLastDevice(device);
+      await RemoteDevicePrefs.setRemoteLastDevice(device);
       final raw = jsonEncode(device);
       expect((await backend.getAll())['flutter.remote_last_device'], raw);
-      final first = (await StorageService.getRemoteLastDevice())!;
+      final first = (await RemoteDevicePrefs.getRemoteLastDevice())!;
       (first['extra'] as List).clear();
       first['new'] = 'local';
-      expect(await StorageService.getRemoteLastDevice(), device);
+      expect(await RemoteDevicePrefs.getRemoteLastDevice(), device);
       expect((await backend.getAll())['flutter.remote_last_device'], raw);
     },
   );
@@ -258,10 +258,10 @@ void main() {
     () async {
       await install({'remote_last_device': '{"old":true}'});
       await expectLater(
-        StorageService.setRemoteLastDevice({'bad': Object()}),
+        RemoteDevicePrefs.setRemoteLastDevice({'bad': Object()}),
         throwsA(isA<JsonUnsupportedObjectError>()),
       );
-      expect(await StorageService.getRemoteLastDevice(), {'old': true});
+      expect(await RemoteDevicePrefs.getRemoteLastDevice(), {'old': true});
       expect(backend.attempts, isEmpty);
     },
   );
@@ -272,14 +272,14 @@ void main() {
         await install({for (final c in _cases) c.key: physical(c.value)});
         backend.mode = mode;
         backend.hold = true;
-        final call = StorageService.clearRemoteLastDevice();
+        final call = RemoteDevicePrefs.clearRemoteLastDevice();
         final completed = mode == 'throw'
             ? expectLater(call, throwsStateError)
             : expectLater(call, completes);
         try {
           await backend.entered.future.timeout(const Duration(seconds: 5));
           ProfileRuntime.publish(b);
-          expect(await StorageService.getRemoteLastDevice(), isNull);
+          expect(await RemoteDevicePrefs.getRemoteLastDevice(), isNull);
           backend.release.complete();
           await completed;
           expect(

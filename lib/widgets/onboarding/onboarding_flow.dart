@@ -22,6 +22,7 @@ import '../../services/profiles/profile_restore_coordinator.dart';
 import '../../services/remote_control/remote_command_router.dart';
 import '../../services/remote_control/remote_constants.dart';
 import '../../services/remote_control/remote_control_state.dart';
+import 'package:debrify/services/remote_control/remote_device_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../services/torbox_account_service.dart';
 import '../../utils/platform_util.dart';
@@ -695,7 +696,7 @@ class _InitialSetupFlowState extends State<InitialSetupFlow> {
     _transition(OnboardStep.importing);
     _attachImportListeners();
     try {
-      var name = await StorageService.getRemoteTvDeviceName();
+      var name = await RemoteDevicePrefs.getRemoteTvDeviceName();
       name ??= await PlatformUtil.getDeviceName();
       name ??= _isTelevision ? 'Debrify TV' : 'This device';
       if (!mounted ||

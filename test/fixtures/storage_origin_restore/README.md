@@ -1615,3 +1615,16 @@ not portable sender identity or imported device configuration.
 Optional public-origin correspondence reverses23sites including4staticgetter
 tearoffs. Neither that reversal nor this adapter claims an identical whole old
 harness; existing helpers and adapters remain necessary. No newgeneration.
+
+
+### Q2 RemoteDevicePrefs caller retirement: old-loader adapter
+
+In the copied loader for unchanged6d26, reverse exactly4same-method
+RemoteDevicePrefs readers to StorageService and remove its owner import.
+Keep all prior adapters, including DeviceMaintenance4, and all recipe/artifact
+bytes. The exclusion fixture proves destination globals, not sender identity
+import, pairing, discovery or native-positive behavior. No new generation.
+
+Optional public-origin correspondence reverses18sites including4staticgetter
+tearoffs. This is not an identical whole old harness; its existing copied-loader
+adaptations and two adapted helpers remain necessary.
