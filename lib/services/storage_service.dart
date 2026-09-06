@@ -1,4 +1,3 @@
-import 'storage/download_destination_prefs.dart';
 
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
@@ -829,20 +828,9 @@ class StorageService {
 
   /// The persisted SAF tree URI for the user-chosen download folder, or null
   /// when downloads go to the default location (Downloads/Debrify).
-  static Future<String?> getDownloadTreeUri() =>
-      DownloadDestinationPrefs.getDownloadTreeUri();
 
-  static Future<String?> getDownloadTreeDisplayName() =>
-      DownloadDestinationPrefs.getDownloadTreeDisplayName();
 
-  static Future<void> setDownloadTreeUri(
-    String treeUri,
-    String displayName,
-  ) =>
-      DownloadDestinationPrefs.setDownloadTreeUri(treeUri, displayName);
 
-  static Future<void> clearDownloadTreeUri() =>
-      DownloadDestinationPrefs.clearDownloadTreeUri();
 
   // ── Custom download location (desktop: plain filesystem path) ───────────
   // Windows/Linux only. macOS is deliberately excluded: the app is sandboxed
@@ -851,14 +839,8 @@ class StorageService {
 
   /// The persisted absolute directory for the user-chosen download folder on
   /// desktop, or null when downloads go to the platform default.
-  static Future<String?> getDownloadDirPath() =>
-      DownloadDestinationPrefs.getDownloadDirPath();
 
-  static Future<void> setDownloadDirPath(String dirPath) =>
-      DownloadDestinationPrefs.setDownloadDirPath(dirPath);
 
-  static Future<void> clearDownloadDirPath() =>
-      DownloadDestinationPrefs.clearDownloadDirPath();
 
 
 

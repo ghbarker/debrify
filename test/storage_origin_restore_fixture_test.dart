@@ -20,6 +20,7 @@ import 'package:debrify/services/profiles/profile_restore_coordinator.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
 import 'package:debrify/services/secret_vault.dart';
+import 'package:debrify/services/storage/download_destination_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -406,13 +407,13 @@ void main() {
   final sourceDestinations = Map<String, String>.from(destinationDomain['sourceValues'] as Map);
   final localDestinations = Map<String, String>.from(destinationDomain['destinationValues'] as Map);
   Future<void> writeDestinations(Map<String, String> values) async {
-    await StorageService.setDownloadTreeUri(values['download_tree_uri_v1']!, values['download_tree_display_name_v1']!);
-    await StorageService.setDownloadDirPath(values['download_dir_path_v1']!);
+    await DownloadDestinationPrefs.setDownloadTreeUri(values['download_tree_uri_v1']!, values['download_tree_display_name_v1']!);
+    await DownloadDestinationPrefs.setDownloadDirPath(values['download_dir_path_v1']!);
   }
   Future<Map<String, Object?>> readDestinations() async => {
-    'download_tree_uri_v1': await StorageService.getDownloadTreeUri(),
-    'download_tree_display_name_v1': await StorageService.getDownloadTreeDisplayName(),
-    'download_dir_path_v1': await StorageService.getDownloadDirPath(),
+    'download_tree_uri_v1': await DownloadDestinationPrefs.getDownloadTreeUri(),
+    'download_tree_display_name_v1': await DownloadDestinationPrefs.getDownloadTreeDisplayName(),
+    'download_dir_path_v1': await DownloadDestinationPrefs.getDownloadDirPath(),
   };
   void expectDestinationExclusions(PortableProfilePackage package) {
     for (final key in destinationKeys) {
