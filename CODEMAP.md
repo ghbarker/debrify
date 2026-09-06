@@ -508,6 +508,10 @@ is an editor mirror, not the source of truth. How to add a provider:
 - WebDAV: `lib/services/webdav_service.dart` (read/browse only — no upload yet).
 
 ## Players
+- Shared playlist data: `lib/models/playlist_entry.dart` owns `PlaylistEntry`.
+  `lib/screens/video_player/models/playlist_entry.dart` remains a compatibility
+  export of the same declaration; cloud services and collection models use the
+  neutral owner directly.
 - In-app player: `lib/screens/video_player_screen.dart` 🔴 (subtitles via media_kit
   `subtitleViewConfiguration`; per-key D-pad handlers arrowUp/Down/Left/Right;
   scrobble via `ScrobbleCoordinator` + `ScrobbleTarget`s in

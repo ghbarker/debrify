@@ -21,7 +21,7 @@ import '../../screens/cloud/cloud_browse_select_source.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../screens/catalog_item_detail_screen.dart';
-import '../../screens/debrify_tv/widgets/tv_focus_scroll_wrapper.dart';
+import '../tv_focus_scroll_wrapper.dart';
 import '../../screens/stremio_tv/widgets/stremio_tv_catalog_picker_dialog.dart';
 import '../add_source_picker_dialog.dart';
 import '../../utils/tv_keys.dart';

@@ -26,7 +26,7 @@ import '../models/rd_file_node.dart';
 import '../models/torbox_torrent.dart';
 import '../models/torbox_file.dart';
 import '../models/webdav_item.dart';
-import '../screens/video_player/models/playlist_entry.dart';
+import '../models/playlist_entry.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_theme_scope.dart';
 

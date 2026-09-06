@@ -16,7 +16,7 @@ import '../services/local_series_completion_service.dart';
 import '../utils/platform_util.dart';
 import '../utils/episode_progress_merge.dart';
 import '../utils/tv_keys.dart';
-import '../screens/debrify_tv/widgets/tv_focus_scroll_wrapper.dart';
+import 'tv_focus_scroll_wrapper.dart';
 import '../theme/app_theme_scope.dart';
 import 'detail/detail_style.dart';
 import 'detail/theme/detail_theme.dart';
