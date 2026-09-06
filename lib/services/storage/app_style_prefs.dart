@@ -12,7 +12,57 @@ import '../profiles/profile_preferences.dart';
 class AppStylePrefs {
   AppStylePrefs._();
 
+  /// Use the in-app DPAD keyboard for text fields on TV (TvTextField) instead
+  /// of the system IME, which can't be navigated with the remote on many
+  /// devices (flutter/flutter#177360 — Chromecast/Google TV, some
+  /// Philips/Samsung panels). On by default on Android TV. Apple TV defaults
+  /// to its system keyboard; the Settings toggle still lets users opt into the
+  /// Debrify keyboard.
+  ///
+  /// [tvKeyboardEnabledCached] mirrors the stored value for synchronous widget
+  /// builds — warmed at startup (main.dart) and kept in sync by the setter.
+  static bool tvKeyboardEnabledCached = !PlatformUtil.isTvOS;
+
+  // Apple TV keyboard default, generation 1 (2026-08): disable the Debrify
+  // keyboard once for every profile, including profiles whose user explicitly
+  // enabled it in an older build. The generation is committed only after the
+  // new value, so a failed/interrupted write retries safely next launch. Once
+  // committed, [setTvKeyboardEnabled] is authoritative and later user changes
+  // are never overwritten.
+  static const int _currentTvosKeyboardDefaultGeneration = 1;
+  static const String _tvosKeyboardDefaultGenerationKey =
+      'tvos_keyboard_default_generation';
+
+  static Future<bool> getTvKeyboardEnabled({
+    bool? tvOs,
+  }) async {
+    final prefs = await ProfilePreferences.instance();
+    final runningOnTvOs = tvOs ?? PlatformUtil.isTvOS;
+    final generation = prefs.getInt(_tvosKeyboardDefaultGenerationKey) ?? 0;
+    if (runningOnTvOs && generation < _currentTvosKeyboardDefaultGeneration) {
+      final disabled = await prefs.setBool('tv_keyboard_enabled', false);
+      if (disabled) {
+        await prefs.setInt(
+          _tvosKeyboardDefaultGenerationKey,
+          _currentTvosKeyboardDefaultGeneration,
+        );
+      }
+    }
+    tvKeyboardEnabledCached =
+        prefs.getBool('tv_keyboard_enabled') ?? !runningOnTvOs;
+    return tvKeyboardEnabledCached;
+  }
+
+  static Future<void> setTvKeyboardEnabled(bool enabled) async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.setBool('tv_keyboard_enabled', enabled);
+    tvKeyboardEnabledCached = enabled;
+  }
+
+
   static const Set<String> ownedKeys = {
+    'tv_keyboard_enabled',
+    _tvosKeyboardDefaultGenerationKey,
     _phoneNavStyleKey,
     _phoneNavBarIndicesKey,
     debrifyTvStyleKey,

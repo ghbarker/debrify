@@ -279,6 +279,13 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   consumers directly to AmbientTrailerPrefs. Retirement removes15 host lines
   (14 declarations + import), whole production -10; prior owner move -69 host
   included docs/separators and added32 whole. Strict ownership remains OPEN.
+  **TV keyboard policy:** AppStylePrefs owns the profile bool/generation pair,
+  two migration/access bodies and one synchronous keyboard cache. StorageService
+  retains two nonasync APIs and sync cache accessors; its original first reset
+  assignment and AppStylePrefs.resetCaches are unchanged. Only the owner tvOs
+  parameter loses its testing annotation for forwarding; the host retains it.
+  Host -37 includes docs; whole production +13. Q2 compatibility and strict
+  Storage ownership closure remain open; no native keyboard proof is claimed.
   **Download destinations:** `lib/services/storage/download_destination_prefs.dart`
   owns three profile-scoped String keys and seven persistence bodies; OS grants
   remain with callers. Q2 retired all seven StorageService APIs; callers route

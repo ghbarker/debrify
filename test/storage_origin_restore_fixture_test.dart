@@ -532,6 +532,126 @@ void main() {
 
 
   // Separately counted destination exclusions; no OS grants are exercised.
+  // Two physical states: portable legacy absence versus committed generation.
+  final keyboardDomain = _recipe['residualDomains']['tv-keyboard'] as Map;
+  for (final entry in (keyboardDomain['cases'] as Map).entries) {
+    final scenario = entry.key as String;
+    final values = Map<String, Object?>.from((entry.value as Map)['values'] as Map);
+    final expectedRead = (entry.value as Map)['expectedRead'] as bool;
+    const enabledKey = 'tv_keyboard_enabled';
+    const generationKey = 'tvos_keyboard_default_generation';
+    const physicalKeys = [enabledKey, generationKey];
+    if (_generate) {
+      test('$scenario: generate actual pre-S2 keyboard state', () async {
+        final head = await Process.run('git', ['rev-parse', 'HEAD']);
+        expect(head.exitCode, 0);
+        expect(head.stdout.toString().trim(), _origin);
+        final diff = await Process.run('git', ['diff', '--exit-code', _origin, '--', 'lib']);
+        expect(diff.exitCode, 0, reason: 'Old production must remain unchanged');
+        final config = File('.dart_tool/package_config.json');
+        final metadata = jsonDecode(await config.readAsString()) as Map;
+        final app = (metadata['packages'] as List).cast<Map>().singleWhere((e) => e['name'] == 'debrify');
+        final library = config.absolute.uri.resolve(app['rootUri'] as String).resolve(app['packageUri'] as String).resolve('services/storage_service.dart');
+        expect(p.equals(library.toFilePath(), p.join(Directory.current.path, 'lib', 'services', 'storage_service.dart')), isTrue);
+        final prefs = await ProfilePreferences.instance();
+        // Do not call the public migration getter before exporting raw state.
+        await prefs.setBool(enabledKey, true);
+        if (values.containsKey(generationKey)) {
+          await prefs.setInt(generationKey, values[generationKey] as int);
+        }
+        _expectSettings({for (final key in values.keys) key: prefs.get(key)}, values);
+        expect(prefs.containsKey(generationKey), values.containsKey(generationKey));
+        final package = await export();
+        _expectSettings(_values(package), values);
+        expect(package.resources, isEmpty);
+        final bytes = await PortableProfilePackage.encodeEncryptedBytes(package, _passphrase);
+        final decoded = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+        _expectSettings(_values(decoded), values);
+        await File('$_directory/$scenario.encrypted.json').writeAsBytes(bytes);
+        await File('$_directory/$scenario.manifest.json').writeAsString(const JsonEncoder.withIndent('  ').convert({
+          'origin': _origin, 'scenario': scenario, 'syntheticOnly': true,
+          'sha256': await _digest(bytes), 'includeSecrets': false,
+          'representedSettings': values,
+          'keyTypes': values.map((key, value) => MapEntry(key, _type(value))),
+          'absentKeys': [if (!values.containsKey(generationKey)) generationKey],
+          'excludedKeys': <String>[], 'expectedPublicRead': expectedRead,
+          'rawSeed': 'ProfilePreferences bool/int; no public migration getter before export',
+          'omissions': package.omissions,
+        }));
+      });
+    } else {
+      test('$scenario: restore physical state then public migration', () async {
+        final manifest = jsonDecode(await File('$_directory/$scenario.manifest.json').readAsString()) as Map;
+        final bytes = await File('$_directory/$scenario.encrypted.json').readAsBytes();
+        expect(manifest['origin'], _origin);
+        expect(manifest['syntheticOnly'], isTrue);
+        expect(manifest['sha256'], await _digest(bytes));
+        expect(manifest['representedSettings'], values);
+        expect(manifest['keyTypes'], values.map((key, value) => MapEntry(key, _type(value))));
+        expect(manifest['absentKeys'], [if (!values.containsKey(generationKey)) generationKey]);
+        expect(manifest['excludedKeys'], isEmpty);
+        expect(manifest['expectedPublicRead'], expectedRead);
+        var package = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+        _expectSettings(_values(package), values);
+        expect(package.resources, isEmpty);
+        if (_mutation.isNotEmpty) {
+          expect(scenario, 'tv-keyboard-committed');
+          final mutation = (keyboardDomain['mutations'] as Map)[_mutation] as Map;
+          final changed = {...values};
+          final key = mutation['key'] as String;
+          if (mutation['operation'] == 'rename') {
+            changed['synthetic_wrong_keyboard_key'] = changed.remove(key);
+          } else {
+            changed[key] = mutation['value'];
+          }
+          final mutant = PortableProfilePackage(
+            mode: package.mode, createdAt: package.createdAt, profiles: package.profiles,
+            resources: package.resources, omissions: package.omissions,
+            sections: {...package.sections,
+              package.profiles.single['preferencesSection'] as String: await PortableProfilePackage.buildSection(changed)},
+          );
+          package = await PortableProfilePackage.decrypt(await PortableProfilePackage.encrypt(mutant, _passphrase), _passphrase);
+          _expectSettings(_values(package), changed);
+        }
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('p.$profileId.g.1.$enabledKey', false);
+        expect(prefs.containsKey('p.$profileId.g.1.$generationKey'), isFalse);
+        for (final key in physicalKeys) {
+          await prefs.setString('p.$otherProfileId.g.1.$key', 'synthetic other profile');
+          await prefs.setString('p.$profileId.g.7.$key', 'synthetic other generation');
+        }
+        await prefs.setString('p.$profileId.g.1.keyboard_fixture_sentinel', 'untouched');
+        // Default empty lifecycle participants: explicit public read below,
+        // not application bootstrap or real device keyboard evidence.
+        final report = await ProfileRestoreCoordinator(registry: registry, cipher: cipher).restore(
+          package: package, destinationProfileId: profileId,
+          authorization: await ProfileAuthorizationContext.capture(registry),
+        );
+        expect(report.publishedGeneration, 2);
+        final prefix = ProfileRuntime.capture().preferencePrefix;
+        // Mutants must fail HERE after valid decoding and completed restore.
+        _expectSettings({for (final key in physicalKeys) if (prefs.containsKey('$prefix$key')) key: prefs.get('$prefix$key')}, values);
+        expect(await StorageService.getTvKeyboardEnabled(tvOs: true), expectedRead);
+        expect(StorageService.tvKeyboardEnabledCached, expectedRead);
+        final after = {enabledKey: expectedRead, generationKey: 1};
+        _expectSettings({for (final key in physicalKeys) key: prefs.get('$prefix$key')}, after);
+        expect(await StorageService.getTvKeyboardEnabled(tvOs: true), expectedRead);
+        _expectSettings({for (final key in physicalKeys) key: prefs.get('$prefix$key')}, after);
+        expect(prefs.getBool('p.$profileId.g.1.$enabledKey'), isFalse);
+        expect(prefs.containsKey('p.$profileId.g.1.$generationKey'), isFalse);
+        for (final key in physicalKeys) {
+          expect(prefs.get('p.$otherProfileId.g.1.$key'), 'synthetic other profile');
+          expect(prefs.get('p.$profileId.g.7.$key'), 'synthetic other generation');
+        }
+        expect(prefs.get('p.$profileId.g.1.keyboard_fixture_sentinel'), 'untouched');
+        expect(prefs.get('${prefix}keyboard_fixture_sentinel'), 'untouched');
+        for (final secrets in [false, true]) {
+          _expectSettings(_values(await export(includeSecrets: secrets)), {...after, 'keyboard_fixture_sentinel': 'untouched'});
+        }
+      });
+    }
+  }
+
   const destinationScenario = 'download-destination-exclusion';
   final destinationDomain = _recipe['residualDomains'][destinationScenario] as Map;
   final destinationKeys = (destinationDomain['excludedKeys'] as List).cast<String>();
