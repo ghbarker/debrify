@@ -157,3 +157,31 @@ shape/caption rendering, Home Rows persistence and See All propagation have
 widget tests. This does not substitute for an Android TV hardware pass through
 all six layouts, focus GIFs and active trailer transitions. Remaining Part 2
 P3s are deferred, apart from the adjacent fixes explicitly listed above.
+
+## Replay and All-view follow-up (Part 3, 2026-09-07)
+
+Starting at `06290656`, the new regression tests reproduced both reported
+All-view failures (an overlapping source and a client-filtered window) and a
+collection deletion lost during pending-apply replay.
+
+- All ignores individual no-progress windows while sibling sources advance.
+  Genuine transport errors still surface, and exhausting the shared eight-window
+  budget still produces a resumable retry state.
+- Replay journals converted collection tombstones in the adapter's `beforeWrite`
+  hook, inside the preference mutation fence, before local markers disappear.
+  The successful replay state update also retains those tombstones with the
+  baseline. The regression interrupts a normal apply, deletes a collection,
+  crashes again after replay materialization, restarts and verifies convergence
+  on a peer still holding the live record.
+- Empty-object and null-`metas` catalog responses are accepted as exhaustion,
+  matching Home/See All. Wrongly typed `metas` remains an uncached retryable
+  failure. This supersedes the earlier missing-array strictness.
+
+The low-impact addon-signature and live See All preference limitations, and
+remaining P3 findings, are not addressed in this pass.
+
+Validation: **841 tests passed** across the same collections, WebDAV, backup,
+profile, Home and Spotlight suites used in Part 2. Full debug Dart bundle
+build succeeded. Analysis of all PR-touched Dart files found no errors or
+warnings and the same 27 existing informational diagnostics. Hardware TV
+validation remains outstanding.

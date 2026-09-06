@@ -2414,13 +2414,10 @@ class StremioService {
         }
 
         final Map<String, dynamic> data = await decodeJsonAsync(response.body);
-        final rawMetas = data['metas'];
-        if (rawMetas is! List) {
-          // A successful HTTP status without a catalog payload is an addon
-          // failure, not proof that its catalog has ended.
-          return [];
-        }
-        final metasRaw = rawMetas;
+        // Some addons signal exhaustion with {} or metas: null. Match the
+        // catalog browsers' empty-list convention while rejecting wrong types.
+        final metasRaw = data['metas'] ?? const <dynamic>[];
+        if (metasRaw is! List) return [];
         onRawCount?.call(metasRaw.length);
 
         if (metasRaw.isEmpty) {

@@ -70,7 +70,10 @@ class CollectionFolderLoader {
   int get resolvedSourceCount => _sources.length;
   List<String> get unresolved => List.unmodifiable(_unresolved);
   bool get exhausted => _sources.every((s) => s.exhausted);
-  bool get hasErrors => _stalled || _sources.any((s) => s.error != null);
+  // A source can have an empty/overlapping window while its siblings advance.
+  // Only the shared budget exhausting makes no-progress an All-view error.
+  bool get hasErrors =>
+      _stalled || _sources.any((s) => s.error != null && !s.noProgress);
 
   void reset() {
     _seen.clear();

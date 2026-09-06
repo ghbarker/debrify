@@ -175,9 +175,11 @@ updated implementation on each device that edits collections; the original PR's
 array-only store cannot read the upgraded inventory.
 
 Catalog paging advances by the raw response count, including filtered-out or
-overlapping results. Only an empty raw catalog response means the end. Failed
-requests, responses without a `metas` array, and addons that make no progress
-show a retryable state. All shares an eight-request-per-source budget for each
+overlapping results. An empty raw catalog response means the end, including
+`{}` and `{"metas": null}`, consistent with Home and See All. Failed requests
+and wrongly typed `metas` values show a retryable state. In All, one source's
+filtered or overlapping window does not interrupt another source's progress;
+no-progress becomes retryable only when the shared attempt budget is exhausted. All shares an eight-request-per-source budget for each
 page attempt, including filtered and duplicate-only windows. Retry bypasses the
 cache for the retried rail request, then normal cache use resumes. Initial rail
 loads and the merged view use bounded concurrency; retries retain the selected

@@ -511,7 +511,7 @@ void main() {
     });
   });
 
-  test('HTTP 200 without metas remains retryable and is not cached', () async {
+  test('HTTP 200 with wrongly typed metas remains retryable and is not cached', () async {
     final a = addon(id: 'malformed-response');
     final pager = CollectionCatalogPager(
       addon: a,
@@ -521,7 +521,7 @@ void main() {
     );
     await http.runWithClient(
       () => pager.nextPage(),
-      () => MockClient((_) async => http.Response('{}', 200)),
+      () => MockClient((_) async => http.Response('{"metas":{}}', 200)),
     );
     expect(pager.exhausted, false);
     expect(pager.error, isNotNull);
@@ -532,6 +532,29 @@ void main() {
     expect(pager.exhausted, true);
     expect(pager.error, isNull);
   });
+
+  for (final body in ['{}', '{"metas":null}', '{"metas":[]}']) {
+    test('catalog end response $body exhausts a folder without Retry', () async {
+      StremioService.instance.invalidateCache();
+      final a = addon(id: 'empty-response');
+      var calls = 0;
+      final pager = CollectionCatalogPager(
+        addon: a, catalog: a.catalogs.single,
+        fetch: (a, c, {skip = 0, genre, onRawCount}) => StremioService.instance
+            .fetchCatalog(a, c, skip: skip, genre: genre, onRawCount: onRawCount),
+      );
+      await http.runWithClient(() async {
+        expect(await pager.nextPage(), isEmpty);
+        expect(await pager.nextPage(), isEmpty);
+      }, () => MockClient((_) async {
+        calls++;
+        return http.Response(body, 200);
+      }));
+      expect(calls, 1);
+      expect(pager.exhausted, true);
+      expect(pager.error, isNull);
+    });
+  }
 
   test('hidden collection rows and non-Home modes do not claim catalogs', () {
     final installed = [addon()];

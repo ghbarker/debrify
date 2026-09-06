@@ -90,6 +90,76 @@ void main() {
       expect(loader.hasErrors, true);
     },
   );
+  for (final filtered in [false, true]) {
+    test(
+      'All keeps paging when one source ${filtered ? 'is filtered' : 'overlaps'}',
+      () async {
+        final other = StremioAddon(
+          id: 'b',
+          name: 'B',
+          manifestUrl: 'https://example.invalid/b/manifest.json',
+          baseUrl: 'https://example.invalid/b',
+          catalogs: addon.catalogs,
+        );
+        final loader = CollectionFolderLoader(
+          folder: const HomeCollectionFolder(
+            id: 'f',
+            title: 'F',
+            sources: [
+              CollectionCatalogSource(
+                addonId: 'a',
+                type: 'movie',
+                catalogId: 'popular',
+              ),
+              CollectionCatalogSource(
+                addonId: 'b',
+                type: 'movie',
+                catalogId: 'popular',
+              ),
+            ],
+          ),
+          installedAddons: [addon, other],
+          fetch: (a, c, {skip = 0, genre, onRawCount}) async {
+            onRawCount?.call(skip < 3 ? 1 : 0);
+            if (skip >= 3) return [];
+            if (a.id == 'b') return [meta('b$skip')];
+            if (skip == 1) return filtered ? [] : [meta('a0')];
+            return [meta('a$skip')];
+          },
+        );
+        expect((await loader.nextPage()).map((m) => m.id), ['a0', 'b0']);
+        expect((await loader.nextPage()).map((m) => m.id), ['b1']);
+        expect(loader.hasErrors, false);
+        expect(loader.exhausted, false);
+        expect((await loader.nextPage()).map((m) => m.id), ['a2', 'b2']);
+        expect(await loader.nextPage(), isEmpty);
+        expect(loader.exhausted, true);
+        expect(loader.hasErrors, false);
+      },
+    );
+  }
+
+  test('All still reports genuine transport failures', () async {
+    final loader = CollectionFolderLoader(
+      folder: const HomeCollectionFolder(
+        id: 'f',
+        title: 'F',
+        sources: [
+          CollectionCatalogSource(
+            addonId: 'a',
+            type: 'movie',
+            catalogId: 'popular',
+          ),
+        ],
+      ),
+      installedAddons: [addon],
+      fetch: (a, c, {skip = 0, genre, onRawCount}) async => [],
+    );
+    expect(await loader.nextPage(), isEmpty);
+    expect(loader.hasErrors, true);
+    expect(loader.exhausted, false);
+  });
+
   test('raw end of catalog stops future network calls', () async {
     var calls = 0;
     final p = pager((a, c, {skip = 0, genre, onRawCount}) async {
