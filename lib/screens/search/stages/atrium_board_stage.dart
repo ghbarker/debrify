@@ -40,14 +40,21 @@ extension on _SearchScreenState {
         // The wall gets a BUDGET (a share of the board) and the row box is
         // derived from what fits inside it, so two scaled labels and a large
         // text scale can shrink the rows instead of running off the board.
-        final labelH = _atriumLabelHeight(context);
+        final labelWidth = boardW - splitX - _kAtriumWallPad * 2;
+        final topLabel = _atriumRailLabel(rails, active);
+        final bottomLabel = hasSecondRow ? _atriumRailLabel(rails, active + 1) : null;
+        final topLabelH = _measureAtriumRailLabel(context, topLabel, labelWidth);
+        final bottomLabelH = bottomLabel == null
+            ? 0.0
+            : _measureAtriumRailLabel(context, bottomLabel, labelWidth);
         // The wall gets a BUDGET. If two rows at the accessibility floor
         // (scaled caption + a recognisable poster) don't fit inside it, show
         // ONE row rather than two clipped ones — the second rail is still one
         // DOWN away.
         final floorH = _homeArtPosterCaptionBand + _kStageMinPosterH;
         double chromeFor(int rows) =>
-            rows * (labelH + _kAtriumLabelGap) +
+            topLabelH + (rows == 2 ? bottomLabelH : 0) +
+            rows * _kAtriumLabelGap +
             (rows - 1) * _kAtriumRowGap +
             _kAtriumWallTail;
         final wallBudget = boardH * _kAtriumWallBudget;
@@ -61,9 +68,10 @@ extension on _SearchScreenState {
           min(boardH * 0.22, budget / rows),
           maxH: max(budget / rows, floorH),
         );
-        final rowUnit = labelH + _kAtriumLabelGap + rowBoxH;
+        final topRowUnit = topLabelH + _kAtriumLabelGap + rowBoxH;
+        final bottomRowUnit = bottomLabelH + _kAtriumLabelGap + rowBoxH;
         final wallH =
-            (showSecondRow ? rowUnit * 2 + _kAtriumRowGap : rowUnit) +
+            (showSecondRow ? topRowUnit + bottomRowUnit + _kAtriumRowGap : topRowUnit) +
             _kAtriumWallTail;
 
         return Stack(
@@ -217,6 +225,7 @@ extension on _SearchScreenState {
                     rowBoxH,
                     isTopRow: true,
                     hasRowBelow: showSecondRow,
+                    label: topLabel,
                   ),
                   if (showSecondRow) ...[
                     const SizedBox(height: _kAtriumRowGap),
@@ -226,6 +235,7 @@ extension on _SearchScreenState {
                       rowBoxH,
                       isTopRow: false,
                       hasRowBelow: false,
+                      label: bottomLabel!,
                     ),
                   ],
                   const SizedBox(height: _kAtriumWallTail),
