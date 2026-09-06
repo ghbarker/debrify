@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:debrify/screens/settings/detail_theme_page.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/theme/app_looks.dart';
 import 'package:debrify/theme/app_theme.dart';
@@ -81,7 +82,7 @@ void main() {
 
       // A manual change to ONE key the Look names — exactly what a user does
       // by opening a picker afterwards.
-      await StorageService.setDetailPageStyle('stage');
+      await AppStylePrefs.setDetailPageStyle('stage');
       expect(AppLooks.active()?.id, isNot('classic'),
           reason: 'a stored "current Look" would still claim classic here');
     });

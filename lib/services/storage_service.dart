@@ -482,22 +482,8 @@ class StorageService {
   static Future<void> setTvUiScalePercent(int percent) => AppStylePrefs.setTvUiScalePercent(percent);
   static Future<TvHeroArtworkQuality> getTvHeroArtworkQuality() => AppStylePrefs.getTvHeroArtworkQuality();
   static Future<void> setTvHeroArtworkQuality(TvHeroArtworkQuality quality) => AppStylePrefs.setTvHeroArtworkQuality(quality);
-  static Future<String> getPhoneNavStyle() => AppStylePrefs.getPhoneNavStyle();
-  static Future<void> setPhoneNavStyle(String style) => AppStylePrefs.setPhoneNavStyle(style);
-  static Future<List<int>?> getPhoneNavBarIndices() => AppStylePrefs.getPhoneNavBarIndices();
-  static Future<void> setPhoneNavBarIndices(List<int> indices) => AppStylePrefs.setPhoneNavBarIndices(indices);
   static Future<String> getDebrifyTvStyle() => AppStylePrefs.getDebrifyTvStyle();
   static Future<void> setDebrifyTvStyle(String style) => AppStylePrefs.setDebrifyTvStyle(style);
-  static Future<String> getDetailPageStyle() => AppStylePrefs.getDetailPageStyle();
-  static Future<void> setDetailPageStyle(String value) => AppStylePrefs.setDetailPageStyle(value);
-  static Future<String> getDetailTheme() => AppStylePrefs.getDetailTheme();
-  static Future<void> setDetailTheme(String value) => AppStylePrefs.setDetailTheme(value);
-  static Future<String> getAppTheme() => AppStylePrefs.getAppTheme();
-  static Future<void> setAppTheme(String value) => AppStylePrefs.setAppTheme(value);
-  static Future<String> getThemeOverrides() => AppStylePrefs.getThemeOverrides();
-  static Future<void> setThemeOverrides(String raw) => AppStylePrefs.setThemeOverrides(raw);
-  static Future<String> getParentsGuideStyle() => AppStylePrefs.getParentsGuideStyle();
-  static Future<void> setParentsGuideStyle(String value) => AppStylePrefs.setParentsGuideStyle(value);
   static Future<bool> getIptvChannelPreviewEnabled() => AppStylePrefs.getIptvChannelPreviewEnabled();
   static Future<void> setIptvChannelPreviewEnabled(bool enabled) => AppStylePrefs.setIptvChannelPreviewEnabled(enabled);
   static Future<String> getIptvStyle() => AppStylePrefs.getIptvStyle();
@@ -522,19 +508,8 @@ class StorageService {
   static Future<void> setDiscoverLastSource(String value) => AppStylePrefs.setDiscoverLastSource(value);
   static Future<String> getDiscoverLayout() => AppStylePrefs.getDiscoverLayout();
   static Future<void> setDiscoverLayout(String layout) => AppStylePrefs.setDiscoverLayout(layout);
-  static Future<String> getLaunchAnimation() => AppStylePrefs.getLaunchAnimation();
-  static Future<void> setLaunchAnimation(String value) => AppStylePrefs.setLaunchAnimation(value);
-  static Future<String> getLaunchIdentPalette() => AppStylePrefs.getLaunchIdentPalette();
-  static Future<void> setLaunchIdentPalette(String value) => AppStylePrefs.setLaunchIdentPalette(value);
-  static Future<String> getTextBrightness() => AppStylePrefs.getTextBrightness();
-  static Future<void> setTextBrightness(String value) => AppStylePrefs.setTextBrightness(value);
   static Future<String> getTvSidebarStyle() => AppStylePrefs.getTvSidebarStyle();
   static Future<void> setTvSidebarStyle(String style) => AppStylePrefs.setTvSidebarStyle(style);
-  static Future<String> getDesktopSidebarStyle() => AppStylePrefs.getDesktopSidebarStyle();
-  static Future<void> setDesktopSidebarStyle(String style) => AppStylePrefs.setDesktopSidebarStyle(style);
-  static Future<SidebarConfiguration> getSidebarConfiguration() => AppStylePrefs.getSidebarConfiguration();
-  static Future<bool> setSidebarConfiguration(SidebarConfiguration configuration) => AppStylePrefs.setSidebarConfiguration(configuration);
-  static Future<bool> resetSidebarConfiguration() => AppStylePrefs.resetSidebarConfiguration();
 
 
 

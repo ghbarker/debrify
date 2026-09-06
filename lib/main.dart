@@ -61,6 +61,7 @@ import 'models/profiles/user_profile.dart';
 import 'models/sidebar_configuration.dart';
 import 'services/secret_vault.dart';
 import 'services/play_loader_style.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'services/storage_service.dart';
 import 'services/tv_hero_artwork_quality_controller.dart';
 import 'services/tvos_top_shelf_service.dart';
@@ -609,8 +610,8 @@ Future<void> _continueApplicationStartup() async {
   await _bestEffortStartupStep('layout-pref-warms', () async {
     await StorageService.getTvHomeStyle();
     await StorageService.getTvSidebarStyle();
-    await StorageService.getDesktopSidebarStyle();
-    await StorageService.getSidebarConfiguration();
+    await AppStylePrefs.getDesktopSidebarStyle();
+    await AppStylePrefs.getSidebarConfiguration();
     // Debrify TV reads its mirror synchronously on first build; warmed here,
     // AFTER the migration, so frame one draws what generation 3 just wrote.
     await StorageService.getDebrifyTvStyle();
@@ -670,26 +671,26 @@ Future<void> _continueApplicationStartup() async {
   // initState, so an async-only read would flash the default ident's world
   // for a frame. A cosmetic pref must never block startup.
   try {
-    await StorageService.getLaunchAnimation();
-    await StorageService.getLaunchIdentPalette();
+    await AppStylePrefs.getLaunchAnimation();
+    await AppStylePrefs.getLaunchIdentPalette();
   } catch (_) {}
   // Warms the details-page layout choice: MergedDetailScreen picks its body in
   // the first build, so an async-only read would paint Classic for a frame and
   // then re-lay-out the entire page. Same rule — a cosmetic pref must never
   // block startup.
   try {
-    await StorageService.getDetailPageStyle();
+    await AppStylePrefs.getDetailPageStyle();
   } catch (_) {}
   // And the details THEME, for the same reason — the page resolves both in its
   // first build, so a stored choice must be readable before the first frame.
   try {
-    await StorageService.getDetailTheme();
+    await AppStylePrefs.getDetailTheme();
   } catch (_) {}
   // Parents Guide chooses its presentation synchronously when metadata lands.
   // Warm the cosmetic preference so a stored Classic choice never flashes
   // Compass for one frame.
   try {
-    await StorageService.getParentsGuideStyle();
+    await AppStylePrefs.getParentsGuideStyle();
   } catch (_) {}
   // Apple TV hardware generation, warmed FIRST because everything below keys
   // off it: the artwork decode bounds, the image-cache cap, the Home board's
@@ -2715,11 +2716,11 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
   }
 
   Future<void> _loadPhoneNavPrefs() async {
-    final style = await StorageService.getPhoneNavStyle();
-    final picks = await StorageService.getPhoneNavBarIndices();
+    final style = await AppStylePrefs.getPhoneNavStyle();
+    final picks = await AppStylePrefs.getPhoneNavBarIndices();
     final tvSidebar = await StorageService.getTvSidebarStyle();
-    final desktopSidebar = await StorageService.getDesktopSidebarStyle();
-    final sidebarConfiguration = await StorageService.getSidebarConfiguration();
+    final desktopSidebar = await AppStylePrefs.getDesktopSidebarStyle();
+    final sidebarConfiguration = await AppStylePrefs.getSidebarConfiguration();
     if (!mounted) return;
     MainPageBridge.phoneNavStyleCached = style;
     setState(() {
@@ -3871,7 +3872,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                           onBarEdited: (picks) {
                             setState(() => _phoneNavBarPicks = picks);
                             unawaited(
-                              StorageService.setPhoneNavBarIndices(picks),
+                              AppStylePrefs.setPhoneNavBarIndices(picks),
                             );
                           },
                           onRemoteControlTap: () {

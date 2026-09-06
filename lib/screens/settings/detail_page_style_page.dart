@@ -2,6 +2,7 @@ import '../../theme/app_looks.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/analytics_service.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../utils/platform_util.dart';
 import 'widgets/settings_widgets.dart';
@@ -169,7 +170,7 @@ class _DetailPageStylePageState extends State<DetailPageStylePage> {
   }
 
   Future<void> _load() async {
-    final style = await StorageService.getDetailPageStyle();
+    final style = await AppStylePrefs.getDetailPageStyle();
     if (!mounted) return;
     setState(() {
       // Narrowed, so a value this build can't draw still shows a selection.
@@ -194,7 +195,7 @@ class _DetailPageStylePageState extends State<DetailPageStylePage> {
     // Tell an in-flight Look apply that a human just chose this key, so it
     // does not stamp over the choice. See theme/app_looks.dart.
     LookApplier.noteExternalWrite('detail_page_style');
-    await StorageService.setDetailPageStyle(value);
+    await AppStylePrefs.setDetailPageStyle(value);
   }
 
   @override

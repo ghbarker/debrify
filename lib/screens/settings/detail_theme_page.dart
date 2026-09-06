@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/analytics_service.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import '../../theme/premium_looks.dart';
 import '../../utils/platform_util.dart';
 import '../../widgets/detail/theme/detail_theme.dart';
@@ -69,8 +69,8 @@ class _DetailThemePageState extends State<DetailThemePage> {
   }
 
   Future<void> _load() async {
-    final theme = await StorageService.getDetailTheme();
-    final style = await StorageService.getDetailPageStyle();
+    final theme = await AppStylePrefs.getDetailTheme();
+    final style = await AppStylePrefs.getDetailPageStyle();
     if (!mounted) return;
     setState(() {
       _theme = effectiveDetailTheme(theme);
@@ -90,7 +90,7 @@ class _DetailThemePageState extends State<DetailThemePage> {
   Future<void> _select(String value) async {
     if (value == _theme) return;
     setState(() => _theme = value);
-    await StorageService.setDetailTheme(value);
+    await AppStylePrefs.setDetailTheme(value);
   }
 
   @override

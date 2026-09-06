@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../services/analytics_service.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../utils/platform_util.dart';
 import '../../widgets/launch/launch_ident.dart';
@@ -64,7 +65,7 @@ class _LaunchAnimationPageState extends State<LaunchAnimationPage> {
     // Tell an in-flight Look apply that a human just chose this key, so it
     // does not stamp over the choice. See theme/app_looks.dart.
     LookApplier.noteExternalWrite('launch_animation');
-    await StorageService.setLaunchAnimation(choice.id);
+    await AppStylePrefs.setLaunchAnimation(choice.id);
   }
 
   Future<void> _selectPalette(String value) async {
@@ -74,7 +75,7 @@ class _LaunchAnimationPageState extends State<LaunchAnimationPage> {
     // in-flight apply would stamp over a choice made here. Same reason every
     // other Appearance picker announces itself.
     LookApplier.noteExternalWrite('launch_ident_palette');
-    await StorageService.setLaunchIdentPalette(value);
+    await AppStylePrefs.setLaunchIdentPalette(value);
   }
 
   @override

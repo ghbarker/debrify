@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import '../services/storage_service.dart';
 import '../services/text_brightness.dart';
 import 'dart:async';
@@ -97,12 +98,12 @@ class AppThemeController extends ChangeNotifier {
   /// the notify costs the startup path nothing.
   static Future<void> warm() async {
     try {
-      instance._id = await StorageService.getAppTheme();
+      instance._id = await AppStylePrefs.getAppTheme();
       // Decoded here rather than on every recompute: a malformed value costs
       // one parse at startup and degrades to none, and the running app never
       // touches storage to answer "what did the user change".
       instance._overrides =
-          ThemeOverrides.decode(await StorageService.getThemeOverrides());
+          ThemeOverrides.decode(await AppStylePrefs.getThemeOverrides());
       // Notify LAST, after both inputs have landed: TextBrightnessController
       // warms first and can already have driven a recompute against the
       // outgoing profile's id, so this is what supersedes it.
@@ -137,7 +138,7 @@ class AppThemeController extends ChangeNotifier {
       // (e.g. applying the Classic Look on a legacy app) is still an
       // explicit choice, and the defaults-generation migration reads an
       // absent `app_theme` key as "never chosen". Persist it quietly.
-      unawaited(StorageService.setAppTheme(normalized).catchError((_) {}));
+      unawaited(AppStylePrefs.setAppTheme(normalized).catchError((_) {}));
       return;
     }
     _id = normalized;
@@ -154,14 +155,14 @@ class AppThemeController extends ChangeNotifier {
     final seq = ++_persistSeq;
     try {
       if (normalized != AppThemes.legacyId) {
-        await StorageService.setDetailTheme(normalized);
+        await AppStylePrefs.setDetailTheme(normalized);
         // Superseded mid-flight: the newer select owns the final state, and
         // writing app_theme now could land AFTER its writes. Our detail write
         // is harmless — the newer call's own detail write was issued later
         // and the preference channel is FIFO, so it wins the key.
         if (seq != _persistSeq) return;
       }
-      await StorageService.setAppTheme(normalized);
+      await AppStylePrefs.setAppTheme(normalized);
     } catch (e) {
       debugPrint('AppThemeController: persist failed: $e');
     }
@@ -204,7 +205,7 @@ class AppThemeController extends ChangeNotifier {
     // mid-select made select bail after writing `detail_theme` and never write
     // `app_theme`, leaving the two disagreeing after a restart.
     try {
-      await StorageService.setThemeOverrides(value.encode());
+      await AppStylePrefs.setThemeOverrides(value.encode());
     } catch (e) {
       debugPrint('AppThemeController: override persist failed: $e');
     }

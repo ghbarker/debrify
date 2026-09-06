@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'storage_service.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 
 /// App-wide text brightness (Appearance → Text Brightness).
 ///
@@ -75,7 +75,7 @@ abstract final class TextBrightnessController {
   static Future<void> warm() async {
     try {
       notifier.value =
-          TextBrightness.fromPref(await StorageService.getTextBrightness());
+          TextBrightness.fromPref(await AppStylePrefs.getTextBrightness());
     } catch (e) {
       debugPrint('TextBrightnessController: warm failed, staying bright: $e');
     }
@@ -90,7 +90,7 @@ abstract final class TextBrightnessController {
   static Future<void> select(TextBrightness choice) async {
     notifier.value = choice;
     try {
-      await StorageService.setTextBrightness(choice.value);
+      await AppStylePrefs.setTextBrightness(choice.value);
     } catch (e) {
       debugPrint('TextBrightnessController: persist failed: $e');
     }

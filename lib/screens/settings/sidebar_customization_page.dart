@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import '../../models/sidebar_configuration.dart';
 import '../../services/analytics_service.dart';
 import '../../services/main_page_bridge.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/platform_util.dart';
 import '../../utils/tv_keys.dart';
@@ -80,7 +80,7 @@ class _SidebarCustomizationPageState extends State<SidebarCustomizationPage> {
   }
 
   Future<void> _load() async {
-    final configuration = await StorageService.getSidebarConfiguration();
+    final configuration = await AppStylePrefs.getSidebarConfiguration();
     if (!mounted) return;
     setState(() {
       _configuration = configuration;
@@ -127,8 +127,8 @@ class _SidebarCustomizationPageState extends State<SidebarCustomizationPage> {
         .then((_) async {
           if (revision != _saveRevision) return;
           final saved = reset
-              ? await StorageService.resetSidebarConfiguration()
-              : await StorageService.setSidebarConfiguration(snapshot);
+              ? await AppStylePrefs.resetSidebarConfiguration()
+              : await AppStylePrefs.setSidebarConfiguration(snapshot);
           if (!saved) throw StateError('Sidebar preference write was refused');
           if (revision != _saveRevision) return;
           MainPageBridge.sidebarConfigurationChanged?.call();

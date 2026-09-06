@@ -1589,3 +1589,16 @@ five static test tearoffs. That is not a complete old-suite harness: preexisting
 TrackingPrefs usages and other extracted owners remain. Only the adapted loader
 and its existing two helpers generate the old fixture. Credential exclusions
 remain exclusions, not portable credential import/authority proof.
+
+
+### Q2 application appearance: old-export loader adapter
+
+For unchanged old6d26 generation, reverse exactly6same-method AppStylePrefs
+loader receivers to StorageService and remove the new AppStylePrefs import.
+Preserve Home19/Tracking15 and all prior owner/helper adapters; recipe, payloads
+and assertions remain unchanged. No new fixture generation or owner backport.
+
+Optional historical correspondence reverses131candidate sites across13current
+tests; preexisting extracted-owner references remain, so this alone is not an
+old-compatible whole-suite harness. Actual export uses only the copied loader
+and its two existing adapted helpers. No identical-harness or native proof claim.

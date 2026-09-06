@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:debrify/services/profiles/profile_preferences.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -59,7 +60,7 @@ void main() {
 
   test('a real settings write lands inside the active profile scope', () async {
     await StorageService.setTvHomeStyle('atrium');
-    await StorageService.setDetailTheme('dossier');
+    await AppStylePrefs.setDetailTheme('dossier');
 
     final result = await classify();
 

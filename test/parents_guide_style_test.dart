@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:debrify/screens/settings/parents_guide_style_page.dart';
 import 'package:debrify/services/imdb_parents_guide_service.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/widgets/detail/theme/detail_theme.dart';
 import 'package:debrify/widgets/detail/theme/detail_themes.dart';
@@ -66,16 +67,16 @@ void main() {
     });
 
     test('Compass is the default and invalid values normalize to it', () async {
-      expect(await StorageService.getParentsGuideStyle(), 'compass');
-      await StorageService.setParentsGuideStyle('unknown');
-      expect(await StorageService.getParentsGuideStyle(), 'compass');
+      expect(await AppStylePrefs.getParentsGuideStyle(), 'compass');
+      await AppStylePrefs.setParentsGuideStyle('unknown');
+      expect(await AppStylePrefs.getParentsGuideStyle(), 'compass');
       expect(parentsGuideStyleLabel('unknown'), 'Compass');
     });
 
     test('Classic round-trips and updates the synchronous cache', () async {
-      await StorageService.setParentsGuideStyle('classic');
+      await AppStylePrefs.setParentsGuideStyle('classic');
       expect(StorageService.parentsGuideStyleCached, 'classic');
-      expect(await StorageService.getParentsGuideStyle(), 'classic');
+      expect(await AppStylePrefs.getParentsGuideStyle(), 'classic');
       expect(parentsGuideStyleLabel('classic'), 'Classic');
     });
   });

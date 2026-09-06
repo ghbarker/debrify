@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/analytics_service.dart';
 import '../../services/main_page_bridge.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import '../../theme/app_theme_scope.dart';
 import 'widgets/settings_widgets.dart';
 import 'sidebar_customization_page.dart';
@@ -62,7 +62,7 @@ class _DesktopSidebarStylePageState extends State<DesktopSidebarStylePage> {
   }
 
   Future<void> _load() async {
-    final style = await StorageService.getDesktopSidebarStyle();
+    final style = await AppStylePrefs.getDesktopSidebarStyle();
     if (!mounted) return;
     setState(() {
       _style = style;
@@ -73,7 +73,7 @@ class _DesktopSidebarStylePageState extends State<DesktopSidebarStylePage> {
   Future<void> _select(String value) async {
     if (value == _style) return;
     setState(() => _style = value);
-    await StorageService.setDesktopSidebarStyle(value);
+    await AppStylePrefs.setDesktopSidebarStyle(value);
     // Live-apply: the shell re-reads the pref and swaps the chrome.
     MainPageBridge.desktopSidebarStyleChanged?.call();
   }

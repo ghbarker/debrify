@@ -23,6 +23,7 @@ import '../premiumize_account_service.dart';
 import '../remote_control/remote_command_router.dart';
 import '../simkl/simkl_service.dart';
 import 'package:debrify/services/storage/tracking_prefs.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import '../storage_service.dart';
 import '../stream_badges_service.dart';
 import '../stremio_service.dart';
@@ -171,15 +172,15 @@ class ProfileAppLifecycleParticipant implements ProfileLifecycleParticipant {
         StorageService.getTvKeyboardEnabled(),
         StorageService.getTvHomeStyle(),
         StorageService.getTvSidebarStyle(),
-        StorageService.getDesktopSidebarStyle(),
+        AppStylePrefs.getDesktopSidebarStyle(),
         StorageService.getDebrifyTvStyle(),
         StorageService.getUiSounds(),
         StorageService.getUiHaptics(),
-        StorageService.getLaunchAnimation(),
-        StorageService.getLaunchIdentPalette(),
-        StorageService.getDetailPageStyle(),
-        StorageService.getDetailTheme(),
-        StorageService.getParentsGuideStyle(),
+        AppStylePrefs.getLaunchAnimation(),
+        AppStylePrefs.getLaunchIdentPalette(),
+        AppStylePrefs.getDetailPageStyle(),
+        AppStylePrefs.getDetailTheme(),
+        AppStylePrefs.getParentsGuideStyle(),
       ]);
       await TextBrightnessController.warm();
       await PlayLoaderStyleController.warm();
