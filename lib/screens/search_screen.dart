@@ -4,6 +4,7 @@ import 'search/stages/stage_favourite_cells.dart';
 import 'search/board_cell.dart';
 import 'search/stage_visuals.dart';
 import 'search/stages/deck_board_stage.dart';
+import 'search/stages/atrium_board_stage.dart';
 import 'search/stages/mosaic_board_stage.dart';
 import 'search/stages/promenade_board_stage.dart';
 import 'search/stages/canvas_board_stage.dart';
@@ -126,7 +127,6 @@ part 'search/search_hero_widgets.dart';
 part 'search/search_stage_widgets.dart';
 
 
-part 'search/stages/atrium_board_stage.dart';
 
 
 
@@ -301,18 +301,9 @@ const double _kStageMinPosterH = 56;
 
 // ATRIUM metrics. The wall's height is DERIVED from these (never guessed),
 // so the dossier column beside it can't be crowded by a taller row.
-const double _kAtriumSplit = 0.38;
-const double _kAtriumPanelPad = 48;
-const double _kAtriumWallPad = 40;
 const double _kAtriumLabelFontSize = 12.0;
-const double _kAtriumLabelGap = 10;
-const double _kAtriumRowGap = 18;
-const double _kAtriumWallTail = 26;
+const double _kAtriumLabelGap = atriumLabelGap;
 
-/// The share of the board Atrium's two-row wall may occupy. The row box is
-/// derived from what fits inside this, so scaled labels shrink the posters
-/// rather than pushing the wall off the bottom.
-const double _kAtriumWallBudget = 0.64;
 
 double _atriumLabelHeight(BuildContext context) =>
     MediaQuery.textScalerOf(context).scale(_kAtriumLabelFontSize) * 1.35;
@@ -3275,49 +3266,118 @@ class _SearchScreenState extends State<SearchScreenHost>
     );
   }
 
-  // Atrium plain labels only: measure the same inherited Text configuration,
-  // without changing the legacy metric used by Deck and Tonight.
-  double _measureAtriumRailLabel(BuildContext context, Text label, double width) {
-    final defaults = DefaultTextStyle.of(context);
-    var style = defaults.style.merge(label.style);
-    if (MediaQuery.boldTextOf(context)) {
-      style = style.merge(const TextStyle(fontWeight: FontWeight.bold));
-    }
-    final lineHeight = MediaQuery.maybeLineHeightScaleFactorOverrideOf(context);
-    final letterSpacing = MediaQuery.maybeLetterSpacingOverrideOf(context);
-    final wordSpacing = MediaQuery.maybeWordSpacingOverrideOf(context);
-    if (lineHeight != null || letterSpacing != null || wordSpacing != null) {
-      style = style.merge(TextStyle(
-        height: lineHeight,
-        letterSpacing: letterSpacing,
-        wordSpacing: wordSpacing,
-      ));
-    }
-    final overflow = label.overflow ?? style.overflow ?? defaults.overflow;
-    final painter = TextPainter(
-      text: TextSpan(text: label.data, style: style, locale: label.locale),
-      textAlign: label.textAlign ?? defaults.textAlign ?? TextAlign.start,
-      textDirection: label.textDirection ?? Directionality.of(context),
-      textScaler: label.textScaler ?? MediaQuery.textScalerOf(context),
-      maxLines: label.maxLines ?? defaults.maxLines,
-      ellipsis: overflow == TextOverflow.ellipsis ? '…' : null,
-      locale: label.locale ?? Localizations.maybeLocaleOf(context),
-      strutStyle: label.strutStyle?.merge(StrutStyle(height: lineHeight)),
-      textWidthBasis: label.textWidthBasis ?? defaults.textWidthBasis,
-      textHeightBehavior: label.textHeightBehavior ??
-          defaults.textHeightBehavior ?? DefaultTextHeightBehavior.maybeOf(context),
+  AtriumStageFrame? _readAtriumFrame() {
+    final app = AppThemeScope.of(context);
+    final view = _resolveStageRail();
+    if (view == null) return null;
+    _seedStageFocusOnce();
+    final rails = view.rails;
+    final active = view.index;
+    return AtriumStageFrame(
+      app: app,
+      minimumPosterHeight: _kStageMinPosterH,
+      hasSecondRow: active + 1 < rails.length,
+      wall: (
+        label: (offset) => _atriumRailLabel(rails, active + offset),
+        captionBand: () => _homeArtPosterCaptionBand,
+        rowBoxHeight: _stageRailBoxH,
+        row: (offset, height, label, {required isTopRow, required hasRowBelow}) =>
+            _atriumRow(rails, active + offset, height,
+                isTopRow: isTopRow, hasRowBelow: hasRowBelow, label: label),
+      ),
+      visuals: (
+        backdrop: (boardH) => Stack(
+                fit: StackFit.expand,
+                children: [
+                  CanvasArtLayer(
+                    item: _heroItem,
+                    enriched: _heroEnriched,
+                    fav: _canvasFavFocus,
+                    cacheWidth: _tvHeroArtworkCacheWidth,
+                    cacheHeight: _tvHeroArtworkCacheHeight,
+                  ),
+                  if (_heroTrailerActive)
+                    _HeroTrailerLayer(
+                      trailer: _heroTrailer,
+                      isTelevision: widget.isTelevision,
+                      heroHeight: boardH,
+                      fullBleed: true,
+                      volume: _heroTrailerVolume,
+                      loading: _heroTrailerLoading,
+                      onPlayingChanged: _onHeroTrailerPlaying,
+                      takeover: _heroTrailerTakeover,
+                    ),
+                  if (_heroTrailerActive)
+                    _HeroLiveLayer(
+                      channel: _heroLiveChannel,
+                      streamUrl: _heroLiveUrl,
+                      heroHeight: boardH,
+                      fullBleed: true,
+                      volume: _heroTrailerVolume,
+                      onPlayingChanged: _onHeroTrailerPlaying,
+                      onPlaybackFailed: _onHeroLivePlaybackFailed,
+                    ),
+                  const IgnorePointer(
+                    child: _CanvasScrims(variant: _StageScrimVariant.seam),
+                  ),
+                ],
+              ),
+        dossier: (boardH, splitX) => Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ValueListenableBuilder<String?>(
+                        valueListenable: _atriumFocusedRailKey,
+                        builder: (context, key, _) {
+                          final i = key == null
+                              ? active
+                              : rails.indexWhere(
+                                  (r) => _canvasRailKeyOf(r) == key,
+                                );
+                          final title = _canvasTabTitle(
+                            rails,
+                            i < 0 ? active : i,
+                          );
+                          return Text(
+                            title.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2.6,
+                              color: kCardFocusRing,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 22),
+                      ValueListenableBuilder<CanvasFavFocus?>(
+                        valueListenable: _canvasFavFocus,
+                        builder: (context, fav, _) => fav != null
+                            ? StageFavIdentity(fav: fav)
+                            : CanvasIdentity(
+                                item: _heroItem,
+                                enriched: _heroEnriched,
+                                trailerShowing: _heroTrailerShowing,
+                                // Drop the synopsis rather than clip it when
+                                // the column is short (small board / large
+                                // text scale).
+                                variant:
+                                    boardH - 64 >=
+                                        stageNarrowIdentityH(context) + 90
+                                    ? StageIdentityVariant.narrow
+                                    : StageIdentityVariant.headline,
+                                maxWidth: (splitX - atriumPanelPad * 2).clamp(
+                                  120.0,
+                                  520.0,
+                                ),
+                              ),
+                      ),
+                    ],
+                  ),
+      ),
     );
-    try {
-      painter.layout(
-        minWidth: 0,
-        maxWidth: (label.softWrap ?? defaults.softWrap) || overflow == TextOverflow.ellipsis
-            ? width
-            : double.infinity,
-      );
-      return painter.height;
-    } finally {
-      painter.dispose();
-    }
   }
 
   Widget _atriumRow(
@@ -5113,7 +5173,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       case 'canvas':
         return CanvasStage(bindings: _canvasBindings, isTelevision: widget.isTelevision);
       case 'atrium':
-        return _AtriumBoardStage(host: this);
+        return AtriumStage(readFrame: _readAtriumFrame, isTelevision: widget.isTelevision);
       case 'mosaic':
         return MosaicStage(bindings: _mosaicBindings, isTelevision: widget.isTelevision);
       case 'promenade':
