@@ -223,6 +223,14 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   Twenty-one typed shared operations remain explicit coupling, expiring with remaining
   G1'-8 shared-cell/navigation adoption. No State proxy, pure-logic claim or automatic
   target closure; five stage parts remain. Appended Tonight pages do not replay Right.
+  Shared Deck/Tonight `StageShelfContent` in `stages/stage_shelf_content.dart`
+  now owns shelf-cell policy and rail-label geometry (product df143735).
+  Host 6551 -> 6480 (**71 net Leaves**); whole production **+49**.
+  Ten live operations and borrowed board/map/notifier remain; Tonight calls the
+  shared cell owner directly. The two-line host label adapter and Tonight's
+  `buildRailLabel` callback retain host-context lookup until final composition /
+  phase-completion review. This is partial shared-cell ownership, not whole Deck
+  or closure of the 1400 stage target.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
