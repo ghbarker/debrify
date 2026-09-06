@@ -1,0 +1,32 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "recipeVersion": 5,
+  "includeSecrets": false,
+  "scenario": "onboarding-state-exclusion",
+  "absentKeys": [],
+  "omittedKeys": [],
+  "syntheticOnly": true,
+  "sha256": "beb17d703ce5fc99711226a17bf67910b7a93a7ca3755598c9ad3cd9a32ef5d3",
+  "representedSettings": {},
+  "keyTypes": {},
+  "excludedKeys": [
+    "initial_setup_complete_v1"
+  ],
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  },
+  "sourceAuthority": {
+    "canonicalSetupComplete": true,
+    "compatibilityValue": false,
+    "portableProfileSetupComplete": true
+  }
+}

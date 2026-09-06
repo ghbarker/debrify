@@ -631,6 +631,7 @@ is an editor mirror, not the source of truth. How to add a provider:
   `lib/widgets/remote/` + `lib/services/remote_control/` (device-to-device over LAN, no server).
   See the 11-site checklist above until **T1**.
 - Onboarding: `lib/widgets/initial_setup_flow.dart` (export) → `lib/widgets/onboarding/onboarding_flow.dart`.
+- `lib/services/profiles/profile_onboarding_state.dart` (`ProfileOnboardingState`) owns onboarding readiness reconciliation and retirement of `initial_setup_complete_v1`; the existing profile registry remains canonical. Two unchanged bodies retain two nonasync `StorageService` facades (4 lines), expiring only after separately scoped Q2 caller compatibility retirement. Preserve reader canonical-write-before-remove versus setter remove-before-write, captured authority and failure behavior. Actual merge restore imports canonical true but retains destination compatibility false; the next public read reconciles canonical false and retires that flag. Host 2678 -> 2609 (-69), new owner 85 and registry +2 yield whole production +18: ownership separation, no line-target or profile-safety claim.
   Migration: `lib/services/app_migration_service.dart`.
 
 ## Metadata

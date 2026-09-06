@@ -436,6 +436,7 @@ void main() {
     'my-watchlist': {'absentKeys': <String>[]},
     'quick-play-policy': {'absentKeys': <String>[]},
     'quick-play-vr': {'absentKeys': <String>[]},
+    'onboarding-state-exclusion': {'absentKeys': <String>[]},
     'quick-play-policy-legacy': {'absentKeys': ['quick_play_movie_rules_v2', 'quick_play_series_rules_v2']},
     'repair': {'absentKeys': ['playback_completion_migration_generation', 'resume_ghost_purge_generation']},
     'repair-markers-zero': {'absentKeys': <String>[]},
@@ -449,9 +450,12 @@ void main() {
     final isMetadata = scenario == 'playlist-metadata';
     final isWatchlist = scenario == 'my-watchlist';
     final isQuickPolicy = scenario == 'quick-play-policy' || scenario == 'quick-play-policy-legacy';
+    final isOnboarding = scenario == 'onboarding-state-exclusion';
     final isVr = scenario == 'quick-play-vr';
-    final isResidual = isVr || isQuickPolicy || isFilter || isPlaylist || isRepair || isMetadata || isWatchlist;
-    final domain = isVr
+    final isResidual = isOnboarding || isVr || isQuickPolicy || isFilter || isPlaylist || isRepair || isMetadata || isWatchlist;
+    final domain = isOnboarding
+        ? _recipe['residualDomains']['onboarding-state-exclusion'] as Map
+        : isVr
         ? _recipe['residualDomains']['quick-play-vr'] as Map
         : isQuickPolicy
         ? _recipe['residualDomains']['quick-play-policy'] as Map
@@ -475,11 +479,16 @@ void main() {
     final credentialValues = isResidual
         ? <String, Object?>{}
         : _credentialEngineValues;
-    final excludedKeys = isResidual ? <String>[] : _excludedInputs.keys.toList();
+    final excludedKeys = isOnboarding ? ['initial_setup_complete_v1']
+        : isResidual ? <String>[] : _excludedInputs.keys.toList();
     void expectExclusions(
       Map<String, Object?> values, {
       bool includeSecrets = false,
     }) {
+      if (isOnboarding) {
+        expect(values.containsKey('initial_setup_complete_v1'), isFalse,
+            reason: 'Declared onboarding exclusion: readiness belongs to profile record');
+      }
       if (!isResidual) _expectExclusions(values, includeSecrets: includeSecrets);
     }
 
@@ -516,6 +525,19 @@ void main() {
         : '$scenario.manifest.json';
 
     Future<void> seedScenario() async {
+      if (isOnboarding) {
+        expect(domain['origin'], _origin);
+        expect(domain['admittedKeyCount'], 0);
+        expect(domain['excludedKeys'], excludedKeys);
+        expect(scenarioSettings, isEmpty);
+        await StorageService.setInitialSetupComplete(domain['sourceCanonicalSetupComplete'] as bool);
+        final prefs = await ProfilePreferences.instance();
+        await prefs.setBool('initial_setup_complete_v1', domain['sourceCompatibilityValue'] as bool);
+        expect((await registry.getProfile(profileId))!.setupComplete, isTrue);
+        expect(prefs.getBool('initial_setup_complete_v1'), isFalse);
+        // Do not call the compatibility reader: it would reconcile false first.
+        return;
+      }
       if (isVr) {
         expect(domain['origin'], _origin);
         expect(domain['namedKeyCount'], 5);
@@ -749,6 +771,11 @@ void main() {
           _expectSettings(_values(package), expected);
           expectExclusions(_values(package), includeSecrets: includeSecrets);
           expect(package.resources, isEmpty);
+          if (isOnboarding) {
+          expect(package.profiles.single['setupComplete'], isTrue);
+          expect((await registry.getProfile(profileId))!.setupComplete, isTrue);
+          expect((await ProfilePreferences.instance()).getBool('initial_setup_complete_v1'), isFalse);
+        }
           final bytes = await PortableProfilePackage.encodeEncryptedBytes(
             package,
             _passphrase,
@@ -773,6 +800,10 @@ void main() {
               ),
               'excludedKeys': excludedKeys,
               'omissions': package.omissions,
+              if (isOnboarding) 'sourceAuthority': {
+                'canonicalSetupComplete': true, 'compatibilityValue': false,
+                'portableProfileSetupComplete': package.profiles.single['setupComplete'],
+              },
             }),
           );
         },
@@ -788,6 +819,11 @@ void main() {
         _expectSettings(await readScenario(inputExpected), inputExpected);
         final package = await export(includeSecrets: includeSecrets);
         _expectSettings(_values(package), expected);
+        if (isOnboarding) {
+          expect(package.profiles.single['setupComplete'], isTrue);
+          expect((await registry.getProfile(profileId))!.setupComplete, isTrue);
+          expect((await ProfilePreferences.instance()).getBool('initial_setup_complete_v1'), isFalse);
+        }
         expectExclusions(_values(package), includeSecrets: includeSecrets);
         _expectSettings(_values(await export(includeSecrets: true)), {
           ...expected,
@@ -803,6 +839,7 @@ void main() {
     for (final repairFailure in ['none', if (scenario == 'repair') ...['marker-type', 'episode-type']]) {
     for (final keepDestination in [false, if (missing.isNotEmpty && !isRepair && !isQuickPolicy) true]) {
       final destinationValues = <String, Object?>{
+        if (isOnboarding) 'onboarding_restore_sentinel': 'untouched',
         if (isPlaylist) 'playlist_restore_sentinel': 'untouched',
         if (isRepair) 'repair_restore_sentinel': 'untouched',
         if (isMetadata) 'metadata_restore_sentinel': 'untouched',
@@ -852,7 +889,7 @@ void main() {
                     'value': ['fullHd', 'unknown quality', 'fullHd'],
                   },
                 }
-              : isPlaylist || isRepair || isMetadata || isWatchlist || isQuickPolicy || isVr
+              : isOnboarding || isPlaylist || isRepair || isMetadata || isWatchlist || isQuickPolicy || isVr
                   ? domain['mutations'] as Map
                   : _recipe['mutations'] as Map;
           expect(['', ...mutations.keys], contains(_mutation));
@@ -917,6 +954,15 @@ void main() {
               _passphrase,
             );
           }
+          if (isOnboarding) {
+            // Also checks a valid re-encrypted forbidden-key negative package.
+            expectExclusions(_values(package));
+            expect(package.profiles.single['setupComplete'], isTrue);
+            expect(manifest['sourceAuthority'], {
+              'canonicalSetupComplete': true, 'compatibilityValue': false,
+              'portableProfileSetupComplete': true,
+            });
+          }
           if (isRepair && repairFailure != 'none') {
             // Separate incoming negative package, derived from the real origin
             // export through actual section hashing/encryption. Never mix its
@@ -974,6 +1020,11 @@ void main() {
               await prefs.setString(key, entry.value! as String);
             }
           }
+          if (isOnboarding) {
+            expect((await registry.getProfile(profileId))!.setupComplete, isFalse);
+            await prefs.setBool('p.$profileId.g.1.initial_setup_complete_v1', false);
+            await prefs.setBool('p.$other.g.1.initial_setup_complete_v1', false);
+          }
           final report =
               await ProfileRestoreCoordinator(
                 registry: registry,
@@ -988,6 +1039,20 @@ void main() {
           expect(report.publishedGeneration, 2);
           expect(ProfileRuntime.capture().dataGeneration, 2);
           final prefix = ProfileRuntime.capture().preferencePrefix;
+          if (isOnboarding) {
+            expect((await registry.getProfile(profileId))!.setupComplete, isTrue);
+            // Merge retains the destination compatibility flag despite export
+            // exclusion. The next public read reconciles false over imported
+            // canonical true, then retires the flag. Preserve, do not fix here.
+            expect(prefs.getBool('${prefix}initial_setup_complete_v1'), isFalse);
+            expect(await StorageService.isInitialSetupComplete(), isFalse);
+            expect((await registry.getProfile(profileId))!.setupComplete, isFalse);
+            expect((await export()).profiles.single['setupComplete'], isFalse);
+            expect(prefs.containsKey('${prefix}initial_setup_complete_v1'), isFalse);
+            expect(prefs.getBool('p.$profileId.g.1.initial_setup_complete_v1'), isFalse);
+            expect(prefs.getBool('p.$other.g.1.initial_setup_complete_v1'), isFalse);
+            expect((await registry.getProfile(other))!.setupComplete, isFalse);
+          }
           // Inspect physical types before getters can default/coerce/cache them.
           _expectSettings({
             for (final key in restoredExpected.keys)
