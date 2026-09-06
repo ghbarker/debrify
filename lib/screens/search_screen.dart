@@ -6194,7 +6194,9 @@ class _SearchScreenState extends State<SearchScreen>
   /// [_focusCwRow], so DPAD wiring can defer the move instead of eating it.
   bool _focusRow(int row, int column) {
     if (row >= _rowNodes.length) {
-      // DPAD-down past the last loaded row on TV: pull the next board batch.
+      // Reach visible actions before starting another batch. When no action
+      // is mounted, retain the existing deferred move into the next row.
+      if (!_boardLoadingMore && _focusCatalogContinuation()) return true;
       if (_boardHasMore) _loadMoreBoard();
       return false;
     }
@@ -7637,6 +7639,7 @@ class _SearchScreenState extends State<SearchScreen>
       _leaveBoardTop();
       return;
     }
+    if (!_boardLoadingMore && _focusCatalogContinuation()) return;
     if (_boardHasMore) _loadMoreBoard();
     _deferDownMove(homeRowId: rowId, column: column);
   }
@@ -7787,6 +7790,9 @@ class _SearchScreenState extends State<SearchScreen>
     final current = _resolveCanvasRailIndex(rails);
     final next = (current + delta).clamp(0, rails.length - 1);
     if (next == current) {
+      if (delta > 0 && !_boardLoadingMore && _focusCatalogContinuation()) {
+        return;
+      }
       if (delta > 0 && _boardHasMore) {
         // Remember the move so it COMPLETES when the batch lands — otherwise
         // the keypress is silently eaten and the user has to press again.

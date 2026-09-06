@@ -279,6 +279,16 @@ class WatchedStatusService extends ChangeNotifier {
     final mdblistFuture = MdblistService.instance.fetchCompletedTitleIds();
     final calendarFuture = LocalSeriesCompletionService.instance
         .refreshCalendarIfDue();
+    // Capture errors immediately, while local reads may still be retrying.
+    // Unwrap after local publication so tracker latency cannot delay it.
+    final parallelReads = captureWatchedRead(
+      Future.wait<Object?>([
+        traktFuture,
+        simklFuture,
+        calendarFuture,
+        mdblistFuture,
+      ]),
+    );
     List<Set<String>>? local;
     try {
       local = await readWatchedSnapshotWithRetry(
@@ -305,12 +315,7 @@ class WatchedStatusService extends ChangeNotifier {
     // Always join the requests this pass started, even if invalidated. That
     // keeps the coalescer honest: the follow-up cannot overlap abandoned page
     // loops from the superseded pass.
-    final results = await Future.wait<Object?>([
-      traktFuture,
-      simklFuture,
-      calendarFuture,
-      mdblistFuture,
-    ]);
+    final results = (await parallelReads).unwrap();
     if (generation != _generation) return;
     final trakt =
         results[0] as ({Map<String, double>? movies, Set<String>? series});

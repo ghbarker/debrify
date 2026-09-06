@@ -13,3 +13,26 @@ Future<T> readWatchedSnapshotWithRetry<T>(
     }
   }
 }
+
+/// Stores an asynchronous error until the consumer is ready to handle it.
+/// The capture future itself never fails, even when awaited after local retries.
+Future<CapturedWatchedRead<T>> captureWatchedRead<T>(Future<T> read) =>
+    read.then(
+      (value) => CapturedWatchedRead<T>._(value, null, null),
+      onError: (Object error, StackTrace stack) =>
+          CapturedWatchedRead<T>._(null, error, stack),
+    );
+
+class CapturedWatchedRead<T> {
+  CapturedWatchedRead._(this._value, this._error, this._stack);
+
+  final T? _value;
+  final Object? _error;
+  final StackTrace? _stack;
+
+  T unwrap() {
+    final error = _error;
+    if (error != null) Error.throwWithStackTrace(error, _stack!);
+    return _value as T;
+  }
+}
