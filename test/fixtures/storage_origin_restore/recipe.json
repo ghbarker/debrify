@@ -1239,6 +1239,23 @@
         }
       }
     },
+    "download-destination-exclusion": {
+      "sourceValues": {
+        "download_tree_uri_v1": "content://synthetic.example.invalid/tree/source",
+        "download_tree_display_name_v1": "  Synthetic source folder  ",
+        "download_dir_path_v1": "C:/synthetic-not-a-real-directory/source"
+      },
+      "destinationValues": {
+        "download_tree_uri_v1": "content://synthetic.example.invalid/tree/destination",
+        "download_tree_display_name_v1": "  Destination folder  ",
+        "download_dir_path_v1": "  C:/synthetic-not-a-real-directory/destination  "
+      },
+      "excludedKeys": [
+        "download_tree_uri_v1",
+        "download_tree_display_name_v1",
+        "download_dir_path_v1"
+      ]
+    },
     "ambient-trailer": {
       "values": {
         "home_hero_trailer_audio_enabled": false,

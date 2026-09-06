@@ -912,6 +912,78 @@ helpers retain their separately documented correspondence. Native playback
 removal, My Watchlist identity-key/cap/debug aliases and owner internal calls
 remain outside this retirement. No new export or native coverage is claimed.
 
+## Download destination exclusions (separate three-key domain)
+
+`download-destination-exclusion.encrypted.json` was generated through unchanged
+production at `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`. Actual public setters
+seed three synthetic profile-scoped String keys: `download_tree_uri_v1`,
+`download_tree_display_name_v1`, and `download_dir_path_v1`. Physical String
+values and public reads are checked before export. The decrypted package has
+zero represented settings/resources and excludes all three keys. This adds
+three separately counted exclusions, not three portable destination settings
+or an expansion of the historical 141-key inventory.
+
+Actual current restore at `cdc87217a339dadd4cc68da5a109e0769b784f39` was first
+observed, then pinned: generation 2 retains the destination's existing three
+String values, including whitespace, and public readers return exactly those
+values without rewriting them. Source identity/path values are not imported.
+The old generation, other profile, legacy keys and unrelated sentinel remain
+unchanged. Re-export with secrets off/on still excludes all three. This finite
+fixture establishes preference behavior, not usable filesystem paths, SAF
+permissions, picker behavior, native projection, tvOS recovery or all restore
+interleavings. All values are synthetic; no real user paths or grants are read.
+
+Exact generation harness adaptations: the copied loader removes the three
+IptvPrefs/PlaybackProgressStore/ProviderCredentialPrefs imports and redirects
+3/14/19 respective same-method receivers to actual old StorageService. The
+copied playlist helper removes its PlaybackProgressStore import and redirects
+four receivers. The filter helper and recipe are identical at generation.
+At this frozen base, the new history domain still uses two StorageService
+receivers: zero TorrentSearchHistoryStore imports/receivers require adaptation.
+A later history caller retirement must document removal of its new owner import
+and reversal of those receivers in the copied old harness; it is not silently
+backported here. Likewise later Q2 filter routing needs its documented ten
+tearoff adapter. No old production code is edited or copied.
+
+The first current restore observation was followed by adding exact physical/
+public-read assertions only in the current restore branch and removing the
+observation print. The already-generated artifact was not regenerated. Thus
+this is not an identical-whole-harness claim. All previous artifact bytes and
+recipe entries remain unchanged.
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# Own detached 6d26 checkout with copied loader/helpers/recipe adapted above:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --plain-name 'download-destination-exclusion: generate' --reporter json
+# Current checkout, frozen artifact pair copied from that actual exporter:
+& $flutter test --no-pub test/download_destination_prefs_origin_test.dart test/storage_origin_restore_fixture_test.dart --reporter json
+# Each must fail at the declared exclusion assertion after valid hash/encryption/decryption:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'download-destination-exclusion: restore' --dart-define=STORAGE_FIXTURE_MUTATION=download_tree_uri_v1 --reporter json
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'download-destination-exclusion: restore' --dart-define=STORAGE_FIXTURE_MUTATION=download_tree_display_name_v1 --reporter json
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'download-destination-exclusion: restore' --dart-define=STORAGE_FIXTURE_MUTATION=download_dir_path_v1 --reporter json
+```
+
+The controls insert one forbidden String key, rebuild the actual section hash,
+re-encrypt and decrypt successfully, then fail the declared semantic exclusion.
+They do not claim codec rejection or post-restore mutant failure. Positive
+restore uses the untouched original bytes. No production mutation is involved.
+
+
+### Q2 destination caller retirement: old-export harness adapter
+
+For reproduction after the seven public facade retirements, remove the copied
+loader's `package:debrify/services/storage/download_destination_prefs.dart`
+import and reverse exactly five `DownloadDestinationPrefs` receivers to the
+actual old `StorageService`: two setters in `writeDestinations`, three getters
+in `readDestinations`. Keep all arguments, awaits, assertions and existing
+filter/playback/provider adapters. This does not change or regenerate payloads.
+The standard old exporter does not import `download_destination_prefs_origin_test.dart`.
+If separately replaying that pin against old production, replace its owner
+import with `storage_service.dart` and reverse its nine receivers, preserving
+five tearoffs and four calls. Do not turn tearoffs into closures. These adapters
+restore old public entry points; no owner is copied/backported to pre-S2 and no
+identical-harness or SAF/native permission claim is made.
+
 ## Ambient trailer: separate four-key domain
 
 `ambient-trailer.encrypted.json` and its manifest were generated by actual

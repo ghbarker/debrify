@@ -23,6 +23,7 @@ import 'package:debrify/services/profiles/profile_restore_coordinator.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
 import 'package:debrify/services/secret_vault.dart';
+import 'package:debrify/services/storage/download_destination_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -526,6 +527,122 @@ void main() {
           ...ambientValues, 'ambient_fixture_sentinel': 'untouched',
         });
       }
+    });
+  }
+
+
+  // Separately counted destination exclusions; no OS grants are exercised.
+  const destinationScenario = 'download-destination-exclusion';
+  final destinationDomain = _recipe['residualDomains'][destinationScenario] as Map;
+  final destinationKeys = (destinationDomain['excludedKeys'] as List).cast<String>();
+  final sourceDestinations = Map<String, String>.from(destinationDomain['sourceValues'] as Map);
+  final localDestinations = Map<String, String>.from(destinationDomain['destinationValues'] as Map);
+  Future<void> writeDestinations(Map<String, String> values) async {
+    await DownloadDestinationPrefs.setDownloadTreeUri(values['download_tree_uri_v1']!, values['download_tree_display_name_v1']!);
+    await DownloadDestinationPrefs.setDownloadDirPath(values['download_dir_path_v1']!);
+  }
+  Future<Map<String, Object?>> readDestinations() async => {
+    'download_tree_uri_v1': await DownloadDestinationPrefs.getDownloadTreeUri(),
+    'download_tree_display_name_v1': await DownloadDestinationPrefs.getDownloadTreeDisplayName(),
+    'download_dir_path_v1': await DownloadDestinationPrefs.getDownloadDirPath(),
+  };
+  void expectDestinationExclusions(PortableProfilePackage package) {
+    for (final key in destinationKeys) {
+      expect(_values(package).containsKey(key), isFalse,
+          reason: 'Declared download destination exclusion: $key');
+    }
+  }
+  if (_generate) {
+    test('$destinationScenario: generate actual pre-S2 excluded destinations', () async {
+      final head = await Process.run('git', ['rev-parse', 'HEAD']);
+      expect(head.exitCode, 0);
+      expect(head.stdout.toString().trim(), _origin);
+      final diff = await Process.run('git', ['diff', '--exit-code', _origin, '--', 'lib']);
+      expect(diff.exitCode, 0, reason: 'Never generate from modified production');
+      final config = File('.dart_tool/package_config.json');
+      final metadata = jsonDecode(await config.readAsString()) as Map;
+      final app = (metadata['packages'] as List).cast<Map>().singleWhere((e) => e['name'] == 'debrify');
+      final library = config.absolute.uri.resolve(app['rootUri'] as String).resolve(app['packageUri'] as String).resolve('services/storage_service.dart');
+      expect(p.equals(library.toFilePath(), p.join(Directory.current.path, 'lib', 'services', 'storage_service.dart')), isTrue);
+      await writeDestinations(sourceDestinations);
+      final prefs = await ProfilePreferences.instance();
+      _expectSettings({for (final key in destinationKeys) key: prefs.get(key)}, sourceDestinations);
+      _expectSettings(await readDestinations(), sourceDestinations);
+      final package = await export();
+      expectDestinationExclusions(package);
+      expect(_values(package), isEmpty);
+      expect(package.resources, isEmpty);
+      final bytes = await PortableProfilePackage.encodeEncryptedBytes(package, _passphrase);
+      final decoded = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+      expectDestinationExclusions(decoded);
+      await File('$_directory/$destinationScenario.encrypted.json').writeAsBytes(bytes);
+      await File('$_directory/$destinationScenario.manifest.json').writeAsString(const JsonEncoder.withIndent('  ').convert({
+        'origin': _origin, 'scenario': destinationScenario, 'syntheticOnly': true,
+        'includeSecrets': false, 'sha256': await _digest(bytes),
+        'sourceValues': sourceDestinations, 'excludedKeys': destinationKeys,
+        'representedSettings': _values(package), 'keyTypes': <String, String>{},
+        'sourcePhysicalTypes': {for (final key in destinationKeys) key: 'String'},
+        'omissions': package.omissions,
+      }));
+    });
+  } else {
+    test('$destinationScenario: restore actual old export and observe local destinations', () async {
+      final manifest = jsonDecode(await File('$_directory/$destinationScenario.manifest.json').readAsString()) as Map;
+      final bytes = await File('$_directory/$destinationScenario.encrypted.json').readAsBytes();
+      expect(manifest['origin'], _origin);
+      expect(manifest['syntheticOnly'], isTrue);
+      expect(manifest['sha256'], await _digest(bytes));
+      expect(manifest['sourceValues'], sourceDestinations);
+      expect(manifest['excludedKeys'], unorderedEquals(destinationKeys));
+      expect(manifest['sourcePhysicalTypes'], {for (final key in destinationKeys) key: 'String'});
+      var package = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+      expectDestinationExclusions(package);
+      expect(_values(package), isEmpty);
+      expect(package.resources, isEmpty);
+      if (_mutation.isNotEmpty) {
+        expect(destinationKeys, contains(_mutation));
+        final invalid = PortableProfilePackage(
+          mode: package.mode, createdAt: package.createdAt, profiles: package.profiles,
+          resources: package.resources, omissions: package.omissions,
+          sections: {...package.sections,
+            package.profiles.single['preferencesSection'] as String:
+                await PortableProfilePackage.buildSection({..._values(package), _mutation: sourceDestinations[_mutation]}),
+          },
+        );
+        package = await PortableProfilePackage.decrypt(
+          await PortableProfilePackage.encrypt(invalid, _passphrase), _passphrase);
+        expect(_values(package)[_mutation], sourceDestinations[_mutation], reason: 'Valid rehashed/reencrypted package reached semantic exclusion check');
+        expectDestinationExclusions(package);
+      }
+      await writeDestinations(localDestinations);
+      final prefs = await SharedPreferences.getInstance();
+      for (final key in destinationKeys) {
+        await prefs.setString('p.$otherProfileId.g.1.$key', 'synthetic other profile');
+        await prefs.setString(key, 'synthetic legacy destination');
+      }
+      await prefs.setString('p.$profileId.g.1.destination_fixture_sentinel', 'untouched');
+      final report = await ProfileRestoreCoordinator(registry: registry, cipher: cipher).restore(
+        package: package, destinationProfileId: profileId,
+        authorization: await ProfileAuthorizationContext.capture(registry),
+      );
+      expect(report.publishedGeneration, 2);
+      final prefix = ProfileRuntime.capture().preferencePrefix;
+      final physical = {for (final key in destinationKeys) key: prefs.get('$prefix$key')};
+      final publicReads = await readDestinations();
+      // Observed on cdc87217: restore carries destination values into generation 2.
+      _expectSettings(physical, localDestinations);
+      _expectSettings(publicReads, localDestinations);
+      expect({for (final key in destinationKeys) key: prefs.get('$prefix$key')}, physical,
+          reason: 'Public destination reads do not rewrite restored values');
+      for (final key in destinationKeys) {
+        expect(prefs.get('p.$profileId.g.1.$key'), localDestinations[key]);
+        expect(prefs.get('p.$otherProfileId.g.1.$key'), 'synthetic other profile');
+        expect(prefs.get(key), 'synthetic legacy destination');
+      }
+      expect(prefs.get('${prefix}destination_fixture_sentinel'), 'untouched');
+      expect(prefs.get('p.$profileId.g.1.destination_fixture_sentinel'), 'untouched');
+      expectDestinationExclusions(await export());
+      expectDestinationExclusions(await export(includeSecrets: true));
     });
   }
 

@@ -11,7 +11,7 @@ import 'package:flutter/services.dart';
 import '../services/analytics_service.dart';
 import '../services/download_service.dart';
 import '../theme/app_theme_scope.dart';
-import '../services/storage_service.dart';
+import '../services/storage/download_destination_prefs.dart';
 import '../services/android_native_downloader.dart';
 import '../services/main_page_bridge.dart';
 import '../widgets/shimmer.dart';
@@ -399,7 +399,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       String? customDir;
       if (Platform.isWindows || Platform.isLinux) {
         try {
-          customDir = await StorageService.getDownloadDirPath();
+          customDir = await DownloadDestinationPrefs.getDownloadDirPath();
         } catch (_) {}
       }
       if (customDir != null && customDir.isNotEmpty) {
@@ -408,7 +408,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
       } else if (Platform.isAndroid) {
         String? treeName;
         try {
-          treeName = await StorageService.getDownloadTreeDisplayName();
+          treeName = await DownloadDestinationPrefs.getDownloadTreeDisplayName();
         } catch (_) {}
         destPath = treeName != null
             ? '$treeName/$filename'

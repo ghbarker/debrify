@@ -253,6 +253,11 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   consumers directly to AmbientTrailerPrefs. Retirement removes15 host lines
   (14 declarations + import), whole production -10; prior owner move -69 host
   included docs/separators and added32 whole. Strict ownership remains OPEN.
+  **Download destinations:** `lib/services/storage/download_destination_prefs.dart`
+  owns three profile-scoped String keys and seven persistence bodies; OS grants
+  remain with callers. Q2 retired all seven StorageService APIs; callers route
+  directly to the owner (-18 host lines, -17 whole-production lines).
+  Strict outcome 3 remains OPEN; no SAF or native-authority verification is claimed.
   **Residual filters:** `lib/services/storage/default_torrent_filter_prefs.dart`
   owns five default-filter JSON String keys and ten get/set bodies. Its
   `clearDefaults(ProfilePreferences)` removes five keys in order on captured

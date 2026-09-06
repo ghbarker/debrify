@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 
 import '../../services/android_native_downloader.dart';
-import '../../services/storage_service.dart';
+import '../../services/storage/download_destination_prefs.dart';
 import '../../theme/app_theme_scope.dart';
 
 /// Download-location picker extracted from [SettingsScreen].
@@ -44,8 +44,8 @@ class DownloadLocationController {
   Future<void> loadDownloadLocation() async {
     if (!downloadLocationSupported) return;
     final String? name = downloadLocationUsesSaf
-        ? await StorageService.getDownloadTreeDisplayName()
-        : await StorageService.getDownloadDirPath();
+        ? await DownloadDestinationPrefs.getDownloadTreeDisplayName()
+        : await DownloadDestinationPrefs.getDownloadDirPath();
     if (!isMounted()) return;
     setState(() {
       downloadLocationSubtitle = name == null
@@ -56,8 +56,8 @@ class DownloadLocationController {
 
   Future<void> openDownloadLocationSettings() async {
     final String? currentTree = downloadLocationUsesSaf
-        ? await StorageService.getDownloadTreeUri()
-        : await StorageService.getDownloadDirPath();
+        ? await DownloadDestinationPrefs.getDownloadTreeUri()
+        : await DownloadDestinationPrefs.getDownloadDirPath();
     if (!isMounted()) return;
     final context = contextOf();
     await showModalBottomSheet<void>(
@@ -135,12 +135,12 @@ class DownloadLocationController {
     final newTree = (res['treeUri'] ?? '').toString();
     final name = (res['displayName'] ?? 'Custom folder').toString();
     if (newTree.isEmpty) return;
-    final old = await StorageService.getDownloadTreeUri();
+    final old = await DownloadDestinationPrefs.getDownloadTreeUri();
     if (old != null && old.isNotEmpty && old != newTree) {
       // Release the previous grant — persisted-permission slots are limited.
       await AndroidNativeDownloader.releaseDownloadDirectory(old);
     }
-    await StorageService.setDownloadTreeUri(newTree, name);
+    await DownloadDestinationPrefs.setDownloadTreeUri(newTree, name);
     await loadDownloadLocation();
     if (!isMounted()) return;
     ScaffoldMessenger.of(contextOf()).showSnackBar(
@@ -213,7 +213,7 @@ class DownloadLocationController {
       );
       return;
     }
-    await StorageService.setDownloadDirPath(dir);
+    await DownloadDestinationPrefs.setDownloadDirPath(dir);
     await loadDownloadLocation();
     if (!isMounted()) return;
     ScaffoldMessenger.of(contextOf()).showSnackBar(
@@ -223,13 +223,13 @@ class DownloadLocationController {
 
   Future<void> resetDownloadFolder() async {
     if (downloadLocationUsesSaf) {
-      final old = await StorageService.getDownloadTreeUri();
+      final old = await DownloadDestinationPrefs.getDownloadTreeUri();
       if (old != null && old.isNotEmpty) {
         await AndroidNativeDownloader.releaseDownloadDirectory(old);
       }
-      await StorageService.clearDownloadTreeUri();
+      await DownloadDestinationPrefs.clearDownloadTreeUri();
     } else {
-      await StorageService.clearDownloadDirPath();
+      await DownloadDestinationPrefs.clearDownloadDirPath();
     }
     await loadDownloadLocation();
     if (!isMounted()) return;

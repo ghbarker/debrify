@@ -1,0 +1,62 @@
+# Engineering rules
+
+Canonical content relocated from the two `.cursor/rules/` refactor rules.
+Repository paths in this document are relative to the repository root.
+
+## Refactor ground rules
+
+You are a worker on one lane; see `dev/design/REFACTOR_BOARD.md` for your row.
+
+These rules are copied verbatim from `dev/design/REFACTOR_PLAN.md` §2.
+
+1. **Behaviour preservation is the bar.** Before moving code, write or point to a test
+   that pins the current behaviour of that path, including its quirks. If a quirk looks
+   like a bug, keep it and file a note in `dev/design/REFACTOR_NOTES.md`; do not fix it
+   in a refactor commit.
+2. **Move, don't rewrite.** A moved function should diff cleanly against its origin.
+   Comments move with the code. Improve only after the move lands, in a separate commit.
+3. **One lane, one branch, one PR.** Branch name `refactor/<lane-id>-<slug>`. Small
+   commits, each self-describing, message format:
+   `<Area>: <what moved/changed>` + a body naming the preserved quirk and the pinning
+   test.
+4. **Compatibility surfaces are frozen**: prefs keys, DB schema, backup payload keys,
+   remote `ConfigCommand` strings, `MainTab` indices, sidebar destination ids, Home row
+   id grammar, deep-link formats. Renaming a Dart symbol is fine; renaming a persisted
+   string is not.
+5. **File ownership is exclusive.** The orchestrator's board (section 6) says which lane
+   owns which files. A worker never edits a file another active lane owns. If you need
+   a change in a file you don't own, write the request in your PR description and stop
+   at that boundary.
+6. **The god files are edited by hunk, never reformatted.** No `dart format` on
+   `search_screen.dart`, `settings_screen.dart`, `storage_service.dart`,
+   `video_player_screen.dart`, `magic_tv_screen.dart`, `torrent_playback_service.dart`,
+   `remote_command_router.dart`, `video_player_launcher.dart`. Format new files only.
+7. **Verification before every push**:
+   `flutter analyze` on every file you touched (zero new issues of any severity),
+   `flutter test` on the suites listed in your lane plus every test file you touched,
+   and `tool/ci_test_allowlist.py` semantics (no new failures, no unused allowlist
+   entries). Record the exact commands and results in the PR.
+8. **Never commit tooling noise**: `pubspec.lock`, `analysis_options.yaml`, the
+   generated plugin registrants under `linux/`, `macos/`, `windows/`, and
+   `android/app/build.gradle.kts` package tweaks. Revert them before committing.
+9. **CODEMAP is part of the change.** If a lane moves a symbol CODEMAP names, update
+   CODEMAP in the same PR.
+10. **Ask by writing, not by guessing.** When a decision is above your lane (a new
+    abstraction, a compatibility question, a conflict with another lane), write it into
+    the PR under "Decisions needed" and stop. The orchestrator answers in the board.
+
+## Debrify refactor safety
+
+Source of truth: `CODEMAP.md` (Debrid providers & cloud). This file is an
+editor mirror.
+
+- Strangler-fig only: keep public static APIs; move internals behind
+  `lib/services/cloud/` ports and facades.
+- Never skip `flutter test` on the touched subtree (`test/adversarial/` for
+  cloud/playback).
+- Do not rewrite god files end-to-end. Grep and extract.
+- Do not change persisted preference keys or provider ids in the same PR as a
+  behavior change.
+- Treat `docs/architecture/profile-storage-ownership.md` as a compatibility
+  contract.
+- After a behavior-adjacent change, follow `.cursor/skills/debrify-break/SKILL.md`.

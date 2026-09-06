@@ -740,61 +740,22 @@ class StorageService {
   }
 
   // ── Custom download location (Android SAF tree) ─────────────────────────
-  static const String _downloadTreeUriKey = 'download_tree_uri_v1';
-  static const String _downloadTreeNameKey = 'download_tree_display_name_v1';
 
   /// The persisted SAF tree URI for the user-chosen download folder, or null
   /// when downloads go to the default location (Downloads/Debrify).
-  static Future<String?> getDownloadTreeUri() async {
-    final prefs = await ProfilePreferences.instance();
-    final v = prefs.getString(_downloadTreeUriKey);
-    return (v == null || v.isEmpty) ? null : v;
-  }
 
-  static Future<String?> getDownloadTreeDisplayName() async {
-    final prefs = await ProfilePreferences.instance();
-    final v = prefs.getString(_downloadTreeNameKey);
-    return (v == null || v.isEmpty) ? null : v;
-  }
 
-  static Future<void> setDownloadTreeUri(
-    String treeUri,
-    String displayName,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_downloadTreeUriKey, treeUri);
-    await prefs.setString(_downloadTreeNameKey, displayName);
-  }
 
-  static Future<void> clearDownloadTreeUri() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_downloadTreeUriKey);
-    await prefs.remove(_downloadTreeNameKey);
-  }
 
   // ── Custom download location (desktop: plain filesystem path) ───────────
   // Windows/Linux only. macOS is deliberately excluded: the app is sandboxed
   // with a read-only user-selected-files entitlement, so a picked folder
   // needs security-scoped bookmarks to survive relaunch — separate feature.
-  static const String _downloadDirPathKey = 'download_dir_path_v1';
 
   /// The persisted absolute directory for the user-chosen download folder on
   /// desktop, or null when downloads go to the platform default.
-  static Future<String?> getDownloadDirPath() async {
-    final prefs = await ProfilePreferences.instance();
-    final v = prefs.getString(_downloadDirPathKey);
-    return (v == null || v.isEmpty) ? null : v;
-  }
 
-  static Future<void> setDownloadDirPath(String dirPath) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_downloadDirPathKey, dirPath);
-  }
 
-  static Future<void> clearDownloadDirPath() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_downloadDirPathKey);
-  }
 
 
 
