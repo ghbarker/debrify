@@ -12,12 +12,12 @@
 - **Storage:** 9,963 → **1,741** (8,222 fewer)
 - **Settings:** 7,905 → **2,908** (4,997 fewer)
 
-Physical lines, not whole-project deletions. Last full gate: **bc017 PASSED**; its forwarder ledger was Storage204 / Search133 / Player161 / Magic23 / Settings0. Later #216/#217 are individually verified, not included in that gate. Forbidden imports: **77 → 56 on merged main**, including #217/#218. No baseline increase.
+Physical lines, not whole-project deletions. Last full gate: **b6a71b0e PASSED**; its forwarder ledger was Storage204 / Search133 / Player161 / Magic23 / Settings0. #216/#217/#218 are included in this gate. Forbidden imports: **77 → 56 on merged main**, including #217/#218. No baseline increase.
 
 ### Do next — actual execution order
 
 - [x] **Merge #218, shared TV focus owner.** Merged b6a71b0e after independent22 tests, exact union review and all CI checks passed.
-- [ ] **Cicero: run full integrated gate at b6a71b0e — ASSIGNED.** #216/#217/#218 are three production merges sincebc017. Actual-main full tests, goldens, analysis, layering/forwarder ledger, native pair, Windows and ARM64 builds. Record known failures separately.
+- [x] **Run full integrated gate at b6a71b0e — PASSED.** #216/#217/#218 are three production merges sincebc017. Actual-main full tests, goldens, analysis, layering/forwarder ledger, native pair, Windows and ARM64 builds. Record known failures separately.
 - [ ] **Locke + parent: integrate and merge #219, public Atrium stage, after that gate passes.** Independent28 checks passed; exact3e613 CI tests/goldens running, native passed. Reconcile latest main and verify unchanged payload before merging. No duplicate behavior run for an unchanged union.
 - [ ] **Locke: prepare a bounded Sources-route ownership proposal.** Read-only import/symbol closure and actual public-behavior pin matrix first. Implementation and new test runs require the next bounded grant; this is not approved production scope.
 - [ ] **Parent + reviewers: choose the next player/native ownership step from recorded evidence.** Tracker terminal experiment is stopped after four failed runs; no automatic fifth attempt or timer/pump workaround.
@@ -69,7 +69,7 @@ Finite pre-S2 fixtures are not proof of every pre-refactor backup. Indexer expor
 
 ### 6. Final integrated acceptance of completed architecture — PENDING
 
-- [x] Pass the latest completed intermediate gatebc017:6,095 tests passed /12 exact known exceptions /2 skips; goldens21 known; native first pair, Windows and ARM64 passed; analyzer431/449; layering77 at that gate.
+- [x] Pass the latest completed intermediate gateb6a71b0e:6,118 tests passed /12 exact known exceptions /2 skips; goldens21 known; native first pair, Windows and ARM64 passed; analyzer431/449; layering56 at that gate.
 - [ ] Finish or explicitly disposition the remaining contractual outcomes above without quietly changing their meaning.
 - [ ] Run final integrated acceptance on the resulting actual main and record exact source/artifact hashes, complete failures, dependency count and god-file/forwarder ledger.
 - [ ] Report final accepted outcomes and retained debt. Prior phone/TV acceptance stays historical; do not label it new-build device proof. Manual smoke does not block authorized progress.
@@ -86,6 +86,9 @@ Finite pre-S2 fixtures are not proof of every pre-refactor backup. Indexer expor
 
 Check off an item only when its stated result is achieved. Update its owner/blocker when it changes; retain these six outcome names. Record merged work separately from prepared/reviewed PRs. Keep original/current god lines visible. After each merge explain the actual benefit and remaining work; preserve detailed evidence in the history below.
 ### Latest completed milestones
+
+- **Fullb6a71b0e gate PASSED:**6118PASS/12exactknown/2skip;goldens21known/configured2retries/actualhelpers0/unexpected0unused0. NativefirstpairPASS;431/449zeroNew/Python55/layer62→56+0/-6 ceiling77unchanged. SameAST204/133/161/23/0 unchangedidentities. ZIP31805c61ea9c6b41ee2bcd830dcea06d3dda56ebd7ea635a715d07cfa6dd89d3; ARM64APK0c4d75cd06496d617b4c835693624baa429b534d7737ac83f5a9812aafcc1aa7. Initialwrongnegative-probeflag preserved/corrected; generatednewlineonlyowncheckoutnoise restored; no source/baselinechange. Counterreset0; #219integration released and Sources5case checkpoint runtimeclear. No finalarchitecture/deviceclaim.
+
 
 - #218 merged **b6a71b0e**, exact94645fe5, independent22PASS/unionaccepted/allCIgreen. ActualcombinedQ1 77→56,+0/-21; thisPR6edges, production+1compat export, no god-linecredit. Did we make a difference? Sharedwidget no longer belongs to a screen layer; strictQ1 remainsopen. Third216217218 triggersfullb6a gate withCicero. Sourcesfirst3originPASS pendingreadonlyreview; icons/subtitle held on compatibility/guardcost, no newparser/runtime. #219 waits gate.
 
