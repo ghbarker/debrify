@@ -1,3 +1,4 @@
+import 'profile_session_unavailable.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -6174,7 +6175,7 @@ class ProfileRegistry {
         ProfileLockController.instance.lockedProfileId.value != null ||
         runtimeScope?.profileId != profileId ||
         runtimeScope?.sessionEpoch != sessionEpoch) {
-      throw StateError('Active profile session has ended');
+      throw ProfileSessionUnavailable('Active profile session has ended');
     }
     final active = await db.query(
       'device_state',
@@ -6195,12 +6196,12 @@ class ProfileRegistry {
         profiles.single['authorization_revision'] != authorizationRevision ||
         profiles.single['lifecycle_state'] !=
             UserProfileLifecycle.active.name) {
-      throw StateError('Active profile authorization changed');
+      throw ProfileSessionUnavailable('Active profile authorization changed');
     }
     if (ProfileLockController.instance.lockedProfileId.value != null ||
         ProfileRuntime.scope.value?.profileId != profileId ||
         ProfileRuntime.scope.value?.sessionEpoch != sessionEpoch) {
-      throw StateError('Active profile session has ended');
+      throw ProfileSessionUnavailable('Active profile session has ended');
     }
   }
 
@@ -6240,7 +6241,7 @@ class ProfileRegistry {
         ProfileLockController.instance.lockedProfileId.value != null ||
         runtimeScope?.profileId != profileId ||
         runtimeScope?.sessionEpoch != sessionEpoch) {
-      throw StateError('Managing profile session has ended');
+      throw ProfileSessionUnavailable('Managing profile session has ended');
     }
     final active = await db.query(
       'device_state',
@@ -6249,7 +6250,7 @@ class ProfileRegistry {
       limit: 1,
     );
     if (active.isEmpty || active.single['active_profile_id'] != profileId) {
-      throw StateError('Managing profile is no longer active');
+      throw ProfileSessionUnavailable('Managing profile is no longer active');
     }
     final rows = await db.query(
       'user_profiles',
@@ -6261,19 +6262,19 @@ class ProfileRegistry {
     if (rows.isEmpty ||
         rows.single['authorization_revision'] != authorizationRevision ||
         rows.single['role'] != UserProfileRole.admin.name) {
-      throw StateError('Managing profile authorization changed');
+      throw ProfileSessionUnavailable('Managing profile authorization changed');
     }
     final policy = ProfilePolicy.decode(
       rows.single['policy_json']! as String,
       UserProfileRole.admin,
     );
     if (!policy.allows(UserProfileRole.admin, ProfileFeature.manageProfiles)) {
-      throw StateError('Profile management is not authorized');
+      throw ProfileSessionUnavailable('Profile management is not authorized');
     }
     if (ProfileLockController.instance.lockedProfileId.value != null ||
         ProfileRuntime.scope.value?.profileId != profileId ||
         ProfileRuntime.scope.value?.sessionEpoch != sessionEpoch) {
-      throw StateError('Managing profile session has ended');
+      throw ProfileSessionUnavailable('Managing profile session has ended');
     }
   }
 

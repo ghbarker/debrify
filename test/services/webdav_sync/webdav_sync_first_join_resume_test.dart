@@ -1,3 +1,4 @@
+import 'package:debrify/services/profiles/profile_session_unavailable.dart';
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -70,6 +71,46 @@ void main() {
     clock: () => now,
     diagnostic: (message, _) => diagnostics.add(message),
   );
+
+  for (final wrapped in [false, true]) {
+    test(
+      'session interruptions preserve retries and recover wrapped=$wrapped',
+      () async {
+        var available = false;
+        final policy = resumePolicy(
+          connect: (id) async {
+            if (!available) {
+              final error = ProfileSessionUnavailable(
+                'Profile session is locked',
+              );
+              throw wrapped ? WebDavSyncPostHandoffException(error) : error;
+            }
+            await store.setLifecycle(id, WebDavSyncLifecycle.active);
+            await store.promoteStaged(id);
+            return (await store.load()).activeBinding!;
+          },
+        );
+        for (var i = 0; i < 7; i++) {
+          expect(
+            await policy.resumeIfNeeded(reconfigurationPaused: false),
+            WebDavSyncFirstJoinAutoResumeOutcome.waiting,
+          );
+          expect(policy.attemptCount, 0);
+          expect((await store.load()).stagedBinding!.errorMessage, isNull);
+          expect(
+            await policy.retryDelay(),
+            WebDavSyncFirstJoinAutoResume.minimumSpacing,
+          );
+          now = now.add(WebDavSyncFirstJoinAutoResume.minimumSpacing);
+        }
+        available = true;
+        expect(
+          await policy.resumeIfNeeded(reconfigurationPaused: false),
+          WebDavSyncFirstJoinAutoResumeOutcome.activated,
+        );
+      },
+    );
+  }
 
   test(
     'awaiting adoption arms auto-resume and next foreground completes it',

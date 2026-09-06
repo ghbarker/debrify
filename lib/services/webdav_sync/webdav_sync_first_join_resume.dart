@@ -1,3 +1,4 @@
+import '../profiles/profile_session_unavailable.dart';
 import '../profiles/profile_preferences.dart';
 import '../webdav_protocol_client.dart';
 import 'webdav_sync_binding_store.dart';
@@ -20,7 +21,8 @@ Object webDavSyncFirstJoinErrorCause(Object error) {
 
 bool webDavSyncFirstJoinErrorIsTransient(Object error) {
   final cause = webDavSyncFirstJoinErrorCause(error);
-  return cause is ProfilePreferenceMutationConflict ||
+  return cause is ProfileSessionUnavailable ||
+      cause is ProfilePreferenceMutationConflict ||
       (cause is WebDavException &&
           (cause.kind == WebDavErrorKind.transient ||
               cause.kind == WebDavErrorKind.timeout ||
@@ -130,6 +132,13 @@ final class WebDavSyncFirstJoinAutoResume {
       // failures after adoption. Retry classification uses the cause, without
       // ever treating that boundary as permission to repeat replacement.
       final cause = webDavSyncFirstJoinErrorCause(error);
+      if (cause is ProfileSessionUnavailable) {
+        // Switching/locking a local Admin is not a failed server attempt.
+        // Preserve spacing, but do not exhaust the network retry budget.
+        _attempts--;
+        _authenticationFailures.remove(binding.id);
+        return _waitAfterRetryableFailure(binding.id);
+      }
       if (cause is ProfilePreferenceMutationConflict) {
         _authenticationFailures.remove(binding.id);
         return _waitOrExhaust(binding.id);

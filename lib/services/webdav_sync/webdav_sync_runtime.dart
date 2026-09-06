@@ -1,3 +1,4 @@
+import '../profiles/profile_session_unavailable.dart';
 import 'dart:convert';
 import 'webdav_sync_backup.dart';
 import 'webdav_sync_logout.dart';
@@ -1101,9 +1102,12 @@ final class WebDavSyncRuntime
     final pending = _firstJoinResuming;
     if (pending != null) return pending;
     late final Future<void> started;
-    started = _resumeFirstJoinOnce().whenComplete(() {
-      if (identical(_firstJoinResuming, started)) _firstJoinResuming = null;
-    });
+    // Remote imports run in the receiving profile's zone. A durable retry
+    // must instead authorize the Admin that is active when the attempt runs.
+    started = ProfileRuntime.withoutCapturedScope(_resumeFirstJoinOnce)
+        .whenComplete(() {
+          if (identical(_firstJoinResuming, started)) _firstJoinResuming = null;
+        });
     _firstJoinResuming = started;
     return started;
   }
@@ -1775,7 +1779,9 @@ final class WebDavSyncRuntime
     if (!profile.isAdmin ||
         !profile.allows(ProfileFeature.manageProfiles) ||
         !profile.allows(ProfileFeature.backupRestore)) {
-      throw StateError('WebDAV sync requires an active managing Admin');
+      throw ProfileSessionUnavailable(
+        'WebDAV sync requires an active managing Admin',
+      );
     }
     return authorization;
   }

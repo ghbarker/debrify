@@ -1,3 +1,4 @@
+import 'package:debrify/services/profiles/profile_lock_controller.dart';
 import 'dart:convert';
 import 'package:debrify/services/webdav_sync/webdav_sync_backup.dart';
 import 'package:debrify/services/webdav_sync/webdav_sync_codec.dart';
@@ -33,6 +34,91 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test(
+    'reconnect timer uses the new Admin after importing Admin is deleted',
+    () async {
+      final fixture = await _openRuntimeFixture('deferred-join');
+      addTearDown(fixture.dispose);
+      WebDavSyncFeature.debugOverride = true;
+      final runtime = WebDavSyncRuntime.instance;
+      const config = WebDavConfig(
+        id: 'server',
+        name: 'Server',
+        baseUrl: 'https://example.test/dav',
+        username: 'alice',
+        password: 'secret',
+      );
+      var binding = await runtime.bindingStore.stageBinding(
+        location: WebDavSyncFolderLocation.fromConfig(config, 'Family'),
+        config: config,
+        syncPassphrase: 'circle-secret',
+      );
+      binding = await runtime.bindingStore.markRootVerified(
+        bindingId: binding.id,
+        root: WebDavSyncRootDocument(
+          circleId: 'circle-one',
+          createdAt: DateTime.utc(2026, 9, 1),
+          schemaFloor: 1,
+          kdfSalt: Uint8List(16),
+        ),
+        markerBytes: [1, 2, 3],
+      );
+      await runtime.bindingStore.setLifecycle(
+        binding.id,
+        WebDavSyncLifecycle.awaitingAdoption,
+      );
+
+      await runtime.initialize();
+      final oldScope = ProfileRuntime.capture();
+      final oldAdmin = (await fixture.registry.getProfile(fixture.adminId))!;
+      ProfileLockController.instance.unlock(oldAdmin);
+      final nextAdmin = await fixture.registry.createProfile(
+        name: 'Admin',
+        role: UserProfileRole.admin,
+        actingProfileId: oldAdmin.id,
+        actingAuthorizationRevision: oldAdmin.authorizationRevision,
+        actingSessionEpoch: oldScope.sessionEpoch,
+      );
+      final observed = Completer<String>();
+      runtime.debugFirstJoinConnect = (_) async {
+        observed.complete(ProfileRuntime.capture().profileId);
+        return (await runtime.bindingStore.load()).stagedBinding!;
+      };
+      await ProfileRuntime.withCapturedScope(
+        oldScope,
+        runtime.resumeAfterReconfiguration,
+      );
+      await fixture.registry.setActiveProfile(nextAdmin.id);
+      ProfileRuntime.publish(
+        ProfileScope(
+          profileId: nextAdmin.id,
+          dataGeneration: 1,
+          sessionEpoch: 2,
+        ),
+      );
+      ProfileLockController.instance.unlock(nextAdmin);
+      addTearDown(ProfileLockController.instance.dispose);
+      await fixture.registry.deleteProfileWithDisposition(
+        id: oldAdmin.id,
+        deleteOwnedResources: true,
+        detachPublicArtifacts: false,
+        actingProfileId: nextAdmin.id,
+        actingAuthorizationRevision: nextAdmin.authorizationRevision,
+        actingSessionEpoch: 2,
+      );
+      final captured = await observed.future.timeout(
+        const Duration(seconds: 35),
+      );
+      runtime.pauseForReconfiguration();
+      expect(
+        captured,
+        nextAdmin.id,
+        reason: 'The user has logged into the new Admin',
+      );
+    },
+    timeout: const Timeout(Duration(seconds: 45)),
+  );
 
   for (final enabled in [false, true]) {
     test(
