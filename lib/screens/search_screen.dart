@@ -1,5 +1,6 @@
 import '../widgets/see_all/discover_browsing_input.dart';
 import '../services/home_catalog_refresh.dart';
+import '../services/home_load_deadline.dart';
 import '../widgets/home/home_row_focus.dart';
 import '../services/home_row_refresh.dart';
 import '../services/profiles/connection_resource_service.dart';
@@ -755,6 +756,11 @@ class _SearchScreenState extends State<SearchScreen>
   // persists across a search detour so returning to the board keeps its place.
   final List<(StremioAddon, StremioAddonCatalog)> _boardRefs = [];
   int _boardCursor = 0;
+  // Updated only when a full board or additional page has been accepted.
+  // Refreshes mutate live references, so even overlapping refreshes must use
+  // this independent snapshot of the board that is actually displayed.
+  HomeBoardSnapshot<(StremioAddon, StremioAddonCatalog), StremioAddon>?
+      _committedBoard;
   bool _boardLoadingMore = false;
   final ScrollController _boardScroll = ScrollController();
 
@@ -2576,15 +2582,27 @@ class _SearchScreenState extends State<SearchScreen>
     if (_mode != mode) _switchMode(mode);
   }
 
+  void _commitBoardSnapshot() {
+    _committedBoard = HomeBoardSnapshot(_boardRefs, _boardCursor, _addonsById);
+  }
+
   Future<void> _load({bool preserveVisibleRows = false}) async {
-    final keepRows = preserveVisibleRows && _homeSections.isNotEmpty;
-    final previouslyLoaded = keepRows ? _boardCursor : 0;
+    final keepRows = preserveVisibleRows &&
+        _homeSections.isNotEmpty &&
+        _committedBoard != null;
+    final previousBoard = keepRows ? _committedBoard : null;
+    final previouslyLoaded = previousBoard?.cursor ?? 0;
     final previousRows = <String, CatalogSection>{
       if (keepRows)
         for (final row in _homeSections)
           if (row is! HomeListSection) _sectionRowId(row): row,
     };
     final gen = ++_boardLoadGen;
+    var completionGen = gen;
+    var expired = false;
+    // A superseded pagination request may never return. Its finally block is
+    // generation-guarded, so it cannot clear a newer request's loading flag.
+    _boardLoadingMore = false;
     _boardRefreshing = true;
     setState(() {
       if (!keepRows) _loading = true;
@@ -2592,122 +2610,140 @@ class _SearchScreenState extends State<SearchScreen>
     });
     unawaited(_refreshPikpakOnly());
     try {
-      final disabled = await StorageService.getHomeDisabledSections();
-      final extras = await StorageService.getHomeExtraRows();
-      final rowOrder = await StorageService.getHomeRowOrder();
-      final heroSource = await StorageService.getHomeHeroSource();
-      final collections = await _readHomeCollections();
-      // Commit the prefs and (crucially) start the tracker fan-out only if
-      // this load still owns the board — a superseded run kicking off its own
-      // resolve would double the concurrent tracker requests beside the
-      // winning generation's and stale-write the shared settings fields.
-      if (!mounted || gen != _boardLoadGen) return;
-      _homeDisabled = disabled;
-      _homeExtras = extras;
-      _homeRowOrder = rowOrder;
-      _heroSource = heroSource;
-      _homeCollections = collections;
-      _homeCollectionsSig = HomeCollectionsStore.signatureOf(collections);
-      // Opt-in Trakt/Simkl list rows, resolved IN PARALLEL with the first
-      // catalog batch below. Home board only — the Search tab runs _load just
-      // to warm the catalog refs for its search, and Discover never comes
-      // through here. The 5s deadline keeps the rows that finished and drops
-      // stragglers, bounding what an enabled config can add to first paint
-      // (nothing at all is fetched in the default, nothing-enabled config).
-      final listRowsFuture =
-          widget.searchMode || widget.discoverMode || !_trackerExtrasEnabled
-          ? Future.value(const <HomeListSection>[])
-          // catchError at creation, not at the await: a superseded load
-          // returns before awaiting this future, and an unawaited throw
-          // would surface as an unhandled async error. A resolve failure
-          // just means no list rows this load.
-          : HomeListRowsService.instance
-                .resolve(_homeExtras, deadline: const Duration(seconds: 5))
-                .catchError((_) => const <HomeListSection>[]);
-      final addons = await _stremio.getCatalogAddons();
-      if (!mounted || gen != _boardLoadGen) return;
-      // Enumerate every BROWSABLE catalog across all addons — no global row cap.
-      // This is cheap (manifest data); items are pulled lazily in batches on
-      // scroll. Catalogs that require a `search` extra are search-only: browsing
-      // them without a query just returns empty after a wasted round trip, so
-      // skip them here (they still power the Keyword/catalog search path).
-      // Catalogs the user hid in the Home Rows manager are skipped too.
-      // Catalogs claimed by an enabled collection folder live inside that
-      // folder (as in Nuvio) and never double up as plain board rows.
-      final claimed = HomeCollectionsStore.claimedCatalogKeys(
-        _homeCollections,
-        addons,
-        disabledRows: _homeDisabled,
-        showsCollectionRows: !widget.searchMode && !widget.discoverMode,
+      await runHomeLoadWithDeadline(
+        retire: () {
+          if (!mounted || gen != _boardLoadGen) return;
+          expired = true;
+          completionGen = ++_boardLoadGen;
+          // Retiring the generation stops stale batches. A refresh timeout
+          // must restore the paging state belonging to the still-visible rows.
+          if (previousBoard != null) {
+            _boardCursor = previousBoard.restore(_boardRefs, _addonsById);
+          } else {
+            _boardRefs.clear();
+            _boardCursor = 0;
+          }
+        },
+        load: () async {
+          final disabled = await StorageService.getHomeDisabledSections();
+          final extras = await StorageService.getHomeExtraRows();
+          final rowOrder = await StorageService.getHomeRowOrder();
+          final heroSource = await StorageService.getHomeHeroSource();
+          final collections = await _readHomeCollections();
+          // Commit the prefs and (crucially) start the tracker fan-out only if
+          // this load still owns the board — a superseded run kicking off its own
+          // resolve would double the concurrent tracker requests beside the
+          // winning generation's and stale-write the shared settings fields.
+          if (!mounted || gen != _boardLoadGen) return;
+          _homeDisabled = disabled;
+          _homeExtras = extras;
+          _homeRowOrder = rowOrder;
+          _heroSource = heroSource;
+          _homeCollections = collections;
+          _homeCollectionsSig = HomeCollectionsStore.signatureOf(collections);
+          // Opt-in Trakt/Simkl list rows, resolved IN PARALLEL with the first
+          // catalog batch below. Home board only — the Search tab runs _load just
+          // to warm the catalog refs for its search, and Discover never comes
+          // through here. The 5s deadline keeps the rows that finished and drops
+          // stragglers, bounding what an enabled config can add to first paint
+          // (nothing at all is fetched in the default, nothing-enabled config).
+          final listRowsFuture =
+              widget.searchMode || widget.discoverMode || !_trackerExtrasEnabled
+              ? Future.value(const <HomeListSection>[])
+              // catchError at creation, not at the await: a superseded load
+              // returns before awaiting this future, and an unawaited throw
+              // would surface as an unhandled async error. A resolve failure
+              // just means no list rows this load.
+              : HomeListRowsService.instance
+                    .resolve(_homeExtras, deadline: const Duration(seconds: 5))
+                    .catchError((_) => const <HomeListSection>[]);
+          final addons = await _stremio.getCatalogAddons();
+          if (!mounted || gen != _boardLoadGen) return;
+          // Enumerate every BROWSABLE catalog across all addons — no global row cap.
+          // This is cheap (manifest data); items are pulled lazily in batches on
+          // scroll. Catalogs that require a `search` extra are search-only: browsing
+          // them without a query just returns empty after a wasted round trip, so
+          // skip them here (they still power the Keyword/catalog search path).
+          // Catalogs the user hid in the Home Rows manager are skipped too.
+          // Catalogs claimed by an enabled collection folder live inside that
+          // folder (as in Nuvio) and never double up as plain board rows.
+          final claimed = HomeCollectionsStore.claimedCatalogKeys(
+            _homeCollections,
+            addons,
+            disabledRows: _homeDisabled,
+            showsCollectionRows: !widget.searchMode && !widget.discoverMode,
+          );
+          final boardRefs = [
+            for (final a in addons)
+              for (final c in a.catalogs)
+                if (c.isBrowsable &&
+                    !_homeDisabled.contains('${a.id}:${c.type}:${c.id}') &&
+                    !claimed.contains('${a.id}:${c.type}:${c.id}'))
+                  (a, c),
+          ];
+          _boardRefs
+            ..clear()
+            ..addAll(
+              _homeRowOrderActive
+                  ? HomeRowOrder.apply(boardRefs, _homeRowOrder, _catalogRefRowId)
+                  : boardRefs,
+            );
+          _boardCursor = 0;
+          _addonsById.clear();
+          for (final a in addons) {
+            _addonsById.putIfAbsent(a.id, () => a);
+          }
+          // Resolve the Spotlight hero's own reel in parallel with the first
+          // batch — its catalog may sit far down the board (or be hidden as a
+          // row), so it can't wait for a batch to happen to include it. Home
+          // board only, like the list rows above.
+          if (!widget.searchMode && !widget.discoverMode) {
+            unawaited(_resolveSpotlightHeroSource(addons));
+          }
+          // First batch is blocking so the board isn't empty on first paint; skip
+          // runs of empty catalogs so we always land on some visible rows.
+          final first = await _fetchBoardBatchUntilNonEmpty(gen, previousRows: previousRows);
+          // Keep the previously loaded vertical extent when addons change.
+          while (gen == _boardLoadGen && _boardCursor < previouslyLoaded &&
+              _boardCursor < _boardRefs.length) {
+            first.addAll(await _fetchBoardBatch(_kBoardBatchSize, gen, previousRows: previousRows));
+          }
+          final listRows = await listRowsFuture;
+          if (!mounted || gen != _boardLoadGen) return;
+          // List rows lead the sections — after the favourites rows, before every
+          // addon catalog row. Batching appends after them untouched.
+          // Imported collections follow Nuvio's order: pinned ones lead the
+          // board, the rest sit after the tracker list rows and before every
+          // addon catalog row. No network — folders are static tiles.
+          final collectionRows = widget.searchMode || widget.discoverMode
+              ? const <HomeCollectionSection>[]
+              : _buildCollectionSections();
+          final sections = <CatalogSection>[
+            for (final s in collectionRows)
+              if (s.collection.pinToTop) s,
+            ...listRows,
+            for (final s in collectionRows)
+              if (!s.collection.pinToTop) s,
+            ...first,
+          ];
+          _homeSections = sections;
+          _commitBoardSnapshot();
+          setState(() => _loading = false);
+          MainPageBridge.homeBoardReady.value = true;
+          // A catalog search may have STARTED while this load was in flight —
+          // `_sections` now holds (or is streaming) search results, and applying
+          // the board over them would permanently mix the two views. Same
+          // discipline as _loadMoreBoard: the Home cache above is refreshed, the
+          // visible view is not — _restoreHome re-applies _homeSections when the
+          // search ends.
+          if (_catalogQuery.isNotEmpty || _catalogSearching) return;
+          _applySections(sections, preserveFocus: keepRows);
+          _maybeAutoFocusBoard();
+          // Pagination resumes after the refresh releases its cursor below.
+        },
       );
-      final boardRefs = [
-        for (final a in addons)
-          for (final c in a.catalogs)
-            if (c.isBrowsable &&
-                !_homeDisabled.contains('${a.id}:${c.type}:${c.id}') &&
-                !claimed.contains('${a.id}:${c.type}:${c.id}'))
-              (a, c),
-      ];
-      _boardRefs
-        ..clear()
-        ..addAll(
-          _homeRowOrderActive
-              ? HomeRowOrder.apply(boardRefs, _homeRowOrder, _catalogRefRowId)
-              : boardRefs,
-        );
-      _boardCursor = 0;
-      _addonsById.clear();
-      for (final a in addons) {
-        _addonsById.putIfAbsent(a.id, () => a);
-      }
-      // Resolve the Spotlight hero's own reel in parallel with the first
-      // batch — its catalog may sit far down the board (or be hidden as a
-      // row), so it can't wait for a batch to happen to include it. Home
-      // board only, like the list rows above.
-      if (!widget.searchMode && !widget.discoverMode) {
-        unawaited(_resolveSpotlightHeroSource(addons));
-      }
-      // First batch is blocking so the board isn't empty on first paint; skip
-      // runs of empty catalogs so we always land on some visible rows.
-      final first = await _fetchBoardBatchUntilNonEmpty(gen, previousRows: previousRows);
-      // Keep the previously loaded vertical extent when addons change.
-      while (gen == _boardLoadGen && _boardCursor < previouslyLoaded &&
-          _boardCursor < _boardRefs.length) {
-        first.addAll(await _fetchBoardBatch(_kBoardBatchSize, gen, previousRows: previousRows));
-      }
-      final listRows = await listRowsFuture;
-      if (!mounted || gen != _boardLoadGen) return;
-      // List rows lead the sections — after the favourites rows, before every
-      // addon catalog row. Batching appends after them untouched.
-      // Imported collections follow Nuvio's order: pinned ones lead the
-      // board, the rest sit after the tracker list rows and before every
-      // addon catalog row. No network — folders are static tiles.
-      final collectionRows = widget.searchMode || widget.discoverMode
-          ? const <HomeCollectionSection>[]
-          : _buildCollectionSections();
-      final sections = <CatalogSection>[
-        for (final s in collectionRows)
-          if (s.collection.pinToTop) s,
-        ...listRows,
-        for (final s in collectionRows)
-          if (!s.collection.pinToTop) s,
-        ...first,
-      ];
-      _homeSections = sections;
-      setState(() => _loading = false);
-      MainPageBridge.homeBoardReady.value = true;
-      // A catalog search may have STARTED while this load was in flight —
-      // `_sections` now holds (or is streaming) search results, and applying
-      // the board over them would permanently mix the two views. Same
-      // discipline as _loadMoreBoard: the Home cache above is refreshed, the
-      // visible view is not — _restoreHome re-applies _homeSections when the
-      // search ends.
-      if (_catalogQuery.isNotEmpty || _catalogSearching) return;
-      _applySections(sections, preserveFocus: keepRows);
-      _maybeAutoFocusBoard();
-      // Pagination resumes after the refresh releases its cursor below.
     } catch (e) {
-      if (!mounted || gen != _boardLoadGen) return;
+      if (!mounted || completionGen != _boardLoadGen) return;
       // Mid-search, the error screen must not replace the search results
       // (_buildBoard renders _error before anything else) — latch a retry
       // for _restoreHome instead.
@@ -2718,20 +2754,36 @@ class _SearchScreenState extends State<SearchScreen>
         return;
       }
       setState(() {
-        if (!keepRows) _error = e.toString();
+        if (!keepRows) {
+          _error = expired
+              ? 'Home took too long to load. Please try again.'
+              : e.toString();
+        }
         _loading = false;
       });
+      if (expired && keepRows) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(
+            content: const Text("Couldn't refresh Home. Showing previous rows."),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: () {
+                if (mounted) unawaited(_load(preserveVisibleRows: true));
+              },
+            ),
+          ),
+        );
+      }
       // Terminal state too — the launch splash must not outlive the board's
       // loading phase just because it ended in an error screen.
       MainPageBridge.homeBoardReady.value = true;
     } finally {
-      if (gen == _boardLoadGen) {
+      if (completionGen == _boardLoadGen) {
         _boardRefreshing = false;
-        if (mounted) _maybeAutoFillBoard();
+        if (mounted && !expired) _maybeAutoFillBoard();
       }
     }
   }
-
   /// Fetch the next batch of catalog rows from [_boardCursor], skipping over any
   /// runs of empty catalogs, and return the non-empty sections (advancing the
   /// cursor as it goes). Empty result ⇒ the board is exhausted — or [gen] went
@@ -2814,6 +2866,7 @@ class _SearchScreenState extends State<SearchScreen>
     try {
       final more = await _fetchBoardBatchUntilNonEmpty(gen);
       if (!mounted || gen != _boardLoadGen) return false;
+      _commitBoardSnapshot();
       if (more.isNotEmpty) {
         // Always keep the board cache growing so nothing is lost…
         _homeSections = [..._homeSections, ...more];
@@ -2831,8 +2884,10 @@ class _SearchScreenState extends State<SearchScreen>
         }
       }
     } finally {
-      if (mounted) setState(() => _boardLoadingMore = false);
-      _maybeAutoFillBoard();
+      if (mounted && gen == _boardLoadGen) {
+        setState(() => _boardLoadingMore = false);
+        _maybeAutoFillBoard();
+      }
     }
     return appended;
   }
@@ -17545,6 +17600,7 @@ class _SearchScreenState extends State<SearchScreen>
         Icons.error_outline_rounded,
         "Couldn't load catalogs",
         _error!,
+        onRetry: () => unawaited(_load()),
       );
     }
     final showCw = _cwVisible;
@@ -19213,7 +19269,12 @@ class _SearchScreenState extends State<SearchScreen>
     );
   }
 
-  Widget _message(IconData icon, String title, String body) {
+  Widget _message(
+    IconData icon,
+    String title,
+    String body, {
+    VoidCallback? onRetry,
+  }) {
     final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
@@ -19237,11 +19298,21 @@ class _SearchScreenState extends State<SearchScreen>
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
             ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                autofocus: widget.isTelevision,
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try again'),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+
 }
 
 /// The Stremio-style spotlight. Reflects the currently focused board title —

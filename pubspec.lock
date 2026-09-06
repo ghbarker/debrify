@@ -984,12 +984,11 @@ packages:
     source: hosted
     version: "2.4.2"
   sqflite_android:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: sqflite_android
-      sha256: "2b3070c5fa881839f8b402ee4a39c1b4d561704d4ebbbcfb808a119bc2a1701b"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/sqflite_android_patched"
+      relative: true
+    source: path
     version: "2.4.1"
   sqflite_common:
     dependency: transitive

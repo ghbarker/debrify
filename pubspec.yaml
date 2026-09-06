@@ -152,6 +152,9 @@ dependencies:
 # tvOS fallback — flutter_cache_manager, google_fonts, background_downloader.
 # Everything else is stock 0.0.3 — diff it before upgrading.
 dependency_overrides:
+  # Engine-owned Android database handles; see the package PATCHES.md.
+  sqflite_android:
+    path: packages/sqflite_android_patched
   media_kit:
     path: packages/media_kit_patched
   # Android TV uses ExoPlayer and is unaffected. Android phones use MediaKit's
