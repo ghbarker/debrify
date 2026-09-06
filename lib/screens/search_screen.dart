@@ -1,4 +1,11 @@
+import '../widgets/see_all/discover_browsing_input.dart';
+import '../services/home_catalog_refresh.dart';
+import '../services/home_load_deadline.dart';
+import '../widgets/home/home_row_focus.dart';
+import '../services/home_row_refresh.dart';
+import '../services/profiles/connection_resource_service.dart';
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' as ui show ImageFilter;
 
@@ -11,9 +18,11 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/advanced_search_selection.dart';
 import '../theme/app_theme_scope.dart';
 import '../theme/artwork_accent.dart';
+import '../utils/home_rail_metrics.dart';
 import '../utils/platform_util.dart';
 import '../utils/tvos_device.dart';
 import '../models/debrify_tv/channel.dart';
+import '../models/home_collection.dart';
 import '../models/iptv_playlist.dart';
 import '../models/play_loader_art.dart';
 import '../models/playlist_view_mode.dart';
@@ -28,6 +37,8 @@ import '../services/discover_prefs.dart';
 import '../services/engine/dynamic_engine.dart';
 import '../services/engine/settings_manager.dart';
 import '../services/episode_artwork_service.dart';
+import '../services/home_collection_rows.dart';
+import '../services/home_collections_store.dart';
 import '../services/home_list_rows.dart';
 import '../services/home_row_order.dart';
 import '../services/filtered_catalog_pager.dart';
@@ -89,6 +100,7 @@ import '../widgets/source_row.dart';
 import '../widgets/torrent_filters_sheet.dart';
 import '../widgets/torrent_result_row.dart';
 import '../widgets/tv_text_field.dart';
+import 'collections/collection_folder_screen.dart';
 import 'iptv/xtream_series_detail.dart';
 import 'playlist_content_view_screen.dart';
 import 'see_all/catalog_see_all_screen.dart';
@@ -712,6 +724,12 @@ class _SearchScreenState extends State<SearchScreen>
   /// row membership, so [_reloadForHomeSettings] diffs it like a row toggle.
   bool _hideWatched = HideWatchedPrefs.enabled;
 
+  /// Imported collections — each enabled one is a [HomeCollectionSection] row
+  /// of folder tiles. [_homeCollectionsSig] is the store's change token the
+  /// settings-changed listener diffs against.
+  List<HomeCollection> _homeCollections = const [];
+  String _homeCollectionsSig = HomeCollectionsStore.signatureOf(const []);
+
   /// Stable ids in the user's global Home-row order. Rows not present append
   /// canonically; ids whose backing row is temporarily unavailable stay saved.
   List<String> _homeRowOrder = const [];
@@ -733,6 +751,7 @@ class _SearchScreenState extends State<SearchScreen>
   /// load pipeline re-checks this so a superseded load can neither apply its
   /// stale sections nor advance the new load's cursor.
   int _boardLoadGen = 0;
+  bool _boardRefreshing = false;
 
   /// A triggered board reload arrived while a catalog search was showing its
   /// results — running [_load] then would stomp the search view, so it's
@@ -745,6 +764,11 @@ class _SearchScreenState extends State<SearchScreen>
   // persists across a search detour so returning to the board keeps its place.
   final List<(StremioAddon, StremioAddonCatalog)> _boardRefs = [];
   int _boardCursor = 0;
+  // Updated only when a full board or additional page has been accepted.
+  // Refreshes mutate live references, so even overlapping refreshes must use
+  // this independent snapshot of the board that is actually displayed.
+  HomeBoardSnapshot<(StremioAddon, StremioAddonCatalog), StremioAddon>?
+      _committedBoard;
   bool _boardLoadingMore = false;
   final ScrollController _boardScroll = ScrollController();
 
@@ -1332,10 +1356,16 @@ class _SearchScreenState extends State<SearchScreen>
   /// CW ids. Seed those new ids after the Simkl CW family instead of allowing
   /// the generic ordering projection to append them at the bottom. Any MDBList
   /// id already saved keeps its chosen position untouched.
-  List<String> get _effectiveHomeRowOrder => HomeRowOrder.insertMissingAfter(
-    _homeRowOrder,
-    additions: const ['mdblist:movies', 'mdblist:shows'],
-    anchors: const ['simkl:movies', 'simkl:shows'],
+  List<String> get _effectiveHomeRowOrder => HomeRowOrder.seedPinned(
+    HomeRowOrder.insertMissingAfter(
+      _homeRowOrder,
+      additions: const ['mdblist:movies', 'mdblist:shows'],
+      anchors: const ['simkl:movies', 'simkl:shows'],
+    ),
+    [
+      for (final c in _homeCollections)
+        if (c.pinToTop) HomeCollectionRowIds.collection(c.id),
+    ],
   );
 
   /// Whether the Trakt rows should be held open with skeleton placeholders: the
@@ -1523,8 +1553,8 @@ class _SearchScreenState extends State<SearchScreen>
   final ValueNotifier<bool> _discTrailerShowing = ValueNotifier(false);
   // Theater: after a few seconds of uninterrupted playback the page commits to
   // the trailer — veils thin to near-clear, rail and grid recede to ~15%. Armed
-  // by [_onDiscShowingChanged]; dropped the instant frames stop (any DPAD move
-  // clears the trailer, so browsing input always brings the lights back).
+  // by playback and browsing activity; controls return immediately on input
+  // and dim again after the idle dwell if trailer playback continues.
   final ValueNotifier<bool> _discTheater = ValueNotifier(false);
   Timer? _discTheaterTimer;
   static const Duration _discTheaterDelay = Duration(seconds: 5);
@@ -1631,6 +1661,7 @@ class _SearchScreenState extends State<SearchScreen>
       MdblistService.instance.playbackRevision.addListener(
         _onMdblistPlaybackRevision,
       );
+      MainPageBridge.addPlaylistChangeListener(_loadPlaylistFavorites);
     }
     if (widget.searchMode) {
       MainPageBridge.registerTabBackHandler('search', _handleSearchBack);
@@ -1761,6 +1792,8 @@ class _SearchScreenState extends State<SearchScreen>
     // rebuilt on return; on TV a tab switch already reloads it fresh).
     if (!widget.searchMode && !widget.discoverMode) {
       MainPageBridge.addHomeSettingsListener(_reloadForHomeSettings);
+      HomeRowRefreshSignal.addListener(_queueHomeRows);
+      _stremio.addAddonsChangedListener(_onHomeAddonsChanged);
       // IPTV list mutations (picker, IPTV settings, provider deletion,
       // reconcile, import) all bump the store revision — the only signal a
       // Home that stays alive across tab switches gets about them.
@@ -2164,6 +2197,7 @@ class _SearchScreenState extends State<SearchScreen>
       _onMdblistPlaybackRevision,
     );
     if (!widget.searchMode && !widget.discoverMode) {
+      MainPageBridge.removePlaylistChangeListener(_loadPlaylistFavorites);
       MainPageBridge.unregisterCatalogDetailOpenHandler(
         _openPendingCatalogDetail,
       );
@@ -2183,6 +2217,9 @@ class _SearchScreenState extends State<SearchScreen>
     MainPageBridge.removePlaybackReturnListener(_onPlaybackReturned);
     MainPageBridge.removePlayerLaunchListener(_markPlaybackStarted);
     MainPageBridge.removeHomeSettingsListener(_reloadForHomeSettings);
+    HomeRowRefreshSignal.removeListener(_queueHomeRows);
+    _stremio.removeAddonsChangedListener(_onHomeAddonsChanged);
+    _homeRefreshTimer?.cancel();
     IptvMediaStore.listsRevision.removeListener(_onIptvListsRevision);
     for (final row in _iptvListRows) {
       for (final n in row.nodes) {
@@ -2455,9 +2492,12 @@ class _SearchScreenState extends State<SearchScreen>
     final extras = await StorageService.getHomeExtraRows();
     final rowOrder = await StorageService.getHomeRowOrder();
     final heroSource = await StorageService.getHomeHeroSource();
+    final collections = await _readHomeCollections();
     if (!mounted) return;
     final hideWatched = HideWatchedPrefs.enabled;
     final hideWatchedUnchanged = hideWatched == _hideWatched;
+    final collectionsSig = HomeCollectionsStore.signatureOf(collections);
+    final collectionsUnchanged = collectionsSig == _homeCollectionsSig;
     final disabledUnchanged =
         disabled.length == _homeDisabled.length &&
         disabled.containsAll(_homeDisabled);
@@ -2493,7 +2533,8 @@ class _SearchScreenState extends State<SearchScreen>
         iptvExtrasUnchanged &&
         rowOrderUnchanged &&
         heroSourceUnchanged &&
-        hideWatchedUnchanged) {
+        hideWatchedUnchanged &&
+        collectionsUnchanged) {
       return;
     }
     setState(() {
@@ -2502,11 +2543,14 @@ class _SearchScreenState extends State<SearchScreen>
       _homeRowOrder = rowOrder;
       _heroSource = heroSource;
       _hideWatched = hideWatched;
+      _homeCollections = collections;
+      _homeCollectionsSig = collectionsSig;
     });
     // Hide-watched changes row MEMBERSHIP, so it takes the full reload path.
     if (!disabledUnchanged ||
         !boardExtrasUnchanged ||
         !hideWatchedUnchanged ||
+        !collectionsUnchanged ||
         (!rowOrderUnchanged && !widget.searchMode && !widget.discoverMode)) {
       _requestBoardReload();
     } else if (!heroSourceUnchanged &&
@@ -2552,113 +2596,181 @@ class _SearchScreenState extends State<SearchScreen>
     if (_mode != mode) _switchMode(mode);
   }
 
-  Future<void> _load() async {
+  void _commitBoardSnapshot() {
+    _committedBoard = HomeBoardSnapshot(_boardRefs, _boardCursor, _addonsById);
+  }
+
+  Future<void> _load({bool preserveVisibleRows = false}) async {
+    final keepRows = preserveVisibleRows &&
+        _homeSections.isNotEmpty &&
+        _committedBoard != null;
+    final previousBoard = keepRows ? _committedBoard : null;
+    final previouslyLoaded = previousBoard?.cursor ?? 0;
+    final previousRows = <String, CatalogSection>{
+      if (keepRows)
+        for (final row in _homeSections)
+          if (row is! HomeListSection) _sectionRowId(row): row,
+    };
     final gen = ++_boardLoadGen;
+    var completionGen = gen;
+    var expired = false;
+    // A superseded pagination request may never return. Its finally block is
+    // generation-guarded, so it cannot clear a newer request's loading flag.
+    _boardLoadingMore = false;
+    _boardRefreshing = true;
     setState(() {
-      _loading = true;
+      if (!keepRows) _loading = true;
       _error = null;
     });
     unawaited(_refreshPikpakOnly());
     try {
-      final disabled = await StorageService.getHomeDisabledSections();
-      final extras = await StorageService.getHomeExtraRows();
-      final rowOrder = await StorageService.getHomeRowOrder();
-      final heroSource = await StorageService.getHomeHeroSource();
-      // Commit the prefs and (crucially) start the tracker fan-out only if
-      // this load still owns the board — a superseded run kicking off its own
-      // resolve would double the concurrent tracker requests beside the
-      // winning generation's and stale-write the shared settings fields.
-      if (!mounted || gen != _boardLoadGen) return;
-      _homeDisabled = disabled;
-      _homeExtras = extras;
-      _homeRowOrder = rowOrder;
-      _heroSource = heroSource;
-      _hideWatched = HideWatchedPrefs.enabled;
-      // Opt-in Trakt/Simkl list rows, resolved IN PARALLEL with the first
-      // catalog batch below. Home board only — the Search tab runs _load just
-      // to warm the catalog refs for its search, and Discover never comes
-      // through here. The 5s deadline keeps the rows that finished and drops
-      // stragglers, bounding what an enabled config can add to first paint
-      // (nothing at all is fetched in the default, nothing-enabled config).
-      final listRowsFuture =
-          widget.searchMode || widget.discoverMode || !_trackerExtrasEnabled
-          ? Future.value(const <HomeListSection>[])
-          // catchError at creation, not at the await: a superseded load
-          // returns before awaiting this future, and an unawaited throw
-          // would surface as an unhandled async error. A resolve failure
-          // just means no list rows this load.
-          : HomeListRowsService.instance
-                .resolve(_homeExtras, deadline: const Duration(seconds: 5))
-                .catchError((_) => const <HomeListSection>[]);
-      // With hide-watched on, wait briefly for the local watched snapshot so
-      // the first rows paint already filtered instead of losing titles a beat
-      // later. Tracker histories fold in asynchronously and apply from the
-      // next load; the timeout keeps a slow disk from stalling first paint.
-      if (HideWatchedPrefs.enabled) {
-        WatchedStatusService.instance.ensureStarted();
-        await WatchedStatusService.instance.firstSnapshot.timeout(
-          const Duration(milliseconds: 1500),
-          onTimeout: () {},
-        );
-        if (!mounted || gen != _boardLoadGen) return;
-      }
-      final addons = await _stremio.getCatalogAddons();
-      if (!mounted || gen != _boardLoadGen) return;
-      // Enumerate every BROWSABLE catalog across all addons — no global row cap.
-      // This is cheap (manifest data); items are pulled lazily in batches on
-      // scroll. Catalogs that require a `search` extra are search-only: browsing
-      // them without a query just returns empty after a wasted round trip, so
-      // skip them here (they still power the Keyword/catalog search path).
-      // Catalogs the user hid in the Home Rows manager are skipped too.
-      final boardRefs = [
-        for (final a in addons)
-          for (final c in a.catalogs)
-            if (c.isBrowsable &&
-                !_homeDisabled.contains('${a.id}:${c.type}:${c.id}'))
-              (a, c),
-      ];
-      _boardRefs
-        ..clear()
-        ..addAll(
-          _homeRowOrderActive
-              ? HomeRowOrder.apply(boardRefs, _homeRowOrder, _catalogRefRowId)
-              : boardRefs,
-        );
-      _boardCursor = 0;
-      _addonsById.clear();
-      for (final a in addons) {
-        _addonsById.putIfAbsent(a.id, () => a);
-      }
-      // Resolve the Spotlight hero's own reel in parallel with the first
-      // batch — its catalog may sit far down the board (or be hidden as a
-      // row), so it can't wait for a batch to happen to include it. Home
-      // board only, like the list rows above.
-      if (!widget.searchMode && !widget.discoverMode) {
-        unawaited(_resolveSpotlightHeroSource(addons));
-      }
-      // First batch is blocking so the board isn't empty on first paint; skip
-      // runs of empty catalogs so we always land on some visible rows.
-      final first = await _fetchBoardBatchUntilNonEmpty(gen);
-      final listRows = await listRowsFuture;
-      if (!mounted || gen != _boardLoadGen) return;
-      // List rows lead the sections — after the favourites rows, before every
-      // addon catalog row. Batching appends after them untouched.
-      final sections = [...listRows, ...first];
-      _homeSections = sections;
-      setState(() => _loading = false);
-      MainPageBridge.homeBoardReady.value = true;
-      // A catalog search may have STARTED while this load was in flight —
-      // `_sections` now holds (or is streaming) search results, and applying
-      // the board over them would permanently mix the two views. Same
-      // discipline as _loadMoreBoard: the Home cache above is refreshed, the
-      // visible view is not — _restoreHome re-applies _homeSections when the
-      // search ends.
-      if (_catalogQuery.isNotEmpty || _catalogSearching) return;
-      _applySections(sections);
-      _maybeAutoFocusBoard();
-      _maybeAutoFillBoard();
+      await runHomeLoadWithDeadline(
+        retire: () {
+          if (!mounted || gen != _boardLoadGen) return;
+          expired = true;
+          completionGen = ++_boardLoadGen;
+          // Retiring the generation stops stale batches. A refresh timeout
+          // must restore the paging state belonging to the still-visible rows.
+          if (previousBoard != null) {
+            _boardCursor = previousBoard.restore(_boardRefs, _addonsById);
+          } else {
+            _boardRefs.clear();
+            _boardCursor = 0;
+          }
+        },
+        load: () async {
+          final disabled = await StorageService.getHomeDisabledSections();
+          final extras = await StorageService.getHomeExtraRows();
+          final rowOrder = await StorageService.getHomeRowOrder();
+          final heroSource = await StorageService.getHomeHeroSource();
+          final collections = await _readHomeCollections();
+          // Commit the prefs and (crucially) start the tracker fan-out only if
+          // this load still owns the board — a superseded run kicking off its own
+          // resolve would double the concurrent tracker requests beside the
+          // winning generation's and stale-write the shared settings fields.
+          if (!mounted || gen != _boardLoadGen) return;
+          _homeDisabled = disabled;
+          _homeExtras = extras;
+          _homeRowOrder = rowOrder;
+          _heroSource = heroSource;
+          _hideWatched = HideWatchedPrefs.enabled;
+          _homeCollections = collections;
+          _homeCollectionsSig = HomeCollectionsStore.signatureOf(collections);
+          // Opt-in Trakt/Simkl list rows, resolved IN PARALLEL with the first
+          // catalog batch below. Home board only — the Search tab runs _load just
+          // to warm the catalog refs for its search, and Discover never comes
+          // through here. The 5s deadline keeps the rows that finished and drops
+          // stragglers, bounding what an enabled config can add to first paint
+          // (nothing at all is fetched in the default, nothing-enabled config).
+          final listRowsFuture =
+              widget.searchMode || widget.discoverMode || !_trackerExtrasEnabled
+              ? Future.value(const <HomeListSection>[])
+              // catchError at creation, not at the await: a superseded load
+              // returns before awaiting this future, and an unawaited throw
+              // would surface as an unhandled async error. A resolve failure
+              // just means no list rows this load.
+              : HomeListRowsService.instance
+                    .resolve(_homeExtras, deadline: const Duration(seconds: 5))
+                    .catchError((_) => const <HomeListSection>[]);
+          // With hide-watched on, wait briefly for the local watched snapshot so
+          // the first rows paint already filtered instead of losing titles a beat
+          // later. Tracker histories fold in asynchronously and apply from the
+          // next load; the timeout keeps a slow disk from stalling first paint.
+          if (HideWatchedPrefs.enabled) {
+            WatchedStatusService.instance.ensureStarted();
+            await WatchedStatusService.instance.firstSnapshot.timeout(
+              const Duration(milliseconds: 1500),
+              onTimeout: () {},
+            );
+            if (!mounted || gen != _boardLoadGen) return;
+          }
+          final addons = await _stremio.getCatalogAddons();
+          if (!mounted || gen != _boardLoadGen) return;
+          // Enumerate every BROWSABLE catalog across all addons — no global row cap.
+          // This is cheap (manifest data); items are pulled lazily in batches on
+          // scroll. Catalogs that require a `search` extra are search-only: browsing
+          // them without a query just returns empty after a wasted round trip, so
+          // skip them here (they still power the Keyword/catalog search path).
+          // Catalogs the user hid in the Home Rows manager are skipped too.
+          // Catalogs claimed by an enabled collection folder live inside that
+          // folder (as in Nuvio) and never double up as plain board rows.
+          final claimed = HomeCollectionsStore.claimedCatalogKeys(
+            _homeCollections,
+            addons,
+            disabledRows: _homeDisabled,
+            showsCollectionRows: !widget.searchMode && !widget.discoverMode,
+          );
+          final boardRefs = [
+            for (final a in addons)
+              for (final c in a.catalogs)
+                if (c.isBrowsable &&
+                    !_homeDisabled.contains('${a.id}:${c.type}:${c.id}') &&
+                    !claimed.contains('${a.id}:${c.type}:${c.id}'))
+                  (a, c),
+          ];
+          _boardRefs
+            ..clear()
+            ..addAll(
+              _homeRowOrderActive
+                  ? HomeRowOrder.apply(boardRefs, _homeRowOrder, _catalogRefRowId)
+                  : boardRefs,
+            );
+          _boardCursor = 0;
+          _addonsById.clear();
+          for (final a in addons) {
+            _addonsById.putIfAbsent(a.id, () => a);
+          }
+          // Resolve the Spotlight hero's own reel in parallel with the first
+          // batch — its catalog may sit far down the board (or be hidden as a
+          // row), so it can't wait for a batch to happen to include it. Home
+          // board only, like the list rows above.
+          if (!widget.searchMode && !widget.discoverMode) {
+            unawaited(_resolveSpotlightHeroSource(addons));
+          }
+          // First batch is blocking so the board isn't empty on first paint; skip
+          // runs of empty catalogs so we always land on some visible rows.
+          final first = await _fetchBoardBatchUntilNonEmpty(gen, previousRows: previousRows);
+          // Keep the previously loaded vertical extent when addons change.
+          while (gen == _boardLoadGen && _boardCursor < previouslyLoaded &&
+              _boardCursor < _boardRefs.length) {
+            first.addAll(await _fetchBoardBatch(_kBoardBatchSize, gen, previousRows: previousRows));
+          }
+          final listRows = await listRowsFuture;
+          if (!mounted || gen != _boardLoadGen) return;
+          // List rows lead the sections — after the favourites rows, before every
+          // addon catalog row. Batching appends after them untouched.
+          // Imported collections follow Nuvio's order: pinned ones lead the
+          // board, the rest sit after the tracker list rows and before every
+          // addon catalog row. No network — folders are static tiles.
+          final collectionRows = widget.searchMode || widget.discoverMode
+              ? const <HomeCollectionSection>[]
+              : _buildCollectionSections();
+          final sections = <CatalogSection>[
+            for (final s in collectionRows)
+              if (s.collection.pinToTop) s,
+            ...listRows,
+            for (final s in collectionRows)
+              if (!s.collection.pinToTop) s,
+            ...first,
+          ];
+          _homeSections = sections;
+          _commitBoardSnapshot();
+          setState(() => _loading = false);
+          MainPageBridge.homeBoardReady.value = true;
+          // A catalog search may have STARTED while this load was in flight —
+          // `_sections` now holds (or is streaming) search results, and applying
+          // the board over them would permanently mix the two views. Same
+          // discipline as _loadMoreBoard: the Home cache above is refreshed, the
+          // visible view is not — _restoreHome re-applies _homeSections when the
+          // search ends.
+          if (_catalogQuery.isNotEmpty || _catalogSearching) return;
+          _applySections(sections, preserveFocus: keepRows);
+          _maybeAutoFocusBoard();
+          // Pagination resumes after the refresh releases its cursor below.
+        },
+      );
     } catch (e) {
-      if (!mounted || gen != _boardLoadGen) return;
+      if (!mounted || completionGen != _boardLoadGen) return;
       // Mid-search, the error screen must not replace the search results
       // (_buildBoard renders _error before anything else) — latch a retry
       // for _restoreHome instead.
@@ -2669,22 +2781,43 @@ class _SearchScreenState extends State<SearchScreen>
         return;
       }
       setState(() {
-        _error = e.toString();
+        if (!keepRows) {
+          _error = expired
+              ? 'Home took too long to load. Please try again.'
+              : e.toString();
+        }
         _loading = false;
       });
+      if (expired && keepRows) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(
+            content: const Text("Couldn't refresh Home. Showing previous rows."),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: () {
+                if (mounted) unawaited(_load(preserveVisibleRows: true));
+              },
+            ),
+          ),
+        );
+      }
       // Terminal state too — the launch splash must not outlive the board's
       // loading phase just because it ended in an error screen.
       MainPageBridge.homeBoardReady.value = true;
+    } finally {
+      if (completionGen == _boardLoadGen) {
+        _boardRefreshing = false;
+        if (mounted && !expired) _maybeAutoFillBoard();
+      }
     }
   }
-
   /// Fetch the next batch of catalog rows from [_boardCursor], skipping over any
   /// runs of empty catalogs, and return the non-empty sections (advancing the
   /// cursor as it goes). Empty result ⇒ the board is exhausted — or [gen] went
   /// stale (a newer [_load] owns the cursor now; stop without touching it).
-  Future<List<CatalogSection>> _fetchBoardBatchUntilNonEmpty(int gen) async {
+  Future<List<CatalogSection>> _fetchBoardBatchUntilNonEmpty(int gen, {Map<String, CatalogSection> previousRows = const {}}) async {
     while (gen == _boardLoadGen && _boardCursor < _boardRefs.length) {
-      final batch = await _fetchBoardBatch(_kBoardBatchSize, gen);
+      final batch = await _fetchBoardBatch(_kBoardBatchSize, gen, previousRows: previousRows);
       if (batch.isNotEmpty) return batch;
     }
     return const [];
@@ -2694,7 +2827,7 @@ class _SearchScreenState extends State<SearchScreen>
   /// [_boardCursor], and return the non-empty ones (order preserved). No-ops
   /// when [gen] is stale so a superseded load can't advance the fresh load's
   /// cursor.
-  Future<List<CatalogSection>> _fetchBoardBatch(int n, int gen) async {
+  Future<List<CatalogSection>> _fetchBoardBatch(int n, int gen, {Map<String, CatalogSection> previousRows = const {}}) async {
     if (gen != _boardLoadGen) return const [];
     final end = (_boardCursor + n).clamp(0, _boardRefs.length);
     final slice = _boardRefs.sublist(_boardCursor, end);
@@ -2703,29 +2836,29 @@ class _SearchScreenState extends State<SearchScreen>
       slice.map((ref) async {
         final (addon, catalog) = ref;
         try {
-          // With hide-watched on, the pager tops the row up across windows so
-          // an all-watched first page doesn't read as an empty catalog.
-          final page = await fetchFilteredPage(
-            (skip, onRaw) => _stremio.fetchCatalog(
-              addon,
-              catalog,
-              skip: skip,
-              onRawCount: onRaw,
-            ),
-            skip: 0,
-            hides: WatchedFilter.predicate,
-          );
-          if (page.items.isEmpty) return null;
-          return CatalogSection(
-            title: CatalogSection.rowTitle(catalog),
+          return await loadHomeCatalogSection(
             addon: addon,
             catalog: catalog,
-            // Keep the whole first page; more pages stream in on horizontal scroll.
-            items: page.items.toList(),
-            // Past the addon's raw window(s), not the post-filter count, so
-            // paging is aligned from the very first fetch.
-            nextSkip: page.nextSkip,
-            exhausted: page.exhausted,
+            previous: previousRows[_catalogRefRowId(ref)],
+            isCurrent: () => mounted && gen == _boardLoadGen,
+            fetch: (skip, onRawCount) async {
+              // Preserve the refresh loader's raw extent across every window
+              // consumed while topping up the filtered row.
+              final page = await fetchFilteredPage(
+                (cursor, onRaw) {
+                  if (!mounted || gen != _boardLoadGen) {
+                    return Future.value(const <StremioMeta>[]);
+                  }
+                  return _stremio.fetchCatalog(
+                    addon, catalog, skip: cursor, onRawCount: onRaw,
+                  );
+                },
+                skip: skip,
+                hides: WatchedFilter.predicate,
+              );
+              onRawCount(page.nextSkip - skip);
+              return page.items;
+            },
           );
         } catch (_) {
           return null;
@@ -2762,7 +2895,10 @@ class _SearchScreenState extends State<SearchScreen>
 
   /// Load and append the next batch of board rows (deduped against re-entry).
   Future<bool> _loadMoreBoard() async {
-    if (_boardLoadingMore || _boardCursor >= _boardRefs.length) return false;
+    if (_boardRefreshing || _boardLoadingMore ||
+        _boardCursor >= _boardRefs.length) {
+      return false;
+    }
     // Bind this append to the load generation that owns the current cursor —
     // if a full reload lands mid-fetch, the stale batch must not append onto
     // (or advance) the fresh board.
@@ -2772,6 +2908,7 @@ class _SearchScreenState extends State<SearchScreen>
     try {
       final more = await _fetchBoardBatchUntilNonEmpty(gen);
       if (!mounted || gen != _boardLoadGen) return false;
+      _commitBoardSnapshot();
       if (more.isNotEmpty) {
         // Always keep the board cache growing so nothing is lost…
         _homeSections = [..._homeSections, ...more];
@@ -2789,8 +2926,10 @@ class _SearchScreenState extends State<SearchScreen>
         }
       }
     } finally {
-      if (mounted) setState(() => _boardLoadingMore = false);
-      _maybeAutoFillBoard();
+      if (mounted && gen == _boardLoadGen) {
+        setState(() => _boardLoadingMore = false);
+        _maybeAutoFillBoard();
+      }
     }
     return appended;
   }
@@ -3353,6 +3492,8 @@ class _SearchScreenState extends State<SearchScreen>
 
   String _sectionRowId(CatalogSection section) => section is HomeListSection
       ? section.rowId
+      : section is HomeCollectionSection
+      ? section.rowId
       : '${section.addon.id}:${section.catalog.type}:${section.catalog.id}';
 
   String _catalogRefRowId((StremioAddon, StremioAddonCatalog) ref) =>
@@ -3466,13 +3607,65 @@ class _SearchScreenState extends State<SearchScreen>
   VoidCallback _favRowOnDown(String rowId, int column) =>
       () => _focusRelativeHomeRail(rowId, 1, column);
 
-  /// Load the user's starred Debrify TV channels for the leading favourites row.
-  /// Silently leaves the row empty on any error (it just won't render).
+  final _pendingHomeRows = <HomeRowRefresh>{};
+  Timer? _homeRefreshTimer;
+  bool _homeAddonsPending = false;
+  int _tvFavoritesRevision = 0;
+  int _stremioFavoritesRevision = 0;
+  int _watchlistRevision = 0;
+  int _playlistRevision = 0;
+
+  void _onHomeAddonsChanged() {
+    _homeAddonsPending = true;
+    _queueHomeRows({HomeRowRefresh.stremioTvFavorites});
+  }
+
+  void _queueHomeRows(Set<HomeRowRefresh> rows) {
+    if (!mounted) return;
+    _pendingHomeRows.addAll(rows.where((row) =>
+        row != HomeRowRefresh.playback ||
+        !(ModalRoute.of(context)?.isCurrent ?? false)));
+    // Visible Home already receives the existing playback-data bridge.
+
+    _homeRefreshTimer ??= Timer(const Duration(milliseconds: 100), () {
+      _homeRefreshTimer = null;
+      if (!mounted) return;
+      final pending = Set<HomeRowRefresh>.of(_pendingHomeRows);
+      _pendingHomeRows.clear();
+      for (final row in pending) {
+        switch (row) {
+          case HomeRowRefresh.tvFavorites:
+            unawaited(_loadTvFavorites());
+          case HomeRowRefresh.stremioTvFavorites:
+            unawaited(_loadStremioTvFavorites());
+          case HomeRowRefresh.playlist:
+            unawaited(_loadPlaylistFavorites());
+          case HomeRowRefresh.watchlist:
+            unawaited(_loadMyWatchlist());
+          case HomeRowRefresh.playback:
+            // Do not consume the local playback/tracker refresh latch here.
+            unawaited(_loadContinueWatching());
+            unawaited(_loadIptvContinueWatching());
+        }
+      }
+      if (_homeAddonsPending) {
+        _homeAddonsPending = false;
+        if (_catalogQuery.isNotEmpty || _catalogSearching) {
+          _pendingBoardReload = true;
+        } else {
+          unawaited(_load(preserveVisibleRows: true));
+        }
+      }
+    });
+  }
+
+  /// Reload starred channels without replacing newer row data.
   Future<void> _loadTvFavorites() async {
+    final revision = ++_tvFavoritesRevision;
     try {
       final ids = await StorageService.getDebrifyTvFavoriteChannelIds();
       if (ids.isEmpty) {
-        if (!mounted) return;
+        if (!mounted || revision != _tvFavoritesRevision) return;
         setState(() => _tvFavChannels = const []);
         _syncTvFavNodes();
         return;
@@ -3485,7 +3678,7 @@ class _SearchScreenState extends State<SearchScreen>
           .map(DebrifyTvChannel.fromRecord)
           .where((c) => ids.contains(c.id))
           .toList();
-      if (!mounted) return;
+      if (!mounted || revision != _tvFavoritesRevision) return;
       setState(() => _tvFavChannels = favs);
       _syncTvFavNodes();
       _maybeAutoFocusBoard();
@@ -3522,10 +3715,11 @@ class _SearchScreenState extends State<SearchScreen>
   /// (preserving discovery order), then fetch their items so each card can show
   /// a now-playing poster. Silently leaves the row empty on any error.
   Future<void> _loadStremioTvFavorites() async {
+    final revision = ++_stremioFavoritesRevision;
     try {
       final ids = await StorageService.getStremioTvFavoriteChannelIds();
       if (ids.isEmpty) {
-        if (!mounted) return;
+        if (!mounted || revision != _stremioFavoritesRevision) return;
         setState(() => _stvFavChannels = const []);
         _syncStvFavNodes();
         return;
@@ -3539,7 +3733,7 @@ class _SearchScreenState extends State<SearchScreen>
       final all = await StremioTvService.instance.discoverChannels();
       final favs = all.where((c) => ids.contains(c.id)).toList();
       await StremioTvService.instance.loadAllChannelItems(favs);
-      if (!mounted) return;
+      if (!mounted || revision != _stremioFavoritesRevision) return;
       setState(() {
         _stvRotationMinutes = rotation;
         _stvSeriesRotationMinutes = seriesRotation;
@@ -3780,6 +3974,21 @@ class _SearchScreenState extends State<SearchScreen>
   /// A collapsed series sentinel stored in a list: resolve its Xtream origin
   /// and open the merged series page (the episode list / Resume plays from
   /// there) — the sentinel URL itself is not a stream.
+  Future<List<IptvPlaylist>?> _readIptvPlaylistsForAction() async {
+    try {
+      return await StorageService.getIptvPlaylists(forSettings: false);
+    } on ResourceAuthorizationException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('IPTV is unavailable. Please retry or sign in.'),
+          ),
+        );
+      }
+      return null;
+    }
+  }
+
   Future<void> _openIptvListSeries(IptvChannel channel) async {
     // xtream-series://<originId>/<seriesId>
     final rest = channel.url.substring('xtream-series://'.length);
@@ -3789,8 +3998,8 @@ class _SearchScreenState extends State<SearchScreen>
         : rest.substring(0, slash);
     final seriesId = slash < 0 ? rest : rest.substring(slash + 1);
     if (seriesId.isEmpty) return;
-    final playlists = await StorageService.getIptvPlaylists(forSettings: false);
-    if (!mounted) return;
+    final playlists = await _readIptvPlaylistsForAction();
+    if (!mounted || playlists == null) return;
     IptvPlaylist? origin;
     for (final p in playlists) {
       if (p.id == originId && p.isXtreamCodes) {
@@ -3886,9 +4095,10 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   Future<void> _loadMyWatchlist() async {
+    final revision = ++_watchlistRevision;
     try {
       final items = await StorageService.getMyWatchlistItems();
-      if (!mounted) return;
+      if (!mounted || revision != _watchlistRevision) return;
       setState(() {
         _watchlistMovieItems = [
           for (final item in items)
@@ -3998,10 +4208,8 @@ class _SearchScreenState extends State<SearchScreen>
         return;
       }
 
-      final playlists = await StorageService.getIptvPlaylists(
-        forSettings: false,
-      );
-      if (!mounted) return;
+      final playlists = await _readIptvPlaylistsForAction();
+      if (!mounted || playlists == null) return;
       IptvPlaylist? playlist;
       for (final candidate in playlists) {
         if (candidate.id == xtream.playlistId && candidate.isXtreamCodes) {
@@ -4052,6 +4260,7 @@ class _SearchScreenState extends State<SearchScreen>
   /// poster overrides and resume progress (same as the Home playlist section),
   /// newest first. Silently leaves the row empty on any error.
   Future<void> _loadPlaylistFavorites() async {
+    final revision = ++_playlistRevision;
     try {
       final results = await Future.wait([
         StorageService.getPlaylistItemsRaw(),
@@ -4076,7 +4285,7 @@ class _SearchScreenState extends State<SearchScreen>
       }
 
       final progress = await StorageService.buildPlaylistProgressMap(items);
-      if (!mounted) return;
+      if (!mounted || revision != _playlistRevision) return;
       setState(() {
         _playlistItems = items;
         _playlistProgress = progress;
@@ -4312,7 +4521,9 @@ class _SearchScreenState extends State<SearchScreen>
     // rows that now lead _homeSections carry only a placeholder addon (empty
     // baseUrl), which can't serve /meta or /stream.
     for (final s in _homeSections) {
-      if (s is! HomeListSection) return s.addon;
+      if (s is! HomeListSection && s is! HomeCollectionSection) {
+        return s.addon;
+      }
     }
     return StremioAddon(
       id: addonId ?? 'continue_watching',
@@ -4332,6 +4543,11 @@ class _SearchScreenState extends State<SearchScreen>
     StremioMeta item, {
     String? heroTag,
   }) {
+    // A folder tile opens the folder's merged grid, never a detail page.
+    if (section is HomeCollectionSection) {
+      _openCollectionFolder(section, item);
+      return;
+    }
     if (section is HomeListSection) {
       _openItem(
         item,
@@ -4349,6 +4565,11 @@ class _SearchScreenState extends State<SearchScreen>
   /// [_playTraktItem] (CW-cached resume, else catalog play with Trakt-first
   /// resume); Simkl rows play plainly like Discover's lists.
   void _sectionQuickPlay(CatalogSection section, StremioMeta item) {
+    // A folder tile has nothing to play — open it instead.
+    if (section is HomeCollectionSection) {
+      _openCollectionFolder(section, item);
+      return;
+    }
     if (section is HomeListSection) {
       if (section.isTrakt) {
         _playTraktItem(item);
@@ -4364,6 +4585,55 @@ class _SearchScreenState extends State<SearchScreen>
       return;
     }
     _onCatalogPlay(item, section.addon);
+  }
+
+  Future<List<HomeCollection>> _readHomeCollections() async {
+    try {
+      return await HomeCollectionsStore.instance.getCollections();
+    } catch (_) {
+      debugPrint('Home: saved collections could not be loaded');
+      return const [];
+    }
+  }
+
+  /// Every enabled imported collection as a board row (hidden rows skipped).
+  List<HomeCollectionSection> _buildCollectionSections() => [
+    for (final c in _homeCollections)
+      if (c.enabled && c.folders.isNotEmpty && !_homeDisabled.contains(c.rowId))
+        HomeCollectionSection(collection: c),
+  ];
+
+  /// A folder tile on a collection row opens that folder's merged grid.
+  void _openCollectionFolder(HomeCollectionSection section, StremioMeta item) {
+    final index = section.folderIndexOf(item);
+    _openCollectionScreen(section.collection, index < 0 ? 0 : index);
+  }
+
+  /// Push the folder browser on [folderIndex]. Items open through [_openItem]
+  /// with the addon that served them (the catalog fetch stamps
+  /// `sourceAddon`), so the detail flow is the catalog rows' own.
+  void _openCollectionScreen(HomeCollection collection, int folderIndex) {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => _withHomeExpandedCardSettings(
+              CollectionFolderScreen(
+                collection: collection,
+                initialFolderIndex: folderIndex,
+                isTelevision: widget.isTelevision,
+                onOpenItem: (item) =>
+                    _openItem(item, item.sourceAddon ?? _addonForContinue(null)),
+                onQuickPlay: _pikpakOnly
+                    ? null
+                    : (item) => _onCatalogPlay(
+                        item,
+                        item.sourceAddon ?? _addonForContinue(null),
+                      ),
+              ),
+            ),
+          ),
+        )
+        .then((_) => _afterSeeAllReturn());
   }
 
   /// Open a Continue Watching title as a normal detail page (no Home-style
@@ -5365,7 +5635,7 @@ class _SearchScreenState extends State<SearchScreen>
 
   /// Swap the displayed sections (homepage or search results): rebuild the
   /// per-row focus nodes and reset the hero to the first item.
-  void _applySections(List<CatalogSection> sections) {
+  void _applySections(List<CatalogSection> sections, {bool preserveFocus = false}) {
     _boardGen++;
     _boardAppliedAt = DateTime.now();
     // Rail keys are content-addressed by stable Home-row id, so a reload can
@@ -5373,24 +5643,52 @@ class _SearchScreenState extends State<SearchScreen>
     _pendingStageAdvanceKey = null;
     _pendingStageAdvanceAt = null;
     _stageGeneration++;
-    _disposeNodes();
-    for (final section in sections) {
-      _rowNodes.add(
-        List.generate(
-          section.items.length,
-          (i) => FocusNode(debugLabel: 'search_r${_rowNodes.length}_c$i'),
-        ),
+    if (preserveFocus) {
+      List<List<String>> identities(List<CatalogSection> rows) => [
+        for (final row in rows) [
+          for (final item in row.items)
+            jsonEncode([_sectionRowId(row), item.type, item.id]),
+        ],
+      ];
+      final nextNodes = reconcileHomeRowFocus(
+        previousIds: identities(_sections),
+        previousNodes: _rowNodes,
+        nextIds: identities(sections),
       );
+      _rowNodes..clear()..addAll(nextNodes);
+      _rowCol.clear();
+    } else {
+      _disposeNodes();
+      for (final section in sections) {
+        _rowNodes.add(
+          List.generate(
+            section.items.length,
+            (i) => FocusNode(debugLabel: 'search_r${_rowNodes.length}_c$i'),
+          ),
+        );
+      }
     }
     setState(() => _sections = sections);
     _publishTopShelfSpotlight();
     unawaited(_refreshBoundSources());
+    if (preserveFocus && _heroItem.value != null && sections.any((section) =>
+        section.items.any((item) => item.id == _heroItem.value!.id &&
+            item.type == _heroItem.value!.type))) {
+      return;
+    }
     // Seed the hero with the first item so it isn't blank before DPAD focus
     // lands (see [_heroActive] for when the hero is shown).
     if (_heroActive) {
-      final first = sections.isNotEmpty && sections.first.items.isNotEmpty
-          ? sections.first.items.first
-          : null;
+      // Seed from the first real title: a pinned collection row can lead the
+      // board, and folder tiles can't drive the hero.
+      StremioMeta? first;
+      for (final section in sections) {
+        if (section is HomeCollectionSection) continue;
+        if (section.items.isNotEmpty) {
+          first = section.items.first;
+          break;
+        }
+      }
       _heroItem.value = first;
       _heroEnriched.value = null;
       // Outside the null-check: a board that reloads EMPTY must clear the
@@ -6800,6 +7098,8 @@ class _SearchScreenState extends State<SearchScreen>
       return override;
     }
     for (final section in _sections) {
+      // Folder tiles aren't titles, so they can't feed the hero reel.
+      if (section is HomeCollectionSection) continue;
       if (section.items.isNotEmpty) return section;
     }
     return null;
@@ -6858,6 +7158,42 @@ class _SearchScreenState extends State<SearchScreen>
     final fav = rail.favKind;
     if (fav != null) return _spotlightFavShelf(fav, id: railKey);
     final i = rail.sectionIndex!;
+    final section = _sections[i];
+    if (section is HomeCollectionSection) {
+      return SpotlightShelf(
+        id: railKey,
+        title: section.title,
+        tag: _catalogSourceTag(section),
+        nodes: i < _rowNodes.length ? _rowNodes[i] : const [],
+        onSeeAll: () => _openCatalogSeeAll(section),
+        // A brand-logo tile needs no caption; captions stay on only while
+        // some folder still wants its title drawn.
+        captions: section.collection.folders.any((f) => !f.hideTitle),
+        items: [
+          for (final m in section.items)
+            SpotlightCard(
+              image: m.poster,
+              fallbackImage: m.background,
+              previewBuilder: section.focusArtOf(m) == null
+                  ? null
+                  : (_) => CachedNetworkImage(
+                      imageUrl: section.focusArtOf(m)!,
+                      memCacheWidth: 640,
+                      errorWidget: (_, _, _) => const SizedBox.shrink(),
+                      fit: BoxFit.cover,
+                    ),
+              title: m.name,
+              shape: section.tileAspectRatio == 1
+                  ? SpotlightCardShape.square
+                  : section.landscapeTiles
+                  ? SpotlightCardShape.wide
+                  : SpotlightCardShape.poster,
+              showCaption: !(section.folderOf(m)?.hideTitle ?? false),
+              onOpen: () => _openCollectionFolder(section, m),
+            ),
+        ],
+      );
+    }
     return SpotlightShelf(
       id: railKey,
       title: _sections[i].title,
@@ -7231,7 +7567,12 @@ class _SearchScreenState extends State<SearchScreen>
       if (_sections[i].items.isEmpty || i >= _rowNodes.length) continue;
       rails.add(_CanvasRail(sectionIndex: i));
     }
-    return rails;
+    return [
+      for (final rail in rails)
+        if (_stageCollection(rail)?.collection.pinToTop ?? false) rail,
+      for (final rail in rails)
+        if (!(_stageCollection(rail)?.collection.pinToTop ?? false)) rail,
+    ];
   }
 
   /// The canonical rails, globally sorted by the user's saved row ids.
@@ -7261,7 +7602,8 @@ class _SearchScreenState extends State<SearchScreen>
       rails = HomeRowOrder.insertAfterLeadingRun(
         rails,
         skeletons,
-        (rail) => rail.cw != null,
+        (rail) => rail.cw != null ||
+            (_stageCollection(rail)?.collection.pinToTop ?? false),
       );
     }
     return _homeRowOrderActive
@@ -7505,7 +7847,7 @@ class _SearchScreenState extends State<SearchScreen>
         // Title cards follow the Home Cards orientation (full shelf height
         // either way — the same grammar as Promenade's strip); favourites
         // keep their portrait cell whatever the setting says.
-        final cardW = cardH * _titleCardAspect;
+        final cardW = cardH * _stageCardAspect(rail);
         final favCardW = cardH * 2 / 3;
         // ONE height for the whole bottom column, measured bottom-up, so the
         // identity block above can reserve exactly what the tabs and shelf
@@ -7724,8 +8066,10 @@ class _SearchScreenState extends State<SearchScreen>
                                             // Canvas focus grammar: white ring (the
                                             // violet stays with classic chrome).
                                             ringColor: Colors.white,
-                                            aspectRatio: _titleCardAspect,
-                                            artUrl: _titleArtUrl(item),
+                                            aspectRatio: _stageCardAspect(rail),
+                                            artUrl: _stageCardArt(rail, item),
+                                            focusArtUrl: _stageCollection(rail)?.focusArtOf(item),
+                                            showTitleOverlay: !(_stageCollection(rail)?.folderOf(item)?.hideTitle ?? false),
                                             progress: rail.cw?.progressOf(item),
                                             episodeLabel: rail.cw?.episodeOf(
                                               item,
@@ -7871,7 +8215,22 @@ class _SearchScreenState extends State<SearchScreen>
   String? _titleArtUrl(StremioMeta item) =>
       _homeLandscapeCards ? _wideArtUrl(item) : null;
 
-  double _stagePosterW(double boxH) => boxH * _titleCardAspect;
+  HomeCollectionSection? _stageCollection(_CanvasRail rail) {
+    final index = rail.sectionIndex;
+    if (index == null) return null;
+    final section = _sections[index];
+    return section is HomeCollectionSection ? section : null;
+  }
+
+  double _stageCardAspect(_CanvasRail rail, {double? fallback}) =>
+      _stageCollection(rail)?.tileAspectRatio ?? fallback ?? _titleCardAspect;
+
+  String? _stageCardArt(_CanvasRail rail, StremioMeta item, {bool wide = false}) =>
+      _stageCollection(rail) != null
+          ? item.poster
+          : wide
+          ? _wideArtUrl(item)
+          : _titleArtUrl(item);
 
   double _stageFavW(BuildContext context, double boxH) {
     // Poster + caption must equal the box EXACTLY. A width floor here would
@@ -7971,7 +8330,7 @@ class _SearchScreenState extends State<SearchScreen>
         );
         final double cellW = favRail
             ? _stageFavW(context, stripBoxH)
-            : stripBoxH * 16 / 9;
+            : stripBoxH * _stageCardAspect(rail, fallback: 16 / 9);
         // Measured bottom-up, exactly like Canvas's shelfColumnH, so the
         // identity's clearance is DERIVED and can never drift into the strip.
         final columnH =
@@ -8173,8 +8532,10 @@ class _SearchScreenState extends State<SearchScreen>
       rowNodes: nodes,
       hasBoundSource: _isBound(item),
       ringColor: Colors.white,
-      aspectRatio: 16 / 9,
-      artUrl: _wideArtUrl(item),
+      aspectRatio: _stageCardAspect(rail, fallback: 16 / 9),
+      artUrl: _stageCardArt(rail, item, wide: true),
+      focusArtUrl: _stageCollection(rail)?.focusArtOf(item),
+      showTitleOverlay: !(_stageCollection(rail)?.folderOf(item)?.hideTitle ?? false),
       restVeil: _kPromRestVeil,
       progress: rail.cw?.progressOf(item),
       episodeLabel: rail.cw?.episodeOf(item),
@@ -8573,7 +8934,7 @@ class _SearchScreenState extends State<SearchScreen>
     final nodes = _canvasRailNodes(rail);
     final cardW = favRail
         ? _stageFavW(context, rowBoxH)
-        : _stagePosterW(rowBoxH);
+        : rowBoxH * _stageCardAspect(rail);
     final count = favRail ? _canvasFavItemCount(rail.favKind!) : items.length;
 
     // The window is [active, active+1]. From the top row UP leaves the
@@ -8653,8 +9014,10 @@ class _SearchScreenState extends State<SearchScreen>
                             rowNodes: nodes,
                             hasBoundSource: _isBound(items[col]),
                             ringColor: Colors.white,
-                            aspectRatio: _titleCardAspect,
-                            artUrl: _titleArtUrl(items[col]),
+                            aspectRatio: _stageCardAspect(rail),
+                            artUrl: _stageCardArt(rail, items[col]),
+                            focusArtUrl: _stageCollection(rail)?.focusArtOf(items[col]),
+                            showTitleOverlay: !(_stageCollection(rail)?.folderOf(items[col])?.hideTitle ?? false),
                             progress: rail.cw?.progressOf(items[col]),
                             episodeLabel: rail.cw?.episodeOf(items[col]),
                             onQuickPlay: rail.cw != null || _pikpakOnly
@@ -8733,7 +9096,7 @@ class _SearchScreenState extends State<SearchScreen>
         // A grid only ever shows ONE rail, and a rail is homogeneous — so
         // the whole wall takes one shape: favourites are always portrait,
         // title cells follow the Home Cards orientation.
-        final cellAspect = favRail ? 2 / 3 : _titleCardAspect;
+        final cellAspect = favRail ? 2 / 3 : _stageCardAspect(rail);
         // Aim for a cell about a third of the board's height — landscape a
         // little shorter, or three backdrops swallow the whole wall — then
         // take whatever whole number of columns actually FITS, as few as one.
@@ -9022,15 +9385,17 @@ class _SearchScreenState extends State<SearchScreen>
     }
     final item = items[col];
     return SizedBox(
-      height: cellW / _titleCardAspect,
+      height: cellW / _stageCardAspect(rail),
       child: _BoardCell(
         item: item,
         isTelevision: true,
         focusNode: nodes[col],
         column: col,
         rowNodes: nodes,
-        aspectRatio: _titleCardAspect,
-        artUrl: _titleArtUrl(item),
+        aspectRatio: _stageCardAspect(rail),
+        artUrl: _stageCardArt(rail, item),
+        focusArtUrl: _stageCollection(rail)?.focusArtOf(item),
+        showTitleOverlay: !(_stageCollection(rail)?.folderOf(item)?.hideTitle ?? false),
         hasBoundSource: _isBound(item),
         ringColor: Colors.white,
         progress: rail.cw?.progressOf(item),
@@ -9288,7 +9653,7 @@ class _SearchScreenState extends State<SearchScreen>
                               child: SizedBox(
                                 width: favRail
                                     ? _stageFavW(context, railBoxH)
-                                    : _stagePosterW(railBoxH),
+                                    : railBoxH * _stageCardAspect(rail),
                                 child: favRail
                                     ? _canvasFavCell(
                                         rail.favKind!,
@@ -9453,8 +9818,10 @@ class _SearchScreenState extends State<SearchScreen>
       rowNodes: nodes,
       hasBoundSource: _isBound(item),
       ringColor: Colors.white,
-      aspectRatio: _titleCardAspect,
-      artUrl: _titleArtUrl(item),
+      aspectRatio: _stageCardAspect(rail),
+      artUrl: _stageCardArt(rail, item),
+      focusArtUrl: _stageCollection(rail)?.focusArtOf(item),
+      showTitleOverlay: !(_stageCollection(rail)?.folderOf(item)?.hideTitle ?? false),
       progress: rail.cw?.progressOf(item),
       episodeLabel: rail.cw?.episodeOf(item),
       onQuickPlay: rail.cw != null || _pikpakOnly
@@ -10018,7 +10385,7 @@ class _SearchScreenState extends State<SearchScreen>
                 child: SizedBox(
                   width: favRail
                       ? _stageFavW(context, boxH)
-                      : _stagePosterW(boxH),
+                      : boxH * _stageCardAspect(rail),
                   child: favRail
                       ? _canvasFavCell(
                           rail.favKind!,
@@ -10217,6 +10584,20 @@ class _SearchScreenState extends State<SearchScreen>
     // Off-TV / blank search prompt the hero isn't rendered, so don't track focus
     // or fire the per-item backdrop-enrichment /meta fetch behind it.
     if (!_heroActive) return;
+    // Folders own the stage art too, but never request title metadata or video.
+    if (item.type == 'folder') {
+      _heroTimer?.cancel();
+      _heroReqId++;
+      _heroSwapTimer?.cancel();
+      _clearHeroTrailer();
+      _clearHeroLiveIptv();
+      _canvasFavFocus.value = null;
+      _heroEnriched.value = null;
+      _heroItem.value = item;
+      _publishAmbientArt(item, null);
+      _updateHeroTint(item);
+      return;
+    }
     // A catalog/CW card owns the stage again — drop any Canvas favourites
     // override so its art/identity yield to the hero pipeline.
     _canvasFavFocus.value = null;
@@ -10329,6 +10710,7 @@ class _SearchScreenState extends State<SearchScreen>
   /// lookups (Cinemeta /meta for the YouTube id, then the stream resolve) are
   /// cached in their services, so re-resting on a recent card starts fast.
   void _scheduleHeroTrailer(StremioMeta item, {bool fromSpotlight = false}) {
+    if (item.type == 'folder') return;
     // Off-TV nothing ever calls _applyHero (the TV paths that lift the
     // after-playback suppression), so a NEW title arriving through the
     // spotlight dwell lifts it here — fresh context, fresh trailer, the same
@@ -15607,6 +15989,8 @@ class _SearchScreenState extends State<SearchScreen>
                               isTelevision: widget.isTelevision,
                               showPlayPill: widget.isTelevision,
                               formatTags: tags,
+                              badgeName: t.name,
+                              badgeDescription: t.badgeDescription,
                               qualityTag: tags.isEmpty
                                   ? _SourcesScreenState._qualityLabel(t)
                                   : null,
@@ -16543,12 +16927,8 @@ class _SearchScreenState extends State<SearchScreen>
   /// tuned for a 720-logical canvas leaves no room for a row (plus its header and
   /// the next row's header) under the hero. So scale the poster with the screen
   /// height.
-  double _railPosterW(BuildContext context) {
-    if (!widget.isTelevision) {
-      return MediaQuery.of(context).size.width >= 900 ? 162.0 : 118.0;
-    }
-    return (MediaQuery.of(context).size.height * 0.17).clamp(92.0, 140.0);
-  }
+  double _railPosterW(BuildContext context) =>
+      homeRailPosterWidth(context, isTelevision: widget.isTelevision);
 
   /// TITLE-card size for a classic board rail under the Home Cards
   /// orientation. Landscape keeps Spotlight's proportions — about 1.6× the
@@ -16676,7 +17056,17 @@ class _SearchScreenState extends State<SearchScreen>
   /// Scaffold/back header), with the Source dropdown injected as its leading
   /// filter so DPAD walks Source → the panel's own filters → grid. All item
   /// open/play/bound wiring is this screen's existing board handlers.
-  Widget _buildDiscover() {
+  Widget _buildDiscover() => DiscoverBrowsingInput(
+    onActivity: () {
+      if (_discTheater.value) _discTheater.value = false;
+      // Input can leave the same trailer playing (hover or a grid boundary).
+      // Restart its idle dwell even when the playback notifier does not change.
+      _onDiscShowingChanged();
+    },
+    child: _buildDiscoverContent(),
+  );
+
+  Widget _buildDiscoverContent() {
     final app = AppThemeScope.of(context);
     final panel = DiscoverCardSettingsScope(
       showTypeTags: _discShowTypeTags,
@@ -17258,6 +17648,7 @@ class _SearchScreenState extends State<SearchScreen>
         Icons.error_outline_rounded,
         "Couldn't load catalogs",
         _error!,
+        onRetry: () => unawaited(_load()),
       );
     }
     final showCw = _cwVisible;
@@ -17953,6 +18344,7 @@ class _SearchScreenState extends State<SearchScreen>
   /// the heading it used to shout open ("Cinemeta: Popular") and into the
   /// quiet pill this feeds.
   String _sectionTag(CatalogSection section) {
+    if (section is HomeCollectionSection) return 'Collection';
     if (section is HomeListSection) {
       return section.isTrakt
           ? 'Trakt'
@@ -17992,6 +18384,10 @@ class _SearchScreenState extends State<SearchScreen>
     // placeholder addon that can't serve a catalog endpoint.
     if (section is HomeListSection) {
       _openListRowSeeAll(section);
+      return;
+    }
+    if (section is HomeCollectionSection) {
+      _openCollectionScreen(section.collection, 0);
       return;
     }
     Navigator.of(context)
@@ -18343,8 +18739,15 @@ class _SearchScreenState extends State<SearchScreen>
     // Bigger, roomier posters on desktop (Stremio-scale); smaller on phones.
     // Titleless cells (Stremio-style) — just the art box + a little headroom
     // for the hover/focus lift. The box follows the Home Cards orientation.
-    final posterW = _railTitleCardW(context);
+    // Collection rows draw their folders' own tile shape (a brand tile stays
+    // wide even when Home cards are portrait) at the same height as every
+    // other rail, so the row grammar stays intact.
+    final collection = section is HomeCollectionSection ? section : null;
     final cellH = _railTitleCardH(context);
+    final cellAspect = collection?.tileAspectRatio ?? _titleCardAspect;
+    final posterW = collection == null
+        ? _railTitleCardW(context)
+        : cellH * cellAspect;
     final rowH = cellH + 14;
 
     return Column(
@@ -18440,10 +18843,16 @@ class _SearchScreenState extends State<SearchScreen>
                             column: col,
                             rowNodes: nodes,
                             hasBoundSource: _isBound(item),
-                            aspectRatio: _titleCardAspect,
-                            artUrl: _titleArtUrl(item),
-                            showTitleOverlay: !_hideHomeCardTitlesAndRatings,
-                            onQuickPlay: _pikpakOnly
+                            aspectRatio: cellAspect,
+                            artUrl: collection != null
+                                ? item.poster
+                                : _titleArtUrl(item),
+                            focusArtUrl: collection?.focusArtOf(item),
+                            showTitleOverlay: collection != null
+                                ? !(collection.folderOf(item)?.hideTitle ??
+                                      false)
+                                : !_hideHomeCardTitlesAndRatings,
+                            onQuickPlay: _pikpakOnly || collection != null
                                 ? null
                                 : () => _sectionQuickPlay(section, item),
                             onFocused: () {
@@ -18908,7 +19317,12 @@ class _SearchScreenState extends State<SearchScreen>
     );
   }
 
-  Widget _message(IconData icon, String title, String body) {
+  Widget _message(
+    IconData icon,
+    String title,
+    String body, {
+    VoidCallback? onRetry,
+  }) {
     final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
@@ -18932,11 +19346,21 @@ class _SearchScreenState extends State<SearchScreen>
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
             ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                autofocus: widget.isTelevision,
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try again'),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+
 }
 
 /// The Stremio-style spotlight. Reflects the currently focused board title —

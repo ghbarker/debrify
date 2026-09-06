@@ -1624,6 +1624,7 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
                         )
                         return
                     }
+                    recordPlaybackLifecycle("playback_completed")
                     sendProgress(completed = true)
 
                     // "Stop at the end of this episode". Playback has already
@@ -1904,10 +1905,13 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         DiagnosticFileLog.initialize(this)
-        DiagnosticFileLog.record(
+        sourcePersistenceSessionId = intent.getIntExtra("playbackSessionId", 0)
+        DiagnosticFileLog.recordCritical(
             source = "android_tv_player",
             event = "activity_create",
-            message = "hasPayloadFile=${intent.hasExtra("payloadPath")}",
+            message = "hasPayloadFile=${intent.hasExtra("payloadPath")} " +
+                "pid=${android.os.Process.myPid()} activity=${System.identityHashCode(this)} " +
+                "savedState=${savedInstanceState != null}",
         )
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_android_tv_torrent_player)
@@ -1964,7 +1968,7 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
             // finish event must still identify the bridge launch that owns
             // the callbacks it is about to clear.
             sourcePersistenceSessionId =
-                payloadCheck.optInt("sourcePersistenceSessionId", 0)
+                payloadCheck.optInt("sourcePersistenceSessionId", sourcePersistenceSessionId)
             if (payloadCheck.optString("mode") == "iptv") {
                 initIptvMode(payloadCheck)
                 return
@@ -2445,7 +2449,25 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
                             seeders = source.seeders,
                             direct = source.isDirectStream,
                             seasonPack = source.isSeasonPack,
+                            badgeName = source.name,
+                            badgeDescription = source.badgeDescription,
                         )
+                    }
+
+                    override fun requestBadges(entry: TvSourceBrowserEntry, complete: (TvSourceBadgeResult?) -> Unit) {
+                        val channel = MainActivity.getAndroidTvPlayerChannel()
+                        if (channel == null) { complete(null); return }
+                        channel.invokeMethod("requestStreamBadges", mapOf(
+                            "sourcePersistenceSessionId" to sourcePersistenceSessionId,
+                            "name" to entry.badgeName,
+                            "description" to entry.badgeDescription,
+                        ), object : io.flutter.plugin.common.MethodChannel.Result {
+                            override fun success(result: Any?) {
+                                complete(if (isFinishing || isDestroyed) null else TvSourceBadgeResult.parse(result))
+                            }
+                            override fun error(code: String, message: String?, details: Any?) { complete(null) }
+                            override fun notImplemented() { complete(null) }
+                        })
                     }
 
                     override fun currentIndex(): Int = currentStremioSourceIndex
@@ -6426,7 +6448,7 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
 
     private fun hidePikPakRetryOverlay() {
         runOnUiThread {
-            if (isFinishing || isDestroyed) return@runOnUiThread
+            if (isFinishing || isDestroyed || !::pikPakReactivationIndicator.isInitialized) return@runOnUiThread
             pikPakReactivationIndicator.animate().cancel()
             pikPakReactivationIndicator.alpha = 0f
             pikPakReactivationIndicator.visibility = View.GONE
@@ -16015,6 +16037,73 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
         progressHandler.postDelayed(progressRunnable, PROGRESS_INTERVAL_MS)
     }
 
+    private var progressSentCount = 0
+    private var progressAckCount = 0
+    private var lastProgressLogAt = 0L
+    private var lastProgressAckAt = 0L
+    private var lastProgressBridgeAvailable: Boolean? = null
+    private var finalProgressSnapshot = false
+
+    private fun recordPlaybackLifecycle(event: String, details: String = "") {
+        DiagnosticFileLog.recordCritical(
+            source = "android_tv_player", event = event,
+            message = "pid=${android.os.Process.myPid()} activity=${System.identityHashCode(this)} " +
+                "session=$sourcePersistenceSessionId finishing=$isFinishing " +
+                "changingConfigurations=$isChangingConfigurations " +
+                "sent=$progressSentCount acknowledged=$progressAckCount $details",
+        )
+    }
+
+    override fun finish() {
+        recordPlaybackLifecycle("finish_requested")
+        super.finish()
+    }
+
+    /** Observe delivery, including a missing/detached Flutter engine. No media
+     * identity or URL is logged. A callback confirms the Dart handler finished. */
+    private fun deliverProgress(map: HashMap<String, Any?>) {
+        map["sourcePersistenceSessionId"] = sourcePersistenceSessionId
+        val channel = MainActivity.getAndroidTvPlayerChannel()
+        val now = SystemClock.elapsedRealtime()
+        val forceLog = finalProgressSnapshot || map["completed"] == true
+        val logSample = forceLog || lastProgressLogAt == 0L ||
+            now - lastProgressLogAt >= 60_000L ||
+            lastProgressBridgeAvailable != (channel != null)
+        if (logSample) {
+            lastProgressLogAt = now
+            recordPlaybackLifecycle(
+                "progress_checkpoint",
+                "bridgeAvailable=${channel != null} positionMs=${map["positionMs"]} " +
+                    "durationMs=${map["durationMs"]} completed=${map["completed"]} " +
+                    "lastAckAgeMs=${if (lastProgressAckAt == 0L) -1 else now - lastProgressAckAt}",
+            )
+        }
+        lastProgressBridgeAvailable = channel != null
+        if (channel == null) return
+        progressSentCount++
+        try {
+            channel.invokeMethod("torrentPlaybackProgress", map, object : io.flutter.plugin.common.MethodChannel.Result {
+                override fun success(result: Any?) {
+                    if (result == true) {
+                        progressAckCount++
+                        lastProgressAckAt = SystemClock.elapsedRealtime()
+                    }
+                    if (logSample) recordPlaybackLifecycle("progress_ack", "accepted=${result == true}")
+                }
+                override fun error(code: String, message: String?, details: Any?) {
+                    if (logSample) recordPlaybackLifecycle("progress_ack_error")
+                }
+                override fun notImplemented() {
+                    if (logSample) recordPlaybackLifecycle("progress_handler_missing")
+                }
+            })
+        } catch (error: RuntimeException) {
+            if (logSample) DiagnosticFileLog.recordError(
+                source = "android_tv_player", event = "progress_delivery_failed", throwable = error,
+            )
+        }
+    }
+
     private fun sendProgress(completed: Boolean) {
         // IPTV mode builds no payload (initIptvMode returns before it is
         // parsed), so it reports against the current channel instead.
@@ -16030,7 +16119,7 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
             manualSourceRestoreInProgress
         ) return
         val model = payload ?: return
-        val item = model.items[currentIndex]
+        val item = model.items.getOrNull(currentIndex) ?: return
         // Use the largest stable duration seen — ExoPlayer can briefly report a
         // short duration right after a source re-prepare, which would otherwise
         // inflate progress% and scrobble a false watch on Trakt.
@@ -16056,12 +16145,12 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
         } else {
             "index:$currentIndex"
         }
-        val localCompleted =
+        val localCompletionEligible =
             model.localCompletionTracking &&
             duration > 0L &&
             rawPosition > 0L &&
-            rawPosition.toDouble() * 100.0 / duration.toDouble() >= completionThreshold &&
-            locallyCompletedItemKeys.add(completionKey)
+            rawPosition.toDouble() * 100.0 / duration.toDouble() >= completionThreshold
+        val localCompleted = localCompletionEligible && locallyCompletedItemKeys.add(completionKey)
 
         // Update the item's progress in the payload for live UI updates
         val updatedItem = item.copy(
@@ -16087,12 +16176,13 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
             "aspect" to resizeModeLabels[resizeModeIndex].lowercase(),
             "completed" to completed,
             "localCompleted" to localCompleted,
+            "localCompletionEligible" to localCompletionEligible,
             "url" to item.url,
             "isPlaying" to (player?.isPlaying ?: false),
             "isBuffering" to (player?.playbackState == Player.STATE_BUFFERING)
         )
 
-        MainActivity.getAndroidTvPlayerChannel()?.invokeMethod("torrentPlaybackProgress", map)
+        deliverProgress(map)
     }
 
     /**
@@ -16126,7 +16216,20 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
             "isPlaying" to (player?.isPlaying ?: false),
         )
 
-        MainActivity.getAndroidTvPlayerChannel()?.invokeMethod("torrentPlaybackProgress", map)
+        deliverProgress(map)
+    }
+
+    private fun sendPlaybackActivityState(active: Boolean) {
+        try {
+            MainActivity.getAndroidTvPlayerChannel()?.invokeMethod(
+                "torrentPlaybackActivityState",
+                mapOf("sourcePersistenceSessionId" to sourcePersistenceSessionId, "active" to active),
+            )
+        } catch (error: RuntimeException) {
+            DiagnosticFileLog.recordError(
+                source = "android_tv_player", event = "activity_state_delivery_failed", throwable = error,
+            )
+        }
     }
 
     private fun sendFinished() {
@@ -16136,10 +16239,15 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
         if (startupSourcesExhausted) {
             result["startupSourcesExhausted"] = true
         }
-        MainActivity.getAndroidTvPlayerChannel()?.invokeMethod(
-            "torrentPlaybackFinished",
-            result,
-        )
+        val channel = MainActivity.getAndroidTvPlayerChannel()
+        recordPlaybackLifecycle("finish_sent", "bridgeAvailable=${channel != null}")
+        try {
+            channel?.invokeMethod("torrentPlaybackFinished", result)
+        } catch (error: RuntimeException) {
+            DiagnosticFileLog.recordError(
+                source = "android_tv_player", event = "finish_delivery_failed", throwable = error,
+            )
+        }
     }
 
     /** The guide episode adjacent to the current item (specials excluded). */
@@ -17982,7 +18090,7 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
             startupResolverProvider = obj.optString("startupResolverProvider")
                 .takeIf { it.isNotEmpty() }
             startupRecoveryAvailable = obj.optBoolean("startupRecoveryAvailable", false)
-            sourcePersistenceSessionId = obj.optInt("sourcePersistenceSessionId", 0)
+            sourcePersistenceSessionId = obj.optInt("sourcePersistenceSessionId", sourcePersistenceSessionId)
             startupLog(
                 "event=payload_parsed sourceCount=${stremioSources.size} " +
                     "selectedIndex=$currentStremioSourceIndex " +
@@ -18052,6 +18160,8 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        recordPlaybackLifecycle("activity_start")
+        sendPlaybackActivityState(true)
         // Never undo a sleep-timer stop — this runs every time the activity
         // comes back, including after the screen has slept.
         if (!sleepStopLatched) {
@@ -18087,6 +18197,13 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        recordPlaybackLifecycle("activity_stop")
+        sendPlaybackActivityState(false)
+        // Checkpoint before teardown or background process eviction. Keep the
+        // startup/source-switch guards intact when taking this snapshot.
+        finalProgressSnapshot = true
+        sendProgress(completed = false)
+        finalProgressSnapshot = false
         super.onStop()
         // Publish the recording HERE, not just in onDestroy: Home / app-switch
         // runs onStop and Android may kill the process afterwards without ever
@@ -18133,6 +18250,7 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastBackPressTime < BACK_PRESS_INTERVAL_MS) {
                     // Second back press within time window - exit
+                    recordPlaybackLifecycle("back_exit")
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()
                 } else {
@@ -18165,6 +18283,7 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        recordPlaybackLifecycle("activity_resume")
         ActivityTracker.currentActivity = this
         // A recording finished while storage was misbehaving stays written but
         // invisible; coming back to the player is a good moment to retry.
@@ -18180,6 +18299,7 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        recordPlaybackLifecycle("activity_pause")
         super.onPause()
         if (ActivityTracker.currentActivity == this) {
             ActivityTracker.currentActivity = null
@@ -18212,6 +18332,11 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        sourceBrowser?.destroy()
+        sourceBrowser = null
+        recordPlaybackLifecycle("activity_destroy_begin")
+        finalProgressSnapshot = true
+        sendProgress(completed = false)
         if (::subtitleControlsLift.isInitialized) subtitleControlsLift.cancel()
         iptvTuneDiagnostics.onSessionEnd()
         startupFailoverTimeout?.let { progressHandler.removeCallbacks(it) }
@@ -18267,9 +18392,11 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
         pikPakRetryHandler.removeCallbacksAndMessages(null)
 
         // Clean up indicators
-        pikPakReactivationIndicator.animate().cancel()
-        pikPakReactivationIndicator.visibility = View.GONE
-        bufferingIndicator.animate().cancel()
+        if (::pikPakReactivationIndicator.isInitialized) {
+            pikPakReactivationIndicator.animate().cancel()
+            pikPakReactivationIndicator.visibility = View.GONE
+        }
+        if (::bufferingIndicator.isInitialized) bufferingIndicator.animate().cancel()
         bufferingHandler.removeCallbacksAndMessages(null)
 
         // Clean up Up Next card
@@ -18312,10 +18439,17 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
 
         // Clear player and listeners
         player?.let {
-            sendProgress(completed = false)
-            it.removeListener(playbackListener)
-            subtitleListener?.let { listener -> it.removeListener(listener) }
-            it.release()
+            recordPlaybackLifecycle("player_release_begin")
+            try {
+                it.removeListener(playbackListener)
+                subtitleListener?.let { listener -> it.removeListener(listener) }
+                it.release()
+                recordPlaybackLifecycle("player_release_complete")
+            } catch (error: RuntimeException) {
+                DiagnosticFileLog.recordError(
+                    source = "android_tv_player", event = "player_release_failed", throwable = error,
+                )
+            }
         }
         player = null
         subtitleListener = null
@@ -18333,7 +18467,7 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
         SubtitleSettings.clearActiveSubtitleIdentityProvider(this)
 
         // Clear adapters to release lambda references
-        playlistView.adapter = null
+        if (::playlistView.isInitialized) playlistView.adapter = null
         playlistAdapter = null
         seriesPlaylistAdapter = null
         moviePlaylistAdapter = null
@@ -18349,10 +18483,11 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
         movieTabs.clear()
 
         // Clear view listeners
-        seekbarOverlay.setOnKeyListener(null)
+        if (::seekbarOverlay.isInitialized) seekbarOverlay.setOnKeyListener(null)
 
         sendFinished()
         super.onDestroy()
+        recordPlaybackLifecycle("activity_destroy_complete")
     }
 
 
@@ -19158,6 +19293,7 @@ private data class StremioSource(
     // Coverage stamped by the Dart search engines: 'completeSeries',
     // 'multiSeasonPack', 'seasonPack', 'singleEpisode', or null (unknown).
     val coverageType: String? = null,
+    val badgeDescription: String? = null,
 ) {
     val isDirectStream: Boolean get() = streamType == "directUrl"
 
@@ -19198,6 +19334,7 @@ private data class StremioSource(
                 addonId = obj.optString("stremio_addon_id").takeIf { it.isNotEmpty() },
                 quality = parseQuality(name),
                 coverageType = obj.optString("coverage_type").takeIf { it.isNotEmpty() },
+                badgeDescription = sourceBadgeDescription(obj.optString("stream_label"), obj.optString("stream_description")),
             )
         }
 
@@ -19215,6 +19352,7 @@ private data class StremioSource(
                 addonId = (map["stremio_addon_id"] as? String)?.takeIf { it.isNotEmpty() },
                 quality = parseQuality(name),
                 coverageType = (map["coverage_type"] as? String)?.takeIf { it.isNotEmpty() },
+                badgeDescription = sourceBadgeDescription(map["stream_label"] as? String, map["stream_description"] as? String),
             )
         }
 

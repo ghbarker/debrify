@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../services/player_visibility.dart';
 import '../utils/media_kit_init.dart';
 import 'dart:io';
 import 'dart:math' as math;
@@ -9,10 +10,10 @@ import 'package:path_provider/path_provider.dart';
 import '../utils/app_storage.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter/services.dart';
-import 'package:screen_brightness/screen_brightness.dart';
+import '../services/player_display_controls.dart';
+import 'package:synchronized/synchronized.dart';
 
 // Removed volume_controller; using media_kit player volume instead
-import 'package:wakelock_plus/wakelock_plus.dart';
 import '../services/storage_service.dart';
 import '../services/local_playback_resume_resolver.dart';
 import '../services/startup_stream_policy.dart';
@@ -27,6 +28,7 @@ import '../services/tvos_decode_remedy.dart';
 import '../services/android_native_downloader.dart';
 import '../services/desktop_recording_service.dart';
 import '../services/live_recording_service.dart';
+import '../services/main_page_bridge.dart';
 import '../services/profiles/profile_lock_controller.dart';
 import '../services/tracking_source_policy.dart';
 import '../services/profiles/profile_runtime.dart';
@@ -1201,6 +1203,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   // Blocks the autosave from filing a near-zero position over a deep resume
   // point while a requested resume seek has not landed. See ResumeWriteGuard.
   final ResumeWriteGuard _resumeWriteGuard = ResumeWriteGuard();
+  // The 6s tick and explicit UI checkpoints can land together. Serialize the
+  // read/modify/write saves so an older autosave cannot finish after, and
+  // overwrite, a newer pause or settled-seek checkpoint.
+  final Lock _resumeSaveLock = Lock();
   // Bumped whenever the media the landing verifier is watching stops being
   // current (item change, source switch). Aborts the verifier WITHOUT
   // releasing the guard — the guard must survive through the outgoing
@@ -1399,6 +1405,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   @override
   void initState() {
     super.initState();
+    PlayerVisibility.opened(this);
     AnalyticsService.screenView('video_player');
     _startAnalyticsHeartbeat();
     _activePlaylist = widget.playlist;
@@ -1517,11 +1524,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     // Held for the LOADING phase only — a slow debrid resolve must not let
     // the screen sleep before the first frame. From the first playing event
     // onward the lock follows play/pause (see _syncWakelock).
-    try {
-      WakelockPlus.enable();
-    } catch (_) {
-      // Wakelock not supported on this platform (e.g., Linux)
-    }
+    unawaited(PlayerDisplayControls.instance.setWakelock(true));
     if (Platform.isWindows || Platform.isLinux) {
       windowManager.setFullScreen(true);
     }
@@ -9458,7 +9461,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     try {
       await Future.wait([
         StorageService.markMovieAsFinished(imdbId),
-        StorageService.removeVideoResume(_resumeKey),
+        StorageService.removeVideoResume(_resumeKey, playbackCheckpoint: true),
       ]);
     } catch (_) {
       // Playback remains usable if local storage is temporarily unavailable.
@@ -10679,19 +10682,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   /// takes the lock up front so the screen can't sleep through a slow
   /// resolve/open before the first playing event arrives.
   void _syncWakelock(bool playing) {
-    try {
-      if (playing) {
-        WakelockPlus.enable();
-      } else {
-        WakelockPlus.disable();
-      }
-    } catch (_) {
-      // Wakelock not supported on this platform (e.g., Linux).
-    }
+    unawaited(PlayerDisplayControls.instance.setWakelock(playing));
   }
 
   @override
   void dispose() {
+    PlayerVisibility.closed(this);
     ProfileLockController.instance.setPlaybackActive(false);
     _iptvDiag.onSessionEnd();
     _iptvLiveRecovery.cancel();
@@ -10774,6 +10770,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
     // Save the current state before disposing
     _saveResume();
+    // Every in-app player route converges here, including callers that push
+    // VideoPlayerScreen directly. The sync trigger is debounced, so the async
+    // resume write above settles before its hot-state snapshot is built.
+    MainPageBridge.notifyContentPlaybackStopped();
 
     // Cancel any ongoing PikPak retry operations
     _pikPakRetryId++;
@@ -10846,17 +10846,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     }
     _transitionStopTimer?.cancel();
     _rainbowController.dispose();
-    // Restore system brightness when exiting the player
-    try {
-      ScreenBrightness().resetScreenBrightness();
-    } catch (_) {
-      // Screen brightness not supported on this platform (e.g., Linux)
-    }
-    try {
-      WakelockPlus.disable();
-    } catch (_) {
-      // Wakelock not supported on this platform (e.g., Linux)
-    }
+    // Each helper awaits native failures before completing, including disposal.
+    unawaited(PlayerDisplayControls.instance.resetBrightness());
+    unawaited(PlayerDisplayControls.instance.setWakelock(false));
     if (Platform.isWindows || Platform.isLinux) {
       windowManager.setFullScreen(false);
     }
@@ -11415,11 +11407,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     return null;
   }
 
-  Future<void> _saveResume({bool debounced = false}) async {
-    if (_validationGateActive || !_isReady) {
-      return;
-    }
-
+  bool _resumeSaveBlocked(bool debounced) {
+    if (_validationGateActive || !_isReady) return true;
     // An IPTV zap flips _currentIptvIndex — and therefore _resumeKey — before
     // the incoming stream opens, while _position/_duration still describe the
     // OUTGOING one (_isReady is never cleared for the gap). A tick landing in
@@ -11427,16 +11416,44 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     // key, which the Continue-watching shelf would then show as real progress.
     // Nothing is lost by skipping: the next tick saves once the switch lands.
     if (_effectiveIptvChannels != null && _isTransitioning) {
-      return;
+      return true;
     }
 
     // If this is a manual episode selection and it's been less than 30 seconds, skip saving
     // This gives the user time to seek to where they want
     if (_isManualEpisodeSelection && debounced) {
-      return;
+      return true;
     }
+    return false;
+  }
 
-    var pos = _position;
+  Future<void> _saveResume({
+    bool debounced = false,
+    Duration? positionOverride,
+  }) {
+    // Check both when requested and after queueing. A save requested inside a
+    // transition/validation guard must not become valid merely because an
+    // older write kept it queued until the guard ended; conversely, a newly
+    // started transition must suppress work which was waiting on the lock.
+    if (_resumeSaveBlocked(debounced)) return Future<void>.value();
+    // A periodic tick carries no unique intent. If any newer/older save owns
+    // the lock, drop this tick instead of building an unbounded timer backlog.
+    if (debounced && _resumeSaveLock.locked) return Future<void>.value();
+    return _resumeSaveLock.synchronized(
+      () => _saveResumeLocked(
+        debounced: debounced,
+        positionOverride: positionOverride,
+      ),
+    );
+  }
+
+  Future<void> _saveResumeLocked({
+    required bool debounced,
+    Duration? positionOverride,
+  }) async {
+    if (_resumeSaveBlocked(debounced)) return;
+
+    var pos = positionOverride ?? _position;
     final dur = _duration;
     if (dur <= Duration.zero) {
       return;
@@ -11602,13 +11619,29 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     } catch (e) {}
 
     // Also save to legacy system for backward compatibility
-    await StorageService.upsertVideoResume(_resumeKey, {
-      'positionMs': pos.inMilliseconds,
-      'speed': persistedSpeed,
-      'aspect': aspectStr,
-      'durationMs': dur.inMilliseconds,
-      'updatedAt': DateTime.now().millisecondsSinceEpoch,
-    });
+    await StorageService.upsertVideoResume(
+      _resumeKey,
+      {
+        'positionMs': pos.inMilliseconds,
+        'speed': persistedSpeed,
+        'aspect': aspectStr,
+        'durationMs': dur.inMilliseconds,
+        'updatedAt': DateTime.now().millisecondsSinceEpoch,
+      },
+      sourceId:
+          _currentIptvChannel?.attributes['series_playlist_id'] ??
+          _currentIptvChannel?.attributes['source_playlist_id'] ??
+          _iptvGuideContextOverride?.sourceId ??
+          widget.iptvSourceId,
+    );
+
+    // Explicit checkpoints (pause, settled seek, exit-adjacent saves) are the
+    // handoff moments another device would resume from — let sync flush now
+    // instead of waiting out the playback coalescing window. The 6s autosave
+    // tick stays on the throttled path.
+    if (!debounced) {
+      MainPageBridge.notifyPlaybackCheckpoint();
+    }
   }
 
   /// True while the auto-hide poll is being held off by a scrub, a pause, a
@@ -12312,11 +12345,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     _gestureStartPosition = details.localPosition;
     _gestureStartVideoPosition = _position;
     _gestureStartVolume = (_player.state.volume / 100.0).clamp(0.0, 1.0);
-    try {
-      _gestureStartBrightness = await ScreenBrightness().current;
-    } catch (_) {
-      _gestureStartBrightness = 0.5;
-    }
+    _gestureStartBrightness = await PlayerDisplayControls.instance.brightness();
+    if (!mounted) return;
     _mode = GestureMode.none;
     _verticalHud.value = null;
     _seekHud.value = null;
@@ -12336,6 +12366,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         _mode = GestureMode.seek;
       } else if (absDy > 12) {
         final isLeftHalf = _gestureStartPosition.dx < size.width / 2;
+        if (isLeftHalf && !PlayerDisplayControls.supportsBrightness) return;
         _mode = isLeftHalf ? GestureMode.brightness : GestureMode.volume;
       }
     }
@@ -12367,11 +12398,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         0.0,
         1.0,
       );
-      try {
-        ScreenBrightness().setScreenBrightness(newBright);
-      } catch (_) {
-        // Screen brightness not supported on this platform (e.g., Linux)
-      }
+      unawaited(PlayerDisplayControls.instance.setBrightness(newBright));
       _verticalHud.value = VerticalHudState(
         kind: VerticalKind.brightness,
         value: newBright,
@@ -12405,6 +12432,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       _activeMediaUserPaused = true;
       _activeMediaShouldPlay = false;
       _player.pause();
+      unawaited(_saveResume(positionOverride: _position));
     } else {
       // An explicit press is the one thing that clears a sleep stop.
       _sleepStopLatched = false;
@@ -14058,10 +14086,19 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                                     _isSeekingWithSlider = false;
                                     _scheduleAutoHide();
                                     if (_lastSliderSeekPos != null) {
-                                      _traktScrobbleSeek(_lastSliderSeekPos!);
-                                      _simklScrobbleSeek(_lastSliderSeekPos!);
-                                      _mdblistScrobbleSeek(_lastSliderSeekPos!);
+                                      final settledPosition =
+                                          _lastSliderSeekPos!;
+                                      _traktScrobbleSeek(settledPosition);
+                                      _simklScrobbleSeek(settledPosition);
+                                      _mdblistScrobbleSeek(settledPosition);
                                       _lastSliderSeekPos = null;
+                                      // A settled seek is a handoff moment:
+                                      // persist and let sync flush promptly.
+                                      unawaited(
+                                        _saveResume(
+                                          positionOverride: settledPosition,
+                                        ),
+                                      );
                                     }
                                   },
                                   // IPTV episode list (series/VOD) gets Next/Previous

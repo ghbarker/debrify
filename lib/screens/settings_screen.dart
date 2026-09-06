@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io' show File, Platform, exit;
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -17,6 +17,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/webdav_item.dart';
 import '../models/android_video_renderer_mode.dart';
 import '../models/profiles/profile_policy.dart';
+import '../models/profiles/connection_resource.dart';
 import '../models/profiles/user_profile.dart';
 import '../services/main_page_bridge.dart';
 import '../services/external_player_service.dart';
@@ -33,6 +34,7 @@ import '../services/profiles/profile_authorization.dart';
 import '../services/profiles/profile_bootstrap.dart';
 import '../services/profiles/profile_device_reset_service.dart';
 import '../services/profiles/profile_reset_service.dart';
+import '../services/webdav_sync/webdav_sync_library_models.dart';
 import '../utils/platform_util.dart';
 import '../utils/deovr_utils.dart' as deovr;
 
@@ -92,12 +94,15 @@ import 'settings/desktop_sidebar_style_page.dart';
 import 'settings/tv_sidebar_style_page.dart';
 import 'settings/sidebar_customization_page.dart';
 import 'settings/profile_backup_flows.dart';
+import 'settings/sync_and_migrate_page.dart';
 import 'settings/profile_appearance_page.dart';
 import 'settings/widgets/settings_widgets.dart';
 import 'settings/pikpak_settings_page.dart';
+import 'settings/settings_summary_reads.dart';
 import 'settings/real_debrid_settings_page.dart';
 import 'settings/iptv_settings_page.dart';
 import 'settings/iptv_channel_order_page.dart';
+import 'settings/collections_settings_page.dart';
 import 'settings/home_page_settings_page.dart';
 import 'settings/torbox_settings_page.dart';
 import 'settings/premiumize_settings_page.dart';
@@ -124,8 +129,18 @@ import '../theme/app_looks.dart';
 import '../theme/app_theme_scope.dart';
 import '../models/tv_hero_artwork_quality.dart';
 
+@visibleForTesting
+bool shouldApplyPendingCredentialOverride({
+  required Set<ConnectionResourceType> pendingTypes,
+  required Set<ConnectionResourceType> providerTypes,
+  required bool ownCredentialPresent,
+}) => !ownCredentialPresent && pendingTypes.any(providerTypes.contains);
+
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.summaryReadOverrides = const {}});
+
+  @visibleForTesting
+  final Map<String, Future<Object?> Function()> summaryReadOverrides;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -133,6 +148,9 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _loading = true;
+  Set<String> _summaryFailures = {};
+  bool _summaryLoadFailed = false;
+  Set<String> _summaryUnavailable = {};
   bool _isAndroidTv = false;
 
   // Focus node for the first connection card (Real-Debrid) for TV navigation
@@ -213,6 +231,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _webDavConnected = false;
   String _webDavStatus = 'Not connected';
   String _webDavCaption = 'Tap to connect';
+
+  bool _iptvCredentialsPending = false;
 
   bool _traktConnected = false;
   String _traktStatus = 'Not connected';
@@ -313,16 +333,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
         : null;
     try {
       await _loadSummariesForCurrentProfile();
-    } on ResourceAuthorizationException {
-      // ProfileGate replaces this subtree before switching authority. Reads
-      // revoked while this disposed settings page winds down are expected.
+    } catch (error) {
+      // ProfileGate retires this subtree on a switch or lock. Never publish
+      // old-profile summaries into the replacement session.
       if (!mounted ||
           ProfileLockController.instance.lockedProfileId.value != null ||
           (startingScope != null &&
               ProfileRuntime.scope.value != startingScope)) {
         return;
       }
-      rethrow;
+      _summaryLoadFailed = true;
+      DiagnosticLog.instance.recordEvent(
+        source: 'app',
+        event: 'settings_summary_load_failed',
+        fields: {'errorType': DiagnosticLabel(error.runtimeType.toString())},
+      );
+    } finally {
+      if (mounted &&
+          ProfileLockController.instance.lockedProfileId.value == null &&
+          (startingScope == null ||
+              ProfileRuntime.scope.value == startingScope)) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -347,52 +379,251 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSummariesForCurrentProfile() async {
     // Phase 1: Load cached/local state instantly (no network)
-    final results = await Future.wait([
-      StorageService.hasRealDebridCredential(),
-      StorageService.hasTorboxCredential(),
-      PikPakApiService.instance.isAuthenticated(),
-      StorageService.getWebDavEnabled(),
-      StorageService.getWebDavServers(forSettings: true),
-      StorageService.hasTraktCredential(),
-      StorageService.getTraktTokenExpiry(),
-      StorageService.getTraktUsername(),
-      AppVersionInfo.get(),
-      AndroidNativeDownloader.isTelevision(),
-      StorageService.getUpdateAutoCheckEnabled(),
-      StorageService.getIndexerManagerConfigs(forSettings: true),
-      StorageService.hasPremiumizeCredential(),
-      StorageService.hasAllDebridCredential(),
-      StorageService.hasSimklCredential(),
-      StorageService.getSimklUsername(),
-      StorageService.hasMdblistCredential(),
-      StorageService.getMdblistUsername(),
-      StorageService.getTvKeyboardEnabled(),
-      StorageService.getTvUiScalePercent(),
-      StorageService.getTvHomeStyle(),
-      StorageService.getTvSidebarStyle(),
-      StorageService.getDiscoverLayout(),
-      StorageService.getIptvStyle(),
-      StorageService.getIptvPlayerGuideStyle(),
-      StorageService.getPhoneNavStyle(),
-      StorageService.getTextBrightness(),
-      StorageService.getLaunchAnimation(),
-      StorageService.getDetailPageStyle(),
-      StorageService.getTvRenderQuality(),
-      StorageService.getDetailTheme(),
-      StorageService.getParentsGuideStyle(),
-      StorageService.getTvHeroArtworkQuality(),
-      StorageService.getPlayerDockStyle(),
-      StorageService.getPlayerDockPalette(),
-      StorageService.getPlayerDockSize(),
-      StorageService.getDesktopSidebarStyle(),
-      StorageService.getDebrifyTvStyle(),
-      StorageService.getTvPlayerControlsStyle(),
-      StorageService.getDebrifyTvPlayerStyle(),
-      StorageService.getPlayLoaderStyle(),
-      _activeProfileMayExportDiagnostics(),
+    final startingScope = ProfileRuntime.scope.value;
+    _summaryLoadFailed = false;
+    final summaries = SettingsSummaryReads(
+      overrides: widget.summaryReadOverrides,
+      onFailure: (label, error) {
+        if (mounted && ProfileRuntime.scope.value == startingScope) {
+          _summaryFailures = {..._summaryFailures, label};
+          if (error is ResourceAuthorizationException) {
+            _summaryUnavailable = {..._summaryUnavailable, label};
+          }
+        }
+        DiagnosticLog.instance.recordEvent(
+          source: 'app',
+          event: 'settings_summary_read_failed',
+          fields: <String, Object?>{
+            'item': DiagnosticLabel(label),
+            // Exception messages can contain server URLs or credentials.
+            'errorType': DiagnosticLabel(error.runtimeType.toString()),
+            if (error is ResourceAuthorizationException)
+              'authorizationReason': DiagnosticLabel(
+                const {
+                      'Connection authority is missing',
+                      'Connection authority changed',
+                      'Resource is unavailable',
+                      'Profile feature is disabled',
+                      'Resource permission denied',
+                      'Profile session is locked',
+                      'Profile authorization session has ended',
+                      'Profile authorization has changed',
+                      'Profile storage is in maintenance mode',
+                    }.contains(error.message)
+                    ? error.message
+                    : 'other',
+              ),
+          },
+        );
+      },
+    );
+    final results = await Future.wait<Object?>([
+      summaries.read(
+        'Real Debrid',
+        () => StorageService.hasRealDebridCredential(),
+        false,
+      ),
+      summaries.read(
+        'Torbox',
+        () => StorageService.hasTorboxCredential(),
+        false,
+      ),
+      summaries.read(
+        'PikPak',
+        () => PikPakApiService.instance.isAuthenticated(),
+        false,
+      ),
+      summaries.read('WebDAV', () => StorageService.getWebDavEnabled(), false),
+      summaries.read(
+        'WebDAV',
+        () => StorageService.getWebDavServers(forSettings: true),
+        <WebDavConfig>[],
+      ),
+      summaries.read('Trakt', () => StorageService.hasTraktCredential(), false),
+      summaries.read('Trakt', () => StorageService.getTraktTokenExpiry(), null),
+      summaries.read('Trakt', () => StorageService.getTraktUsername(), null),
+      summaries.read(
+        'App version',
+        () => AppVersionInfo.get(),
+        PackageInfo(
+          appName: '',
+          packageName: '',
+          version: 'Unavailable',
+          buildNumber: '',
+        ),
+      ),
+      summaries.read(
+        'TV detection',
+        () => AndroidNativeDownloader.isTelevision(),
+        false,
+      ),
+      summaries.read(
+        'Update checks',
+        () => StorageService.getUpdateAutoCheckEnabled(),
+        false,
+      ),
+      summaries.read(
+        'Indexer managers',
+        () => StorageService.getIndexerManagerConfigs(forSettings: true),
+        [],
+      ),
+      summaries.read(
+        'Premiumize',
+        () => StorageService.hasPremiumizeCredential(),
+        false,
+      ),
+      summaries.read(
+        'AllDebrid',
+        () => StorageService.hasAllDebridCredential(),
+        false,
+      ),
+      summaries.read('Simkl', () => StorageService.hasSimklCredential(), false),
+      summaries.read('Simkl', () => StorageService.getSimklUsername(), null),
+      summaries.read(
+        'MDBList',
+        () => StorageService.hasMdblistCredential(),
+        false,
+      ),
+      summaries.read(
+        'MDBList',
+        () => StorageService.getMdblistUsername(),
+        null,
+      ),
+      summaries.read(
+        'TV keyboard',
+        () => StorageService.getTvKeyboardEnabled(),
+        _tvKeyboardEnabled,
+      ),
+      summaries.read(
+        'TV scale',
+        () => StorageService.getTvUiScalePercent(),
+        _tvUiScalePercent,
+      ),
+      summaries.read(
+        'TV home',
+        () => StorageService.getTvHomeStyle(),
+        _tvHomeStyle,
+      ),
+      summaries.read(
+        'TV sidebar',
+        () => StorageService.getTvSidebarStyle(),
+        _tvSidebarStyle,
+      ),
+      summaries.read(
+        'Discover layout',
+        () => StorageService.getDiscoverLayout(),
+        _discoverLayout,
+      ),
+      summaries.read(
+        'IPTV style',
+        () => StorageService.getIptvStyle(),
+        _iptvStyle,
+      ),
+      summaries.read(
+        'Player guide',
+        () => StorageService.getIptvPlayerGuideStyle(),
+        _playerGuideStyle,
+      ),
+      summaries.read(
+        'Phone navigation',
+        () => StorageService.getPhoneNavStyle(),
+        _phoneNavStyle,
+      ),
+      summaries.read(
+        'Text brightness',
+        () => StorageService.getTextBrightness(),
+        _textBrightness,
+      ),
+      summaries.read(
+        'Launch animation',
+        () => StorageService.getLaunchAnimation(),
+        _launchAnimation,
+      ),
+      summaries.read(
+        'Detail page',
+        () => StorageService.getDetailPageStyle(),
+        _detailPageStyle,
+      ),
+      summaries.read(
+        'Render quality',
+        () => StorageService.getTvRenderQuality(),
+        _tvRenderQuality,
+      ),
+      summaries.read(
+        'Detail theme',
+        () => StorageService.getDetailTheme(),
+        _detailTheme,
+      ),
+      summaries.read(
+        'Parents guide',
+        () => StorageService.getParentsGuideStyle(),
+        _parentsGuideStyle,
+      ),
+      summaries.read(
+        'Artwork quality',
+        () => StorageService.getTvHeroArtworkQuality(),
+        _tvHeroArtworkQuality,
+      ),
+      summaries.read(
+        'Player dock',
+        () => StorageService.getPlayerDockStyle(),
+        _playerDockStyle,
+      ),
+      summaries.read(
+        'Dock palette',
+        () => StorageService.getPlayerDockPalette(),
+        _playerDockPalette,
+      ),
+      summaries.read(
+        'Dock size',
+        () => StorageService.getPlayerDockSize(),
+        _playerDockSize,
+      ),
+      summaries.read(
+        'Desktop sidebar',
+        () => StorageService.getDesktopSidebarStyle(),
+        _desktopSidebarStyle,
+      ),
+      summaries.read(
+        'Debrify TV',
+        () => StorageService.getDebrifyTvStyle(),
+        _debrifyTvStyle,
+      ),
+      summaries.read(
+        'TV controls',
+        () => StorageService.getTvPlayerControlsStyle(),
+        _tvPlayerControlsStyle,
+      ),
+      summaries.read(
+        'TV player',
+        () => StorageService.getDebrifyTvPlayerStyle(),
+        _debrifyTvPlayerStyle,
+      ),
+      summaries.read(
+        'Play loader',
+        () => StorageService.getPlayLoaderStyle(),
+        _playLoaderStyle,
+      ),
+      summaries.read(
+        'Diagnostics',
+        () => _activeProfileMayExportDiagnostics(),
+        false,
+      ),
+      summaries.read(
+        'Pending credentials',
+        () => _pendingCredentialTypes(),
+        <ConnectionResourceType>{},
+      ),
+      summaries.read(
+        'IPTV',
+        () => StorageService.getIptvPlaylists(forSettings: true),
+        [],
+      ),
     ]);
 
-    if (!mounted) return;
+    if (!mounted || ProfileRuntime.scope.value != startingScope) return;
+    _summaryFailures = summaries.failures;
+    _summaryUnavailable = summaries.unavailable;
 
     final rdConnected = results[0] as bool;
     final torConnected = results[1] as bool;
@@ -427,8 +658,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final detailTheme = results[30] as String;
     final parentsGuideStyle = results[31] as String;
     final tvHeroArtworkQuality = results[32] as TvHeroArtworkQuality;
-    // Appended at the END of the Future.wait above, so no existing index
-    // moves. The list holds 33 entries (0..32) as of b525f2dc.
+    // Later summary fields stay appended at the END of the Future.wait above,
+    // so the long-established indices 0..32 never move.
     final playerDockStyle = results[33] as String;
     final playerDockPalette = results[34] as String;
     final playerDockSize = results[35] as String;
@@ -438,6 +669,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final debrifyTvPlayerStyle = results[39] as String;
     final playLoaderStyle = results[40] as String;
     final diagnosticExportVisible = results[41] as bool;
+    final pendingCredentialTypes = results[42] as Set<ConnectionResourceType>;
+    final configuredIptvPlaylists = results[43] as List;
 
     // Set initial state from cached data
     // Use cached account info if available
@@ -506,10 +739,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _webDavCaption = 'Tap to connect';
     }
 
+    final traktExpired =
+        traktExpiry != null &&
+        DateTime.now().millisecondsSinceEpoch >= traktExpiry;
     if (traktConnected) {
-      final traktExpired =
-          traktExpiry != null &&
-          DateTime.now().millisecondsSinceEpoch >= traktExpiry;
       if (!traktExpired) {
         _traktConnected = true;
         _traktStatus = 'Active';
@@ -557,6 +790,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _indexerManagersCaption =
           '${indexerManagers.length} engine${indexerManagers.length == 1 ? '' : 's'} configured';
     }
+
+    void pending(
+      Set<ConnectionResourceType> types,
+      bool ownCredentialPresent,
+      void Function() apply,
+    ) {
+      if (shouldApplyPendingCredentialOverride(
+        pendingTypes: pendingCredentialTypes,
+        providerTypes: types,
+        ownCredentialPresent: ownCredentialPresent,
+      )) {
+        apply();
+      }
+    }
+
+    const pendingCaption = 'credentials pending owner sign-in';
+    _iptvCredentialsPending = shouldApplyPendingCredentialOverride(
+      pendingTypes: pendingCredentialTypes,
+      providerTypes: const {
+        ConnectionResourceType.iptvM3u,
+        ConnectionResourceType.iptvXtream,
+        ConnectionResourceType.xmltv,
+      },
+      ownCredentialPresent: configuredIptvPlaylists.isNotEmpty,
+    );
+    pending(const {ConnectionResourceType.realDebrid}, rdConnected, () {
+      _realDebridConnected = true;
+      _realDebridStatus = 'Attention';
+      _realDebridCaption = pendingCaption;
+    });
+    pending(const {ConnectionResourceType.torbox}, torConnected, () {
+      _torboxConnected = true;
+      _torboxStatus = 'Attention';
+      _torboxCaption = pendingCaption;
+    });
+    pending(const {ConnectionResourceType.premiumize}, premiumizeConnected, () {
+      _premiumizeConnected = true;
+      _premiumizeStatus = 'Attention';
+      _premiumizeCaption = pendingCaption;
+    });
+    pending(const {ConnectionResourceType.allDebrid}, allDebridConnected, () {
+      _allDebridConnected = true;
+      _allDebridStatus = 'Attention';
+      _allDebridCaption = pendingCaption;
+    });
+    pending(const {ConnectionResourceType.pikpak}, pikpakAuth, () {
+      _pikpakConnected = true;
+      _pikpakStatus = 'Attention';
+      _pikpakCaption = pendingCaption;
+    });
+    pending(
+      const {ConnectionResourceType.webDav},
+      webDavEnabled && webDavServers.isNotEmpty,
+      () {
+        _webDavConnected = true;
+        _webDavStatus = 'Attention';
+        _webDavCaption = pendingCaption;
+      },
+    );
+    pending(const {ConnectionResourceType.trakt}, traktConnected, () {
+      _traktConnected = true;
+      _traktStatus = 'Attention';
+      _traktCaption = pendingCaption;
+    });
+    pending(const {ConnectionResourceType.simkl}, simklConnected, () {
+      _simklConnected = true;
+      _simklStatus = 'Attention';
+      _simklCaption = pendingCaption;
+    });
+    pending(const {ConnectionResourceType.mdblist}, mdblistConnected, () {
+      _mdblistConnected = true;
+      _mdblistStatus = 'Attention';
+      _mdblistCaption = pendingCaption;
+    });
+    pending(
+      const {ConnectionResourceType.jackett, ConnectionResourceType.prowlarr},
+      indexerManagers.isNotEmpty,
+      () {
+        _indexerManagersConfigured = true;
+        _indexerManagersStatus = 'Attention';
+        _indexerManagersCaption = pendingCaption;
+      },
+    );
 
     _appVersion = '${packageInfo.version} (${packageInfo.buildNumber})';
     _currentVersionName = packageInfo.version;
@@ -639,6 +955,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       });
     }
+  }
+
+  Future<Set<ConnectionResourceType>> _pendingCredentialTypes() async {
+    if (!ProfileRuntime.isInitialized || !ProfileRuntime.isProfileCommitted) {
+      return const <ConnectionResourceType>{};
+    }
+    final scope = ProfileRuntime.capture();
+    final resources = await ProfileBootstrap.registry.listGrantedResources(
+      scope.profileId,
+    );
+    if (ProfileRuntime.scope.value != scope) {
+      return const <ConnectionResourceType>{};
+    }
+    return resources
+        .where((resource) => resource.secretPending)
+        .map((resource) => resource.type)
+        .toSet();
   }
 
   Future<void> _loadSupportConfig() async {
@@ -751,79 +1084,150 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Theme(
       data: settingsPageTheme(context),
-      child: _isAndroidTv ? _buildTvLayout() : _buildLayout(context),
+      child: Column(
+        children: [
+          if (_summaryLoadFailed || _summaryFailures.isNotEmpty)
+            Material(
+              color: Theme.of(context).colorScheme.errorContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  "Some items couldn't load — open them to retry or sign in.",
+                  key: const ValueKey('settings-summary-attention'),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          Expanded(
+            child: _isAndroidTv ? _buildTvLayout() : _buildLayout(context),
+          ),
+        ],
+      ),
     );
   }
 
   // Connection cards in canonical order (matches the phone grid rows).
+  String _summaryFailureStatus(String label) => 'Attention';
+
+  String _summaryFailureCaption(String label) =>
+      _summaryUnavailable.contains(label)
+      ? 'Unavailable; retry or sign in'
+      : 'Unable to load; open the item to retry';
+
   ConnectionInfo get _rdInfo => ConnectionInfo(
     title: 'Real Debrid',
-    connected: _realDebridConnected,
-    status: _realDebridStatus,
-    caption: _realDebridCaption,
+    connected:
+        !_summaryFailures.contains('Real Debrid') && _realDebridConnected,
+    status: _summaryFailures.contains('Real Debrid')
+        ? _summaryFailureStatus('Real Debrid')
+        : _realDebridStatus,
+    caption: _summaryFailures.contains('Real Debrid')
+        ? _summaryFailureCaption('Real Debrid')
+        : _realDebridCaption,
     onTap: _openRealDebridSettings,
   );
   ConnectionInfo get _torboxInfo => ConnectionInfo(
     title: 'Torbox',
-    connected: _torboxConnected,
-    status: _torboxStatus,
-    caption: _torboxCaption,
+    connected: !_summaryFailures.contains('Torbox') && _torboxConnected,
+    status: _summaryFailures.contains('Torbox')
+        ? _summaryFailureStatus('Torbox')
+        : _torboxStatus,
+    caption: _summaryFailures.contains('Torbox')
+        ? _summaryFailureCaption('Torbox')
+        : _torboxCaption,
     onTap: _openTorboxSettings,
   );
   ConnectionInfo get _premiumizeInfo => ConnectionInfo(
     title: 'Premiumize',
-    connected: _premiumizeConnected,
-    status: _premiumizeStatus,
-    caption: _premiumizeCaption,
+    connected: !_summaryFailures.contains('Premiumize') && _premiumizeConnected,
+    status: _summaryFailures.contains('Premiumize')
+        ? _summaryFailureStatus('Premiumize')
+        : _premiumizeStatus,
+    caption: _summaryFailures.contains('Premiumize')
+        ? _summaryFailureCaption('Premiumize')
+        : _premiumizeCaption,
     onTap: _openPremiumizeSettings,
   );
   ConnectionInfo get _allDebridInfo => ConnectionInfo(
     title: 'AllDebrid',
-    connected: _allDebridConnected,
-    status: _allDebridStatus,
-    caption: _allDebridCaption,
+    connected: !_summaryFailures.contains('AllDebrid') && _allDebridConnected,
+    status: _summaryFailures.contains('AllDebrid')
+        ? _summaryFailureStatus('AllDebrid')
+        : _allDebridStatus,
+    caption: _summaryFailures.contains('AllDebrid')
+        ? _summaryFailureCaption('AllDebrid')
+        : _allDebridCaption,
     onTap: _openAllDebridSettings,
   );
   ConnectionInfo get _pikpakInfo => ConnectionInfo(
     title: 'PikPak',
-    connected: _pikpakConnected,
-    status: _pikpakStatus,
-    caption: _pikpakCaption,
+    connected: !_summaryFailures.contains('PikPak') && _pikpakConnected,
+    status: _summaryFailures.contains('PikPak')
+        ? _summaryFailureStatus('PikPak')
+        : _pikpakStatus,
+    caption: _summaryFailures.contains('PikPak')
+        ? _summaryFailureCaption('PikPak')
+        : _pikpakCaption,
     onTap: _openPikPakSettings,
   );
   ConnectionInfo get _webDavInfo => ConnectionInfo(
     title: 'WebDAV',
-    connected: _webDavConnected,
-    status: _webDavStatus,
-    caption: _webDavCaption,
+    connected: !_summaryFailures.contains('WebDAV') && _webDavConnected,
+    status: _summaryFailures.contains('WebDAV')
+        ? _summaryFailureStatus('WebDAV')
+        : _webDavStatus,
+    caption: _summaryFailures.contains('WebDAV')
+        ? _summaryFailureCaption('WebDAV')
+        : _webDavCaption,
     onTap: _openWebDavSettings,
   );
   ConnectionInfo get _iptvInfo => ConnectionInfo(
     title: 'IPTV',
-    connected: true,
-    status: 'Active',
-    caption: 'M3U playlist channels',
+    connected: !_summaryFailures.contains('IPTV'),
+    status: _summaryFailures.contains('IPTV')
+        ? _summaryFailureStatus('IPTV')
+        : _iptvCredentialsPending
+        ? 'Attention'
+        : 'Active',
+    caption: _summaryFailures.contains('IPTV')
+        ? _summaryFailureCaption('IPTV')
+        : _iptvCredentialsPending
+        ? 'credentials pending owner sign-in'
+        : 'M3U playlist channels',
     onTap: _openIptvSettings,
   );
   ConnectionInfo get _traktInfo => ConnectionInfo(
     title: 'Trakt',
-    connected: _traktConnected,
-    status: _traktStatus,
-    caption: _traktCaption,
+    connected: !_summaryFailures.contains('Trakt') && _traktConnected,
+    status: _summaryFailures.contains('Trakt')
+        ? _summaryFailureStatus('Trakt')
+        : _traktStatus,
+    caption: _summaryFailures.contains('Trakt')
+        ? _summaryFailureCaption('Trakt')
+        : _traktCaption,
     onTap: _openTraktSettings,
   );
   ConnectionInfo get _simklInfo => ConnectionInfo(
     title: 'Simkl',
-    connected: _simklConnected,
-    status: _simklStatus,
-    caption: _simklCaption,
+    connected: !_summaryFailures.contains('Simkl') && _simklConnected,
+    status: _summaryFailures.contains('Simkl')
+        ? _summaryFailureStatus('Simkl')
+        : _simklStatus,
+    caption: _summaryFailures.contains('Simkl')
+        ? _summaryFailureCaption('Simkl')
+        : _simklCaption,
     onTap: _openSimklSettings,
   );
   ConnectionInfo get _mdblistInfo => ConnectionInfo(
     title: 'MDBList',
-    connected: _mdblistConnected,
-    status: _mdblistStatus,
-    caption: _mdblistCaption,
+    connected: !_summaryFailures.contains('MDBList') && _mdblistConnected,
+    status: _summaryFailures.contains('MDBList')
+        ? _summaryFailureStatus('MDBList')
+        : _mdblistStatus,
+    caption: _summaryFailures.contains('MDBList')
+        ? _summaryFailureCaption('MDBList')
+        : _mdblistCaption,
     onTap: _openMdblistSettings,
   );
   ConnectionInfo get _trackingInfo => ConnectionInfo(
@@ -835,9 +1239,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   );
   ConnectionInfo get _indexerManagersInfo => ConnectionInfo(
     title: 'Jackett & Prowlarr',
-    connected: _indexerManagersConfigured,
-    status: _indexerManagersStatus,
-    caption: _indexerManagersCaption,
+    connected:
+        !_summaryFailures.contains('Indexer managers') &&
+        _indexerManagersConfigured,
+    status: _summaryFailures.contains('Indexer managers')
+        ? _summaryFailureStatus('Indexer managers')
+        : _indexerManagersStatus,
+    caption: _summaryFailures.contains('Indexer managers')
+        ? _summaryFailureCaption('Indexer managers')
+        : _indexerManagersCaption,
     onTap: _openIndexerManagersSettings,
   );
 
@@ -886,6 +1296,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       downloadLocationSubtitle: _downloadLocationSubtitle,
       onCreateBackup: _createBackup,
       onRestoreBackup: _restoreBackup,
+      onOpenSyncAndMigrate: _openSyncAndMigrate,
       onExportDiagnosticLogs: _diagnosticExportVisible
           ? _exportDiagnosticLogs
           : null,
@@ -1002,6 +1413,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       downloadLocationSubtitle: _downloadLocationSubtitle,
       onCreateBackup: _createBackup,
       onRestoreBackup: _restoreBackup,
+      onOpenSyncAndMigrate: _openSyncAndMigrate,
       onExportDiagnosticLogs: _diagnosticExportVisible
           ? _exportDiagnosticLogs
           : null,
@@ -1400,6 +1812,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'startup',
           'landing',
           'tab',
+        ],
+      ),
+      nav(
+        SettingsRows.collections,
+        'Home & Display',
+        _openCollectionsSettings,
+        keywords: const [
+          'collections',
+          'collection',
+          'nuvio',
+          'xperience',
+          'folders',
+          'import json',
         ],
       ),
 
@@ -2217,6 +2642,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
         toggleValue: () => _tvKeyboardEnabled,
         onToggle: _toggleTvKeyboard,
+      ),
+
+      nav(
+        SettingsRows.syncAndMigrate,
+        'Sync and backup',
+        _openSyncAndMigrate,
+        keywords: const [
+          'webdav',
+          'cloud backup',
+          'migration',
+          'transfer',
+          'save backup',
+          'restore backup',
+          'apple tv',
+          'tvos',
+          'encrypted',
+        ],
       ),
 
       // Downloads
@@ -4558,6 +5000,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await pushSettingsPage(context, const RecordingsPage());
   }
 
+  Future<void> _openCollectionsSettings() async {
+    await pushSettingsPage(context, const CollectionsSettingsPage());
+  }
+
   Future<void> _openHomePageSettings() async {
     await pushSettingsPage(context, const HomePageSettingsPage());
     if (!mounted) return;
@@ -4781,6 +5227,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
         MainPageBridge.notifyIntegrationChanged();
       },
     ).restoreProfileBackup();
+  }
+
+  Future<void> _openSyncAndMigrate() async {
+    if (ProfileRuntime.mode != ProfileRuntimeMode.profileCommitted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Sync and backup becomes available after Profiles setup.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    if (!await _ensureProfileFeature(ProfileFeature.backupRestore)) return;
+    if (!mounted) return;
+    await pushSettingsPage(
+      context,
+      SyncAndMigratePage(
+        onRestored: () async {
+          await _loadSummaries();
+          MainPageBridge.notifyIntegrationChanged();
+        },
+      ),
+    );
   }
 
   Future<void> _createBackup() async {
@@ -5490,6 +5962,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         '${s.iptvListChannelCount} channels)',
       );
     }
+    if (s.homeCollectionCount > 0) {
+      lines.add('Collections (${s.homeCollectionCount})');
+    }
+    if (s.streamBadgeSourceCount > 0) {
+      lines.add('Stream badge rulesets (${s.streamBadgeSourceCount})');
+    }
     return lines;
   }
 
@@ -5526,6 +6004,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     if (r.iptvListChannelsImported > 0) {
       parts.add('${r.iptvListChannelsImported} list channel(s)');
+    }
+    if (r.homeCollectionsImported > 0) {
+      parts.add('${r.homeCollectionsImported} collection(s)');
+    }
+    if (r.streamBadgeSourcesImported > 0) {
+      parts.add('${r.streamBadgeSourcesImported} badge ruleset(s)');
     }
 
     if (parts.isEmpty && !r.hasAnyFailure) {
@@ -6011,10 +6495,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Clears the key + username AND the in-memory list/items cache.
     await MdblistService.instance.logout();
     await DownloadService.instance.clearDownloadDatabase();
-    await StorageService.clearAllPlaybackData();
-    await StorageService.clearContinueWatching();
-    await StorageService.clearPlaylist();
-    await StorageService.clearAllPlaylistMetadata();
+    // Reset is a device-local wipe: none of these clears may record synced
+    // deletions, or reconnecting sync later replays them circle-wide.
+    await StorageService.clearAllPlaybackData(recordSyncDeletions: false);
+    await StorageService.clearContinueWatching(recordSyncDeletions: false);
+    await StorageService.clearPlaylist(recordSyncDeletions: false);
+    await StorageService.clearAllPlaylistMetadata(recordSyncDeletions: false);
     await StorageService.clearMyWatchlist();
     await StorageService.clearTorrentSearchHistory();
     await StorageService.clearAllStartupSettings();
@@ -6025,7 +6511,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await StorageService.clearAllTorrentEngineSettings();
     await StorageService.clearAllPostTorrentActions();
     await StorageService.clearAllDebrifyTvSettings();
-    await DebrifyTvRepository.instance.clearAll();
+    // A device-local reset must never mint circle-wide channel deletions:
+    // rejoining a sync circle later means adopting its data, not erasing it.
+    await DebrifyTvRepository.instance.clearAll(
+      origin: WebDavSyncMutationOrigin.maintenance,
+    );
     await StremioService.instance.clearAllAddons();
     await StorageService.setInitialSetupComplete(false);
     if (!mounted) return;
@@ -6809,6 +7299,16 @@ const List<SettingsCategoryDefinition> _kAdaptiveSettingsCategories = [
         'profile can reach.',
   ),
   SettingsCategoryDefinition(
+    icon: Icons.sync_alt_rounded,
+    label: 'Sync and backup',
+    subtitle: 'Sync across devices and save backups',
+    eyebrow: 'Sync and backup',
+    title: 'Keep your devices in sync.',
+    description:
+        'Connect your WebDAV account to sync profiles, settings and watch '
+        'progress, or save a separate backup.',
+  ),
+  SettingsCategoryDefinition(
     icon: Icons.storage_rounded,
     label: 'Data & Backup',
     subtitle: 'Downloads, backup & restore',
@@ -6866,6 +7366,7 @@ class _SettingsLayout extends StatelessWidget {
   final String downloadLocationSubtitle;
   final Future<void> Function() onCreateBackup;
   final Future<void> Function() onRestoreBackup;
+  final Future<void> Function() onOpenSyncAndMigrate;
   final Future<void> Function()? onExportDiagnosticLogs;
   final Future<void> Function() onDangerAction;
   final String appVersion;
@@ -6956,6 +7457,7 @@ class _SettingsLayout extends StatelessWidget {
     this.downloadLocationSubtitle = '',
     required this.onCreateBackup,
     required this.onRestoreBackup,
+    required this.onOpenSyncAndMigrate,
     this.onExportDiagnosticLogs,
     required this.onDangerAction,
     required this.appVersion,
@@ -7320,6 +7822,17 @@ class _SettingsLayout extends StatelessWidget {
           ],
         );
       case 10:
+        return SettingsSection(
+          title: '',
+          children: [
+            SettingsTile.spec(
+              SettingsRows.syncAndMigrate,
+              onTap: onOpenSyncAndMigrate,
+              trailing: const WebDavSyncPendingBadge(),
+            ),
+          ],
+        );
+      case 11:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -7377,7 +7890,7 @@ class _SettingsLayout extends StatelessWidget {
             ],
           ],
         );
-      case 11:
+      case 12:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -7432,7 +7945,7 @@ class _SettingsLayout extends StatelessWidget {
             ),
           ],
         );
-      case 12:
+      case 13:
         return SettingsSection(
           title: '',
           accentColor: t.danger,
@@ -7700,6 +8213,17 @@ class _SettingsLayout extends StatelessWidget {
                     ],
                   ),
                 ],
+                const SizedBox(height: 24),
+                SettingsSection(
+                  title: 'Sync and backup',
+                  children: [
+                    SettingsTile.spec(
+                      SettingsRows.syncAndMigrate,
+                      onTap: onOpenSyncAndMigrate,
+                      trailing: const WebDavSyncPendingBadge(),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 24),
                 SettingsSection(
                   title: 'Data & Backup',

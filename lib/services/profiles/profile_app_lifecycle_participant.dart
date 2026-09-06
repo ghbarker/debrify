@@ -22,6 +22,7 @@ import '../premiumize_account_service.dart';
 import '../remote_control/remote_command_router.dart';
 import '../simkl/simkl_service.dart';
 import '../storage_service.dart';
+import '../stream_badges_service.dart';
 import '../stremio_service.dart';
 import '../subtitle_font_service.dart';
 import '../play_loader_style.dart';
@@ -69,6 +70,7 @@ class ProfileAppLifecycleParticipant implements ProfileLifecycleParticipant {
     XtreamCodesService.instance.clearCache();
     DiscoverPrefs.resetProfileScope();
     HideWatchedPrefs.resetProfileScope();
+    StreamBadgesService.instance.resetProfileScope();
     SubtitleFontService.instance.resetProfileScope();
     SubtitleSettingsService.instance.resetProfileScope();
     AccountService.clearUserInfo();
@@ -128,6 +130,11 @@ class ProfileAppLifecycleParticipant implements ProfileLifecycleParticipant {
       _warmed('DiscoverPrefs', scope, DiscoverPrefs.resetProfileScope);
       _warmed('HideWatchedPrefs', scope, HideWatchedPrefs.resetProfileScope);
       _warmed(
+        'StreamBadges',
+        scope,
+        StreamBadgesService.instance.resetProfileScope,
+      );
+      _warmed(
         'SubtitleFont',
         scope,
         SubtitleFontService.instance.resetProfileScope,
@@ -178,6 +185,7 @@ class ProfileAppLifecycleParticipant implements ProfileLifecycleParticipant {
       await TvHeroArtworkQualityController.warm();
       await DiscoverPrefs.warmUp();
       await HideWatchedPrefs.warmUp();
+      await StreamBadgesService.instance.warmUp();
       // Do not open credentials here. ProfileGate intentionally keeps the
       // candidate locked until switchTo returns; the newly mounted profile UI
       // refreshes provider authentication immediately after unlock.

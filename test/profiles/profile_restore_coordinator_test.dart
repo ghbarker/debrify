@@ -1,5 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:debrify/models/indexer_manager_config.dart';
+import 'package:debrify/models/iptv_playlist.dart';
+import 'package:debrify/models/webdav_item.dart';
+import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/profiles/profile_collection_resource_facade.dart';
+import 'package:debrify/services/webdav_sync/webdav_sync_adoption.dart';
+import 'package:debrify/services/webdav_sync/webdav_sync_adoption_models.dart';
+import 'package:debrify/services/webdav_sync/webdav_sync_adoption_operations.dart';
+import 'package:debrify/services/webdav_sync/webdav_sync_engine_state.dart';
+import 'package:debrify/services/webdav_sync/webdav_sync_graph.dart';
+import 'package:debrify/services/webdav_sync/webdav_sync_safety_backup.dart';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:debrify/models/profiles/connection_resource.dart';
@@ -193,6 +204,207 @@ void main() {
     await temporaryDirectory.delete(recursive: true);
   });
 
+  test(
+    'restored backup then circle adoption leaves every collection usable',
+    () async {
+      final resources = ConnectionResourceService(
+        registry: registry,
+        cipher: cipher,
+      );
+      const types = {
+        ConnectionResourceType.iptvM3u,
+        ConnectionResourceType.iptvXtream,
+        ConnectionResourceType.stremioAddon,
+        ConnectionResourceType.webDav,
+        ConnectionResourceType.jackett,
+        ConnectionResourceType.prowlarr,
+      };
+      for (final type in types) {
+        final secret = <String, dynamic>{
+          'id': 'old-${type.name}',
+          'name': type.name,
+          'enabled': true,
+          // Deliberately retain old compatibility authority in the encrypted
+          // payload. Only registry readback may mint an executable model.
+          '_connectionResourceId': 'pre-backup-resource',
+          '_connectionResourceRevision': 73,
+          if (type == ConnectionResourceType.iptvM3u ||
+              type == ConnectionResourceType.iptvXtream) ...{
+            'url': type == ConnectionResourceType.iptvM3u
+                ? 'https://example.invalid/list.m3u'
+                : '',
+            'addedAt': '2026-08-01T00:00:00.000Z',
+            if (type == ConnectionResourceType.iptvXtream) ...{
+              'serverUrl': 'https://example.invalid',
+              'username': 'test-user',
+              'password': 'test-password',
+            },
+          },
+          if (type == ConnectionResourceType.stremioAddon) ...{
+            'manifest_url': 'https://example.invalid/manifest.json',
+            'base_url': 'https://example.invalid',
+            'types': ['movie'],
+            'resources': ['catalog'],
+            'catalogs': [],
+          },
+          if (type == ConnectionResourceType.webDav) ...{
+            'baseUrl': 'https://example.invalid/dav',
+            'username': 'test-user',
+            'password': 'test-password',
+          },
+          if (type == ConnectionResourceType.jackett ||
+              type == ConnectionResourceType.prowlarr) ...{
+            'type': type.name,
+            'base_url': 'https://example.invalid',
+            'api_key': 'test-key',
+          },
+        };
+        await resources.create(
+          context: await ProfileAuthorizationContext.capture(registry),
+          type: type,
+          label: type.name,
+          publicConfig: const {},
+          secretConfig: secret,
+        );
+      }
+      final packages = ProfilePackageService(
+        registry: registry,
+        resources: resources,
+      );
+      final circle = await packages.exportAllProfiles(
+        context: await ProfileAuthorizationContext.capture(registry),
+        includeSecrets: true,
+        includeDatabases: false,
+      );
+      final restore = ProfileRestoreCoordinator(
+        registry: registry,
+        cipher: cipher,
+      );
+      final restoredBackup = await restore.restoreDeviceGraph(
+        package: circle,
+        authorization: await ProfileAuthorizationContext.capture(registry),
+      );
+      final lifecycle = ProfileLifecycleCoordinator(registry: registry);
+      addTearDown(lifecycle.dispose);
+      await lifecycle.switchTo(restoredBackup.importedProfileIds.single);
+
+      final operations = DefaultWebDavSyncAdoptionOperations(
+        registry: registry,
+        restoreCoordinator: restore,
+        lifecycleCoordinator: lifecycle,
+      );
+      // The backup source is not part of the restored phone. Remove it before
+      // seeding so the circle contains exactly the restored resource graph.
+      await operations.pruneProfile(profileId);
+      final localProfiles = await registry.listProfiles(includeDisabled: true);
+      final localResources = await registry.listAllResourcesIncludingDisabled();
+      final seedMaps = WebDavSyncGraphIdentityPlanner.ensure(
+        localProfileIds: localProfiles.map((profile) => profile.id),
+        localResourceIds: localResources.map((resource) => resource.id),
+      ).maps;
+      final retained = WebDavSyncGraphIdentityPlanner.ensure(
+        localProfileIds: localProfiles.map((profile) => profile.id),
+        localResourceIds: localResources.map((resource) => resource.id),
+        currentCircleToLocalProfiles: seedMaps.circleToLocalProfiles,
+        currentCircleToLocalResources: seedMaps.circleToLocalResources,
+      ).maps;
+      expect(retained.circleToLocalResources, seedMaps.circleToLocalResources);
+      final seed = await WebDavSyncGraphBuilder(packages).build(
+        kind: WebDavSyncGraphKind.bootstrap,
+        authorization: await ProfileAuthorizationContext.capture(registry),
+        identityMaps: retained,
+      );
+
+      Future<List<Map<String, dynamic>>> read() =>
+          ProfileCollectionResourceFacade.read(
+            types: types,
+            feature: ProfileFeature.manageConnections,
+          );
+      final preJoinScope = ProfileRuntime.capture();
+      final oldModels = await read();
+      expect(oldModels.length, greaterThanOrEqualTo(types.length));
+      final states = _JoinStateRepository();
+      final adoption = WebDavSyncCircleAdoption(
+        stateRepository: states,
+        // Only the backup filesystem is substituted; restore, registry
+        // publication, handoff, resource remapping and predecessor prune are real.
+        safetyBackups: _JoinSafetyBackups(),
+        operations: operations,
+      );
+      final joined = await adoption.adopt(
+        WebDavSyncAdoptionRequest(
+          namespaceId: 'circle:regression',
+          mode: WebDavSyncAdoptionMode.firstJoin,
+          package: seed.package,
+          graphSemanticDigest: seed.semanticDigest,
+          profileMap: seed.profileMap,
+          resourceMap: seed.resourceMap,
+          passphrase: 'test-circle-passphrase',
+          authorization: await ProfileAuthorizationContext.capture(registry),
+          replacementConfirmed: true,
+        ),
+      );
+      expect(joined.phase, WebDavSyncAdoptionPhase.complete);
+      expect(states.state.adoption, isNull);
+      final current = await read();
+      expect(current, hasLength(types.length));
+      Future<void> authorize(Map<String, dynamic> row) =>
+          ProfileCollectionResourceFacade.authorizeExecution(
+            resourceId: row['_connectionResourceId'] as String?,
+            resourceRevision: row['_connectionResourceRevision'] as int?,
+            acceptedTypes: types,
+            feature: ProfileFeature.manageConnections,
+          );
+      for (final row in current) {
+        final resource = await registry.getResource(
+          row['_connectionResourceId'] as String,
+        );
+        expect(
+          row['_connectionResourceRevision'],
+          resource!.authorizationRevision,
+        );
+        await authorize(row);
+      }
+      for (final row in oldModels) {
+        await expectLater(
+          authorize(row),
+          throwsA(isA<ResourceAuthorizationException>()),
+        );
+      }
+      // Exercise the production model getters (not just raw facade records).
+      final List<IptvPlaylist> playlists =
+          await StorageService.getIptvPlaylists(forSettings: false);
+      expect(playlists.where((p) => !p.isVirtual), hasLength(2));
+      final List<WebDavConfig> servers = await StorageService.getWebDavServers(
+        forSettings: false,
+      );
+      expect(servers, hasLength(1));
+      final List<IndexerManagerConfig> managers =
+          await StorageService.getIndexerManagerConfigs(forSettings: false);
+      expect(managers, hasLength(2));
+      StremioService.instance.invalidateCache();
+      // A retired display read must fail soft, without caching an empty result
+      // over the new profile's catalog or reviving its old resource authority.
+      expect(
+        await ProfileRuntime.withCapturedScope(
+          preJoinScope,
+          () => StremioService.instance.getAddons(),
+        ),
+        isEmpty,
+      );
+      final addons = await StremioService.instance.getAddons();
+      expect(addons, hasLength(1));
+      for (final row in [
+        ...playlists.where((p) => !p.isVirtual).map((p) => p.toJson()),
+        ...servers.map((p) => p.toJson()),
+        ...managers.map((p) => p.toJson()),
+        ...addons.map((p) => p.toJson()),
+      ]) {
+        await authorize(row);
+      }
+    },
+  );
+
   test('sanitized export emits only reviewed settings and values', () async {
     final prefs = await SharedPreferences.getInstance();
     final prefix = 'p.$profileId.g.1.';
@@ -341,6 +553,107 @@ void main() {
     },
   );
 
+  test(
+    'compacted TV omission drops matching sync stamps so a joiner backfills',
+    () async {
+      final scope = ProfileRuntime.capture();
+      final source = scope.fileIn(documents, 'documents', 'debrify_tv.db');
+      await source.parent.create(recursive: true);
+      final database = await openDatabase(source.path, singleInstance: false);
+      await database.execute(
+        'CREATE TABLE tv_channels (channel_id TEXT PRIMARY KEY)',
+      );
+      await database.execute(
+        'CREATE TABLE tv_cached_torrents '
+        '(channel_id TEXT NOT NULL, infohash TEXT NOT NULL)',
+      );
+      await database.execute(
+        'CREATE TABLE webdav_sync_record_state ('
+        'kind TEXT NOT NULL, owner_key TEXT NOT NULL, '
+        'item_key TEXT NOT NULL, updated_at_ms INTEGER NOT NULL, '
+        'origin_device_id TEXT NOT NULL, normalized INTEGER NOT NULL, '
+        'deleted INTEGER NOT NULL, aux TEXT, '
+        'PRIMARY KEY (kind, owner_key, item_key))',
+      );
+      await database.insert('tv_channels', <String, Object?>{
+        'channel_id': 'portable-channel',
+      });
+      await database.insert('tv_cached_torrents', <String, Object?>{
+        'channel_id': 'portable-channel',
+        'infohash': 'portable-hash',
+      });
+      for (final kind in const <String>[
+        'tv_channels',
+        'tv_pool_generation',
+        'video_resume',
+      ]) {
+        await database.insert('webdav_sync_record_state', <String, Object?>{
+          'kind': kind,
+          'owner_key': 'portable-channel',
+          'item_key': '',
+          'updated_at_ms': 111,
+          'origin_device_id': 'other-device',
+          'normalized': 1,
+          'deleted': 0,
+          'aux': kind == 'tv_pool_generation' ? 'generation-one' : null,
+        });
+      }
+      await database.close();
+
+      final authorization = await ProfileAuthorizationContext.capture(registry);
+      final package =
+          await ProfilePackageService(
+            registry: registry,
+            resources: ConnectionResourceService(
+              registry: registry,
+              cipher: cipher,
+            ),
+          ).exportAllProfiles(
+            context: authorization,
+            includeSecrets: true,
+            compactDatabaseSnapshots: true,
+          );
+      expect(package.omissions, contains(DebrifyTvBackupOmission.key));
+
+      final report = await ProfileRestoreCoordinator(
+        registry: registry,
+        cipher: cipher,
+      ).restoreDeviceGraph(package: package, authorization: authorization);
+      expect(report.profilesImported, 1);
+      final imported = (await registry.listProfiles()).singleWhere(
+        (profile) => profile.id != profileId,
+      );
+      final importedScope = ProfileScope(
+        profileId: imported.id,
+        dataGeneration: imported.visibleDataGeneration,
+        sessionEpoch: 0,
+      );
+      final restored = await openDatabase(
+        importedScope.fileIn(documents, 'documents', 'debrify_tv.db').path,
+        readOnly: true,
+        singleInstance: false,
+      );
+      expect(await restored.query('tv_channels'), isEmpty);
+      expect(
+        await restored.query(
+          'webdav_sync_record_state',
+          where: 'kind IN (?, ?)',
+          whereArgs: const <Object>['tv_channels', 'tv_pool_generation'],
+        ),
+        isEmpty,
+      );
+      expect(
+        await restored.query(
+          'webdav_sync_record_state',
+          where: 'kind = ?',
+          whereArgs: const <Object>['video_resume'],
+        ),
+        hasLength(1),
+      );
+      await restored.close();
+    },
+  );
+
   test('publishes only the finalized staged generation', () async {
     final section = await PortableProfilePackage.buildSection(
       const <String, Object?>{'theme_mode': 'restored', 'language': 'en'},
@@ -376,6 +689,39 @@ void main() {
     expect(prefs.getString('p.$profileId.g.2.theme_mode'), 'restored');
     expect(prefs.getString('p.$profileId.g.2.language'), 'en');
   });
+
+  test(
+    'active restore republishes generation before recovery checkpoint',
+    () async {
+      final original = ProfileRuntime.capture();
+      var observedPublication = false;
+      registry.authorityChangedCallback = () async {
+        final active = (await registry.getProfile(profileId))!;
+        if (active.visibleDataGeneration == original.dataGeneration) return;
+        observedPublication = true;
+        expect(
+          ProfileRuntime.capture().dataGeneration,
+          active.visibleDataGeneration,
+        );
+        expect(
+          ProfileRuntime.capture().sessionEpoch,
+          greaterThan(original.sessionEpoch),
+        );
+        await (await ProfileAuthorizationContext.capture(
+          registry,
+        )).validate(registry);
+      };
+      await ProfileRestoreCoordinator(
+        registry: registry,
+        cipher: cipher,
+      ).restore(
+        package: await _singleProfilePackage(setupComplete: false),
+        destinationProfileId: profileId,
+        authorization: await ProfileAuthorizationContext.capture(registry),
+      );
+      expect(observedPublication, isTrue);
+    },
+  );
 
   for (final importedSetupComplete in <bool?>[null, false]) {
     final sourceLabel = importedSetupComplete == null
@@ -1367,10 +1713,22 @@ void main() {
         registry: registry,
         resources: resourceService,
       ).exportAllProfiles(context: authorization, includeSecrets: true);
-      await ProfileRestoreCoordinator(
+      final report = await ProfileRestoreCoordinator(
         registry: registry,
         cipher: cipher,
       ).restoreDeviceGraph(package: package, authorization: authorization);
+
+      for (final record in package.resources) {
+        final backupId = record['backupId']! as String;
+        final restoredId = report.importedResourceIdsByBackupId[backupId];
+        expect(restoredId, isNotNull);
+        expect(
+          (await registry.listAllResourcesIncludingDisabled()).map(
+            (resource) => resource.id,
+          ),
+          contains(restoredId),
+        );
+      }
 
       final imported = (await registry.listProfiles()).singleWhere(
         (profile) => profile.id != profileId,
@@ -1560,6 +1918,79 @@ void main() {
   );
 
   test(
+    'structure-only graph excludes preferences and databases and still restores',
+    () async {
+      final source = ProfileRuntime.capture();
+      final preferences = await ProfilePreferences.instance();
+      await preferences.setString('theme_mode', 'source-only');
+      final sourceDatabase = source.fileIn(
+        documents,
+        'documents',
+        'debrify_tv.db',
+      );
+      await sourceDatabase.parent.create(recursive: true);
+      final database = await openDatabase(
+        sourceDatabase.path,
+        singleInstance: false,
+      );
+      await database.execute('CREATE TABLE proof(value TEXT NOT NULL)');
+      await database.close();
+
+      final authorization = await ProfileAuthorizationContext.capture(registry);
+      final package =
+          await ProfilePackageService(
+            registry: registry,
+            resources: ConnectionResourceService(
+              registry: registry,
+              cipher: cipher,
+            ),
+          ).exportAllProfiles(
+            context: authorization,
+            includeSecrets: true,
+            includeDatabases: false,
+            includePreferences: false,
+          );
+
+      expect(
+        package.profiles,
+        everyElement(isNot(contains('preferencesSection'))),
+      );
+      expect(
+        package.profiles,
+        everyElement(isNot(contains('databasesSection'))),
+      );
+      expect(
+        package.sections.keys,
+        isNot(
+          contains(anyOf(endsWith('-preferences'), endsWith('-databases'))),
+        ),
+      );
+      final decoded = await PortableProfilePackage.decodeAuthenticatedMap(
+        await PortableProfilePackage.withIntegrity(package),
+        allowMissingPreferences: true,
+      );
+      final report = await ProfileRestoreCoordinator(
+        registry: registry,
+        cipher: cipher,
+      ).restoreDeviceGraph(package: decoded, authorization: authorization);
+
+      expect(report.profilesImported, 1);
+      final imported = (await registry.listProfiles()).singleWhere(
+        (profile) => profile.id != profileId,
+      );
+      final importedPreferences = await ProfilePreferences.forCapturedScope(
+        ProfileScope(
+          profileId: imported.id,
+          dataGeneration: imported.visibleDataGeneration,
+          sessionEpoch: 0,
+        ),
+        CapturedProfilePreferenceAccess.restore,
+      );
+      expect(importedPreferences.getString('theme_mode'), isNull);
+    },
+  );
+
+  test(
     'device graph publishes a final manifest covering preferences db and file',
     () async {
       final source = ProfileRuntime.capture();
@@ -1726,4 +2157,106 @@ void main() {
       expect(preferences.getString('theme_mode'), 'old');
     },
   );
+
+  test('restore preserves original profile creation order', () async {
+    final actor = await ProfileAuthorizationContext.capture(registry);
+    // Created in REVERSE of their carried instants: if the adopting device
+    // ordered by insertion, Later-but-created-first would sort first and this
+    // fixture would fail.
+    await registry.createProfile(
+      name: 'Second by instant',
+      role: UserProfileRole.member,
+      createdAtMs: DateTime.utc(2026, 6, 1).millisecondsSinceEpoch,
+      actingProfileId: actor.profileId,
+      actingAuthorizationRevision: actor.authorizationRevision,
+      actingSessionEpoch: actor.sessionEpoch,
+    );
+    await registry.createProfile(
+      name: 'First by instant',
+      role: UserProfileRole.member,
+      createdAtMs: DateTime.utc(2026, 1, 1).millisecondsSinceEpoch,
+      actingProfileId: actor.profileId,
+      actingAuthorizationRevision: actor.authorizationRevision,
+      actingSessionEpoch: actor.sessionEpoch,
+    );
+
+    final authorization = await ProfileAuthorizationContext.capture(registry);
+    final service = ProfilePackageService(
+      registry: registry,
+      resources: ConnectionResourceService(registry: registry, cipher: cipher),
+    );
+    final package = await service.exportAllProfiles(
+      context: authorization,
+      includeSecrets: true,
+    );
+    final originals = (await registry.listProfiles())
+        .map((profile) => profile.id)
+        .toSet();
+    await ProfileRestoreCoordinator(
+      registry: registry,
+      cipher: cipher,
+    ).restoreDeviceGraph(package: package, authorization: authorization);
+
+    final importedMembers = (await registry.listProfiles())
+        .where(
+          (profile) =>
+              !originals.contains(profile.id) &&
+              profile.role == UserProfileRole.member,
+        )
+        .toList();
+    expect(importedMembers, hasLength(2));
+    // listProfiles orders by created_at_ms — the ORIGINAL instants traveled,
+    // so the January profile sorts first despite being inserted last on both
+    // the seed and the adopting device.
+    expect(importedMembers.first.name, 'First by instant');
+    expect(importedMembers.last.name, 'Second by instant');
+    expect(
+      importedMembers.first.createdAt.millisecondsSinceEpoch,
+      DateTime.utc(2026, 1, 1).millisecondsSinceEpoch,
+    );
+  });
+
+  test('a missing or future createdAt falls back to import time', () async {
+    final actor = await ProfileAuthorizationContext.capture(registry);
+    final before = DateTime.now().millisecondsSinceEpoch;
+    final profile = await registry.createProfile(
+      name: 'Clock skew',
+      role: UserProfileRole.member,
+      createdAtMs: DateTime.now()
+          .add(const Duration(days: 365))
+          .millisecondsSinceEpoch,
+      actingProfileId: actor.profileId,
+      actingAuthorizationRevision: actor.authorizationRevision,
+      actingSessionEpoch: actor.sessionEpoch,
+    );
+    expect(
+      profile.createdAt.millisecondsSinceEpoch,
+      greaterThanOrEqualTo(before),
+    );
+  });
+}
+
+final class _JoinStateRepository implements WebDavSyncEngineStateRepository {
+  WebDavSyncEngineState state = const WebDavSyncEngineState();
+  @override
+  Future<WebDavSyncEngineState> load(String namespaceId) async => state;
+  @override
+  Future<WebDavSyncEngineState> update(
+    String namespaceId,
+    WebDavSyncEngineState Function(WebDavSyncEngineState) update,
+  ) async => state = update(state);
+}
+
+final class _JoinSafetyBackups implements WebDavSyncSafetyBackupStore {
+  @override
+  Future<WebDavSyncSafetyBackup> createVerified({
+    required String adoptionId,
+    required String passphrase,
+    required ProfileAuthorizationContext authorization,
+  }) async => WebDavSyncSafetyBackup(
+    path: '/test-backup/$adoptionId',
+    sha256Hex: 'b' * 64,
+  );
+  @override
+  Future<bool> verifyRetained(WebDavSyncSafetyBackup backup) async => true;
 }

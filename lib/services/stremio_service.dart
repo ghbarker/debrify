@@ -8,6 +8,7 @@ import '../utils/concurrency.dart';
 import '../utils/json_isolate.dart';
 import '../utils/stremio_url.dart';
 import 'profiles/profile_preferences.dart';
+import 'profiles/profile_runtime.dart';
 import 'profiles/profile_collection_resource_facade.dart';
 import 'profiles/connection_resource_service.dart';
 import 'profiles/profile_async_authorization.dart';
@@ -196,6 +197,36 @@ class StremioService {
     bool forSettings = false,
     bool forRemoteTransfer = false,
   }) async {
+    final startingScope =
+        ProfileRuntime.isInitialized && ProfileRuntime.isProfileCommitted
+        ? ProfileRuntime.capture()
+        : null;
+    try {
+      return await _getAddons(
+        forSettings: forSettings,
+        forRemoteTransfer: forRemoteTransfer,
+      );
+    } on ResourceAuthorizationException {
+      // Display readers can race a graph replacement or resource revocation.
+      // Keep management/transfer errors actionable and never cache a fallback.
+      if (forSettings || forRemoteTransfer) rethrow;
+      return [];
+    } on StateError {
+      // Only suppress a retired session. A stable-session storage failure
+      // must remain visible rather than masquerading as an empty collection.
+      if (forSettings ||
+          forRemoteTransfer ||
+          ProfileRuntime.scope.value == startingScope) {
+        rethrow;
+      }
+      return [];
+    }
+  }
+
+  Future<List<StremioAddon>> _getAddons({
+    required bool forSettings,
+    required bool forRemoteTransfer,
+  }) async {
     // READING addons is an operation every profile keeps ([ProfileFeature
     // .addonUse]) — Home shelves and catalog search must survive "Manage own
     // sources" being off. The management entry points (add/remove/import/
@@ -296,7 +327,12 @@ class StremioService {
             // management callers retain disabled rows. Re-read through the
             // execution path here; a playback caller must never receive that
             // settings representation (including redacted shared addons).
-            return await getAddons();
+            return await _getAddons(
+              forSettings: false,
+              forRemoteTransfer: false,
+            );
+          } on ResourceAuthorizationException {
+            rethrow;
           } catch (_) {
             debugPrint(
               'StremioService: could not persist hydrated addons; '
@@ -346,7 +382,10 @@ class StremioService {
     final settings = await getAddons(forSettings: true);
     if (!ProfileCollectionResourceFacade.active) return settings;
 
-    final executable = await getAddons();
+    final executable = await _getAddons(
+      forSettings: false,
+      forRemoteTransfer: false,
+    );
     if (authorization != null && !authorization.isCurrentlyActive) {
       throw StateError('Profile session changed while loading addons');
     }
@@ -2172,6 +2211,8 @@ class StremioService {
           stremioAddonKey: stream.addonKey,
           stremioStreamKey: stream.streamKey,
           stremioStreamIndex: stream.streamIndex,
+          streamLabel: stream.name,
+          streamDescription: stream.title,
         );
 
         // Exact addon mode preserves every returned playable entry, including
@@ -2373,10 +2414,13 @@ class StremioService {
         }
 
         final Map<String, dynamic> data = await decodeJsonAsync(response.body);
-        final metasRaw = data['metas'] as List<dynamic>?;
-        onRawCount?.call(metasRaw?.length ?? 0);
+        // Some addons signal exhaustion with {} or metas: null. Match the
+        // catalog browsers' empty-list convention while rejecting wrong types.
+        final metasRaw = data['metas'] ?? const <dynamic>[];
+        if (metasRaw is! List) return [];
+        onRawCount?.call(metasRaw.length);
 
-        if (metasRaw == null || metasRaw.isEmpty) {
+        if (metasRaw.isEmpty) {
           debugPrint('StremioService: Catalog returned no items');
           _cacheCatalogPage(url, const [], 0);
           return [];
@@ -3030,6 +3074,21 @@ class StremioService {
   Future<int> getEnabledAddonCount() async {
     final addons = await getEnabledAddons();
     return addons.length;
+  }
+
+  /// Replay local addon notifications after an external registry commit.
+  void refreshAfterExternalChange() {
+    invalidateCache();
+    _recommendationsCache.clear();
+    _metaDetailsCache.clear();
+    _nonRecommendationAddonIds.clear();
+    for (final listener in List<VoidCallback>.of(_addonsChangedListeners)) {
+      try {
+        listener();
+      } catch (_) {
+        // A stale UI listener must not prevent other views from refreshing.
+      }
+    }
   }
 
   /// Invalidate cache (call after external changes)

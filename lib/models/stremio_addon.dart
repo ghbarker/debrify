@@ -525,6 +525,10 @@ class StremioAddon {
   /// Unique identifier for this addon (derived from manifest id)
   final String id;
 
+  /// Provider identity used by portable collection catalog references.
+  /// Separate from the profile-local configuration identity in [id].
+  final String? manifestId;
+
   /// Human-readable name from manifest
   final String name;
 
@@ -571,6 +575,7 @@ class StremioAddon {
 
   StremioAddon({
     required this.id,
+    this.manifestId,
     required this.name,
     required this.manifestUrl,
     required this.baseUrl,
@@ -769,6 +774,7 @@ class StremioAddon {
 
     return StremioAddon(
       id: id,
+      manifestId: id,
       name: name,
       manifestUrl: manifestUrl,
       baseUrl: baseUrl,
@@ -797,6 +803,7 @@ class StremioAddon {
 
     return StremioAddon(
       id: json['id'] as String,
+      manifestId: json['manifest_id'] as String?,
       name: json['name'] as String,
       manifestUrl: json['manifest_url'] as String,
       baseUrl: json['base_url'] as String,
@@ -826,6 +833,7 @@ class StremioAddon {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      if (manifestId != null) 'manifest_id': manifestId,
       'name': name,
       'manifest_url': manifestUrl,
       'base_url': baseUrl,
@@ -855,6 +863,7 @@ class StremioAddon {
   /// Create a copy with updated fields
   StremioAddon copyWith({
     String? id,
+    String? manifestId,
     String? name,
     String? manifestUrl,
     String? baseUrl,
@@ -874,6 +883,7 @@ class StremioAddon {
   }) {
     return StremioAddon(
       id: id ?? this.id,
+      manifestId: manifestId ?? this.manifestId,
       name: name ?? this.name,
       manifestUrl: manifestUrl ?? this.manifestUrl,
       baseUrl: baseUrl ?? this.baseUrl,

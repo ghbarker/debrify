@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:cryptography/cryptography.dart';
@@ -74,6 +75,8 @@ class RemoteSessionCrypto {
     required List<int> nc,
     int? senderProtocolVersion,
     int? receiverProtocolVersion,
+    int senderTransferPort = kReliableTransferPort,
+    int receiverTransferPort = kReliableTransferPort,
   }) => sha256Of([
     ...utf8.encode(_transcriptLabel),
     ...sid,
@@ -92,6 +95,12 @@ class RemoteSessionCrypto {
       ...utf8.encode('capabilities'),
       ..._nBytes(senderProtocolVersion!),
       ..._nBytes(receiverProtocolVersion!),
+    ],
+    if ((senderProtocolVersion ?? 0) >= 6 &&
+        (receiverProtocolVersion ?? 0) >= 6) ...[
+      ...utf8.encode('transfer-ports'),
+      ..._nBytes(senderTransferPort),
+      ..._nBytes(receiverTransferPort),
     ],
   ]);
 
@@ -323,6 +332,7 @@ class RemoteSession {
   /// manual-IP/VPN peers report capabilities without a broadcast discovery
   /// record. Early encrypted peers that omit the field are treated as v2.
   final int peerProtocolVersion;
+  final int peerTransferPort;
 
   /// The 6-digit SAS, derived locally. Displayed on the receiver; compared on
   /// the sender against what the user reads off the TV.
@@ -346,6 +356,7 @@ class RemoteSession {
     required this.peerFingerprint,
     required this.peerName,
     this.peerProtocolVersion = kProtoVersion,
+    this.peerTransferPort = kReliableTransferPort,
     required this.sasCode,
     required this.establishedAt,
   }) : sidB64 = base64Encode(sid),
@@ -398,6 +409,12 @@ class RemoteCommandContext {
   /// deliberately absent for plaintext traffic.
   final Future<void> Function(String code)? reject;
 
+  /// Only supplied by the authenticated file transport; never decoded from
+  /// a peer-provided filesystem path.
+  final File? profileArchive;
+  final File? channelArchive;
+  final Future<bool> Function(String command, String body)? transferReply;
+
   const RemoteCommandContext({
     required this.encrypted,
     required this.authorized,
@@ -407,6 +424,9 @@ class RemoteCommandContext {
     this.peerName,
     this.sourceIp,
     this.reject,
+    this.profileArchive,
+    this.channelArchive,
+    this.transferReply,
   });
 
   static const plaintext = RemoteCommandContext(
@@ -462,6 +482,7 @@ class _ReceiverPending {
   /// established session (created on hs3) can name its peer.
   final String senderName;
   final int senderProtocolVersion;
+  final int senderTransferPort;
   final Map<String, dynamic> hs2; // cached: duplicate hs1 → identical hs2
   Map<String, dynamic>? hs4; // cached: duplicate hs3 → identical hs4
 
@@ -473,6 +494,7 @@ class _ReceiverPending {
     required this.createdAt,
     required this.senderName,
     required this.senderProtocolVersion,
+    required this.senderTransferPort,
     required this.hs2,
   });
 }
@@ -486,6 +508,7 @@ class RemoteSessionManager {
   final DateTime Function() now;
   final List<int> Function(int) randomBytes;
   final int protocolVersion;
+  final int transferPort;
 
   final Map<String, _SenderHandshake> _senderHandshakes = {};
   final Map<String, _ReceiverPending> _receiverPending = {};
@@ -497,6 +520,7 @@ class RemoteSessionManager {
     DateTime Function()? now,
     List<int> Function(int)? randomBytes,
     this.protocolVersion = kProtoVersion,
+    this.transferPort = kReliableTransferPort,
   }) : assert(protocolVersion >= 2),
        now = now ?? DateTime.now,
        randomBytes = randomBytes ?? _secureRandomBytes;
@@ -530,6 +554,7 @@ class RemoteSessionManager {
   Map<String, dynamic> _hs1For(_SenderHandshake handshake) => {
     'type': RemoteMessageType.hs1,
     'v': protocolVersion,
+    if (protocolVersion >= 6) 'transferPort': transferPort,
     'sid': handshake.sidB64,
     'com': base64Encode(handshake.com),
     'name': deviceName(),
@@ -622,6 +647,7 @@ class RemoteSessionManager {
     final spkR = base64Decode(json['spk'] as String);
     final peerName = (json['name'] as String?) ?? 'TV';
     final peerProtocolVersion = _readProtocolVersion(json['v']);
+    final peerTransferPort = _readTransferPort(json['transferPort']);
 
     final statics = await loadStaticKeyPair();
     final spkS = (await statics.extractPublicKey()).bytes;
@@ -639,6 +665,8 @@ class RemoteSessionManager {
       nc: handshake.nc,
       senderProtocolVersion: protocolVersion,
       receiverProtocolVersion: peerProtocolVersion,
+      senderTransferPort: transferPort,
+      receiverTransferPort: peerTransferPort,
     );
     final keys = await RemoteSessionCrypto.deriveKeys(
       ikm: [...ee, ...es, ...se],
@@ -664,6 +692,7 @@ class RemoteSessionManager {
       peerSpk: spkR,
       peerName: peerName,
       peerProtocolVersion: peerProtocolVersion,
+      peerTransferPort: peerTransferPort,
     );
     result.outgoing.add(handshake.hs3!);
   }
@@ -675,6 +704,7 @@ class RemoteSessionManager {
       List<int> peerSpk,
       String peerName,
       int peerProtocolVersion,
+      int peerTransferPort,
     })
   >
   _senderDerived = {};
@@ -704,6 +734,7 @@ class RemoteSessionManager {
       peerFingerprint: await RemoteSessionCrypto.fingerprint(derived.peerSpk),
       peerName: derived.peerName,
       peerProtocolVersion: derived.peerProtocolVersion,
+      peerTransferPort: derived.peerTransferPort,
       sasCode: await RemoteSessionCrypto.sasCode(derived.keys.sas),
       establishedAt: now(),
     );
@@ -752,9 +783,11 @@ class RemoteSessionManager {
       createdAt: now(),
       senderName: (json['name'] as String?) ?? 'Phone',
       senderProtocolVersion: _readProtocolVersion(json['v']),
+      senderTransferPort: _readTransferPort(json['transferPort']),
       hs2: {
         'type': RemoteMessageType.hs2,
         'v': protocolVersion,
+        if (protocolVersion >= 6) 'transferPort': transferPort,
         'sid': sidB64,
         'epk': base64Encode(epkR),
         'spk': base64Encode(spkR),
@@ -805,6 +838,8 @@ class RemoteSessionManager {
       nc: nc,
       senderProtocolVersion: pending.senderProtocolVersion,
       receiverProtocolVersion: protocolVersion,
+      senderTransferPort: pending.senderTransferPort,
+      receiverTransferPort: transferPort,
     );
     final keys = await RemoteSessionCrypto.deriveKeys(
       ikm: [...ee, ...es, ...se],
@@ -838,6 +873,7 @@ class RemoteSessionManager {
       // hs3 carries no name field — the sender introduced itself in hs1.
       peerName: pending.senderName,
       peerProtocolVersion: pending.senderProtocolVersion,
+      peerTransferPort: pending.senderTransferPort,
       sasCode: await RemoteSessionCrypto.sasCode(keys.sas),
       establishedAt: now(),
     );
@@ -845,6 +881,14 @@ class RemoteSessionManager {
     _expireSessions(now());
     result.outgoing.add(pending.hs4!);
     result.established = session;
+  }
+
+  static int _readTransferPort(dynamic value) {
+    if (value == null) return kReliableTransferPort;
+    if (value is! int || value < 1 || value > 65535) {
+      throw const FormatException('Invalid transfer port');
+    }
+    return value;
   }
 
   static Future<List<int>> _dh(

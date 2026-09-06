@@ -59,6 +59,21 @@ class HomeRowOrder {
     return out;
   }
 
+  /// New pinned rows lead an existing order. Once saved, an explicit manual
+  /// position wins, so arranging a pinned collection remains possible.
+  static List<String> seedPinned(
+    Iterable<String> saved,
+    Iterable<String> pinned,
+  ) {
+    final order = normalize(saved);
+    final known = order.toSet();
+    return normalize([
+      for (final id in pinned)
+        if (!known.contains(id)) id,
+      ...order,
+    ]);
+  }
+
   /// Sort [values] by the saved ids. Unranked values append stably.
   static List<T> apply<T>(
     Iterable<T> values,

@@ -915,7 +915,7 @@ packages:
     source: hosted
     version: "2.4.1"
   shared_preferences_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: shared_preferences_platform_interface
       sha256: "57cbf196c486bc2cf1f02b85784932c6094376284b3ad5779d1b1c6c6a816b80"
@@ -984,12 +984,11 @@ packages:
     source: hosted
     version: "2.4.2"
   sqflite_android:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: sqflite_android
-      sha256: "2b3070c5fa881839f8b402ee4a39c1b4d561704d4ebbbcfb808a119bc2a1701b"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/sqflite_android_patched"
+      relative: true
+    source: path
     version: "2.4.1"
   sqflite_common:
     dependency: transitive
