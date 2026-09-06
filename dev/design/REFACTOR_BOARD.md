@@ -29,7 +29,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 3. **Finish storage business-logic ownership and eligible temporary facade removal — IN PROGRESS.**
    Done: storage size target reached, multiple domain owners and pre-refactor restore fixtures merged, earlier223 facades retired.
    Left: remaining domain logic and eligible forwarding APIs; native-sensitive exceptions remain explicit.
-   History/watchlist, filter, download, Ambient, keyboard, catalog (#197), indexer (#199), device (#202), scalar (#204), adult (#206) and caller retirements #207–#214 are merged. Next: reconcile remaining eligible routing with accepted coordinator/cache/native retention decisions. Five coordinators remain explicitly retained; size does not establish strict ownership closure.
+   History/watchlist, filter, download, Ambient, keyboard, catalog (#197), indexer (#199), device (#202), scalar (#204), adult (#206) and caller retirements #207–#214 are merged. Milestone ACCEPTED at bc017: extracted/key-compatible Storage and completed eligible Q2 routing, after independent contract review and full gate. Next: address separately deferred native ownership evidence. Five coordinators remain explicitly retained; size does not establish strict ownership closure.
 
 4. **Finish M1-7 genuine common-flow dedup and dependency cleanup — COMPLETE against the agreed finite scope.**
    Done: shared flow programmes merged, provider-leaf target met (627 current lines versus under800), two cached-entry wrappers removed.
@@ -51,7 +51,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 ### Current work — latest verified checkpoint
 
 - **Locke / Storage:** #215 merged; contractual Storage acceptance versus deferred-native evidence packet assigned, read-only; no further tiny-batch survey.
-- **Cicero / Review:** full actual-main bc017b87 gate PASSED; Storage contractual acceptance packet under read-only review.
+- **Cicero / Review:** full actual-main bc017b87 gate PASSED; Storage limited milestone accepted against the contract; strict native ownership remains open.
 - **Ampere / Search and upstream:** local upstream catalog trial independently accepted, unpublished. Search final composition and Atrium remain open; no new implementation assignment claimed.
 - **Wegener / Player:** presentation #201 and transport #205 merged; remaining decoder/state/UI work open, bounded unsuccessful experiments retained as debt.
 - **Parent:** #212 merged at 98cae882. Full98ca gate passed; Fullbc017 gate passed; production counter reset0. No user/manual-smoke blocker.
@@ -67,7 +67,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 ### Latest completed milestones
 
-- **Fullbc017 gate PASSED:**6095PASS/12exactknown/2skip;goldens21exactknown/configured2retries/actualhelpers0/unexpected0unused0;raw failures retained. Nativeoriginal/currentFIRSTPAIRPASS,analyzer431/449zeroNew/Python55/layer77+0-0. AST204/133/161/23/0:42Storage removed0added, others unchanged;legacySearch60 separate. Windows162.7s68files ZIPefb4ad80c919716a9fda0e362b2deeaed30a486b9c6ab1c13c46667720982f9e; ARM64APK05d2a54ad4e6527db77472032ff59ed5761783b84201078b5fcb7e3b6ad9e3c7. Generatedowncheckout line-ending noise verified/restored, finalclean. Counter0; Storage milestone disposition awaitscontractreview, strictoutcome3 remainsOPEN. No device or finalarchitecture claim.
+- **Fullbc017 gate PASSED:**6095PASS/12exactknown/2skip;goldens21exactknown/configured2retries/actualhelpers0/unexpected0unused0;raw failures retained. Nativeoriginal/currentFIRSTPAIRPASS,analyzer431/449zeroNew/Python55/layer77+0-0. AST204/133/161/23/0:42Storage removed0added, others unchanged;legacySearch60 separate. Windows162.7s68files ZIPefb4ad80c919716a9fda0e362b2deeaed30a486b9c6ab1c13c46667720982f9e; ARM64APK05d2a54ad4e6527db77472032ff59ed5761783b84201078b5fcb7e3b6ad9e3c7. Generatedowncheckout line-ending noise verified/restored, finalclean. Counter0; Storage extracted/key-compatible and eligibleQ2 milestone ACCEPTED after independentcontractreview; strictoutcome3 remainsOPEN. No device or finalarchitecture claim.
 
 
 - #215 merged **bc017b87**, exactf03ddf1c, independent87PASS/maincontained/allthreeCIgreen. NineRemoteforwards removed; host-19/prod-16/all8-2, one actualrolepicker dependency removed. Native/network/lifecycle/auth unchanged. Did we make a difference? Existingowner routing reducescoupling; no positivepairing/native or strictclosure claim. Third213214215 triggers fullactual-main bc017gate withCicero; Locke boundedcontractualcloseout packet assigned.
