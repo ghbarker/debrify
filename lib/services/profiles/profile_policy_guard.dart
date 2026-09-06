@@ -6,6 +6,25 @@ import 'profile_runtime.dart';
 class ProfilePolicyGuard {
   ProfilePolicyGuard._();
 
+  /// Legacy preference gate, distinct from the stricter operation guard below.
+  /// Preserve permissive pre-profile mode, feature-only committed lookup and
+  /// catch-to-deny failures; disabled/maintenance checks and session revalidation
+  /// are deliberately not added here. Only compatibility preference callers use it.
+  static Future<bool> allowsAdultContentForPreferences() async {
+    if (!ProfileRuntime.isInitialized || !ProfileRuntime.isProfileCommitted) {
+      return true;
+    }
+    try {
+      final scope = ProfileRuntime.capture();
+      final profile = await ProfileBootstrap.registry.getProfile(
+        scope.profileId,
+      );
+      return profile?.allows(ProfileFeature.allowAdultContent) == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Synchronous mirror of the ACTIVE profile for build-path gating (nav
   /// tabs, Home rows, the keyword segment). The gate updates it on every
   /// unlock/switch and main's policy load refreshes it; the async [allows]

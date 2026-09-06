@@ -1,12 +1,10 @@
+import '../profiles/profile_policy_guard.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
-import '../../models/profiles/profile_policy.dart';
 import '../../utils/json_isolate.dart';
-import '../profiles/profile_bootstrap.dart';
 import '../profiles/profile_preferences.dart';
-import '../profiles/profile_runtime.dart';
 
 /// Debrify TV display, filter, channel, and favorite prefs.
 ///
@@ -85,20 +83,8 @@ class DebrifyTvPrefs {
     minTorrentsPerKeywordKey,
   };
 
-  static Future<bool> _profileAllowsAdultContent() async {
-    if (!ProfileRuntime.isInitialized || !ProfileRuntime.isProfileCommitted) {
-      return true;
-    }
-    try {
-      final scope = ProfileRuntime.capture();
-      final profile = await ProfileBootstrap.registry.getProfile(
-        scope.profileId,
-      );
-      return profile?.allows(ProfileFeature.allowAdultContent) == true;
-    } catch (_) {
-      return false;
-    }
-  }
+  static Future<bool> _profileAllowsAdultContent() =>
+      ProfilePolicyGuard.allowsAdultContentForPreferences();
 
   // Debrify TV settings methods
   static Future<String> getDebrifyTvProvider() async {
