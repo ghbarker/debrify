@@ -1156,3 +1156,71 @@ markerabsence versus committedgeneration. Is there more we could do? Exact
 owner scope/independent fixture review precede any production move. This adds
 zero production credit/facades and does not close Storage ownership or verify
 native/render/underlay behavior.
+
+
+## Profile scalars: seven separately counted admitted keys
+
+Actual unchanged exporter `6d26d7a1a98c7ddd37b4a25815f74123c1e29126` in
+`C:/Users/hunth/debrify/debrify-profile-scalars-fixture-origin` generated
+`profile-scalars.encrypted.json` and its manifest. Current restore runs in
+`C:/Users/hunth/debrify/debrify-s2-profile-scalar-prefs`, following green public
+origin `08a6ef7cf80f4bddd79a5a9f46e8d6c050a8222c` on main `033fea69`.
+
+Actual export, decode and current restore admit all seven keys, zero exclusions:
+series_browser_dense_view bool true; merged_series_page_enabled,
+stremio_addon_hub_enabled, detail_trailer_autoplay_enabled and
+series_auto_pin_on_play bool false; quick_play_search_timeout int -7 and
+stremio_sources_timeout int 2147483647. Raw ProfilePreferences bool/int seeds
+are read by the actual public APIs before export; no clamping or rewriting is
+expected. This is a separate seven-key domain, not an increment to a blanket
+historical141-key completeness claim. Encrypted portability is exercised;
+sanitized sharing and runtime playback/native policy are not claimed.
+
+The generator verifies real origin HEAD, unchanged lib, and local app package
+resolution. It requires exactly seven physical exported keys, exact types and
+values after encryption/decryption, and no resources. Current actual merge
+restore publishes generation2, then compares physical types/values BEFORE public
+reads, compares again after them, and reexports with secrets off/on. Old profile
+generation1, another profile, generation7 and destination sentinel remain as
+explicitly asserted. This is finite restore/public preference proof, not an
+all-interleavings or profile-safety claim.
+
+Harness adaptations only: remove seven absent owner imports and reverse identical
+method receivers to old StorageService: IptvPrefs3, PlaybackProgressStore14,
+ProviderCredentialPrefs19, TorrentSearchHistoryStore2, MyWatchlistStore2,
+DownloadDestinationPrefs5 and AmbientTrailerPrefs6. Copied filter helper removes
+its owner import and reverses10tearoffs; copied playlist helper removes its owner
+import and reverses4receivers. New scalar block/recipe unchanged between copies.
+No old owner backport or identical-whole-harness claim. Both ignored package
+configs resolve their own app and pinned Flutter/test3.44.8. Current includes
+keyboard fixtures; unmerged catalog/device-maintenance pairs are not invented.
+All48 prior artifact Git blobs and prior recipe entries remain unchanged. The
+new pair yields50artifacts plus README/recipe =52files, copied byte-identically
+from actual old output. Counts refer to this generation base, not prior batches.
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# Fresh old6d26 checkout with the exact adapters above:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --plain-name 'profile-scalars: generate' --reporter json
+# Current checkout:
+& $flutter test --no-pub test/profile_scalar_prefs_origin_test.dart test/storage_origin_restore_fixture_test.dart --reporter json
+& 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/cache/dart-sdk/bin/dart.exe' analyze test/storage_origin_restore_fixture_test.dart
+foreach ($variant in @('scalar-key', 'scalar-type', 'scalar-value')) {
+  & $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'profile-scalars: restore' "--dart-define=STORAGE_FIXTURE_MUTATION=$variant" --reporter json
+}
+```
+
+Generation1PASS; combined107PASS=55public-origin+52fixture; scopedloader0.
+Three valid semantic mutants rebuild section hashes and survive encryption,
+decryption and actual restore before failing physical assertion504/helper156:
+renamed dense key leaves destination String sentinel; timeout int -7 becomes
+String '-7'; source timeout2147483647 becomes15. All exit1 at that physical
+stage, not package/codec rejection, and never reach later public assertions.
+No production mutation, fixture regeneration or native execution.
+Ciphertext SHA256:
+`aca9a677b09ffec54e4047296083666d2bf447f4806fdc00e8f56f77d597d158`.
+
+Did we make a difference? Seven residual profile preference keys now have actual
+old-export/current-restore and public scalar proof. Is there more we could do?
+Existing-owner batch remains separately gated; zero production credit here,
+no new runtime authority or strict Storage completion claim.

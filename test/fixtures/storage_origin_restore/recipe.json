@@ -628,7 +628,7 @@
       "values": {
         "default_filter_qualities_v1": "[\"fullHd\",\"unknown quality\",\"fullHd\"]",
         "default_filter_rip_sources_v1": "[\"web\",\"bluray\",\"web\"]",
-        "default_filter_languages_v1": "[\"english\",\"日本語\",\"english\"]",
+        "default_filter_languages_v1": "[\"english\",\"\u65e5\u672c\u8a9e\",\"english\"]",
         "default_filter_sizes_v1": "[\"large\",\"\",\"large\"]",
         "default_filter_dynamic_ranges_v1": "[\"hdr10\",\"unknown range\",\"hdr10\"]"
       },
@@ -1316,6 +1316,34 @@
           "operation": "replace",
           "key": "tvos_keyboard_default_generation",
           "value": 0
+        }
+      }
+    },
+    "profile-scalars": {
+      "values": {
+        "series_browser_dense_view": true,
+        "merged_series_page_enabled": false,
+        "stremio_addon_hub_enabled": false,
+        "detail_trailer_autoplay_enabled": false,
+        "series_auto_pin_on_play": false,
+        "quick_play_search_timeout": -7,
+        "stremio_sources_timeout": 2147483647
+      },
+      "excludedKeys": [],
+      "mutations": {
+        "scalar-key": {
+          "operation": "rename",
+          "key": "series_browser_dense_view"
+        },
+        "scalar-type": {
+          "operation": "replace",
+          "key": "quick_play_search_timeout",
+          "value": "-7"
+        },
+        "scalar-value": {
+          "operation": "replace",
+          "key": "stremio_sources_timeout",
+          "value": 15
         }
       }
     }

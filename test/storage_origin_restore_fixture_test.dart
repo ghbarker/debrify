@@ -403,6 +403,120 @@ void main() {
       );
 
 
+  // Separate seven-key profile scalar domain: actual exporter admission.
+  const scalarScenario = 'profile-scalars';
+  final scalarDomain = _recipe['residualDomains'][scalarScenario] as Map;
+  final scalarValues = Map<String, Object?>.from(scalarDomain['values'] as Map);
+  Future<void> expectScalarReaders() async {
+    _expectSettings({
+      'series_browser_dense_view': await StorageService.getSeriesBrowserDenseView(),
+      'merged_series_page_enabled': await StorageService.getMergedSeriesPageEnabled(),
+      'stremio_addon_hub_enabled': await StorageService.getStremioAddonHubEnabled(),
+      'detail_trailer_autoplay_enabled': await StorageService.getDetailTrailerAutoplayEnabled(),
+      'series_auto_pin_on_play': await StorageService.getSeriesAutoPinOnPlay(),
+      'quick_play_search_timeout': await StorageService.getQuickPlaySearchTimeout(),
+      'stremio_sources_timeout': await StorageService.getStremioSourcesTimeout(),
+    }, scalarValues);
+  }
+  if (_generate) {
+    test('$scalarScenario: generate actual pre-S2 seven-key export', () async {
+      final head = await Process.run('git', ['rev-parse', 'HEAD']);
+      expect(head.exitCode, 0);
+      expect(head.stdout.toString().trim(), _origin);
+      final diff = await Process.run('git', ['diff', '--exit-code', _origin, '--', 'lib']);
+      expect(diff.exitCode, 0, reason: 'Old production must remain unchanged');
+      final config = File('.dart_tool/package_config.json');
+      final metadata = jsonDecode(await config.readAsString()) as Map;
+      final app = (metadata['packages'] as List).cast<Map>().singleWhere((e) => e['name'] == 'debrify');
+      final library = config.absolute.uri.resolve(app['rootUri'] as String).resolve(app['packageUri'] as String).resolve('services/storage_service.dart');
+      expect(p.equals(library.toFilePath(), p.join(Directory.current.path, 'lib', 'services', 'storage_service.dart')), isTrue);
+      expect(scalarValues, {
+        'series_browser_dense_view': true, 'merged_series_page_enabled': false,
+        'stremio_addon_hub_enabled': false, 'detail_trailer_autoplay_enabled': false,
+        'series_auto_pin_on_play': false, 'quick_play_search_timeout': -7,
+        'stremio_sources_timeout': 2147483647,
+      });
+      await _writeValues(scalarValues);
+      final prefs = await ProfilePreferences.instance();
+      _expectSettings({for (final key in scalarValues.keys) key: prefs.get(key)}, scalarValues);
+      await expectScalarReaders();
+      final package = await export();
+      _expectSettings(_values(package), scalarValues);
+      expect(package.resources, isEmpty);
+      final bytes = await PortableProfilePackage.encodeEncryptedBytes(package, _passphrase);
+      final decoded = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+      _expectSettings(_values(decoded), scalarValues);
+      await File('$_directory/$scalarScenario.encrypted.json').writeAsBytes(bytes);
+      await File('$_directory/$scalarScenario.manifest.json').writeAsString(const JsonEncoder.withIndent('  ').convert({
+        'origin': _origin, 'scenario': scalarScenario, 'syntheticOnly': true,
+        'sha256': await _digest(bytes), 'includeSecrets': false,
+        'representedSettings': scalarValues,
+        'keyTypes': scalarValues.map((key, value) => MapEntry(key, _type(value))),
+        'excludedKeys': <String>[], 'omissions': package.omissions,
+      }));
+    });
+  } else {
+    test('$scalarScenario: restore physical values before public reads', () async {
+      final manifest = jsonDecode(await File('$_directory/$scalarScenario.manifest.json').readAsString()) as Map;
+      final bytes = await File('$_directory/$scalarScenario.encrypted.json').readAsBytes();
+      expect(manifest['origin'], _origin);
+      expect(manifest['syntheticOnly'], isTrue);
+      expect(manifest['sha256'], await _digest(bytes));
+      expect(manifest['representedSettings'], scalarValues);
+      expect(manifest['excludedKeys'], isEmpty);
+      expect(manifest['keyTypes'], scalarValues.map((key, value) => MapEntry(key, _type(value))));
+      var package = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+      _expectSettings(_values(package), scalarValues);
+      expect(package.resources, isEmpty);
+      if (_mutation.isNotEmpty) {
+        final mutation = (scalarDomain['mutations'] as Map)[_mutation] as Map?;
+        expect(mutation, isNotNull);
+        final values = {..._values(package)};
+        final key = mutation!['key'] as String;
+        if (mutation['operation'] == 'rename') {
+          values['synthetic_wrong_scalar_key'] = values.remove(key);
+        } else {
+          values[key] = mutation['value'];
+        }
+        final mutant = PortableProfilePackage(
+          mode: package.mode, createdAt: package.createdAt, profiles: package.profiles,
+          resources: package.resources, omissions: package.omissions,
+          sections: {...package.sections,
+            package.profiles.single['preferencesSection'] as String: await PortableProfilePackage.buildSection(values)},
+        );
+        package = await PortableProfilePackage.decrypt(await PortableProfilePackage.encrypt(mutant, _passphrase), _passphrase);
+        _expectSettings(_values(package), values);
+      }
+      final prefs = await SharedPreferences.getInstance();
+      for (final key in scalarValues.keys) {
+        await prefs.setString('p.$profileId.g.1.$key', 'synthetic old generation');
+        await prefs.setString('p.$otherProfileId.g.1.$key', 'synthetic other profile');
+        await prefs.setString('p.$profileId.g.7.$key', 'synthetic other generation');
+      }
+      await prefs.setString('p.$profileId.g.1.scalar_fixture_sentinel', 'untouched');
+      final report = await ProfileRestoreCoordinator(registry: registry, cipher: cipher).restore(
+        package: package, destinationProfileId: profileId,
+        authorization: await ProfileAuthorizationContext.capture(registry),
+      );
+      expect(report.publishedGeneration, 2);
+      final prefix = ProfileRuntime.capture().preferencePrefix;
+      // Valid semantic mutants fail here, AFTER successful decode and restore.
+      _expectSettings({for (final key in scalarValues.keys) key: prefs.get('$prefix$key')}, scalarValues);
+      await expectScalarReaders();
+      _expectSettings({for (final key in scalarValues.keys) key: prefs.get('$prefix$key')}, scalarValues);
+      for (final key in scalarValues.keys) {
+        expect(prefs.get('p.$profileId.g.1.$key'), 'synthetic old generation');
+        expect(prefs.get('p.$otherProfileId.g.1.$key'), 'synthetic other profile');
+        expect(prefs.get('p.$profileId.g.7.$key'), 'synthetic other generation');
+      }
+      expect(prefs.get('${prefix}scalar_fixture_sentinel'), 'untouched');
+      expect(prefs.get('p.$profileId.g.1.scalar_fixture_sentinel'), 'untouched');
+      for (final secrets in [false, true]) {
+        _expectSettings(_values(await export(includeSecrets: secrets)), {...scalarValues, 'scalar_fixture_sentinel': 'untouched'});
+      }
+    });
+  }
+
   // Four independent raw bool/int values; volume readers clamp, export does not.
   const ambientScenario = 'ambient-trailer';
   final ambientDomain = _recipe['residualDomains'][ambientScenario] as Map;
