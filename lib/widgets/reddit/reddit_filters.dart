@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/reddit_service.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/social_prefs.dart';
 import '../../utils/tv_keys.dart';
 import '../tv_text_field.dart';
 
@@ -482,7 +482,7 @@ class _SubredditPickerSheetState extends State<_SubredditPickerSheet> {
   }
 
   Future<void> _loadFavorites() async {
-    final favorites = await StorageService.getRedditFavoriteSubreddits();
+    final favorites = await SocialPrefs.getRedditFavoriteSubreddits();
     if (!mounted) return;
     setState(() {
       _favoriteSubreddits = favorites;

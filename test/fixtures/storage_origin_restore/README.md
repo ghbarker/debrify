@@ -1373,3 +1373,19 @@ Optional historical origin-test reproduction reverses 24 receivers in
 quick_play_policy_prefs_origin_test.dart, or six in profile_scalar_prefs_origin_test.dart,
 and removes that owner import. Preserve the latter's three getter tearoffs.
 Neither origin test is a generation helper imported by the loader.
+
+### Q2 SocialPrefs caller retirement: old-export harness adapter
+
+In the copied loader for unchanged old `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`,
+remove the SocialPrefs import and reverse exactly six same-method receivers to
+StorageService (three writes and three reads). Preserve all prior adapters,
+including the dependent Quick Play nine-receiver adapter; recipe and payloads
+stay unchanged. No owner backport or identical-whole-harness claim is made.
+
+Optional old test reproduction reverses the 15 migrated references in
+storage_s21_store_roundtrip_test.dart (which already has direct SocialPrefs
+reads), or the 53 in storage_stremio_social_debrify_tv_prefs_snapshot_test.dart.
+The roundtrip test already depended on the extracted owner and is not an
+unchanged pre-S2 generation helper; reversing those 15 alone does not make it
+runnable against old6d26. The actual export uses only the copied loader and its
+existing helper adapters. These tests are not imported by that loader.

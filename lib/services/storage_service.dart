@@ -25,7 +25,6 @@ import 'storage/debrify_tv_prefs.dart';
 import 'storage/home_prefs.dart';
 import 'storage/default_torrent_filter_prefs.dart';
 import 'storage/quick_play_policy_prefs.dart';
-import 'storage/social_prefs.dart';
 import 'storage/iptv_prefs.dart';
 import 'storage/app_style_prefs.dart';
 import 'storage/player_prefs.dart';
@@ -1154,33 +1153,15 @@ class StorageService {
       HomePrefs.clearAllHomePageSettings();
 
   // Reddit Settings — forwarding façade; bodies live on SocialPrefs.
-  static Future<String?> getRedditAccessToken() =>
-      SocialPrefs.getRedditAccessToken();
 
-  static Future<void> setRedditAccessToken(String token) =>
-      SocialPrefs.setRedditAccessToken(token);
 
-  static Future<String?> getRedditRefreshToken() =>
-      SocialPrefs.getRedditRefreshToken();
 
-  static Future<void> setRedditRefreshToken(String token) =>
-      SocialPrefs.setRedditRefreshToken(token);
 
-  static Future<String?> getRedditUsername() => SocialPrefs.getRedditUsername();
 
-  static Future<void> setRedditUsername(String username) =>
-      SocialPrefs.setRedditUsername(username);
 
-  static Future<bool> getRedditEnabled() => SocialPrefs.getRedditEnabled();
 
-  static Future<void> setRedditEnabled(bool value) =>
-      SocialPrefs.setRedditEnabled(value);
 
-  static Future<bool> getRedditHiddenFromNav() =>
-      SocialPrefs.getRedditHiddenFromNav();
 
-  static Future<void> setRedditHiddenFromNav(bool value) =>
-      SocialPrefs.setRedditHiddenFromNav(value);
 
 
   // Tracking source policy — forwarding façade; bodies live on TrackingPrefs.
@@ -1197,13 +1178,8 @@ class StorageService {
   static Future<void> reseedTrackingScrobbleTargetsFromLegacy() => TrackingPrefs.reseedTrackingScrobbleTargetsFromLegacy();
   static Future<void> applyTrackingPreferencesPayload(Map<dynamic, dynamic> payload) => TrackingPrefs.applyTrackingPreferencesPayload(payload);
 
-  static Future<String?> getRedditLastSubreddit() =>
-      SocialPrefs.getRedditLastSubreddit();
 
-  static Future<void> setRedditLastSubreddit(String subreddit) =>
-      SocialPrefs.setRedditLastSubreddit(subreddit);
 
-  static Future<void> clearRedditAuth() => SocialPrefs.clearRedditAuth();
 
 
   // Trakt / Simkl / MDBList catalog + credentials — TrackingPrefs façade.
@@ -1233,59 +1209,25 @@ class StorageService {
   static Future<void> setSimklUsername(String username) => TrackingPrefs.setSimklUsername(username);
   static Future<void> clearSimklAuth() => TrackingPrefs.clearSimklAuth();
 
-  static Future<List<String>> getRedditRecentSubreddits() =>
-      SocialPrefs.getRedditRecentSubreddits();
 
-  static Future<void> setRedditRecentSubreddits(List<String> subreddits) =>
-      SocialPrefs.setRedditRecentSubreddits(subreddits);
 
-  static Future<bool> getRedditAllowNsfw() => SocialPrefs.getRedditAllowNsfw();
 
-  static Future<void> setRedditAllowNsfw(bool value) =>
-      SocialPrefs.setRedditAllowNsfw(value);
 
-  static Future<List<String>> getRedditFavoriteSubreddits() =>
-      SocialPrefs.getRedditFavoriteSubreddits();
 
-  static Future<void> setRedditFavoriteSubreddits(
-    List<String> subreddits,
-  ) => SocialPrefs.setRedditFavoriteSubreddits(subreddits);
 
-  static Future<String?> getRedditDefaultSubreddit() =>
-      SocialPrefs.getRedditDefaultSubreddit();
 
-  static Future<void> setRedditDefaultSubreddit(String? subreddit) =>
-      SocialPrefs.setRedditDefaultSubreddit(subreddit);
 
   // Lemmy Settings — forwarding façade; bodies live on SocialPrefs.
-  static Future<String> getLemmyInstance() => SocialPrefs.getLemmyInstance();
 
-  static Future<void> setLemmyInstance(String instance) =>
-      SocialPrefs.setLemmyInstance(instance);
 
-  static Future<bool> getLemmyAllowNsfw() => SocialPrefs.getLemmyAllowNsfw();
 
-  static Future<void> setLemmyAllowNsfw(bool value) =>
-      SocialPrefs.setLemmyAllowNsfw(value);
 
-  static Future<List<String>> getLemmyFavoriteCommunities() =>
-      SocialPrefs.getLemmyFavoriteCommunities();
 
-  static Future<void> setLemmyFavoriteCommunities(
-    List<String> communities,
-  ) => SocialPrefs.setLemmyFavoriteCommunities(communities);
 
-  static Future<String?> getLemmyDefaultCommunity() =>
-      SocialPrefs.getLemmyDefaultCommunity();
 
-  static Future<void> setLemmyDefaultCommunity(String? community) =>
-      SocialPrefs.setLemmyDefaultCommunity(community);
 
   // YouTube Settings — forwarding façade; bodies live on SocialPrefs.
-  static Future<int> getYoutubeMaxHeight() => SocialPrefs.getYoutubeMaxHeight();
 
-  static Future<void> setYoutubeMaxHeight(int height) =>
-      SocialPrefs.setYoutubeMaxHeight(height);
 
 
   /// Android TV IPTV video decoder: 'auto' | 'hardware' | 'software'.

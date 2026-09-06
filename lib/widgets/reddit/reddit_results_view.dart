@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/playlist_view_mode.dart';
 import '../../services/reddit_service.dart';
 import '../../services/reddit_embed_resolver_service.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/social_prefs.dart';
 import '../../services/video_player_launcher.dart';
 import '../../services/download_service.dart';
 import '../../screens/debrify_tv/widgets/tv_focus_scroll_wrapper.dart';
@@ -62,8 +62,8 @@ class RedditResultsViewState extends State<RedditResultsView> {
   }
 
   Future<void> _loadSettings() async {
-    final allowNsfw = await StorageService.getRedditAllowNsfw();
-    final defaultSubreddit = await StorageService.getRedditDefaultSubreddit();
+    final allowNsfw = await SocialPrefs.getRedditAllowNsfw();
+    final defaultSubreddit = await SocialPrefs.getRedditDefaultSubreddit();
 
     if (!mounted) return;
 

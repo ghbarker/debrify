@@ -4,7 +4,7 @@ import '../../models/stremio_subtitle.dart';
 import '../../models/torrent.dart';
 import '../browse/browse_results_focus.dart';
 import '../../services/youtube_service.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/social_prefs.dart';
 import '../../services/video_player_launcher.dart';
 import '../../services/download_service.dart';
 import '../../screens/debrify_tv/widgets/tv_focus_scroll_wrapper.dart';
@@ -70,13 +70,13 @@ class YoutubeResultsViewState extends State<YoutubeResultsView>
   }
 
   Future<void> _loadQuality() async {
-    final h = await StorageService.getYoutubeMaxHeight();
+    final h = await SocialPrefs.getYoutubeMaxHeight();
     if (mounted) setState(() => _maxHeight = h);
   }
 
   void _onQualityChanged(int height) {
     setState(() => _maxHeight = height);
-    StorageService.setYoutubeMaxHeight(height);
+    SocialPrefs.setYoutubeMaxHeight(height);
     // Applies to the next video resolved; current playback is unaffected.
   }
 
