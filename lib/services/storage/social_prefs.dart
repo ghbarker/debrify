@@ -1,8 +1,6 @@
-import '../profiles/profile_bootstrap.dart';
+import '../profiles/profile_policy_guard.dart';
 import '../profiles/profile_credential_facade.dart';
 import '../profiles/profile_preferences.dart';
-import '../profiles/profile_runtime.dart';
-import '../../models/profiles/profile_policy.dart';
 import '../secret_vault.dart';
 
 /// Reddit, Lemmy, and YouTube prefs.
@@ -52,20 +50,8 @@ class SocialPrefs {
     _youtubeMaxHeightKey,
   };
 
-  static Future<bool> _profileAllowsAdultContent() async {
-    if (!ProfileRuntime.isInitialized || !ProfileRuntime.isProfileCommitted) {
-      return true;
-    }
-    try {
-      final scope = ProfileRuntime.capture();
-      final profile = await ProfileBootstrap.registry.getProfile(
-        scope.profileId,
-      );
-      return profile?.allows(ProfileFeature.allowAdultContent) == true;
-    } catch (_) {
-      return false;
-    }
-  }
+  static Future<bool> _profileAllowsAdultContent() =>
+      ProfilePolicyGuard.allowsAdultContentForPreferences();
 
   // Reddit Settings
   static Future<String?> getRedditAccessToken() async {

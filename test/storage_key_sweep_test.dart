@@ -161,6 +161,31 @@ void main() {
       StorageKeyOwnership.byKey.keys.toSet().difference(expected)), expected);
   });
 
+  test('profile scalar keys have exact owner membership and each missing row fails', () {
+    const all = {
+      'series_browser_dense_view',
+      'merged_series_page_enabled',
+      'stremio_addon_hub_enabled',
+      'detail_trailer_autoplay_enabled',
+      'series_auto_pin_on_play',
+      'quick_play_search_timeout',
+      'stremio_sources_timeout',
+    };
+    expect(AppStylePrefs.ownedKeys.intersection(all), {'series_browser_dense_view', 'merged_series_page_enabled', 'stremio_addon_hub_enabled'});
+    expect(StorageKeyOwnership.keysFor(StorageKeyStore.appStylePrefs).intersection(all), {'series_browser_dense_view', 'merged_series_page_enabled', 'stremio_addon_hub_enabled'});
+    expect(AmbientTrailerPrefs.ownedKeys.intersection(all), {'detail_trailer_autoplay_enabled'});
+    expect(StorageKeyOwnership.keysFor(StorageKeyStore.ambientTrailerPrefs).intersection(all), {'detail_trailer_autoplay_enabled'});
+    expect(QuickPlayPolicyPrefs.ownedKeys.intersection(all), {'series_auto_pin_on_play', 'quick_play_search_timeout', 'stremio_sources_timeout'});
+    expect(StorageKeyOwnership.keysFor(StorageKeyStore.quickPlayPolicyPrefs).intersection(all), {'series_auto_pin_on_play', 'quick_play_search_timeout', 'stremio_sources_timeout'});
+    expect(declaredOnStorageService().intersection(all), isEmpty);
+    expect(inlinePrefsKeysOnStorageService().intersection(all), {'detail_trailer_autoplay_enabled'});
+    expect(allDiscoveredPrefsKeys(), containsAll(all));
+    for (final key in all) {
+      expect(allDiscoveredPrefsKeys().difference(
+        StorageKeyOwnership.byKey.keys.toSet().difference({key})), {key});
+    }
+  });
+
   test('device maintenance keys have exact ownership and missing rows fail', () {
     const expected = {
       'support_remote_config_cache_v1', 'dismissed_donation_campaign_ids_v1',
@@ -202,7 +227,7 @@ void main() {
   });
 
   test('ambient detail keys have exact ownership and missing rows fail', () {
-    const expected = {'detail_trailer_audio_enabled', 'detail_trailer_volume'};
+    const expected = {'detail_trailer_audio_enabled', 'detail_trailer_volume', 'detail_trailer_autoplay_enabled'};
     expect(AmbientTrailerPrefs.ownedKeys, expected);
     expect(StorageKeyOwnership.keysFor(StorageKeyStore.ambientTrailerPrefs), expected);
     expect(HomePrefs.ownedKeys, containsAll({
@@ -326,6 +351,9 @@ void main() {
       'quick_play_series_rules_v2',
       'play_button_mode',
       'auto_bind_series_packs_on_play',
+      'series_auto_pin_on_play',
+      'quick_play_search_timeout',
+      'stremio_sources_timeout',
     };
     expect(QuickPlayPolicyPrefs.ownedKeys, expected);
     expect(StorageKeyOwnership.keysFor(StorageKeyStore.quickPlayPolicyPrefs), expected);

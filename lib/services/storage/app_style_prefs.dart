@@ -61,6 +61,9 @@ class AppStylePrefs {
 
 
   static const Set<String> ownedKeys = {
+    'series_browser_dense_view',
+    'merged_series_page_enabled',
+    'stremio_addon_hub_enabled',
     'tv_keyboard_enabled',
     _tvosKeyboardDefaultGenerationKey,
     _phoneNavStyleKey,
@@ -1086,4 +1089,34 @@ class AppStylePrefs {
     }
   }
 
+
+  static Future<bool> getSeriesBrowserDenseView() async {
+    final prefs = await ProfilePreferences.instance();
+    return prefs.getBool('series_browser_dense_view') ?? false;
+  }
+
+  static Future<void> setSeriesBrowserDenseView(bool dense) async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.setBool('series_browser_dense_view', dense);
+  }
+
+  static Future<bool> getMergedSeriesPageEnabled() async {
+    final prefs = await ProfilePreferences.instance();
+    return prefs.getBool('merged_series_page_enabled') ?? true;
+  }
+
+  static Future<void> setMergedSeriesPageEnabled(bool enabled) async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.setBool('merged_series_page_enabled', enabled);
+  }
+
+  static Future<bool> getStremioAddonHubEnabled() async {
+    final prefs = await ProfilePreferences.instance();
+    return prefs.getBool('stremio_addon_hub_enabled') ?? true;
+  }
+
+  static Future<void> setStremioAddonHubEnabled(bool enabled) async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.setBool('stremio_addon_hub_enabled', enabled);
+  }
 }

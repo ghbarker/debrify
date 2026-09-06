@@ -1,0 +1,38 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "scenario": "profile-scalars",
+  "syntheticOnly": true,
+  "sha256": "aca9a677b09ffec54e4047296083666d2bf447f4806fdc00e8f56f77d597d158",
+  "includeSecrets": false,
+  "representedSettings": {
+    "series_browser_dense_view": true,
+    "merged_series_page_enabled": false,
+    "stremio_addon_hub_enabled": false,
+    "detail_trailer_autoplay_enabled": false,
+    "series_auto_pin_on_play": false,
+    "quick_play_search_timeout": -7,
+    "stremio_sources_timeout": 2147483647
+  },
+  "keyTypes": {
+    "series_browser_dense_view": "bool",
+    "merged_series_page_enabled": "bool",
+    "stremio_addon_hub_enabled": "bool",
+    "detail_trailer_autoplay_enabled": "bool",
+    "series_auto_pin_on_play": "bool",
+    "quick_play_search_timeout": "int",
+    "stremio_sources_timeout": "int"
+  },
+  "excludedKeys": [],
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}
