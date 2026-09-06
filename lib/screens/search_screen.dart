@@ -1,4 +1,6 @@
 import 'search/board_cell.dart';
+import 'search/stage_visuals.dart';
+import 'search/stages/deck_board_stage.dart';
 import 'search/stages/tonight_board_stage.dart';
 import 'search/stages/tonight_stage_content.dart';
 import 'search/stages/stage_shelf_content.dart';
@@ -118,7 +120,7 @@ part 'search/stages/canvas_board_stage.dart';
 part 'search/stages/promenade_board_stage.dart';
 part 'search/stages/atrium_board_stage.dart';
 part 'search/stages/mosaic_board_stage.dart';
-part 'search/stages/deck_board_stage.dart';
+
 
 /// TV focus ring for board cards — violet-300, deliberately LIGHTER than the
 /// board's chrome accent: a light ring over dark art pops at 10ft, while the
@@ -303,12 +305,11 @@ const double _kCanvasIdentityGap = 25;
 /// to recognise — the floor every derived rail box respects.
 const double _kStageMinPosterH = 56;
 
-// DECK metrics.
-const double _kDeckPanelPad = 48;
-const double _kDeckCardRightPad = 36;
-const double _kDeckCardRadius = 22;
-const double _kDeckRailGap = 18;
-const double _kDeckRailTail = 26;
+
+
+
+
+
 
 // MOSAIC metrics. The head band is a FIXED height so the wall below it never
 // shifts when a title's logo is taller than the last one's.
@@ -322,19 +323,16 @@ double _mosaicHeadHeight(BuildContext context) {
   final t = MediaQuery.textScalerOf(context);
   // A title with no logo art falls back to TEXT, which scales — the band has
   // to reserve whichever of the two is taller.
-  final titleH = max(_kMosaicLogoH, t.scale(_kStageHeadlineTitleSize) * 1.25);
+  final titleH = max(stageMosaicLogoHeight, t.scale(stageHeadlineTitleSize) * 1.25);
   // Facts line, then the genres on their own line beneath it. The right-hand
   // column (rail label + hold hint) is shorter than that, so the identity
   // still sets the band's height.
   return titleH + 10 + t.scale(12.5) * 1.4 + 6 + t.scale(12.5) * 1.4 + 6;
 }
 
-const double _kMosaicLogoH = 52;
 
-/// The headline variant's text fallback is smaller than a stage title — it is
-/// a caption over a wall, not a billboard. Shared with [_mosaicHeadHeight] so
-/// the band that reserves space for it can't drift.
-const double _kStageHeadlineTitleSize = 24;
+
+
 const double _kMosaicHeadGap = 18;
 
 // ATRIUM metrics. The wall's height is DERIVED from these (never guessed),
@@ -786,7 +784,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       setHero: _setHero,
       isBound: _isBound,
       openCwMenu: _openCwCardMenu,
-      wideArtUrl: _wideArtUrl,
+      wideArtUrl: wideArtUrl,
       atriumLabelHeight: _atriumLabelHeight,
       railBoxHeight: _stageRailBoxH,
       posterWidth: _stagePosterW,
@@ -2394,11 +2392,11 @@ class _SearchScreenState extends State<SearchScreenHost>
   bool _canvasFocusSeeded = false;
 
   /// Stage override while a favourites cell has focus (see
-  /// [_CanvasFavFocus]). A ValueNotifier — NOT setState — so scrubbing along
+  /// [CanvasFavFocus]). A ValueNotifier — NOT setState — so scrubbing along
   /// a favourites rail repaints only the stage layers that listen (art +
   /// identity), never the whole board (the hero pipeline's own pattern).
-  final ValueNotifier<_CanvasFavFocus?> _canvasFavFocus =
-      ValueNotifier<_CanvasFavFocus?>(null);
+  final ValueNotifier<CanvasFavFocus?> _canvasFavFocus =
+      ValueNotifier<CanvasFavFocus?>(null);
 
   /// A Canvas favourites cell took focus: remember the column, stop any
   /// catalog trailer machinery (a PENDING hero swap firing later would start
@@ -2408,7 +2406,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   void _canvasFavFocused(
     String railKey,
     int col,
-    _CanvasFavFocus focus, {
+    CanvasFavFocus focus, {
     IptvChannel? liveChannel,
   }) {
     _canvasCols[railKey] = col;
@@ -2478,7 +2476,7 @@ class _SearchScreenState extends State<SearchScreenHost>
           onFocused: () => _canvasFavFocused(
             railKey,
             col,
-            _CanvasFavFocus(
+            CanvasFavFocus(
               art: channel.logoUrl,
               fit: BoxFit.contain,
               title: channel.name,
@@ -2517,7 +2515,7 @@ class _SearchScreenState extends State<SearchScreenHost>
             onFocused: () => _canvasFavFocused(
               railKey,
               col,
-              _CanvasFavFocus(
+              CanvasFavFocus(
                 art: _favourites.firstNonEmpty(item.background, item.poster),
                 title: item.name,
                 subtitle: 'MY WATCHLIST · ${item.type.toUpperCase()}',
@@ -2551,7 +2549,7 @@ class _SearchScreenState extends State<SearchScreenHost>
             onFocused: () => _canvasFavFocused(
               railKey,
               col,
-              _CanvasFavFocus(
+              CanvasFavFocus(
                 art: channel.logoUrl,
                 fit: BoxFit.contain,
                 title: channel.name,
@@ -2588,7 +2586,7 @@ class _SearchScreenState extends State<SearchScreenHost>
             onFocused: () => _canvasFavFocused(
               railKey,
               col,
-              _CanvasFavFocus(
+              CanvasFavFocus(
                 art: null,
                 title: channel.name,
                 subtitle: 'DEBRIFY TV · CHANNEL $number',
@@ -2621,7 +2619,7 @@ class _SearchScreenState extends State<SearchScreenHost>
             onFocused: () => _canvasFavFocused(
               railKey,
               col,
-              _CanvasFavFocus(
+              CanvasFavFocus(
                 // The stage prefers the WIDE art; the card keeps the poster.
                 art: _favourites.firstNonEmpty(item?.background, item?.poster),
                 title: channel.displayName,
@@ -2658,7 +2656,7 @@ class _SearchScreenState extends State<SearchScreenHost>
             onFocused: () => _canvasFavFocused(
               railKey,
               col,
-              _CanvasFavFocus(
+              CanvasFavFocus(
                 art: posterUrl,
                 title: title,
                 subtitle: 'PLAYLIST · SAVED',
@@ -2828,7 +2826,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     bindings: (
       landscapeCards: () => _homeLandscapeCards,
       railKeyOf: _canvasRailKeyOf,
-      wideArtUrl: _wideArtUrl,
+      wideArtUrl: wideArtUrl,
       catalogSourceTag: _catalogSourceTag,
       stvFavArt: _stvFavArt,
       iptvPreview: (channel) => SpotlightIptvCardPreview(
@@ -2850,7 +2848,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   String? _stvFavArt(StremioTvChannel ch, {bool landscape = false}) {
     final item = _favourites.stvNowPlaying(ch)?.item;
     if (item == null) return null;
-    if (landscape) return _wideArtUrl(item);
+    if (landscape) return wideArtUrl(item);
     return _favourites.firstNonEmpty(item.poster, item.background);
   }
 
@@ -2961,6 +2959,48 @@ class _SearchScreenState extends State<SearchScreenHost>
     }
     return false;
   }
+
+  late final DeckStageBindings _deckBindings = (
+    readTheme: () => AppThemeScope.of(context),
+    resolveRail: _resolveStageRail,
+    seedFocus: _seedStageFocusOnce,
+    favouriteCount: _canvasFavItemCount,
+    readTheater: () => _canvasTheater,
+    readTrailerActive: () => _heroTrailerActive,
+    cacheWidth: () => _tvHeroArtworkCacheWidth,
+    cacheHeight: () => _tvHeroArtworkCacheHeight,
+    column: _stageCol,
+    favourite: _canvasFavFocus,
+    heroItem: _heroItem,
+    enriched: _heroEnriched,
+    trailerShowing: _heroTrailerShowing,
+    railBoxHeight: _stageRailBoxH,
+    labelHeight: _atriumLabelHeight,
+    favouriteWidth: _stageFavW,
+    posterWidth: _stagePosterW,
+    favouriteCell: _canvasFavCell,
+    railLabel: _deckRailLabel,
+    buildTrailer: (cardH) => _HeroTrailerLayer(
+      trailer: _heroTrailer,
+      isTelevision: widget.isTelevision,
+      heroHeight: cardH,
+      fullBleed: true,
+      volume: _heroTrailerVolume,
+      loading: _heroTrailerLoading,
+      onPlayingChanged: _onHeroTrailerPlaying,
+      takeover: _heroTrailerTakeover,
+    ),
+    buildLive: (cardH) => _HeroLiveLayer(
+      channel: _heroLiveChannel,
+      streamUrl: _heroLiveUrl,
+      heroHeight: cardH,
+      fullBleed: true,
+      volume: _heroTrailerVolume,
+      onPlayingChanged: _onHeroTrailerPlaying,
+      onPlaybackFailed: _onHeroLivePlaybackFailed,
+    ),
+    shelf: _stageShelf,
+  );
 
   // Eager Tonight lifetime at the former card-notifier construction slot.
   late final StageShelfContent _stageShelf = StageShelfContent(
@@ -3133,7 +3173,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// cell's own default (the 2:3 poster) — only landscape needs a derived
   /// wide still.
   String? _titleArtUrl(StremioMeta item) =>
-      _homeLandscapeCards ? _wideArtUrl(item) : null;
+      _homeLandscapeCards ? wideArtUrl(item) : null;
 
   double _stagePosterW(double boxH) => boxH * _titleCardAspect;
 
@@ -3223,7 +3263,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       hasBoundSource: _isBound(item),
       ringColor: Colors.white,
       aspectRatio: 16 / 9,
-      artUrl: _wideArtUrl(item),
+      artUrl: wideArtUrl(item),
       restVeil: _kPromRestVeil,
       progress: rail.cw?.progressOf(item),
       episodeLabel: rail.cw?.episodeOf(item),
@@ -3669,70 +3709,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   Widget _deckRailLabel(StageRailView view) =>
       _stageShelf.label(context, view);
 
-  /// The two cards stacked behind the hero — the NEXT two titles on this
-  /// rail, drawn from the focused column so moving along the rail deals them
-  /// forward. Static art, no focus, no video.
-  List<Widget> _deckPeeks({
-    required List<StremioMeta> items,
-    required bool favRail,
-    required int focused,
-    required double left,
-    required double top,
-    required double width,
-    required double height,
-  }) {
-    // Favourites rails have no StremioMeta to draw from — the deck simply
-    // shows the single card, which is correct: a favourite has no "next".
-    if (favRail || items.isEmpty) return const [];
-    final at = focused.clamp(0, items.length - 1);
-    final peeks = <Widget>[];
-    // Painted far-to-near so the nearer card overlaps the farther one.
-    for (final spec in const [
-      (step: 2, dx: 0.19, scale: 0.87, alpha: 0.30),
-      (step: 1, dx: 0.10, scale: 0.94, alpha: 0.52),
-    ]) {
-      final i = at + spec.step;
-      if (i >= items.length) continue;
-      final art = _wideArtUrl(items[i]);
-      if (art == null || art.isEmpty) continue;
-      peeks.add(
-        Positioned(
-          left: left,
-          top: top,
-          width: width,
-          height: height,
-          child: IgnorePointer(
-            child: AnimatedOpacity(
-              opacity: spec.alpha,
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeOutCubic,
-              child: AnimatedSlide(
-                offset: Offset(spec.dx, 0),
-                duration: const Duration(milliseconds: 260),
-                curve: Curves.easeOutCubic,
-                child: Transform.scale(
-                  scale: spec.scale,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(_kDeckCardRadius),
-                    child: CachedNetworkImage(
-                      key: ValueKey('deck-peek-${spec.step}-$art'),
-                      imageUrl: art,
-                      fit: BoxFit.cover,
-                      memCacheWidth: 480,
-                      fadeInDuration: Duration.zero,
-                      fadeOutDuration: Duration.zero,
-                      errorWidget: (_, __, ___) => const SizedBox.shrink(),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-    return peeks;
-  }
+
 
   /// The shared poster shelf cell (Canvas grammar: L/R along the rail, U/D
   /// switches rails) — used by Deck and Tonight's bottom strip.
@@ -3741,7 +3718,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   Widget _tonightCardLayers(double cardH) => Stack(
     fit: StackFit.expand,
     children: [
-      _CanvasArtLayer(
+      CanvasArtLayer(
         item: _heroItem,
         enriched: _heroEnriched,
         fav: _canvasFavFocus,
@@ -3786,7 +3763,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       ),
       IgnorePointer(
         child: CustomPaint(
-          painter: const _CornerWedges(
+          painter: const CornerWedges(
             radius: kTonightCardRadius,
             color: Color(0xFF100D1F),
           ),
@@ -5256,7 +5233,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       case 'promenade':
         return _PromenadeBoardStage(host: this);
       case 'deck':
-        return _DeckBoardStage(host: this);
+        return DeckStage(bindings: _deckBindings, isTelevision: widget.isTelevision);
       case 'tonight':
         return TonightStage(content: _tonight, isTelevision: widget.isTelevision);
       case 'spotlight':
