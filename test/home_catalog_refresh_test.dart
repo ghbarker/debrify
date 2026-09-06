@@ -153,22 +153,25 @@ void main() {
     expect(calls, 1);
   });
 
-  test('duplicate pages pause a catalog which ignores skip', () async {
-    var calls = 0;
-    final result = await loadHomeCatalogSection(
-      addon: addon('https://new.invalid'),
-      catalog: catalog,
-      previous: previous(addon('https://old.invalid')),
-      isCurrent: () => true,
-      fetch: (skip, raw) async {
-        calls++;
-        raw(1);
-        return [item(1)];
-      },
-    );
-    expect(calls, 2);
-    expect(result!.exhausted, isFalse);
-    expect(result.pagingPaused, isTrue);
-    expect(result.items, hasLength(1));
-  });
+  test(
+    'switch-off duplicate pages terminate a catalog which ignores skip',
+    () async {
+      var calls = 0;
+      final result = await loadHomeCatalogSection(
+        addon: addon('https://new.invalid'),
+        catalog: catalog,
+        previous: previous(addon('https://old.invalid')),
+        isCurrent: () => true,
+        fetch: (skip, raw) async {
+          calls++;
+          raw(1);
+          return [item(1)];
+        },
+      );
+      expect(calls, 2);
+      expect(result!.exhausted, isTrue);
+      expect(result.pagingPaused, isFalse);
+      expect(result.items, hasLength(1));
+    },
+  );
 }

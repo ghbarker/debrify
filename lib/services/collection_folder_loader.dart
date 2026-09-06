@@ -75,8 +75,9 @@ class CollectionFolderLoader {
   bool get exhausted => _sources.every((s) => s.exhausted);
   // A source can have an empty/overlapping window while its siblings advance.
   // Only the shared budget exhausting makes no-progress an All-view error.
-  bool get hasErrors =>
-      _stalled || _sources.any((s) => s.error != null && !s.noProgress);
+  bool get hasLoadFailures =>
+      _sources.any((s) => s.error != null && !s.noProgress);
+  bool get hasErrors => _stalled || hasLoadFailures;
 
   void reset() {
     _seen.clear();

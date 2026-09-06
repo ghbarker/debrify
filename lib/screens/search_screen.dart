@@ -3,6 +3,7 @@ import '../services/home_catalog_refresh.dart';
 import '../services/home_load_deadline.dart';
 import '../widgets/home/home_row_focus.dart';
 import '../widgets/home/home_continuation_focus.dart';
+import '../widgets/home/catalog_continuation_button.dart';
 import '../services/home_row_refresh.dart';
 import '../services/profiles/connection_resource_service.dart';
 import 'dart:async';
@@ -688,6 +689,7 @@ class _SearchScreenState extends State<SearchScreen>
   // is currently shown (homepage OR per-addon catalog search results). Both the
   // board and catalog search render through the same horizontal-row layout.
   final _catalogContinueNode = FocusNode(debugLabel: 'catalog_continue');
+  final _catalogMoreNode = FocusNode(debugLabel: 'catalog_more');
   FocusNode? _catalogReturnFocus;
   bool _catalogContinuing = false;
   int _catalogContinueCursor = 0;
@@ -2148,6 +2150,7 @@ class _SearchScreenState extends State<SearchScreen>
   @override
   void dispose() {
     _catalogContinueNode.dispose();
+    _catalogMoreNode.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _mdblistRevisionRefreshToken++;
     _spotlightHeroNode.dispose();
@@ -3540,7 +3543,7 @@ class _SearchScreenState extends State<SearchScreen>
     String? homeRowId,
     required int column,
   }) {
-    if (_focusCatalogContinuation()) return;
+    if (!_boardHasMore && !_boardLoadingMore && _focusCatalogContinuation()) return;
     _pendingDownOrigin = FocusManager.instance.primaryFocus;
     if (_pendingDownOrigin == null) return;
     _pendingDownRowIndex = rowIndex;
@@ -17631,10 +17634,15 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   bool _focusCatalogContinuation() {
-    if (!(_catalogContinueNode.context?.mounted ?? false)) return false;
+    final target = [_catalogContinueNode, _catalogMoreNode]
+        .where(
+          (node) => node.parent != null && (node.context?.mounted ?? false),
+        )
+        .firstOrNull;
+    if (target == null) return false;
     final origin = FocusManager.instance.primaryFocus;
-    if (!identical(origin, _catalogContinueNode)) _catalogReturnFocus = origin;
-    _catalogContinueNode.requestFocus();
+    if (!identical(origin, target)) _catalogReturnFocus = origin;
+    target.requestFocus();
     return true;
   }
 
@@ -17647,6 +17655,51 @@ class _SearchScreenState extends State<SearchScreen>
       return;
     }
     MainPageBridge.focusTvSidebar?.call();
+  }
+
+  Future<void> _continueHomeCatalogs({required bool moreCatalogs}) async {
+    if (_catalogContinuing || _boardLoadingMore) return;
+    final pending = _sections
+        .where((s) => s.pagingPaused && !s.exhausted)
+        .toList();
+    if (pending.any((s) => s.loadingMore)) return;
+    final gen = _boardLoadGen;
+    final actionNode = moreCatalogs ? _catalogMoreNode : _catalogContinueNode;
+    final ownedFocus = actionNode.hasFocus;
+    setState(() => _catalogContinuing = true);
+    try {
+      if (moreCatalogs) {
+        if (_boardHasMore) await _loadMoreBoard();
+      } else if (pending.isNotEmpty) {
+        final offset = _catalogContinueCursor % pending.length;
+        final batch = [
+          ...pending.skip(offset),
+          ...pending.take(offset),
+        ].take(4);
+        _catalogContinueCursor = (offset + 4) % pending.length;
+        for (final section in batch) {
+          if (!mounted || gen != _boardLoadGen) return;
+          final i = _sections.indexOf(section);
+          if (i >= 0) await _loadMoreRow(i, resume: true);
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _catalogContinuing = false);
+      if (mounted && gen == _boardLoadGen && ownedFocus) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || gen != _boardLoadGen) return;
+          // Busy buttons retain focus. Restore only when the completed action
+          // disappeared, and do not override a user's move to another card.
+          if (actionNode.parent != null &&
+              (actionNode.context?.mounted ?? false)) {
+            return;
+          }
+          final focused = FocusManager.instance.primaryFocus;
+          if (focused != null && focused is! FocusScopeNode) return;
+          _restoreCatalogContinuationFocus();
+        });
+      }
+    }
   }
 
   Widget _buildBoard() {
@@ -17695,58 +17748,30 @@ class _SearchScreenState extends State<SearchScreen>
                 }
                 return KeyEventResult.ignored;
               },
-              child: TextButton.icon(
-                focusNode: _catalogContinueNode,
-                autofocus: _sections.every((s) => s.items.isEmpty),
-                onPressed: busy
-                    ? null
-                    : () async {
-                        final gen = _boardLoadGen;
-                        final wasEmpty = _sections.every(
-                          (s) => s.items.isEmpty,
-                        );
-                        setState(() => _catalogContinuing = true);
-                        try {
-                          // Vertical paging must remain independent of a
-                          // watched-only or failing row already on the board.
-                          if (_boardHasMore) {
-                            await _loadMoreBoard();
-                          } else if (pending.isNotEmpty) {
-                            final offset =
-                                _catalogContinueCursor % pending.length;
-                            final batch = [
-                              ...pending.skip(offset),
-                              ...pending.take(offset),
-                            ].take(4).map((i) => _sections[i]).toList();
-                            _catalogContinueCursor =
-                                (offset + batch.length) % pending.length;
-                            for (final section in batch) {
-                              if (!mounted || gen != _boardLoadGen) return;
-                              final i = _sections.indexOf(section);
-                              if (i >= 0) await _loadMoreRow(i, resume: true);
-                            }
-                          }
-                        } finally {
-                          if (mounted) {
-                            setState(() => _catalogContinuing = false);
-                          }
-                        }
-                        if (mounted && gen == _boardLoadGen) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (!mounted || gen != _boardLoadGen) return;
-                            if ((wasEmpty &&
-                                    _sections.any((s) => s.items.isNotEmpty)) ||
-                                (!_boardHasMore &&
-                                    !_sections.any(
-                                      (s) => s.pagingPaused && !s.exhausted,
-                                    ))) {
-                              _restoreCatalogContinuationFocus();
-                            }
-                          });
-                        }
-                      },
-                icon: const Icon(Icons.arrow_forward_rounded),
-                label: Text(busy ? 'Loading…' : 'Continue loading catalogs'),
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                children: [
+                  if (pending.isNotEmpty)
+                    CatalogContinuationButton(
+                      focusNode: _catalogContinueNode,
+                      autofocus: _sections.every((s) => s.items.isEmpty),
+                      busy: busy,
+                      label: 'Continue paused rows',
+                      onPressed: () =>
+                          _continueHomeCatalogs(moreCatalogs: false),
+                    ),
+                  if (hasMoreCatalogs)
+                    CatalogContinuationButton(
+                      focusNode: _catalogMoreNode,
+                      autofocus:
+                          pending.isEmpty &&
+                          _sections.every((s) => s.items.isEmpty),
+                      busy: busy,
+                      label: 'Load more catalogs',
+                      onPressed: () =>
+                          _continueHomeCatalogs(moreCatalogs: true),
+                    ),
+                ],
               ),
             ),
           ),

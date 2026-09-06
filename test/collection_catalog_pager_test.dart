@@ -67,6 +67,7 @@ void main() {
       expect(await all.nextPage(), isEmpty);
       expect(all.exhausted, isFalse);
       expect(all.hasErrors, isTrue);
+      expect(all.hasLoadFailures, isFalse);
       expect((await all.nextPage()).single.id, '8');
       expect(all.hasErrors, isFalse);
     },
@@ -207,6 +208,7 @@ void main() {
     );
     expect(await loader.nextPage(), isEmpty);
     expect(loader.hasErrors, true);
+    expect(loader.hasLoadFailures, true);
     expect(loader.exhausted, false);
   });
 

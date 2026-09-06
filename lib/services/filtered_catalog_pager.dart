@@ -18,9 +18,9 @@ class FilteredPage {
   /// Where the next page starts: the sum of the raw windows consumed.
   final int nextSkip;
 
-  /// True only when the addon served a RAW-empty window, i.e. the catalog is
-  /// genuinely at its end. A window that was entirely filtered away is not
-  /// exhaustion.
+  /// With filtering enabled, true only after a RAW-empty window. With the
+  /// switch off, preserves legacy empty/duplicate termination. A window that
+  /// was entirely filtered away is not exhaustion.
   final bool exhausted;
 
   /// Number of windows pulled. Tests only.
@@ -52,6 +52,21 @@ Future<FilteredPage> fetchFilteredPage(
   int maxFetches = 4,
   Set<String>? seenIds,
 }) async {
+  // The disabled feature preserves the original single-page termination rules.
+  if (hides == null) {
+    var rawCount = 0;
+    final page = await fetch(skip, (count) => rawCount = count);
+    final seen = seenIds ?? <String>{};
+    final fresh = page.where((item) => seen.add(item.id)).toList();
+    return FilteredPage(
+      items: fresh,
+      nextSkip: page.isEmpty
+          ? skip
+          : skip + (rawCount > 0 ? rawCount : page.length),
+      exhausted: fresh.isEmpty,
+      fetches: 1,
+    );
+  }
   var cursor = skip;
   var fetches = 0;
   var exhausted = false;
@@ -71,10 +86,9 @@ Future<FilteredPage> fetchFilteredPage(
     cursor += count;
     for (final m in page) {
       if (!seen.add(m.id)) continue;
-      if (hides != null && hides(m)) continue;
+      if (hides(m)) continue;
       out.add(m);
     }
-    if (hides == null) break;
     if (out.length >= minItems || fetches >= maxFetches) break;
   }
   return FilteredPage(

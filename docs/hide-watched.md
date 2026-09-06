@@ -3,7 +3,8 @@
 Settings → **Tracking** → **Hide watched** → "Hide watched titles". Off by
 default, saved per profile, and included in Backup & Restore as `hide_watched`
 inside the tracking-preferences payload. WebDAV sync applies the setting to the
-active profile immediately, including refreshing the Home board.
+active profile immediately, including refreshing the Home board. Remote-control
+tracking-preferences pushes also refresh Home.
 
 When ON, movies you have finished and shows you have completed disappear from
 the catalog surfaces:
@@ -45,15 +46,17 @@ addon as the end of the catalog. Skip offsets advance by the addon's raw counts
 so paging stays aligned. Repeated items are deduplicated across the windows.
 If a batch has no visible titles but the addon has more, Home and See All show
 **Continue loading**. This resumes at the saved offset instead of restarting or
-marking the catalog exhausted. On Home, additional catalog rows load before
-paused rows are retried, so one watched-only source cannot block the rest of
-the board. MDBList also offers continuation when its filtered first page is
+marking the catalog exhausted. Home offers separate **Continue paused rows** and **Load more catalogs**
+actions, so paused rows can resume while more catalogs remain. TV action buttons
+retain focus while loading and ignore repeated presses until the batch finishes. MDBList also offers continuation when its filtered first page is
 empty and the provider returns a next cursor. A failed request without a raw count also keeps
-its cursor for retry. With the switch off each pager call makes one fetch.
+its cursor for retry. With the switch off each pager call makes one fetch and preserves legacy
+termination on empty or duplicate-only results, including failed empty fetches.
 
 Collection folders use their existing raw cursor pager with the same watched
 predicate. Their bounded empty-window budget and Retry action remain in place;
-watched-only windows never mark a folder source exhausted.
+watched-only windows never mark a folder source exhausted. Paused windows use
+“No new titles loaded · Continue”; only request failures say a list could not load.
 
 ## Timing
 
@@ -61,7 +64,8 @@ Decisions are pinned at fetch time. Finishing a movie does not rip it out of a
 row you are looking at; it is gone on the next board load. On a cold start the
 board waits (at most 1.5 s) for the local watched snapshot before fetching, so
 the first paint is already filtered; tracker histories arrive asynchronously
-and apply from the next load.
+and apply from the next load. Local snapshot reads retry transient failures up
+to three times; a failed first snapshot can retry on a later activation.
 
 ## Code
 

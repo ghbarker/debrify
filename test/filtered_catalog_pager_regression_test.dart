@@ -4,6 +4,35 @@ import 'package:debrify/services/filtered_catalog_pager.dart';
 
 void main() {
   test(
+    'switch off ends failed fetches without a retryable paused page',
+    () async {
+      var calls = 0;
+      final page = await fetchFilteredPage((skip, raw) async {
+        calls++;
+        return [];
+      }, skip: 40);
+      expect(page.exhausted, isTrue);
+      expect(page.nextSkip, 40);
+      expect(calls, 1);
+    },
+  );
+
+  test('switch off terminates addons repeating already seen titles', () async {
+    final page = await fetchFilteredPage(
+      (skip, raw) async {
+        raw(20);
+        return [StremioMeta(id: 'tt1', type: 'movie', name: 'One')];
+      },
+      skip: 20,
+      seenIds: {'tt1'},
+    );
+    expect(page.items, isEmpty);
+    expect(page.exhausted, isTrue);
+    expect(page.nextSkip, 40);
+    expect(page.fetches, 1);
+  });
+
+  test(
     'transport failure retains its cursor without declaring exhaustion',
     () async {
       final page = await fetchFilteredPage(
