@@ -184,7 +184,8 @@ void main() {
           tester.widget<ContinueWatchingSeeAllScreen>(
             find.byType(ContinueWatchingSeeAllScreen),
           );
-      final host = tester.state(find.byType(SearchScreenHost));
+      final host = tester.state(find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_DiscoverComposition'));
       final sourceNode = discoverSource(tester).focusNode!;
       sourceNode.requestFocus();
       await tester.pump();
@@ -202,7 +203,8 @@ void main() {
       MainPageBridge.notifyIntegrationChanged();
       await pumpFavourites(tester);
       expect(
-        identical(tester.state(find.byType(SearchScreenHost)), host),
+        identical(tester.state(find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_DiscoverComposition')), host),
         isTrue,
       );
       expect(panel().onQuickPlay, isNull);
