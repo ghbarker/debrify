@@ -9,7 +9,6 @@ import '../../magic_tv_screen.dart'
     show MagicTvDispatch, MagicTvNextChannelQuirk;
 
 import 'provider_watch_flow.dart';
-import 'cached_locked_watch_programme.dart';
 
 class AlldebridWatchFlow {
   const AlldebridWatchFlow(this.host);
@@ -197,19 +196,4 @@ class AlldebridWatchFlow {
     }
   });
 
-  Future<void> watchAllDebridWithCachedTorrents(
-    List<Torrent> cachedTorrents, {
-    required bool applyNsfwFilter,
-    String? channelName,
-    String? channelId,
-    int? channelNumber,
-  }) => runCachedLockedWatch(
-    host,
-    cachedTorrents,
-    provider: CachedLockedProvider.allDebrid,
-    applyNsfwFilter: applyNsfwFilter,
-    channelName: channelName,
-    channelId: channelId,
-    channelNumber: channelNumber,
-  );
 }
