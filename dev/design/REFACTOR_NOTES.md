@@ -739,3 +739,13 @@ Accepted remaining Windowed bindings as live owner-injected work, not dead alias
 M1-7 closure: gate e78d100e passed including186; finite retention disposition above plus leaf627/common-flow/captured-operation evidence satisfy agreed outcome4. Closed, without expanding scope or claiming native/SHIELD execution.
 
 Renderer experiment HOLD: isolated new case on193-based separate draft timed out waiting disposal entry, with later cleanup/null assertion and replacement progress. No native or positive fallback proof; merged193 unaffected. Preserve raw renderer-isolated.jsonl/proof and three uncommitted experiment files. No further runtime/investigation authorized; V1-7 cohesive speed/aspect read-only design explicitly authorized separately.
+
+## September 6 — storage retention decisions after gate896a168d
+
+The parent accepts five named coordinator retentions: migrateDefaultsGeneration(21 declaration lines), clearAllStartupSettings(14), clearAllFilterSettings(5), clearAllTorrentEngineSettings(12), resetProfileCaches(22). Preserve captured preferences, phase order/final marker, startup IPTV tail and synchronous first keyboard reset slot. Their 74 lines are not dead forwarding APIs or completion credit; all failure/interleaving cases are not proven.
+
+Battery's two methods/eight lines retain a profile-scoped raw String/default unknown until meaningful download-lifecycle work. Fixed-parallel's two methods/six lines retain getter1/setter-no-op/no persisted key. No device-global conversion or concurrency feature is authorized.
+
+Six native/render methods42 lines plus debug reset3 remain explicitly deferred ownership work, not completed or waived. Nine native-sensitive forwarding APIs and caller/native-proof requirements remain. Strict facade-only outcome3 stays OPEN. Indexer portable-resource export and adult held-inside-getProfile gaps remain disclosed.
+
+Search Atrium FINAL HOLD and merged stage ledger762/1400 (638 short) remain open. Mosaic129-line cell policy is retained because generic shelf substitution changes focus notification and prefetch behavior. Player scrub ownership is retained because moving five helpers leaves eleven invalidation/input transitions behind; no callback-only wrapper or renewed native experiments is authorized.
