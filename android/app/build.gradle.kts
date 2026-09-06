@@ -1,5 +1,10 @@
 import java.util.Properties
 import java.io.FileInputStream
+import com.android.build.api.artifact.SingleArtifact
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.transform.TransformerFactory
+import javax.xml.transform.dom.DOMSource
+import javax.xml.transform.stream.StreamResult
 
 plugins {
     id("com.android.application")
@@ -81,6 +86,41 @@ android {
 
 flutter {
     source = "../.."
+}
+
+// Keep Flutter's build type in release mode: setting isDebuggable above makes
+// Flutter select its debug engine. Only transform the packaged manifest for
+// an explicitly opted-in local build, allowing adb run-as with release AOT.
+abstract class LocalDiagnosticsManifest : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val inputManifest: RegularFileProperty
+
+    @get:OutputFile
+    abstract val outputManifest: RegularFileProperty
+
+    @TaskAction
+    fun enableUsbDiagnostics() {
+        val factory = DocumentBuilderFactory.newInstance()
+        factory.isNamespaceAware = true
+        val document = factory.newDocumentBuilder().parse(inputManifest.get().asFile)
+        val application = document.getElementsByTagName("application").item(0) as org.w3c.dom.Element
+        application.setAttributeNS("http://schemas.android.com/apk/res/android", "android:debuggable", "true")
+        val output = outputManifest.get().asFile
+        output.parentFile.mkdirs()
+        TransformerFactory.newInstance().newTransformer().transform(DOMSource(document), StreamResult(output))
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        if (providers.gradleProperty("debrifyLocalDiagnostics").orNull == "true") {
+            val localManifest = tasks.register<LocalDiagnosticsManifest>("${variant.name}LocalDiagnosticsManifest")
+            variant.artifacts.use(localManifest)
+                .wiredWithFiles(LocalDiagnosticsManifest::inputManifest, LocalDiagnosticsManifest::outputManifest)
+                .toTransform(SingleArtifact.MERGED_MANIFEST)
+        }
+    }
 }
 
 dependencies {

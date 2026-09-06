@@ -1,3 +1,4 @@
+import '../local_validation_diagnostics.dart';
 import 'dart:convert';
 import 'dart:math';
 
@@ -90,6 +91,10 @@ class ProfileRestoreCoordinator {
     )?
     beforePublish,
   }) async {
+    LocalValidationDiagnostics.event('profile_restore_started', {
+      'profiles': package.profiles.length,
+      'resources': package.resources.length,
+    });
     final actor = await authorization.validate(registry);
     if (actor.role != UserProfileRole.admin ||
         !actor.allows(ProfileFeature.manageProfiles) ||
@@ -531,6 +536,12 @@ class ProfileRestoreCoordinator {
         // Publication is already authoritative. A retained `published` journal
         // is harmless and bootstrap removes it idempotently.
       }
+      LocalValidationDiagnostics.event('graph_restore_finished', {
+        'profiles': parsedProfiles.length,
+        'resources': stagedResources.length,
+        'grants': grantCount,
+        'bindings': bindingCount,
+      });
       return ProfileGraphRestoreReport(
         profilesImported: parsedProfiles.length,
         resourcesImported: stagedResources.length,
@@ -609,6 +620,10 @@ class ProfileRestoreCoordinator {
     )?
     beforePublish,
   }) async {
+    LocalValidationDiagnostics.event('profile_restore_started', {
+      'profiles': package.profiles.length,
+      'resources': package.resources.length,
+    });
     final actor = await authorization.validate(registry);
     if (actor.id != destinationProfileId) {
       throw StateError('Restore destination must match local authorization');
@@ -1046,6 +1061,11 @@ class ProfileRestoreCoordinator {
           if (expected > 0) omissions['searchEngines'] = expected;
         }
       }
+      LocalValidationDiagnostics.event('profile_restore_finished', {
+        'preferences': values.length,
+        'resources': imported,
+        'omissions': omissions.length,
+      });
       return ProfileRestoreReport(
         destinationProfileId: destinationProfileId,
         publishedGeneration: publishedProfile.visibleDataGeneration,

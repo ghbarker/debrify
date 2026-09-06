@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as path;
 import 'package:synchronized/synchronized.dart';
@@ -29,6 +30,7 @@ class DiagnosticLogExport {
     required this.entryCount,
     required this.windowStart,
     required this.windowEnd,
+    this.truncated = false,
   });
 
   final String fileName;
@@ -36,6 +38,7 @@ class DiagnosticLogExport {
   final int entryCount;
   final DateTime windowStart;
   final DateTime windowEnd;
+  final bool truncated;
 }
 
 /// Privacy-filtered, bounded diagnostics retained independently of console
@@ -47,7 +50,8 @@ class DiagnosticLogExport {
 /// Files are split into short time buckets. That makes pruning cheap and
 /// avoids rewriting a multi-megabyte active log on every message. Each bucket
 /// is independently capped, and exports filter individual records to the
-/// requested two-hour window rather than relying only on file timestamps.
+/// normal retention window rather than relying only on file timestamps.
+/// Sparse durable lifecycle/error events have a separate, capped 24-hour window.
 class DiagnosticLog {
   DiagnosticLog({
     DateTime Function()? clock,
@@ -56,13 +60,21 @@ class DiagnosticLog {
     this.maxSegmentBytes = 256 * 1024,
   }) : _clock = clock ?? DateTime.now;
 
-  static final DiagnosticLog instance = DiagnosticLog();
+  static final DiagnosticLog instance = DiagnosticLog(
+    retention: const Duration(
+      hours: bool.fromEnvironment('DEBRIFY_LOCAL_VALIDATION') ? 12 : 2,
+    ),
+    maxSegmentBytes: const bool.fromEnvironment('DEBRIFY_LOCAL_VALIDATION')
+        ? 1024 * 1024
+        : 256 * 1024,
+  );
 
   static const MethodChannel _nativeChannel = MethodChannel(
     'debrify/native_diagnostics',
   );
   static const String _filePrefix = 'debrify-diagnostics-';
   static const String _fileSuffix = '.jsonl';
+  static const Duration criticalRetention = Duration(hours: 24);
   static const int _maxPendingEntries = 2000;
   static const int _maxMemoryEntries = 4000;
 
@@ -82,6 +94,7 @@ class DiagnosticLog {
   bool _disabledForDeviceReset = false;
   int _droppedEntries = 0;
   int _writeGeneration = 0;
+  int _durableWriteFailures = 0;
 
   bool get isAvailable => _accepting;
 
@@ -134,6 +147,7 @@ class DiagnosticLog {
     DiagnosticLevel level = DiagnosticLevel.info,
     Map<String, Object?> fields = const <String, Object?>{},
     bool flushImmediately = false,
+    bool durable = false,
   }) {
     final safeFields = <String, Object?>{};
     for (final entry in fields.entries) {
@@ -151,6 +165,7 @@ class DiagnosticLog {
         fields: safeFields,
       ),
       flushImmediately: flushImmediately,
+      durable: durable,
     );
   }
 
@@ -160,6 +175,7 @@ class DiagnosticLog {
     required Object error,
     required StackTrace stackTrace,
     bool flushImmediately = true,
+    bool durable = false,
   }) {
     _enqueue(
       _DiagnosticEntry(
@@ -174,6 +190,7 @@ class DiagnosticLog {
         },
       ),
       flushImmediately: flushImmediately,
+      durable: durable,
     );
   }
 
@@ -207,10 +224,41 @@ class DiagnosticLog {
         },
       ),
       flushImmediately: true,
+      durable: true,
     );
   }
 
+  Future<void>? _flushFuture;
+
   Future<void> flush() async {
+    _flushTimer?.cancel();
+    _flushTimer = null;
+    // Join one writer instead of retaining a batch per immediate error. Check
+    // again after joining so events arriving at drain completion are covered.
+    while (_pending.isNotEmpty || _droppedEntries > 0 || _flushFuture != null) {
+      final active = _flushFuture;
+      if (active != null) {
+        await active;
+        continue;
+      }
+      final completed = Completer<void>();
+      _flushFuture = completed.future;
+      try {
+        await _drain();
+      } finally {
+        _flushFuture = null;
+        completed.complete();
+      }
+    }
+  }
+
+  Future<void> _drain() async {
+    do {
+      await _flushBatch();
+    } while (_pending.isNotEmpty || _droppedEntries > 0);
+  }
+
+  Future<void> _flushBatch() async {
     _flushTimer?.cancel();
     _flushTimer = null;
     if (_pending.isEmpty && _droppedEntries == 0) return;
@@ -242,32 +290,36 @@ class DiagnosticLog {
     await _ioLock.synchronized(() async {
       if (!_accepting || generation != _writeGeneration) return;
       try {
-        final grouped = <int, List<_DiagnosticEntry>>{};
+        final grouped = <(int, bool), List<_DiagnosticEntry>>{};
         for (final entry in batch) {
           grouped
-              .putIfAbsent(_segmentStartMs(entry.timestamp), () => [])
+              .putIfAbsent((
+                _segmentStartMs(entry.timestamp),
+                entry.durable,
+              ), () => [])
               .add(entry);
         }
         for (final group in grouped.entries) {
           final file = File(
             path.join(
               directory.path,
-              '$_filePrefix${group.key}-dart$_fileSuffix',
+              '$_filePrefix${group.key.$1}-dart${group.key.$2 ? '-critical' : ''}$_fileSuffix',
             ),
           );
-          final encoded = StringBuffer();
+          final encoded = StringBuffer()..writeln();
           for (final entry in group.value) {
             encoded.writeln(jsonEncode(entry.toJson()));
           }
           await file.writeAsString(
             encoded.toString(),
             mode: FileMode.append,
-            flush: false,
+            flush: group.key.$2,
           );
           await _trimSegment(file);
         }
         await _pruneExpiredFiles(directory);
       } catch (_) {
+        if (batch.any((entry) => entry.durable)) _durableWriteFailures++;
         if (_accepting && generation == _writeGeneration) {
           _retainInMemory(batch);
         }
@@ -275,17 +327,40 @@ class DiagnosticLog {
     });
   }
 
-  Future<DiagnosticLogExport> exportLastWindow() async {
+  Future<DiagnosticLogExport> exportLastWindow({int? maxBytes}) async {
+    if (maxBytes != null && maxBytes < 8192) {
+      throw ArgumentError.value(maxBytes, 'maxBytes', 'Must be at least 8192');
+    }
     await initialize();
     if (!_accepting) {
       throw StateError('Diagnostic logging is unavailable after device reset');
     }
-    await _flushNative();
+    final nativeFlushed = await _flushNative();
     await flush();
 
     final now = _clock().toUtc();
     final cutoff = now.subtract(retention);
     final entries = <_DiagnosticExportLine>[];
+    final recent = HeapPriorityQueue<_DiagnosticExportLine>(
+      (a, b) => a.timestamp.compareTo(b.timestamp),
+    );
+    var retainedBytes = 0;
+    var omittedForBudget = 0;
+    void addEntry(_DiagnosticExportLine entry) {
+      if (maxBytes == null) {
+        entries.add(entry);
+        return;
+      }
+      recent.add(entry);
+      retainedBytes += utf8.encode(entry.jsonLine).length + 1;
+      while (retainedBytes > maxBytes - 4096 && recent.isNotEmpty) {
+        retainedBytes -= utf8.encode(recent.removeFirst().jsonLine).length + 1;
+        omittedForBudget++;
+      }
+    }
+
+    var malformedLineCount = 0;
+    var unreadableFileCount = 0;
     final directory = _directory;
 
     if (directory != null) {
@@ -299,26 +374,37 @@ class DiagnosticLog {
         files.sort((a, b) => a.path.compareTo(b.path));
         for (final file in files) {
           try {
+            final fileCutoff =
+                file.path.endsWith('-critical.jsonl') ||
+                    file.path.endsWith('-android-crash.jsonl')
+                ? now.subtract(criticalRetention)
+                : cutoff;
             await for (final line
                 in file
                     .openRead()
-                    .transform(utf8.decoder)
+                    .transform(const Utf8Decoder(allowMalformed: true))
                     .transform(const LineSplitter())) {
-              final decoded = jsonDecode(line);
-              if (decoded is! Map<String, dynamic>) continue;
-              final timestamp = DateTime.tryParse(
-                decoded['timestamp']?.toString() ?? '',
-              )?.toUtc();
-              if (timestamp == null ||
-                  timestamp.isBefore(cutoff) ||
-                  timestamp.isAfter(now.add(const Duration(minutes: 1)))) {
-                continue;
+              if (line.trim().isEmpty) continue;
+              try {
+                final decoded = jsonDecode(line);
+                if (decoded is! Map<String, dynamic>) continue;
+                final timestamp = DateTime.tryParse(
+                  decoded['timestamp']?.toString() ?? '',
+                )?.toUtc();
+                if (timestamp == null ||
+                    timestamp.isBefore(fileCutoff) ||
+                    timestamp.isAfter(now.add(const Duration(minutes: 1)))) {
+                  continue;
+                }
+                addEntry(
+                  _DiagnosticExportLine(timestamp: timestamp, jsonLine: line),
+                );
+              } on FormatException {
+                malformedLineCount++;
               }
-              entries.add(
-                _DiagnosticExportLine(timestamp: timestamp, jsonLine: line),
-              );
             }
           } catch (_) {
+            unreadableFileCount++;
             // A partial final line after a hard process kill must not prevent
             // the rest of the retained files from being exported.
           }
@@ -327,8 +413,12 @@ class DiagnosticLog {
     }
 
     for (final entry in _memoryFallback) {
-      if (!entry.timestamp.isBefore(cutoff) && !entry.timestamp.isAfter(now)) {
-        entries.add(
+      final entryCutoff = entry.durable
+          ? now.subtract(criticalRetention)
+          : cutoff;
+      if (!entry.timestamp.isBefore(entryCutoff) &&
+          !entry.timestamp.isAfter(now)) {
+        addEntry(
           _DiagnosticExportLine(
             timestamp: entry.timestamp,
             jsonLine: jsonEncode(entry.toJson()),
@@ -336,6 +426,7 @@ class DiagnosticLog {
         );
       }
     }
+    if (maxBytes != null) entries.addAll(recent.toUnorderedList());
     entries.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     final header = <String, Object?>{
@@ -346,7 +437,15 @@ class DiagnosticLog {
       'fields': <String, Object?>{
         'windowStart': cutoff.toIso8601String(),
         'windowEnd': now.toIso8601String(),
+        'criticalWindowStart': now
+            .subtract(criticalRetention)
+            .toIso8601String(),
+        'malformedLineCount': malformedLineCount,
+        'nativeFlushed': nativeFlushed,
+        'unreadableFileCount': unreadableFileCount,
+        'durableWriteFailures': _durableWriteFailures,
         'entryCount': entries.length,
+        if (maxBytes != null) 'omittedForBudget': omittedForBudget,
         'format': 1,
       },
     };
@@ -361,6 +460,7 @@ class DiagnosticLog {
       entryCount: entries.length,
       windowStart: cutoff,
       windowEnd: now,
+      truncated: omittedForBudget > 0,
     );
   }
 
@@ -437,8 +537,13 @@ class DiagnosticLog {
     }
   }
 
-  void _enqueue(_DiagnosticEntry entry, {bool flushImmediately = false}) {
+  void _enqueue(
+    _DiagnosticEntry entry, {
+    bool flushImmediately = false,
+    bool durable = false,
+  }) {
     if (!_accepting) return;
+    entry.durable = durable;
     if (_pending.length >= _maxPendingEntries) {
       const discard = 200;
       _pending.removeRange(0, discard);
@@ -461,7 +566,11 @@ class DiagnosticLog {
   void _retainInMemory(List<_DiagnosticEntry> entries) {
     _memoryFallback.addAll(entries);
     final cutoff = _clock().toUtc().subtract(retention);
-    _memoryFallback.removeWhere((entry) => entry.timestamp.isBefore(cutoff));
+    _memoryFallback.removeWhere(
+      (entry) => entry.timestamp.isBefore(
+        entry.durable ? _clock().toUtc().subtract(criticalRetention) : cutoff,
+      ),
+    );
     if (_memoryFallback.length > _maxMemoryEntries) {
       _memoryFallback.removeRange(
         0,
@@ -470,13 +579,16 @@ class DiagnosticLog {
     }
   }
 
-  Future<void> _flushNative() async {
-    if (kIsWeb || !Platform.isAndroid) return;
+  Future<bool> _flushNative() async {
+    if (kIsWeb || !Platform.isAndroid) return true;
     try {
       await _nativeChannel
           .invokeMethod<void>('flush')
           .timeout(const Duration(seconds: 2));
-    } catch (_) {}
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _clearNativeForDeviceReset() async {
@@ -495,7 +607,12 @@ class DiagnosticLog {
       if (entity is! File || !_isDiagnosticFile(entity)) continue;
       final segmentStart = _segmentFromFile(entity);
       if (segmentStart == null) continue;
-      if (segmentStart + segmentDuration.inMilliseconds <= cutoffMs) {
+      final effectiveCutoff =
+          entity.path.endsWith('-critical.jsonl') ||
+              entity.path.endsWith('-android-crash.jsonl')
+          ? _clock().toUtc().subtract(criticalRetention).millisecondsSinceEpoch
+          : cutoffMs;
+      if (segmentStart + segmentDuration.inMilliseconds <= effectiveCutoff) {
         try {
           await entity.delete();
         } catch (_) {}
@@ -596,7 +713,7 @@ class _DiagnosticExportLine {
 }
 
 class _DiagnosticEntry {
-  const _DiagnosticEntry({
+  _DiagnosticEntry({
     required this.timestamp,
     required this.level,
     required this.source,
@@ -604,6 +721,7 @@ class _DiagnosticEntry {
     this.fields = const <String, Object?>{},
   });
 
+  bool durable = false;
   final DateTime timestamp;
   final DiagnosticLevel level;
   final String source;

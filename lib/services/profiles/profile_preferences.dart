@@ -67,6 +67,13 @@ class ProfilePreferences implements SharedPreferences {
   static Completer<void>? _activeMutationsDrained;
   static Completer<void>? _exclusiveMutationReleased;
 
+  /// Read-only counters for local diagnostics; no values or lock acquisition.
+  static Map<String, Object> get diagnosticMutationState => {
+    'activePreferenceWrites': _activeMutations,
+    'preferenceBarrierHeld': _exclusiveMutationReleased != null,
+    'preferenceRevision': _mutationRevision,
+  };
+
   ProfilePreferences._(
     this._delegate,
     this._scope, {

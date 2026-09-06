@@ -1,3 +1,4 @@
+import '../local_validation_diagnostics.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -63,6 +64,9 @@ class ProfileLifecycleCoordinator {
       sessionEpoch: ProfileRuntime.nextEpoch,
     );
     switching.value = true;
+    LocalValidationDiagnostics.event('profile_switch_started', {
+      'sameProfile': sameProfile,
+    });
     var journalStarted = false;
     var committed = false;
     try {
@@ -78,6 +82,7 @@ class ProfileLifecycleCoordinator {
       // Adoption uses this drained, still-pre-commit edge to finish replacing
       // the target's database bytes. A failure here can safely abort back to
       // the current profile rather than exposing a half-copied target.
+      LocalValidationDiagnostics.event('profile_deactivated');
       await afterDeactivateBeforeCommit?.call();
       // The drained hook may have published a new generation for this same
       // identity. Build the scope from the final registry row, not the picker.
@@ -99,10 +104,12 @@ class ProfileLifecycleCoordinator {
         onAuthorityCommitted: () {
           committed = true;
           ProfileRuntime.publish(candidate);
+          LocalValidationDiagnostics.event('profile_authority_committed');
           afterAuthorityCommitted?.call();
         },
       );
       await afterCommitBeforeInitialize?.call();
+      LocalValidationDiagnostics.event('profile_warm_started');
       // Candidate warming touches process-global caches and controllers. Do it
       // only after registry and runtime authority agree on the target; no
       // observer can see B's state while A is still authoritative.
@@ -143,6 +150,9 @@ class ProfileLifecycleCoordinator {
       rethrow;
     } finally {
       switching.value = false;
+      LocalValidationDiagnostics.event('profile_switch_finished', {
+        'committed': committed,
+      });
     }
   });
 

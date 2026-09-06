@@ -1,3 +1,4 @@
+import '../../services/webdav_sync/webdav_log_upload.dart';
 import '../../services/webdav_sync/webdav_sync_binding_store.dart';
 import 'dart:async';
 
@@ -57,6 +58,11 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
   WebDavSyncRuntimeStatus? _runtimeStatus;
   String? _syncStateMessage;
   bool _syncBusy = false;
+  bool _logUploadEnabled = false;
+  bool _logSettingsBusy = false;
+  bool _logUploading = false;
+  String? _logBindingId;
+  int _logSettingRevision = 0;
   bool _logoutPending = false;
   Timer? _statusTimer;
   Future<void>? _statusLoading;
@@ -88,12 +94,68 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
     AnalyticsService.screenView('sync_and_migrate');
     if (_syncFeatureEnabled) {
       _loadSyncState();
+      unawaited(_loadLogUploadSetting());
       // Also observe background completion and expiring platform gates while
       // the page remains open. Coalesce reads so a slow cycle never queues
       // an unbounded number of status operations.
       _statusTimer = Timer.periodic(const Duration(seconds: 2), (_) {
         if (!_syncBusy) unawaited(_loadActiveSyncState());
       });
+    }
+  }
+
+  Future<void> _loadLogUploadSetting() async {
+    final revision = ++_logSettingRevision;
+    final bindingId = _syncBinding?.id;
+    try {
+      final enabled = await WebDavLogUpload.instance.isEnabled();
+      if (mounted &&
+          revision == _logSettingRevision &&
+          bindingId == _syncBinding?.id) {
+        setState(() {
+          _logUploadEnabled = enabled;
+          _logBindingId = bindingId;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _setLogUpload(bool enabled) async {
+    if (_logSettingsBusy || _syncBusy || _logoutPending) return;
+    setState(() => _logSettingsBusy = true);
+    try {
+      await _syncAuthorization.requireAdmin();
+      await WebDavLogUpload.instance.setEnabled(enabled);
+      await _loadLogUploadSetting();
+    } catch (error) {
+      if (mounted) _showError(error);
+    } finally {
+      if (mounted) setState(() => _logSettingsBusy = false);
+    }
+  }
+
+  Future<void> _uploadLogsNow() async {
+    if (_logUploading) return;
+    setState(() => _logUploading = true);
+    try {
+      await _syncAuthorization.requireAdmin();
+      final result = await WebDavLogUpload.instance.upload();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result == WebDavLogUploadResult.uploaded
+                ? 'Diagnostic logs uploaded.'
+                : result == WebDavLogUploadResult.busy
+                ? 'A log upload is already running.'
+                : 'Logs could not be uploaded. They remain on this device.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (mounted) _showError(error);
+    } finally {
+      if (mounted) setState(() => _logUploading = false);
     }
   }
 
@@ -170,6 +232,9 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
           _syncBinding = snapshot.stagedBinding ?? snapshot.activeBinding;
           _logoutPending = WebDavSyncBindingStore.logoutPending(snapshot);
           _runtimeStatus = status;
+          if (_logBindingId != _syncBinding?.id) {
+            unawaited(_loadLogUploadSetting());
+          }
           _tvManualAvailability = tvAvailability;
           _syncStateMessage =
               'Local sync state was cleared. Re-enter your WebDAV password '
@@ -182,6 +247,9 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
         _syncBinding = snapshot.stagedBinding ?? snapshot.activeBinding;
         _logoutPending = WebDavSyncBindingStore.logoutPending(snapshot);
         _runtimeStatus = status;
+        if (_logBindingId != _syncBinding?.id) {
+          unawaited(_loadLogUploadSetting());
+        }
         _tvManualAvailability = tvAvailability;
         _syncStateMessage = status.adminPruneBlocked
             ? status.safetyCleanupBlocked
@@ -883,6 +951,32 @@ class _SyncAndMigratePageState extends State<SyncAndMigratePage>
               ),
           ],
         ),
+        if (active && !_logoutPending) ...[
+          const SizedBox(height: 16),
+          SettingsSection(
+            title: 'Diagnostics',
+            children: [
+              SettingsToggleTile(
+                icon: Icons.upload_file_outlined,
+                title: 'Upload diagnostic logs to WebDAV',
+                subtitle:
+                    'This device only. Saves one rolling file in logs/ every 5 minutes while the app is open. Anyone with folder access can read it.',
+                subtitleMaxLines: 4,
+                value: _logUploadEnabled,
+                onChanged: _setLogUpload,
+              ),
+              if (_logUploadEnabled)
+                SettingsTile(
+                  icon: Icons.cloud_upload_outlined,
+                  title: _logUploading ? 'Uploading logs…' : 'Upload logs now',
+                  subtitle:
+                      'Replace this device’s file with its latest diagnostic history',
+                  enabled: !_logUploading && !_logSettingsBusy && !_syncBusy,
+                  onTap: _uploadLogsNow,
+                ),
+            ],
+          ),
+        ],
         if (clockMessage != null || _syncStateMessage != null) ...[
           const SizedBox(height: 12),
           Text(

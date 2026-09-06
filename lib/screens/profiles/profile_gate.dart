@@ -103,6 +103,11 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    DiagnosticLog.instance.recordEvent(
+      source: 'profile_gate',
+      durable: true,
+      event: 'gate_created',
+    );
     if (_committed) {
       final registry = ProfileBootstrap.registry;
       _pins = ProfilePinService(registry: registry);
@@ -127,6 +132,11 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    DiagnosticLog.instance.recordEvent(
+      source: 'profile_gate',
+      durable: true,
+      event: 'gate_disposed',
+    );
     WidgetsBinding.instance.removeObserver(this);
     if (_committed) ProfileRuntime.scope.removeListener(_scopeChanged);
     if (_committed) {
@@ -213,6 +223,16 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
             allowSingleProfileAutoEnter && !ProfileGateAlwaysAsk.cached,
       );
     });
+    DiagnosticLog.instance.recordEvent(
+      source: 'profile_gate',
+      durable: true,
+      event: 'profiles_loaded',
+      fields: <String, Object?>{
+        'profileCount': profiles.length,
+        'pickerVisible': !_entered,
+        'startupLoad': allowSingleProfileAutoEnter,
+      },
+    );
     if (!_entered) {
       // Startup conveniences were resolved against the last active profile
       // before this gate mounted. Once a picker/PIN is required they are not
@@ -292,6 +312,11 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
 
   Future<void> _openPicker() async {
     if (!mounted || !_committed) return;
+    DiagnosticLog.instance.recordEvent(
+      source: 'profile_gate',
+      durable: true,
+      event: 'picker_requested',
+    );
     // Nothing may sit above the gate while it asks who is watching. A remote
     // profile-graph import hands authority over, which remounts AppInitializer
     // through the gate's epoch key — and the doomed instance's in-flight
@@ -332,6 +357,11 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_committed || state != AppLifecycleState.resumed || !_entered) return;
+    DiagnosticLog.instance.recordEvent(
+      source: 'profile_gate',
+      durable: true,
+      event: 'gate_resumed',
+    );
     ProfileLockController.instance.onResume();
   }
 

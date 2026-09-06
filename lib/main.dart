@@ -1,4 +1,6 @@
+import 'services/webdav_sync/webdav_log_upload.dart';
 import 'widgets/webdav_sync/webdav_save_status.dart';
+import 'services/local_validation_diagnostics.dart';
 import 'dart:async';
 import 'dart:io' show Platform, exit;
 import 'dart:ui' show AppExitResponse, PointerDeviceKind;
@@ -239,6 +241,8 @@ Future<void> _mainUnchecked(List<String> launchArguments) async {
   // before any startup service has a chance to open profile-owned bytes.
   await ProfileDatabaseAdoptionGate.restorePersisted();
   await DiagnosticLog.instance.initialize();
+  LocalValidationDiagnostics.start();
+  WebDavLogUpload.instance.start();
   // On a release tvOS build, Dart's print() lands on stdout, which the device
   // console does not carry — so Flutter errors, and anything we log while
   // bringing the port up, are simply invisible on real hardware. Forward
@@ -279,6 +283,7 @@ Future<void> _mainUnchecked(List<String> launchArguments) async {
     DiagnosticLog.instance.recordError(
       source: 'dart',
       event: 'unhandled_async_error',
+      durable: true,
       error: error,
       stackTrace: stack,
     );
@@ -288,6 +293,7 @@ Future<void> _mainUnchecked(List<String> launchArguments) async {
   DiagnosticLog.instance.recordEvent(
     source: 'app',
     event: 'session_start',
+    durable: true,
     fields: <String, Object?>{
       'platform': DiagnosticLabel(kIsWeb ? 'web' : Platform.operatingSystem),
       'buildMode': DiagnosticLabel(
