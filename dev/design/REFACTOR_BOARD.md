@@ -1,36 +1,43 @@
 # Refactor board
 
-## Current roadmap — September 5 (read this section first)
-Overall percentage: WITHDRAWN. The repeated65% estimate was not recalculated and is not a reliable completion measure. Report completed acceptance criteria, remaining architectural outcomes and verified changes; relocation is separate from actual deletion.
+## Current roadmap — September 6, main 58864c1d
+
+Overall completion percentage is withdrawn: there is no reliable remaining-work denominator. Track accepted outcomes below; line reduction is not architecture completion.
 
 ### Done and merged
-- [x] Safety gates, origin behavior tests, old-backup restore fixtures, adversarial checks, native CI and dependency ceiling.
-- [x] Settings owners; Search/Home/Discover presentation and lifecycle slices; multiple storage owners; Magic TV state and watch-flow simplifications.
-- [x] #140 Discover presentation; #141 filters; #142/#144/#154 real watch-flow dedup; #146 playlist owner; #153 seven IPTV forwarding getters removed.
-- [x] #143/#145/#147–#152 compatibility tests and fixtures, including corrected speed/disposal proof. Timer attempt was inconclusive and stopped; no timer change.
-- [x] Full integrated automated gate a443 passed unchanged baselines:5499 pass/12known/2skip;goldens21known errors after configured retries;0unexpected/unused;analyzer436/452;layer77;nativepair/Python55/Windows/ARM64 passed.
-- [x] Installed f75fa016 manual smoke passed by user acceptance for phone and TV behavior. Direct TV hardware execution and later-build smoke are not claimed.
+- [x] Safety gates, real origin tests, old-backup fixtures, adversarial checks and native CI established; existing failure allowances remain explicit.
+- [x] Settings ownership and earlier provider, storage, Search/Home and player slices merged. This does not mean every architectural goal is closed.
+- [x] PR165: retire223 storage facades and migrate callers;592 production lines removed. Storage2833,33 above target; remaining business logic is still open.
+- [x] PR166: common admission/search programme across four watch flows;135 production lines removed. Five provider leaves1782, below800 target remains open.
+- [x] PR167: board runtime owns navigation, paging and deferred focus; three Fav-to-host dependencies removed. Search266 lines smaller; whole production106 lines larger. Standalone Discover not complete.
+- [x] All three PRs independently reviewed and all three CI checks passed; merged into58864c1d.
 
-### Now
-- [x] #155 repair owner merged:259 fewer host lines/+30 total production, seven temporary forwarding methods; existing quirks preserved.
-- [x] Full integrated gate f4862238 passed after #153/#154/#155:5526pass/12known/2skip;goldens21known;native/analysis/layer/builds passed.
-- [ ] Locke: released playlist metadata owner extraction after independently passing origin/restore fixtures; two production files only.
-- [ ] Wegener: review proposed captured-key capability for actual architectural benefit; Ampere proposal ready, no implementation authorization.
-- [ ] Parent: merge exact reviewed green heads, maintain ownership and this roadmap. No user action required.
+### Working now
+- [ ] Cicero: full integrated gate on58864c1d after three production merges. Full tests/goldens, analyzer, layering, strict native pair, Windows/ARM64 builds and all-five forwarder ledger. No further merge until this gate passes.
+- [ ] Wegener: planned Discover cutover and shared Home/Search content/actions composition on refactor/g1-discover-cutover. Actual board runtime reused, no legacy State instance on Discover path. Scoped dependency/lifetime consolidation underway.
+- [ ] Locke: Quick Play policy origin tests and two pre-refactor export fixtures on refactor/s2-quick-play-policy-prefs; green evidence before the13-body owner move. PR168 production complete and independently accepted:214 tests passed, host2712 forecast onmerge/wholeproduction+69. CIHome paging failure undertriage; notmerged. Initial estimate3–5 agent-hours, subject to evidence.
+- [ ] Ampere: M1 slice merged; available for review and a bounded next coherent watch-flow scope. No further production scope assigned.
+- [ ] Parent: handle decisions and merge exact independently reviewed passing heads; batch board updates with merges. No user blocker.
 
-### Still left
-1. Discover content/actions and standalone dispatch, Search stage layouts and final cleanup. Preserve hidden watchlist/focus behavior until proved.
-2. Player decoder/remaining state and UI separation; timer-only helper rejected because it added code without sufficient benefit.
-3. Storage remaining ownership and Q2 caller migration. Host3498, target2800; remaining698 after168 net host reduction counted once.
-4. M1-7 watch flows: five files2283/common1431, total3714; five-file targetbelow800 still unmet. Magic TV size provisional.
-5. Q-phase dependency/rule cleanup and upstream contribution work, then final integrated/device acceptance.
+### Remaining outcomes
+1. Complete standalone Discover, remaining Search stage layouts and final composition cleanup.
+2. Complete player decoder/state/UI separation. Overlay and guide native pins are green but their partial moves were held for weak architectural benefit. Tracker pins stopped after a bounded failed attempt; no completed-lane credit.
+3. Finish storage domain ownership and retire eligible temporary facades. Reaching2800 lines alone does not close this goal; native-sensitive APIs remain intentionally retained.
+4. Finish M1-7 watch-flow dedup; provider leaves1782 versus target below800. Shared programme1551 plus Windowed queue217 reported separately. Magic TV host size remains provisional.
+5. Complete Q-phase dependency/rule cleanup, remaining compatibility facade removal and upstream contribution work.
+6. Final integrated acceptance on the completed architecture. Earlier user-accepted phone/TV behavior applies to installedf75fa016 only, not later builds or direct SHIELD execution.
 
-### Current measured state
-- God hosts Search8614/19070, Player11926/16278, MagicTV3317/10716, Storage3498/9963, Settings2899/7905 (current/original).
-- Latest full-gate a443 forwarders total/single physical line: Storage592/147, Search85/72, Player161/112, MagicTV23/12, Settings0/0. Later deletion153 is separate; recount at next gate.
-- #154 made a difference:26 net production lines removed with194 independent tests; #153 removed18 lines/seven getters. More remains above.
-- Only parent edits BOARD/NOTES; CODEMAP locks serialized and currently released. Parked112/109/56; no disk work or renewed keep-awake authorization.
+### Current measurements and budget
+- Search8349/19070; Player11928/16278; MagicTV3318/10716; Storage2833/9963; Settings2901/7905 (current/original lines).
+- Last complete gatec1ca:5575 successes/12 known failures/2 skips; goldens21 known errors; analyzer436/452, layering77. Gate58864 was blocked by a Simkl UTC/local fixture bug reproduced on earlier main. Corrective169 mergedb19cd9e9 withallCIpassed; merged-main generic rerun pending. Separate168Home paging CI failure under diagnostic review.
+- Forwarders at58864: Storage393/143, Search82/69, Player161/112, MagicTV23/12, Settings0/0 (total/single-line).
+- No reliable whole-project time/quota estimate yet. Quick Play checkpoint estimate above is bounded; unestimated architectural work is not treated as zero remaining work.
 
+### Active rules and parked work
+- One combined PR: locally green real origin-pin commit before move; one final CI/review cycle. Production retains independent verification; test-only PRs have no duplicate independent rerun.
+- Separate worktrees and exclusive file scopes; parent alone edits BOARD/NOTES. CODEMAP lock currently released. No whole-god-file formatting, persistence changes or baseline inflation.
+- At most one board commit per merge. This refreshed top section will be included in the next merge update.
+- PR112 backup feature,109 test kit and56 helper remain parked. No disk/power changes. No startup-performance lane or plan change from the user's Nuvio question.
 ## Prior checkpoints and retained evidence
 
 
@@ -374,3 +381,12 @@ C0fullgateactualc1caIN_PROGRESS after158163164; allchecks/builds/forwarderledger
 
 ### Progress reporting correction
 User correctly challenged unchanged65% repeatedover6hours. Estimatewithdrawn, not replaced by anotherunsupportednumber. Future reports must name closed acceptancecriteria and outstanding architectural outcomes; hostshrinkage/testcounts are evidence, notoverallcompletion. Priorpercentageentries are historical and superseded. Prioritize completing coherent architecture over creating more smallPRs.
+
+## Merge165 — September5
+Exact reviewed97db merged as79547771. All3CIchecks passed; independent495focusedpass; generic5593pass/12known/2skip, goldens21known, analyzer436/452 and layering77 unchanged.223facades retired, host665lines fewer, wholeproduction592lines fewer.33targetshortfall and97residual members remain open. Pin-before-move preserved in merge history. One batched board commit for this merge; no new manual smoke claim. Active follow-ons: M1 shared admission and board runtime, independent reviewers assigned. No user blockers; parked112/109/56 unchanged.
+
+## Merges166 and167 — September6
+Both exact reviewed heads41bf90c8 and6c0fc23 passed test/goldens/native CI and merged sequentially into58864c1d.166 removes135 production lines through four-provider shared admission/search (five leaves1782/common1551; targetopen).167 removes266 host lines but adds106 wholeproduction lines; actualnavigation/paging/deferred-focus ownership removes threeFavhostdependencies, not standaloneDiscover completion. Combined net29 production lines removed; architectural and relocation accounting remain separate. Godcounts Search8349/19070,Player11928/16278,Magic3318/10716,Storage2833/9963,Settings2901/7905. Threeproduction merges sincec1ca trigger full integrated gate at58864c1d (Cicero), now running withallfiveforwarderledger. Active Discover composition(Wegener) and QuickPlay policy origin/restorefixtures(Locke); no newmergebeforegate. No userblocker/performance scope added. One batched board commit for these merges.
+
+## Corrective merge169
+Test-only fixture correction4ea3520a mergedb19cd9e9 after8author tests/cleananalysis andall3CIchecks. No independenttest-onlyrerun, production/allowances unchanged. Actualmain genericrerun assignedC0; prior58864 build/native evidence retains exactsource labels. PR168 HomeDown duplicate-request assertion failedCI and is underboundeddiagnostic review; notwaived. Godfiles unchanged8349/11928/3318/2833/2901 versus originals19070/16278/10716/9963/7905. Did we make a difference: fixed provenUTC/local testfixture error, noappbehaviorchange. More remains: Discovercutover,168CIresolution and architectureoutcomes above.
