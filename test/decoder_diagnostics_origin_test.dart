@@ -44,6 +44,17 @@ class _Properties implements mk.NativePlayer {
   final List<String> unexpected;
   final reads = <String>[];
   final writes = <(String, String)>[];
+  final scripts = <String, List<Future<String> Function()>>{};
+  final responseOverrides = <String, String>{};
+  final holds = <Completer<String>>[];
+  bool allowMediaSwitch = false;
+
+  Completer<String> holdNext(String property) {
+    final held = Completer<String>();
+    holds.add(held);
+    scripts.putIfAbsent(property, () => []).add(() => held.future);
+    return held;
+  }
   bool closed = false;
   static const replies = {
     'hwdec-current': 'no',
@@ -66,7 +77,9 @@ class _Properties implements mk.NativePlayer {
       unexpected.add('getProperty:$property');
       throw StateError('Unscripted property $property');
     }
-    return replies[property]!;
+    final queue = scripts[property];
+    if (queue != null && queue.isNotEmpty) return queue.removeAt(0)();
+    return responseOverrides[property] ?? replies[property]!;
   }
 
   @override
@@ -76,7 +89,9 @@ class _Properties implements mk.NativePlayer {
     bool waitForInitialization = true,
   }) async {
     writes.add((property, value));
-    if (property != 'video-zoom') {
+    if (property != 'video-zoom' &&
+        !(allowMediaSwitch &&
+            {'stream-lavf-o', 'sub-visibility', 'sub-delay'}.contains(property))) {
       unexpected.add('setProperty:$property');
       throw StateError('Unscripted property write $property');
     }
@@ -115,6 +130,35 @@ class _Player implements mk.Player {
   mk.PlayerStream get stream => backend.stream;
   @override
   Future<void> dispose() => backend.dispose();
+
+  final actions = <String>[];
+  final opened = <mk.Playable>[];
+  final openPlay = <bool>[];
+  final subtitleIds = <String>[];
+
+  void _requireMediaSwitch(String action) {
+    if (!backend.allowMediaSwitch) {
+      backend.unexpected.add('player:$action');
+      throw StateError('Unscripted player action $action');
+    }
+    actions.add(action);
+  }
+
+  @override
+  Future<void> pause() async => _requireMediaSwitch('pause');
+
+  @override
+  Future<void> open(mk.Playable playable, {bool play = true}) async {
+    _requireMediaSwitch('open');
+    openPlay.add(play);
+    opened.add(playable);
+  }
+
+  @override
+  Future<void> setSubtitleTrack(mk.SubtitleTrack track) async {
+    _requireMediaSwitch('subtitle:${track.id}');
+    subtitleIds.add(track.id);
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) {
@@ -259,6 +303,222 @@ void main() {
       ProfileRuntime.debugReset();
       SecretVault.debugReset();
     }
+  });
+
+  const cycle = [
+    'hwdec-current',
+    'current-vo',
+    'current-ao',
+    'audio-out-params/channel-count',
+  ];
+  const tail = [
+    'video-codec',
+    'audio-codec-name',
+    'audio-params/channel-count',
+    'audio-out-params/format',
+  ];
+  const params = mk.VideoParams(w: 1280, h: 720);
+
+  Future<void> arm(WidgetTester tester, [mk.VideoParams value = params]) async {
+    terminal.properties!.emitParams(value);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 150));
+  }
+
+  Future<void> withHost(
+    WidgetTester tester,
+    Future<void> Function(_Properties, List<String>) exercise, {
+    Future<Map<String, dynamic>?> Function()? next,
+  }) async {
+    final diagnostics = <String>[];
+    await runZoned(() async {
+      tester.view.physicalSize = const Size(1280, 720);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      try {
+        await tester.pumpWidget(MaterialApp(
+          builder: (_, child) => AppThemeScope(
+            theme: AppThemes.byId('spotlight'), child: child!),
+          home: VideoPlayerScreen(
+            videoUrl: '', title: 'Terminal diagnostic fixture',
+            disableAutoResume: true, requestNextChannel: next),
+        ));
+        for (var i = 0; i < 20 && terminal.video == null; i++) {
+          await tester.pump();
+        }
+        expect(terminal.construction, ['bootstrap', 'player', 'video']);
+        final backend = terminal.properties!;
+        backend.configuration.ready!();
+        await tester.pump();
+        expect(find.byType(Controls), findsOneWidget);
+        expect(backend.reads, isEmpty);
+        await exercise(backend, diagnostics);
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        // Release any held terminal replies after host disposal even if an
+        // assertion fails. No outstanding fake I/O survives override restoration.
+        for (final held in terminal.properties?.holds ?? <Completer<String>>[]) {
+          if (!held.isCompleted) held.complete('no');
+        }
+        await tester.pump(const Duration(milliseconds: 250));
+      }
+      expect(terminal.unexpected, isEmpty);
+      expect(terminal.properties!.closed, isTrue);
+      expect(VideoOutputLease.isHeld, isFalse);
+    }, zoneSpecification: ZoneSpecification(print: (self, parent, zone, line) {
+      if (line.startsWith('DEBRIFY_PLAYER_DECODER ')) diagnostics.add(line);
+      parent.print(zone, line);
+    }));
+  }
+
+  testWidgets('completed probes dedupe but changed resolution reports', (tester) async {
+    await withHost(tester, (backend, diagnostics) async {
+      await arm(tester);
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(backend.reads, [...cycle, ...cycle, ...tail]);
+      expect(diagnostics, hasLength(1));
+      await arm(tester);
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(backend.reads, [
+        ...cycle, ...cycle, ...tail, ...cycle, ...cycle, ...tail,
+      ]);
+      expect(diagnostics, hasLength(1));
+      await arm(tester, const mk.VideoParams(w: 1920, h: 1080));
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(backend.reads.length, 36);
+      expect(diagnostics, hasLength(2));
+      expect(diagnostics.last, contains('resolution=1920x1080'));
+    });
+  });
+
+  testWidgets('invalid params stop the next poll after held success, then recover', (tester) async {
+    await withHost(tester, (backend, diagnostics) async {
+      final held = backend.holdNext('hwdec-current');
+      await arm(tester);
+      expect(backend.reads, ['hwdec-current']);
+      backend.emitParams(const mk.VideoParams(w: 0, h: 0));
+      await tester.pump();
+      held.complete('no');
+      await tester.pump();
+      expect(backend.reads, cycle); // No guard between the four awaits.
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(backend.reads, cycle);
+      expect(diagnostics, isEmpty);
+      await arm(tester);
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(backend.reads, [...cycle, ...cycle, ...cycle, ...tail]);
+      expect(diagnostics, hasLength(1));
+      expect(diagnostics.single, contains('phase=stable'));
+    });
+  });
+
+  testWidgets('held errors ignore token changes, dedupe, but stop after disposal', (tester) async {
+    await withHost(tester, (backend, diagnostics) async {
+      for (var attempt = 0; attempt < 2; attempt++) {
+        final held = backend.holdNext('hwdec-current');
+        await arm(tester);
+        expect(backend.reads.length, attempt + 1);
+        backend.emitParams(const mk.VideoParams(w: 0, h: 0));
+        await tester.pump();
+        held.completeError(StateError('scripted property refusal'));
+        await tester.pump();
+        expect(diagnostics, hasLength(1));
+        expect(diagnostics.single, contains('phase=error status=unavailable'));
+        expect(diagnostics.single, contains('reason=property_query_failed'));
+      }
+      final held = backend.holdNext('hwdec-current');
+      await arm(tester);
+      expect(backend.reads, ['hwdec-current', 'hwdec-current', 'hwdec-current']);
+      await tester.pumpWidget(const SizedBox.shrink());
+      held.completeError(StateError('scripted post-dispose refusal'));
+      await tester.pump();
+      expect(diagnostics, hasLength(1));
+    });
+  });
+
+  testWidgets('token invalidation during tail reads still reports stable metadata', (tester) async {
+    await withHost(tester, (backend, diagnostics) async {
+      final held = backend.holdNext('video-codec');
+      await arm(tester);
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(backend.reads, [...cycle, ...cycle, 'video-codec']);
+      expect(diagnostics, isEmpty);
+      backend.emitParams(const mk.VideoParams(w: 0, h: 0));
+      await tester.pump();
+      held.complete('h264');
+      await tester.pump();
+      expect(backend.reads, [...cycle, ...cycle, ...tail]);
+      expect(diagnostics, hasLength(1));
+      expect(diagnostics.single, contains('phase=stable status=software'));
+      expect(diagnostics.single, contains('resolution=1280x720'));
+    });
+  });
+
+  testWidgets('twelve incomplete cycles include final delay before partial report', (tester) async {
+    await withHost(tester, (backend, diagnostics) async {
+      backend.responseOverrides.addAll({
+        'current-vo': 'null', 'current-ao': '',
+        'audio-out-params/channel-count': '',
+      });
+      await arm(tester);
+      final expected = <String>[...cycle];
+      expect(backend.reads, expected);
+      // Exactly eleven further cycles. This is a fixed clock trace, not polling.
+      for (var attempt = 1; attempt < 12; attempt++) {
+        await tester.pump(const Duration(milliseconds: 250));
+        expected.addAll(cycle);
+        expect(backend.reads, expected);
+        expect(diagnostics, isEmpty);
+      }
+      await tester.pump(const Duration(milliseconds: 249));
+      expect(backend.reads, expected);
+      expect(diagnostics, isEmpty);
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(backend.reads, [...expected, ...tail]);
+      expect(backend.reads, hasLength(52));
+      expect(diagnostics, hasLength(1));
+      expect(diagnostics.single, contains('phase=partial status=software'));
+      expect(diagnostics.single, contains('output=unknown'));
+    });
+  });
+
+  testWidgets('public next channel invalidates held error and resets diagnostic dedupe', (tester) async {
+    var requests = 0;
+    await withHost(tester, (backend, diagnostics) async {
+      await arm(tester);
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(diagnostics, hasLength(1));
+      expect(diagnostics.single, contains('generation=0'));
+      final held = backend.holdNext('hwdec-current');
+      await arm(tester);
+      expect(backend.reads.length, 13);
+      backend.allowMediaSwitch = true;
+      final controls = tester.widget<Controls>(find.byType(Controls));
+      expect(controls.onNextChannel, isNotNull);
+      controls.onNextChannel!(); // Actual public host callback, no State access.
+      await tester.pump();
+      expect(requests, 1);
+      expect(terminal.player!.opened, hasLength(1));
+      expect((terminal.player!.opened.single as mk.Media).uri,
+          'https://decoder.invalid/next.mkv');
+      expect(terminal.player!.actions, ['pause', 'open', 'subtitle:no']);
+      expect(terminal.player!.openPlay, [true]);
+      expect(terminal.player!.subtitleIds, ['no']);
+      // The real subtitle application waits 50ms before returning to the host.
+      await tester.pump(const Duration(milliseconds: 50));
+      held.completeError(StateError('scripted old-media refusal'));
+      await tester.pump();
+      expect(diagnostics, hasLength(1));
+      await arm(tester);
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(diagnostics, hasLength(2));
+      expect(diagnostics.last, contains('generation=1 phase=stable'));
+      expect(diagnostics.last, contains('resolution=1280x720'));
+    }, next: () async {
+      requests++;
+      return {'url': 'https://decoder.invalid/next.mkv', 'title': 'Next fixture'};
+    });
   });
 
   testWidgets('actual host probes after 150ms and requires two ordered matches', (
