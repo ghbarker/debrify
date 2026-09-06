@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../models/stream_badge_rules.dart';
 import '../../services/analytics_service.dart';
 import '../../services/stream_badges_service.dart';
+import '../../services/stream_badge_matcher.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../widgets/stream_badge_strip.dart';
 import '../../widgets/text_prompt_dialog.dart';
@@ -476,6 +477,18 @@ class _StreamBadgesSettingsPageState extends State<StreamBadgesSettingsPage> {
                       '— provider, format, resolution, HDR, audio, language',
                 ),
                 const SizedBox(height: 24),
+                ValueListenableBuilder<StreamBadgeMatcher>(
+                  valueListenable: _service.matcher,
+                  builder: (_, matcher, __) => ValueListenableBuilder<bool>(
+                    valueListenable: matcher.failure,
+                    builder: (_, failed, __) => failed
+                        ? Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Text(matcher.failureMessage),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ),
                 SettingsSection(
                   title: '',
                   children: [
@@ -496,7 +509,7 @@ class _StreamBadgesSettingsPageState extends State<StreamBadgesSettingsPage> {
                   blurb:
                       'A badges file is a list of regular-expression rules; a '
                       'rule that matches a source\'s name or description adds '
-                      'its chip. Presets can use up to 128 KiB per profile.',
+                      'its chip. Up to 512 active rules and 128 KiB per profile.',
                   children: [
                     SettingsTile(
                       icon: Icons.link_rounded,

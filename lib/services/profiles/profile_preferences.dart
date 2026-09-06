@@ -700,9 +700,11 @@ class ProfilePreferences implements SharedPreferences {
   }) async {
     _assertWritable();
     var unchanged = false;
+    Object? mutationValue = budgetValue;
     final success = await _runOrdinaryMutation((markMutated) async {
       _assertWritable();
       final proposedValue = prepareValue != null ? prepareValue() : budgetValue;
+      mutationValue = proposedValue;
       if (_capturedAccess == null && budgetKey != null) {
         final previous = _delegate.get(budgetKey);
         unchanged =
@@ -721,7 +723,11 @@ class ProfilePreferences implements SharedPreferences {
       // result is never inspected, so refusing them can only skip a save.
       if (budgetKey != null &&
           _capturedAccess == null &&
-          !ProfilePreferenceBudget.admits(_delegate, budgetKey, proposedValue)) {
+          !ProfilePreferenceBudget.admits(
+            _delegate,
+            budgetKey,
+            proposedValue,
+          )) {
         return false;
       }
       final success = await operation();
@@ -758,7 +764,7 @@ class ProfilePreferences implements SharedPreferences {
           ProfilePreferencePortability.allowsKey(logicalKey) &&
           !ProfilePreferencePortability.prepareValue(
             logicalKey,
-            budgetValue,
+            mutationValue,
           ).include;
       if (!excludedValue) {
         notifyWebDavSyncLocalChange(scope.profileId, logicalKey);

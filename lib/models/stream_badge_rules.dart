@@ -1,4 +1,6 @@
 import 'dart:convert';
+import '../utils/stream_badge_pattern.dart';
+export '../utils/stream_badge_pattern.dart' show compileBadgePattern;
 import 'dart:ui' show Color;
 
 /// A Nuvio-compatible stream badge ruleset (`badges.json`): regex rules that
@@ -192,25 +194,6 @@ class StreamBadgeRule {
     if (textColor != null) 'textColor': encodeBadgeColor(textColor!),
     if (borderColor != null) 'borderColor': encodeBadgeColor(borderColor!),
   };
-}
-
-/// Compile a badges.json pattern. A leading `(?i)` becomes case-insensitive
-/// matching (Dart's RegExp has no inline flags); anything Dart rejects
-/// yields null rather than an exception, so one bad rule never breaks a
-/// ruleset.
-RegExp? compileBadgePattern(String pattern) {
-  var source = pattern.trim();
-  var caseSensitive = true;
-  while (source.startsWith('(?i)')) {
-    caseSensitive = false;
-    source = source.substring(4);
-  }
-  if (source.isEmpty) return null;
-  try {
-    return RegExp(source, caseSensitive: caseSensitive);
-  } catch (_) {
-    return null;
-  }
 }
 
 /// `#RRGGBB` or `#AARRGGBB` (Nuvio's Android-style ARGB). Null for anything

@@ -114,31 +114,39 @@ void main() {
   });
 
   group('StreamBadgeMatcher', () {
-    test('matches on name or description, skips disabled and broken rules', () {
+    test(
+      'matches on name or description, skips disabled and broken rules',
+      () async {
+        final m = StreamBadgeMatcher([StreamBadgeRuleset.parse(_sample)]);
+        addTearDown(m.dispose);
+        expect(m.rules.map((r) => r.name), ['Remux', '4K', '⚡ Vidlink', '5.1']);
+
+        final byName = await m.matchesFor(name: 'Movie.2019.2160p.REMUX.mkv');
+        expect(byName.map((r) => r.name), ['Remux', '4K']);
+
+        final byDesc = await m.matchesFor(
+          name: 'Movie',
+          description: 'Vidlink • 4K • 5.1 • 12 GB',
+        );
+        expect(byDesc.map((r) => r.name), ['4K', '⚡ Vidlink', '5.1']);
+
+        expect(await m.matchesFor(name: 'Plain 1080p BluRay'), isEmpty);
+      },
+    );
+
+    test('memoises repeated lookups', () async {
       final m = StreamBadgeMatcher([StreamBadgeRuleset.parse(_sample)]);
-      expect(m.rules.map((r) => r.name), ['Remux', '4K', '⚡ Vidlink', '5.1']);
-
-      final byName = m.matchesFor(name: 'Movie.2019.2160p.REMUX.mkv');
-      expect(byName.map((r) => r.name), ['Remux', '4K']);
-
-      final byDesc = m.matchesFor(
-        name: 'Movie',
-        description: 'Vidlink • 4K • 5.1 • 12 GB',
-      );
-      expect(byDesc.map((r) => r.name), ['4K', '⚡ Vidlink', '5.1']);
-
-      expect(m.matchesFor(name: 'Plain 1080p BluRay'), isEmpty);
-    });
-
-    test('memoises repeated lookups', () {
-      final m = StreamBadgeMatcher([StreamBadgeRuleset.parse(_sample)]);
-      final a = m.matchesFor(name: 'X REMUX', description: 'd');
-      final b = m.matchesFor(name: 'X REMUX', description: 'd');
+      addTearDown(m.dispose);
+      final a = await m.matchesFor(name: 'X REMUX', description: 'd');
+      final b = await m.matchesFor(name: 'X REMUX', description: 'd');
       expect(identical(a, b), isTrue);
     });
 
-    test('empty matcher never matches', () {
-      expect(StreamBadgeMatcher.empty.matchesFor(name: 'REMUX 4K'), isEmpty);
+    test('empty matcher never matches', () async {
+      expect(
+        await StreamBadgeMatcher.empty.matchesFor(name: 'REMUX 4K'),
+        isEmpty,
+      );
     });
   });
 

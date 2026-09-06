@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -68,14 +69,21 @@ class StreamBadgeStripFor extends StatelessWidget {
     return ValueListenableBuilder<StreamBadgeMatcher>(
       valueListenable: StreamBadgesService.instance.matcher,
       builder: (context, matcher, _) {
-        final badges = matcher.matchesFor(name: name, description: description);
-        if (badges.isEmpty) return const SizedBox.shrink();
-        final strip = StreamBadgeStrip(
-          badges: badges,
-          height: height,
-          spacing: spacing,
+        return _MatchedBadgeStrip(
+          key: ValueKey((matcher, name, description)),
+          matcher: matcher,
+          name: name,
+          description: description,
+          render: (badges) {
+            if (badges.isEmpty) return const SizedBox.shrink();
+            final strip = StreamBadgeStrip(
+              badges: badges,
+              height: height,
+              spacing: spacing,
+            );
+            return builder?.call(strip) ?? strip;
+          },
         );
-        return builder?.call(strip) ?? strip;
       },
     );
   }
@@ -112,8 +120,8 @@ class StreamBadgeChip extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-        child: SizedBox(
-          height: inner,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: height * 8, maxHeight: inner),
           child: CachedNetworkImage(
             imageUrl: image,
             height: inner,
@@ -131,18 +139,22 @@ class StreamBadgeChip extends StatelessWidget {
 
   Widget _textChip() {
     final style = rule.style;
-    final fill = style.fills ? rule.tagColor : null;
+    final fill = (style.fills ? rule.tagColor : null) ?? imageBacking;
     final border = style.borders ? (rule.borderColor ?? rule.tagColor) : null;
     return Container(
       height: height,
       padding: EdgeInsets.symmetric(horizontal: height * 0.35),
-      alignment: Alignment.center,
+      constraints: BoxConstraints(maxWidth: height * 10),
       decoration: BoxDecoration(
         color: fill,
         borderRadius: BorderRadius.circular(height * 0.25),
         border: border == null ? null : Border.all(color: border, width: 1),
       ),
-      child: _text(fontSize: height * 0.6, letterSpacing: 0.3),
+      child: Align(
+        widthFactor: 1,
+        heightFactor: 1,
+        child: _text(fontSize: height * 0.6, letterSpacing: 0.3),
+      ),
     );
   }
 
@@ -159,4 +171,53 @@ class StreamBadgeChip extends StatelessWidget {
       letterSpacing: letterSpacing,
     ),
   );
+}
+
+class _MatchedBadgeStrip extends StatefulWidget {
+  const _MatchedBadgeStrip({
+    super.key,
+    required this.matcher,
+    required this.name,
+    required this.description,
+    required this.render,
+  });
+  final StreamBadgeMatcher matcher;
+  final String name;
+  final String? description;
+  final Widget Function(List<StreamBadgeRule>) render;
+  @override
+  State<_MatchedBadgeStrip> createState() => _MatchedBadgeStripState();
+}
+
+class _MatchedBadgeStripState extends State<_MatchedBadgeStrip> {
+  List<StreamBadgeRule> _badges = const [];
+  Timer? _retry;
+
+  @override
+  void initState() {
+    super.initState();
+    _request();
+  }
+
+  Future<void> _request() async {
+    final result = await widget.matcher.matchResultFor(
+      name: widget.name,
+      description: widget.description,
+    );
+    if (!mounted) return;
+    if (result.status == StreamBadgeMatchStatus.deferred) {
+      _retry = Timer(const Duration(milliseconds: 250), _request);
+    } else if (result.status == StreamBadgeMatchStatus.resolved) {
+      setState(() => _badges = result.badges);
+    }
+  }
+
+  @override
+  void dispose() {
+    _retry?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.render(_badges);
 }

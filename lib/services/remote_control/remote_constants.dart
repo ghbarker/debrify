@@ -36,12 +36,16 @@ class RemoteMessageType {
 /// correlated receiver outcomes for single-addon transfers, v4 = correlated
 /// outcomes for configuration batches and Debrify TV channels, v5 = complete
 /// profile-graph transfers (including disabled resources, profile-local
-/// settings, lock policy, reference remapping, and bounded compression).
-const int kProtoVersion = 6;
+/// settings, lock policy, reference remapping, and bounded compression), v6 =
+/// reliable TCP transfers, v7 = badge transfers including the master switch.
+const int kProtoVersion = 7;
 
 /// Reliable, file-backed transfers and receiver receipts over TCP.
 const int kReliableTransferProtocolVersion = 6;
 const int kReliableTransferPort = 5557;
+
+/// Badge envelope support; older peers continue receiving the legacy array.
+const int kStreamBadgeEnvelopeProtocolVersion = 7;
 
 const int kAddonResultProtocolVersion = 3;
 const int kRemoteTransferResultProtocolVersion = 4;

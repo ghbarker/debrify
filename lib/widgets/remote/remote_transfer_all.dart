@@ -604,8 +604,9 @@ class _RemoteTransferAllState extends State<RemoteTransferAll> {
     int success = 0;
     int failure = 0;
     final deliveredCommands = <String>[];
+    final peerProtocolVersion = session.peerProtocolVersion;
     final supportsApplicationResult =
-        session.peerProtocolVersion >= kRemoteTransferResultProtocolVersion;
+        peerProtocolVersion >= kRemoteTransferResultProtocolVersion;
     final requestId = createRemoteTransferRequestId();
 
     if (supportsApplicationResult &&
@@ -657,6 +658,7 @@ class _RemoteTransferAllState extends State<RemoteTransferAll> {
             state,
             target.ip,
             item.key,
+            peerProtocolVersion: peerProtocolVersion,
             transferRequestId: supportsApplicationResult ? requestId : null,
           );
         }
@@ -1150,6 +1152,7 @@ class _RemoteTransferAllState extends State<RemoteTransferAll> {
     RemoteControlState state,
     String targetIp,
     String key, {
+    required int peerProtocolVersion,
     String? transferRequestId,
   }) async {
     String transferData(String value) => transferRequestId == null
@@ -1353,7 +1356,9 @@ class _RemoteTransferAllState extends State<RemoteTransferAll> {
           transferRequestId: transferRequestId,
         );
       case ConfigCommand.streamBadges:
-        final payload = await StreamBadgesService.instance.exportTransferJson();
+        final payload = await StreamBadgesService.instance.exportTransferJson(
+          peerProtocolVersion: peerProtocolVersion,
+        );
         if (payload.isEmpty) return false;
         return sendConfigPayloadToDevice(
           state,

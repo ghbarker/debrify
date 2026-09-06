@@ -86,8 +86,41 @@ this is an input safety limit, not a promise that a 4 MiB preset can be stored.
 Imports remain bound to their initiating profile. Concurrent edits are
 serialized, and a refresh cannot resurrect a preset deleted while downloading.
 WebDAV changes refresh the active matcher without restarting the profile.
-Selective remote transfers include the master switch in a versioned badge
-payload; receivers still accept legacy source arrays without changing the
-receiving profile's master switch. Whole-profile backups retain both keys.
+Selective remote transfers include the master switch when the authenticated
+receiver advertises protocol v7 or newer. Older receivers receive the legacy
+source array, which leaves their master switch unchanged. New receivers accept
+both formats; pairing and the minimum version for other transfers are unchanged. Whole-profile backups retain both keys.
 Corrupt optional badge data does not prevent startup; the settings page offers
 retry and an explicit reset.
+
+## Matching and player rendering
+
+Rule execution runs in a dedicated worker isolate, shared by Flutter source
+rows and Android TV's native source browser. The first source match has a
+two-second cold-execution deadline; subsequent matches have 500 ms. An overrun
+or worker failure terminates that matcher and completes pending requests without blocking navigation. The settings page
+reports the stopped matcher. Changing the presets creates a fresh matcher.
+Worker startup is bounded to three seconds and preparation has a separate
+five-second deadline. Both paths share the same pattern compiler. Inventories
+allow up to 512 active, valid rules across enabled presets; existing oversized inventories show a settings warning
+and can be reduced or disabled without truncating saved data. Source name and
+description inputs over 8192 characters are skipped
+rather than truncated into misleading matches. The cache holds 400 results and
+the request queue holds at most 64 pending entries. Saturated queues defer
+new requests without evicting admitted work. Mounted Flutter rows retry deferred
+admission; disposed rows stop retrying. Native pickers cache only resolved
+outcomes, including confirmed empty matches. Unresolved native requests retry
+with backoff up to ten seconds while visible. Hiding or destroying the picker
+cancels pending requests, retry timers and scroll animations. Unchanged badge
+configuration retains its matcher across preference refreshes.
+
+Text and image chips have bounded widths and wrap below source titles. A dark
+backing is used consistently under image chips and text chips without an
+authored fill, keeping them readable when a source row becomes focused.
+Android TV requests matches only for visible rows, checks the playback session,
+and ignores results from a closed browser generation. Artwork falls back to its
+label if loading fails. Badge updates do not invoke source selection or move
+focus. Row growth preserves the selected source position; active keyboard
+scroll animations are retargeted to the new layout. Flutter touch/wheel
+scrolling remains under user control. Native pending-request timers are canceled when the picker
+closes.

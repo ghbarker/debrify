@@ -142,6 +142,36 @@ void main() {
     },
   );
 
+  for (final selection in [
+    ('subtitle_selected_font_id', 'custom_test_font', 'default'),
+    ('external_player_preferred', 'custom_app', 'vlc'),
+  ]) {
+    test(
+      'atomic ${selection.$1} uses its computed value for sync eligibility',
+      () async {
+        ProfileRuntime.initializeCommitted(
+          ProfileScope(profileId: 'one', dataGeneration: 1, sessionEpoch: 1),
+        );
+        final prefs = await ProfilePreferences.instance();
+        final signals = <String>[];
+        ProfilePreferences.webDavSyncLocalChangeSink = (_, key) =>
+            signals.add(key);
+        final (key, local, portable) = selection;
+        expect(await prefs.mutateStringAtomically(key, (_) => local), true);
+        expect(prefs.getString(key), local);
+        expect(signals, isEmpty);
+        expect(await prefs.mutateStringAtomically(key, (_) => portable), true);
+        expect(signals, [key]);
+        expect(await prefs.mutateStringAtomically(key, (_) => portable), true);
+        expect(signals, [key]); // Unchanged writes remain silent.
+        expect(await prefs.mutateStringAtomically(key, (_) => local), true);
+        expect(signals, [key]);
+        expect(await prefs.remove(key), true);
+        expect(signals, [key, key]);
+      },
+    );
+  }
+
   for (final selection in <(String, String, String)>[
     ('subtitle_selected_font_id', 'custom_test_font', 'default'),
     ('external_player_preferred', 'custom', 'vlc'),

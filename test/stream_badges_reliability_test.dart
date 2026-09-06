@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:debrify/services/stream_badges_service.dart';
+import 'package:debrify/services/remote_control/remote_constants.dart';
 import 'package:debrify/services/profiles/profile_preferences.dart';
 import 'package:debrify/services/profiles/profile_preference_budget.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
@@ -33,6 +34,71 @@ void main() {
     ProfileRuntime.initializeLegacy();
     svc.resetProfileScope();
   });
+
+  test(
+    'corrupt sibling presets do not block unrelated removal or disabling',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        StreamBadgesService.sourcesKey: jsonEncode([
+          StreamBadgeSource(id: 'bad', name: 'bad', json: 'broken').toJson(),
+          StreamBadgeSource(id: 'one', name: 'one', json: preset()).toJson(),
+          StreamBadgeSource(id: 'two', name: 'two', json: preset()).toJson(),
+        ]),
+      });
+      await svc.setSourceEnabled('one', false);
+      await svc.remove('two');
+      final sources = await svc.getSources();
+      expect(sources.map((s) => s.id), ['bad', 'one']);
+      expect(sources.last.enabled, false);
+      expect(sources.first.json, 'broken');
+    },
+  );
+  test(
+    'only enabled valid rules in enabled presets count toward the cap',
+    () async {
+      final large = jsonEncode({
+        'filters': [
+          for (var i = 0; i < 600; i++) {'name': '$i', 'pattern': 'HDR'},
+        ],
+      });
+      SharedPreferences.setMockInitialValues({
+        StreamBadgesService.sourcesKey: jsonEncode([
+          StreamBadgeSource(
+            id: 'disabled',
+            name: 'disabled',
+            json: large,
+            enabled: false,
+          ).toJson(),
+        ]),
+      });
+      await svc.importJson(preset(), name: 'active');
+      await svc.importJson(
+        jsonEncode({
+          'filters': [
+            for (var i = 0; i < 600; i++)
+              {'name': '$i', 'pattern': 'HDR', 'isEnabled': false},
+          ],
+        }),
+        name: 'inactive rules',
+      );
+      expect(svc.matcher.value.rules, hasLength(1));
+      await expectLater(
+        svc.setSourceEnabled('disabled', true),
+        throwsFormatException,
+      );
+      expect((await svc.getSources()).first.enabled, false);
+    },
+  );
+  test(
+    'unchanged preferences preserve the live matcher across refreshes',
+    () async {
+      await svc.importJson(preset(), name: 'one');
+      final matcher = svc.matcher.value;
+      await svc.refreshFromPreferences();
+      await svc.refreshFromPreferences();
+      expect(identical(svc.matcher.value, matcher), true);
+    },
+  );
   test(
     'concurrent imports preserve both inventories across service instances',
     () async {
@@ -44,6 +110,50 @@ void main() {
       expect(await svc.getSources(), hasLength(2));
     },
   );
+  test(
+    'aggregate rule limit rejects imports without changing saved presets',
+    () async {
+      await svc.importJson(preset(), name: 'original');
+      await expectLater(
+        svc.importJson(
+          jsonEncode({
+            'filters': [
+              for (var i = 0; i < 512; i++)
+                {'name': 'Rule $i', 'pattern': 'HDR'},
+            ],
+          }),
+          name: 'too many',
+        ),
+        throwsFormatException,
+      );
+      expect((await svc.getSources()).single.name, 'original');
+      expect(svc.matcher.value.rules, hasLength(1));
+    },
+  );
+  test('oversized existing inventories can be reduced in stages', () async {
+    SharedPreferences.setMockInitialValues({
+      StreamBadgesService.sourcesKey: jsonEncode([
+        for (var i = 0; i < 3; i++)
+          StreamBadgeSource(
+            id: '$i',
+            name: '$i',
+            json: jsonEncode({
+              'filters': [
+                for (var j = 0; j < 300; j++) {'name': '$j', 'pattern': 'x'},
+              ],
+            }),
+          ).toJson(),
+      ]),
+    });
+    await svc.warmUp();
+    expect(svc.matcher.value.failed, true);
+    await svc.remove('0');
+    expect(await svc.getSources(), hasLength(2));
+    expect(svc.matcher.value.failed, true);
+    await svc.remove('1');
+    expect(svc.matcher.value.failed, false);
+    expect(svc.matcher.value.rules, hasLength(300));
+  });
   test(
     'aggregate size rejection preserves the previously saved preset',
     () async {
@@ -222,10 +332,31 @@ void main() {
     await Future.wait([guarded, pending]);
     expect(await svc.getSources(), hasLength(2));
   });
+  test('new sender emits plain source entries for older receivers', () async {
+    await svc.importJson(preset(), name: 'one');
+    await svc.setEnabled(false);
+    final payload = await svc.exportTransferJson(peerProtocolVersion: 6);
+    // This is the source-entry decoder used by legacy receivers: envelopes
+    // would decode to null and produce "one rejected, nothing added".
+    final legacySources = payload.map(StreamBadgeSource.fromJson).toList();
+    expect(legacySources, hasLength(1));
+    expect(legacySources.single?.name, 'one');
+    expect(payload.single.containsKey('badgeTransferVersion'), false);
+    expect(payload, await svc.exportJson());
+    SharedPreferences.setMockInitialValues({});
+    svc.resetProfileScope();
+    final result = await svc.applyBackup(payload);
+    expect(result.imported, 1);
+    expect(result.failed, 0);
+    expect(svc.enabled, true); // Legacy format leaves the receiver's setting.
+  });
+
   test('selective transfer preserves a disabled master switch', () async {
     await svc.importJson(preset(), name: 'one');
     await svc.setEnabled(false);
-    final payload = await svc.exportTransferJson();
+    final payload = await svc.exportTransferJson(
+      peerProtocolVersion: kProtoVersion,
+    );
     SharedPreferences.setMockInitialValues({});
     svc.resetProfileScope();
     await svc.warmUp();

@@ -2449,7 +2449,25 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
                             seeders = source.seeders,
                             direct = source.isDirectStream,
                             seasonPack = source.isSeasonPack,
+                            badgeName = source.name,
+                            badgeDescription = source.badgeDescription,
                         )
+                    }
+
+                    override fun requestBadges(entry: TvSourceBrowserEntry, complete: (List<Map<*, *>>?) -> Unit) {
+                        val channel = MainActivity.getAndroidTvPlayerChannel()
+                        if (channel == null) { complete(null); return }
+                        channel.invokeMethod("requestStreamBadges", mapOf(
+                            "sourcePersistenceSessionId" to sourcePersistenceSessionId,
+                            "name" to entry.badgeName,
+                            "description" to entry.badgeDescription,
+                        ), object : io.flutter.plugin.common.MethodChannel.Result {
+                            override fun success(result: Any?) {
+                                complete(if (isFinishing || isDestroyed) null else (result as? List<*>)?.filterIsInstance<Map<*, *>>())
+                            }
+                            override fun error(code: String, message: String?, details: Any?) { complete(null) }
+                            override fun notImplemented() { complete(null) }
+                        })
                     }
 
                     override fun currentIndex(): Int = currentStremioSourceIndex
@@ -18314,6 +18332,8 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        sourceBrowser?.destroy()
+        sourceBrowser = null
         recordPlaybackLifecycle("activity_destroy_begin")
         finalProgressSnapshot = true
         sendProgress(completed = false)
@@ -19273,6 +19293,7 @@ private data class StremioSource(
     // Coverage stamped by the Dart search engines: 'completeSeries',
     // 'multiSeasonPack', 'seasonPack', 'singleEpisode', or null (unknown).
     val coverageType: String? = null,
+    val badgeDescription: String? = null,
 ) {
     val isDirectStream: Boolean get() = streamType == "directUrl"
 
@@ -19313,6 +19334,7 @@ private data class StremioSource(
                 addonId = obj.optString("stremio_addon_id").takeIf { it.isNotEmpty() },
                 quality = parseQuality(name),
                 coverageType = obj.optString("coverage_type").takeIf { it.isNotEmpty() },
+                badgeDescription = sourceBadgeDescription(obj.optString("stream_label"), obj.optString("stream_description")),
             )
         }
 
@@ -19330,6 +19352,7 @@ private data class StremioSource(
                 addonId = (map["stremio_addon_id"] as? String)?.takeIf { it.isNotEmpty() },
                 quality = parseQuality(name),
                 coverageType = (map["coverage_type"] as? String)?.takeIf { it.isNotEmpty() },
+                badgeDescription = sourceBadgeDescription(map["stream_label"] as? String, map["stream_description"] as? String),
             )
         }
 

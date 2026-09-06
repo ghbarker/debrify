@@ -10,6 +10,7 @@ import 'profiles/profile_scope.dart';
 import '../models/stream_badge_rules.dart';
 import 'profiles/profile_preferences.dart';
 import 'stream_badge_matcher.dart';
+import 'remote_control/remote_constants.dart';
 
 /// One imported badges file: where it came from and its cached content, so
 /// the rules keep working offline and a URL source can be refreshed.
@@ -88,12 +89,11 @@ class StreamBadgeImportResult {
 }
 
 /// Profile-scoped store of imported badge rulesets plus the live matcher the
-/// source lists read synchronously.
+/// source lists observe for asynchronous matching.
 ///
 /// Sources live under `stream_badge_sources_v1` as one JSON string in
 /// [ProfilePreferences]. [matcher] is rebuilt whenever the sources change and
-/// warmed once at startup, because the rows that draw badges cannot await
-/// storage.
+/// warmed once at startup so source rows never need to read storage.
 class StreamBadgesService {
   StreamBadgesService({http.Client Function()? httpClientFactory})
     : _httpClientFactory = httpClientFactory ?? http.Client.new;
@@ -120,6 +120,7 @@ class StreamBadgesService {
   static final Lock _mutations = Lock(reentrant: true);
   bool _enabled = true;
   bool _warmed = false;
+  String? _publishedConfiguration;
   int _generation = 0;
   bool get enabled => _enabled;
 
@@ -149,6 +150,18 @@ class StreamBadgesService {
     if (context.scope != context.active) return;
     final enabled = prefs.getBool(enabledKey) ?? true;
     final sources = _decode(prefs.getString(sourcesKey));
+    final configuration = jsonEncode([
+      enabled,
+      if (enabled)
+        for (final source in sources)
+          if (source.enabled) source.json,
+    ]);
+    if (_warmed &&
+        configuration == _publishedConfiguration &&
+        !matcher.value.failed) {
+      return;
+    }
+    _publishedConfiguration = configuration;
     final next = enabled
         ? StreamBadgeMatcher([
             for (final s in sources)
@@ -159,7 +172,9 @@ class StreamBadgesService {
         : StreamBadgeMatcher.empty;
     _enabled = enabled;
     _warmed = true;
+    final old = matcher.value;
     matcher.value = next;
+    if (!identical(old, StreamBadgeMatcher.empty)) old.dispose();
   }
 
   Future<void> warmUp() async {
@@ -181,7 +196,10 @@ class StreamBadgesService {
       if (context.scope == context.active) {
         _enabled = prefs.getBool(enabledKey) ?? true;
         _warmed = true;
+        _publishedConfiguration = null;
+        final old = matcher.value;
         matcher.value = StreamBadgeMatcher.empty;
+        if (!identical(old, StreamBadgeMatcher.empty)) old.dispose();
       }
     }
   }
@@ -189,8 +207,11 @@ class StreamBadgesService {
   void resetProfileScope() {
     _generation++;
     _warmed = false;
+    _publishedConfiguration = null;
     _enabled = true;
+    final old = matcher.value;
     matcher.value = StreamBadgeMatcher.empty;
+    if (!identical(old, StreamBadgeMatcher.empty)) old.dispose();
   }
 
   Future<void> setEnabled(bool value) {
@@ -226,6 +247,19 @@ class StreamBadgesService {
     return _decode(prefs.getString(sourcesKey));
   }
 
+  static int _activeRuleCount(List<StreamBadgeSource> sources) =>
+      sources.fold<int>(
+        0,
+        (count, source) =>
+            count +
+            (source.enabled
+                ? (StreamBadgeRuleset.tryParse(source.json)?.rules
+                          .where((rule) => rule.enabled && rule.regex != null)
+                          .length ??
+                      0)
+                : 0),
+      );
+
   Future<T> _mutate<T>(
     _BadgeContext context,
     (List<StreamBadgeSource>, T) Function(List<StreamBadgeSource>) update, {
@@ -235,7 +269,18 @@ class StreamBadgesService {
     late T result;
     final success = await prefs.mutateStringAtomically(sourcesKey, (old) {
       _check(context);
-      final (sources, value) = update(replaceAll ? [] : _decode(old));
+      final previous = replaceAll ? <StreamBadgeSource>[] : _decode(old);
+      final previousCount = _activeRuleCount(previous);
+      final (sources, value) = update(previous);
+      final ruleCount = _activeRuleCount(sources);
+      // Older/synced inventories can already exceed the cap. Allow users to
+      // disable or remove presets in stages while refusing further growth.
+      if (ruleCount > StreamBadgeMatcher.maxRules &&
+          ruleCount > previousCount) {
+        throw const FormatException(
+          'Badge presets can have up to 512 active rules per profile.',
+        );
+      }
       final encoded = jsonEncode([for (final s in sources) s.toJson()]);
       if (utf8.encode(encoded).length > maxStoredBytes) {
         throw const FormatException(
@@ -351,19 +396,26 @@ class StreamBadgesService {
     for (final s in await getSources()) s.toJson(),
   ];
 
-  /// Keep the wire category an array for existing configuration framing.
-  /// Legacy source arrays remain accepted by applyBackup.
-  Future<List<Map<String, dynamic>>> exportTransferJson() {
+  /// Use the authenticated peer capability, never an app-version guess.
+  /// Older receivers accept only source arrays and retain their master switch.
+  Future<List<Map<String, dynamic>>> exportTransferJson({
+    required int peerProtocolVersion,
+  }) {
     final context = _capture();
     return _mutations.synchronized(() async {
       final prefs = await _preferences(context);
+      final sources = [
+        for (final source in _decode(prefs.getString(sourcesKey)))
+          source.toJson(),
+      ];
+      if (peerProtocolVersion < kStreamBadgeEnvelopeProtocolVersion) {
+        return sources;
+      }
       return [
         {
           'badgeTransferVersion': 1,
           'enabled': prefs.getBool(enabledKey) ?? true,
-          'sources': [
-            for (final s in _decode(prefs.getString(sourcesKey))) s.toJson(),
-          ],
+          'sources': sources,
         },
       ];
     });
