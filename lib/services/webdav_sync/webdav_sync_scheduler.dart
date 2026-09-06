@@ -220,13 +220,17 @@ final class WebDavSyncScheduler {
     _pendingLocalChangeKey = logicalKey;
     _localChangeSequence++;
     _pendingLocalChangeSequence = _localChangeSequence;
-    // Playback checkpoints and automatic build bookkeeping are not Settings
-    // saves. They still sync, but must not put a status overlay over playback.
+    // Playback checkpoints, derived episode inventories, calendar refresh
+    // timestamps, and startup/navigation bookkeeping are not Settings saves.
+    // They still sync, but must not create a user-save receipt or status overlay.
     if (logicalKey != WebDavSyncHotMerge.playbackPreference &&
         logicalKey != WebDavSyncHotMerge.continueWatchingPreference &&
         logicalKey != WebDavSyncHotMerge.finishedMoviesPreference &&
         logicalKey != WebDavSyncHotMerge.explicitlyWatchedSeriesPreference &&
         logicalKey != ProfilePreferences.webDavSyncPlaybackLibraryLogicalKey &&
+        logicalKey != 'local_series_completion_v1' &&
+        logicalKey != 'local_series_completion_calendar_attempted_at_v1' &&
+        logicalKey != 'local_series_completion_calendar_checked_at_v1' &&
         logicalKey != 'app_last_build_number' &&
         logicalKey != 'app_last_version' &&
         logicalKey != 'discover_last_source' &&

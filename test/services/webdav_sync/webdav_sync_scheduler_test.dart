@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
+import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/services/webdav_protocol_client.dart';
 import 'package:debrify/services/profiles/profile_preferences.dart';
 import 'package:debrify/services/webdav_sync/webdav_sync_codec.dart';
@@ -166,7 +167,13 @@ void main() {
     });
   });
 
-  for (final key in ['app_last_version', 'app_last_build_number']) {
+  for (final key in [
+    'app_last_version',
+    'app_last_build_number',
+    StorageService.localSeriesCompletionStateKey,
+    StorageService.localSeriesCalendarAttemptedAtKey,
+    StorageService.localSeriesCalendarCheckedAtKey,
+  ]) {
     test('startup bookkeeping $key syncs without creating save feedback', () {
       fakeAsync((async) {
         final feedback = WebDavSyncSaveFeedback();
@@ -192,6 +199,78 @@ void main() {
       });
     });
   }
+
+  test('calendar writes during launch keep the follow-up sync silent', () {
+    fakeAsync((async) {
+      final feedback = WebDavSyncSaveFeedback();
+      final runner = _Runner()..blocker = Completer<void>();
+      final scheduler = WebDavSyncScheduler(
+        runner: runner,
+        gate: _Gate(),
+        saveFeedback: feedback,
+      );
+      scheduler.arm(() async => context());
+      final phases = <WebDavSavePhase>[];
+      feedback.addListener(() => phases.add(feedback.phase));
+      unawaited(scheduler.signal(WebDavSyncTrigger.launch));
+      async.flushMicrotasks();
+      for (final key in [
+        StorageService.localSeriesCalendarAttemptedAtKey,
+        StorageService.localSeriesCompletionStateKey,
+        StorageService.localSeriesCalendarCheckedAtKey,
+      ]) {
+        scheduler.notifyLocalChange(key);
+      }
+      runner.blocker!.complete();
+      async.flushMicrotasks();
+      async.elapse(const Duration(seconds: 2));
+      expect(runner.triggers, [
+        WebDavSyncTrigger.launch,
+        WebDavSyncTrigger.localChange,
+      ]);
+      expect(feedback.hasPending, isFalse);
+      expect(feedback.phase, WebDavSavePhase.inactive);
+      expect(phases, everyElement(WebDavSavePhase.inactive));
+      scheduler.dispose();
+      feedback.dispose();
+    });
+  });
+
+  test('calendar maintenance preserves a gated settings receipt', () {
+    fakeAsync((async) {
+      final feedback = WebDavSyncSaveFeedback();
+      final runner = _Runner();
+      final gate = _Gate()..televisionPlayback = true;
+      final scheduler = WebDavSyncScheduler(
+        runner: runner,
+        gate: gate,
+        saveFeedback: feedback,
+      );
+      scheduler.arm(() async => context());
+      scheduler.notifyLocalChange('tracking_scrobble_targets');
+      final savedRevision = feedback.revision;
+      for (final key in [
+        StorageService.localSeriesCalendarAttemptedAtKey,
+        StorageService.localSeriesCompletionStateKey,
+        StorageService.localSeriesCalendarCheckedAtKey,
+      ]) {
+        scheduler.notifyLocalChange(key);
+      }
+      async.elapse(const Duration(seconds: 2));
+      expect(runner.runs, 0);
+      expect(feedback.hasPending, isTrue);
+      expect(feedback.revision, savedRevision);
+      expect(feedback.phase, WebDavSavePhase.pending);
+      gate.televisionPlayback = false;
+      unawaited(scheduler.signal(WebDavSyncTrigger.manual));
+      async.flushMicrotasks();
+      expect(runner.runs, 1);
+      expect(feedback.hasPending, isFalse);
+      expect(feedback.phase, WebDavSavePhase.synced);
+      scheduler.dispose();
+      feedback.dispose();
+    });
+  });
 
   test('remembered navigation syncs silently while defaults show feedback', () {
     fakeAsync((async) {
