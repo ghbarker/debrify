@@ -939,6 +939,7 @@ final class WebDavSyncEngine
               throw StateError('WebDAV sync pending apply mapping changed');
             }
             WebDavSyncHotDocument? replayedTarget;
+            var replayedCollectionDeletions = <String, WebDavSyncTombstone>{};
             var replayedAppliedKeys = const <String>{};
             for (var attempt = 0; attempt < 2; attempt++) {
               final fresh = await _localAdapter.readProfile(
@@ -999,12 +1000,40 @@ final class WebDavSyncEngine
                 protectedPreferenceKeys: built.protectedPreferenceKeys,
               );
               try {
+                replayedCollectionDeletions = {
+                  for (final entry in replayed.tombstones.entries)
+                    if (entry.key.startsWith('homecollection/'))
+                      entry.key: entry.value,
+                };
                 replayedAppliedKeys = await _localAdapter.applyProfile(
                   session,
                   pending.localProfileId,
                   values,
                   expectedMutationToken: fresh.mutationToken,
                   replayingPending: true,
+                  beforeWrite: () => _stateRepository.update(namespaceId, (current) {
+                    final profiles =
+                        Map<String, WebDavSyncProfileEngineState>.from(
+                          current.profiles,
+                        );
+                    final profile = profiles[entry.key] ??
+                        const WebDavSyncProfileEngineState();
+                    // Replay can discover deletions made since the interrupted
+                    // apply. Persist them before materialization removes their
+                    // local null markers, even if replay itself crashes.
+                    profiles[entry.key] = profile.copyWith(
+                      tombstones: {
+                        ...profile.tombstones,
+                        ...replayedCollectionDeletions,
+                      },
+                    );
+                    return current.copyWith(
+                      profiles:
+                          Map<String, WebDavSyncProfileEngineState>.unmodifiable(
+                            profiles,
+                          ),
+                    );
+                  }),
                 );
                 replayedTarget = replayed.document;
                 break;
@@ -1021,6 +1050,10 @@ final class WebDavSyncEngine
                   profiles[entry.key] ?? const WebDavSyncProfileEngineState();
               profiles[entry.key] = profile.copyWith(
                 baseline: replayedTarget!,
+                tombstones: {
+                  ...profile.tombstones,
+                  ...replayedCollectionDeletions,
+                },
                 clearPendingApply: true,
               );
               return current.copyWith(
@@ -1535,6 +1568,10 @@ final class WebDavSyncEngine
             localPortableRecords: built.document.watchState.records,
             protectedPreferenceKeys: built.protectedPreferenceKeys,
           );
+          final collectionDeletions = <String, WebDavSyncTombstone>{
+            for (final entry in merged.tombstones.entries)
+              if (entry.key.startsWith('homecollection/')) entry.key: entry.value,
+          };
           final pending = WebDavSyncPendingApply(
             localProfileId: localProfileId,
             values: values,
@@ -1554,6 +1591,12 @@ final class WebDavSyncEngine
                   const WebDavSyncProfileEngineState();
               profiles[circleProfileId] = currentProfile.copyWith(
                 pendingApply: pending,
+                // Durably journal converted collection deletions before their
+                // local null markers disappear, including a failed apply/push.
+                tombstones: {
+                  ...currentProfile.tombstones,
+                  ...collectionDeletions,
+                },
               );
               return current.copyWith(
                 profiles:
@@ -1717,7 +1760,10 @@ final class WebDavSyncEngine
             document: merged.document,
             library: mergedLibrary,
             tombstones: merged.tombstones,
-            originalLocalTombstones: profileState.tombstones,
+            originalLocalTombstones: {
+              ...profileState.tombstones,
+              ...collectionDeletions,
+            },
           );
         } finally {
           instrumentation.finishPhase(_CyclePhase.mergeApply, phaseStarted);

@@ -3,11 +3,15 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 
+import '../../models/home_collection_inventory.dart';
 import 'webdav_sync_codec.dart';
 import 'webdav_sync_hot_models.dart';
 import '../playlist_dedupe_key.dart';
 
 abstract final class WebDavSyncRecordKey {
+  static String homeCollection(String id) => 'homecollection/${_part(id)}';
+  static const String homeCollectionOrder = 'homecollections/items';
+
   static String playback(String alias) => 'playback/record/${_part(alias)}';
 
   static String playbackMeta(String alias) => 'playback/meta/${_part(alias)}';
@@ -502,6 +506,7 @@ abstract final class WebDavSyncHotMerge {
       'mdblist_sync_checkpoint_v1';
 
   static const Set<String> _specialKeys = <String>{
+    HomeCollectionInventory.prefsKey,
     playbackPreference,
     continueWatchingPreference,
     finishedMoviesPreference,
@@ -643,6 +648,18 @@ abstract final class WebDavSyncHotMerge {
       playlistDedupeMap,
     );
 
+    final collectionRaw =
+        input.portablePreferences[HomeCollectionInventory.prefsKey];
+    if (collectionRaw != null) {
+      final inventory = HomeCollectionInventory.recover(collectionRaw);
+      for (final entry in inventory.records.entries) {
+        portableRecords[WebDavSyncRecordKey.homeCollection(entry.key)] = entry
+            .value
+            ?.toJson();
+      }
+      orderKeys[WebDavSyncRecordKey.homeCollectionOrder] = inventory.order;
+    }
+
     final wireRecords = <String, WebDavSyncStampedValue>{};
     for (final entry in portableRecords.entries) {
       final wireValue = input.identityMaps.toWire(entry.value);
@@ -751,6 +768,22 @@ abstract final class WebDavSyncHotMerge {
         }
       }
     }
+    // Local nulls are a pending-delete outbox. Move them into the normal
+    // tombstone tier so publication/retention and dormant-peer suppression
+    // apply, and deletion history no longer fills collection preferences.
+    for (final doc in docs) {
+      for (final entry in doc.watchState.records.entries) {
+        if (!entry.key.startsWith('homecollection/') || entry.value.value != null) continue;
+        if (suppressDormantLocal && identical(doc, local) &&
+            entry.value.stamp.normalizedTimeMs <= dormantSinceMs) {
+          continue;
+        }
+        final prior = tombstones[entry.key];
+        if (prior == null || _compareStamp(entry.value.stamp, prior.stamp) > 0) {
+          tombstones[entry.key] = WebDavSyncTombstone(key: entry.key, stamp: entry.value.stamp);
+        }
+      }
+    }
     if (tombstones.length > WebDavSyncLimits.maxTombstonesPerProfile) {
       throw const FormatException(
         'Merged WebDAV sync tombstones exceed their safe limit',
@@ -788,6 +821,7 @@ abstract final class WebDavSyncHotMerge {
     final records = <String, WebDavSyncStampedValue>{};
     for (final doc in docs) {
       for (final entry in doc.watchState.records.entries) {
+        if (entry.key.startsWith('homecollection/') && entry.value.value == null) continue;
         if (suppressDormantLocal &&
             identical(doc, local) &&
             entry.value.stamp.normalizedTimeMs <= dormantSinceMs) {
@@ -988,10 +1022,21 @@ abstract final class WebDavSyncHotMerge {
     final series = <String>{};
     final playlist = <String, Map<String, Object?>>{};
     final favorites = <String>{};
+    final collections = <String, Object?>{};
 
     for (final entry in document.watchState.records.entries) {
       final parts = entry.key.split('/');
-      if (parts.length >= 3 && parts[0] == 'playback') {
+      if (parts.length == 2 && parts[0] == 'homecollection') {
+        try {
+          collections[WebDavSyncRecordKey.decodePart(parts[1])] = chosen(
+            entry.key,
+            entry.value,
+          );
+        } on FormatException {
+          // An invalid collection identity must not block unrelated profiles.
+          continue;
+        }
+      } else if (parts.length >= 3 && parts[0] == 'playback') {
         final alias = WebDavSyncRecordKey.decodePart(parts[2]);
         if (parts[1] == 'record' && parts.length == 3) {
           final value = chosen(entry.key, entry.value);
@@ -1053,6 +1098,34 @@ abstract final class WebDavSyncHotMerge {
           favorites.add(key);
         }
       }
+    }
+
+    // Keep deletion markers in local storage so a subsequent local build
+    // cannot forget them when an offline peer rejoins.
+    if (collections.isNotEmpty ||
+        document.watchState.orders.containsKey(
+          WebDavSyncRecordKey.homeCollectionOrder,
+        )) {
+      final preferred =
+          document
+              .watchState
+              .orders[WebDavSyncRecordKey.homeCollectionOrder]
+              ?.keys ??
+          const <String>[];
+      final order = <String>[
+        for (final id in preferred)
+          if (collections.containsKey(id)) id,
+        for (final id in (collections.keys.toList()..sort()))
+          if (!preferred.contains(id)) id,
+      ];
+      final inventory = HomeCollectionInventory.recover({
+        'version': 2,
+        'records': collections,
+        'order': order,
+      });
+      output[HomeCollectionInventory.prefsKey] = WebDavSyncCodec.canonicalJson(
+        inventory.toJson(),
+      );
     }
 
     if (playback.isNotEmpty ||
@@ -1322,7 +1395,9 @@ abstract final class WebDavSyncHotMerge {
     Map<String, WebDavSyncStampedValue> records,
   ) {
     late final String prefix;
-    if (orderKey == WebDavSyncRecordKey.playlistOrder) {
+    if (orderKey == WebDavSyncRecordKey.homeCollectionOrder) {
+      prefix = 'homecollection/';
+    } else if (orderKey == WebDavSyncRecordKey.playlistOrder) {
       prefix = 'playlist/item/';
     } else if (orderKey == WebDavSyncRecordKey.playlistFavoriteOrder) {
       prefix = 'playlist/favorite/';

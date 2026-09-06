@@ -2414,10 +2414,13 @@ class StremioService {
         }
 
         final Map<String, dynamic> data = await decodeJsonAsync(response.body);
-        final metasRaw = data['metas'] as List<dynamic>?;
-        onRawCount?.call(metasRaw?.length ?? 0);
+        // Some addons signal exhaustion with {} or metas: null. Match the
+        // catalog browsers' empty-list convention while rejecting wrong types.
+        final metasRaw = data['metas'] ?? const <dynamic>[];
+        if (metasRaw is! List) return [];
+        onRawCount?.call(metasRaw.length);
 
-        if (metasRaw == null || metasRaw.isEmpty) {
+        if (metasRaw.isEmpty) {
           debugPrint('StremioService: Catalog returned no items');
           _cacheCatalogPage(url, const [], 0);
           return [];

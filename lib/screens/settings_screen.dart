@@ -102,6 +102,7 @@ import 'settings/settings_summary_reads.dart';
 import 'settings/real_debrid_settings_page.dart';
 import 'settings/iptv_settings_page.dart';
 import 'settings/iptv_channel_order_page.dart';
+import 'settings/collections_settings_page.dart';
 import 'settings/home_page_settings_page.dart';
 import 'settings/torbox_settings_page.dart';
 import 'settings/premiumize_settings_page.dart';
@@ -1811,6 +1812,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'startup',
           'landing',
           'tab',
+        ],
+      ),
+      nav(
+        SettingsRows.collections,
+        'Home & Display',
+        _openCollectionsSettings,
+        keywords: const [
+          'collections',
+          'collection',
+          'nuvio',
+          'xperience',
+          'folders',
+          'import json',
         ],
       ),
 
@@ -4972,6 +4986,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await pushSettingsPage(context, const RecordingsPage());
   }
 
+  Future<void> _openCollectionsSettings() async {
+    await pushSettingsPage(context, const CollectionsSettingsPage());
+  }
+
   Future<void> _openHomePageSettings() async {
     await pushSettingsPage(context, const HomePageSettingsPage());
     if (!mounted) return;
@@ -5930,6 +5948,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         '${s.iptvListChannelCount} channels)',
       );
     }
+    if (s.homeCollectionCount > 0) {
+      lines.add('Collections (${s.homeCollectionCount})');
+    }
     if (s.streamBadgeSourceCount > 0) {
       lines.add('Stream badge rulesets (${s.streamBadgeSourceCount})');
     }
@@ -5969,6 +5990,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     if (r.iptvListChannelsImported > 0) {
       parts.add('${r.iptvListChannelsImported} list channel(s)');
+    }
+    if (r.homeCollectionsImported > 0) {
+      parts.add('${r.homeCollectionsImported} collection(s)');
     }
     if (r.streamBadgeSourcesImported > 0) {
       parts.add('${r.streamBadgeSourcesImported} badge ruleset(s)');

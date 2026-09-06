@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:debrify/models/home_collection.dart';
 
 import 'package:debrify/screens/settings/home_sections_filter_page.dart';
 import 'package:debrify/services/storage_service.dart';
@@ -9,6 +10,7 @@ import 'package:debrify/services/storage_service.dart';
 Future<void> _pumpPage(
   WidgetTester tester, {
   List<HomeExtraRow> extraRows = const [],
+  List<HomeCollection> collections = const [],
   Set<String> disabled = const {},
   List<String> rowOrder = const [],
 }) async {
@@ -23,6 +25,7 @@ Future<void> _pumpPage(
         catalogTree: const [],
         disabled: Set.of(disabled),
         extraRows: extraRows,
+        collections: collections,
         rowOrder: rowOrder,
         isTelevision: false,
       ),
@@ -40,6 +43,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets('saving Home Rows preserves a new pinned collections leading slot', (tester) async {
+    await _pumpPage(tester, rowOrder: ['cw:movies', 'trakt:movies'], collections: const [
+      HomeCollection(id: 'pinned', title: 'Pinned', pinToTop: true, folders: []),
+    ]);
+    await tester.tap(find.text('Movies').first);
+    await tester.pump();
+    await _saveAndClose(tester);
+    expect((await StorageService.getHomeRowOrder()).first, 'collection:pinned');
+  });
 
   testWidgets('opt-in leaf toggles persist to the extras store, not the '
       'disabled set', (tester) async {
