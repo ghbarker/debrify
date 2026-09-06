@@ -3,18 +3,5 @@ description: Safety-net refactor rules for Debrify. Always apply when editing Da
 alwaysApply: true
 ---
 
-# Debrify refactor
-
-Source of truth: `CODEMAP.md` (Debrid providers & cloud). This file is an
-editor mirror.
-
-- Strangler-fig only: keep public static APIs; move internals behind
-  `lib/services/cloud/` ports and facades.
-- Never skip `flutter test` on the touched subtree (`test/adversarial/` for
-  cloud/playback).
-- Do not rewrite god files end-to-end. Grep and extract.
-- Do not change persisted preference keys or provider ids in the same PR as a
-  behavior change.
-- Treat `docs/architecture/profile-storage-ownership.md` as a compatibility
-  contract.
-- After a behavior-adjacent change, follow `.cursor/skills/debrify-break/SKILL.md`.
+Read and apply [Debrify refactor safety](../../dev/design/ENGINEERING_RULES.md#debrify-refactor-safety).
+The canonical rules are maintained in that section.
