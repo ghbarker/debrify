@@ -77,8 +77,9 @@ class DebrifyTvRepository {
   Future<void> upsertChannel(
     DebrifyTvChannelRecord record, {
     WebDavSyncMutationOrigin origin = WebDavSyncMutationOrigin.user,
+    Transaction? transaction,
   }) async {
-    await DebrifyTvDatabase.instance.runTxn((txn) async {
+    Future<void> write(Transaction txn) async {
       var channelNumber = record.channelNumber;
 
       if (channelNumber <= 0) {
@@ -146,7 +147,13 @@ class DebrifyTvRepository {
         await _incrementWebDavSyncRevision(txn);
         await DebrifyTvDatabase.markWebDavTvChangesPending(txn);
       }
-    });
+    }
+
+    if (transaction != null) {
+      await write(transaction);
+    } else {
+      await DebrifyTvDatabase.instance.runTxn(write);
+    }
   }
 
   Future<void> deleteChannel(

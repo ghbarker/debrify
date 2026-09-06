@@ -12,6 +12,8 @@ import 'package:path/path.dart' as p;
 import '../../utils/app_storage.dart';
 
 import 'remote_constants.dart';
+import 'remote_channel_file.dart';
+import '../profiles/local_backup/local_backup_archive.dart';
 import 'remote_control_state.dart';
 import 'remote_pairing_store.dart';
 import 'remote_chunked_send.dart';
@@ -67,6 +69,7 @@ import '../profiles/profile_data_generation.dart';
 import '../../services/backup_restore_service.dart';
 import '../webdav_sync/webdav_sync_binding_store.dart';
 import '../webdav_sync/webdav_sync_models.dart';
+import '../webdav_sync/webdav_sync_runtime.dart';
 
 /// Callback type for remote command handlers
 typedef RemoteCommandCallback =
@@ -371,6 +374,15 @@ class RemoteCommandRouter {
     _pendingRemoteTransferDispatches.add(tracked);
     unawaited(tracked);
   }
+
+  /// Reliable transport awaits handler completion before acknowledging the
+  /// command, preserving batch ordering even on a slow receiving device.
+  Future<void> receiveTransferCommand(
+    String action,
+    String command,
+    String? data,
+    RemoteCommandContext context,
+  ) => _dispatchCommandAndWait(action, command, data, context);
 
   Future<void> _dispatchCommandAndWait(
     String action,
@@ -1133,6 +1145,14 @@ class RemoteCommandRouter {
     required bool ok,
     required String message,
   }) async {
+    final reply = remoteContext.transferReply;
+    if (reply != null) {
+      return reply(
+        ConfigCommand.profileGraphResult,
+        profileGraphResultBody(requestId: requestId, ok: ok, message: message),
+      );
+    }
+
     final trace = RemoteTransferDiagnostics.traceToken(requestId);
     final sidB64 = remoteContext.sidB64;
     if (sidB64 == null) {
@@ -1228,6 +1248,14 @@ class RemoteCommandRouter {
     required bool ok,
   }) async {
     if (requestId == null) return false;
+    final reply = remoteContext.transferReply;
+    if (reply != null) {
+      return reply(
+        ConfigCommand.addonTransferResult,
+        addonTransferResultBody(requestId: requestId, ok: ok),
+      );
+    }
+
     try {
       final sidB64 = remoteContext.sidB64;
       if (sidB64 == null) return false;
@@ -1280,6 +1308,18 @@ class RemoteCommandRouter {
       message: message,
       completedAt: now,
     );
+    final reply = remoteContext.transferReply;
+    if (reply != null) {
+      return reply(
+        ConfigCommand.remoteTransferResult,
+        remoteTransferResultBody(
+          requestId: requestId,
+          ok: ok,
+          message: message,
+        ),
+      );
+    }
+
     try {
       final sidB64 = remoteContext.sidB64;
       if (sidB64 == null) return false;
@@ -1410,11 +1450,25 @@ class RemoteCommandRouter {
       return;
     }
     _profileGraphInFlight = true;
+    LocalBackupRestoreStage? archiveStage;
+    Directory? archiveStaging;
     try {
+      final archive = remoteContext.profileArchive;
+      if (archive != null) {
+        final inspection = await LocalBackupRestorer.inspect(archive);
+        final staging = await LocalBackupScratch.create('remote-restore');
+        archiveStaging = staging;
+        archiveStage = await LocalBackupRestorer.stage(
+          archive: archive,
+          staging: staging,
+          inspection: inspection,
+        );
+      }
       await _handleProfileGraphConfigInner(
         data,
         remoteContext,
         requestId: requestId,
+        archiveStage: archiveStage,
       );
     } catch (error) {
       RemoteTransferDiagnostics.record(
@@ -1424,9 +1478,24 @@ class RemoteCommandRouter {
           'errorType': error.runtimeType,
         },
       );
+      await _reportProfileGraphResultBestEffort(
+        remoteContext,
+        requestId: requestId,
+        ok: false,
+        message:
+            'The receiving device could not read the profile package. Retry the transfer.',
+      );
       rethrow;
     } finally {
-      _profileGraphInFlight = false;
+      try {
+        if (archiveStage != null) {
+          await archiveStage.dispose();
+        } else if (archiveStaging != null && await archiveStaging.exists()) {
+          await archiveStaging.delete(recursive: true);
+        }
+      } finally {
+        _profileGraphInFlight = false;
+      }
     }
   }
 
@@ -1436,6 +1505,7 @@ class RemoteCommandRouter {
     String data,
     RemoteCommandContext remoteContext, {
     required String? requestId,
+    LocalBackupRestoreStage? archiveStage,
   }) async {
     final trace = RemoteTransferDiagnostics.traceToken(requestId);
     if (!ProfileRuntime.isInitialized || !ProfileRuntime.isProfileCommitted) {
@@ -1464,10 +1534,12 @@ class RemoteCommandRouter {
     try {
       // Off-main: a 10 MB parse + digest would freeze TV hardware for
       // seconds on the UI isolate.
-      package = await PortableProfilePackage.decodeAuthenticatedJson(
-        data,
-        maxExpandedPayloadBytes: kMaxProfileGraphExpandedBytes,
-      );
+      package =
+          archiveStage?.package ??
+          await PortableProfilePackage.decodeAuthenticatedJson(
+            data,
+            maxExpandedPayloadBytes: kMaxProfileGraphExpandedBytes,
+          );
       if (package.mode != 'deviceGraph') {
         throw const FormatException('Not a profile graph package');
       }
@@ -1618,7 +1690,8 @@ class RemoteCommandRouter {
                         'caches were compacted for transport. Playlists, '
                         'favorites, history, numbering, and settings are '
                         'included.' : ''}'
-              '${webDavSyncOwnsProfileGraph ? '\n\nWebDAV Sync already owns '
+              '${archiveStage?.manifest.webDavSync != null ? '\n\nWebDAV Sync settings will also match the sending device, replacing this device’s current sync connection. Reconnection can continue after the import.' : ''}'
+              '${webDavSyncOwnsProfileGraph && archiveStage?.manifest.webDavSync == null ? '\n\nWebDAV Sync already owns '
                         'this device profile set. These imported profiles '
                         'will start outside that sync set and a later Admin '
                         'profile update could send duplicates to every '
@@ -1676,41 +1749,77 @@ class RemoteCommandRouter {
       );
     }
     try {
-      final ProfileGraphRestoreReport report;
+      late final ProfileGraphRestoreReport report;
+      ProfileGraphRestoreReport? publishedReport;
+      final syncBackup = archiveStage?.manifest.webDavSync;
+      var syncRestorePending = false;
       final restoreWatch = Stopwatch()..start();
       RemoteTransferDiagnostics.record(
         'receiver_restore_start',
         fields: <String, Object?>{'trace': trace},
       );
       try {
-        report = await ProfileRestoreCoordinator(
-          registry: registry,
-          cipher: DeviceKeyProvider.cipher,
-          lifecycleParticipants: <ProfileLifecycleParticipant>[
-            ProfileAppLifecycleParticipant(),
-          ],
-        ).restoreDeviceGraph(package: package, authorization: authorization);
+        Future<ProfileGraphRestoreReport> restore() async {
+          final restored =
+              await ProfileRestoreCoordinator(
+                registry: registry,
+                cipher: DeviceKeyProvider.cipher,
+                lifecycleParticipants: <ProfileLifecycleParticipant>[
+                  ProfileAppLifecycleParticipant(),
+                ],
+              ).restoreDeviceGraph(
+                package: package,
+                authorization: authorization,
+                databaseFileResolver: archiveStage?.resolveDatabase,
+                beforePublish: syncBackup == null
+                    ? null
+                    : (profiles, resources, generations) =>
+                          WebDavSyncRuntime.instance.prepareBackupRestore(
+                            syncBackup,
+                            profiles,
+                            resources,
+                            generations,
+                          ),
+              );
+          publishedReport = restored;
+          return restored;
+        }
+
+        report = syncBackup == null
+            ? await restore()
+            : await WebDavSyncRuntime.instance.withBackupRestore(restore);
       } catch (error) {
-        RemoteTransferDiagnostics.record(
-          'receiver_restore_exception',
-          fields: <String, Object?>{
-            'trace': trace,
-            'errorType': error.runtimeType,
-            'elapsedMs': restoreWatch.elapsedMilliseconds,
-          },
-        );
-        debugPrint('RemoteCommandRouter: profile graph restore failed');
-        _showSnackBar(
-          'Profile import failed; existing data is unchanged',
-          isError: true,
-        );
-        await _reportProfileGraphResultBestEffort(
-          remoteContext,
-          requestId: requestId,
-          ok: false,
-          message: 'Import failed on the TV; nothing was changed there',
-        );
-        return;
+        if (publishedReport != null) {
+          // The connection journal retries on startup. Never invite another
+          // graph import when the profiles have already been committed.
+          report = publishedReport!;
+          syncRestorePending = true;
+          RemoteTransferDiagnostics.record(
+            'receiver_sync_restore_pending',
+            fields: {'trace': trace, 'errorType': error.runtimeType},
+          );
+        } else {
+          RemoteTransferDiagnostics.record(
+            'receiver_restore_exception',
+            fields: <String, Object?>{
+              'trace': trace,
+              'errorType': error.runtimeType,
+              'elapsedMs': restoreWatch.elapsedMilliseconds,
+            },
+          );
+          debugPrint('RemoteCommandRouter: profile graph restore failed');
+          _showSnackBar(
+            'Profile import failed; existing data is unchanged',
+            isError: true,
+          );
+          await _reportProfileGraphResultBestEffort(
+            remoteContext,
+            requestId: requestId,
+            ok: false,
+            message: 'Import failed on the TV; nothing was changed there',
+          );
+          return;
+        }
       }
       RemoteTransferDiagnostics.record(
         'receiver_restore_complete',
@@ -1735,6 +1844,7 @@ class RemoteCommandRouter {
         message:
             'TV imported ${report.profilesImported} profiles and '
             '${report.resourcesImported} connections'
+            '${syncRestorePending ? '; WebDAV sync reconnection is pending' : ''}'
             '${debrifyTvOmission?.isEmpty == false ? '; Debrify TV channels were not included' : ''}',
       );
       if (!acknowledged) {
@@ -3970,6 +4080,27 @@ class RemoteCommandRouter {
     }
     try {
       debugPrint('RemoteCommandRouter: Importing Debrify TV channel...');
+
+      final channelArchive = context.channelArchive;
+      if (channelArchive != null) {
+        if (profileBinding != null &&
+            !await _validateRemoteBinding(
+              context,
+              profileBinding,
+              ProfileFeature.remoteTransfer,
+            )) {
+          throw StateError('Remote transfer authorization expired');
+        }
+        final name = await RemoteChannelFile.import(channelArchive);
+        _showSnackBar('Channel imported: $name');
+        await _reportRemoteTransferResultBestEffort(
+          context,
+          requestId: requestId,
+          ok: true,
+          message: 'Channel imported on TV',
+        );
+        return;
+      }
 
       // 1. Decode the debrify:// URI
       final decoded = MagnetYamlService.decode(debrifyUri);

@@ -178,9 +178,11 @@ class DebrifyTvCacheService {
   static Future<void> saveEntry(
     DebrifyTvChannelCacheEntry entry, {
     WebDavSyncMutationOrigin origin = WebDavSyncMutationOrigin.user,
+    Transaction? transaction,
+    Stream<CachedTorrent>? torrentStream,
   }) async {
     String? generationId;
-    await DebrifyTvDatabase.instance.runTxn((txn) async {
+    Future<void> write(Transaction txn) async {
       await txn.insert('tv_channel_cache_state', {
         'channel_id': entry.channelId,
         'status': entry.status,
@@ -194,11 +196,13 @@ class DebrifyTvCacheService {
         whereArgs: [entry.channelId],
       );
 
-      if (entry.torrents.isNotEmpty) {
-        final batch = txn.batch();
+      {
+        var batch = txn.batch();
+        var pending = 0;
+        var index = 0;
         final baseTimestamp = DateTime.now().millisecondsSinceEpoch;
-        for (var index = 0; index < entry.torrents.length; index++) {
-          final torrent = entry.torrents[index];
+        await for (final torrent
+            in torrentStream ?? Stream.fromIterable(entry.torrents)) {
           batch.insert('tv_cached_torrents', {
             'channel_id': entry.channelId,
             'infohash': torrent.infohash,
@@ -213,8 +217,14 @@ class DebrifyTvCacheService {
             'sources_json': jsonEncode(torrent.sources),
             'added_at': baseTimestamp + index,
           }, conflictAlgorithm: ConflictAlgorithm.replace);
+          index++;
+          if (++pending >= 500) {
+            await batch.commit(noResult: true);
+            batch = txn.batch();
+            pending = 0;
+          }
         }
-        await batch.commit(noResult: true);
+        if (pending > 0) await batch.commit(noResult: true);
       }
 
       await txn.delete(
@@ -252,7 +262,13 @@ class DebrifyTvCacheService {
         await _incrementWebDavSyncRevision(txn);
         await DebrifyTvDatabase.markWebDavTvChangesPending(txn);
       }
-    });
+    }
+
+    if (transaction != null) {
+      await write(transaction);
+    } else {
+      await DebrifyTvDatabase.instance.runTxn(write);
+    }
   }
 
   static Future<void> removeEntry(

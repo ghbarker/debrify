@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:debrify/services/remote_control/remote_channel_file.dart';
+import 'package:debrify/services/community/channel_yaml_builder.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -228,6 +231,10 @@ void main() {
     });
 
     expect(await DebrifyTvCacheService.getEntry('portable-channel'), isNull);
+    final remoteYaml = await ChannelYamlBuilder.build(
+      channel('portable-channel', keywords: const ['science fiction']),
+    );
+    expect(remoteYaml, contains('infohash: preserved-hash'));
     final portable = await DebrifyTvCacheService.getEntryForPortableExport(
       'portable-channel',
     );
@@ -238,6 +245,71 @@ void main() {
     expect(portable.torrents.single.infohash, 'preserved-hash');
     expect(portable.torrents.single.sources, <String>['custom-source']);
   });
+
+  test(
+    'remote channel file streams a complete pool and rolls back truncation',
+    () async {
+      final record = channel('remote-large', name: 'ÉMISSIONS');
+      await DebrifyTvRepository.instance.upsertChannel(record);
+      final pool = List<CachedTorrent>.generate(
+        1501,
+        (i) => torrent(
+          'hash-${i.toString().padLeft(5, '0')}',
+          'Saved title $i',
+        ).merge(keywords: const ['old association']),
+      );
+      await DebrifyTvCacheService.saveEntry(cache(record.channelId, pool));
+      final file = File(p.join(root.path, 'channel.gz'));
+      await RemoteChannelFile.export(record.channelId, file);
+      await DebrifyTvCacheService.saveEntry(
+        cache(record.channelId, [torrent('local-only', 'Local')]),
+      );
+
+      final lines = utf8
+          .decode(gzip.decode(await file.readAsBytes()))
+          .trimRight()
+          .split('\n');
+      final header = jsonDecode(lines.first) as Map<String, dynamic>;
+      header['name'] = 'émissions';
+      lines[0] = jsonEncode(header);
+      await file.writeAsBytes(
+        gzip.encode(utf8.encode('${lines.join('\n')}\n')),
+      );
+      final damaged = File(p.join(root.path, 'damaged.gz'));
+      await damaged.writeAsBytes(
+        gzip.encode(
+          utf8.encode('${lines.take(lines.length - 1).join('\n')}\n'),
+        ),
+      );
+      await expectLater(
+        RemoteChannelFile.import(damaged),
+        throwsFormatException,
+      );
+      expect(
+        (await DebrifyTvCacheService.getEntry(
+          record.channelId,
+        ))!.torrents.single.infohash,
+        'local-only',
+      );
+
+      await RemoteChannelFile.import(file);
+      final restored = (await DebrifyTvCacheService.getEntry(
+        record.channelId,
+      ))!;
+      expect(
+        restored.torrents.map((t) => t.infohash).toSet(),
+        pool.map((t) => t.infohash).toSet(),
+      );
+      expect(
+        restored.torrents.every((t) => t.keywords.contains('old association')),
+        isTrue,
+      );
+      expect(
+        await DebrifyTvRepository.instance.fetchAllChannels(),
+        hasLength(1),
+      );
+    },
+  );
 
   test('profile close waits for an admitted write transaction', () async {
     final transactionStarted = Completer<void>();
