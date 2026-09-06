@@ -9,6 +9,7 @@
 /// [StorageKeyStore] ownership when a domain store is extracted; they must
 /// not change the string.
 enum StorageKeyStore {
+  ambientTrailerPrefs,
   /// Torrent search history and its recording preference.
   torrentSearchHistoryStore,
   /// Installation-wide remote device preferences (RemoteDevicePrefs).
@@ -350,8 +351,8 @@ class StorageKeyOwnership {
     'mdblist_sync_catalog_items': StorageKeyStore.trackingPrefs,
     'debrify_tv_keyword_threshold': StorageKeyStore.debrifyTvPrefs,
     'debrify_tv_min_torrents_per_keyword': StorageKeyStore.debrifyTvPrefs,
-    'detail_trailer_audio_enabled': StorageKeyStore.storageService,
-    'detail_trailer_volume': StorageKeyStore.storageService,
+    'detail_trailer_audio_enabled': StorageKeyStore.ambientTrailerPrefs,
+    'detail_trailer_volume': StorageKeyStore.ambientTrailerPrefs,
     'engine_tv_': StorageKeyStore.debrifyTvPrefs,
     'debrify_tv_use_': StorageKeyStore.debrifyTvPrefs,
     'debrify_tv_channel_small_': StorageKeyStore.debrifyTvPrefs,
