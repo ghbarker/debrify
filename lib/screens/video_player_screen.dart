@@ -1,7 +1,7 @@
+import 'video_player/services/player_terminal_backend.dart';
 import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
-import '../utils/media_kit_init.dart';
 import 'dart:io';
 import 'dart:math' as math;
 
@@ -1215,7 +1215,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     unawaited(_loadTrackingPolicy());
     unawaited(_loadSkipSegmentSettings());
     unawaited(_loadLocalCompletionThresholds());
-    MediaKitInit.ensureInitialized();
+    PlayerTerminalBackend.current.ensureInitialized();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     // The player opens landscape — a video wants the long edge — unless the
     // user asked it to open upright, in which case the Portrait/Landscape
@@ -1907,7 +1907,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   void _createPlayerInstance(AndroidVideoRendererMode rendererMode) {
     final instanceGeneration = ++_playerInstanceGeneration;
     _isReady = false;
-    final player = mk.Player(
+    final terminal = PlayerTerminalBackend.current;
+    final player = terminal.createPlayer(
       configuration: mk.PlayerConfiguration(
         logLevel: mk.MPVLogLevel.error,
         ready: () => _onPlayerInstanceReady(instanceGeneration),
@@ -1915,7 +1916,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     );
     _player = player;
     _playerCreated = true;
-    _videoController = mkv.VideoController(
+    _videoController = terminal.createVideoController(
       player,
       configuration: mkv.VideoControllerConfiguration(
         vo: rendererMode.videoOutput,

@@ -223,6 +223,14 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   Twenty-one typed shared operations remain explicit coupling, expiring with remaining
   G1'-8 shared-cell/navigation adoption. No State proxy, pure-logic claim or automatic
   target closure; five stage parts remain. Appended Tonight pages do not replay Right.
+  Shared Deck/Tonight `StageShelfContent` in `stages/stage_shelf_content.dart`
+  now owns shelf-cell policy and rail-label geometry (product df143735).
+  Host 6551 -> 6480 (**71 net Leaves**); whole production **+49**.
+  Ten live operations and borrowed board/map/notifier remain; Tonight calls the
+  shared cell owner directly. The two-line host label adapter and Tonight's
+  `buildRailLabel` callback retain host-context lookup until final composition /
+  phase-completion review. This is partial shared-cell ownership, not whole Deck
+  or closure of the 1400 stage target.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
@@ -246,6 +254,12 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   MDBList credentials live in `lib/services/storage/tracking_prefs.dart`
   (`TrackingPrefs`, owns `trackingSourceRevision`). `home_tick_sources` stays
   on HomePrefs; TrackingPrefs bumps the revision after that write.
+  **Ambient trailer policy:** `lib/services/storage/ambient_trailer_prefs.dart`
+  owns two detail audio/volume keys and five preference bodies; HomePrefs keeps
+  the two home keys. StorageService re-exports the same AmbientTrailerSurface
+  enum and retains four nonasync facades (14 declaration / 18 physical lines),
+  expiring at separately scoped Q2 caller retirement. Host -69 includes moved
+  docs/separators; whole production +32. Strict ownership closure remains OPEN.
   **TV keyboard policy:** AppStylePrefs owns the profile bool/generation pair,
   two migration/access bodies and one synchronous keyboard cache. StorageService
   retains two nonasync APIs and sync cache accessors; its original first reset
@@ -255,9 +269,9 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   Storage ownership closure remain open; no native keyboard proof is claimed.
   **Download destinations:** `lib/services/storage/download_destination_prefs.dart`
   owns three profile-scoped String keys and seven persistence bodies; OS grants
-  remain with callers. StorageService retains seven direct facades (17 lines),
-  expiring with Q2 caller migration. This move removes21 host lines and adds40
-  whole-production lines; no SAF or native-authority verification is claimed.
+  remain with callers. Q2 retired all seven StorageService APIs; callers route
+  directly to the owner (-18 host lines, -17 whole-production lines).
+  Strict outcome 3 remains OPEN; no SAF or native-authority verification is claimed.
   **Residual filters:** `lib/services/storage/default_torrent_filter_prefs.dart`
   owns five default-filter JSON String keys and ten get/set bodies. Its
   `clearDefaults(ProfilePreferences)` removes five keys in order on captured

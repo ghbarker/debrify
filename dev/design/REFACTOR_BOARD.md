@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main 64a10b59
+## Current roadmap — September 6, main 334145c6
 
 ### God-file line counts — original → current merged main
 
-- **Search:** 19,070 → **6,551** (12,519 fewer)
-- **Player:** 16,278 → **11,928** (4,350 fewer)
+- **Search:** 19,070 → **6,480** (12,590 fewer)
+- **Player:** 16,278 → **11,929** (4,349 fewer)
 - **Magic TV:** 10,716 → **3,321** (7,395 fewer)
-- **Storage:** 9,963 → **2,470** (7,493 fewer)
+- **Storage:** 9,963 → **2,383** (7,580 fewer)
 - **Settings:** 7,905 → **2,903** (5,002 fewer)
 
-Counted from actual merged main 64a10b59. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion percentage remains withdrawn: remaining architectural work lacks a reliable denominator.
+Counted from actual merged main 334145c6. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion percentage remains withdrawn: remaining architectural work lacks a reliable denominator.
 
 ### The same six outcomes — stable roadmap
 
@@ -31,10 +31,10 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
    Left: remaining domain logic and eligible forwarding APIs; native-sensitive exceptions remain explicit.
    Next: history/watchlist caller retirement and download-destination ownership; filter facade retirement (#182) is now merged. These are steps within outcome3, not new top-level goals.
 
-4. **Finish M1-7 genuine common-flow dedup and dependency cleanup — PARTIAL MILESTONE COMPLETE.**
+4. **Finish M1-7 genuine common-flow dedup and dependency cleanup — COMPLETE against the agreed finite scope.**
    Done: shared flow programmes merged, provider-leaf target met (627 current lines versus under800), two cached-entry wrappers removed.
-   Left: integrated acceptance of merged186. Three captured-key operations now use the provider interface at ten call sites. Finite Windowed/UI retention decisions are accepted and recorded in NOTES. Distinct provider algorithms are intentional and do not all need unification.
-   Next: verify merged186 in the next integrated gate; independent88-case consumer verification already passed. No new autonomous-provider-framework or zero-UI-callback requirement. This is closest to closure, but the whole outcome is not marked complete.
+   Integrated acceptance: gate e78d100e PASSED, including merged186. Three captured-key operations now use the provider interface at ten call sites. Finite Windowed/UI retention decisions are accepted and recorded in NOTES. Distinct provider algorithms are intentional and do not all need unification.
+   No remaining M1-7 implementation obligation; independent88-case verification and integrated gate passed. No new autonomous-provider-framework or zero-UI-callback requirement. Outcome4 is closed; wider Q-phase/native obligations remain in their existing outcomes.
 
 5. **Q-phase dependency/rule cleanup, compatibility expiry and upstream contribution work — PARTLY STARTED.**
    Done: some compatibility retirement is underway with outcome3 and4; upstream contribution intent established.
@@ -58,6 +58,16 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Parent owns decisions/merges/BOARD/NOTES. Every completion/blocker needs parent response and next step; unresolved dependencies must be reported explicitly. No user blocker.
 ### Latest completed milestones
 
+- #189 merged334145c6 exactb6 after independent107PASS/1exactknownsidebarfailure, allCIgreen and final5blob/CODEMAP union review. SharedDeck/Tonight cell owner removes71host lines, wholeproduction plus49; tenliveoperations and labeladapter retained. Did we make a difference? Two consumers share actual cell policy; wholeDeck/sharedvisual work remains, no stage-target closure.
+
+- #190 merged e9e182bd exactc73 after independent production1case plus read-only six-case test delta (author7PASS), final3blob union and allCIgreen. Three synchronous terminal operations preserve original defaults/order; wholeproduction plus43/host plus1, no decoder extraction. Did we make a difference? Actual host timing/error/generation behavior is testable before193 movement; no native/Android proof claimed.
+
+- Full gate e78d100e PASS:5824success/12known/2skip, goldens21known with configuredretries, helpers0/unexpected0/unused0, rawfailures retained. Analyzer431/4490new,Python55,layer77/77,nativefirstpairPASS. WindowsZIP SHA03faf3871a40cceaa74dd96cb8447f131ab18e4716aca435d8767dd5aad223fc; ARM64 SHA1a54aca15061b55807386c3a5897809c85afda16fc36f19397033e88ed5119d4. SameAST total/single: Storage411/143,Search133/117,Player161/112,Magic23/12,Settings0/0. Gate includes186184185188; no fresh device smoke claimed.
+- #187 merged6e7d97b2 exact9a46 after independent113 and finalunion/allCIgreen: Ambient owner preserves four-key restore behavior and enum compatibility. Host minus69 including docs; wholeproduction plus32; fourfacades retained pending191. Did we make a difference? Explicit domain ownership with old-export evidence; Storage outcome remains open.
+
+- #185 merged e78d100e exact3b02 after independent106 and accepted main union/allCI green: seven download facades retired, host minus18/whole production minus17. Did we make a difference? Actual callers use the download preference owner; native transport unchanged, wider storage work remains.
+- #188 canonical engineering rules merged before185, exactcad2 parent-reviewed/allCI green. Ten rules and six safety bullets preserved, editor pointers retain triggers. Q3 consolidation delivered; not whole Q-phase closure. God lines unchanged by188.
+
 - #184 merged64a10b59 exact562869 after independent106 tests and final integration acceptance/allCI green. Download destination preference owner preserves three profile keys and actual pre-refactor exclusion fixture. Host minus21, whole production plus40, seven facades retained. Did we make a difference? Preference ownership is explicit with restore evidence; caller retirement185 is next, no native SAF/permission proof claimed.
 
 - #186 merged93c966cc exact301325: independent88 cases and final union review, allCI green. Three captured-key operations at ten consumers now use typed provider capabilities, preserving captured keys/live timing. Whole production plus26, host zero reduction, provider leaves627. Did we make a difference? Yes: actual provider calls follow the contract; integrated acceptance remains, not another autonomy framework.
@@ -75,7 +85,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Gate pinned analyzer431/449, zero errors/new issues; layering77→77; Python55 passed; originalbc46/current native pair passed first try. Initial wrong-PATH analyzer output retained separately and corrected using pinned SDK; no baseline edit.
 - Windows226.2s/68files and ARM64171.9s builds passed. ZIP SHA256b96b7a4bd0b98a4f9de799ef3242bebf18a150d3c49c0113ad0566d10f1d729f; APK80811b556495c20078920091643b91cbcde5bc236d89737bd3bed7d1479e8cb5. No fresh manual/device smoke claimed.
 - #181 BoardCell mergedc7a332bd exact932 after independent140 passes plus the exact known sidebar failure, final integration review and all3CI green. Shared renderer owns card state/shuttle; 669 declaration lines relocated, whole production+17, zero host-file reduction. Did we make a difference? Removed private host-library access at real consumers; remaining stage navigation/composition is still open.
-- Production merge counter: **2 since gate a6bc820b** (#186, #184), which includes181/182/183. Gate excludes181; source/build evidence remains attached to95c93.
+- Production merge counter: **3 since gate e78d100e** (#187, #190, #189); full334145 gate assigned, further production merges held, which includes181/182/183. Gate excludes181; source/build evidence remains attached to95c93.
 
 ### Forwarders at the last full gate95c93
 

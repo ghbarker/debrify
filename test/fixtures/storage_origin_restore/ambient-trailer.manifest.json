@@ -1,0 +1,39 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "scenario": "ambient-trailer",
+  "syntheticOnly": true,
+  "sha256": "bcbb4022824f18dbfa616e329bdb8f403a7464e436078c6aef62dd7a658df391",
+  "includeSecrets": false,
+  "representedSettings": {
+    "home_hero_trailer_audio_enabled": false,
+    "home_hero_trailer_volume": -9,
+    "detail_trailer_audio_enabled": true,
+    "detail_trailer_volume": 137
+  },
+  "keyTypes": {
+    "home_hero_trailer_audio_enabled": "bool",
+    "home_hero_trailer_volume": "int",
+    "detail_trailer_audio_enabled": "bool",
+    "detail_trailer_volume": "int"
+  },
+  "excludedKeys": [],
+  "expectedPublicReads": {
+    "home_hero_trailer_audio_enabled": false,
+    "home_hero_trailer_volume": 10,
+    "detail_trailer_audio_enabled": true,
+    "detail_trailer_volume": 100
+  },
+  "rawSeed": "Bool public setters; out-of-range int ProfilePreferences.setInt, not public volume setters",
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}

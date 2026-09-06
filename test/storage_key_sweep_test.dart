@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/ambient_trailer_prefs.dart';
 import 'package:debrify/services/storage/download_destination_prefs.dart';
 import 'package:debrify/services/storage/torrent_search_history_store.dart';
 import 'package:debrify/services/remote_control/remote_device_prefs.dart';
@@ -38,13 +39,6 @@ const notPersistedValueConsts = {
 
 /// JSON object field names inside persisted blobs — not SharedPreferences keys.
 const jsonPayloadFields = {'finishedEpisodes', 'seasons', 'trackPreferences'};
-
-/// Interpolated names from `_ambientTrailerKeyFor` (detail surface). The
-/// Home-hero pair is already a HomePrefs const; these two have no `_…Key`.
-const interpolatedPrefsKeys = {
-  'detail_trailer_audio_enabled',
-  'detail_trailer_volume',
-};
 
 const _aliases = {
   'PlaybackProgressStore.playbackStateKey': PlaybackProgressStore.playbackStateKey,
@@ -142,7 +136,7 @@ Set<String> allDiscoveredPrefsKeys() => {
   ...DefaultTorrentFilterPrefs.ownedKeys,
   ...QuickPlayPolicyPrefs.ownedKeys,
   ...inlinePrefsKeysOnStorageService(),
-  ...interpolatedPrefsKeys,
+  ...AmbientTrailerPrefs.ownedKeys,
 };
 
 /// Discovered names not yet in [StorageKeyOwnership.byKey]. Must stay empty.
@@ -156,6 +150,21 @@ void main() {
     expect(StorageKeyOwnership.keysFor(StorageKeyStore.appStylePrefs).intersection(expected), expected);
     expect(declaredOnStorageService().intersection(expected), isEmpty);
     expect(inlinePrefsKeysOnStorageService().intersection(expected), isEmpty);
+    expect(allDiscoveredPrefsKeys(), containsAll(expected));
+    for (final key in expected) {
+      expect(allDiscoveredPrefsKeys().difference(
+        StorageKeyOwnership.byKey.keys.toSet().difference({key})), {key});
+    }
+  });
+
+  test('ambient detail keys have exact ownership and missing rows fail', () {
+    const expected = {'detail_trailer_audio_enabled', 'detail_trailer_volume'};
+    expect(AmbientTrailerPrefs.ownedKeys, expected);
+    expect(StorageKeyOwnership.keysFor(StorageKeyStore.ambientTrailerPrefs), expected);
+    expect(HomePrefs.ownedKeys, containsAll({
+      'home_hero_trailer_audio_enabled', 'home_hero_trailer_volume',
+    }));
+    expect(HomePrefs.ownedKeys.intersection(expected), isEmpty);
     expect(allDiscoveredPrefsKeys(), containsAll(expected));
     for (final key in expected) {
       expect(allDiscoveredPrefsKeys().difference(
@@ -316,7 +325,6 @@ void main() {
     final fromTracking = TrackingPrefs.ownedKeys;
     final fromInline = {
       ...inlinePrefsKeysOnStorageService(),
-      ...interpolatedPrefsKeys,
     };
     expect(fromCloud, {
       CloudSecretPrefs.realDebridApiKey,
@@ -383,6 +391,8 @@ void main() {
 
     expectStore(DownloadDestinationPrefs.ownedKeys,
         StorageKeyStore.downloadDestinationPrefs, 'DownloadDestinationPrefs');
+    expectStore(AmbientTrailerPrefs.ownedKeys,
+        StorageKeyStore.ambientTrailerPrefs, 'AmbientTrailerPrefs');
     expectStore(TorrentSearchHistoryStore.ownedKeys,
         StorageKeyStore.torrentSearchHistoryStore, 'TorrentSearchHistoryStore');
     expectStore(RemoteDevicePrefs.ownedKeys,
@@ -407,6 +417,7 @@ void main() {
         StorageKeyStore.defaultTorrentFilterPrefs, 'DefaultTorrentFilterPrefs');
 
     final extracted = {
+      ...AmbientTrailerPrefs.ownedKeys,
       ...DownloadDestinationPrefs.ownedKeys,
       ...TorrentSearchHistoryStore.ownedKeys,
       ...RemoteDevicePrefs.ownedKeys,
