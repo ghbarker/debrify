@@ -1,3 +1,4 @@
+import '../widgets/see_all/discover_browsing_input.dart';
 import '../services/home_catalog_refresh.dart';
 import '../widgets/home/home_row_focus.dart';
 import '../services/home_row_refresh.dart';
@@ -1521,8 +1522,8 @@ class _SearchScreenState extends State<SearchScreen>
   final ValueNotifier<bool> _discTrailerShowing = ValueNotifier(false);
   // Theater: after a few seconds of uninterrupted playback the page commits to
   // the trailer — veils thin to near-clear, rail and grid recede to ~15%. Armed
-  // by [_onDiscShowingChanged]; dropped the instant frames stop (any DPAD move
-  // clears the trailer, so browsing input always brings the lights back).
+  // by playback and browsing activity; controls return immediately on input
+  // and dim again after the idle dwell if trailer playback continues.
   final ValueNotifier<bool> _discTheater = ValueNotifier(false);
   Timer? _discTheaterTimer;
   static const Duration _discTheaterDelay = Duration(seconds: 5);
@@ -16751,7 +16752,17 @@ class _SearchScreenState extends State<SearchScreen>
   /// Scaffold/back header), with the Source dropdown injected as its leading
   /// filter so DPAD walks Source → the panel's own filters → grid. All item
   /// open/play/bound wiring is this screen's existing board handlers.
-  Widget _buildDiscover() {
+  Widget _buildDiscover() => DiscoverBrowsingInput(
+    onActivity: () {
+      if (_discTheater.value) _discTheater.value = false;
+      // Input can leave the same trailer playing (hover or a grid boundary).
+      // Restart its idle dwell even when the playback notifier does not change.
+      _onDiscShowingChanged();
+    },
+    child: _buildDiscoverContent(),
+  );
+
+  Widget _buildDiscoverContent() {
     final app = AppThemeScope.of(context);
     final panel = DiscoverCardSettingsScope(
       showTypeTags: _discShowTypeTags,

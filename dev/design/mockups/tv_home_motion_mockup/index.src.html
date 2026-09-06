@@ -1,0 +1,955 @@
+<title>Home in Motion</title>
+<style>
+  :root{
+    --ink:#0A0812;
+    --panel:#131020;
+    --hair:rgba(167,139,250,.16);
+    --hair2:rgba(255,255,255,.07);
+    --tx:#EAE7F3;
+    --dim:#9A93B0;
+    --dimmer:#6E6785;
+    --acc:#A78BFA;
+    --gold:#F5C518;
+    --good:#34D399;
+    --warn:#F59E0B;
+    --hot:#F87171;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --serif:"Iowan Old Style","Hoefler Text",Georgia,"Times New Roman",serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){ --ink:#0A0812; --panel:#131020; --hair:rgba(167,139,250,.16);
+      --hair2:rgba(255,255,255,.07); --tx:#EAE7F3; --dim:#9A93B0; --dimmer:#6E6785; --acc:#A78BFA; }
+  }
+  :root[data-theme="dark"]{ --ink:#0A0812; --panel:#131020; --hair:rgba(167,139,250,.16); --hair2:rgba(255,255,255,.07);
+    --tx:#EAE7F3; --dim:#9A93B0; --dimmer:#6E6785; --acc:#A78BFA; }
+  /* Light is a deliberate second theme, not an inversion: paper ground, deeper violet
+     so the accent still holds against white. */
+  :root[data-theme="light"]{ --ink:#EDEBF2; --panel:#FCFBFE; --hair:rgba(88,60,190,.22); --hair2:rgba(20,17,30,.10);
+    --tx:#161320; --dim:#575067; --dimmer:#8A8399; --acc:#5B3BD4; --good:#0F9A6E; --warn:#B4770B; --hot:#C4443F; }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){ --ink:#EDEBF2; --panel:#FCFBFE; --hair:rgba(88,60,190,.22); --hair2:rgba(20,17,30,.10);
+      --tx:#161320; --dim:#575067; --dimmer:#8A8399; --acc:#5B3BD4; --good:#0F9A6E; --warn:#B4770B; --hot:#C4443F; }
+  }
+
+  body{ margin:0; background:var(--ink); color:var(--tx); font-family:var(--sans);
+        -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 28px 130px; }
+
+  /* ── masthead ─────────────────────────────────────────────── */
+  .top{ position:sticky; top:0; z-index:60; background:color-mix(in srgb, var(--ink) 88%, transparent);
+        border-bottom:1px solid var(--hair2); backdrop-filter:blur(14px); }
+  .topin{ max-width:1180px; margin:0 auto; padding:11px 28px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .brandmark{ font:600 12px/1 var(--mono); letter-spacing:.16em; color:var(--acc); text-transform:uppercase; }
+  .jump{ display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
+  .jump a{ font:600 11.5px/1 var(--mono); letter-spacing:.09em; text-transform:uppercase; color:var(--dim);
+           text-decoration:none; padding:6px 9px; border-radius:6px; border:1px solid transparent; }
+  .jump a:hover,.jump a:focus-visible{ color:var(--tx); border-color:var(--hair); outline:none; }
+  .demotog{ font:600 11.5px/1 var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--dim);
+            background:none; border:1px solid var(--hair); border-radius:6px; padding:6px 10px; cursor:pointer; }
+  .demotog[aria-pressed="true"]{ color:var(--acc); border-color:var(--acc); }
+
+  header.lede{ padding:76px 0 44px; max-width:780px; }
+  .eyebrow{ font:600 11.5px/1 var(--mono); letter-spacing:.2em; text-transform:uppercase; color:var(--dimmer); }
+  h1{ font:400 clamp(40px,6.4vw,68px)/1.02 var(--serif); letter-spacing:-.02em; margin:20px 0 0; text-wrap:balance; }
+  h1 em{ font-style:italic; color:var(--acc); }
+  .lede p{ font:400 17px/1.62 var(--sans); color:var(--dim); margin:22px 0 0; max-width:64ch; }
+  .lede p b{ color:var(--tx); font-weight:600; }
+
+  /* frame budget strip — the deck's own subject rendered as a measure */
+  .budget{ margin-top:36px; border:1px solid var(--hair); border-radius:10px; padding:18px 20px 16px; }
+  .budget h4{ font:600 10.5px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--dimmer); margin:0 0 14px; }
+  .bar{ position:relative; height:30px; border-radius:5px; overflow:hidden; background:var(--hair2); }
+  .bar i{ position:absolute; top:0; bottom:0; display:block; }
+  .bar .b-target{ left:0; width:33.4%; background:color-mix(in srgb,var(--good) 32%,transparent); }
+  .bar .b-now{ left:33.4%; right:0; background:color-mix(in srgb,var(--hot) 22%,transparent); }
+  .bar .tick{ position:absolute; top:0; bottom:0; width:1px; background:var(--hair2); }
+  .barlabels{ display:flex; justify-content:space-between; margin-top:9px;
+              font:500 11.5px/1.4 var(--mono); color:var(--dimmer); letter-spacing:.03em; }
+  .barlabels b{ color:var(--tx); font-weight:600; }
+  .budget p{ margin:14px 0 0; font:400 13.5px/1.6 var(--sans); color:var(--dim); max-width:70ch; }
+
+  .rulebox{ margin-top:22px; border:1px solid var(--hair2); border-radius:10px; padding:16px 18px;
+            display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px 26px; }
+  .rulebox div{ font:400 13px/1.5 var(--sans); color:var(--dim); }
+  .rulebox b{ display:block; font:600 10.5px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase;
+              color:var(--dimmer); margin-bottom:6px; }
+
+  /* ── concept chapter ──────────────────────────────────────── */
+  section.concept{ padding-top:78px; scroll-margin-top:64px; }
+  .chead{ display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom:4px; }
+  .cnum{ font:600 11.5px/1 var(--mono); letter-spacing:.18em; color:var(--acc); }
+  .cname{ font:700 30px/1.1 var(--sans); letter-spacing:-.015em; margin:0; }
+  .verb{ font:600 10.5px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--gold);
+         border:1px solid color-mix(in srgb,var(--gold) 34%,transparent); border-radius:99px; padding:5px 10px; }
+  .cpitch{ font:400 19px/1.5 var(--serif); color:var(--dim); margin:12px 0 22px; max-width:62ch; font-style:italic; }
+
+  .frame{ position:relative; width:100%; aspect-ratio:16/9; border-radius:12px; overflow:hidden;
+          background:#0A0812; border:1px solid var(--hair2); cursor:pointer;
+          box-shadow:0 30px 70px -30px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.02) inset; }
+  .frame:focus-visible{ outline:2px solid var(--acc); outline-offset:3px; }
+  .frame.live{ border-color:color-mix(in srgb,var(--acc) 55%, transparent); }
+  .stage{ position:absolute; top:0; left:0; width:1920px; height:1080px; transform-origin:top left;
+          background:#0A0812; color:#fff; overflow:hidden;
+          font-family:Roboto,system-ui,-apple-system,sans-serif; }
+  .livebadge{ position:absolute; z-index:80; right:12px; bottom:12px; font:600 10px/1 var(--mono); letter-spacing:.12em;
+              text-transform:uppercase; color:#0B0912; background:var(--acc); border-radius:5px; padding:5px 8px;
+              opacity:0; transition:opacity .18s; pointer-events:none; }
+  .frame.live .livebadge{ opacity:1; }
+  .keyhint{ margin:10px 0 0; font:500 12px/1.5 var(--mono); color:var(--dimmer); letter-spacing:.02em; }
+  .keyhint kbd{ font:inherit; color:var(--dim); border:1px solid var(--hair2); border-radius:4px; padding:1px 5px; }
+
+  /* motion sheet: the one thing every chapter has that a layout deck wouldn't */
+  .motion{ margin-top:26px; display:grid; grid-template-columns:1.15fr 1fr 1fr; gap:0;
+           border:1px solid var(--hair2); border-radius:10px; overflow:hidden; }
+  @media (max-width:820px){ .motion{ grid-template-columns:1fr; } }
+  .m{ padding:18px 20px; border-right:1px solid var(--hair2); }
+  .m:last-child{ border-right:none; }
+  .m h4{ font:600 10.5px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--acc); margin:0 0 10px; }
+  .m p{ font:400 13.5px/1.58 var(--sans); color:var(--dim); margin:0; }
+  .m p+p{ margin-top:8px; }
+  .m code{ font:500 12px/1.4 var(--mono); color:var(--tx); background:var(--hair2); padding:1px 4px; border-radius:3px; }
+  .curve{ display:flex; flex-direction:column; gap:7px; margin:0 0 12px; }
+  .curve span{ font:500 12px/1.35 var(--mono); color:var(--dim); letter-spacing:.02em; display:flex; gap:10px; }
+  .curve span b{ color:var(--tx); font-weight:600; min-width:66px; font-variant-numeric:tabular-nums; }
+
+  .costline{ margin-top:14px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+             font:500 12px/1 var(--mono); color:var(--dimmer); letter-spacing:.04em; }
+  .pill{ border:1px solid var(--hair2); border-radius:99px; padding:6px 10px; color:var(--dim); }
+  .pill.warn{ border-color:color-mix(in srgb,var(--warn) 42%,transparent); color:var(--warn); }
+  .pill.good{ border-color:color-mix(in srgb,var(--good) 40%,transparent); color:var(--good); }
+  .pill.hot{ border-color:color-mix(in srgb,var(--hot) 42%,transparent); color:var(--hot); }
+
+  .cmp{ width:100%; border-collapse:collapse; margin-top:26px; font-size:13.5px; }
+  .cmp th,.cmp td{ text-align:left; padding:13px 14px; border-bottom:1px solid var(--hair2); vertical-align:top; }
+  .cmp th{ font:600 10.5px/1 var(--mono); letter-spacing:.13em; text-transform:uppercase; color:var(--dimmer); }
+  .cmp td{ color:var(--dim); }
+  .cmp td:first-child{ color:var(--tx); font-weight:600; white-space:nowrap; }
+  .tblwrap{ overflow-x:auto; }
+  h2.sec{ font:400 34px/1.1 var(--serif); letter-spacing:-.01em; margin:0 0 10px; }
+  section.close{ padding-top:88px; }
+  .close p{ font:400 15.5px/1.65 var(--sans); color:var(--dim); max-width:66ch; }
+  .close p b{ color:var(--tx); font-weight:600; }
+  .close p em{ color:var(--tx); font-style:italic; }
+
+  @media (prefers-reduced-motion: reduce){ .stage *{ transition:none !important; animation:none !important; } }
+
+  /* ══ TV STAGE INTERNALS (always dark — these are screens) ══ */
+  .stage img{ display:block; }
+  .ghost{ position:absolute; left:0; top:0; bottom:0; width:116px; z-index:40;
+          background:linear-gradient(90deg, rgba(10,8,18,.94) 0%, rgba(10,8,18,.60) 55%, rgba(10,8,18,0) 100%);
+          display:flex; flex-direction:column; align-items:center; padding:34px 0; gap:0; }
+  .ghost .g-logo{ margin-bottom:52px; opacity:.95; }
+  .ghost .g-ic{ width:52px; height:52px; display:grid; place-items:center; margin:16px 0; opacity:.42; }
+  .ghost .g-ic.on{ opacity:1; background:#fff; border-radius:99px; }
+  .ghost .g-ic.on svg{ stroke:#12101F; }
+  .ghost .g-sp{ flex:1; }
+  .g-ic svg{ width:26px; height:26px; fill:none; stroke:#fff; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+
+  .art{ position:absolute; background-size:cover; background-position:center 22%; }
+  .fade{ transition:opacity .26s ease; }
+  .imdb{ color:#F5C518; font-weight:800; }
+  .metaline{ font-size:25px; font-weight:600; letter-spacing:.2px; color:rgba(255,255,255,.72); white-space:nowrap; }
+  .metaline .sep{ color:rgba(255,255,255,.28); padding:0 12px; }
+  .syn{ font-size:25px; line-height:1.5; font-weight:500; color:rgba(255,255,255,.78);
+        text-shadow:0 1px 3px rgba(0,0,0,.75); }
+  .stage img.logoimg{ width:auto; height:auto; max-height:112px; max-width:600px;
+                      object-fit:contain; object-position:left bottom; }
+  .logoimg.md{ max-height:88px; max-width:480px; }
+  .logoimg.sm{ max-height:64px; max-width:380px; }
+  .namefb{ font-size:52px; font-weight:800; letter-spacing:-1px; line-height:1.04; }
+  .namefb.md{ font-size:42px; }
+  .namefb.sm{ font-size:32px; }
+  .rlabel{ font-size:22px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,.86); }
+  .rlabel.off{ color:rgba(255,255,255,.34); font-weight:700; }
+
+  .cell{ position:relative; border-radius:8px; overflow:hidden; background:#171426;
+         box-shadow:0 8px 22px -10px rgba(0,0,0,.9);
+         transition:transform .13s cubic-bezier(.22,.61,.36,1), box-shadow .13s, opacity .18s; will-change:transform; }
+  .cell img{ width:100%; height:100%; object-fit:cover; }
+  .cell.on{ transform:scale(1.055); box-shadow:0 16px 34px -12px rgba(0,0,0,.95); }
+  .cell.on::after{ content:""; position:absolute; inset:0; border-radius:8px; border:4px solid #fff; }
+  .track{ display:flex; transition:transform .2s cubic-bezier(.22,.61,.36,1); will-change:transform; }
+  .prog{ position:absolute; left:0; right:0; bottom:0; height:7px; background:rgba(255,255,255,.22); }
+  .prog i{ display:block; height:100%; background:#fff; }
+  .epbadge{ position:absolute; left:10px; bottom:20px; font-size:19px; font-weight:800; color:#fff;
+            background:rgba(10,8,18,.78); border-radius:5px; padding:5px 9px; letter-spacing:.02em; }
+  .trailerpill{ position:absolute; right:44px; top:38px; z-index:30; display:flex; align-items:center; gap:12px;
+                background:rgba(12,10,22,.72); border:1px solid rgba(255,255,255,.13); border-radius:99px;
+                padding:12px 22px; font-size:21px; font-weight:800; letter-spacing:.14em; color:#fff; }
+  .eqbar{ display:flex; align-items:flex-end; gap:3px; height:18px; }
+  .eqbar i{ width:4px; background:#FBBF24; border-radius:1px; }
+  .hintchip{ display:inline-flex; align-items:center; gap:10px; border:1px solid rgba(255,255,255,.16);
+             border-radius:99px; padding:10px 18px; font-size:20px; font-weight:700; color:rgba(255,255,255,.8); }
+  .hintchip b{ background:rgba(255,255,255,.9); color:#12101F; border-radius:5px; padding:3px 8px; font-size:17px; }
+
+  /* VI · Mural ------------------------------------------------ */
+  .mustrip{ position:absolute; top:-40px; left:0; height:1160px; display:flex;
+            transition:transform .62s cubic-bezier(.16,.84,.24,1); will-change:transform; }
+  .mupanel{ width:1280px; height:100%; flex:0 0 1280px; margin-right:-150px; background-size:cover;
+            background-position:center 26%;
+            -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 11%,#000 89%,transparent 100%);
+            mask-image:linear-gradient(90deg,transparent 0,#000 11%,#000 89%,transparent 100%); }
+  .kin{ display:inline-block; transition:transform .34s cubic-bezier(.16,.84,.24,1), opacity .34s; }
+  .kin.out{ transform:translateY(22px); opacity:0; }
+
+  /* VII · Bloom ----------------------------------------------- */
+  .bloomart{ position:absolute; inset:0; background-size:cover; background-position:center 24%;
+             transform-origin:50% 50%; }
+  .socket{ position:absolute; border-radius:8px; border:3px dashed rgba(255,255,255,.34);
+           transition:opacity .2s; pointer-events:none; }
+
+  /* VIII · Reel ----------------------------------------------- */
+  .reelcol{ position:absolute; left:0; top:0; width:1920px;
+            transition:transform .52s cubic-bezier(.16,.84,.24,1); will-change:transform; }
+  .reelpanel{ position:relative; width:1920px; height:1080px; overflow:hidden;
+              transition:transform .52s cubic-bezier(.16,.84,.24,1), opacity .42s; transform-origin:50% 50%; }
+  .reelpanel.rest{ transform:scale(.93); opacity:.34; }
+  .lanedots{ position:absolute; right:44px; top:50%; transform:translateY(-50%); z-index:35;
+             display:flex; flex-direction:column; gap:14px; align-items:center; }
+  .lanedots i{ width:10px; height:10px; border-radius:99px; background:rgba(255,255,255,.3); transition:all .2s; }
+  .lanedots i.on{ background:#fff; height:34px; }
+
+  /* IX · Diorama ---------------------------------------------- */
+  .plane{ position:absolute; transition:transform .42s cubic-bezier(.16,.84,.24,1); will-change:transform; }
+  .sweep{ position:absolute; inset:-20% -40%; z-index:6; pointer-events:none;
+          background:linear-gradient(102deg, rgba(255,255,255,0) 42%, rgba(255,255,255,.085) 50%, rgba(255,255,255,0) 58%);
+          animation:sweep 11s linear infinite; }
+  @keyframes sweep{ from{ transform:translateX(-46%);} to{ transform:translateX(46%);} }
+  .tiltwrap{ perspective:1700px; }
+  .tilt{ transition:transform .22s cubic-bezier(.22,.61,.36,1); will-change:transform; }
+
+  /* X · Atlas -------------------------------------------------- */
+  .board{ position:absolute; left:0; top:0; transform-origin:0 0;
+          transition:transform .5s cubic-bezier(.16,.84,.24,1); will-change:transform; }
+  .brow{ margin-bottom:34px; transition:opacity .35s; }
+  /* at row altitude the rows above the focused one would run under the identity
+     block — they drop far enough back to read as the map you came from */
+  .brow.dim{ opacity:.12; }
+  .camchip{ position:absolute; left:212px; top:44px; z-index:36; }
+</style>
+
+<div class="top"><div class="topin">
+  <span class="brandmark">Debrify · Android TV · vol. II</span>
+  <nav class="jump">
+    <a href="#c1">VI Mural</a><a href="#c2">VII Bloom</a><a href="#c3">VIII Reel</a>
+    <a href="#c4">IX Diorama</a><a href="#c5">X Atlas</a><a href="#pick">Compare</a>
+    <button class="demotog" id="demotog" aria-pressed="true">Auto-demo</button>
+  </nav>
+</div></div>
+
+<div class="wrap">
+
+<header class="lede">
+  <div class="eyebrow">Home screen · volume II · motion concepts</div>
+  <h1>Home <em>in motion</em></h1>
+  <p>Eight layouts already ship — Canvas, Classic, Spotlight, Atrium, Mosaic, Promenade, Deck, Tonight.
+     They differ in <b>where things sit</b>. Every one of them moves the same way: art cross-dissolves,
+     a card rises 1.055, a rail glides. That's why a ninth arrangement of the same parts wouldn't feel
+     like more.</p>
+  <p>These five are organised around a <b>verb instead of a shape</b>. Each one picks a single motion idea
+     — pan, bloom, glide, parallax, zoom — and lets the layout follow from it. They're drawn at true TV
+     scale (1920×1080 = 2× the app's logical pixels) with the real 116px ghost rail, and they're live:
+     <b>click a screen and drive it with the arrow keys.</b> Atlas also answers <kbd>Enter</kbd> and
+     <kbd>Backspace</kbd>.</p>
+
+  <div class="budget">
+    <h4>The constraint every one of these has to survive</h4>
+    <div class="bar">
+      <i class="b-target"></i><i class="b-now"></i>
+      <span class="tick" style="left:33.4%"></span><span class="tick" style="left:66.7%"></span>
+    </div>
+    <div class="barlabels">
+      <span><b>16.7 ms</b> — one vsync</span>
+      <span><b>50 ms</b> — measured home-board scrub, Mi Box 4</span>
+    </div>
+    <p>The Mi Box baseline is 50 ms median per frame and 88% missed vsync, and the cost is
+      <b>per keypress</b>, not per second — each deliberate press re-runs the whole hero pipeline. So every
+      concept below is judged on one question: does its motion add work <em>per press</em>, or does it move
+      pixels that were already going to be painted? Transform and opacity are free-ish. Blur, saveLayer,
+      and a second decode are not.</p>
+  </div>
+
+  <div class="rulebox">
+    <div><b>Trailer hole</b>The underlay video sits behind a translucent Flutter view. Nothing with
+      <code>Opacity</code> or a filter may sit over the hole — so a concept animates the hole's
+      <em>rect</em>, never its alpha.</div>
+    <div><b>Decode at card size</b>Every image is decoded at the size it paints, and neighbours are
+      pre-decoded. A concept that shows more art at once must show it smaller.</div>
+    <div><b>One verb</b>Each screen commits to a single motion. Layouts that animate three things at
+      once read as busy on a 10-foot screen, and cost three times as much.</div>
+  </div>
+</header>
+
+<!-- ══════════════════ VI · MURAL ══════════════════ -->
+<section class="concept" id="c1">
+  <div class="chead">
+    <span class="cnum">VI</span><h3 class="cname">Mural</h3><span class="verb">Verb · pan</span>
+  </div>
+  <p class="cpitch">Nothing cross-dissolves. The wall is continuous, and moving through the rail walks the camera along it.</p>
+  <div class="frame" id="f1" tabindex="0"><div class="stage" id="s1"></div><span class="livebadge">Live · arrows</span></div>
+  <p class="keyhint"><kbd>←</kbd><kbd>→</kbd> walk the wall · <kbd>↑</kbd><kbd>↓</kbd> change rail — the wall repaints, the camera keeps its place</p>
+  <div class="motion">
+    <div class="m"><h4>The motion</h4>
+      <div class="curve">
+        <span><b>620 ms</b> wall pan, <code>cubic(.16,.84,.24,1)</code></span>
+        <span><b>200 ms</b> rail glide — 6.4× faster than the wall</span>
+        <span><b>340 ms</b> identity, masked slide-up</span>
+      </div>
+      <p>Backdrops are hung edge to edge with a 150px overlap and a soft mask on each seam, so the joins
+        read as one painted surface. The rail moves at its own pitch, the wall at 1280px per title — the
+        parallax is a consequence of the two speeds, not a separate effect.</p></div>
+    <div class="m"><h4>Why it feels different</h4>
+      <p>A cross-dissolve says "new screen". A pan says "same room, different corner" — the reason a
+        gallery feels bigger than a slideshow.</p>
+      <p>It also fixes the thing Canvas can't hide: on a slow box a dissolve stalls mid-way and looks
+        broken. A pan that arrives late just arrives late.</p></div>
+    <div class="m"><h4>What it costs</h4>
+      <p>Three panels live at a time — <code>prev/cur/next</code> in a recycled window. One decode per
+        press, the same as today, and the pan is one <code>Transform.translate</code> on a
+        <code>RepaintBoundary</code>.</p>
+      <p>Trailer hole is a fixed rect in the upper right; the wall pans behind it.</p></div>
+  </div>
+  <div class="costline"><span class="pill good">No new per-press work</span><span class="pill">Reuses the Canvas art layer + rails</span><span class="pill warn">Wants landscape stills; posters look wrong hung edge to edge</span></div>
+</section>
+
+<!-- ══════════════════ VII · BLOOM ══════════════════ -->
+<section class="concept" id="c2">
+  <div class="chead">
+    <span class="cnum">VII</span><h3 class="cname">Bloom</h3><span class="verb">Verb · grow</span>
+  </div>
+  <p class="cpitch">The stage isn't a backdrop that changes. It's the card you're standing on, opened up.</p>
+  <div class="frame" id="f2" tabindex="0"><div class="stage" id="s2"></div><span class="livebadge">Live · arrows</span></div>
+  <p class="keyhint"><kbd>←</kbd><kbd>→</kbd> along the shelf — watch where the picture comes <em>from</em> · <kbd>↑</kbd><kbd>↓</kbd> change shelf</p>
+  <div class="motion">
+    <div class="m"><h4>The motion</h4>
+      <div class="curve">
+        <span><b>180 ms</b> collapse back into the card</span>
+        <span><b>220 ms</b> focus rest before it re-opens</span>
+        <span><b>420 ms</b> bloom out, <code>cubic(.2,.8,.2,1)</code></span>
+      </div>
+      <p>One art layer, permanently full-bleed, with its transform origin parked on the focused card's
+        centre. Collapsed it's <code>scale(cardW/1920)</code> sitting exactly in the card's rect; open it's
+        <code>scale(1)</code>. The card leaves a dashed socket so the eye knows what left.</p></div>
+    <div class="m"><h4>Why it feels different</h4>
+      <p>Every other layout asks you to believe two unrelated things changed together. Bloom shows the
+        causal link — this picture is <em>that</em> card — which is the same trick a good app transition
+        plays when a thumbnail opens into a page.</p></div>
+    <div class="m"><h4>What it costs</h4>
+      <p>Genuinely cheap: no second image, no blur, no clip. A uniform scale on one already-decoded
+        backdrop, which is why it survives a Mali-450.</p>
+      <p>The trailer hole animates <em>with</em> the bloom — it's an <code>AnimatedPositioned</code> rect,
+        never a fading layer, so the punch-through stays legal.</p></div>
+  </div>
+  <div class="costline"><span class="pill good">Cheapest new motion here</span><span class="pill">Ships the "where did that come from" moment</span><span class="pill warn">Fast scrubbing must cancel mid-bloom, not queue</span></div>
+</section>
+
+<!-- ══════════════════ VIII · REEL ══════════════════ -->
+<section class="concept" id="c3">
+  <div class="chead">
+    <span class="cnum">VIII</span><h3 class="cname">Reel</h3><span class="verb">Verb · glide</span>
+  </div>
+  <p class="cpitch">One title owns the whole screen. Down is the next title; right is a different mood entirely.</p>
+  <div class="frame" id="f3" tabindex="0"><div class="stage" id="s3"></div><span class="livebadge">Live · arrows</span></div>
+  <p class="keyhint"><kbd>↑</kbd><kbd>↓</kbd> next title, full screen · <kbd>←</kbd><kbd>→</kbd> switch lane — Continue, Popular, Because you watched</p>
+  <div class="motion">
+    <div class="m"><h4>The motion</h4>
+      <div class="curve">
+        <span><b>520 ms</b> vertical glide, one screen height</span>
+        <span><b>0.93</b> rest scale on the outgoing panel</span>
+        <span><b>2.4 s</b> dwell, then the trailer takes the frame</span>
+      </div>
+      <p>The column is 1080px per title. The panel you leave shrinks and dims as it goes, the one arriving
+        scales up into place — so the movement has a direction and a weight instead of a fade.</p></div>
+    <div class="m"><h4>Why it feels different</h4>
+      <p>It's the only concept where a title is never a thumbnail. On a rail, a show is a 160px poster
+        competing with eleven others; here it gets the whole 65-inch panel, its logo, its rating, and 2.4
+        seconds before the trailer starts.</p>
+      <p>Best home for Continue Watching, where the list is short and the decision is already half made.</p></div>
+    <div class="m"><h4>What it costs</h4>
+      <p><b>The least of the five.</b> Two full-screen images exist at a time and only one is fully
+        painted. No rail, no grid, no twelve simultaneous decodes.</p>
+      <p>Trailer hole is the whole panel and it's stationary — start and stop have nothing to move.</p></div>
+  </div>
+  <div class="costline"><span class="pill good">Lowest GPU + memory cost</span><span class="pill">The one built for weak boxes</span><span class="pill hot">Browsing density: one title per screen</span></div>
+</section>
+
+<!-- ══════════════════ IX · DIORAMA ══════════════════ -->
+<section class="concept" id="c4">
+  <div class="chead">
+    <span class="cnum">IX</span><h3 class="cname">Diorama</h3><span class="verb">Verb · parallax</span>
+  </div>
+  <p class="cpitch">Three planes at three speeds, and cards that turn to face you. The screen gets a depth it doesn't actually have.</p>
+  <div class="frame" id="f4" tabindex="0"><div class="stage" id="s4"></div><span class="livebadge">Live · arrows</span></div>
+  <p class="keyhint"><kbd>←</kbd><kbd>→</kbd> along the shelf — the back wall drifts, the shelf runs, the cards turn · <kbd>↑</kbd><kbd>↓</kbd> change shelf</p>
+  <div class="motion">
+    <div class="m"><h4>The motion</h4>
+      <div class="curve">
+        <span><b>−0.06×</b> back wall (drifts against you)</span>
+        <span><b>0.22×</b> identity plane</span>
+        <span><b>1.00×</b> shelf</span>
+        <span><b>±7°</b> card yaw by distance from centre</span>
+      </div>
+      <p>Cards sit under one shared perspective, so the ones off to the side turn away and the focused one
+        squares up to the viewer. A slow specular sweep crosses the back wall on an 11s loop — the only
+        thing on the screen that moves when you don't.</p></div>
+    <div class="m"><h4>Why it feels different</h4>
+      <p>Flat art on a flat panel is what every app does. Depth is what a hardware product does — the
+        reason an Apple TV screensaver reads as expensive and a wallpaper doesn't.</p>
+      <p>It also makes focus unmistakable from across a room: the focused card is the only one facing you.</p></div>
+    <div class="m"><h4>What it costs</h4>
+      <p><b>The most here — spend it knowingly.</b> The yaw is a matrix per card, not a repaint, so it's
+        affordable; the sweep is a translated gradient, never a blur or a shader.</p>
+      <p>Rule if it ships: on a GLES2 box the sweep is off and the yaw drops to the focused card only.
+        The parallax stays — it's three transforms.</p></div>
+  </div>
+  <div class="costline"><span class="pill">Most "designed" screen</span><span class="pill warn">Needs a TV-class gate</span><span class="pill hot">Three moving planes = three chances to jank</span></div>
+</section>
+
+<!-- ══════════════════ X · ATLAS ══════════════════ -->
+<section class="concept" id="c5">
+  <div class="chead">
+    <span class="cnum">X</span><h3 class="cname">Atlas</h3><span class="verb">Verb · zoom</span>
+  </div>
+  <p class="cpitch">Navigation stops being scrolling and becomes a camera. Back pulls up to the map; OK dives into a row.</p>
+  <div class="frame" id="f5" tabindex="0"><div class="stage" id="s5"></div><span class="livebadge">Live · arrows</span></div>
+  <p class="keyhint"><kbd>Enter</kbd> dive into the row · <kbd>Backspace</kbd> pull up to the map · <kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> move in either altitude</p>
+  <div class="motion">
+    <div class="m"><h4>The motion</h4>
+      <div class="curve">
+        <span><b>0.52×</b> map altitude — every row on one screen</span>
+        <span><b>1.00×</b> row altitude — hero art, full rail</span>
+        <span><b>500 ms</b> camera, one transform on the whole board</span>
+      </div>
+      <p>The board is built once and never rebuilt; zooming is a single scale-and-translate on it. Rows you
+        aren't in drop back to 12% so the row you're in is unmistakable at either altitude.</p></div>
+    <div class="m"><h4>Why it feels different</h4>
+      <p>It gives Home the one thing it has never had: <b>an overview.</b> Ten rows and eighty titles in a
+        single glance, then a dive into the one you meant — instead of pressing down eleven times to find
+        out what's below the fold.</p>
+      <p>BACK finally means something on Home too. Today it exits; here it pulls up.</p></div>
+    <div class="m"><h4>What it costs</h4>
+      <p>Scaling a large tree is a raster cost, so the board goes in one <code>RepaintBoundary</code> and
+        posters at map altitude decode at map size (≈70px wide) — the same decode-at-paint-size rule,
+        applied to two altitudes.</p>
+      <p>No trailer at map altitude; it resumes on the dive.</p></div>
+  </div>
+  <div class="costline"><span class="pill good">Only layout with an overview</span><span class="pill">Gives BACK a job on Home</span><span class="pill warn">Two altitudes = two decode sizes to manage</span></div>
+</section>
+
+<!-- ══════════════════ COMPARE ══════════════════ -->
+<section class="close" id="pick">
+  <h2 class="sec">Which one, and why</h2>
+  <p>All five are additive — a new value in <code>tv_home_style</code>, a new branch in the board build,
+     nothing removed. Canvas stays the default until you say otherwise.</p>
+  <div class="tblwrap"><table class="cmp">
+    <thead><tr><th>Concept</th><th>Verb</th><th>Per-press cost vs today</th><th>New code</th><th>The reason to build it</th></tr></thead>
+    <tbody>
+      <tr><td>VI Mural</td><td>Pan</td><td>Same — one decode, one transform</td><td>Low — 3-panel recycled window</td><td>Kills the cross-dissolve stall on slow boxes</td></tr>
+      <tr><td>VII Bloom</td><td>Grow</td><td>Lower — no second image at all</td><td>Low — one origin-parked art layer</td><td>The moment people screenshot</td></tr>
+      <tr><td>VIII Reel</td><td>Glide</td><td>Lowest — two panels, one painted</td><td>Medium — new vertical focus model</td><td>The layout a Mi Box can actually run</td></tr>
+      <tr><td>IX Diorama</td><td>Parallax</td><td>Higher — three planes + yaw</td><td>Medium — depth scaffold, TV-gated</td><td>Looks like hardware, not an app</td></tr>
+      <tr><td>X Atlas</td><td>Zoom</td><td>Higher at the dive, free at rest</td><td>High — camera model, two decode sizes</td><td>The only one that adds a new capability</td></tr>
+    </tbody>
+  </table></div>
+  <p style="margin-top:26px"><b>My pick: build Bloom first, then Mural.</b> Bloom is the cheapest motion in
+    the deck and the most distinctive — it changes the feel of a press without changing what's on screen,
+    so it can drop into Canvas's own layout as a motion option rather than a whole new board. Mural follows
+    naturally: same art layer, same rails, and it retires the cross-dissolve that stalls on the slow boxes
+    we already know about.</p>
+  <p><b>Reel is the sleeper.</b> It's the only concept whose cost goes <em>down</em> as the screen gets more
+    ambitious, and it's the right answer for a Continue-Watching-first home on hardware that can't afford
+    a board at all. <b>Diorama</b> is the showpiece and needs a GLES3 gate. <b>Atlas</b> is the biggest
+    build and the only one that adds something we can't do today — worth it if the map is a feature you
+    want, not just a transition.</p>
+  <p style="margin-top:26px;color:var(--dimmer);font-size:13.5px">Concepts I–V (Atrium, Mosaic, Promenade,
+    Deck, Tonight) are volume I and already built behind <code>tv_home_style</code>. Nothing here replaces
+    them.</p>
+</section>
+
+</div>
+
+<script>
+const IMG = __IMG_MAP__;
+
+/* ── content ─────────────────────────────────────────────────── */
+const T = [
+  {id:'tt3581920',  n:'The Last of Us',   t:'SERIES', y:'2023–', rt:'60 min', g:'Drama · Action',     r:'8.6',
+   s:'Twenty years after a fungal outbreak, a hardened survivor is hired to smuggle a fourteen-year-old girl out of a quarantine zone.', ep:'S1 · E5', pr:.71, left:'22 min left'},
+  {id:'tt14452776', n:'The Bear',         t:'SERIES', y:'2022–', rt:'30 min', g:'Comedy · Drama',     r:'8.6',
+   s:'A young chef from the fine-dining world returns to Chicago to run his family’s chaotic sandwich shop.', ep:'S3 · E7', pr:.34, left:'19 min left'},
+  {id:'tt9253284',  n:'Andor',            t:'SERIES', y:'2022–', rt:'45 min', g:'Sci-Fi · Drama',     r:'8.4',
+   s:'Cassian Andor’s reluctant journey to becoming a rebel, in an era of danger, deception and intrigue under the Empire.', ep:'S2 · E1', pr:.18, left:'37 min left'},
+  {id:'tt5753856',  n:'Dark',             t:'SERIES', y:'2017–2020',rt:'60 min',g:'Mystery · Sci-Fi', r:'8.7',
+   s:'A family saga with a supernatural twist, set in a German town where the disappearance of two children exposes the fractured relationships of four families.', ep:'S3 · E5', pr:.47, left:'31 min left'},
+  {id:'tt15239678', n:'Dune: Part Two',   t:'MOVIE',  y:'2024',  rt:'166 min',g:'Sci-Fi · Adventure', r:'8.5',
+   s:'Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.', ep:null, pr:0},
+  {id:'tt12637874', n:'Fallout',          t:'SERIES', y:'2024–', rt:'60 min', g:'Sci-Fi · Adventure', r:'8.4',
+   s:'In a future ravaged by nuclear war, a naive vault dweller ventures onto the surface and finds a violent, bizarre world.', ep:'S1 · E4', pr:.55, left:'27 min left'},
+  {id:'tt11126994', n:'Arcane',           t:'SERIES', y:'2021–', rt:'41 min', g:'Animation · Action', r:'9.0',
+   s:'Amid the unrest between utopian Piltover and the oppressed undercity of Zaun, two sisters fight on opposite sides of a war.', ep:null, pr:0},
+  {id:'tt1856101',  n:'Blade Runner 2049',t:'MOVIE',  y:'2017',  rt:'164 min',g:'Sci-Fi · Drama',     r:'8.0',
+   s:'A young blade runner uncovers a secret that could plunge what is left of society into chaos, and goes looking for a man missing thirty years.', ep:null, pr:0},
+  {id:'tt11198330', n:'House of the Dragon',t:'SERIES',y:'2022–',rt:'60 min', g:'Fantasy · Drama',    r:'8.3',
+   s:'An internal succession war within House Targaryen at the height of its power, two hundred years before the Iron Throne is lost.', ep:null, pr:0},
+  {id:'tt1877830',  n:'The Batman',       t:'MOVIE',  y:'2022',  rt:'176 min',g:'Action · Crime',     r:'7.8',
+   s:'When a sadistic killer leaves a trail of cryptic clues, Batman must forge new relationships and unmask the culprit.', ep:null, pr:0},
+  {id:'tt0903747',  n:'Breaking Bad',     t:'SERIES', y:'2008–2013',rt:'47 min',g:'Crime · Drama',    r:'9.5',
+   s:'A high-school chemistry teacher diagnosed with terminal cancer turns to making and selling methamphetamine to secure his family’s future.', ep:null, pr:0},
+  {id:'tt0816692',  n:'Interstellar',     t:'MOVIE',  y:'2014',  rt:'169 min',g:'Sci-Fi · Drama',     r:'8.7',
+   s:'A team of explorers travel through a wormhole in space in an attempt to ensure humanity’s survival.', ep:null, pr:0},
+  {id:'tt7660850',  n:'Succession',       t:'SERIES', y:'2018–2023',rt:'60 min',g:'Drama',            r:'8.9',
+   s:'The Roy family controls the biggest media conglomerate in the world, and their lives play out in the shadow of their father’s decline.', ep:null, pr:0},
+  {id:'tt6710474',  n:'Everything Everywhere All at Once', t:'MOVIE', y:'2022', rt:'139 min', g:'Action · Comedy', r:'7.8',
+   s:'An ageing Chinese immigrant is swept up in an insane adventure in which she alone can save existence by exploring other universes.', ep:null, pr:0},
+  // Severance (tt11280740) is deliberately absent: its metahub logo is a BLACK
+  // wordmark, invisible on an ink ground — the same note volume I carried.
+];
+const byId = Object.fromEntries(T.map(t=>[t.id,t]));
+const bg   = id => IMG['bg_'+id]   || '';
+const logo = id => IMG['logo_'+id] || '';
+const post = id => IMG['p_'+id]    || '';
+const ids  = T.map(t=>t.id);
+const rot  = (a,k) => [...a.slice(k), ...a.slice(0,k)];
+/* pad a rail out to a full shelf without ever repeating a title */
+const fill = base => base.concat(ids.filter(id=>!base.includes(id)));
+
+/* ── shared chrome ───────────────────────────────────────────── */
+const ICONS = {
+  search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  home:'<path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/>',
+  compass:'<circle cx="12" cy="12" r="9"/><path d="M15 9l-2 4-4 2 2-4z"/>',
+  dl:'<path d="M12 4v11"/><path d="M8 12l4 4 4-4"/><path d="M5 20h14"/>',
+  tv:'<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/>',
+  cloud:'<path d="M7 18h9a4 4 0 000-8 5.5 5.5 0 00-10.6 1.6A3.5 3.5 0 006 18z"/>'
+};
+const ic = (k,on) => `<div class="g-ic${on?' on':''}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg></div>`;
+const ghost = () => `<div class="ghost">
+  <div class="g-logo"><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M6 4l13 8-13 8z" fill="#7B5CFF"/></svg></div>
+  ${ic('search')}${ic('home',true)}${ic('compass')}${ic('dl')}
+  <div class="g-sp"></div>${ic('tv')}${ic('cloud')}</div>`;
+
+const metaHTML = t => `<span class="imdb">IMDb</span>&nbsp;${t.r}<span class="sep">·</span>${t.t}<span class="sep">·</span>${t.y}<span class="sep">·</span>${t.rt}<span class="sep">·</span>${t.g}`;
+const logoOrName = (t,cls='') => logo(t.id)
+  ? `<img class="logoimg ${cls}" src="${logo(t.id)}" alt="${t.n}">`
+  : `<div class="namefb ${cls}">${t.n}</div>`;
+const trailerPill = () => `<div class="trailerpill"><span class="eqbar"><i style="height:8px"></i><i style="height:16px"></i><i style="height:11px"></i></span>TRAILER</div>`;
+const poster = (id,w,h,cw) => {
+  const t = byId[id];
+  const over = (cw && t && t.pr)
+    ? `<div class="epbadge">${t.ep}</div><div class="prog"><i style="width:${t.pr*100}%"></i></div>` : '';
+  return `<div class="cell" style="width:${w}px;height:${h}px"><img src="${post(id)}" alt="">${over}</div>`;
+};
+const railCells = (list,r,w,h,cw,gap=22) => list.map((id,c)=>
+  `<div data-cell data-r="${r}" data-c="${c}" data-t="${id}" style="flex:0 0 ${w}px;margin-right:${gap}px">
+     ${poster(id,w,h,cw)}</div>`).join('');
+
+/* rails shared by the shelf-based concepts */
+const RAILS = [
+  { label:'Continue Watching',  ids:['tt3581920','tt12637874','tt14452776','tt5753856','tt9253284'], cw:true },
+  { label:'Cinemeta · Popular', ids:rot(ids,4), cw:false },
+  { label:'Favourites',         ids:rot(ids,9), cw:false },
+];
+
+/* ═══════════ VI · MURAL ═══════════ */
+function mural(){
+  const rail = RAILS[0];
+  const panels = ids.map(id=>`<div class="mupanel" style="background-image:url(${bg(id)})"></div>`).join('');
+  return `
+  <div class="mustrip" id="mu-strip">${panels}</div>
+  <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(10,8,18,.92) 0,rgba(10,8,18,.35) 30%,rgba(10,8,18,0) 52%)"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;height:620px;background:linear-gradient(0deg,rgba(10,8,18,.97) 0,rgba(10,8,18,.80) 34%,rgba(10,8,18,0) 100%)"></div>
+  ${trailerPill()}
+  <div style="position:absolute;left:212px;bottom:404px;right:900px">
+    <div class="kin" id="mu-logo" style="min-height:118px;display:flex;align-items:flex-end"></div>
+    <div class="kin metaline" id="mu-meta" style="margin-top:24px"></div>
+    <div class="kin syn" id="mu-syn" style="margin-top:20px;font-size:23px"></div>
+  </div>
+  <div style="position:absolute;left:212px;right:0;bottom:78px">
+    <div class="rlabel" id="mu-rail" style="margin:0 0 18px 2px">${rail.label}</div>
+    <div style="overflow:hidden"><div class="track" data-track="0" style="transition-duration:.2s">
+      ${railCells(fill(rail.ids).slice(0,11),0,168,252,true)}
+    </div></div>
+  </div>`;
+}
+function muralSync(st,t,cell){
+  const i = st.cells.indexOf(cell);
+  st.q('#mu-strip').style.transform = `translateX(${960 - (i*1130 + 640)}px) translateY(${st.railIdx*-26}px)`;
+  st.kinetic(['#mu-logo','#mu-meta','#mu-syn'], ()=>{
+    st.q('#mu-logo').innerHTML = logoOrName(t);
+    st.q('#mu-meta').innerHTML = metaHTML(t);
+    st.q('#mu-syn').textContent = t.s;
+  });
+}
+
+/* ═══════════ VII · BLOOM ═══════════ */
+function bloom(){
+  const rail = RAILS[1];
+  return `
+  <div class="bloomart" id="bl-art"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(10,8,18,.90) 0,rgba(10,8,18,.30) 34%,rgba(10,8,18,0) 58%)"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;height:560px;background:linear-gradient(0deg,rgba(10,8,18,.98) 0,rgba(10,8,18,.86) 30%,rgba(10,8,18,0) 100%)"></div>
+  <div class="socket" id="bl-socket" style="opacity:0"></div>
+  ${trailerPill()}
+  <div style="position:absolute;left:212px;bottom:372px;right:860px" class="fade" id="bl-id">
+    <div style="min-height:112px;display:flex;align-items:flex-end" id="bl-logo"></div>
+    <div class="metaline" id="bl-meta" style="margin-top:22px"></div>
+    <div style="display:flex;gap:14px;margin-top:34px">
+      <span class="hintchip"><b>OK</b> Play</span><span class="hintchip"><b>HOLD</b> Details</span>
+    </div>
+  </div>
+  <div style="position:absolute;left:212px;right:0;bottom:74px">
+    <div class="rlabel" id="bl-rail" style="margin:0 0 18px 2px">${rail.label}</div>
+    <div style="overflow:hidden"><div class="track" data-track="0">
+      ${railCells(rail.ids,0,168,252,false)}
+    </div></div>
+  </div>`;
+}
+function bloomSync(st,t,cell){
+  const art = st.q('#bl-art'), sock = st.q('#bl-socket');
+  const r = st.localRect(cell.querySelector('.cell'));
+  art.style.transition = 'none';
+  art.style.opacity = '0';
+  art.style.backgroundImage = `url(${bg(t.id)})`;
+  const s = r.w/1920, tx = (r.x + r.w/2) - 960, ty = (r.y + r.h/2) - 540;
+  art.style.transform = `translate(${tx}px,${ty}px) scale(${s})`;
+  Object.assign(sock.style, {left:r.x+'px', top:r.y+'px', width:r.w+'px', height:r.h+'px', opacity:'0'});
+  st.q('#bl-logo').innerHTML = logoOrName(t);
+  st.q('#bl-meta').innerHTML = metaHTML(t);
+  st.q('#bl-id').style.opacity = '0';
+  clearTimeout(st._t);
+  st._t = setTimeout(()=>{
+    void art.offsetWidth;
+    art.style.transition = 'transform .42s cubic-bezier(.2,.8,.2,1), opacity .30s';
+    art.style.transform = 'translate(0,0) scale(1)';
+    art.style.opacity = '1';
+    sock.style.opacity = '.85';
+    st.q('#bl-id').style.opacity = '1';
+  }, 180);
+}
+
+/* ═══════════ VIII · REEL ═══════════ */
+const LANES = [
+  { label:'CONTINUE', ids:['tt3581920','tt12637874','tt14452776','tt5753856'] },
+  { label:'POPULAR TODAY', ids:['tt15239678','tt11198330','tt11126994','tt1877830'] },
+  { label:'BECAUSE YOU WATCHED DARK', ids:['tt1856101','tt0816692','tt5753856','tt7660850'] },
+];
+/* progress row — rebuilt on every lane swap, so a movie never inherits an
+   episode's "19 min left" from the panel it replaced */
+const progRow = t => t.pr
+  ? `<div style="margin-top:30px;display:flex;align-items:center;gap:20px">
+       <div style="width:420px;height:8px;border-radius:99px;background:rgba(255,255,255,.24)">
+         <i style="display:block;height:100%;border-radius:99px;background:#fff;width:${t.pr*100}%"></i></div>
+       <span style="font-size:21px;font-weight:700;color:rgba(255,255,255,.72)">${t.ep} · ${t.left}</span>
+     </div>`
+  : '';
+function reel(){
+  const panel = (id,i) => {
+    const t = byId[id];
+    return `<div class="reelpanel rest" data-cell data-r="${i}" data-c="0" data-t="${id}">
+      <div class="art" style="inset:0;background-image:url(${bg(id)})"></div>
+      <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(10,8,18,.86) 0,rgba(10,8,18,.20) 46%,rgba(10,8,18,0) 70%)"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;height:520px;background:linear-gradient(0deg,rgba(10,8,18,.94) 0,rgba(10,8,18,0) 100%)"></div>
+      <div style="position:absolute;left:212px;bottom:180px;right:640px">
+        <div style="font:800 19px/1 Roboto,sans-serif;letter-spacing:.24em;color:#A78BFA;margin-bottom:30px" data-lane>CONTINUE</div>
+        <div style="min-height:120px;display:flex;align-items:flex-end">${logoOrName(t)}</div>
+        <div class="metaline" style="margin-top:24px">${metaHTML(t)}</div>
+        <div class="syn" style="margin-top:20px;font-size:23px">${t.s}</div>
+        <div data-prog>${progRow(t)}</div>
+        <div style="display:flex;gap:14px;margin-top:34px">
+          <span class="hintchip" data-ok><b>OK</b> ${t.pr?'Resume':'Play'}</span><span class="hintchip"><b>▾</b> Next title</span>
+        </div>
+      </div>
+    </div>`;
+  };
+  return `
+  <div class="reelcol" id="re-col">${LANES[0].ids.map(panel).join('')}</div>
+  ${trailerPill()}
+  <div class="lanedots" id="re-dots"><i class="on"></i><i></i><i></i><i></i></div>
+  <div style="position:absolute;right:44px;bottom:70px;z-index:35;display:flex;gap:12px" id="re-lanes"></div>`;
+}
+function reelSync(st,t,cell){
+  const i = st.cells.indexOf(cell);
+  st.q('#re-col').style.transform = `translateY(${-i*1080}px)`;
+  st.cells.forEach((el,j)=> el.classList.toggle('rest', j!==i));
+  [...st.q('#re-dots').children].forEach((d,j)=> d.classList.toggle('on', j===i));
+  const lane = LANES[st.laneIdx||0];
+  st.stage.querySelectorAll('[data-lane]').forEach(el=> el.textContent = lane.label);
+  st.q('#re-lanes').innerHTML = LANES.map((l,j)=>
+    `<span class="hintchip" style="${j===(st.laneIdx||0)?'border-color:#fff;color:#fff':'opacity:.5'}">${l.label}</span>`).join('');
+}
+
+/* ═══════════ IX · DIORAMA ═══════════ */
+function diorama(){
+  const rail = RAILS[1];
+  return `
+  <div class="art plane" id="di-far" style="inset:-60px;background-position:center 30%;transform:scale(1.06)"></div>
+  <div class="sweep"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 86% at 24% 30%,rgba(10,8,18,0) 0,rgba(10,8,18,.62) 62%,rgba(10,8,18,.92) 100%)"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;height:600px;background:linear-gradient(0deg,rgba(10,8,18,.97) 0,rgba(10,8,18,.72) 40%,rgba(10,8,18,0) 100%)"></div>
+  ${trailerPill()}
+  <div class="plane" id="di-mid" style="left:212px;bottom:392px;right:880px">
+    <div style="min-height:112px;display:flex;align-items:flex-end" id="di-logo"></div>
+    <div class="metaline fade" id="di-meta" style="margin-top:22px"></div>
+    <div class="syn fade" id="di-syn" style="margin-top:20px;font-size:23px"></div>
+  </div>
+  <div style="position:absolute;left:212px;right:0;bottom:70px">
+    <div class="rlabel" id="di-rail" style="margin:0 0 18px 2px">${rail.label}</div>
+    <div class="tiltwrap" style="overflow:hidden"><div class="track" data-track="0">
+      ${fill(rail.ids).map((id,c)=>
+        `<div data-cell data-r="0" data-c="${c}" style="flex:0 0 176px;margin-right:26px" data-t="${id}">
+           <div class="tilt">${poster(id,176,264,false)}</div></div>`).join('')}
+    </div></div>
+  </div>`;
+}
+function dioramaSync(st,t,cell){
+  const i = st.cells.indexOf(cell);
+  st.q('#di-far').style.transform = `scale(1.06) translateX(${i*11}px)`;
+  st.q('#di-mid').style.transform = `translateX(${i*-22}px)`;
+  st.q('#di-far').style.backgroundImage = `url(${bg(t.id)})`;
+  st.q('#di-logo').innerHTML = logoOrName(t);
+  st.q('#di-meta').innerHTML = metaHTML(t);
+  st.q('#di-syn').textContent = t.s;
+  // yaw every card toward the viewer by how far off centre it sits
+  st.cells.forEach(el=>{
+    const r = st.localRect(el);
+    const d = Math.max(-1, Math.min(1, ((r.x + r.w/2) - 980) / 900));
+    el.querySelector('.tilt').style.transform = `rotateY(${-d*7}deg) translateZ(${-Math.abs(d)*30}px)`;
+  });
+}
+
+/* ═══════════ X · ATLAS ═══════════ */
+const ATLAS_ROWS = [
+  { label:'Continue Watching',  ids:RAILS[0].ids.concat(rot(ids,3).slice(0,4)), cw:true },
+  { label:'Cinemeta · Popular', ids:rot(ids,4).slice(0,9) },
+  { label:'Trending Movies',    ids:rot(ids,8).slice(0,9) },
+  { label:'Favourites',         ids:rot(ids,1).slice(0,9) },
+  { label:'Debrify TV · Live',  ids:rot(ids,6).slice(0,9) },
+];
+function atlas(){
+  const rows = ATLAS_ROWS.map((row,r)=>`
+    <div class="brow" data-row="${r}">
+      <div class="rlabel" style="margin:0 0 16px 2px">${row.label}</div>
+      <div style="display:flex">
+        ${row.ids.map((id,c)=>
+          `<div data-cell data-r="${r}" data-c="${c}" data-t="${id}" style="flex:0 0 176px;margin-right:26px">
+             ${poster(id,176,264,row.cw)}</div>`).join('')}
+      </div>
+    </div>`).join('');
+  return `
+  <div class="art fade" id="at-art" style="inset:0;opacity:0"></div>
+  <div class="fade" id="at-scrim" style="position:absolute;inset:0;opacity:0;background:
+       linear-gradient(90deg,rgba(10,8,18,.92) 0,rgba(10,8,18,.30) 40%,rgba(10,8,18,0) 66%)"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(10,8,18,.96) 0,rgba(10,8,18,.55) 46%,rgba(10,8,18,.30) 100%)"></div>
+  <div class="camchip"><span class="hintchip" id="at-chip"><b>MAP</b> Enter dives · Backspace pulls up</span></div>
+  <div class="fade" id="at-id" style="position:absolute;left:212px;top:206px;right:900px;opacity:0">
+    <div style="min-height:96px;display:flex;align-items:flex-end" id="at-logo"></div>
+    <div class="metaline fade" id="at-meta" style="margin-top:20px;font-size:23px"></div>
+  </div>
+  <div class="board" id="at-board" style="left:212px;top:150px;width:1900px">${rows}</div>`;
+}
+function atlasSync(st,t,cell){
+  const zoom = !!st.zoom;
+  const row = +cell.dataset.r;
+  const board = st.q('#at-board');
+  // camera in BOARD coordinates (offsets), never in transformed screen space —
+  // reading a transformed rect to build the next transform compounds the error
+  if (zoom){
+    const rowEl = st.stage.querySelector(`[data-row="${row}"]`);
+    const tx = -Math.max(0, cell.offsetLeft - 48);
+    const ty = 510 - rowEl.offsetTop;
+    board.style.transform = `translate(${tx}px,${ty}px) scale(1)`;
+  } else {
+    board.style.transform = `translate(300px,-30px) scale(.52)`;
+  }
+  st.stage.querySelectorAll('.brow').forEach(el=>
+    el.classList.toggle('dim', zoom && +el.dataset.row !== row));
+  st.q('#at-art').style.backgroundImage = `url(${bg(t.id)})`;
+  st.q('#at-art').style.opacity   = zoom ? '1' : '0';
+  st.q('#at-scrim').style.opacity = zoom ? '1' : '0';
+  st.q('#at-id').style.opacity    = zoom ? '1' : '0';
+  st.q('#at-logo').innerHTML = logoOrName(t,'md');
+  st.q('#at-meta').innerHTML = metaHTML(t);
+  st.q('#at-chip').innerHTML = zoom
+    ? '<b>ROW</b> Backspace pulls up to the map'
+    : '<b>MAP</b> Enter dives into the row';
+}
+
+/* ── engine ──────────────────────────────────────────────────── */
+class Stage{
+  constructor(frameId, stageId, build, sync){
+    this.frame = document.getElementById(frameId);
+    this.stage = document.getElementById(stageId);
+    this.stage.innerHTML = ghost() + build();
+    this.sync = sync;
+    this.cells = [...this.stage.querySelectorAll('[data-cell]')];
+    this.i = 0; this.railIdx = 0;
+    this.frame.addEventListener('click', ()=> setLive(this));
+    this.fit(); this.focus(0, true);
+  }
+  q(sel){ return this.stage.querySelector(sel); }
+  fit(){ this.stage.style.transform = `scale(${this.frame.clientWidth/1920})`; }
+  /* geometry in 1920×1080 stage coordinates, independent of the frame's scale */
+  localRect(el){
+    const s = this.stage.getBoundingClientRect(), k = 1920/(s.width||1920);
+    const r = el.getBoundingClientRect();
+    return { x:(r.left-s.left)*k, y:(r.top-s.top)*k, w:r.width*k, h:r.height*k };
+  }
+  centre(el){ const r = this.localRect(el); return { x:r.x+r.w/2, y:r.y+r.h/2 }; }
+  move(dx,dy){
+    const from = this.centre(this.cells[this.i]);
+    let best = -1, bestScore = Infinity;
+    this.cells.forEach((el,j)=>{
+      if (j===this.i) return;
+      const p = this.centre(el);
+      const along = dx ? (p.x-from.x)*dx : (p.y-from.y)*dy;
+      const off   = dx ? Math.abs(p.y-from.y) : Math.abs(p.x-from.x);
+      if (along <= 8) return;
+      const score = along + off*2.4;
+      if (score < bestScore){ bestScore = score; best = j; }
+    });
+    if (best >= 0) this.focus(best);
+    else if (this.noMove) this.noMove(dx,dy);
+  }
+  focus(j){
+    this.cells[this.i]?.querySelector('.cell')?.classList.remove('on');
+    this.i = j;
+    const cell = this.cells[j];
+    cell.querySelector('.cell')?.classList.add('on');
+    this.sync(this, byId[cell.dataset.t], cell);
+    this.scrollTo(cell);
+  }
+  /* masked slide-up type swap — Mural's identity change */
+  kinetic(sels, apply){
+    const els = sels.map(s=>this.q(s));
+    els.forEach(e=> e.classList.add('out'));
+    clearTimeout(this._k);
+    this._k = setTimeout(()=>{ apply(); els.forEach(e=> e.classList.remove('out')); }, 160);
+  }
+  scrollTo(cell){
+    const track = cell.closest('.track');
+    if (!track) return;
+    const view = track.parentElement, pad = 60, w = view.clientWidth || 1920;
+    const cur = -(parseFloat(track.dataset.tx)||0);
+    let tx = cur;
+    if (cell.offsetLeft - cur < pad) tx = cell.offsetLeft - pad;
+    if (cell.offsetLeft + cell.offsetWidth - cur > w - pad) tx = cell.offsetLeft + cell.offsetWidth - w + pad;
+    tx = Math.max(0, tx);
+    track.dataset.tx = -tx;
+    track.style.transform = `translateX(${-tx}px)`;
+  }
+  /* repopulate a single-rail stage in place (rail / lane switching) */
+  swapRail(list, labelSel, label){
+    this.cells.forEach((el,i)=>{
+      const id = list[i % list.length];
+      el.dataset.t = id;
+      el.querySelector('img').src = post(id) || bg(id);
+    });
+    if (labelSel) this.q(labelSel).textContent = label;
+  }
+}
+
+/* ── wiring ──────────────────────────────────────────────────── */
+const stages = [
+  new Stage('f1','s1', mural,   muralSync),
+  new Stage('f2','s2', bloom,   bloomSync),
+  new Stage('f3','s3', reel,    reelSync),
+  new Stage('f4','s4', diorama, dioramaSync),
+  new Stage('f5','s5', atlas,   atlasSync),
+];
+const [MURAL, BLOOM, REEL, DIORAMA, ATLAS] = stages;
+
+/* Mural + Bloom + Diorama: ↑↓ swap the rail under a single shelf */
+[[MURAL,'#mu-rail'],[BLOOM,'#bl-rail'],[DIORAMA,'#di-rail']].forEach(([st,sel])=>{
+  st.noMove = (dx, dy) => {
+    if (!dy) return;
+    st.railIdx = (st.railIdx + (dy>0 ? 1 : RAILS.length-1)) % RAILS.length;
+    const rail = RAILS[st.railIdx];
+    st.swapRail(fill(rail.ids), sel, rail.label);
+    st.focus(0);
+  };
+});
+
+/* Reel: ←→ change lane */
+REEL.laneIdx = 0;
+REEL.noMove = (dx)=>{
+  if (!dx) return;
+  REEL.laneIdx = (REEL.laneIdx + (dx>0 ? 1 : LANES.length-1)) % LANES.length;
+  const lane = LANES[REEL.laneIdx];
+  REEL.cells.forEach((el,i)=>{
+    const id = lane.ids[i % lane.ids.length];
+    el.dataset.t = id;
+    const t = byId[id];
+    el.querySelector('.art').style.backgroundImage = `url(${bg(id)})`;
+    const idBlock = el.querySelector('[data-lane]').parentElement;
+    idBlock.querySelector('div:nth-child(2)').innerHTML = logoOrName(t);
+    idBlock.querySelector('.metaline').innerHTML = metaHTML(t);
+    idBlock.querySelector('.syn').textContent = t.s;
+    idBlock.querySelector('[data-prog]').innerHTML = progRow(t);
+    idBlock.querySelector('[data-ok]').innerHTML = `<b>OK</b> ${t.pr?'Resume':'Play'}`;
+  });
+  REEL.focus(0);
+};
+
+/* Atlas: two altitudes */
+ATLAS.zoom = false;
+ATLAS.setZoom = z => { ATLAS.zoom = z; ATLAS.focus(ATLAS.i); };
+
+let live = stages[0];
+function setLive(s){
+  if (live === s) return;
+  live = s;
+  stages.forEach(x => x.frame.classList.toggle('live', x===s));
+}
+stages.forEach(s => s.frame.classList.remove('live'));
+live.frame.classList.add('live');
+
+new ResizeObserver(()=> stages.forEach(s=>s.fit())).observe(document.body);
+
+const io = new IntersectionObserver(es=>{
+  es.forEach(e=>{ if (e.isIntersecting && e.intersectionRatio > .55) setLive(stages.find(s=>s.frame===e.target)); });
+}, { threshold:[.55,.8] });
+stages.forEach(s=> io.observe(s.frame));
+
+const KEYS = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
+addEventListener('keydown', e=>{
+  if (live === ATLAS && (e.key==='Enter' || e.key==='Backspace' || e.key==='Escape')){
+    e.preventDefault(); stopDemo(); ATLAS.setZoom(e.key==='Enter'); return;
+  }
+  const k = KEYS[e.key];
+  if (!k) return;
+  e.preventDefault();
+  stopDemo();
+  live.move(k[0], k[1]);
+});
+
+/* auto-demo — proves the motion without asking anyone to press a key */
+let demoOn = true, demoTimer = null, demoBeat = 0;
+const tog = document.getElementById('demotog');
+function tick(){
+  if (!demoOn) return;
+  demoBeat++;
+  if (live === ATLAS && demoBeat % 4 === 0){
+    ATLAS.setZoom(!ATLAS.zoom);
+  } else {
+    const dir = live === REEL
+      ? (Math.random() < .78 ? [0,1] : [1,0])
+      : (Math.random() < .78 ? [1,0] : [0,1]);
+    const before = live.i;
+    live.move(dir[0], dir[1]);
+    if (live.i === before) live.focus(0);
+  }
+  demoTimer = setTimeout(tick, live === REEL ? 2800 : 2200);
+}
+function stopDemo(){
+  if (!demoOn) return;
+  demoOn = false; clearTimeout(demoTimer); tog.setAttribute('aria-pressed','false');
+}
+tog.addEventListener('click', ()=>{
+  demoOn = !demoOn; tog.setAttribute('aria-pressed', String(demoOn));
+  clearTimeout(demoTimer);
+  if (demoOn) demoTimer = setTimeout(tick, 700);
+});
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches) demoTimer = setTimeout(tick, 1400);
+else stopDemo();
+</script>
