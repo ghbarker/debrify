@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:debrify/models/indexer_manager_config.dart';
+import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/models/advanced_search_selection.dart';
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/search_screen.dart' show buildSearchSources;
@@ -275,6 +277,8 @@ void main() {
     (tester) => _faultCase(tester, throws: true));
   testWidgets('origin public catalog Sources persists eligible addon toggle across reopen',
     (tester) => _catalogRoundtrip(tester));
+  testWidgets('origin public Keyword Sources honors defaults and persists indexer toggle',
+    (tester) => _keywordRoundtrip(tester));
 }
 
 // Additional finite fault outcomes. The accepted three-case helper above stays
@@ -601,3 +605,156 @@ Future<void> _catalogRoundtrip(WidgetTester tester) async {
   expect(tester.takeException(), isNull);
   // Empty query only: no nonempty-query restart or keyword-dialog claim.
 }
+
+const _keywordPhysicalKey = 'flutter.engine_indexer_manager_origin_indexer_case_a_enabled';
+class _KeywordStore extends InMemorySharedPreferencesStore {
+  _KeywordStore(super.data) : super.withData();
+  final writes = <(String, String, Object)>[];
+  @override
+  Future<bool> setValue(String type, String key, Object value) {
+    if (key == _keywordPhysicalKey) writes.add((type, key, value));
+    return super.setValue(type, key, value);
+  }
+  Future<Map<String, Object>> physical() => super.getAllWithParameters(
+    GetAllParameters(filter: PreferencesFilter(prefix: 'flutter.')),
+  );
+}
+
+Future<void> _keywordRoundtrip(WidgetTester tester) async {
+  await prepareFavourites(tester);
+  final previousStore = SharedPreferencesStorePlatform.instance;
+  final service = StremioService.instance;
+  final previousClient = service.debugStreamHttpClientFactory;
+  final unexpected = <Uri>[];
+  final client = MockClient((request) async {
+    unexpected.add(request.url);
+    throw StateError('Unexpected empty-query keyword fixture HTTP');
+  });
+  const config = IndexerManagerConfig(id: 'Case-A', name: 'Origin Indexer',
+    type: IndexerManagerType.jackett, baseUrl: 'https://indexer.invalid',
+    apiKey: 'synthetic-only', enabled: false);
+  await StorageService.setIndexerManagerConfigs([config]);
+  final prefs = await SharedPreferences.getInstance();
+  final backend = _KeywordStore({
+    for (final key in prefs.getKeys()) 'flutter.$key': prefs.get(key)!,
+  });
+  final initial = await backend.physical();
+  try {
+    SharedPreferences.resetStatic();
+    SharedPreferencesStorePlatform.instance = backend;
+    service.invalidateCache();
+    service.debugStreamHttpClientFactory = () => client;
+    LocalEngineStorage.instance.resetProfileScope();
+    EngineRegistry.instance.invalidateProfileScope();
+    await tester.runAsync(() async {
+      await LocalEngineStorage.instance.saveEngine(engineId: 'origin_fixture',
+        fileName: 'origin_fixture.yaml', yamlContent: _keywordOriginYaml,
+        displayName: 'Origin Fixture');
+      await EngineRegistry.instance.reload();
+    });
+    final registryEngine = EngineRegistry.instance.getEngine('origin_fixture');
+    expect(EngineRegistry.instance.getEngineIds(), ['origin_fixture']);
+    expect(initial.containsKey(_keywordPhysicalKey), isFalse);
+    expect(initial.containsKey('flutter.engine_origin_fixture_enabled'), isFalse);
+    final beforeConfig = await StorageService.getIndexerManagerConfigs();
+    expect(beforeConfig.single.enabled, isFalse);
+    expect(beforeConfig.single.engineId, 'indexer_manager_origin_indexer_Case-A');
+    await http.runWithClient(() async {
+      await tester.pumpWidget(const MaterialApp(home: SearchScreen(searchMode: true)));
+      await pumpFavourites(tester);
+      await tester.tap(find.text('Keyword'));
+      await pumpFavourites(tester);
+      expect(find.text('Keyword torrent search'), findsOneWidget);
+      await tester.tap(find.text('Sources'));
+      await pumpFavourites(tester);
+      final dialog = find.byType(Dialog);
+      Finder inside(Finder child) => find.descendant(of: dialog, matching: child);
+      expect(dialog, findsOneWidget);
+      expect(inside(find.text('Origin Fixture')), findsOneWidget);
+      expect(inside(find.text('Origin Indexer')), findsOneWidget);
+      Finder row(String name) => find.ancestor(of: inside(find.text(name)),
+        matching: find.byType(GestureDetector)).first;
+      expect(find.descendant(of: row('Origin Fixture'),
+        matching: find.byIcon(Icons.check_circle_rounded)), findsOneWidget);
+      expect(find.descendant(of: row('Origin Indexer'),
+        matching: find.byIcon(Icons.block_rounded)), findsOneWidget);
+      expect(backend.writes, isEmpty);
+      await tester.tap(inside(find.text('Origin Indexer')));
+      await pumpFavourites(tester);
+      expect(dialog, findsOneWidget);
+      expect(backend.writes, hasLength(1));
+      expect(backend.writes.single.$1, 'Bool');
+      expect(backend.writes.single.$2, _keywordPhysicalKey);
+      expect(backend.writes.single.$3, true);
+      expect((await backend.physical())[_keywordPhysicalKey], true);
+      expect(inside(find.byIcon(Icons.check_circle_rounded)), findsNWidgets(2));
+      await tester.tap(inside(find.text('Done')));
+      await pumpFavourites(tester);
+      SharedPreferences.resetStatic();
+      await tester.tap(find.text('Sources'));
+      await pumpFavourites(tester);
+      expect(dialog, findsOneWidget);
+      expect(inside(find.text('Origin Fixture')), findsOneWidget);
+      expect(inside(find.text('Origin Indexer')), findsOneWidget);
+      expect(inside(find.byIcon(Icons.check_circle_rounded)), findsNWidgets(2));
+      expect(inside(find.byIcon(Icons.block_rounded)), findsNothing);
+      expect(backend.writes, hasLength(1));
+      expect((await backend.physical())[_keywordPhysicalKey], true);
+      expect(EngineRegistry.instance.getEngine('origin_fixture'), same(registryEngine));
+      expect(EngineRegistry.instance.getEngineIds(), ['origin_fixture']);
+      final afterConfig = await StorageService.getIndexerManagerConfigs();
+      // Compare without printing any credential-bearing config on failure.
+      expect(jsonEncode(afterConfig.single.toJson()) == jsonEncode(beforeConfig.single.toJson()), isTrue);
+      expect(afterConfig.single.enabled, isFalse);
+      final physical = await backend.physical();
+      expect(physical['flutter.indexer_manager_configs_v1'] == initial['flutter.indexer_manager_configs_v1'], isTrue);
+      expect(physical.containsKey('flutter.engine_origin_fixture_enabled'), isFalse);
+      await tester.tap(inside(find.text('Done')));
+      await pumpFavourites(tester);
+      expect(tester.takeException(), isNull);
+    }, () => client);
+  } finally {
+    try {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await pumpFavourites(tester);
+    } finally {
+      service.debugStreamHttpClientFactory = previousClient;
+      service.invalidateCache();
+      SharedPreferencesStorePlatform.instance = previousStore;
+      SharedPreferences.resetStatic();
+      EngineRegistry.instance.invalidateProfileScope();
+      LocalEngineStorage.instance.resetProfileScope();
+      client.close();
+    }
+  }
+  expect(service.debugStreamHttpClientFactory, same(previousClient));
+  expect(SharedPreferencesStorePlatform.instance, same(previousStore));
+  expect(unexpected, isEmpty);
+  expect(tester.takeException(), isNull);
+  // Empty query: no query execution, canonical authority or native proof.
+}
+
+const _keywordOriginYaml = '''
+id: origin_fixture
+display_name: Origin Fixture
+icon: travel_explore
+categories: [general]
+capabilities:
+  keyword_search: true
+  imdb_search: false
+  series_support: false
+api:
+  base_url: https://origin-fixture.invalid/search
+  method: GET
+query_params:
+  type: query_params
+  param_name: q
+response_format:
+  type: direct_json
+  results_path: results
+field_mappings:
+  infohash: infohash
+  name: name
+  seeders: seeders
+  size_bytes: size_bytes
+''';
