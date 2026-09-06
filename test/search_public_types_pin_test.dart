@@ -35,7 +35,7 @@ String _cwTypes() {
 }
 
 String _cardWidgets() =>
-    File('lib/screens/search/search_card_widgets.dart').readAsStringSync();
+    File('lib/screens/search/favourite_art_cell.dart').readAsStringSync();
 
 void main() {
   late String host;
