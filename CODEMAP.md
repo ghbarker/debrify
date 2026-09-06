@@ -302,9 +302,17 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   **Ambient trailer policy:** `lib/services/storage/ambient_trailer_prefs.dart`
   owns two detail audio/volume keys and five preference bodies; HomePrefs keeps
   the two home keys. StorageService re-exports the same AmbientTrailerSurface
-  enum and retains four nonasync facades (14 declaration / 18 physical lines),
-  expiring at separately scoped Q2 caller retirement. Host -69 includes moved
-  docs/separators; whole production +32. Strict ownership closure remains OPEN.
+  enum for public type compatibility; Q2 retired four facades and routes
+  consumers directly to AmbientTrailerPrefs. Retirement removes15 host lines
+  (14 declarations + import), whole production -10; prior owner move -69 host
+  included docs/separators and added32 whole. Strict ownership remains OPEN.
+  **TV keyboard policy:** AppStylePrefs owns the profile bool/generation pair,
+  two migration/access bodies and one synchronous keyboard cache. StorageService
+  retains two nonasync APIs and sync cache accessors; its original first reset
+  assignment and AppStylePrefs.resetCaches are unchanged. Only the owner tvOs
+  parameter loses its testing annotation for forwarding; the host retains it.
+  Host -37 includes docs; whole production +13. Q2 compatibility and strict
+  Storage ownership closure remain open; no native keyboard proof is claimed.
   **Download destinations:** `lib/services/storage/download_destination_prefs.dart`
   owns three profile-scoped String keys and seven persistence bodies; OS grants
   remain with callers. Q2 retired all seven StorageService APIs; callers route
@@ -483,6 +491,12 @@ is an editor mirror, not the source of truth. How to add a provider:
   `lib/screens/video_player/subtitle_track_controller.dart`
   (`SubtitleTrackController` + `SubtitleTrackSession`; host keeps
   `_SubtitleTrackSession` adapter and title/season resolvers).
+  Decoder diagnostics: `lib/services/playback/decoder_diagnostics.dart`
+  (`DecoderDiagnostics`) owns four state fields, debounce timer, matching polls
+  and report deduplication. Six explicit live capabilities retain host coupling;
+  shared media generation, renderer recovery and native diagnostic sink stay in
+  the host, with interleaved reset ordering preserved. Host -191 lines / whole
+  production +61; partial ownership, not independent logic or full V1-6 closure.
   IPTV recording (libmpv tee, Android engine, desktop capture):
   `lib/services/playback/iptv_recording_controller.dart`
   (`IptvRecordingController` + `IptvRecordingSession`; host keeps
@@ -762,6 +776,14 @@ _Maintenance: this is a routing hint, not a spec. If a lane moves a path named h
 update this file in the same PR. Line counts come from `wc -l`, not estimates._
 
 - `lib/services/remote_control/remote_device_prefs.dart` (`RemoteDevicePrefs`) owns the four installation-wide remote preference keys and remembered-device JSON; pairing, identity and network/session lifetimes remain with their existing owners. Nine unchanged bodies retain nine nonasync `StorageService` facades (18 lines), expiring only after separately scoped Q2 caller compatibility retirement. `DevicePreferences` globals, raw types, JSON/default/error behavior and held-write lifetime remain unchanged. Host 2609 -> 2582 (-27), new owner 69 and registry +2 yield whole production +44: modest scalar/JSON ownership, no line-target or portable-identity claim. Actual pre-S2 export excludes all four keys and profile shadows; current restore preserves destination globals.
+
+- `lib/services/storage/catalog_search_prefs.dart` (`CatalogSearchPrefs`) owns
+  `catalog_search_disabled_addons_v1` and its two JSON read/write policy bodies.
+  StorageService retains two nonasync facades (4 declaration lines), expiring
+  only in a meaningful same-caller Q2 batch. Raw-type/catch boundaries, ordered
+  dedup without rewrite, live Set after acquisition and false/throw behavior
+  remain unchanged. Host -25; whole production +21. Storage ownership closure
+  remains open; no native, runtime source-selection or profile-safety claim.
 
 - `lib/services/storage/torrent_search_history_store.dart` (`TorrentSearchHistoryStore`) owns the two profile history keys and the unchanged decode/dedup/order/five-item-cap persistence bodies. Q2 retires all five direct `StorageService` history APIs (12 declaration lines); callers now use `TorrentSearchHistoryStore` directly. Captured write preferences, reacquired history reads, raw types, timestamp/error ordering and false-versus-throw behavior are preserved. Host 2582 -> 2538 (-44), new owner76 and registry+2 yield whole production+34. The actual old-export/current-restore fixture covers both physical keys; the fixture union retains40 artifacts plus README/recipe. No live history capture feature or profile-safety claim; strict storage ownership closure remains open.
 

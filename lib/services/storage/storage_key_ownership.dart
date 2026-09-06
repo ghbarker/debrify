@@ -9,6 +9,7 @@
 /// [StorageKeyStore] ownership when a domain store is extracted; they must
 /// not change the string.
 enum StorageKeyStore {
+  catalogSearchPrefs,
   ambientTrailerPrefs,
   /// Profile-scoped download destination strings (DownloadDestinationPrefs).
   downloadDestinationPrefs,
@@ -285,7 +286,7 @@ class StorageKeyOwnership {
     'remote_intro_shown': StorageKeyStore.remoteDevicePrefs,
     'remote_tv_device_name': StorageKeyStore.remoteDevicePrefs,
     'remote_last_device': StorageKeyStore.remoteDevicePrefs,
-    'tvos_keyboard_default_generation': StorageKeyStore.storageService,
+    'tvos_keyboard_default_generation': StorageKeyStore.appStylePrefs,
     'tv_low_res_render': StorageKeyStore.storageService,
     'tv_hero_artwork_quality': StorageKeyStore.appStylePrefs,
     'phone_nav_style': StorageKeyStore.appStylePrefs,
@@ -330,7 +331,7 @@ class StorageKeyOwnership {
     'startup_iptv_mode': StorageKeyStore.iptvPrefs,
     'startup_iptv_channel': StorageKeyStore.iptvPrefs,
     'stremio_tv_disabled_channel_filters_v1': StorageKeyStore.stremioTvPrefs,
-    'catalog_search_disabled_addons_v1': StorageKeyStore.storageService,
+    'catalog_search_disabled_addons_v1': StorageKeyStore.catalogSearchPrefs,
     'home_disabled_sections_v1': StorageKeyStore.homePrefs,
     'home_extra_rows_v1': StorageKeyStore.homePrefs,
     'home_row_order_v1': StorageKeyStore.homePrefs,
@@ -342,7 +343,7 @@ class StorageKeyOwnership {
     // S2-0: names StorageService persists without a `_…Key` const.
     'series_browser_dense_view': StorageKeyStore.storageService,
     'merged_series_page_enabled': StorageKeyStore.storageService,
-    'tv_keyboard_enabled': StorageKeyStore.storageService,
+    'tv_keyboard_enabled': StorageKeyStore.appStylePrefs,
     'tv_ui_scale_percent': StorageKeyStore.appStylePrefs,
     'stremio_addon_hub_enabled': StorageKeyStore.storageService,
     'detail_trailer_autoplay_enabled': StorageKeyStore.storageService,

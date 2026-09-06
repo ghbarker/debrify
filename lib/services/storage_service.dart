@@ -1,4 +1,4 @@
-import 'storage/ambient_trailer_prefs.dart';
+import 'storage/catalog_search_prefs.dart';
 export 'storage/ambient_trailer_prefs.dart' show AmbientTrailerSurface;
 
 import 'package:flutter/foundation.dart';
@@ -311,53 +311,16 @@ class StorageService {
     await prefs.setBool('merged_series_page_enabled', enabled);
   }
 
-  /// Use the in-app DPAD keyboard for text fields on TV (TvTextField) instead
-  /// of the system IME, which can't be navigated with the remote on many
-  /// devices (flutter/flutter#177360 — Chromecast/Google TV, some
-  /// Philips/Samsung panels). On by default on Android TV. Apple TV defaults
-  /// to its system keyboard; the Settings toggle still lets users opt into the
-  /// Debrify keyboard.
-  ///
-  /// [tvKeyboardEnabledCached] mirrors the stored value for synchronous widget
-  /// builds — warmed at startup (main.dart) and kept in sync by the setter.
-  static bool tvKeyboardEnabledCached = !PlatformUtil.isTvOS;
-
-  // Apple TV keyboard default, generation 1 (2026-08): disable the Debrify
-  // keyboard once for every profile, including profiles whose user explicitly
-  // enabled it in an older build. The generation is committed only after the
-  // new value, so a failed/interrupted write retries safely next launch. Once
-  // committed, [setTvKeyboardEnabled] is authoritative and later user changes
-  // are never overwritten.
-  static const int _currentTvosKeyboardDefaultGeneration = 1;
-  static const String _tvosKeyboardDefaultGenerationKey =
-      'tvos_keyboard_default_generation';
+  static bool get tvKeyboardEnabledCached => AppStylePrefs.tvKeyboardEnabledCached;
+  static set tvKeyboardEnabledCached(bool value) =>
+      AppStylePrefs.tvKeyboardEnabledCached = value;
 
   static Future<bool> getTvKeyboardEnabled({
     @visibleForTesting bool? tvOs,
-  }) async {
-    final prefs = await ProfilePreferences.instance();
-    final runningOnTvOs = tvOs ?? PlatformUtil.isTvOS;
-    final generation = prefs.getInt(_tvosKeyboardDefaultGenerationKey) ?? 0;
-    if (runningOnTvOs && generation < _currentTvosKeyboardDefaultGeneration) {
-      final disabled = await prefs.setBool('tv_keyboard_enabled', false);
-      if (disabled) {
-        await prefs.setInt(
-          _tvosKeyboardDefaultGenerationKey,
-          _currentTvosKeyboardDefaultGeneration,
-        );
-      }
-    }
-    tvKeyboardEnabledCached =
-        prefs.getBool('tv_keyboard_enabled') ?? !runningOnTvOs;
-    return tvKeyboardEnabledCached;
-  }
+  }) => AppStylePrefs.getTvKeyboardEnabled(tvOs: tvOs);
 
-  static Future<void> setTvKeyboardEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool('tv_keyboard_enabled', enabled);
-    tvKeyboardEnabledCached = enabled;
-  }
-
+  static Future<void> setTvKeyboardEnabled(bool enabled) =>
+      AppStylePrefs.setTvKeyboardEnabled(enabled);
 
   /// Android TV rendering mode — whether the Flutter UI is rastered at the
   /// panel's own resolution or at a ~720p buffer the TV's scaler blows back
@@ -456,23 +419,9 @@ class StorageService {
   static Future<void> setHomeHeroTrailerEnabled(bool enabled) =>
       HomePrefs.setHomeHeroTrailerEnabled(enabled);
 
-  static Future<bool> getAmbientTrailerAudioEnabled(
-    AmbientTrailerSurface surface,
-  ) => AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(surface);
 
-  static Future<void> setAmbientTrailerAudioEnabled(
-    AmbientTrailerSurface surface,
-    bool enabled,
-  ) => AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(surface, enabled);
 
-  static Future<int> getAmbientTrailerVolume(
-    AmbientTrailerSurface surface,
-  ) => AmbientTrailerPrefs.getAmbientTrailerVolume(surface);
 
-  static Future<void> setAmbientTrailerVolume(
-    AmbientTrailerSurface surface,
-    int percent,
-  ) => AmbientTrailerPrefs.setAmbientTrailerVolume(surface, percent);
 
   /// Android TV: render ambient trailers on a native SurfaceView *under* a
   /// translucent Flutter surface (a hardware overlay plane — Flutter never
@@ -2282,38 +2231,12 @@ class StorageService {
       StremioTvPrefs.setStremioTvDisabledFilters(disabled);
 
 
-  static const String _catalogSearchDisabledAddonsKey =
-      'catalog_search_disabled_addons_v1';
+  /// Search addon selection policy lives in CatalogSearchPrefs.
+  static Future<Set<String>> getCatalogSearchDisabledAddons() =>
+      CatalogSearchPrefs.getCatalogSearchDisabledAddons();
 
-  /// Get the set of addon IDs the user has DISABLED for catalog search on the
-  /// Search tab (empty = every searchable addon is queried).
-  static Future<Set<String>> getCatalogSearchDisabledAddons() async {
-    final prefs = await ProfilePreferences.instance();
-    final json = prefs.getString(_catalogSearchDisabledAddonsKey);
-    if (json == null) return {};
-    try {
-      final list = jsonDecode(json) as List<dynamic>;
-      return list.cast<String>().toSet();
-    } catch (e) {
-      debugPrint('Error reading catalog search disabled addons: $e');
-      return {};
-    }
-  }
-
-  /// Save the set of addon IDs disabled for catalog search.
-  static Future<void> setCatalogSearchDisabledAddons(
-    Set<String> disabled,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    if (disabled.isEmpty) {
-      await prefs.remove(_catalogSearchDisabledAddonsKey);
-    } else {
-      await prefs.setString(
-        _catalogSearchDisabledAddonsKey,
-        jsonEncode(disabled.toList()),
-      );
-    }
-  }
+  static Future<void> setCatalogSearchDisabledAddons(Set<String> disabled) =>
+      CatalogSearchPrefs.setCatalogSearchDisabledAddons(disabled);
 
   static Future<Set<String>> getHomeDisabledSections() =>
       HomePrefs.getHomeDisabledSections();

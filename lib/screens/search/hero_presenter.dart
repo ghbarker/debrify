@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/ambient_trailer_prefs.dart' show AmbientTrailerPrefs;
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -773,10 +774,10 @@ class HeroPresenter {
   Future<void> reloadOffTvTrailerPrefs() async {
     final values = await Future.wait([
       StorageService.getHomeHeroTrailerEnabled(),
-      StorageService.getAmbientTrailerAudioEnabled(
+      AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(
         AmbientTrailerSurface.detail,
       ),
-      StorageService.getAmbientTrailerVolume(AmbientTrailerSurface.detail),
+      AmbientTrailerPrefs.getAmbientTrailerVolume(AmbientTrailerSurface.detail),
     ]);
     if (!isMounted()) return;
     final enabled = values[0] as bool;
@@ -817,10 +818,10 @@ class HeroPresenter {
       HardwareKeyboard.instance.addHandler(_onTakeoverKey);
       Future.wait([
         StorageService.getHomeHeroTrailerEnabled(),
-        StorageService.getAmbientTrailerAudioEnabled(
+        AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(
           AmbientTrailerSurface.homeHero,
         ),
-        StorageService.getAmbientTrailerVolume(AmbientTrailerSurface.homeHero),
+        AmbientTrailerPrefs.getAmbientTrailerVolume(AmbientTrailerSurface.homeHero),
       ]).then((values) {
         if (!isMounted()) return;
         final enabled = values[0] as bool;

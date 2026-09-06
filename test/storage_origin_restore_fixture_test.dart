@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/ambient_trailer_prefs.dart' show AmbientTrailerPrefs;
 import 'package:debrify/services/storage/torrent_search_history_store.dart';
 import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/iptv_prefs.dart';
@@ -402,14 +403,119 @@ void main() {
       );
 
 
+  const catalogScenario = 'catalog-search';
+  const catalogKey = 'catalog_search_disabled_addons_v1';
+  final catalogDomain = _recipe['residualDomains'][catalogScenario] as Map;
+  final catalogValues = Map<String, Object?>.from(catalogDomain['values'] as Map);
+  final catalogRead = (catalogDomain['expectedPublicRead'] as List).cast<String>();
+  Future<void> expectCatalogReader() async {
+    final prefs = await ProfilePreferences.instance();
+    final before = prefs.get(catalogKey);
+    expect((await StorageService.getCatalogSearchDisabledAddons()).toList(), catalogRead);
+    expect(prefs.get(catalogKey), before, reason: 'Public dedup must not rewrite raw JSON');
+  }
+  if (_generate) {
+    test('$catalogScenario: generate actual pre-S2 raw JSON export', () async {
+      final head = await Process.run('git', ['rev-parse', 'HEAD']);
+      expect(head.exitCode, 0);
+      expect(head.stdout.toString().trim(), _origin);
+      final diff = await Process.run('git', ['diff', '--exit-code', _origin, '--', 'lib']);
+      expect(diff.exitCode, 0, reason: 'Never generate from modified production');
+      final config = File('.dart_tool/package_config.json');
+      final metadata = jsonDecode(await config.readAsString()) as Map;
+      final app = (metadata['packages'] as List).cast<Map>().singleWhere((e) => e['name'] == 'debrify');
+      final library = config.absolute.uri.resolve(app['rootUri'] as String).resolve(app['packageUri'] as String).resolve('services/storage_service.dart');
+      expect(p.equals(library.toFilePath(), p.join(Directory.current.path, 'lib', 'services', 'storage_service.dart')), isTrue);
+      expect(catalogValues.keys, [catalogKey]);
+      final prefs = await ProfilePreferences.instance();
+      // Seed physical JSON, preserving duplicates that the public Set setter cannot represent.
+      await prefs.setString(catalogKey, catalogValues[catalogKey] as String);
+      await expectCatalogReader();
+      final package = await export();
+      _expectSettings(_values(package), catalogValues);
+      expect(package.resources, isEmpty);
+      final bytes = await PortableProfilePackage.encodeEncryptedBytes(package, _passphrase);
+      final decoded = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+      _expectSettings(_values(decoded), catalogValues);
+      await File('$_directory/$catalogScenario.encrypted.json').writeAsBytes(bytes);
+      await File('$_directory/$catalogScenario.manifest.json').writeAsString(const JsonEncoder.withIndent('  ').convert({
+        'origin': _origin, 'scenario': catalogScenario, 'syntheticOnly': true,
+        'sha256': await _digest(bytes), 'includeSecrets': false,
+        'representedSettings': catalogValues, 'keyTypes': {catalogKey: 'String'},
+        'excludedKeys': <String>[], 'expectedPublicRead': catalogRead,
+        'rawSeed': 'ProfilePreferences.setString; duplicate/whitespace/order preserved, not public Set setter',
+        'omissions': package.omissions,
+      }));
+    });
+  } else {
+    test('$catalogScenario: restore physical JSON before public dedup without rewrite', () async {
+      final manifest = jsonDecode(await File('$_directory/$catalogScenario.manifest.json').readAsString()) as Map;
+      final bytes = await File('$_directory/$catalogScenario.encrypted.json').readAsBytes();
+      expect(manifest['origin'], _origin);
+      expect(manifest['syntheticOnly'], isTrue);
+      expect(manifest['sha256'], await _digest(bytes));
+      expect(manifest['representedSettings'], catalogValues);
+      expect(manifest['keyTypes'], {catalogKey: 'String'});
+      expect(manifest['expectedPublicRead'], catalogRead);
+      expect(manifest['excludedKeys'], isEmpty);
+      var package = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+      _expectSettings(_values(package), catalogValues);
+      expect(package.resources, isEmpty);
+      if (_mutation.isNotEmpty) {
+        final mutation = (catalogDomain['mutations'] as Map)[_mutation] as Map?;
+        expect(mutation, isNotNull);
+        final values = {..._values(package)};
+        if (mutation!['operation'] == 'rename') {
+          values['synthetic_wrong_catalog_key'] = values.remove(catalogKey);
+        } else {
+          values[catalogKey] = mutation['value'];
+        }
+        final mutant = PortableProfilePackage(
+          mode: package.mode, createdAt: package.createdAt, profiles: package.profiles,
+          resources: package.resources, omissions: package.omissions,
+          sections: {...package.sections,
+            package.profiles.single['preferencesSection'] as String: await PortableProfilePackage.buildSection(values)},
+        );
+        package = await PortableProfilePackage.decrypt(await PortableProfilePackage.encrypt(mutant, _passphrase), _passphrase);
+        _expectSettings(_values(package), values);
+      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('p.$profileId.g.1.$catalogKey', '["destination"]');
+      await prefs.setString('p.$otherProfileId.g.1.$catalogKey', '["other-profile"]');
+      await prefs.setString('p.$profileId.g.7.$catalogKey', '["other-generation"]');
+      await prefs.setString(catalogKey, '["legacy"]');
+      await prefs.setString('p.$profileId.g.1.catalog_fixture_sentinel', 'untouched');
+      final report = await ProfileRestoreCoordinator(registry: registry, cipher: cipher).restore(
+        package: package, destinationProfileId: profileId,
+        authorization: await ProfileAuthorizationContext.capture(registry),
+      );
+      expect(report.publishedGeneration, 2);
+      final prefix = ProfileRuntime.capture().preferencePrefix;
+      // Valid codec mutations reach actual restore and fail this physical comparison first.
+      _expectSettings({catalogKey: prefs.get('$prefix$catalogKey')}, catalogValues);
+      await expectCatalogReader();
+      expect(prefs.get('p.$profileId.g.1.$catalogKey'), '["destination"]');
+      expect(prefs.get('p.$otherProfileId.g.1.$catalogKey'), '["other-profile"]');
+      expect(prefs.get('p.$profileId.g.7.$catalogKey'), '["other-generation"]');
+      expect(prefs.get(catalogKey), '["legacy"]');
+      expect(prefs.get('${prefix}catalog_fixture_sentinel'), 'untouched');
+      expect(prefs.get('p.$profileId.g.1.catalog_fixture_sentinel'), 'untouched');
+      for (final secrets in [false, true]) {
+        _expectSettings(_values(await export(includeSecrets: secrets)), {
+          ...catalogValues, 'catalog_fixture_sentinel': 'untouched',
+        });
+      }
+    });
+  }
+
   // Four independent raw bool/int values; volume readers clamp, export does not.
   const ambientScenario = 'ambient-trailer';
   final ambientDomain = _recipe['residualDomains'][ambientScenario] as Map;
   final ambientValues = Map<String, Object?>.from(ambientDomain['values'] as Map);
   final ambientReads = Map<String, Object?>.from(ambientDomain['publicReads'] as Map);
   Future<void> seedAmbient() async {
-    await StorageService.setAmbientTrailerAudioEnabled(AmbientTrailerSurface.homeHero, false);
-    await StorageService.setAmbientTrailerAudioEnabled(AmbientTrailerSurface.detail, true);
+    await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(AmbientTrailerSurface.homeHero, false);
+    await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(AmbientTrailerSurface.detail, true);
     final prefs = await ProfilePreferences.instance();
     // Deliberate raw legacy values: public setters would clamp these first.
     await prefs.setInt('home_hero_trailer_volume', ambientValues['home_hero_trailer_volume'] as int);
@@ -419,10 +525,10 @@ void main() {
     final prefs = await ProfilePreferences.instance();
     final before = {for (final key in ambientValues.keys) key: prefs.get(key)};
     _expectSettings({
-      'home_hero_trailer_audio_enabled': await StorageService.getAmbientTrailerAudioEnabled(AmbientTrailerSurface.homeHero),
-      'home_hero_trailer_volume': await StorageService.getAmbientTrailerVolume(AmbientTrailerSurface.homeHero),
-      'detail_trailer_audio_enabled': await StorageService.getAmbientTrailerAudioEnabled(AmbientTrailerSurface.detail),
-      'detail_trailer_volume': await StorageService.getAmbientTrailerVolume(AmbientTrailerSurface.detail),
+      'home_hero_trailer_audio_enabled': await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(AmbientTrailerSurface.homeHero),
+      'home_hero_trailer_volume': await AmbientTrailerPrefs.getAmbientTrailerVolume(AmbientTrailerSurface.homeHero),
+      'detail_trailer_audio_enabled': await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(AmbientTrailerSurface.detail),
+      'detail_trailer_volume': await AmbientTrailerPrefs.getAmbientTrailerVolume(AmbientTrailerSurface.detail),
     }, ambientReads);
     _expectSettings({for (final key in ambientValues.keys) key: prefs.get(key)}, before);
   }
@@ -531,6 +637,126 @@ void main() {
 
 
   // Separately counted destination exclusions; no OS grants are exercised.
+  // Two physical states: portable legacy absence versus committed generation.
+  final keyboardDomain = _recipe['residualDomains']['tv-keyboard'] as Map;
+  for (final entry in (keyboardDomain['cases'] as Map).entries) {
+    final scenario = entry.key as String;
+    final values = Map<String, Object?>.from((entry.value as Map)['values'] as Map);
+    final expectedRead = (entry.value as Map)['expectedRead'] as bool;
+    const enabledKey = 'tv_keyboard_enabled';
+    const generationKey = 'tvos_keyboard_default_generation';
+    const physicalKeys = [enabledKey, generationKey];
+    if (_generate) {
+      test('$scenario: generate actual pre-S2 keyboard state', () async {
+        final head = await Process.run('git', ['rev-parse', 'HEAD']);
+        expect(head.exitCode, 0);
+        expect(head.stdout.toString().trim(), _origin);
+        final diff = await Process.run('git', ['diff', '--exit-code', _origin, '--', 'lib']);
+        expect(diff.exitCode, 0, reason: 'Old production must remain unchanged');
+        final config = File('.dart_tool/package_config.json');
+        final metadata = jsonDecode(await config.readAsString()) as Map;
+        final app = (metadata['packages'] as List).cast<Map>().singleWhere((e) => e['name'] == 'debrify');
+        final library = config.absolute.uri.resolve(app['rootUri'] as String).resolve(app['packageUri'] as String).resolve('services/storage_service.dart');
+        expect(p.equals(library.toFilePath(), p.join(Directory.current.path, 'lib', 'services', 'storage_service.dart')), isTrue);
+        final prefs = await ProfilePreferences.instance();
+        // Do not call the public migration getter before exporting raw state.
+        await prefs.setBool(enabledKey, true);
+        if (values.containsKey(generationKey)) {
+          await prefs.setInt(generationKey, values[generationKey] as int);
+        }
+        _expectSettings({for (final key in values.keys) key: prefs.get(key)}, values);
+        expect(prefs.containsKey(generationKey), values.containsKey(generationKey));
+        final package = await export();
+        _expectSettings(_values(package), values);
+        expect(package.resources, isEmpty);
+        final bytes = await PortableProfilePackage.encodeEncryptedBytes(package, _passphrase);
+        final decoded = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+        _expectSettings(_values(decoded), values);
+        await File('$_directory/$scenario.encrypted.json').writeAsBytes(bytes);
+        await File('$_directory/$scenario.manifest.json').writeAsString(const JsonEncoder.withIndent('  ').convert({
+          'origin': _origin, 'scenario': scenario, 'syntheticOnly': true,
+          'sha256': await _digest(bytes), 'includeSecrets': false,
+          'representedSettings': values,
+          'keyTypes': values.map((key, value) => MapEntry(key, _type(value))),
+          'absentKeys': [if (!values.containsKey(generationKey)) generationKey],
+          'excludedKeys': <String>[], 'expectedPublicRead': expectedRead,
+          'rawSeed': 'ProfilePreferences bool/int; no public migration getter before export',
+          'omissions': package.omissions,
+        }));
+      });
+    } else {
+      test('$scenario: restore physical state then public migration', () async {
+        final manifest = jsonDecode(await File('$_directory/$scenario.manifest.json').readAsString()) as Map;
+        final bytes = await File('$_directory/$scenario.encrypted.json').readAsBytes();
+        expect(manifest['origin'], _origin);
+        expect(manifest['syntheticOnly'], isTrue);
+        expect(manifest['sha256'], await _digest(bytes));
+        expect(manifest['representedSettings'], values);
+        expect(manifest['keyTypes'], values.map((key, value) => MapEntry(key, _type(value))));
+        expect(manifest['absentKeys'], [if (!values.containsKey(generationKey)) generationKey]);
+        expect(manifest['excludedKeys'], isEmpty);
+        expect(manifest['expectedPublicRead'], expectedRead);
+        var package = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+        _expectSettings(_values(package), values);
+        expect(package.resources, isEmpty);
+        if (_mutation.isNotEmpty) {
+          expect(scenario, 'tv-keyboard-committed');
+          final mutation = (keyboardDomain['mutations'] as Map)[_mutation] as Map;
+          final changed = {...values};
+          final key = mutation['key'] as String;
+          if (mutation['operation'] == 'rename') {
+            changed['synthetic_wrong_keyboard_key'] = changed.remove(key);
+          } else {
+            changed[key] = mutation['value'];
+          }
+          final mutant = PortableProfilePackage(
+            mode: package.mode, createdAt: package.createdAt, profiles: package.profiles,
+            resources: package.resources, omissions: package.omissions,
+            sections: {...package.sections,
+              package.profiles.single['preferencesSection'] as String: await PortableProfilePackage.buildSection(changed)},
+          );
+          package = await PortableProfilePackage.decrypt(await PortableProfilePackage.encrypt(mutant, _passphrase), _passphrase);
+          _expectSettings(_values(package), changed);
+        }
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('p.$profileId.g.1.$enabledKey', false);
+        expect(prefs.containsKey('p.$profileId.g.1.$generationKey'), isFalse);
+        for (final key in physicalKeys) {
+          await prefs.setString('p.$otherProfileId.g.1.$key', 'synthetic other profile');
+          await prefs.setString('p.$profileId.g.7.$key', 'synthetic other generation');
+        }
+        await prefs.setString('p.$profileId.g.1.keyboard_fixture_sentinel', 'untouched');
+        // Default empty lifecycle participants: explicit public read below,
+        // not application bootstrap or real device keyboard evidence.
+        final report = await ProfileRestoreCoordinator(registry: registry, cipher: cipher).restore(
+          package: package, destinationProfileId: profileId,
+          authorization: await ProfileAuthorizationContext.capture(registry),
+        );
+        expect(report.publishedGeneration, 2);
+        final prefix = ProfileRuntime.capture().preferencePrefix;
+        // Mutants must fail HERE after valid decoding and completed restore.
+        _expectSettings({for (final key in physicalKeys) if (prefs.containsKey('$prefix$key')) key: prefs.get('$prefix$key')}, values);
+        expect(await StorageService.getTvKeyboardEnabled(tvOs: true), expectedRead);
+        expect(StorageService.tvKeyboardEnabledCached, expectedRead);
+        final after = {enabledKey: expectedRead, generationKey: 1};
+        _expectSettings({for (final key in physicalKeys) key: prefs.get('$prefix$key')}, after);
+        expect(await StorageService.getTvKeyboardEnabled(tvOs: true), expectedRead);
+        _expectSettings({for (final key in physicalKeys) key: prefs.get('$prefix$key')}, after);
+        expect(prefs.getBool('p.$profileId.g.1.$enabledKey'), isFalse);
+        expect(prefs.containsKey('p.$profileId.g.1.$generationKey'), isFalse);
+        for (final key in physicalKeys) {
+          expect(prefs.get('p.$otherProfileId.g.1.$key'), 'synthetic other profile');
+          expect(prefs.get('p.$profileId.g.7.$key'), 'synthetic other generation');
+        }
+        expect(prefs.get('p.$profileId.g.1.keyboard_fixture_sentinel'), 'untouched');
+        expect(prefs.get('${prefix}keyboard_fixture_sentinel'), 'untouched');
+        for (final secrets in [false, true]) {
+          _expectSettings(_values(await export(includeSecrets: secrets)), {...after, 'keyboard_fixture_sentinel': 'untouched'});
+        }
+      });
+    }
+  }
+
   const destinationScenario = 'download-destination-exclusion';
   final destinationDomain = _recipe['residualDomains'][destinationScenario] as Map;
   final destinationKeys = (destinationDomain['excludedKeys'] as List).cast<String>();
