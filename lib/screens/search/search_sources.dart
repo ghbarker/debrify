@@ -209,7 +209,7 @@ class _SourcesScreenState extends State<_SourcesScreen> {
 
   Future<void> _loadSourcePriority() async {
     try {
-      final rules = await StorageService.getQuickPlayRules(
+      final rules = await QuickPlayPolicyPrefs.getQuickPlayRules(
         isMovie: !widget.selection.isSeries,
       );
       final aliases = await SourcePriority.engineAliases();

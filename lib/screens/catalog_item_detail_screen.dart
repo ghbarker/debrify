@@ -16,7 +16,7 @@ import '../services/imdb_enrichment_service.dart';
 import '../services/imdb_parents_guide_service.dart';
 import '../services/main_page_bridge.dart';
 import '../services/series_source_service.dart';
-import '../services/storage_service.dart';
+import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import '../widgets/detail/theme/detail_theme.dart';
 import '../widgets/detail/detail_primary_sources.dart';
 import '../widgets/parents_guide_section.dart';
@@ -1725,7 +1725,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
     final openEpisode = widget.onBrowsePrimaryEpisodeSources;
     if (openEpisode == null) return;
 
-    final rules = await StorageService.getQuickPlayRules(isMovie: false);
+    final rules = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false);
     if (!mounted) return;
 
     final canBrowsePacks =

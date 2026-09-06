@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:debrify/models/torrent.dart';
 import 'package:debrify/models/torrent_filter_state.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'package:debrify/services/torrent_playback_service.dart';
 import 'package:debrify/utils/filter_ladder.dart';
 import 'package:debrify/utils/torrent_curation.dart';
@@ -714,7 +714,7 @@ void main() {
       SharedPreferences.setMockInitialValues({
         'default_filter_qualities_v1': jsonEncode(['fullHd']),
       });
-      expect(await StorageService.getQuickPlayHonorsFilters(), isTrue);
+      expect(await QuickPlayPolicyPrefs.getQuickPlayHonorsFilters(), isTrue);
       final ladder = await TorrentPlaybackService.loadLadder();
       expect(ladder.isActive, isTrue);
     });

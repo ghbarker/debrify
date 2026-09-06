@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import '../services/playback/decoder_diagnostics.dart';
 import 'video_player/services/player_terminal_backend.dart';
 import 'package:debrify/services/storage/iptv_prefs.dart';
@@ -5573,7 +5574,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     }
 
     final rules = widget.startupFailoverEnabled
-        ? await StorageService.getQuickPlayRules(
+        ? await QuickPlayPolicyPrefs.getQuickPlayRules(
             isMovie: contentType == 'movie',
           )
         : null;

@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import '../../models/quick_play_rules.dart';
 import '../../services/analytics_service.dart';
 import '../../services/source_priority.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/platform_util.dart';
 import '../../utils/tv_keys.dart';
@@ -32,7 +32,7 @@ class _QuickPlaySettingsPageState extends State<QuickPlaySettingsPage> {
   bool _series = false;
   bool _pikPak = false;
 
-  /// 'quick' | 'smart' | 'always' — see [StorageService.getPlayButtonMode].
+  /// 'quick' | 'smart' | 'always' — see [QuickPlayPolicyPrefs.getPlayButtonMode].
   /// Global on purpose: unlike the rules below it, this is not a per-content
   /// tab setting, so it sits above the Movies/Series tabs.
   String _playMode = 'quick';
@@ -92,10 +92,10 @@ class _QuickPlaySettingsPageState extends State<QuickPlaySettingsPage> {
   }
 
   Future<void> _load() async {
-    final movie = await StorageService.getQuickPlayRules(isMovie: true);
-    final show = await StorageService.getQuickPlayRules(isMovie: false);
+    final movie = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true);
+    final show = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false);
     final provider = await ProviderCredentialPrefs.getDefaultTorrentProvider();
-    final playMode = await StorageService.getPlayButtonMode();
+    final playMode = await QuickPlayPolicyPrefs.getPlayButtonMode();
     if (!mounted) return;
     setState(() {
       _movie = movie;
@@ -146,7 +146,7 @@ class _QuickPlaySettingsPageState extends State<QuickPlaySettingsPage> {
         _show = rules;
       }
     });
-    await StorageService.setQuickPlayRules(rules, isMovie: isMovie);
+    await QuickPlayPolicyPrefs.setQuickPlayRules(rules, isMovie: isMovie);
   }
 
   QuickPlayRules _custom(QuickPlayRules candidate) {
@@ -277,7 +277,7 @@ class _QuickPlaySettingsPageState extends State<QuickPlaySettingsPage> {
   );
 
   void _restore() async {
-    await StorageService.restoreQuickPlayDefaults();
+    await QuickPlayPolicyPrefs.restoreQuickPlayDefaults();
     if (!mounted) return;
     setState(() {
       _movie = QuickPlayRules.debrifyDefault(isMovie: true);
@@ -430,7 +430,7 @@ class _QuickPlaySettingsPageState extends State<QuickPlaySettingsPage> {
 
   Future<void> _setPlayMode(String value) async {
     setState(() => _playMode = value);
-    await StorageService.setPlayButtonMode(value);
+    await QuickPlayPolicyPrefs.setPlayButtonMode(value);
   }
 
   Widget _tabs() => ConstrainedBox(

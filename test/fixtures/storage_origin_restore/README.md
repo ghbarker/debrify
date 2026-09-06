@@ -1360,3 +1360,16 @@ Did we make a difference? Seven residual profile preference keys now have actual
 old-export/current-restore and public scalar proof. Is there more we could do?
 Existing-owner batch remains separately gated; zero production credit here,
 no new runtime authority or strict Storage completion claim.
+
+### Q2 Quick Play policy caller retirement: old-export harness adapter
+
+In the copied loader for unchanged old `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`,
+remove the QuickPlayPolicyPrefs import and reverse exactly nine owner receivers
+to the same-method StorageService APIs: six policy reads and three scalar reads.
+Keep all existing owner/helper adapters, recipe and encrypted/manifest bytes.
+No owner backport or identical-whole-harness claim is made.
+
+Optional historical origin-test reproduction reverses 24 receivers in
+quick_play_policy_prefs_origin_test.dart, or six in profile_scalar_prefs_origin_test.dart,
+and removes that owner import. Preserve the latter's three getter tearoffs.
+Neither origin test is a generation helper imported by the loader.

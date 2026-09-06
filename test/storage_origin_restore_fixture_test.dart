@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'package:debrify/services/storage/ambient_trailer_prefs.dart' show AmbientTrailerPrefs;
 import 'package:debrify/services/storage/torrent_search_history_store.dart';
 import 'package:debrify/services/storage/my_watchlist_store.dart';
@@ -413,9 +414,9 @@ void main() {
       'merged_series_page_enabled': await StorageService.getMergedSeriesPageEnabled(),
       'stremio_addon_hub_enabled': await StorageService.getStremioAddonHubEnabled(),
       'detail_trailer_autoplay_enabled': await StorageService.getDetailTrailerAutoplayEnabled(),
-      'series_auto_pin_on_play': await StorageService.getSeriesAutoPinOnPlay(),
-      'quick_play_search_timeout': await StorageService.getQuickPlaySearchTimeout(),
-      'stremio_sources_timeout': await StorageService.getStremioSourcesTimeout(),
+      'series_auto_pin_on_play': await QuickPlayPolicyPrefs.getSeriesAutoPinOnPlay(),
+      'quick_play_search_timeout': await QuickPlayPolicyPrefs.getQuickPlaySearchTimeout(),
+      'stremio_sources_timeout': await QuickPlayPolicyPrefs.getStremioSourcesTimeout(),
     }, scalarValues);
   }
   if (_generate) {
@@ -1409,12 +1410,12 @@ void main() {
         final before = {for (final key in prefs.getKeys()) key: prefs.get(key)};
         final reads = domain[scenario == 'quick-play-policy-legacy'
             ? 'legacyExpectedReads' : 'expectedReads'] as Map;
-        expect((await StorageService.getQuickPlayRules(isMovie: true)).toJson(), reads['movie']);
-        expect((await StorageService.getQuickPlayRules(isMovie: false)).toJson(), reads['series']);
-        expect(await StorageService.getQuickPlayHonorsFilters(), false);
-        expect(await StorageService.getQuickPlayTryMultipleTorrents(), false);
-        expect(await StorageService.getQuickPlayMaxRetries(), 3);
-        expect(await StorageService.getPlayButtonMode(), 'smart');
+        expect((await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true)).toJson(), reads['movie']);
+        expect((await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false)).toJson(), reads['series']);
+        expect(await QuickPlayPolicyPrefs.getQuickPlayHonorsFilters(), false);
+        expect(await QuickPlayPolicyPrefs.getQuickPlayTryMultipleTorrents(), false);
+        expect(await QuickPlayPolicyPrefs.getQuickPlayMaxRetries(), 3);
+        expect(await QuickPlayPolicyPrefs.getPlayButtonMode(), 'smart');
         expect({for (final key in prefs.getKeys()) key: prefs.get(key)}, before,
             reason: 'Public reads must not persist migrated/normalized rules');
         return;

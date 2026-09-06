@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'dart:async';
 
 import 'package:debrify/services/profiles/profile_runtime.dart';
@@ -54,22 +55,22 @@ final _entries = <_Entry>[
     'series_auto_pin_on_play',
     true,
     false,
-    StorageService.getSeriesAutoPinOnPlay,
-    (v) => StorageService.setSeriesAutoPinOnPlay(v as bool),
+    QuickPlayPolicyPrefs.getSeriesAutoPinOnPlay,
+    (v) => QuickPlayPolicyPrefs.setSeriesAutoPinOnPlay(v as bool),
   ),
   _Entry(
     'quick_play_search_timeout',
     5,
     -7,
-    StorageService.getQuickPlaySearchTimeout,
-    (v) => StorageService.setQuickPlaySearchTimeout(v as int),
+    QuickPlayPolicyPrefs.getQuickPlaySearchTimeout,
+    (v) => QuickPlayPolicyPrefs.setQuickPlaySearchTimeout(v as int),
   ),
   _Entry(
     'stremio_sources_timeout',
     15,
     -9,
-    StorageService.getStremioSourcesTimeout,
-    (v) => StorageService.setStremioSourcesTimeout(v as int),
+    QuickPlayPolicyPrefs.getStremioSourcesTimeout,
+    (v) => QuickPlayPolicyPrefs.setStremioSourcesTimeout(v as int),
   ),
 ];
 
