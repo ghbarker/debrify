@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/torrent_search_history_store.dart';
 import 'package:debrify/services/remote_control/remote_device_prefs.dart';
 import 'package:debrify/services/profiles/profile_onboarding_state.dart';
 import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
@@ -120,6 +121,7 @@ Set<String> inlinePrefsKeysOnStorageService() {
 /// Every name the completed registry must own: declared consts, store-owned
 /// keys, undeclared inline literals, and documented interpolated names.
 Set<String> allDiscoveredPrefsKeys() => {
+  ...TorrentSearchHistoryStore.ownedKeys,
   ...RemoteDevicePrefs.ownedKeys,
   ...ProfileOnboardingState.ownedKeys,
   ...declaredOnStorageService(),
@@ -146,6 +148,19 @@ Set<String> unownedDiscoveredPrefsKeys() =>
     allDiscoveredPrefsKeys().difference(StorageKeyOwnership.byKey.keys.toSet());
 
 void main() {
+  test('history keys are discovered and either missing registry row fails', () {
+    const expected = {'torrent_search_history_v1', 'torrent_search_history_enabled'};
+    expect(TorrentSearchHistoryStore.ownedKeys, expected);
+    expect(StorageKeyOwnership.keysFor(StorageKeyStore.torrentSearchHistoryStore), expected);
+    expect(declaredOnStorageService().intersection(expected), isEmpty);
+    expect(allDiscoveredPrefsKeys(), containsAll(expected));
+    for (final key in expected) {
+      expect(allDiscoveredPrefsKeys().difference(
+        StorageKeyOwnership.byKey.keys.toSet().difference({key})), {key});
+    }
+  });
+
+
   test('remote device keys have exact ownership and missing rows are detected', () {
     const expected = {
       'remote_control_enabled', 'remote_intro_shown',
@@ -334,6 +349,8 @@ void main() {
       }
     }
 
+    expectStore(TorrentSearchHistoryStore.ownedKeys,
+        StorageKeyStore.torrentSearchHistoryStore, 'TorrentSearchHistoryStore');
     expectStore(RemoteDevicePrefs.ownedKeys,
         StorageKeyStore.remoteDevicePrefs, 'RemoteDevicePrefs');
     expectStore(ProfileOnboardingState.ownedKeys,
@@ -356,6 +373,7 @@ void main() {
         StorageKeyStore.defaultTorrentFilterPrefs, 'DefaultTorrentFilterPrefs');
 
     final extracted = {
+      ...TorrentSearchHistoryStore.ownedKeys,
       ...RemoteDevicePrefs.ownedKeys,
       ...ProfileOnboardingState.ownedKeys,
       ...fromCloud,
