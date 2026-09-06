@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import '../services/cloud/rd_cloud_provider.dart';
 import '../services/cloud/alldebrid_cloud_provider.dart';
 import 'package:debrify/services/storage/provider_credential_prefs.dart';
@@ -654,19 +655,19 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   }
 
   Future<void> _loadSettings() async {
-    final startRandom = await StorageService.getDebrifyTvStartRandom();
+    final startRandom = await DebrifyTvPrefs.getDebrifyTvStartRandom();
     final randomStartPercent =
-        await StorageService.getDebrifyTvRandomStartPercent();
+        await DebrifyTvPrefs.getDebrifyTvRandomStartPercent();
     // Hardcoded to false - no longer loading from storage
     const hideOptions = false;
-    final showChannelName = await StorageService.getDebrifyTvShowChannelName();
-    final showVideoTitle = await StorageService.getDebrifyTvShowVideoTitle();
+    final showChannelName = await DebrifyTvPrefs.getDebrifyTvShowChannelName();
+    final showVideoTitle = await DebrifyTvPrefs.getDebrifyTvShowVideoTitle();
     // hideBackButton is hardcoded to false - no longer loading from storage
     final avoidNsfw = await _settingsManager.getGlobalAvoidNsfw(true);
     final rdSkipBlocked = await ProviderCredentialPrefs.getRdSkipBlockedTorrents();
     final tvFilters = await DebrifyTvFilters.load();
-    final storedProvider = await StorageService.getDebrifyTvProvider();
-    final hasStoredProvider = await StorageService.hasDebrifyTvProvider();
+    final storedProvider = await DebrifyTvPrefs.getDebrifyTvProvider();
+    final hasStoredProvider = await DebrifyTvPrefs.hasDebrifyTvProvider();
     final rdIntegrationEnabled =
         await ProviderCredentialPrefs.getRealDebridIntegrationEnabled();
     final rdKey = await StorageService.getApiKey();
@@ -799,12 +800,12 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
       _refreshSpotlightStatsIfFocused(_spotlightFocusedId);
     }
 
-    if (await StorageService.getDebrifyTvHideSeekbar() != hideOptions) {
-      unawaited(StorageService.saveDebrifyTvHideSeekbar(hideOptions));
+    if (await DebrifyTvPrefs.getDebrifyTvHideSeekbar() != hideOptions) {
+      unawaited(DebrifyTvPrefs.saveDebrifyTvHideSeekbar(hideOptions));
     }
 
     if (defaultProvider != storedProvider) {
-      await StorageService.saveDebrifyTvProvider(defaultProvider);
+      await DebrifyTvPrefs.saveDebrifyTvProvider(defaultProvider);
     }
   }
 
@@ -825,7 +826,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   }
 
   Future<void> _loadFavoriteChannels() async {
-    final favoriteIds = await StorageService.getDebrifyTvFavoriteChannelIds();
+    final favoriteIds = await DebrifyTvPrefs.getDebrifyTvFavoriteChannelIds();
     if (!mounted) return;
     setState(() {
       _favoriteChannelIds = favoriteIds;
@@ -836,7 +837,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     final isFavorited = _favoriteChannelIds.contains(channel.id);
     final newState = !isFavorited;
 
-    await StorageService.setDebrifyTvChannelFavorited(channel.id, newState);
+    await DebrifyTvPrefs.setDebrifyTvChannelFavorited(channel.id, newState);
 
     if (!mounted) return;
     setState(() {
@@ -956,7 +957,7 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     });
 
     if (providerChanged) {
-      await StorageService.saveDebrifyTvProvider(nextChannelProvider);
+      await DebrifyTvPrefs.saveDebrifyTvProvider(nextChannelProvider);
     }
   }
 

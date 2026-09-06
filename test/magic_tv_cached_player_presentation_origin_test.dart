@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:io';
@@ -238,7 +239,7 @@ void main() {
     await StorageService.savePremiumizeApiKey('fixture-key');
     await ProviderCredentialPrefs.setPikPakAccessToken('fixture-access');
     await ProviderCredentialPrefs.setPikPakRefreshToken('fixture-refresh');
-    await StorageService.saveDebrifyTvProvider('torbox');
+    await DebrifyTvPrefs.saveDebrifyTvProvider('torbox');
     await StorageService.setDefaultPlayerMode('external');
     torbox = _HeldTorbox();
     CloudProviderRegistry.instance = CloudProviderRegistry([torbox]);
@@ -270,15 +271,15 @@ void main() {
         torbox = _HeldTorbox(provider);
         torbox.pending = Completer<MagicTvPrepared?>();
         CloudProviderRegistry.instance = CloudProviderRegistry([torbox]);
-        await StorageService.saveDebrifyTvProvider(provider.magicTvId);
+        await DebrifyTvPrefs.saveDebrifyTvProvider(provider.magicTvId);
         await StorageService.setDefaultPlayerMode('internal');
-        await StorageService.saveDebrifyTvStartRandom(false);
-        await StorageService.saveDebrifyTvRandomStartPercent(37);
-        await StorageService.saveDebrifyTvShowChannelName(false);
-        await StorageService.saveDebrifyTvShowVideoTitle(false);
+        await DebrifyTvPrefs.saveDebrifyTvStartRandom(false);
+        await DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(37);
+        await DebrifyTvPrefs.saveDebrifyTvShowChannelName(false);
+        await DebrifyTvPrefs.saveDebrifyTvShowVideoTitle(false);
         // These stored values are deliberately ignored by the origin load path.
-        await StorageService.saveDebrifyTvHideSeekbar(true);
-        await StorageService.saveDebrifyTvHideOptions(true);
+        await DebrifyTvPrefs.saveDebrifyTvHideSeekbar(true);
+        await DebrifyTvPrefs.saveDebrifyTvHideOptions(true);
         await tester.runAsync(() async {
           await _seed();
           final now = DateTime.utc(2026, 9, 5);

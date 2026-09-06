@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 import 'package:debrify/services/storage/social_prefs.dart';
 import 'dart:convert';
@@ -378,44 +379,44 @@ void main() {
 
   group('Debrify TV prefs', () {
     test('defaults when no keys are stored', () async {
-      expect(await StorageService.getDebrifyTvProvider(), 'real_debrid');
-      expect(await StorageService.hasDebrifyTvProvider(), isFalse);
-      expect(await StorageService.getDebrifyTvStartRandom(), isTrue);
-      expect(await StorageService.getDebrifyTvRandomStartPercent(), 20);
-      expect(await StorageService.getDebrifyTvHideSeekbar(), isTrue);
-      expect(await StorageService.getDebrifyTvShowChannelName(), isTrue);
-      expect(await StorageService.getDebrifyTvShowVideoTitle(), isTrue);
-      expect(await StorageService.getDebrifyTvHideOptions(), isTrue);
-      expect(await StorageService.getDebrifyTvHideBackButton(), isTrue);
-      expect(await StorageService.getDebrifyTvAvoidNsfw(), isTrue);
-      expect(await StorageService.getDebrifyTvChannels(), isEmpty);
-      expect(await StorageService.getDebrifyTvFilterQualities(), isEmpty);
-      expect(await StorageService.getDebrifyTvFilterSizes(), isEmpty);
+      expect(await DebrifyTvPrefs.getDebrifyTvProvider(), 'real_debrid');
+      expect(await DebrifyTvPrefs.hasDebrifyTvProvider(), isFalse);
+      expect(await DebrifyTvPrefs.getDebrifyTvStartRandom(), isTrue);
+      expect(await DebrifyTvPrefs.getDebrifyTvRandomStartPercent(), 20);
+      expect(await DebrifyTvPrefs.getDebrifyTvHideSeekbar(), isTrue);
+      expect(await DebrifyTvPrefs.getDebrifyTvShowChannelName(), isTrue);
+      expect(await DebrifyTvPrefs.getDebrifyTvShowVideoTitle(), isTrue);
+      expect(await DebrifyTvPrefs.getDebrifyTvHideOptions(), isTrue);
+      expect(await DebrifyTvPrefs.getDebrifyTvHideBackButton(), isTrue);
+      expect(await DebrifyTvPrefs.getDebrifyTvAvoidNsfw(), isTrue);
+      expect(await DebrifyTvPrefs.getDebrifyTvChannels(), isEmpty);
+      expect(await DebrifyTvPrefs.getDebrifyTvFilterQualities(), isEmpty);
+      expect(await DebrifyTvPrefs.getDebrifyTvFilterSizes(), isEmpty);
       expect(
-        await StorageService.getDebrifyTvExternalNoticeDismissed(),
+        await DebrifyTvPrefs.getDebrifyTvExternalNoticeDismissed(),
         isFalse,
       );
-      expect(await StorageService.isDebrifyTvChannelFavorited('ch1'), isFalse);
-      expect(await StorageService.getDebrifyTvFavoriteChannelIds(), isEmpty);
+      expect(await DebrifyTvPrefs.isDebrifyTvChannelFavorited('ch1'), isFalse);
+      expect(await DebrifyTvPrefs.getDebrifyTvFavoriteChannelIds(), isEmpty);
     });
 
     test('StorageService writes the historical Debrify TV key bytes', () async {
-      await StorageService.saveDebrifyTvProvider('torbox');
-      await StorageService.saveDebrifyTvStartRandom(false);
-      await StorageService.saveDebrifyTvRandomStartPercent(40);
-      await StorageService.saveDebrifyTvHideSeekbar(false);
-      await StorageService.saveDebrifyTvShowChannelName(false);
-      await StorageService.saveDebrifyTvShowVideoTitle(false);
-      await StorageService.saveDebrifyTvHideOptions(false);
-      await StorageService.saveDebrifyTvHideBackButton(false);
-      await StorageService.saveDebrifyTvAvoidNsfw(false);
-      await StorageService.saveDebrifyTvChannels(const [
+      await DebrifyTvPrefs.saveDebrifyTvProvider('torbox');
+      await DebrifyTvPrefs.saveDebrifyTvStartRandom(false);
+      await DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(40);
+      await DebrifyTvPrefs.saveDebrifyTvHideSeekbar(false);
+      await DebrifyTvPrefs.saveDebrifyTvShowChannelName(false);
+      await DebrifyTvPrefs.saveDebrifyTvShowVideoTitle(false);
+      await DebrifyTvPrefs.saveDebrifyTvHideOptions(false);
+      await DebrifyTvPrefs.saveDebrifyTvHideBackButton(false);
+      await DebrifyTvPrefs.saveDebrifyTvAvoidNsfw(false);
+      await DebrifyTvPrefs.saveDebrifyTvChannels(const [
         {'id': 'ch1', 'name': 'One'},
       ]);
-      await StorageService.setDebrifyTvFilterQualities(const ['1080p']);
-      await StorageService.setDebrifyTvFilterSizes(const ['2GB-5GB']);
-      await StorageService.setDebrifyTvExternalNoticeDismissed(true);
-      await StorageService.setDebrifyTvChannelFavorited('fav', true);
+      await DebrifyTvPrefs.setDebrifyTvFilterQualities(const ['1080p']);
+      await DebrifyTvPrefs.setDebrifyTvFilterSizes(const ['2GB-5GB']);
+      await DebrifyTvPrefs.setDebrifyTvExternalNoticeDismissed(true);
+      await DebrifyTvPrefs.setDebrifyTvChannelFavorited('fav', true);
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString('debrify_tv_provider'), 'torbox');
@@ -447,16 +448,16 @@ void main() {
         prefs.getString('debrify_tv_favorite_channels_v1'),
         jsonEncode({'fav': true}),
       );
-      expect(await StorageService.hasDebrifyTvProvider(), isTrue);
+      expect(await DebrifyTvPrefs.hasDebrifyTvProvider(), isTrue);
     });
 
     test(
       'random start percent clamps to 10–90; null stored reads 20',
       () async {
-        await StorageService.saveDebrifyTvRandomStartPercent(1);
-        expect(await StorageService.getDebrifyTvRandomStartPercent(), 10);
-        await StorageService.saveDebrifyTvRandomStartPercent(99);
-        expect(await StorageService.getDebrifyTvRandomStartPercent(), 90);
+        await DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(1);
+        expect(await DebrifyTvPrefs.getDebrifyTvRandomStartPercent(), 10);
+        await DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(99);
+        expect(await DebrifyTvPrefs.getDebrifyTvRandomStartPercent(), 90);
 
         final prefs = await SharedPreferences.getInstance();
         expect(prefs.getInt('debrify_tv_random_start_percent'), 90);
@@ -472,7 +473,7 @@ void main() {
           {'id': 'two'},
         ]),
       });
-      expect(await StorageService.getDebrifyTvChannels(), [
+      expect(await DebrifyTvPrefs.getDebrifyTvChannels(), [
         {'id': 'ok'},
         {'id': 'two'},
       ]);
@@ -481,35 +482,35 @@ void main() {
         'debrify_tv_channels': 'not-json{',
         'debrify_tv_favorite_channels_v1': 'not-json{',
       });
-      expect(await StorageService.getDebrifyTvChannels(), isEmpty);
-      expect(await StorageService.isDebrifyTvChannelFavorited('x'), isFalse);
-      expect(await StorageService.getDebrifyTvFavoriteChannelIds(), isEmpty);
+      expect(await DebrifyTvPrefs.getDebrifyTvChannels(), isEmpty);
+      expect(await DebrifyTvPrefs.isDebrifyTvChannelFavorited('x'), isFalse);
+      expect(await DebrifyTvPrefs.getDebrifyTvFavoriteChannelIds(), isEmpty);
     });
 
     test('filter getters throw on corrupt JSON (no try/catch)', () async {
-      await StorageService.setDebrifyTvFilterQualities(const ['1080p']);
-      await StorageService.setDebrifyTvFilterSizes(const ['1GB']);
+      await DebrifyTvPrefs.setDebrifyTvFilterQualities(const ['1080p']);
+      await DebrifyTvPrefs.setDebrifyTvFilterSizes(const ['1GB']);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('debrify_tv_filter_qualities', 'not-json{');
       await prefs.setString('debrify_tv_filter_sizes', 'not-json{');
       expect(
-        StorageService.getDebrifyTvFilterQualities(),
+        DebrifyTvPrefs.getDebrifyTvFilterQualities(),
         throwsFormatException,
       );
-      expect(StorageService.getDebrifyTvFilterSizes(), throwsFormatException);
+      expect(DebrifyTvPrefs.getDebrifyTvFilterSizes(), throwsFormatException);
     });
 
     test(
       'clearDebrifyTvProviderAndLegacy only drops provider + channels',
       () async {
-        await StorageService.saveDebrifyTvProvider('torbox');
-        await StorageService.saveDebrifyTvChannels(const [
+        await DebrifyTvPrefs.saveDebrifyTvProvider('torbox');
+        await DebrifyTvPrefs.saveDebrifyTvChannels(const [
           {'id': 'ch1'},
         ]);
-        await StorageService.saveDebrifyTvStartRandom(false);
-        await StorageService.setDebrifyTvChannelFavorited('fav', true);
+        await DebrifyTvPrefs.saveDebrifyTvStartRandom(false);
+        await DebrifyTvPrefs.setDebrifyTvChannelFavorited('fav', true);
 
-        await StorageService.clearDebrifyTvProviderAndLegacy();
+        await DebrifyTvPrefs.clearDebrifyTvProviderAndLegacy();
 
         final prefs = await SharedPreferences.getInstance();
         expect(prefs.containsKey('debrify_tv_provider'), isFalse);
@@ -522,20 +523,20 @@ void main() {
     test(
       'clearAllDebrifyTvSettings wipes display/filters/prefixes, not provider',
       () async {
-        await StorageService.saveDebrifyTvProvider('torbox');
-        await StorageService.saveDebrifyTvStartRandom(false);
-        await StorageService.saveDebrifyTvHideSeekbar(false);
-        await StorageService.saveDebrifyTvShowChannelName(false);
-        await StorageService.saveDebrifyTvShowVideoTitle(false);
-        await StorageService.saveDebrifyTvHideOptions(false);
-        await StorageService.saveDebrifyTvHideBackButton(false);
-        await StorageService.saveDebrifyTvAvoidNsfw(false);
-        await StorageService.saveDebrifyTvRandomStartPercent(40);
-        await StorageService.setDebrifyTvFilterQualities(const ['720p']);
-        await StorageService.setDebrifyTvFilterSizes(const ['1GB']);
-        await StorageService.setDebrifyTvExternalNoticeDismissed(true);
-        await StorageService.setDebrifyTvChannelFavorited('fav', true);
-        await StorageService.saveDebrifyTvChannels(const [
+        await DebrifyTvPrefs.saveDebrifyTvProvider('torbox');
+        await DebrifyTvPrefs.saveDebrifyTvStartRandom(false);
+        await DebrifyTvPrefs.saveDebrifyTvHideSeekbar(false);
+        await DebrifyTvPrefs.saveDebrifyTvShowChannelName(false);
+        await DebrifyTvPrefs.saveDebrifyTvShowVideoTitle(false);
+        await DebrifyTvPrefs.saveDebrifyTvHideOptions(false);
+        await DebrifyTvPrefs.saveDebrifyTvHideBackButton(false);
+        await DebrifyTvPrefs.saveDebrifyTvAvoidNsfw(false);
+        await DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(40);
+        await DebrifyTvPrefs.setDebrifyTvFilterQualities(const ['720p']);
+        await DebrifyTvPrefs.setDebrifyTvFilterSizes(const ['1GB']);
+        await DebrifyTvPrefs.setDebrifyTvExternalNoticeDismissed(true);
+        await DebrifyTvPrefs.setDebrifyTvChannelFavorited('fav', true);
+        await DebrifyTvPrefs.saveDebrifyTvChannels(const [
           {'id': 'ch1'},
         ]);
 
@@ -549,7 +550,7 @@ void main() {
         await prefs.setInt('debrify_tv_min_torrents_per_keyword', 4);
         await prefs.setBool('engine_yts_enabled', true);
 
-        await StorageService.clearAllDebrifyTvSettings();
+        await DebrifyTvPrefs.clearAllDebrifyTvSettings();
 
         expect(prefs.containsKey('debrify_tv_start_random'), isFalse);
         expect(prefs.containsKey('debrify_tv_hide_seekbar'), isFalse);
@@ -584,10 +585,10 @@ void main() {
     test(
       'avoid-NSFW setter writes the requested bool in legacy mode',
       () async {
-        await StorageService.saveDebrifyTvAvoidNsfw(false);
+        await DebrifyTvPrefs.saveDebrifyTvAvoidNsfw(false);
         final prefs = await SharedPreferences.getInstance();
         expect(prefs.getBool('debrify_tv_avoid_nsfw'), isFalse);
-        expect(await StorageService.getDebrifyTvAvoidNsfw(), isFalse);
+        expect(await DebrifyTvPrefs.getDebrifyTvAvoidNsfw(), isFalse);
       },
     );
   });

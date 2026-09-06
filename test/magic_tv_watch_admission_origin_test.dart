@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -170,7 +171,7 @@ void main() {
     await StorageService.saveAllDebridApiKey('fixture-ad-key');
     await ProviderCredentialPrefs.setPikPakAccessToken('fixture-access');
     await ProviderCredentialPrefs.setPikPakRefreshToken('fixture-refresh');
-    await StorageService.setDebrifyTvFilterQualities(['fullHd']);
+    await DebrifyTvPrefs.setDebrifyTvFilterQualities(['fullHd']);
     routes = _Routes();
   });
   tearDown(() async {
@@ -194,7 +195,7 @@ void main() {
         (tester) async {
           provider = _Provider(id);
           CloudProviderRegistry.instance = CloudProviderRegistry([provider]);
-          await StorageService.saveDebrifyTvProvider(id.magicTvId);
+          await DebrifyTvPrefs.saveDebrifyTvProvider(id.magicTvId);
           await tester.runAsync(() async {
             for (final name in ['dedup_one', 'dedup_two']) {
               await LocalEngineStorage.instance.saveEngine(

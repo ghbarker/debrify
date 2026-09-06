@@ -7,7 +7,7 @@
 // import 'package:flutter/services.dart';
 // import '../models/debrify_tv/channel.dart';
 // import '../utils/tv_keys.dart';
-// import '../services/storage_service.dart';
+// import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 // import '../services/debrify_tv_repository.dart';
 // import '../services/main_page_bridge.dart';
 // import 'home/home_theme.dart';
@@ -98,7 +98,7 @@
 // 
 //     try {
 //       final favoriteIds =
-//           await StorageService.getDebrifyTvFavoriteChannelIds();
+//           await DebrifyTvPrefs.getDebrifyTvFavoriteChannelIds();
 // 
 //       if (favoriteIds.isEmpty) {
 //         if (mounted) {
@@ -176,7 +176,7 @@
 //     );
 // 
 //     if (confirmed == true && mounted) {
-//       await StorageService.setDebrifyTvChannelFavorited(channel.id, false);
+//       await DebrifyTvPrefs.setDebrifyTvChannelFavorited(channel.id, false);
 //       HapticFeedback.mediumImpact();
 //       _loadFavorites();
 //     }

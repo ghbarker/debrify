@@ -1404,3 +1404,18 @@ storage_stremio_social_debrify_tv_prefs_snapshot_test.dart. The roundtrip test
 already has direct StremioTvPrefs reads: reversing 13 alone cannot make it run
 on old6d26. Existing owner adapters remain necessary for snapshot reproduction.
 Neither test is imported by the actual generation loader.
+
+### Q2 DebrifyTvPrefs caller retirement: old-export harness adapter
+
+In the copied loader for unchanged old `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`,
+remove the DebrifyTvPrefs import and reverse exactly four same-method receivers
+to StorageService. Preserve Quick Play nine, Social six, Stremio TV eight and
+all earlier helper/owner adapters; recipe and artifact bytes stay unchanged.
+No owner backport or identical-whole-harness claim is made.
+
+Optional historical correspondence reverses 14 migrated references in
+storage_s21_store_roundtrip_test.dart or 65 in
+storage_stremio_social_debrify_tv_prefs_snapshot_test.dart. Roundtrip already
+reads DebrifyTvPrefs directly; reversing 14 alone cannot make it runnable on
+old6d26. Existing owner adapters remain necessary for snapshot reproduction.
+Neither test is imported by the actual generation loader.

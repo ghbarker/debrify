@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'package:debrify/services/storage/torrent_search_history_store.dart';
 import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
@@ -1940,11 +1941,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await StorageService.clearAllStartupSettings();
     await StorageService.clearAllHomePageSettings();
     await ProviderCredentialPrefs.clearAllIntegrationStates();
-    await StorageService.clearDebrifyTvProviderAndLegacy();
+    await DebrifyTvPrefs.clearDebrifyTvProviderAndLegacy();
     await StorageService.clearAllFilterSettings();
     await StorageService.clearAllTorrentEngineSettings();
     await ProviderCredentialPrefs.clearAllPostTorrentActions();
-    await StorageService.clearAllDebrifyTvSettings();
+    await DebrifyTvPrefs.clearAllDebrifyTvSettings();
     await DebrifyTvRepository.instance.clearAll();
     await StremioService.instance.clearAllAddons();
     await StorageService.setInitialSetupComplete(false);

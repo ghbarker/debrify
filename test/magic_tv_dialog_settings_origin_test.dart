@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'package:debrify/models/debrify_tv/channel.dart';
 import 'dart:async';
 import 'package:flutter/services.dart';
@@ -289,7 +290,7 @@ void main() {
     EngineRegistry.instance.invalidateProfileScope();
     await EngineRegistry.instance.initialize();
     await StorageService.saveTorboxApiKey('fixture-key');
-    await StorageService.saveDebrifyTvProvider('torbox');
+    await DebrifyTvPrefs.saveDebrifyTvProvider('torbox');
     CloudProviderRegistry.instance = CloudProviderRegistry([_HeldTorbox()]);
     routes = _Routes();
   });
@@ -515,8 +516,8 @@ void main() {
   testWidgets(
     'origin reset writes filters then defaults serially and keeps percent storage quirk',
     (tester) async {
-      await StorageService.saveDebrifyTvRandomStartPercent(65);
-      await StorageService.saveDebrifyTvStartRandom(false);
+      await DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(65);
+      await DebrifyTvPrefs.saveDebrifyTvStartRandom(false);
       await _mount(tester, routes, expectedEditorPaintDiagnostics: 2);
       await settings(tester);
       writes.clear();
@@ -570,8 +571,8 @@ void main() {
   testWidgets(
     'origin load keeps percent and normalizes seekbar before held write completes',
     (tester) async {
-      await StorageService.saveDebrifyTvRandomStartPercent(65);
-      await StorageService.saveDebrifyTvHideSeekbar(true);
+      await DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(65);
+      await DebrifyTvPrefs.saveDebrifyTvHideSeekbar(true);
       await prefs.setString('debrify_tv_provider', 'unknown-origin-provider');
       writes.clear();
       heldKey = 'flutter.debrify_tv_hide_seekbar';

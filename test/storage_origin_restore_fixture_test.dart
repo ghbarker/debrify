@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 import 'package:debrify/services/storage/social_prefs.dart';
 import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
@@ -180,8 +181,8 @@ Future<void> _seedThroughStorageService() async {
     _setterSettings['lemmy_favorite_communities']! as List<String>,
   );
   await SocialPrefs.setYoutubeMaxHeight(720);
-  await StorageService.saveDebrifyTvRandomStartPercent(13);
-  await StorageService.saveDebrifyTvProvider('real_debrid');
+  await DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(13);
+  await DebrifyTvPrefs.saveDebrifyTvProvider('real_debrid');
   await ProviderCredentialPrefs.saveFileSelection('all');
   await ProviderCredentialPrefs.setTorboxCacheCheckEnabled(true);
   await ProviderCredentialPrefs.setRealDebridIntegrationEnabled(false);
@@ -246,8 +247,8 @@ Future<Map<String, Object?>> _readThroughStorageService(
       await SocialPrefs.getLemmyFavoriteCommunities(),
   'youtube_max_height': await SocialPrefs.getYoutubeMaxHeight(),
   'debrify_tv_random_start_percent':
-      await StorageService.getDebrifyTvRandomStartPercent(),
-  'debrify_tv_provider': await StorageService.getDebrifyTvProvider(),
+      await DebrifyTvPrefs.getDebrifyTvRandomStartPercent(),
+  'debrify_tv_provider': await DebrifyTvPrefs.getDebrifyTvProvider(),
   'real_debrid_file_selection': await ProviderCredentialPrefs.getFileSelection(),
   'torbox_check_cache_before_search':
       await ProviderCredentialPrefs.getTorboxCacheCheckEnabled(),

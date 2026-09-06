@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -274,7 +275,7 @@ void main() {
     await StorageService.savePremiumizeApiKey('fixture-key');
     await ProviderCredentialPrefs.setPikPakAccessToken('fixture-access');
     await ProviderCredentialPrefs.setPikPakRefreshToken('fixture-refresh');
-    await StorageService.saveDebrifyTvProvider('torbox');
+    await DebrifyTvPrefs.saveDebrifyTvProvider('torbox');
     await StorageService.setDefaultPlayerMode('external');
     torbox = _HeldTorbox();
     CloudProviderRegistry.instance = CloudProviderRegistry([torbox]);
@@ -351,7 +352,7 @@ void main() {
           (tester) async {
             torbox = _HeldTorbox(provider);
             CloudProviderRegistry.instance = CloudProviderRegistry([torbox]);
-            await StorageService.saveDebrifyTvProvider(provider.magicTvId);
+            await DebrifyTvPrefs.saveDebrifyTvProvider(provider.magicTvId);
             await StorageService.setDefaultPlayerMode('internal');
             await tester.runAsync(_seed);
             torbox.pending = Completer<MagicTvPrepared?>();
@@ -491,7 +492,7 @@ void main() {
           (tester) async {
             final port = _LockedProvider(provider);
             CloudProviderRegistry.instance = CloudProviderRegistry([port]);
-            await StorageService.saveDebrifyTvProvider(provider.magicTvId);
+            await DebrifyTvPrefs.saveDebrifyTvProvider(provider.magicTvId);
             await StorageService.setDefaultPlayerMode('internal');
             await tester.runAsync(_seed);
             final unlocks = <http.Request>[];

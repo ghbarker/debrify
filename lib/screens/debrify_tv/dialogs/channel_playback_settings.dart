@@ -6,7 +6,7 @@ import '../../../models/profiles/profile_policy.dart';
 import '../../../services/profiles/profile_policy_guard.dart';
 import '../../../services/cloud/cloud_provider_id.dart';
 import '../../../services/cloud/magic_tv_provider.dart';
-import '../../../services/storage_service.dart';
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import '../../../theme/app_theme_scope.dart';
 import '../../../utils/debrify_tv_filters.dart';
 import '../channel_playback_settings_state.dart';
@@ -43,7 +43,7 @@ Future<void> showChannelPlaybackSettings(
         DebrifyTvFilters(qualities: next, sizes: state.tvFilters.sizes),
       );
       unawaited(
-        StorageService.setDebrifyTvFilterQualities(
+        DebrifyTvPrefs.setDebrifyTvFilterQualities(
           next.map((e) => e.name).toList(),
         ),
       );
@@ -56,7 +56,7 @@ Future<void> showChannelPlaybackSettings(
         DebrifyTvFilters(qualities: state.tvFilters.qualities, sizes: next),
       );
       unawaited(
-        StorageService.setDebrifyTvFilterSizes(
+        DebrifyTvPrefs.setDebrifyTvFilterSizes(
           next.map((e) => e.name).toList(),
         ),
       );
@@ -150,7 +150,7 @@ Future<void> showChannelPlaybackSettings(
         state.provider = value;
       });
       dialogSetState?.call(() {});
-      unawaited(StorageService.saveDebrifyTvProvider(value));
+      unawaited(DebrifyTvPrefs.saveDebrifyTvProvider(value));
     }
 
     Widget providerChip({
@@ -234,7 +234,7 @@ Future<void> showChannelPlaybackSettings(
       });
       dialogSetState?.call(() {});
       if (!isQuickScope) {
-        unawaited(StorageService.saveDebrifyTvStartRandom(value));
+        unawaited(DebrifyTvPrefs.saveDebrifyTvStartRandom(value));
       }
     }
 
@@ -251,7 +251,7 @@ Future<void> showChannelPlaybackSettings(
       });
       dialogSetState?.call(() {});
       if (!isQuickScope) {
-        unawaited(StorageService.saveDebrifyTvRandomStartPercent(value));
+        unawaited(DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(value));
       }
     }
 
@@ -268,7 +268,7 @@ Future<void> showChannelPlaybackSettings(
       });
       dialogSetState?.call(() {});
       if (!isQuickScope) {
-        unawaited(StorageService.saveDebrifyTvShowChannelName(value));
+        unawaited(DebrifyTvPrefs.saveDebrifyTvShowChannelName(value));
       }
     }
 
@@ -285,7 +285,7 @@ Future<void> showChannelPlaybackSettings(
       });
       dialogSetState?.call(() {});
       if (!isQuickScope) {
-        unawaited(StorageService.saveDebrifyTvShowVideoTitle(value));
+        unawaited(DebrifyTvPrefs.saveDebrifyTvShowVideoTitle(value));
       }
     }
 
@@ -354,7 +354,7 @@ Future<void> showChannelPlaybackSettings(
                 onChangeEnd: isQuickScope
                     ? null
                     : (next) =>
-                          StorageService.saveDebrifyTvRandomStartPercent(next),
+                          DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(next),
               ),
             ],
             // Removed Hide all options and Hide back button settings
@@ -434,16 +434,16 @@ Future<void> showChannelPlaybackSettings(
                 invalidateStats();
                 dialogSetState?.call(() {});
 
-                await StorageService.setDebrifyTvFilterQualities(const []);
-                await StorageService.setDebrifyTvFilterSizes(const []);
+                await DebrifyTvPrefs.setDebrifyTvFilterQualities(const []);
+                await DebrifyTvPrefs.setDebrifyTvFilterSizes(const []);
 
                 if (!isQuickScope) {
-                  await StorageService.saveDebrifyTvStartRandom(true);
-                  await StorageService.saveDebrifyTvHideSeekbar(true);
-                  await StorageService.saveDebrifyTvShowChannelName(true);
-                  await StorageService.saveDebrifyTvShowVideoTitle(true);
+                  await DebrifyTvPrefs.saveDebrifyTvStartRandom(true);
+                  await DebrifyTvPrefs.saveDebrifyTvHideSeekbar(true);
+                  await DebrifyTvPrefs.saveDebrifyTvShowChannelName(true);
+                  await DebrifyTvPrefs.saveDebrifyTvShowVideoTitle(true);
                   // No longer saving hideOptions and hideBackButton - they're hardcoded to false
-                  await StorageService.saveDebrifyTvProvider(defaultProvider);
+                  await DebrifyTvPrefs.saveDebrifyTvProvider(defaultProvider);
                 }
 
                 showResetSuccess();

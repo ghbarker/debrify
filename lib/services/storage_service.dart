@@ -21,7 +21,6 @@ import '../models/tracking_source.dart';
 import '../utils/platform_util.dart';
 import 'storage/cloud_secret_prefs.dart';
 import 'storage/tracking_prefs.dart';
-import 'storage/debrify_tv_prefs.dart';
 import 'storage/home_prefs.dart';
 import 'storage/default_torrent_filter_prefs.dart';
 import 'storage/quick_play_policy_prefs.dart';
@@ -744,69 +743,26 @@ class StorageService {
 
 
   // Debrify TV settings — forwarding façade; bodies live on DebrifyTvPrefs.
-  static Future<String> getDebrifyTvProvider() =>
-      DebrifyTvPrefs.getDebrifyTvProvider();
 
-  static Future<void> saveDebrifyTvProvider(String value) =>
-      DebrifyTvPrefs.saveDebrifyTvProvider(value);
 
-  static Future<bool> hasDebrifyTvProvider() =>
-      DebrifyTvPrefs.hasDebrifyTvProvider();
 
-  static Future<bool> getDebrifyTvStartRandom() =>
-      DebrifyTvPrefs.getDebrifyTvStartRandom();
 
-  static Future<void> saveDebrifyTvStartRandom(bool value) =>
-      DebrifyTvPrefs.saveDebrifyTvStartRandom(value);
 
-  static Future<int> getDebrifyTvRandomStartPercent() =>
-      DebrifyTvPrefs.getDebrifyTvRandomStartPercent();
 
-  static Future<void> saveDebrifyTvRandomStartPercent(int value) =>
-      DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(value);
 
-  static Future<bool> getDebrifyTvHideSeekbar() =>
-      DebrifyTvPrefs.getDebrifyTvHideSeekbar();
 
-  static Future<void> saveDebrifyTvHideSeekbar(bool value) =>
-      DebrifyTvPrefs.saveDebrifyTvHideSeekbar(value);
 
-  static Future<bool> getDebrifyTvShowChannelName() =>
-      DebrifyTvPrefs.getDebrifyTvShowChannelName();
 
-  static Future<void> saveDebrifyTvShowChannelName(bool value) =>
-      DebrifyTvPrefs.saveDebrifyTvShowChannelName(value);
 
-  static Future<bool> getDebrifyTvShowVideoTitle() =>
-      DebrifyTvPrefs.getDebrifyTvShowVideoTitle();
 
-  static Future<void> saveDebrifyTvShowVideoTitle(bool value) =>
-      DebrifyTvPrefs.saveDebrifyTvShowVideoTitle(value);
 
-  static Future<bool> getDebrifyTvHideOptions() =>
-      DebrifyTvPrefs.getDebrifyTvHideOptions();
 
-  static Future<void> saveDebrifyTvHideOptions(bool value) =>
-      DebrifyTvPrefs.saveDebrifyTvHideOptions(value);
 
-  static Future<bool> getDebrifyTvHideBackButton() =>
-      DebrifyTvPrefs.getDebrifyTvHideBackButton();
 
-  static Future<void> saveDebrifyTvHideBackButton(bool value) =>
-      DebrifyTvPrefs.saveDebrifyTvHideBackButton(value);
 
-  static Future<bool> getDebrifyTvAvoidNsfw() =>
-      DebrifyTvPrefs.getDebrifyTvAvoidNsfw();
 
-  static Future<void> saveDebrifyTvAvoidNsfw(bool value) =>
-      DebrifyTvPrefs.saveDebrifyTvAvoidNsfw(value);
 
-  static Future<List<Map<String, dynamic>>> getDebrifyTvChannels() =>
-      DebrifyTvPrefs.getDebrifyTvChannels();
 
-  static Future<void> saveDebrifyTvChannels(
-    List<Map<String, dynamic>> channels,
-  ) => DebrifyTvPrefs.saveDebrifyTvChannels(channels);
 
 
 
@@ -835,8 +791,6 @@ class StorageService {
   /// Clear integration enabled states (RD, TorBox)
 
   /// Clear Debrify TV provider and legacy channels key
-  static Future<void> clearDebrifyTvProviderAndLegacy() =>
-      DebrifyTvPrefs.clearDebrifyTvProviderAndLegacy();
 
 
   /// Clear filter settings (qualities, rip sources, languages)
@@ -863,8 +817,6 @@ class StorageService {
   /// Clear post-torrent action preferences
 
   /// Clear all Debrify TV display and engine settings
-  static Future<void> clearAllDebrifyTvSettings() =>
-      DebrifyTvPrefs.clearAllDebrifyTvSettings();
 
 
   /// Update an existing playlist item with poster URL
@@ -934,16 +886,8 @@ class StorageService {
 
 
   // Debrify TV Channel Favorites — forwarding façade; bodies live on DebrifyTvPrefs.
-  static Future<bool> isDebrifyTvChannelFavorited(String channelId) =>
-      DebrifyTvPrefs.isDebrifyTvChannelFavorited(channelId);
 
-  static Future<void> setDebrifyTvChannelFavorited(
-    String channelId,
-    bool isFavorited,
-  ) => DebrifyTvPrefs.setDebrifyTvChannelFavorited(channelId, isFavorited);
 
-  static Future<Set<String>> getDebrifyTvFavoriteChannelIds() =>
-      DebrifyTvPrefs.getDebrifyTvFavoriteChannelIds();
 
 
   // ==========================================================================
@@ -1441,24 +1385,11 @@ class StorageService {
 
 
   // Debrify TV Filter Settings — forwarding façade; bodies live on DebrifyTvPrefs.
-  static Future<List<String>> getDebrifyTvFilterQualities() =>
-      DebrifyTvPrefs.getDebrifyTvFilterQualities();
 
-  static Future<void> setDebrifyTvFilterQualities(
-    List<String> qualities,
-  ) => DebrifyTvPrefs.setDebrifyTvFilterQualities(qualities);
 
-  static Future<List<String>> getDebrifyTvFilterSizes() =>
-      DebrifyTvPrefs.getDebrifyTvFilterSizes();
 
-  static Future<void> setDebrifyTvFilterSizes(List<String> sizes) =>
-      DebrifyTvPrefs.setDebrifyTvFilterSizes(sizes);
 
-  static Future<bool> getDebrifyTvExternalNoticeDismissed() =>
-      DebrifyTvPrefs.getDebrifyTvExternalNoticeDismissed();
 
-  static Future<void> setDebrifyTvExternalNoticeDismissed(bool value) =>
-      DebrifyTvPrefs.setDebrifyTvExternalNoticeDismissed(value);
 
 
   // Default Torrent Provider methods

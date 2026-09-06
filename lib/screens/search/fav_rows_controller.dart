@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/iptv_prefs.dart';
@@ -236,7 +237,7 @@ class FavRowsController {
   /// Silently leaves the row empty on any error (it just won't render).
   Future<void> loadTvFavorites() async {
     try {
-      final ids = await StorageService.getDebrifyTvFavoriteChannelIds();
+      final ids = await DebrifyTvPrefs.getDebrifyTvFavoriteChannelIds();
       if (ids.isEmpty) {
         if (!mounted) return;
         commit(() => tvFavChannels = const []);

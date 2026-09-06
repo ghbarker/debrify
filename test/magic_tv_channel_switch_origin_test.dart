@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -250,7 +251,7 @@ void main() {
     await StorageService.savePremiumizeApiKey('fixture-key');
     await ProviderCredentialPrefs.setPikPakAccessToken('fixture-access');
     await ProviderCredentialPrefs.setPikPakRefreshToken('fixture-refresh');
-    await StorageService.saveDebrifyTvProvider('torbox');
+    await DebrifyTvPrefs.saveDebrifyTvProvider('torbox');
     await StorageService.setDefaultPlayerMode('internal');
     torbox = _HeldTorbox();
     CloudProviderRegistry.instance = CloudProviderRegistry([torbox]);
@@ -280,7 +281,7 @@ void main() {
           PlatformUtil.debugSetAndroidTvCached(cachedTvOverride);
           torbox = _HeldTorbox(provider);
           CloudProviderRegistry.instance = CloudProviderRegistry([torbox]);
-          await StorageService.saveDebrifyTvProvider(provider.magicTvId);
+          await DebrifyTvPrefs.saveDebrifyTvProvider(provider.magicTvId);
           await tester.runAsync(() async {
             await _seed('first', 'First channel', 1);
             await _seed('second', 'Second channel', 7);
@@ -379,7 +380,7 @@ void main() {
         PlatformUtil.debugSetAndroidTvCached(true);
         final port = _LockedProvider(provider);
         CloudProviderRegistry.instance = CloudProviderRegistry([port]);
-        await StorageService.saveDebrifyTvProvider(provider.magicTvId);
+        await DebrifyTvPrefs.saveDebrifyTvProvider(provider.magicTvId);
         await tester.runAsync(() async {
           await _seed('first', 'First channel', 1);
           await _seed('second', 'Second channel', 7);

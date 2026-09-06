@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:debrify/models/debrify_tv/channel.dart';
@@ -158,7 +159,7 @@ void main() {
     await StorageService.savePremiumizeApiKey('fixture-key');
     await StorageService.saveTorboxApiKey('fixture-key');
     await StorageService.setDefaultPlayerMode('internal');
-    await StorageService.setDebrifyTvFilterQualities(['fullHd']);
+    await DebrifyTvPrefs.setDebrifyTvFilterQualities(['fullHd']);
     routes = _Routes();
   });
   tearDown(() async {
@@ -181,7 +182,7 @@ void main() {
       ) async {
         provider = _Provider(id);
         CloudProviderRegistry.instance = CloudProviderRegistry([provider]);
-        await StorageService.saveDebrifyTvProvider(id.magicTvId);
+        await DebrifyTvPrefs.saveDebrifyTvProvider(id.magicTvId);
         await tester.runAsync(_seed);
         tester.view.physicalSize = const Size(1280, 1000);
         tester.view.devicePixelRatio = 1;
