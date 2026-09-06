@@ -246,6 +246,12 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   MDBList credentials live in `lib/services/storage/tracking_prefs.dart`
   (`TrackingPrefs`, owns `trackingSourceRevision`). `home_tick_sources` stays
   on HomePrefs; TrackingPrefs bumps the revision after that write.
+  **Ambient trailer policy:** `lib/services/storage/ambient_trailer_prefs.dart`
+  owns two detail audio/volume keys and five preference bodies; HomePrefs keeps
+  the two home keys. StorageService re-exports the same AmbientTrailerSurface
+  enum and retains four nonasync facades (14 declaration / 18 physical lines),
+  expiring at separately scoped Q2 caller retirement. Host -69 includes moved
+  docs/separators; whole production +32. Strict ownership closure remains OPEN.
   **Download destinations:** `lib/services/storage/download_destination_prefs.dart`
   owns three profile-scoped String keys and seven persistence bodies; OS grants
   remain with callers. Q2 retired all seven StorageService APIs; callers route

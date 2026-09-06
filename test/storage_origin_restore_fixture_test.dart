@@ -402,6 +402,134 @@ void main() {
       );
 
 
+  // Four independent raw bool/int values; volume readers clamp, export does not.
+  const ambientScenario = 'ambient-trailer';
+  final ambientDomain = _recipe['residualDomains'][ambientScenario] as Map;
+  final ambientValues = Map<String, Object?>.from(ambientDomain['values'] as Map);
+  final ambientReads = Map<String, Object?>.from(ambientDomain['publicReads'] as Map);
+  Future<void> seedAmbient() async {
+    await StorageService.setAmbientTrailerAudioEnabled(AmbientTrailerSurface.homeHero, false);
+    await StorageService.setAmbientTrailerAudioEnabled(AmbientTrailerSurface.detail, true);
+    final prefs = await ProfilePreferences.instance();
+    // Deliberate raw legacy values: public setters would clamp these first.
+    await prefs.setInt('home_hero_trailer_volume', ambientValues['home_hero_trailer_volume'] as int);
+    await prefs.setInt('detail_trailer_volume', ambientValues['detail_trailer_volume'] as int);
+  }
+  Future<void> expectAmbientReaders() async {
+    final prefs = await ProfilePreferences.instance();
+    final before = {for (final key in ambientValues.keys) key: prefs.get(key)};
+    _expectSettings({
+      'home_hero_trailer_audio_enabled': await StorageService.getAmbientTrailerAudioEnabled(AmbientTrailerSurface.homeHero),
+      'home_hero_trailer_volume': await StorageService.getAmbientTrailerVolume(AmbientTrailerSurface.homeHero),
+      'detail_trailer_audio_enabled': await StorageService.getAmbientTrailerAudioEnabled(AmbientTrailerSurface.detail),
+      'detail_trailer_volume': await StorageService.getAmbientTrailerVolume(AmbientTrailerSurface.detail),
+    }, ambientReads);
+    _expectSettings({for (final key in ambientValues.keys) key: prefs.get(key)}, before);
+  }
+  if (_generate) {
+    test('$ambientScenario: generate actual pre-S2 four-key export', () async {
+      final head = await Process.run('git', ['rev-parse', 'HEAD']);
+      expect(head.exitCode, 0);
+      expect(head.stdout.toString().trim(), _origin);
+      final diff = await Process.run('git', ['diff', '--exit-code', _origin, '--', 'lib']);
+      expect(diff.exitCode, 0, reason: 'Never generate from modified production');
+      final config = File('.dart_tool/package_config.json');
+      final metadata = jsonDecode(await config.readAsString()) as Map;
+      final app = (metadata['packages'] as List).cast<Map>().singleWhere((e) => e['name'] == 'debrify');
+      final library = config.absolute.uri.resolve(app['rootUri'] as String).resolve(app['packageUri'] as String).resolve('services/storage_service.dart');
+      expect(p.equals(library.toFilePath(), p.join(Directory.current.path, 'lib', 'services', 'storage_service.dart')), isTrue);
+      expect(ambientValues.keys, unorderedEquals([
+        'home_hero_trailer_audio_enabled', 'home_hero_trailer_volume',
+        'detail_trailer_audio_enabled', 'detail_trailer_volume',
+      ]));
+      await seedAmbient();
+      final prefs = await ProfilePreferences.instance();
+      _expectSettings({for (final key in ambientValues.keys) key: prefs.get(key)}, ambientValues);
+      await expectAmbientReaders();
+      final package = await export();
+      _expectSettings(_values(package), ambientValues);
+      expect(package.resources, isEmpty);
+      final bytes = await PortableProfilePackage.encodeEncryptedBytes(package, _passphrase);
+      final decoded = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+      _expectSettings(_values(decoded), ambientValues);
+      await File('$_directory/$ambientScenario.encrypted.json').writeAsBytes(bytes);
+      await File('$_directory/$ambientScenario.manifest.json').writeAsString(const JsonEncoder.withIndent('  ').convert({
+        'origin': _origin, 'scenario': ambientScenario, 'syntheticOnly': true,
+        'sha256': await _digest(bytes), 'includeSecrets': false,
+        'representedSettings': ambientValues,
+        'keyTypes': ambientValues.map((key, value) => MapEntry(key, _type(value))),
+        'excludedKeys': <String>[], 'expectedPublicReads': ambientReads,
+        'rawSeed': 'Bool public setters; out-of-range int ProfilePreferences.setInt, not public volume setters',
+        'omissions': package.omissions,
+      }));
+    });
+  } else {
+    test('$ambientScenario: restore raw types and values before public read clamps', () async {
+      final manifest = jsonDecode(await File('$_directory/$ambientScenario.manifest.json').readAsString()) as Map;
+      final bytes = await File('$_directory/$ambientScenario.encrypted.json').readAsBytes();
+      expect(manifest['origin'], _origin);
+      expect(manifest['syntheticOnly'], isTrue);
+      expect(manifest['sha256'], await _digest(bytes));
+      expect(manifest['representedSettings'], ambientValues);
+      expect(manifest['expectedPublicReads'], ambientReads);
+      expect(manifest['excludedKeys'], isEmpty);
+      expect(manifest['keyTypes'], ambientValues.map((key, value) => MapEntry(key, _type(value))));
+      var package = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+      _expectSettings(_values(package), ambientValues);
+      expect(package.resources, isEmpty);
+      if (_mutation.isNotEmpty) {
+        final mutation = (ambientDomain['mutations'] as Map)[_mutation] as Map?;
+        expect(mutation, isNotNull);
+        final mutatedValues = {..._values(package)};
+        if (mutation!['operation'] == 'rename') {
+          mutatedValues['synthetic_wrong_ambient_key'] = mutatedValues.remove(mutation['key']);
+        } else if (mutation['operation'] == 'replace') {
+          mutatedValues[mutation['key'] as String] = mutation['value'];
+        } else {
+          for (final suffix in ['audio_enabled', 'volume']) {
+            mutatedValues['home_hero_trailer_$suffix'] = ambientValues['detail_trailer_$suffix'];
+            mutatedValues['detail_trailer_$suffix'] = ambientValues['home_hero_trailer_$suffix'];
+          }
+        }
+        final mutant = PortableProfilePackage(
+          mode: package.mode, createdAt: package.createdAt, profiles: package.profiles,
+          resources: package.resources, omissions: package.omissions,
+          sections: {...package.sections,
+            package.profiles.single['preferencesSection'] as String: await PortableProfilePackage.buildSection(mutatedValues)},
+        );
+        package = await PortableProfilePackage.decrypt(await PortableProfilePackage.encrypt(mutant, _passphrase), _passphrase);
+        _expectSettings(_values(package), mutatedValues);
+      }
+      final prefs = await SharedPreferences.getInstance();
+      for (final key in ambientValues.keys) {
+        await prefs.setString('p.$profileId.g.1.$key', 'synthetic old generation');
+        await prefs.setString('p.$otherProfileId.g.1.$key', 'synthetic other profile');
+      }
+      await prefs.setString('p.$profileId.g.1.ambient_fixture_sentinel', 'untouched');
+      final report = await ProfileRestoreCoordinator(registry: registry, cipher: cipher).restore(
+        package: package, destinationProfileId: profileId,
+        authorization: await ProfileAuthorizationContext.capture(registry),
+      );
+      expect(report.publishedGeneration, 2);
+      final prefix = ProfileRuntime.capture().preferencePrefix;
+      // All three valid mutants must reach and fail this physical assertion.
+      _expectSettings({for (final key in ambientValues.keys) key: prefs.get('$prefix$key')}, ambientValues);
+      await expectAmbientReaders();
+      for (final key in ambientValues.keys) {
+        expect(prefs.get('p.$profileId.g.1.$key'), 'synthetic old generation');
+        expect(prefs.get('p.$otherProfileId.g.1.$key'), 'synthetic other profile');
+      }
+      expect(prefs.get('${prefix}ambient_fixture_sentinel'), 'untouched');
+      expect(prefs.get('p.$profileId.g.1.ambient_fixture_sentinel'), 'untouched');
+      for (final secrets in [false, true]) {
+        _expectSettings(_values(await export(includeSecrets: secrets)), {
+          ...ambientValues, 'ambient_fixture_sentinel': 'untouched',
+        });
+      }
+    });
+  }
+
+
   // Separately counted destination exclusions; no OS grants are exercised.
   const destinationScenario = 'download-destination-exclusion';
   final destinationDomain = _recipe['residualDomains'][destinationScenario] as Map;
