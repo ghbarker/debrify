@@ -1,3 +1,4 @@
+import 'profiles/profile_policy_guard.dart';
 import 'storage/catalog_search_prefs.dart';
 export 'storage/ambient_trailer_prefs.dart' show AmbientTrailerSurface;
 
@@ -10,8 +11,6 @@ import 'profiles/profile_preferences.dart';
 import 'profiles/profile_collection_resource_facade.dart';
 import 'profiles/connection_resource_service.dart';
 import 'profiles/profile_onboarding_state.dart';
-import 'profiles/profile_bootstrap.dart';
-import 'profiles/profile_runtime.dart';
 import 'storage/my_watchlist_store.dart';
 import '../models/profiles/connection_resource.dart';
 import '../models/profiles/profile_policy.dart';
@@ -87,20 +86,8 @@ class StorageService {
 
 
 
-  static Future<bool> profileAllowsAdultContent() async {
-    if (!ProfileRuntime.isInitialized || !ProfileRuntime.isProfileCommitted) {
-      return true;
-    }
-    try {
-      final scope = ProfileRuntime.capture();
-      final profile = await ProfileBootstrap.registry.getProfile(
-        scope.profileId,
-      );
-      return profile?.allows(ProfileFeature.allowAdultContent) == true;
-    } catch (_) {
-      return false;
-    }
-  }
+  static Future<bool> profileAllowsAdultContent() =>
+      ProfilePolicyGuard.allowsAdultContentForPreferences();
 
   // ── Update-aware defaults ─────────────────────────────────────────────
   //
