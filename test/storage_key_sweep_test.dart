@@ -150,6 +150,19 @@ Set<String> unownedDiscoveredPrefsKeys() =>
     allDiscoveredPrefsKeys().difference(StorageKeyOwnership.byKey.keys.toSet());
 
 void main() {
+  test('keyboard pair belongs to AppStylePrefs and missing rows fail', () {
+    const expected = {'tv_keyboard_enabled', 'tvos_keyboard_default_generation'};
+    expect(AppStylePrefs.ownedKeys.intersection(expected), expected);
+    expect(StorageKeyOwnership.keysFor(StorageKeyStore.appStylePrefs).intersection(expected), expected);
+    expect(declaredOnStorageService().intersection(expected), isEmpty);
+    expect(inlinePrefsKeysOnStorageService().intersection(expected), isEmpty);
+    expect(allDiscoveredPrefsKeys(), containsAll(expected));
+    for (final key in expected) {
+      expect(allDiscoveredPrefsKeys().difference(
+        StorageKeyOwnership.byKey.keys.toSet().difference({key})), {key});
+    }
+  });
+
   test('download destinations have exact ownership and every missing row fails', () {
     const expected = {
       'download_tree_uri_v1',
