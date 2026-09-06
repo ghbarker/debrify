@@ -4,6 +4,7 @@ import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/see_all/continue_watching_see_all_screen.dart';
 import 'package:debrify/services/discover_prefs.dart';
 import 'package:debrify/services/main_page_bridge.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/services/stremio_service.dart';
 import 'package:debrify/widgets/see_all/discover_card_settings_scope.dart';
@@ -24,7 +25,7 @@ Future<void> _mountOrigin(WidgetTester tester, String layout) async {
   addTearDown(() => DiscoverPrefs.setShowTitles(previousTitles));
   await StorageService.setDiscoverDefaultSource('cw');
   await StorageService.setDiscoverLayout(layout);
-  await StorageService.setHomeContinueWatchingEnabled(true);
+  await HomePrefs.setHomeContinueWatchingEnabled(true);
   await PlaybackProgressStore.saveContinueWatchingItem(
     imdbId: 'view-origin',
     title: 'View origin',

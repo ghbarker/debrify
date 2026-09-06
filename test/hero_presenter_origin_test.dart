@@ -7,7 +7,7 @@ import 'package:debrify/screens/search/continue_watching_row.dart';
 import 'package:debrify/screens/search_screen.dart';
 import 'package:debrify/services/app_route_observer.dart';
 import 'package:debrify/services/main_page_bridge.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/stremio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -83,8 +83,8 @@ Future<void> prepareHero(
   );
   StremioService.instance.invalidateCache();
   addTearDown(StremioService.instance.invalidateCache);
-  await StorageService.setHomeContinueWatchingEnabled(true);
-  await StorageService.setHomeHeroTrailerEnabled(trailers);
+  await HomePrefs.setHomeContinueWatchingEnabled(true);
+  await HomePrefs.setHomeHeroTrailerEnabled(trailers);
   for (final id in ids) {
     await PlaybackProgressStore.saveContinueWatchingItem(
       imdbId: id,

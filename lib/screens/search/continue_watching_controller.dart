@@ -12,6 +12,7 @@ import '../../services/mdblist/mdblist_continue_watching_service.dart';
 import '../../services/mdblist/mdblist_service.dart';
 import '../../services/mdblist/mdblist_sync_coordinator.dart';
 import '../../services/simkl/simkl_continue_watching_service.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../services/tracking_source_policy.dart';
 import '../../services/trakt/trakt_continue_watching_service.dart';
@@ -182,7 +183,7 @@ class ContinueWatchingController extends ChangeNotifier {
     required this.nodes,
     bool Function()? isLive,
     Future<bool> Function(String provider) readMergedRows =
-        StorageService.getHomeCwMergedRows,
+        HomePrefs.getHomeCwMergedRows,
     this.onMaybeAutoFocusBoard,
     this.onRefreshBoundSources,
     this.onSnack,
@@ -742,7 +743,7 @@ class ContinueWatchingController extends ChangeNotifier {
     // integration change, post-playback), so it is the one place the card
     // lookups need their Progress source refreshed.
     final progressSource = await StorageService.getWatchProgressSource();
-    final enabled = await StorageService.getHomeContinueWatchingEnabled();
+    final enabled = await HomePrefs.getHomeContinueWatchingEnabled();
     if (!_live || token != cwLoadToken) return;
     if (progressSource != cwProgressSource) {
       _emit(() => cwProgressSource = progressSource);

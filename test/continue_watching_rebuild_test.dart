@@ -7,6 +7,7 @@ import 'package:debrify/screens/search_screen.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_session_memory.dart';
 import 'package:debrify/services/secret_vault.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter/material.dart';
@@ -90,8 +91,8 @@ void main() {
       await tester.runAsync(() => root.delete(recursive: true));
     });
     await StorageService.setTvHomeStyle('classic');
-    await StorageService.setHomeHeroTrailerEnabled(false);
-    await StorageService.setHomeContinueWatchingEnabled(true);
+    await HomePrefs.setHomeHeroTrailerEnabled(false);
+    await HomePrefs.setHomeContinueWatchingEnabled(true);
     Future<void> save(String id, String title) =>
         PlaybackProgressStore.saveContinueWatchingItem(
           imdbId: id,
@@ -158,7 +159,7 @@ void main() {
       // Host notification is also needed when the last row disappears.
       hostBuilds = 0;
       rowBuilds = 0;
-      await StorageService.setHomeContinueWatchingEnabled(false);
+      await HomePrefs.setHomeContinueWatchingEnabled(false);
       StorageService.localCompletionRevision.value++;
       await pumpFrames();
       expect(rowFinder, findsNothing);

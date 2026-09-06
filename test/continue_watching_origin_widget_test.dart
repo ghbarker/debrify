@@ -7,6 +7,7 @@ import 'package:debrify/services/main_page_bridge.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_session_memory.dart';
 import 'package:debrify/services/secret_vault.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter/material.dart';
@@ -73,7 +74,7 @@ void main() {
     );
     AppStorage.debugOverride(documents: root, support: root, cache: root);
     await StorageService.setTvHomeStyle('classic');
-    await StorageService.setHomeHeroTrailerEnabled(false);
+    await HomePrefs.setHomeHeroTrailerEnabled(false);
   });
 
   tearDown(() async {

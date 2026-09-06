@@ -18,6 +18,7 @@ import '../../services/local_bound_source_service.dart';
 import '../../services/series_source_service.dart';
 import '../cloud_provider_chrome.dart';
 import '../../screens/cloud/cloud_browse_select_source.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../screens/catalog_item_detail_screen.dart';
 import '../../screens/debrify_tv/widgets/tv_focus_scroll_wrapper.dart';
@@ -288,9 +289,9 @@ class TraktResultsViewState extends State<TraktResultsView> {
 
   Future<void> _checkAuthAndLoad() async {
     // Load saved Trakt defaults (list type + content type)
-    final savedListType = await StorageService.getHomeDefaultTraktListType();
+    final savedListType = await HomePrefs.getHomeDefaultTraktListType();
     final savedContentType =
-        await StorageService.getHomeDefaultTraktContentType();
+        await HomePrefs.getHomeDefaultTraktContentType();
     if (!mounted) return;
     if (savedListType != null) {
       final listType = TraktListType.values

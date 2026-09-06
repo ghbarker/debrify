@@ -101,8 +101,8 @@ void main() {
   testWidgets('Home Promenade CW hold opens one menu and restores borrowed focus',
       (tester) async {
     await _prepare(tester);
-    await StorageService.setHomeContinueWatchingEnabled(true);
-    await StorageService.setHomeCwHoldToQuickPlay(false);
+    await HomePrefs.setHomeContinueWatchingEnabled(true);
+    await HomePrefs.setHomeCwHoldToQuickPlay(false);
     for (var i = 0; i < 2; i++) {
       await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'prom-cw-$i', title: 'Promenade continue $i', contentType: 'movie');

@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:debrify/screens/settings/home_sections_filter_page.dart';
 import 'package:debrify/services/home/home_row_family.dart';
 import 'package:debrify/services/home/home_row_registry.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 
 Future<void> _pumpPage(
   WidgetTester tester, {
@@ -54,11 +54,11 @@ void main() {
     await tester.pump();
     await _saveAndClose(tester);
 
-    final extras = await StorageService.getHomeExtraRows();
+    final extras = await HomePrefs.getHomeExtraRows();
     expect(extras.map((r) => r.id), ['traktlist:watchlist']);
     expect(extras.single.title, 'Watchlist');
     // The opt-in toggle must not leak into the disabled-id store.
-    expect(await StorageService.getHomeDisabledSections(), isEmpty);
+    expect(await HomePrefs.getHomeDisabledSections(), isEmpty);
   });
 
   testWidgets('default-on leaf toggles persist to the disabled set, not the '
@@ -70,8 +70,8 @@ void main() {
     await tester.pump();
     await _saveAndClose(tester);
 
-    expect(await StorageService.getHomeDisabledSections(), {'cw:movies'});
-    expect(await StorageService.getHomeExtraRows(), isEmpty);
+    expect(await HomePrefs.getHomeDisabledSections(), {'cw:movies'});
+    expect(await HomePrefs.getHomeExtraRows(), isEmpty);
   });
 
   testWidgets('My Watchlist has independent default-on movie and series rows', (
@@ -87,7 +87,7 @@ void main() {
     await tester.pump();
     await _saveAndClose(tester);
 
-    expect(await StorageService.getHomeDisabledSections(), {
+    expect(await HomePrefs.getHomeDisabledSections(), {
       'watchlist:movies',
     });
   });
@@ -95,7 +95,7 @@ void main() {
   testWidgets('an enabled extra with no loaded backing data survives an '
       'unrelated save as an unavailable leaf', (tester) async {
     const stray = (id: 'traktlist:custom:404', title: 'Vanished List');
-    await StorageService.setHomeExtraRows(const [stray]);
+    await HomePrefs.setHomeExtraRows(const [stray]);
     await _pumpPage(tester, extraRows: const [stray]);
 
     // It must be visible (dimmed leaf under Trakt) so it stays deliberate.
@@ -109,7 +109,7 @@ void main() {
     await tester.pump();
     await _saveAndClose(tester);
 
-    final extras = await StorageService.getHomeExtraRows();
+    final extras = await HomePrefs.getHomeExtraRows();
     expect(extras.map((r) => r.id).toSet(), {
       'traktlist:watchlist',
       'traktlist:custom:404',
@@ -121,7 +121,7 @@ void main() {
     tester,
   ) async {
     const stray = (id: 'iptvlist:list_9', title: 'Old Sports');
-    await StorageService.setHomeExtraRows(const [stray]);
+    await HomePrefs.setHomeExtraRows(const [stray]);
     await _pumpPage(tester, extraRows: const [stray]);
 
     // Strays with no loaded IPTV lists still get an IPTV Lists group.
@@ -131,7 +131,7 @@ void main() {
     await tester.pump();
     await _saveAndClose(tester);
 
-    expect(await StorageService.getHomeExtraRows(), isEmpty);
+    expect(await HomePrefs.getHomeExtraRows(), isEmpty);
   });
 
   testWidgets('Arrange moves enabled rows globally and persists stable ids', (
@@ -151,7 +151,7 @@ void main() {
     await tester.pump();
     await _saveAndClose(tester);
 
-    final order = await StorageService.getHomeRowOrder();
+    final order = await HomePrefs.getHomeRowOrder();
     expect(order.take(2), ['cw:series', 'cw:movies']);
   });
 
@@ -175,7 +175,7 @@ void main() {
     await tester.pump();
     await _saveAndClose(tester);
 
-    expect((await StorageService.getHomeRowOrder()).take(2), [
+    expect((await HomePrefs.getHomeRowOrder()).take(2), [
       'cw:series',
       'cw:movies',
     ]);
@@ -196,7 +196,7 @@ void main() {
     await tester.pump();
     await _saveAndClose(tester);
 
-    expect((await StorageService.getHomeRowOrder()).take(2), [
+    expect((await HomePrefs.getHomeRowOrder()).take(2), [
       'cw:series',
       'cw:movies',
     ]);

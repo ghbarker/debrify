@@ -10,6 +10,7 @@ import '../../models/stremio_addon.dart';
 import '../../services/home_collection_rows.dart';
 import '../../services/imdb_trailer_service.dart';
 import '../../services/main_page_bridge.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../services/stremio_iptv_service.dart';
 import '../../services/stremio_service.dart';
@@ -773,7 +774,7 @@ class HeroPresenter {
   /// the pairs converge on first change.
   Future<void> reloadOffTvTrailerPrefs() async {
     final values = await Future.wait([
-      StorageService.getHomeHeroTrailerEnabled(),
+      HomePrefs.getHomeHeroTrailerEnabled(),
       AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(
         AmbientTrailerSurface.detail,
       ),
@@ -817,7 +818,7 @@ class HeroPresenter {
       // performs its normal action (SELECT opens the showcased title).
       HardwareKeyboard.instance.addHandler(_onTakeoverKey);
       Future.wait([
-        StorageService.getHomeHeroTrailerEnabled(),
+        HomePrefs.getHomeHeroTrailerEnabled(),
         AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(
           AmbientTrailerSurface.homeHero,
         ),

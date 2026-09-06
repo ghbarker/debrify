@@ -1419,3 +1419,93 @@ storage_stremio_social_debrify_tv_prefs_snapshot_test.dart. Roundtrip already
 reads DebrifyTvPrefs directly; reversing 14 alone cannot make it runnable on
 old6d26. Existing owner adapters remain necessary for snapshot reproduction.
 Neither test is imported by the actual generation loader.
+
+
+### Home preferences: finite 21-entry old-export/current-restore fixture
+
+Origin is actual `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`, fresh detached
+`C:/Users/hunth/debrify/debrify-home-prefs-fixture-origin`; current checkpoint
+`C:/Users/hunth/debrify/debrify-q2-home-prefs-callers` starts at `e01820a9`.
+Old `lib/` remains unchanged. Both use Flutter3.44.8 at
+`C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat` with native sibling
+`bin/cache/dart-sdk/bin/dart.exe`; ignored package config resolves each own lib.
+The first generation command stopped before tests because package_graph.json
+was absent. Copying matching ignored SDK dependency metadata resolved it;
+there was no exporter, input or expectation correction.
+
+The recipe explicitly seeds 17 named settings and four finite `home_cw_merge_`
+suffixes (local/trakt/simkl/mdblist). All21 are admitted by the actual encrypted
+export, without secrets/resources. Raw Strings include duplicate/order/invalid
+list members and an unknown card orientation. Inputs bypass setters using
+ProfilePreferences. Current restore first verifies physical keys/types/values,
+then compares public reads to independently written recipe expectations, then
+verifies no physical rewrite, both secret-option reexports, other profile and
+generation sentinels. No sanitized-sharing, unbounded suffix, style/cache,
+native rendering, or broad Home runtime coverage is claimed.
+
+The final clear checks 14 removed entries and seven preserved entries. The
+source's ordered list is recorded as clearOrder, but the final-state fixture
+does not observe transport order. Preserved entries are both Trakt defaults,
+disabled sections, extra rows, row order, hero source and trailer enabled.
+No broader clear behavior is inferred.
+
+Actual copied-loader adaptations for old generation remove extracted-owner
+imports and reverse only same-method receiver namespaces: DebrifyTvPrefs4,
+StremioTvPrefs8, SocialPrefs6, QuickPlayPolicyPrefs9, AmbientTrailerPrefs6,
+TorrentSearchHistoryStore2, MyWatchlistStore2, IptvPrefs3,
+PlaybackProgressStore14, ProviderCredentialPrefs19, DownloadDestinationPrefs5.
+The two imported helpers retain their existing adapters:
+DefaultTorrentFilterPrefs10 in default_torrent_filter_prefs_origin_test.dart;
+PlaybackProgressStore4 in playlist_progress_map_origin_test.dart. No helper
+body is copied into production and no owner is backported. New Home readers
+already use original StorageService APIs: zero new Home namespace adapters.
+This is an adapted test harness, not identical whole-harness provenance.
+
+All54 prior artifact Git blobs are unchanged (27encrypted plus27manifests,
+including legacy manifest.json). The new pair makes56artifacts plus README and
+recipe =58files. Earlier53 suffix-matched count omitted legacy manifest.json;
+it was not the complete artifact denominator. Prior recipe entries unchanged.
+New ciphertext SHA256:
+`e160ef7707f106569ec5bd5c16ddfae25a07fc861cd897e17a2773c772f990be`.
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# Fresh old checkout, copied harness with exact adapters above:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --plain-name 'home-prefs: generate' --reporter json
+# Current checkout:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'home-prefs: restore' --reporter json
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --reporter json
+& 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/cache/dart-sdk/bin/dart.exe' analyze test/storage_origin_restore_fixture_test.dart
+foreach ($variant in @('home-key', 'home-type', 'home-list-order')) {
+  & $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'home-prefs: restore' "--dart-define=STORAGE_FIXTURE_MUTATION=$variant" --reporter json
+}
+```
+
+Results: old generation1PASS; focused current1PASS; combined fixture55PASS;
+scoped current and old loader analysis0. No27-file Home origin suite ran.
+All three valid mutants rebuild section integrity, encrypt/decrypt and restore
+successfully before failure at loader517/_expectSettings160: renamed catalog
+key leaves destination sentinel, bool becomes String, and row-order JSON LIST
+swaps first two members. They do not fail codec/package checks or compare
+object-key ordering. Each exits1 as expected. Production remains untouched.
+
+Did we make a difference? This adds actual portable physical/public proof for
+this finite Home domain. Is there more we could do? Caller retirement remains
+separately gated; family/platform/timing completeness and strict Storage
+ownership are not claimed. Zero production or Leaves credit for this fixture.
+
+
+### Q2 Home preferences: old-export harness adapter
+
+For unchanged old6d26 generation, remove the new HomePrefs import in the copied
+loader and reverse exactly19same-method receivers (18reader sites plus the
+clear call) to StorageService. Preserve every prior helper/owner adapter and
+all recipe/fixture bytes. The current fixture has independently declared raw
+and normalized values; namespace routing changes neither assertions nor clear
+order. Its final-state clear check does not observe transport ordering.
+
+The27existing origin-test files contain237migrated receiver sites. Reversing
+those alone is not a complete old-suite harness: eight already import HomePrefs
+and contain preexisting owner dependencies. The actual old export uses only
+the copied fixture loader and its two existing adapted helpers. No universal
+27-test old6d26 compatibility or identical whole-harness claim is made.

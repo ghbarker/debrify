@@ -4,7 +4,7 @@ import '../../models/stremio_addon.dart';
 import '../../screens/see_all/continue_watching_see_all_screen.dart';
 import '../../screens/see_all/trakt_see_all_screen.dart';
 import 'continue_watching_controller.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import '../../widgets/home/cw_card_menu.dart';
 import '../../widgets/skeleton_poster.dart';
 
@@ -293,7 +293,7 @@ Future<void> openCwCardMenu({
   final quickPlayAvailable =
       playActionAvailable && !(row.kind == CwKind.iptv && isSeries);
   try {
-    final holdToQuickPlay = await StorageService.getHomeCwHoldToQuickPlay();
+    final holdToQuickPlay = await HomePrefs.getHomeCwHoldToQuickPlay();
     if (!isLive()) return;
     if (holdToQuickPlay && quickPlayAvailable) {
       row.onQuickPlay(item);

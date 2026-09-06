@@ -117,8 +117,8 @@ void main() {
     'Home Spotlight CW hold opens the real options and returns focus',
     (tester) async {
       await _prepare(tester);
-      await StorageService.setHomeContinueWatchingEnabled(true);
-      await StorageService.setHomeCwHoldToQuickPlay(false);
+      await HomePrefs.setHomeContinueWatchingEnabled(true);
+      await HomePrefs.setHomeCwHoldToQuickPlay(false);
       await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'tt0000001',
         title: 'Spotlight saved movie',

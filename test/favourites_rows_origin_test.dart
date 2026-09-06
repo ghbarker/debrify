@@ -15,6 +15,7 @@ import 'package:debrify/screens/search_screen.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_session_memory.dart';
 import 'package:debrify/services/secret_vault.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter/material.dart';
@@ -223,7 +224,7 @@ void main() {
           channelName: 'List Live',
           duration: -1,
         );
-        await StorageService.setHomeExtraRows([
+        await HomePrefs.setHomeExtraRows([
           (id: 'iptvlist:$listId', title: 'Mixed List'),
         ]);
       });
@@ -251,7 +252,7 @@ void main() {
         find.text("This series' provider is no longer available"),
         findsOneWidget,
       );
-      await tester.runAsync(() => StorageService.setHomeExtraRows([]));
+      await tester.runAsync(() => HomePrefs.setHomeExtraRows([]));
       MainPageBridge.notifyHomeSettingsChanged();
       await pumpFavourites(tester);
       expect(posters().map((p) => p.title), ['Favourite Live']);
@@ -450,8 +451,8 @@ Future<void> prepareFavourites(WidgetTester tester) async {
     });
   });
   await StorageService.setTvHomeStyle('classic');
-  await StorageService.setHomeHeroTrailerEnabled(false);
-  await StorageService.setHomeContinueWatchingEnabled(false);
+  await HomePrefs.setHomeHeroTrailerEnabled(false);
+  await HomePrefs.setHomeContinueWatchingEnabled(false);
 }
 
 Future<void> pumpFavourites(WidgetTester tester) async {

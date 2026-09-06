@@ -8,7 +8,7 @@ import '../../models/stremio_addon.dart';
 import '../../services/analytics_service.dart';
 import '../../services/collection_folder_loader.dart';
 import '../../services/home_collections_store.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import '../../services/stremio_service.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/home_rail_metrics.dart';
@@ -182,7 +182,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
       _addons = const [];
     }
     try {
-      _disabled = await StorageService.getHomeDisabledSections();
+      _disabled = await HomePrefs.getHomeDisabledSections();
     } catch (_) {
       _disabled = const {};
     }

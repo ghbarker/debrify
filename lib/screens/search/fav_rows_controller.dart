@@ -20,6 +20,7 @@ import '../../services/iptv_media_store.dart';
 import '../../services/main_page_bridge.dart';
 import '../../services/playlist_player_service.dart';
 import '../../services/profiles/profile_policy_guard.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../services/stremio_iptv_service.dart';
 import '../../services/video_player_launcher.dart';
@@ -427,7 +428,7 @@ class FavRowsController {
       // start this runs CONCURRENTLY with _load() (which populates that
       // field), and losing the race would blank the list rows until the next
       // trigger.
-      final extras = await StorageService.getHomeExtraRows();
+      final extras = await HomePrefs.getHomeExtraRows();
       if (token != iptvListRowsLoadToken || !mounted) return;
       final wanted = <String>{
         for (final r in extras)

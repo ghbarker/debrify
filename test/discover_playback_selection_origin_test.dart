@@ -20,6 +20,7 @@ import 'package:debrify/services/video_player_launcher.dart';
 
 import 'package:debrify/screens/merged_series_detail_screen.dart';
 import 'package:debrify/screens/see_all/continue_watching_see_all_screen.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/tv_keys.dart';
 import 'package:flutter/material.dart';
@@ -134,7 +135,7 @@ Future<PlaybackTransport> preparePlayback(
   await prefs.setString('stremio_addons_v1', jsonEncode([addon.toJson()]));
   await StorageService.setDiscoverDefaultSource('cw');
   if (legacyDetail) await StorageService.setMergedSeriesPageEnabled(false);
-  await StorageService.setHomeContinueWatchingEnabled(true);
+  await HomePrefs.setHomeContinueWatchingEnabled(true);
   await QuickPlayPolicyPrefs.setPlayButtonMode('quick');
   await StorageService.setDefaultPlayerMode(external ? 'external' : 'internal');
   await StorageService.setPreferredWindowsExternalPlayer('system_default');
@@ -531,7 +532,7 @@ void main() {
     ) async {
       await prepareFavourites(tester);
       await StorageService.setDiscoverDefaultSource('cw');
-      await StorageService.setHomeContinueWatchingEnabled(true);
+      await HomePrefs.setHomeContinueWatchingEnabled(true);
       await QuickPlayPolicyPrefs.setPlayButtonMode('always');
       await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'tt1234567',
@@ -595,7 +596,7 @@ void main() {
     (tester) async {
       await prepareFavourites(tester);
       await StorageService.setDiscoverDefaultSource('cw');
-      await StorageService.setHomeContinueWatchingEnabled(true);
+      await HomePrefs.setHomeContinueWatchingEnabled(true);
       await QuickPlayPolicyPrefs.setPlayButtonMode('always');
       await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'tt1234567',

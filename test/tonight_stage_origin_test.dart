@@ -36,8 +36,8 @@ Future<void> _prepare(WidgetTester tester) async {
     mode: HomeHeroSourceMode.auto,
     ids: const [],
   ));
-  await StorageService.setHomeContinueWatchingEnabled(true);
-  await StorageService.setHomeCwHoldToQuickPlay(false);
+  await HomePrefs.setHomeContinueWatchingEnabled(true);
+  await HomePrefs.setHomeCwHoldToQuickPlay(false);
   await PlaybackProgressStore.saveContinueWatchingItem(
     imdbId: 'tonight-first',
     title: 'Tonight first',

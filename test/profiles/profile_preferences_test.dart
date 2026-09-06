@@ -4,6 +4,7 @@ import 'package:debrify/services/profiles/profile_preferences.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
 import 'package:debrify/services/profiles/sanitized_profile_preferences.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -61,16 +62,16 @@ void main() {
     // Landscape is the unset default; an explicit portrait choice is the
     // per-profile state that must not leak.
     expect(
-      await StorageService.getHomeCardOrientation(),
+      await HomePrefs.getHomeCardOrientation(),
       HomeCardOrientation.landscape,
     );
-    await StorageService.setHomeCardOrientation(HomeCardOrientation.portrait);
+    await HomePrefs.setHomeCardOrientation(HomeCardOrientation.portrait);
 
     ProfileRuntime.publish(
       ProfileScope(profileId: 'two', dataGeneration: 1, sessionEpoch: 2),
     );
     expect(
-      await StorageService.getHomeCardOrientation(),
+      await HomePrefs.getHomeCardOrientation(),
       HomeCardOrientation.landscape,
     );
 
@@ -78,7 +79,7 @@ void main() {
       ProfileScope(profileId: 'one', dataGeneration: 1, sessionEpoch: 3),
     );
     expect(
-      await StorageService.getHomeCardOrientation(),
+      await HomePrefs.getHomeCardOrientation(),
       HomeCardOrientation.portrait,
     );
   });

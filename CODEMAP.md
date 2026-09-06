@@ -280,9 +280,13 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
   extra rows, order, hero source, tick sources, Home hero-trailer, `tv_home_style`) also
-  live in `lib/services/storage/home_prefs.dart` (`HomePrefs`); StorageService forwards
+  live in `lib/services/storage/home_prefs.dart` (`HomePrefs`). Q2 routes Home callers
+  directly to HomePrefs: 37 facades retired, four live host dependency edges removed,
+  host -74 / production -64 lines. StorageService retains style/cache compatibility
   and re-exports `HomeCardOrientation`, `HomeHeroSourceMode`, `HomeHeroSource`,
-  `HomeExtraRow`. **S2-1:** Stremio TV, social (reddit/lemmy/youtube), and Debrify TV
+  `HomeExtraRow`; three static tearoffs/default callback identities stay direct.
+  Strict Storage ownership remains OPEN; retained style/cache/enum compatibility
+  expires only with separately scoped Q2 caller/owner work, not a zero-alias target. **S2-1:** Stremio TV, social (reddit/lemmy/youtube), and Debrify TV
   prefs live in `lib/services/storage/stremio_tv_prefs.dart` (`StremioTvPrefs`),
   `social_prefs.dart` (`SocialPrefs`), and `debrify_tv_prefs.dart` (`DebrifyTvPrefs`);
   Social callers now use SocialPrefs directly: Q2 retires31 facades (57 declaration lines) plus one unused host import, removes seven consumer-to-host dependencies, and changes host/whole production -58. Owner credentials/adult compatibility stay unchanged; strict Storage outcome remains open. Stremio TV callers also use StremioTvPrefs directly:32 facades retire (69 declaration lines plus unused host import), host -70 / whole production -68, with six live consumer-to-host dependencies removed. Four deprecated Home references remain historical comments, not live dependency credit. Social and Stremio owner behavior stays unchanged; Debrify TV callers now also use DebrifyTvPrefs directly:32 facades retire (68 declaration lines plus unused host import), host -69 / whole production -66, removing three live consumer-to-host dependencies. Captured/unawaited/reset/filter ordering and owner/watch/native authority stay unchanged; two deprecated Home references remain inert comments. S2-1 domain routing is direct, while strict Storage outcome remains open.   **S2-2:** provider-credential *settings* live in

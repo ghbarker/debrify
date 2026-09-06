@@ -3,6 +3,7 @@ import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:debrify/services/main_page_bridge.dart';
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/see_all/continue_watching_see_all_screen.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/services/stremio_service.dart';
 import 'package:debrify/services/series_source_service.dart';
@@ -92,7 +93,7 @@ void main() {
       StremioService.instance.invalidateCache();
       addTearDown(StremioService.instance.invalidateCache);
       await StorageService.setDiscoverDefaultSource('cw');
-      await StorageService.setHomeContinueWatchingEnabled(true);
+      await HomePrefs.setHomeContinueWatchingEnabled(true);
       await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'tt1234567',
         title: 'Bound origin',
@@ -171,7 +172,7 @@ void main() {
         final oldTab = MainPageBridge.activeTvTabIndex;
         addTearDown(() => MainPageBridge.setActiveTvTab(oldTab));
         await StorageService.setDiscoverDefaultSource('cw');
-        await StorageService.setHomeContinueWatchingEnabled(true);
+        await HomePrefs.setHomeContinueWatchingEnabled(true);
         await StorageService.setDiscoverLayout(layout);
         for (final id in ['origin-one', 'origin-two']) {
           await PlaybackProgressStore.saveContinueWatchingItem(

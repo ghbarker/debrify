@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/search_screen.dart';
 import 'package:debrify/services/main_page_bridge.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -50,7 +50,7 @@ void main() {
     expect(origin.hasFocus, isTrue);
 
     await MyWatchlistStore.setMyWatchlistItem(series, true);
-    await StorageService.setHomeContinueWatchingEnabled(true);
+    await HomePrefs.setHomeContinueWatchingEnabled(true);
     await PlaybackProgressStore.saveContinueWatchingItem(
       imdbId: 'tt1234567',
       title: 'Returned CW',

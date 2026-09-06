@@ -1,4 +1,4 @@
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -6,40 +6,40 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   test('Hold to Quick Play defaults off and persists changes', () async {
-    expect(await StorageService.getHomeCwHoldToQuickPlay(), isFalse);
+    expect(await HomePrefs.getHomeCwHoldToQuickPlay(), isFalse);
 
-    await StorageService.setHomeCwHoldToQuickPlay(true);
-    expect(await StorageService.getHomeCwHoldToQuickPlay(), isTrue);
+    await HomePrefs.setHomeCwHoldToQuickPlay(true);
+    expect(await HomePrefs.getHomeCwHoldToQuickPlay(), isTrue);
 
-    await StorageService.setHomeCwHoldToQuickPlay(false);
-    expect(await StorageService.getHomeCwHoldToQuickPlay(), isFalse);
+    await HomePrefs.setHomeCwHoldToQuickPlay(false);
+    expect(await HomePrefs.getHomeCwHoldToQuickPlay(), isFalse);
   });
 
   test('clearing Home settings resets Hold to Quick Play', () async {
-    await StorageService.setHomeCwHoldToQuickPlay(true);
+    await HomePrefs.setHomeCwHoldToQuickPlay(true);
 
-    await StorageService.clearAllHomePageSettings();
+    await HomePrefs.clearAllHomePageSettings();
 
-    expect(await StorageService.getHomeCwHoldToQuickPlay(), isFalse);
+    expect(await HomePrefs.getHomeCwHoldToQuickPlay(), isFalse);
   });
 
   test('Hide Home card titles and ratings defaults off and persists', () async {
-    expect(await StorageService.getHomeHideCardTitlesAndRatings(), isFalse);
+    expect(await HomePrefs.getHomeHideCardTitlesAndRatings(), isFalse);
 
-    await StorageService.setHomeHideCardTitlesAndRatings(true);
-    expect(await StorageService.getHomeHideCardTitlesAndRatings(), isTrue);
+    await HomePrefs.setHomeHideCardTitlesAndRatings(true);
+    expect(await HomePrefs.getHomeHideCardTitlesAndRatings(), isTrue);
 
-    await StorageService.clearAllHomePageSettings();
-    expect(await StorageService.getHomeHideCardTitlesAndRatings(), isFalse);
+    await HomePrefs.clearAllHomePageSettings();
+    expect(await HomePrefs.getHomeHideCardTitlesAndRatings(), isFalse);
   });
 
   test('Hide Home catalog add-on names defaults off and persists', () async {
-    expect(await StorageService.getHomeHideCatalogAddonNames(), isFalse);
+    expect(await HomePrefs.getHomeHideCatalogAddonNames(), isFalse);
 
-    await StorageService.setHomeHideCatalogAddonNames(true);
-    expect(await StorageService.getHomeHideCatalogAddonNames(), isTrue);
+    await HomePrefs.setHomeHideCatalogAddonNames(true);
+    expect(await HomePrefs.getHomeHideCatalogAddonNames(), isTrue);
 
-    await StorageService.clearAllHomePageSettings();
-    expect(await StorageService.getHomeHideCatalogAddonNames(), isFalse);
+    await HomePrefs.clearAllHomePageSettings();
+    expect(await HomePrefs.getHomeHideCatalogAddonNames(), isFalse);
   });
 }

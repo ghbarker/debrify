@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/search_screen.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
-import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/services/stremio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -142,7 +141,7 @@ void main() {
       ),
       true,
     );
-    await StorageService.setHomeRowOrder([
+    await HomePrefs.setHomeRowOrder([
       'board.origin:movie:rail',
       'watchlist:movies',
     ]);
