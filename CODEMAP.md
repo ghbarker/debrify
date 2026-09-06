@@ -28,17 +28,21 @@ Search `part` files: `lib/screens/search/search_sources.dart` (3 163),
 `lib/screens/search/search_hero_widgets.dart` (2 261),
 `lib/screens/search/search_stage_widgets.dart` (1 699),
 `lib/screens/search/search_card_widgets.dart` (1 198).
-TV Home stage parts (6 files, 1 581): `lib/screens/search/stages/*_board_stage.dart`
-except `spotlight_board_stage.dart`, now the imported `SpotlightStage` widget (62 lines).
+TV Home stage parts (5 files, 1 311): `lib/screens/search/stages/*_board_stage.dart`
+except imported `spotlight_board_stage.dart` (`SpotlightStage`, 62 lines) and
+`tonight_board_stage.dart` (`TonightStage`, 195 lines).
 Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.dart`,
 `title_opener.dart` (`TitleOpener.open` — catalog detail from the board),
 `catalog_search_screen.dart` (Search tab), `discover_screen.dart` (Discover tab),
 `search_screen_shells.dart` (tab/variant/landing/dropdown contracts),
 `keyword_search_controller.dart` + `keyword_search_screen.dart` (in-tab keyword
 torrent search; G1'-3).
-TV Home stages (six remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
+TV Home stages (five remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
 — `_CanvasBoardStage`, `_AtriumBoardStage`, `_MosaicBoardStage`, `_PromenadeBoardStage`,
-`_DeckBoardStage`, `_TonightBoardStage`. Spotlight uses public `SpotlightStage` plus
+`_DeckBoardStage`. Tonight uses public `TonightStage`, `TonightStageContent` in
+`tonight_stage_content.dart`, and `TonightQueueRow`/State, `TonightCardInfo` and
+`TonightQueueEntry` in `tonight_stage_widgets.dart`. Neutral `StageRailView` lives
+beside `CanvasRail` in `search_board_runtime.dart`. Spotlight uses public `SpotlightStage` plus
 `spotlight_stage_content.dart` (`SpotlightStageContent`) for actual shelf/card assembly.
 Neutral `FavKind` / `FavRowRef` live in `search/fav_row_ref.dart`; the host re-exports them.
 Dispatch helper:
@@ -202,6 +206,15 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   Host 7053 -> 6830 (**223 net Leaves**); whole production **+92**, including neutral types.
   Ten typed content operations and four frame actions remain explicit coupling; no pure-logic credit.
   Six stage parts and their shared focus/deferral/Hero aliases remain; the 1400 target is not closed.
+  G1'-8 Tonight (product 2392376e): `TonightStageContent` owns the eager queue-zone,
+  remembered index/key and card notifier plus actual header/queue/rail assembly.
+  `TonightQueueRow` and its private State own the unchanged 500ms hold controller;
+  board/CW nodes remain borrowed. Host retains ordered split reset/disposal adapters
+  and lazy art/trailer/live/caption children. `StageRailView` moved unchanged to runtime.
+  Host 6830 -> 6551 (**279 net Leaves**); whole production **+106**.
+  Twenty-one typed shared operations remain explicit coupling, expiring with remaining
+  G1'-8 shared-cell/navigation adoption. No State proxy, pure-logic claim or automatic
+  target closure; five stage parts remain. Appended Tonight pages do not replay Right.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
