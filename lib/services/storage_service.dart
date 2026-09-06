@@ -1,3 +1,4 @@
+import 'storage/indexer_manager_config_store.dart';
 import 'storage/ambient_trailer_prefs.dart';
 export 'storage/ambient_trailer_prefs.dart' show AmbientTrailerSurface;
 
@@ -7,15 +8,11 @@ import 'debrid_service.dart';
 import 'remote_control/remote_device_prefs.dart';
 import 'iptv_media_store.dart';
 import 'profiles/profile_preferences.dart';
-import 'profiles/profile_collection_resource_facade.dart';
-import 'profiles/connection_resource_service.dart';
 import 'profiles/profile_onboarding_state.dart';
 import 'profiles/profile_bootstrap.dart';
 import 'profiles/profile_runtime.dart';
 import 'storage/my_watchlist_store.dart';
-import '../models/profiles/connection_resource.dart';
 import '../models/profiles/profile_policy.dart';
-import 'secret_vault.dart';
 import '../models/indexer_manager_config.dart';
 import '../models/quick_play_rules.dart';
 import '../models/sidebar_configuration.dart';
@@ -224,7 +221,6 @@ class StorageService {
 
   // Default Torrent Provider Settings — key lives on ProviderCredentialPrefs.
   // Values: 'none' (ask every time), 'torbox', 'debrid', 'pikpak'
-  static const String _indexerManagerConfigsKey = 'indexer_manager_configs_v1';
 
   // Quick Play VR Settings
   // VR Player Mode: 'disabled' (always regular player), 'auto' (detect VR content), 'always' (always use DeoVR)
@@ -1624,74 +1620,14 @@ class StorageService {
   static Future<List<IndexerManagerConfig>> getIndexerManagerConfigs({
     bool forSettings = true,
     bool forRemoteTransfer = false,
-  }) async {
-    if (ProfileCollectionResourceFacade.active) {
-      final rows = await ProfileCollectionResourceFacade.read(
-        types: const <ConnectionResourceType>{
-          ConnectionResourceType.jackett,
-          ConnectionResourceType.prowlarr,
-        },
-        feature: ProfileFeature.torrentSearch,
-        forSettings: forSettings,
-        forRemoteTransfer: forRemoteTransfer,
-      );
-      return rows.map(IndexerManagerConfig.fromJson).toList(growable: false);
-    }
-    final prefs = await ProfilePreferences.instance();
-    final rawList = await SecretVault.getStringList(
-      prefs,
-      _indexerManagerConfigsKey,
-    );
-    return rawList
-        .map((raw) {
-          try {
-            return IndexerManagerConfig.fromJson(
-              Map<String, dynamic>.from(jsonDecode(raw) as Map),
-            );
-          } catch (e) {
-            debugPrint('Error loading indexer manager config: $e');
-            return null;
-          }
-        })
-        .whereType<IndexerManagerConfig>()
-        .toList();
-  }
+  }) => IndexerManagerConfigStore.getIndexerManagerConfigs(
+    forSettings: forSettings,
+    forRemoteTransfer: forRemoteTransfer,
+  );
 
   static Future<List<IndexerManagerConfig>> setIndexerManagerConfigs(
     List<IndexerManagerConfig> configs,
-  ) async {
-    if (ProfileCollectionResourceFacade.active) {
-      final rows = await ProfileCollectionResourceFacade.replaceAndRead(
-        types: const <ConnectionResourceType>{
-          ConnectionResourceType.jackett,
-          ConnectionResourceType.prowlarr,
-        },
-        feature: ProfileFeature.torrentSearch,
-        items: <ResourceCollectionItem>[
-          for (final config in configs)
-            ResourceCollectionItem(
-              type: config.type == IndexerManagerType.prowlarr
-                  ? ConnectionResourceType.prowlarr
-                  : ConnectionResourceType.jackett,
-              label: config.displayName,
-              publicConfig: <String, dynamic>{
-                'managerName': config.displayName,
-              },
-              secretConfig: config.toJson(),
-              sourceResourceId: config.connectionResourceId,
-            ),
-        ],
-        forSettings: true,
-      );
-      return rows.map(IndexerManagerConfig.fromJson).toList(growable: false);
-    }
-    final prefs = await ProfilePreferences.instance();
-    final rawList = configs
-        .map((config) => jsonEncode(config.toJson()))
-        .toList();
-    await SecretVault.setStringList(prefs, _indexerManagerConfigsKey, rawList);
-    return List<IndexerManagerConfig>.unmodifiable(configs);
-  }
+  ) => IndexerManagerConfigStore.setIndexerManagerConfigs(configs);
 
   static Future<String?> getSupportRemoteConfigCache() async {
     final prefs = await DevicePreferences.instance();

@@ -9,6 +9,7 @@
 /// [StorageKeyStore] ownership when a domain store is extracted; they must
 /// not change the string.
 enum StorageKeyStore {
+  indexerManagerConfigStore,
   ambientTrailerPrefs,
   /// Profile-scoped download destination strings (DownloadDestinationPrefs).
   downloadDestinationPrefs,
@@ -260,7 +261,7 @@ class StorageKeyOwnership {
     'default_filter_dynamic_ranges_v1': StorageKeyStore.defaultTorrentFilterPrefs,
     'quick_play_honors_filters_v1': StorageKeyStore.quickPlayPolicyPrefs,
     'default_torrent_provider_v1': StorageKeyStore.providerCredentialPrefs,
-    'indexer_manager_configs_v1': StorageKeyStore.storageService,
+    'indexer_manager_configs_v1': StorageKeyStore.indexerManagerConfigStore,
     'quick_play_vr_mode': StorageKeyStore.playerPrefs,
     'quick_play_vr_default_screen_type': StorageKeyStore.playerPrefs,
     'quick_play_vr_default_stereo_mode': StorageKeyStore.playerPrefs,
