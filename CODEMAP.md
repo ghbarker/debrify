@@ -249,9 +249,10 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   **Ambient trailer policy:** `lib/services/storage/ambient_trailer_prefs.dart`
   owns two detail audio/volume keys and five preference bodies; HomePrefs keeps
   the two home keys. StorageService re-exports the same AmbientTrailerSurface
-  enum and retains four nonasync facades (14 declaration / 18 physical lines),
-  expiring at separately scoped Q2 caller retirement. Host -69 includes moved
-  docs/separators; whole production +32. Strict ownership closure remains OPEN.
+  enum for public type compatibility; Q2 retired four facades and routes
+  consumers directly to AmbientTrailerPrefs. Retirement removes15 host lines
+  (14 declarations + import), whole production -10; prior owner move -69 host
+  included docs/separators and added32 whole. Strict ownership remains OPEN.
   **Residual filters:** `lib/services/storage/default_torrent_filter_prefs.dart`
   owns five default-filter JSON String keys and ten get/set bodies. Its
   `clearDefaults(ProfilePreferences)` removes five keys in order on captured
