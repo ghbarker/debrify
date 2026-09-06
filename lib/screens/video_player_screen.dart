@@ -59,6 +59,7 @@ import 'video_player/painters/double_tap_ripple_painter.dart';
 import 'video_player/utils/gesture_helpers.dart';
 import 'video_player/utils/language_mapping.dart';
 import 'video_player/utils/aspect_mode_utils.dart';
+import 'video_player/player_presentation_controls.dart';
 import 'video_player/constants/timing_constants.dart';
 import 'video_player/widgets/auto_sync_pill.dart';
 import 'video_player/widgets/seek_hud.dart';
@@ -1000,12 +1001,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   );
   final ValueNotifier<VerticalHudState?> _verticalHud =
       ValueNotifier<VerticalHudState?>(null);
-  final ValueNotifier<AspectRatioHudState?> _aspectRatioHud =
-      ValueNotifier<AspectRatioHudState?>(null);
+  final _presentation = PlayerPresentationControls();
 
   // Aspect / speed
-  AspectMode _aspectMode = AspectMode.contain;
-  double _playbackSpeed = 1.0;
 
   // ── Sleep timer ───────────────────────────────────────────────────────────
   // Stops playback after a countdown, or at the end of the current item. The
@@ -1030,8 +1028,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   bool _sleepStopLatched = false;
 
   // Press-and-hold for 2x speed
-  double? _speedBeforeHold;
-  final ValueNotifier<bool> _speedHoldHud = ValueNotifier<bool>(false);
 
   // Orientation
   bool _landscapeLocked = false;
@@ -1122,6 +1118,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   @override
   void initState() {
     super.initState();
+    _presentation.bind(
+      readPlayer: () => _player,
+      commit: setState,
+      saveResume: () => _resume.saveResume(),
+      autoHide: () => _scheduleAutoHide(),
+      isMounted: () => mounted,
+    );
     _decoderDiagnostics = DecoderDiagnostics(
       readPlatform: () => _player.platform,
       isMounted: () => mounted,
@@ -1936,7 +1939,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     _installTvosDecodeRemedy(player);
     _bindPlayerInstanceSubscriptions(instanceGeneration, player);
     unawaited(_installDecoderObservers(instanceGeneration, player));
-    unawaited(_applyAspectVideoZoom());
+    unawaited(_presentation.applyAspectVideoZoom());
   }
 
   void _installSubtitleAutoSyncForPlayer(mk.Player player) {
@@ -2088,17 +2091,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     }
   }
 
-  Future<void> _applyAspectVideoZoom() async {
-    final platform = _player.platform;
-    if (platform is! mk.NativePlayer) return;
-    final scale = AspectModeUtils.getScaleForMode(_aspectMode);
-    final zoom = math.log(scale) / math.ln2;
-    try {
-      await platform.setProperty('video-zoom', zoom.toStringAsFixed(6));
-    } catch (e) {
-      debugPrint('VideoPlayer: aspect zoom apply failed: $e');
-    }
-  }
 
   /// Serializes live passthrough flips: each runs WHOLE, in order. Without
   /// this a rapid double-toggle could interleave two aid cycles and leave
@@ -4486,7 +4478,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     // Load default aspect index
     final aspectIndex = await StorageService.getPlayerDefaultAspectIndex();
     const aspects = AspectMode.values;
-    _aspectMode = aspects[aspectIndex.clamp(0, aspects.length - 1)];
+    _presentation.aspectMode = aspects[aspectIndex.clamp(0, aspects.length - 1)];
 
     // In-player guide look. `_initializePlayer` awaits this before playback
     // setup, so every IPTV surface that can actually appear (first tune,
@@ -4531,7 +4523,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       }
     }
 
-    debugPrint('VideoPlayer: Loaded defaults - aspect=$_aspectMode');
+    debugPrint('VideoPlayer: Loaded defaults - aspect=${_presentation.aspectMode}');
   }
 
   /// Update subtitle style settings
@@ -8104,7 +8096,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     _controlsVisible.dispose();
     _seekHud.dispose();
     _verticalHud.dispose();
-    _speedHoldHud.dispose();
+    _presentation.disposeSpeedHoldHud();
     _recording.dispose();
     _subtitleDiagnosticLogSub?.cancel();
     _subtitleSelectionCorrection.dispose();
@@ -8428,8 +8420,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
               onAspect: _onAspectButton,
               onSleepTimer: _showSleepTimerSheet,
               sleepTimerLabel: _sleepTimerButtonLabel,
-              speed: _playbackSpeed,
-              aspectMode: _aspectMode,
+              speed: _presentation.playbackSpeed,
+              aspectMode: _presentation.aspectMode,
               hideOptions: widget.hideOptions,
               onNext: _hasIptvNext
                   ? () => _switchToIptvChannel(_currentIptvIndex + 1)
@@ -8876,90 +8868,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     );
   }
 
-  void _cycleAspectMode() {
-    AspectMode newMode;
-    String modeName;
-    IconData modeIcon;
-
-    switch (_aspectMode) {
-      case AspectMode.contain:
-        newMode = AspectMode.cover;
-        modeName = 'Cover';
-        modeIcon = Icons.crop_free_rounded;
-        break;
-      case AspectMode.cover:
-        newMode = AspectMode.fitWidth;
-        modeName = 'Fit Width';
-        modeIcon = Icons.fit_screen_rounded;
-        break;
-      case AspectMode.fitWidth:
-        newMode = AspectMode.fitHeight;
-        modeName = 'Fit Height';
-        modeIcon = Icons.fit_screen_rounded;
-        break;
-      case AspectMode.fitHeight:
-        newMode = AspectMode.aspect16_9;
-        modeName = '16:9';
-        modeIcon = Icons.aspect_ratio_rounded;
-        break;
-      case AspectMode.aspect16_9:
-        newMode = AspectMode.aspect4_3;
-        modeName = '4:3';
-        modeIcon = Icons.aspect_ratio_rounded;
-        break;
-      case AspectMode.aspect4_3:
-        newMode = AspectMode.aspect21_9;
-        modeName = '21:9';
-        modeIcon = Icons.aspect_ratio_rounded;
-        break;
-      case AspectMode.aspect21_9:
-        newMode = AspectMode.aspect1_1;
-        modeName = '1:1';
-        modeIcon = Icons.crop_square_rounded;
-        break;
-      case AspectMode.aspect1_1:
-        newMode = AspectMode.aspect3_2;
-        modeName = '3:2';
-        modeIcon = Icons.aspect_ratio_rounded;
-        break;
-      case AspectMode.aspect3_2:
-        newMode = AspectMode.aspect5_4;
-        modeName = '5:4';
-        modeIcon = Icons.aspect_ratio_rounded;
-        break;
-      case AspectMode.aspect5_4:
-        newMode = AspectMode.cinemaZoom;
-        modeName = 'Cinema Zoom';
-        modeIcon = Icons.zoom_in_map_rounded;
-        break;
-      case AspectMode.cinemaZoom:
-        newMode = AspectMode.contain;
-        modeName = 'Contain';
-        modeIcon = Icons.crop_free_rounded;
-        break;
-    }
-
-    setState(() {
-      _aspectMode = newMode;
-    });
-    unawaited(_applyAspectVideoZoom());
-
-    // Show elegant HUD feedback
-    _aspectRatioHud.value = AspectRatioHudState(
-      aspectRatio: modeName,
-      icon: modeIcon,
-    );
-
-    // Auto-hide the HUD after 1.5 seconds
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) {
-        _aspectRatioHud.value = null;
-      }
-    });
-
-    _scheduleAutoHide();
-    _resume.saveResume();
-  }
 
   // ── Sleep timer ───────────────────────────────────────────────────────────
 
@@ -9068,15 +8976,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     );
   }
 
-  void _changeSpeed() {
-    const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
-    final idx = speeds.indexOf(_playbackSpeed);
-    final next = speeds[(idx + 1) % speeds.length];
-    _player.setRate(next);
-    setState(() => _playbackSpeed = next);
-    _scheduleAutoHide();
-    _resume.saveResume();
-  }
 
   /// Speed button: the menu's Speed pane when the unified menu is on, the
   /// old blind cycle otherwise. Keyboard/long-press cycling is untouched.
@@ -9085,7 +8984,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       _openPlayerMenuQuick(PlayerMenuSection.speed);
       return;
     }
-    _changeSpeed();
+    _presentation.changeSpeed();
   }
 
   void _onAspectButton() {
@@ -9093,21 +8992,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       _openPlayerMenuQuick(PlayerMenuSection.aspect);
       return;
     }
-    _cycleAspectMode();
+    _presentation.cycleAspectMode();
   }
 
-  void _setPlaybackSpeed(double v) {
-    _player.setRate(v);
-    setState(() => _playbackSpeed = v);
-    _resume.saveResume();
-  }
 
-  void _setAspectModeDirect(AspectMode m) {
-    if (m == _aspectMode) return;
-    setState(() => _aspectMode = m);
-    unawaited(_applyAspectVideoZoom());
-    _resume.saveResume();
-  }
 
   void _onLongPressStart(LongPressStartDetails details) {
     // Respect the same lock used by the single-tap path
@@ -9132,22 +9020,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         }
       }
     }
-    _speedBeforeHold = _playbackSpeed;
-    _player.setRate(2.0);
-    setState(() => _playbackSpeed = 2.0);
-    _speedHoldHud.value = true;
+    _presentation.beginHold();
     HapticFeedback.mediumImpact();
   }
 
-  void _onLongPressEnd(LongPressEndDetails details) {
-    final prior = _speedBeforeHold;
-    if (prior == null) return;
-    _speedBeforeHold = null;
-    if (!mounted) return;
-    _player.setRate(prior);
-    setState(() => _playbackSpeed = prior);
-    _speedHoldHud.value = false;
-  }
 
   Future<void> _toggleOrientation() async {
     if (_landscapeLocked) {
@@ -9167,7 +9043,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     _scheduleAutoHide();
   }
 
-  BoxFit _currentFit() => AspectModeUtils.getBoxFitForMode(_aspectMode);
+  BoxFit _currentFit() => AspectModeUtils.getBoxFitForMode(_presentation.aspectMode);
 
   // Build subtitle view configuration from settings
   // NOTE: the television bar deliberately does NOT move subtitles.
@@ -9350,7 +9226,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
   // Get the custom aspect ratio for specific modes
   double? _getCustomAspectRatio() =>
-      AspectModeUtils.getAspectRatioValue(_aspectMode);
+      AspectModeUtils.getAspectRatioValue(_presentation.aspectMode);
 
   // ─── Episode guide: in-player fetch of absent episodes ────────────────
 
@@ -9742,7 +9618,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
             // A -> Aspect ratio
             if (key == LogicalKeyboardKey.keyA) {
-              _cycleAspectMode();
+              _presentation.cycleAspectMode();
               return KeyEventResult.handled;
             }
 
@@ -10146,7 +10022,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                   },
                 ),
                 ValueListenableBuilder<AspectRatioHudState?>(
-                  valueListenable: _aspectRatioHud,
+                  valueListenable: _presentation.aspectRatioHud,
                   builder: (context, hud, _) {
                     return IgnorePointer(
                       ignoring: true,
@@ -10167,7 +10043,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                   },
                 ),
                 ValueListenableBuilder<bool>(
-                  valueListenable: _speedHoldHud,
+                  valueListenable: _presentation.speedHoldHud,
                   builder: (context, active, _) {
                     return IgnorePointer(
                       ignoring: true,
@@ -10339,7 +10215,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                     },
                     onDoubleTapDown: _handleDoubleTap,
                     onLongPressStart: _onLongPressStart,
-                    onLongPressEnd: _onLongPressEnd,
+                    onLongPressEnd: _presentation.endHold,
                     onPanStart: _onPanStart,
                     onPanUpdate: _onPanUpdate,
                     onPanEnd: _onPanEnd,
@@ -10447,8 +10323,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                                   onSpeed: _onSpeedButton,
                                   onSleepTimer: _showSleepTimerSheet,
                                   sleepTimerLabel: _sleepTimerButtonLabel,
-                                  speed: _playbackSpeed,
-                                  aspectMode: _aspectMode,
+                                  speed: _presentation.playbackSpeed,
+                                  aspectMode: _presentation.aspectMode,
                                   isLandscape: _landscapeLocked,
                                   onRotate: _toggleOrientation,
                                   hasPlaylist:
@@ -11370,10 +11246,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       onSubtitleStyleChanged: _onSubtitleStyleChanged,
       onSyncRequested: _showSyncOverlayPanel,
       showSpeed: !_iptvZapBannerOwnsIdentity,
-      speed: _playbackSpeed,
-      onSpeedSelected: _setPlaybackSpeed,
-      aspectMode: _aspectMode,
-      onAspectSelected: _setAspectModeDirect,
+      speed: _presentation.playbackSpeed,
+      onSpeedSelected: _presentation.setPlaybackSpeed,
+      aspectMode: _presentation.aspectMode,
+      onAspectSelected: _presentation.setAspectModeDirect,
       sleepMode: _sleepTimerMode,
       sleepArmedMinutes: _sleepTimerArmedMinutes,
       sleepMinutesLeft: _sleepTimerMinutesLeft,
@@ -11450,11 +11326,11 @@ class _ResumeSession implements ResumeSession {
   @override Duration get playerPosition => _s._player.state.position;
   @override Future<void> seek(Duration target) => _s._player.seek(target);
   @override Future<void> setRate(double speed) => _s._player.setRate(speed);
-  @override double get playbackSpeed => _s._playbackSpeed;
-  @override set playbackSpeed(double value) => _s._playbackSpeed = value;
-  @override AspectMode get aspectMode => _s._aspectMode;
-  @override set aspectMode(AspectMode value) => _s._aspectMode = value;
-  @override Future<void> applyAspectVideoZoom() => _s._applyAspectVideoZoom();
+  @override double get playbackSpeed => _s._presentation.playbackSpeed;
+  @override set playbackSpeed(double value) => _s._presentation.playbackSpeed = value;
+  @override AspectMode get aspectMode => _s._presentation.aspectMode;
+  @override set aspectMode(AspectMode value) => _s._presentation.aspectMode = value;
+  @override Future<void> applyAspectVideoZoom() => _s._presentation.applyAspectVideoZoom();
   @override Future<void> waitForDuration() => _s._waitForDuration();
   @override Future<double?> currentEpisodeTraktPercent({bool forGuide = false}) =>
       _s._currentEpisodeTraktPercent(forGuide: forGuide);
@@ -11475,7 +11351,7 @@ class _ResumeSession implements ResumeSession {
   @override bool get isReady => _s._isReady;
   @override bool get isTransitioning => _s._isTransitioning;
   @override bool get currentMovieMarkedAsFinished => _s._currentMovieMarkedAsFinished;
-  @override double? get speedBeforeHold => _s._speedBeforeHold;
+  @override double? get speedBeforeHold => _s._presentation.speedBeforeHold;
   @override bool get isMounted => _s.mounted;
   @override bool get screenDisposed => _s._screenDisposed;
   @override String generateFilenameHash(String filename) =>
