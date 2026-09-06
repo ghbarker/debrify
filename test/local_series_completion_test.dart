@@ -24,6 +24,34 @@ void main() {
     firstAired: released.toUtc().toIso8601String(),
   );
 
+  // Simkl supplies a nominal calendar day, not an air-time instant. Keep the
+  // caller's local Y-M-D; converting to UTC can select a different day.
+  List<dynamic> calendar(DateTime date) => [
+    {
+      'date': date.toIso8601String().substring(0, 10),
+      'ids': {'imdb': 'tt-calendar-show'},
+      'episode': {'season': 1, 'episode': 2},
+    },
+  ];
+
+  test('Simkl fixture keeps local day when UTC has crossed midnight', () {
+    final localWallTime = DateTime(2026, 9, 5, 20, 30);
+    // Explicit UTC-04 civil-time example, independent of the process timezone.
+    final instant = DateTime.utc(2026, 9, 5, 20, 30)
+        .subtract(const Duration(hours: -4));
+    expect(instant.toIso8601String().substring(0, 10), '2026-09-06');
+    expect(calendar(localWallTime).single['date'], '2026-09-05');
+  });
+
+  test('Simkl fixture keeps local day when UTC is still the previous day', () {
+    final localWallTime = DateTime(2026, 9, 6, 0, 30);
+    // Explicit UTC+14 civil-time example; no global timezone mutation.
+    final instant = DateTime.utc(2026, 9, 6, 0, 30)
+        .subtract(const Duration(hours: 14));
+    expect(instant.toIso8601String().substring(0, 10), '2026-09-05');
+    expect(calendar(localWallTime).single['date'], '2026-09-06');
+  });
+
   test(
     'series is caught up when every aired regular episode is finished',
     () async {
@@ -173,14 +201,6 @@ void main() {
           season([episode(1, now.subtract(const Duration(days: 2)))]),
         ],
       );
-
-      List<dynamic> calendar(DateTime date) => [
-        {
-          'date': date.toUtc().toIso8601String(),
-          'ids': {'imdb': 'tt-calendar-show'},
-          'episode': {'season': 1, 'episode': 2},
-        },
-      ];
 
       expect(
         await LocalSeriesCompletionService.instance.debugMergeCalendarItems(
