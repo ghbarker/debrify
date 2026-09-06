@@ -1,3 +1,4 @@
+import 'remote_transfer_progress.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -143,6 +144,7 @@ class _RemoteReceiveScreenState extends State<RemoteReceiveScreen>
                             ),
                             const SizedBox(height: 24),
                             if (_localIp != null) _IpChip(ip: _localIp!),
+                            const RemoteTransferProgressPanel(),
                             // Pairing code, when a phone is asking to send
                             // credentials. Registers as the gate's presenter
                             // so the router's fallback dialog stays away

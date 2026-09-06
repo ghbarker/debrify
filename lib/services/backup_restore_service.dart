@@ -1,3 +1,4 @@
+import 'local_validation_diagnostics.dart';
 import 'dart:convert';
 import 'dart:math';
 
@@ -476,6 +477,9 @@ class BackupRestoreService {
     BackupSelection selection = const BackupSelection.all(),
     bool refreshEngineRuntime = true,
   }) async {
+    LocalValidationDiagnostics.event('legacy_restore_started', {
+      'inputSections': map.length,
+    });
     final report = RestoreReport();
 
     if (selection.realDebrid) {
@@ -769,6 +773,9 @@ class BackupRestoreService {
       await StorageService.reseedTrackingScrobbleTargetsFromLegacy();
     }
 
+    LocalValidationDiagnostics.event('legacy_restore_finished', {
+      'errors': report.errors.length,
+    });
     return report;
   }
 

@@ -38,6 +38,21 @@ final Color kSettingsDim2 = Colors.white.withValues(alpha: 0.28);
 /// edge-to-edge on TV/desktop.
 const double kSettingsMaxWidth = 720;
 
+class WebDavSyncPendingBadge extends StatelessWidget {
+  const WebDavSyncPendingBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(
+      Icons.chevron_right_rounded,
+      size: 20,
+      color:
+          IconTheme.of(context).color ??
+          AppThemeScope.of(context).settings.dim2,
+    );
+  }
+}
+
 /// Uniform monochrome initials chip for a connection provider ("RD", "JP").
 /// Replaces the old per-provider colored gradient icon boxes — status is
 /// carried by the dot/text instead, keeping the chrome calm like Stremio.
@@ -329,12 +344,32 @@ abstract final class SettingsRows {
   static const createBackup = SettingsRowContent(
     icon: Icons.save_alt_rounded,
     title: 'Create Backup',
-    subtitle: 'Save services, addons, and search engines to a file',
+    subtitle: 'Back up all profiles and shared connections (Admin)',
   );
   static const restoreBackup = SettingsRowContent(
     icon: Icons.restore_rounded,
     title: 'Restore from Backup',
     subtitle: 'Import services and addons from a backup file',
+  );
+  static const syncAndMigrate = SettingsRowContent(
+    icon: Icons.sync_alt_rounded,
+    title: 'Sync and backup',
+    subtitle: 'Sync across devices and save backups',
+  );
+  static const enableWebDavSync = SettingsRowContent(
+    icon: Icons.sync_rounded,
+    title: 'Enable WebDAV Sync',
+    subtitle: 'Keep supported profile state in one WebDAV account',
+  );
+  static const createWebDavBackup = SettingsRowContent(
+    icon: Icons.cloud_upload_outlined,
+    title: 'Save backup to WebDAV',
+    subtitle: 'Save an encrypted backup of all profiles (Admin)',
+  );
+  static const restoreWebDavBackup = SettingsRowContent(
+    icon: Icons.cloud_download_outlined,
+    title: 'Restore backup from WebDAV',
+    subtitle: 'Choose an encrypted profile package on your server',
   );
   static const exportDiagnosticLogs = SettingsRowContent(
     icon: Icons.bug_report_outlined,
@@ -2151,14 +2186,23 @@ class _SettingsTileState extends State<SettingsTile> {
                       ],
                     ),
                   ),
-                  widget.trailing ??
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: 20,
+                  if (widget.trailing case final trailing?)
+                    IconTheme.merge(
+                      data: IconThemeData(
                         color: inverse
                             ? foreground.withValues(alpha: 0.42)
                             : t.dim2,
                       ),
+                      child: trailing,
+                    )
+                  else
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: inverse
+                          ? foreground.withValues(alpha: 0.42)
+                          : t.dim2,
+                    ),
                 ],
               ),
             ),

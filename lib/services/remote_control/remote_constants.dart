@@ -37,7 +37,11 @@ class RemoteMessageType {
 /// outcomes for configuration batches and Debrify TV channels, v5 = complete
 /// profile-graph transfers (including disabled resources, profile-local
 /// settings, lock policy, reference remapping, and bounded compression).
-const int kProtoVersion = 5;
+const int kProtoVersion = 6;
+
+/// Reliable, file-backed transfers and receiver receipts over TCP.
+const int kReliableTransferProtocolVersion = 6;
+const int kReliableTransferPort = 5557;
 
 const int kAddonResultProtocolVersion = 3;
 const int kRemoteTransferResultProtocolVersion = 4;

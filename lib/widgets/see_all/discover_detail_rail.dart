@@ -216,7 +216,21 @@ class _DiscoverDetailRailState extends State<DiscoverDetailRail>
     // Compare by identity, not id: focus lands on distinct StremioMeta instances,
     // and comparing `id` would miss a move between two items that share an empty
     // or duplicate id.
-    if (!identical(widget.item, old.item)) _adopt(widget.item);
+    if (!identical(widget.item, old.item)) {
+      // Invalidate asynchronous resolution immediately. Publish shared UI
+      // notifiers after the frame; their sibling listeners already built.
+      _trailerImdb = null;
+      _settle?.cancel();
+      _trailerDwell?.cancel();
+      _pillDwell?.cancel();
+      _loadingWatchdog?.cancel();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _dropTrailer();
+          setState(() => _adopt(widget.item));
+        }
+      });
+    }
   }
 
   @override
@@ -378,6 +392,9 @@ class _DiscoverDetailRailState extends State<DiscoverDetailRail>
   /// every path that moves [_shown] (focus change, enrichment, settings load).
   void _evaluateTrailer() {
     final m = _shown;
+    // Settings/enrichment can finish while the visible title is settling.
+    // They must not re-arm the trailer for the card we have already left.
+    if (widget.item?.imdbId != m?.imdbId || (_settle?.isActive ?? false)) return;
     final imdb = m?.imdbId;
     // Focus moved to a different title (or away): drop the old trailer + dwell.
     // A genuine browse action also means we're no longer sitting behind a player,

@@ -1,4 +1,10 @@
+import '../widgets/see_all/discover_browsing_input.dart';
+import '../services/home_catalog_refresh.dart';
+import '../widgets/home/home_row_focus.dart';
+import '../services/home_row_refresh.dart';
+import '../services/profiles/connection_resource_service.dart';
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' as ui show ImageFilter;
 
@@ -725,6 +731,7 @@ class _SearchScreenState extends State<SearchScreen>
   /// load pipeline re-checks this so a superseded load can neither apply its
   /// stale sections nor advance the new load's cursor.
   int _boardLoadGen = 0;
+  bool _boardRefreshing = false;
 
   /// A triggered board reload arrived while a catalog search was showing its
   /// results — running [_load] then would stomp the search view, so it's
@@ -1515,8 +1522,8 @@ class _SearchScreenState extends State<SearchScreen>
   final ValueNotifier<bool> _discTrailerShowing = ValueNotifier(false);
   // Theater: after a few seconds of uninterrupted playback the page commits to
   // the trailer — veils thin to near-clear, rail and grid recede to ~15%. Armed
-  // by [_onDiscShowingChanged]; dropped the instant frames stop (any DPAD move
-  // clears the trailer, so browsing input always brings the lights back).
+  // by playback and browsing activity; controls return immediately on input
+  // and dim again after the idle dwell if trailer playback continues.
   final ValueNotifier<bool> _discTheater = ValueNotifier(false);
   Timer? _discTheaterTimer;
   static const Duration _discTheaterDelay = Duration(seconds: 5);
@@ -1623,6 +1630,7 @@ class _SearchScreenState extends State<SearchScreen>
       MdblistService.instance.playbackRevision.addListener(
         _onMdblistPlaybackRevision,
       );
+      MainPageBridge.addPlaylistChangeListener(_loadPlaylistFavorites);
     }
     if (widget.searchMode) {
       MainPageBridge.registerTabBackHandler('search', _handleSearchBack);
@@ -1753,6 +1761,8 @@ class _SearchScreenState extends State<SearchScreen>
     // rebuilt on return; on TV a tab switch already reloads it fresh).
     if (!widget.searchMode && !widget.discoverMode) {
       MainPageBridge.addHomeSettingsListener(_reloadForHomeSettings);
+      HomeRowRefreshSignal.addListener(_queueHomeRows);
+      _stremio.addAddonsChangedListener(_onHomeAddonsChanged);
       // IPTV list mutations (picker, IPTV settings, provider deletion,
       // reconcile, import) all bump the store revision — the only signal a
       // Home that stays alive across tab switches gets about them.
@@ -2156,6 +2166,7 @@ class _SearchScreenState extends State<SearchScreen>
       _onMdblistPlaybackRevision,
     );
     if (!widget.searchMode && !widget.discoverMode) {
+      MainPageBridge.removePlaylistChangeListener(_loadPlaylistFavorites);
       MainPageBridge.unregisterCatalogDetailOpenHandler(
         _openPendingCatalogDetail,
       );
@@ -2175,6 +2186,9 @@ class _SearchScreenState extends State<SearchScreen>
     MainPageBridge.removePlaybackReturnListener(_onPlaybackReturned);
     MainPageBridge.removePlayerLaunchListener(_markPlaybackStarted);
     MainPageBridge.removeHomeSettingsListener(_reloadForHomeSettings);
+    HomeRowRefreshSignal.removeListener(_queueHomeRows);
+    _stremio.removeAddonsChangedListener(_onHomeAddonsChanged);
+    _homeRefreshTimer?.cancel();
     IptvMediaStore.listsRevision.removeListener(_onIptvListsRevision);
     for (final row in _iptvListRows) {
       for (final n in row.nodes) {
@@ -2538,10 +2552,18 @@ class _SearchScreenState extends State<SearchScreen>
     if (_mode != mode) _switchMode(mode);
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool preserveVisibleRows = false}) async {
+    final keepRows = preserveVisibleRows && _homeSections.isNotEmpty;
+    final previouslyLoaded = keepRows ? _boardCursor : 0;
+    final previousRows = <String, CatalogSection>{
+      if (keepRows)
+        for (final row in _homeSections)
+          if (row is! HomeListSection) _sectionRowId(row): row,
+    };
     final gen = ++_boardLoadGen;
+    _boardRefreshing = true;
     setState(() {
-      _loading = true;
+      if (!keepRows) _loading = true;
       _error = null;
     });
     unawaited(_refreshPikpakOnly());
@@ -2611,7 +2633,12 @@ class _SearchScreenState extends State<SearchScreen>
       }
       // First batch is blocking so the board isn't empty on first paint; skip
       // runs of empty catalogs so we always land on some visible rows.
-      final first = await _fetchBoardBatchUntilNonEmpty(gen);
+      final first = await _fetchBoardBatchUntilNonEmpty(gen, previousRows: previousRows);
+      // Keep the previously loaded vertical extent when addons change.
+      while (gen == _boardLoadGen && _boardCursor < previouslyLoaded &&
+          _boardCursor < _boardRefs.length) {
+        first.addAll(await _fetchBoardBatch(_kBoardBatchSize, gen, previousRows: previousRows));
+      }
       final listRows = await listRowsFuture;
       if (!mounted || gen != _boardLoadGen) return;
       // List rows lead the sections — after the favourites rows, before every
@@ -2627,9 +2654,9 @@ class _SearchScreenState extends State<SearchScreen>
       // visible view is not — _restoreHome re-applies _homeSections when the
       // search ends.
       if (_catalogQuery.isNotEmpty || _catalogSearching) return;
-      _applySections(sections);
+      _applySections(sections, preserveFocus: keepRows);
       _maybeAutoFocusBoard();
-      _maybeAutoFillBoard();
+      // Pagination resumes after the refresh releases its cursor below.
     } catch (e) {
       if (!mounted || gen != _boardLoadGen) return;
       // Mid-search, the error screen must not replace the search results
@@ -2642,12 +2669,17 @@ class _SearchScreenState extends State<SearchScreen>
         return;
       }
       setState(() {
-        _error = e.toString();
+        if (!keepRows) _error = e.toString();
         _loading = false;
       });
       // Terminal state too — the launch splash must not outlive the board's
       // loading phase just because it ended in an error screen.
       MainPageBridge.homeBoardReady.value = true;
+    } finally {
+      if (gen == _boardLoadGen) {
+        _boardRefreshing = false;
+        if (mounted) _maybeAutoFillBoard();
+      }
     }
   }
 
@@ -2655,9 +2687,9 @@ class _SearchScreenState extends State<SearchScreen>
   /// runs of empty catalogs, and return the non-empty sections (advancing the
   /// cursor as it goes). Empty result ⇒ the board is exhausted — or [gen] went
   /// stale (a newer [_load] owns the cursor now; stop without touching it).
-  Future<List<CatalogSection>> _fetchBoardBatchUntilNonEmpty(int gen) async {
+  Future<List<CatalogSection>> _fetchBoardBatchUntilNonEmpty(int gen, {Map<String, CatalogSection> previousRows = const {}}) async {
     while (gen == _boardLoadGen && _boardCursor < _boardRefs.length) {
-      final batch = await _fetchBoardBatch(_kBoardBatchSize, gen);
+      final batch = await _fetchBoardBatch(_kBoardBatchSize, gen, previousRows: previousRows);
       if (batch.isNotEmpty) return batch;
     }
     return const [];
@@ -2667,7 +2699,7 @@ class _SearchScreenState extends State<SearchScreen>
   /// [_boardCursor], and return the non-empty ones (order preserved). No-ops
   /// when [gen] is stale so a superseded load can't advance the fresh load's
   /// cursor.
-  Future<List<CatalogSection>> _fetchBoardBatch(int n, int gen) async {
+  Future<List<CatalogSection>> _fetchBoardBatch(int n, int gen, {Map<String, CatalogSection> previousRows = const {}}) async {
     if (gen != _boardLoadGen) return const [];
     final end = (_boardCursor + n).clamp(0, _boardRefs.length);
     final slice = _boardRefs.sublist(_boardCursor, end);
@@ -2676,22 +2708,14 @@ class _SearchScreenState extends State<SearchScreen>
       slice.map((ref) async {
         final (addon, catalog) = ref;
         try {
-          var rawCount = 0;
-          final items = await _stremio.fetchCatalog(
-            addon,
-            catalog,
-            onRawCount: (c) => rawCount = c,
-          );
-          if (items.isEmpty) return null;
-          return CatalogSection(
-            title: CatalogSection.rowTitle(catalog),
+          return await loadHomeCatalogSection(
             addon: addon,
             catalog: catalog,
-            // Keep the whole first page; more pages stream in on horizontal scroll.
-            items: items.toList(),
-            // Next page starts past the addon's raw first window (not the smaller
-            // post-filter count), keeping paging aligned from the very first fetch.
-            nextSkip: rawCount > 0 ? rawCount : items.length,
+            previous: previousRows[_catalogRefRowId(ref)],
+            isCurrent: () => mounted && gen == _boardLoadGen,
+            fetch: (skip, onRawCount) => _stremio.fetchCatalog(
+              addon, catalog, skip: skip, onRawCount: onRawCount,
+            ),
           );
         } catch (_) {
           return null;
@@ -2728,7 +2752,10 @@ class _SearchScreenState extends State<SearchScreen>
 
   /// Load and append the next batch of board rows (deduped against re-entry).
   Future<bool> _loadMoreBoard() async {
-    if (_boardLoadingMore || _boardCursor >= _boardRefs.length) return false;
+    if (_boardRefreshing || _boardLoadingMore ||
+        _boardCursor >= _boardRefs.length) {
+      return false;
+    }
     // Bind this append to the load generation that owns the current cursor —
     // if a full reload lands mid-fetch, the stale batch must not append onto
     // (or advance) the fresh board.
@@ -3434,13 +3461,65 @@ class _SearchScreenState extends State<SearchScreen>
   VoidCallback _favRowOnDown(String rowId, int column) =>
       () => _focusRelativeHomeRail(rowId, 1, column);
 
-  /// Load the user's starred Debrify TV channels for the leading favourites row.
-  /// Silently leaves the row empty on any error (it just won't render).
+  final _pendingHomeRows = <HomeRowRefresh>{};
+  Timer? _homeRefreshTimer;
+  bool _homeAddonsPending = false;
+  int _tvFavoritesRevision = 0;
+  int _stremioFavoritesRevision = 0;
+  int _watchlistRevision = 0;
+  int _playlistRevision = 0;
+
+  void _onHomeAddonsChanged() {
+    _homeAddonsPending = true;
+    _queueHomeRows({HomeRowRefresh.stremioTvFavorites});
+  }
+
+  void _queueHomeRows(Set<HomeRowRefresh> rows) {
+    if (!mounted) return;
+    _pendingHomeRows.addAll(rows.where((row) =>
+        row != HomeRowRefresh.playback ||
+        !(ModalRoute.of(context)?.isCurrent ?? false)));
+    // Visible Home already receives the existing playback-data bridge.
+
+    _homeRefreshTimer ??= Timer(const Duration(milliseconds: 100), () {
+      _homeRefreshTimer = null;
+      if (!mounted) return;
+      final pending = Set<HomeRowRefresh>.of(_pendingHomeRows);
+      _pendingHomeRows.clear();
+      for (final row in pending) {
+        switch (row) {
+          case HomeRowRefresh.tvFavorites:
+            unawaited(_loadTvFavorites());
+          case HomeRowRefresh.stremioTvFavorites:
+            unawaited(_loadStremioTvFavorites());
+          case HomeRowRefresh.playlist:
+            unawaited(_loadPlaylistFavorites());
+          case HomeRowRefresh.watchlist:
+            unawaited(_loadMyWatchlist());
+          case HomeRowRefresh.playback:
+            // Do not consume the local playback/tracker refresh latch here.
+            unawaited(_loadContinueWatching());
+            unawaited(_loadIptvContinueWatching());
+        }
+      }
+      if (_homeAddonsPending) {
+        _homeAddonsPending = false;
+        if (_catalogQuery.isNotEmpty || _catalogSearching) {
+          _pendingBoardReload = true;
+        } else {
+          unawaited(_load(preserveVisibleRows: true));
+        }
+      }
+    });
+  }
+
+  /// Reload starred channels without replacing newer row data.
   Future<void> _loadTvFavorites() async {
+    final revision = ++_tvFavoritesRevision;
     try {
       final ids = await StorageService.getDebrifyTvFavoriteChannelIds();
       if (ids.isEmpty) {
-        if (!mounted) return;
+        if (!mounted || revision != _tvFavoritesRevision) return;
         setState(() => _tvFavChannels = const []);
         _syncTvFavNodes();
         return;
@@ -3453,7 +3532,7 @@ class _SearchScreenState extends State<SearchScreen>
           .map(DebrifyTvChannel.fromRecord)
           .where((c) => ids.contains(c.id))
           .toList();
-      if (!mounted) return;
+      if (!mounted || revision != _tvFavoritesRevision) return;
       setState(() => _tvFavChannels = favs);
       _syncTvFavNodes();
       _maybeAutoFocusBoard();
@@ -3490,10 +3569,11 @@ class _SearchScreenState extends State<SearchScreen>
   /// (preserving discovery order), then fetch their items so each card can show
   /// a now-playing poster. Silently leaves the row empty on any error.
   Future<void> _loadStremioTvFavorites() async {
+    final revision = ++_stremioFavoritesRevision;
     try {
       final ids = await StorageService.getStremioTvFavoriteChannelIds();
       if (ids.isEmpty) {
-        if (!mounted) return;
+        if (!mounted || revision != _stremioFavoritesRevision) return;
         setState(() => _stvFavChannels = const []);
         _syncStvFavNodes();
         return;
@@ -3507,7 +3587,7 @@ class _SearchScreenState extends State<SearchScreen>
       final all = await StremioTvService.instance.discoverChannels();
       final favs = all.where((c) => ids.contains(c.id)).toList();
       await StremioTvService.instance.loadAllChannelItems(favs);
-      if (!mounted) return;
+      if (!mounted || revision != _stremioFavoritesRevision) return;
       setState(() {
         _stvRotationMinutes = rotation;
         _stvSeriesRotationMinutes = seriesRotation;
@@ -3748,6 +3828,21 @@ class _SearchScreenState extends State<SearchScreen>
   /// A collapsed series sentinel stored in a list: resolve its Xtream origin
   /// and open the merged series page (the episode list / Resume plays from
   /// there) — the sentinel URL itself is not a stream.
+  Future<List<IptvPlaylist>?> _readIptvPlaylistsForAction() async {
+    try {
+      return await StorageService.getIptvPlaylists(forSettings: false);
+    } on ResourceAuthorizationException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('IPTV is unavailable. Please retry or sign in.'),
+          ),
+        );
+      }
+      return null;
+    }
+  }
+
   Future<void> _openIptvListSeries(IptvChannel channel) async {
     // xtream-series://<originId>/<seriesId>
     final rest = channel.url.substring('xtream-series://'.length);
@@ -3757,8 +3852,8 @@ class _SearchScreenState extends State<SearchScreen>
         : rest.substring(0, slash);
     final seriesId = slash < 0 ? rest : rest.substring(slash + 1);
     if (seriesId.isEmpty) return;
-    final playlists = await StorageService.getIptvPlaylists(forSettings: false);
-    if (!mounted) return;
+    final playlists = await _readIptvPlaylistsForAction();
+    if (!mounted || playlists == null) return;
     IptvPlaylist? origin;
     for (final p in playlists) {
       if (p.id == originId && p.isXtreamCodes) {
@@ -3854,9 +3949,10 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   Future<void> _loadMyWatchlist() async {
+    final revision = ++_watchlistRevision;
     try {
       final items = await StorageService.getMyWatchlistItems();
-      if (!mounted) return;
+      if (!mounted || revision != _watchlistRevision) return;
       setState(() {
         _watchlistMovieItems = [
           for (final item in items)
@@ -3966,10 +4062,8 @@ class _SearchScreenState extends State<SearchScreen>
         return;
       }
 
-      final playlists = await StorageService.getIptvPlaylists(
-        forSettings: false,
-      );
-      if (!mounted) return;
+      final playlists = await _readIptvPlaylistsForAction();
+      if (!mounted || playlists == null) return;
       IptvPlaylist? playlist;
       for (final candidate in playlists) {
         if (candidate.id == xtream.playlistId && candidate.isXtreamCodes) {
@@ -4020,6 +4114,7 @@ class _SearchScreenState extends State<SearchScreen>
   /// poster overrides and resume progress (same as the Home playlist section),
   /// newest first. Silently leaves the row empty on any error.
   Future<void> _loadPlaylistFavorites() async {
+    final revision = ++_playlistRevision;
     try {
       final results = await Future.wait([
         StorageService.getPlaylistItemsRaw(),
@@ -4044,7 +4139,7 @@ class _SearchScreenState extends State<SearchScreen>
       }
 
       final progress = await StorageService.buildPlaylistProgressMap(items);
-      if (!mounted) return;
+      if (!mounted || revision != _playlistRevision) return;
       setState(() {
         _playlistItems = items;
         _playlistProgress = progress;
@@ -5333,7 +5428,7 @@ class _SearchScreenState extends State<SearchScreen>
 
   /// Swap the displayed sections (homepage or search results): rebuild the
   /// per-row focus nodes and reset the hero to the first item.
-  void _applySections(List<CatalogSection> sections) {
+  void _applySections(List<CatalogSection> sections, {bool preserveFocus = false}) {
     _boardGen++;
     _boardAppliedAt = DateTime.now();
     // Rail keys are content-addressed by stable Home-row id, so a reload can
@@ -5341,18 +5436,39 @@ class _SearchScreenState extends State<SearchScreen>
     _pendingStageAdvanceKey = null;
     _pendingStageAdvanceAt = null;
     _stageGeneration++;
-    _disposeNodes();
-    for (final section in sections) {
-      _rowNodes.add(
-        List.generate(
-          section.items.length,
-          (i) => FocusNode(debugLabel: 'search_r${_rowNodes.length}_c$i'),
-        ),
+    if (preserveFocus) {
+      List<List<String>> identities(List<CatalogSection> rows) => [
+        for (final row in rows) [
+          for (final item in row.items)
+            jsonEncode([_sectionRowId(row), item.type, item.id]),
+        ],
+      ];
+      final nextNodes = reconcileHomeRowFocus(
+        previousIds: identities(_sections),
+        previousNodes: _rowNodes,
+        nextIds: identities(sections),
       );
+      _rowNodes..clear()..addAll(nextNodes);
+      _rowCol.clear();
+    } else {
+      _disposeNodes();
+      for (final section in sections) {
+        _rowNodes.add(
+          List.generate(
+            section.items.length,
+            (i) => FocusNode(debugLabel: 'search_r${_rowNodes.length}_c$i'),
+          ),
+        );
+      }
     }
     setState(() => _sections = sections);
     _publishTopShelfSpotlight();
     unawaited(_refreshBoundSources());
+    if (preserveFocus && _heroItem.value != null && sections.any((section) =>
+        section.items.any((item) => item.id == _heroItem.value!.id &&
+            item.type == _heroItem.value!.type))) {
+      return;
+    }
     // Seed the hero with the first item so it isn't blank before DPAD focus
     // lands (see [_heroActive] for when the hero is shown).
     if (_heroActive) {
@@ -16638,7 +16754,17 @@ class _SearchScreenState extends State<SearchScreen>
   /// Scaffold/back header), with the Source dropdown injected as its leading
   /// filter so DPAD walks Source → the panel's own filters → grid. All item
   /// open/play/bound wiring is this screen's existing board handlers.
-  Widget _buildDiscover() {
+  Widget _buildDiscover() => DiscoverBrowsingInput(
+    onActivity: () {
+      if (_discTheater.value) _discTheater.value = false;
+      // Input can leave the same trailer playing (hover or a grid boundary).
+      // Restart its idle dwell even when the playback notifier does not change.
+      _onDiscShowingChanged();
+    },
+    child: _buildDiscoverContent(),
+  );
+
+  Widget _buildDiscoverContent() {
     final app = AppThemeScope.of(context);
     final panel = DiscoverCardSettingsScope(
       showTypeTags: _discShowTypeTags,

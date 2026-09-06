@@ -553,25 +553,16 @@ Future<RemoteSession?> ensureAuthorizedSession(
   if (!context.mounted) return null;
 
   if (session == null) {
-    final decision = decideLegacyCredentialSend(
-      peerAdvertisesV2: device.supportsEncryption,
-      peerPinnedV2: sameNamePins.isNotEmpty,
+    // Silence is not a protocol version. A current TV behind a blocked
+    // network, a manual IP, or a restarted receiver can all time out here.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Could not connect to the receiving device. Keep Debrify open in '
+          'Receive mode, check the address and network, then retry.',
+        ),
+      ),
     );
-    debugPrint('RemoteGate: refusing — $decision');
-    switch (decision) {
-      case LegacySendDecision.suspectedDowngrade:
-        await showTvIdentityChangedDialog(context, device.deviceName);
-      case LegacySendDecision.blocked:
-      case LegacySendDecision.askOverride: // policy is block; kept compilable
-        await showLegacyBlockedDialog(context, device.deviceName);
-      case LegacySendDecision.encrypted:
-        // Advertised v2 but the handshake failed — transient network state.
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not establish a secure connection to the TV'),
-          ),
-        );
-    }
     return null;
   }
 

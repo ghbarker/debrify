@@ -1,3 +1,4 @@
+import '../local_validation_diagnostics.dart';
 import 'dart:convert';
 import 'dart:math';
 
@@ -54,6 +55,7 @@ class ProfileGraphRestoreReport {
   final int bindingsImported;
   final int pinResetsRequired;
   final List<String> importedProfileIds;
+  final Map<String, String> importedResourceIdsByBackupId;
 
   const ProfileGraphRestoreReport({
     required this.profilesImported,
@@ -62,6 +64,7 @@ class ProfileGraphRestoreReport {
     required this.bindingsImported,
     required this.pinResetsRequired,
     required this.importedProfileIds,
+    this.importedResourceIdsByBackupId = const <String, String>{},
   });
 }
 
@@ -80,7 +83,18 @@ class ProfileRestoreCoordinator {
   Future<ProfileGraphRestoreReport> restoreDeviceGraph({
     required PortableProfilePackage package,
     required ProfileAuthorizationContext authorization,
+    ProfileDatabaseFileResolver? databaseFileResolver,
+    Future<void> Function(
+      Map<String, String>,
+      Map<String, String>,
+      Map<String, int>,
+    )?
+    beforePublish,
   }) async {
+    LocalValidationDiagnostics.event('profile_restore_started', {
+      'profiles': package.profiles.length,
+      'resources': package.resources.length,
+    });
     final actor = await authorization.validate(registry);
     if (actor.role != UserProfileRole.admin ||
         !actor.allows(ProfileFeature.manageProfiles) ||
@@ -113,7 +127,7 @@ class ProfileRestoreCoordinator {
           name.length > 80 ||
           roleName is! String ||
           policySource is! String ||
-          sectionId is! String) {
+          (sectionId != null && sectionId is! String)) {
         throw const FormatException('Invalid imported profile');
       }
       final matchingRole = UserProfileRole.values.where(
@@ -123,12 +137,14 @@ class ProfileRestoreCoordinator {
         throw FormatException('Unknown imported role $roleName');
       }
       final role = matchingRole.first;
-      final section = package.sections[sectionId];
-      if (section is! Map || section['values'] is! Map) {
+      final section = sectionId == null ? null : package.sections[sectionId];
+      if (sectionId != null && (section is! Map || section['values'] is! Map)) {
         throw const FormatException('Imported profile settings are missing');
       }
       final values = _normalizePreferenceValues(
-        section['values'] as Map,
+        sectionId == null
+            ? const <String, Object?>{}
+            : section!['values'] as Map,
         resourceIds: restoreResourceIds.bySourceId,
         includeCredentialEngineSettings: true,
         rejectDisallowedKeys:
@@ -152,6 +168,10 @@ class ProfileRestoreCoordinator {
           wasPinProtected: _optionalBool(record, 'wasPinProtected') ?? false,
           lockOnResume: _optionalBool(record, 'lockOnResume') ?? false,
           inactivityTimeoutMinutes: _optionalInactivityTimeout(record),
+          createdAtMs: switch (record['createdAtMs']) {
+            final int value when value > 0 => value,
+            _ => null,
+          },
           preferences: values,
         ),
       );
@@ -174,6 +194,7 @@ class ProfileRestoreCoordinator {
           avatarKey: profile.avatarKey,
           role: profile.role,
           policy: profile.policy,
+          createdAtMs: profile.createdAtMs,
           setupComplete: profile.setupComplete,
           // Keep the hidden staging row enabled just long enough to install a
           // carried PIN through the registry's normal credential boundary.
@@ -214,6 +235,7 @@ class ProfileRestoreCoordinator {
           package,
           sourceRecord,
           stagingScope,
+          fileResolver: databaseFileResolver,
         );
         if (databasesRestored > 0) {
           await ProfileDatabaseSnapshot.remapResourceReferences(
@@ -450,6 +472,10 @@ class ProfileRestoreCoordinator {
           profileId: profile.id,
         );
       }
+      await beforePublish?.call(profileIds, restoreResourceIds.byBackupId, {
+        for (final profile in parsedProfiles) profile.id: 1,
+      });
+      await authorization.validate(registry);
       await ProfileAvatarMutation.runExclusiveMany(
         parsedProfiles.map((profile) => profile.id),
         () async {
@@ -510,6 +536,12 @@ class ProfileRestoreCoordinator {
         // Publication is already authoritative. A retained `published` journal
         // is harmless and bootstrap removes it idempotently.
       }
+      LocalValidationDiagnostics.event('graph_restore_finished', {
+        'profiles': parsedProfiles.length,
+        'resources': stagedResources.length,
+        'grants': grantCount,
+        'bindings': bindingCount,
+      });
       return ProfileGraphRestoreReport(
         profilesImported: parsedProfiles.length,
         resourcesImported: stagedResources.length,
@@ -518,6 +550,9 @@ class ProfileRestoreCoordinator {
         pinResetsRequired: pinResetsRequired,
         importedProfileIds: List<String>.unmodifiable(
           parsedProfiles.map((profile) => profile.id),
+        ),
+        importedResourceIdsByBackupId: Map<String, String>.unmodifiable(
+          restoreResourceIds.byBackupId,
         ),
       );
     } catch (_) {
@@ -567,13 +602,28 @@ class ProfileRestoreCoordinator {
   ///
   /// [completeOnboarding] is reserved for the first-run restore entry point;
   /// it makes setup completion part of the generation publication transaction.
+  /// [databaseFileResolver] is the local archive's additive staging hook: it
+  /// maps file-backed database attachment references to already-extracted,
+  /// verified files. Base64 packages ignore it. Authorization, ID remapping,
+  /// rollback, and publication are unchanged either way.
   Future<ProfileRestoreReport> restore({
     required PortableProfilePackage package,
     required String destinationProfileId,
     required ProfileAuthorizationContext authorization,
     bool replacePreferences = false,
     bool completeOnboarding = false,
+    ProfileDatabaseFileResolver? databaseFileResolver,
+    Future<void> Function(
+      Map<String, String>,
+      Map<String, String>,
+      Map<String, int>,
+    )?
+    beforePublish,
   }) async {
+    LocalValidationDiagnostics.event('profile_restore_started', {
+      'profiles': package.profiles.length,
+      'resources': package.resources.length,
+    });
     final actor = await authorization.validate(registry);
     if (actor.id != destinationProfileId) {
       throw StateError('Restore destination must match local authorization');
@@ -650,6 +700,7 @@ class ProfileRestoreCoordinator {
         package,
         profileRecord,
         stagingScope,
+        fileResolver: databaseFileResolver,
       );
       if (databasesRestored > 0) {
         await ProfileDatabaseSnapshot.remapResourceReferences(
@@ -827,6 +878,11 @@ class ProfileRestoreCoordinator {
         );
       }
 
+      await beforePublish?.call(
+        {profileRecord['backupId'] as String: destinationProfileId},
+        restoreResourceIds.byBackupId,
+        {destinationProfileId: staged.generation},
+      );
       // Revalidate the captured role/policy/revision immediately before the
       // one visible-state transaction. The shared avatar queue stays held from
       // live-file installation through registry publication and pruning.
@@ -849,6 +905,10 @@ class ProfileRestoreCoordinator {
           try {
             publishedProfile = await registry.publishDataGeneration(
               profileId: destinationProfileId,
+              onAuthorityCommitted: () {
+                published = true;
+                if (restoringActive) ProfileRuntime.publish(candidate!);
+              },
               baseGeneration: staged.baseGeneration,
               stagedGeneration: staged.generation,
               operationId: operationId,
@@ -933,15 +993,15 @@ class ProfileRestoreCoordinator {
         }
       });
       if (restoringActive) {
-        ProfileRuntime.publish(candidate!);
         // Global caches/controllers may only warm after registry and runtime
         // publish the candidate. A post-commit failure rolls forward below.
+        final activeCandidate = candidate!;
         for (final participant in lifecycleParticipants) {
-          await participant.initializeCandidate(candidate);
+          await participant.initializeCandidate(activeCandidate);
         }
-        await NativeProfileProjection.publish(candidate);
+        await NativeProfileProjection.publish(activeCandidate);
         for (final participant in lifecycleParticipants) {
-          await participant.didActivate(candidate);
+          await participant.didActivate(activeCandidate);
         }
       }
 
@@ -1003,6 +1063,11 @@ class ProfileRestoreCoordinator {
           if (expected > 0) omissions['searchEngines'] = expected;
         }
       }
+      LocalValidationDiagnostics.event('profile_restore_finished', {
+        'preferences': values.length,
+        'resources': imported,
+        'omissions': omissions.length,
+      });
       return ProfileRestoreReport(
         destinationProfileId: destinationProfileId,
         publishedGeneration: publishedProfile.visibleDataGeneration,
@@ -1112,8 +1177,9 @@ class ProfileRestoreCoordinator {
   static Future<int> _restoreDatabaseSection(
     PortableProfilePackage package,
     Map<String, dynamic> profileRecord,
-    ProfileScope destination,
-  ) async {
+    ProfileScope destination, {
+    ProfileDatabaseFileResolver? fileResolver,
+  }) async {
     final sectionId = profileRecord['databasesSection'];
     if (sectionId == null) return 0;
     if (sectionId is! String) {
@@ -1126,6 +1192,7 @@ class ProfileRestoreCoordinator {
     return ProfileDatabaseSnapshot.restore(
       destination,
       Map<Object?, Object?>.from(section['values'] as Map),
+      fileResolver: fileResolver,
     );
   }
 
@@ -1676,6 +1743,7 @@ class _ImportedProfile {
   final bool wasPinProtected;
   final bool lockOnResume;
   final int? inactivityTimeoutMinutes;
+  final int? createdAtMs;
   final Map<String, Object?> preferences;
 
   const _ImportedProfile({
@@ -1689,6 +1757,7 @@ class _ImportedProfile {
     required this.wasPinProtected,
     required this.lockOnResume,
     required this.inactivityTimeoutMinutes,
+    this.createdAtMs,
     required this.preferences,
   });
 }

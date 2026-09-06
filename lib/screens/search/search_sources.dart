@@ -991,7 +991,6 @@ class _SourcesScreenState extends State<_SourcesScreen> {
                               _hasRetryableAddon))
                         _redesignToolbar(scheme),
                       if (_searching) _searchingStrip(),
-                      if (_bound.isNotEmpty) _pinnedBanner(),
                       Expanded(
                         child: Stack(
                           children: [
@@ -2127,74 +2126,6 @@ class _SourcesScreenState extends State<_SourcesScreen> {
             borderSide: BorderSide.none,
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _pinnedBanner() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.link_rounded,
-                color: Color(0xFFF59E0B),
-                size: 16,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                _bound.length == 1 ? 'Pinned source' : 'Pinned sources',
-                style: const TextStyle(
-                  color: Color(0xFFF59E0B),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ..._bound.map(
-            (s) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      s.torrentName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12.5),
-                    ),
-                  ),
-                  InkWell(
-                    onTap: () => unawaited(_unpin(s)),
-                    borderRadius: BorderRadius.circular(8),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Icon(
-                        Icons.close_rounded,
-                        color: Colors.white70,
-                        size: 18,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

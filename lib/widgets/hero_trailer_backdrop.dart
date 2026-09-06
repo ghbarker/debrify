@@ -754,19 +754,10 @@ class HeroTrailerBackdropState extends State<HeroTrailerBackdrop>
 
   // ── Single-decoder discipline ──────────────────────────────────────────────
 
-  /// On Android TV the trailer decodes through native ExoPlayer, which holds a
-  /// hardware H.264 codec even while merely paused. Real playback launches a
-  /// *separate* ExoPlayer (the fullscreen torrent activity), and weak TV SoCs
-  /// have a tiny decoder pool — a paused trailer can starve it and black-screen
-  /// the real video. So when the trailer is hidden (a route covers us, or the
-  /// app backgrounds as the native player takes over), fully release it and
-  /// re-create on return. Off-TV (media_kit) keeps the cheaper pause/resume.
-  /// tvOS releases too, for a different reason: a paused media_kit engine keeps
-  /// its `VideoOutput`, and this process may only ever hold one — a second is a
-  /// SIGABRT, not a degraded picture. So a covered trailer must let go, or the
-  /// page that covered it can never start one (and the content player would
-  /// abort). Pausing is only safe where the output is cheap to hold: phones and
-  /// desktop, which never have two of these surfaces at once.
+  /// Release the decoder when the app backgrounds on TV: Android TV needs
+  /// its limited hardware codecs for native playback, and tvOS needs its
+  /// single video output free. Other platforms pause on app backgrounding.
+  /// Route coverage releases the engine on every platform independently.
   bool get _releaseDecoderWhenHidden =>
       !kIsWeb &&
       ((Platform.isAndroid && PlatformUtil.isAndroidTvCached) ||
@@ -775,11 +766,9 @@ class HeroTrailerBackdropState extends State<HeroTrailerBackdrop>
   @override
   void didPushNext() {
     _covered = true;
-    if (_releaseDecoderWhenHidden) {
-      _teardownPlayer();
-    } else {
-      _engine?.pause();
-    }
+    // Every media_kit trailer owns the process-wide output lease, including
+    // desktop. Pausing would strand the covering page's trailer behind it.
+    _teardownPlayer();
   }
 
   @override

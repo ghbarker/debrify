@@ -99,7 +99,15 @@ jobs:
         EOF
 
     - name: Build APK
-      run: flutter build apk --release
+      env:
+        ORG_GRADLE_PROJECT_debrifyLocalDiagnostics: "false"
+      run: flutter build apk --release --dart-define=DEBRIFY_LOCAL_VALIDATION=false
+
+    - name: Reject debuggable release APK
+      shell: bash
+      run: |
+        debuggable=$("$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest debuggable build/app/outputs/flutter-apk/app-release.apk)
+        test "$debuggable" = "false"
 
     - name: Verify packaged Android subtitle decoders
       run: dev/scripts/verify_android_subtitle_decoders.sh build/app/outputs/flutter-apk/app-release.apk
@@ -157,7 +165,7 @@ jobs:
       run: dev/scripts/build_macos_media_kit_frameworks.sh packages/media_kit_libs_macos_video_patched/macos/Frameworks
 
     - name: Build macOS app
-      run: flutter build macos --release
+      run: flutter build macos --release --dart-define=DEBRIFY_LOCAL_VALIDATION=false
 
     - name: Verify packaged subtitle decoders
       run: dev/scripts/verify_macos_subtitle_decoders.sh build/macos/Build/Products/Release/debrify.app/Contents/Frameworks
@@ -235,7 +243,7 @@ jobs:
       run: flutter pub get
 
     - name: Build Windows app
-      run: flutter build windows --release
+      run: flutter build windows --release --dart-define=DEBRIFY_LOCAL_VALIDATION=false
 
     - name: Install Inno Setup
       run: choco install innosetup --no-progress --yes
@@ -278,7 +286,7 @@ jobs:
       run: flutter pub get
 
     - name: Build iOS (unsigned)
-      run: flutter build ios --release --no-codesign
+      run: flutter build ios --release --dart-define=DEBRIFY_LOCAL_VALIDATION=false --no-codesign
 
     # --no-codesign emits Mach-Os with no LC_CODE_SIGNATURE, so __LINKEDIT has no
     # room reserved for a signature. Sideloaders (AltStore/ldid, Sideloadly) abort
@@ -551,7 +559,7 @@ jobs:
       # media_kit_video uses pkg-config at CMake time. Point it at the same
       # private mpv SDK that will be installed into the AppImage so the plugin
       # records DT_NEEDED=libmpv.so.2 instead of Ubuntu 22.04's libmpv.so.1.
-      run: PKG_CONFIG_PATH="$PWD/build/private-libmpv/pkgconfig" flutter build linux --release
+      run: PKG_CONFIG_PATH="$PWD/build/private-libmpv/pkgconfig" flutter build linux --release --dart-define=DEBRIFY_LOCAL_VALIDATION=false
 
     # media_kit ships no Linux libmpv. Install our statically consolidated mpv
     # in a plugin-private directory; never expose it through LD_LIBRARY_PATH.
@@ -671,7 +679,7 @@ jobs:
       run: flutter pub get
 
     - name: Build Linux app
-      run: PKG_CONFIG_PATH="$PWD/build/private-libmpv/pkgconfig" flutter build linux --release
+      run: PKG_CONFIG_PATH="$PWD/build/private-libmpv/pkgconfig" flutter build linux --release --dart-define=DEBRIFY_LOCAL_VALIDATION=false
 
     # See the x64 job — same reason, same script, arm64 bundle path.
     - name: Install private libmpv into the app bundle
