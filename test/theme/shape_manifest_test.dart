@@ -54,6 +54,7 @@ const Map<String, int> kShapeResidue = {
   'lib/screens/premiumize/premiumize_files_screen.dart': 6,
   'lib/screens/search/keyword_search_screen.dart': 1,
   'lib/screens/search/search_card_widgets.dart': 0,
+  'lib/screens/search/favourite_art_cell.dart': 0,
   'lib/screens/search/board_cell.dart': 0,
   'lib/screens/search/search_hero_widgets.dart': 1,
   'lib/screens/search/trailer_status_chips.dart': 1,
@@ -158,6 +159,33 @@ void main() {
     }
     expect(unswept, isEmpty,
         reason: 'listed as swept but contains no shape-token call: \$unswept');
+  });
+
+  test('moved favourite shape call removal is still detected', () {
+    const path = 'lib/screens/search/favourite_art_cell.dart';
+    final source = File(path).readAsStringSync();
+    expect('app.shape.br(6)'.allMatches(source), hasLength(1));
+    final removed = source.replaceFirst('app.shape.br(6)', '');
+    final calls = RegExp(r'app\.shape\.br');
+    var originalTotal = 0;
+    var removedTotal = 0;
+    for (final entry in kShapeResidue.keys) {
+      final original = File(entry).readAsStringSync();
+      originalTotal += calls.allMatches(original).length;
+      removedTotal += calls.allMatches(entry == path ? removed : original).length;
+    }
+    expect(originalTotal, greaterThanOrEqualTo(490));
+    expect(greaterThanOrEqualTo(490).matches(removedTotal, {}), isFalse);
+  });
+
+  test('new bare radius in favourite artwork is still detected', () {
+    const path = 'lib/screens/search/favourite_art_cell.dart';
+    final source = File(path).readAsStringSync();
+    expect(kShapeResidue[path], 0);
+    expect(_radius.allMatches(source).length, lessThanOrEqualTo(kShapeResidue[path]!));
+    final injected = '$source\nBorderRadius.circular(6)';
+    expect(lessThanOrEqualTo(kShapeResidue[path]!).matches(
+        _radius.allMatches(injected).length, {}), isFalse);
   });
 
   test('the sweep is still substantial', () {
