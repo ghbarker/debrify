@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main 9ae5395a
+## Current roadmap — September 6, main 2f995724
 
 ### God-file line counts — original → current merged main
 
-- **Search:** 19,070 → **6,291** (12,779 fewer)
-- **Player:** 16,278 → **11,534** (4,744 fewer)
-- **Magic TV:** 10,716 → **3,321** (7,395 fewer)
-- **Storage:** 9,963 → **1,996** (7,967 fewer)
-- **Settings:** 7,905 → **2,903** (5,002 fewer)
+- **Search:** 19,070 → **6,292** (12,778 fewer)
+- **Player:** 16,278 → **11,535** (4,743 fewer)
+- **Magic TV:** 10,716 → **3,322** (7,394 fewer)
+- **Storage:** 9,963 → **1,927** (8,036 fewer)
+- **Settings:** 7,905 → **2,904** (5,001 fewer)
 
-Counted from actual merged main 9ae5395a. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
+Counted from actual merged main 2f995724. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
 
 ### The same six outcomes — stable roadmap
 
@@ -50,23 +50,25 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 ### Current work — latest verified checkpoint
 
-- **Locke / Storage:** QuickPlay caller cleanup in progress after 277-test green origin checkpoint; exact20-file scope,18 facades to retire, forecast host-42/whole-37. Owners/registry/native exceptions remain unchanged.
-- **Cicero / Review:** full896a168d gate PASSED; ready for independent QuickPlay production review. No open failed gate or unreviewed merge.
-- **Ampere / Search and upstream:** merged Search host6291, six stages complete; Atrium FINAL HOLD and stage target638-line shortfall remain. Local upstream catalog trial56ad passed independent24 tests; unpublished, no fork completion credit.
-- **Wegener / Player:** speed/aspect201 and transport205 merged. Seek/input lifetime retained after bounded design review; renderer/tracker/Atrium-related retries remain held. Provider guide192 reviewed and merged.
-- **Parent:** maintain exact merge/gate accounting and retained-boundary decisions. CODEMAP lock released. No user/manual-smoke blocker.
-
+- **Locke / Storage:** #210 merged; integrate independently accepted Home #211 onto main, then Tracking #212. Tracking author and independent 180 tests passed; fresh integration and CI remain.
+- **Cicero / Review:** full 9ae5395a gate passed with native retry note; #211 and #212 production reviews accepted. Review integration deltas without repeating unchanged suites.
+- **Ampere / Search and upstream:** local upstream catalog trial independently accepted, unpublished. Search final composition and Atrium remain open; no new implementation assignment claimed.
+- **Wegener / Player:** presentation #201 and transport #205 merged; remaining decoder/state/UI work open, bounded unsuccessful experiments retained as debt.
+- **Parent:** #210 merged at 2f995724. One production merge since completed 9ae gate; next integrated gate after three. No user/manual-smoke blocker.
 ### Next steps — working checklist
 
 - [x] Merge #199/#204/#206 and pass their full integrated gate896a168d.
 - [x] Merge Search favourite cells203 and corrected provider guide192.
-- [ ] Finish QuickPlay18-facade caller cleanup, independent review and exact CI.
+- [x] Merge QuickPlay #207, Social #208, Stremio #209 and Debrify TV #210 caller cleanup with independent review and exact CI.
 - [ ] Reconcile remaining Q2 expiry and native ownership obligations without treating retained code as deleted.
 - [ ] Resolve Search Atrium/final composition and player remaining architectural outcomes under a separately justified scope; no blind retries or wrapper padding.
 - [ ] Decide whether to publish the independently reviewed local upstream catalog candidate; nothing submitted upstream.
 - [ ] Run final integrated acceptance only after the remaining architectural outcomes are fulfilled.
 
 ### Latest completed milestones
+
+- #210 merged **2f995724**, exact ab2977f6, independent208PASS and all three CI checks green. Thirty-two Debrify TV forwarders removed; host-69/whole-production-66. Did we make a difference? Existing domain ownership now reaches callers directly. More remains: Home #211 and Tracking #212 are independently accepted but unmerged, native-sensitive obligations stay open.
+- **Full 9ae5395a gate PASS WITH NOTE:** 6093PASS/12 exact known/2skip; goldens21 known, no unexpected or unused allowances; analyzer431/449, Python55, layering77. Windows and ARM64 builds passed. Original native attempt exited79 with incomplete test; one isolated origin retry passed, current build passed first try. Cause remains unknown. AST forwarders Storage361/Search133/Player161/Magic23/Settings0 at this gate, before #210. ZIP a9b7fe39ddaac7e17d55c3bb40b78d8c1979fc9f45948392462389f29b64b0a1; APK 0c7c4bd9024be5688db12c6a2b1285767f9ab5eca1b5174aad83317433713eee. No fresh device proof.
 
 - #209 merged **9ae5395a**, exactdeb1, independent108PASS/final16payloadunion/allCIgreen. StremioTV32facades retired;host-70/whole-68/sixlivehostedgesremoved;fourhistoricalcommentrefs notlivecredit. Did we make a difference? Directprefsownership reducescoupling withoutauth/playbackchanges; strict/nativeobligations stayopen. Third207/208/209 triggersfull9aegate. #210independent208PASSnowintegratesmain; #211independent221PASSdepends210. Trackingcandidateheldforhome_tick_sources oldrestoregap, no newproduct.
 
