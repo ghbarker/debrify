@@ -1,3 +1,4 @@
+import '../services/playback/decoder_diagnostics.dart';
 import 'video_player/services/player_terminal_backend.dart';
 import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
@@ -980,10 +981,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   /// opened for this item. Generations are advanced by every app-owned open,
   /// while property observers catch a decoder/output transition mid-stream.
   int _decoderProbeGeneration = 0;
-  int _decoderProbeToken = 0;
-  mk.VideoParams? _decoderProbeParams;
-  Timer? _decoderProbeTimer;
-  String? _lastDecoderDiagnosticSignature;
+  late final DecoderDiagnostics _decoderDiagnostics;
 
   // Buffering indicator
   final ValueNotifier<bool> _showBufferingIndicator = ValueNotifier(false);
@@ -1124,6 +1122,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   @override
   void initState() {
     super.initState();
+    _decoderDiagnostics = DecoderDiagnostics(
+      readPlatform: () => _player.platform,
+      isMounted: () => mounted,
+      generation: () => _decoderProbeGeneration,
+      rendererMode: () => _androidVideoRendererMode,
+      remedy: () => _tvosDecodeRemedy,
+      emit: _releasePlayerDiagnostic,
+    );
     AnalyticsService.screenView('video_player');
     _startAnalyticsHeartbeat();
     _activePlaylist = config.playlist;
@@ -2213,7 +2219,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       // reported around — re-arm it so the diagnostic line carries the
       // remedy journey.
       onStateChanged: () {
-        if (mounted) _scheduleDecoderProbe();
+        if (mounted) _decoderDiagnostics.schedule();
       },
     );
   }
@@ -2862,16 +2868,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       // Player.open() normally resets VideoParams before loading the next item.
       // Treat it as an extra invalidation signal, but do not require it: the
       // app-owned generation started in _openMedia is the session boundary.
-      _decoderProbeToken++;
-      _decoderProbeTimer?.cancel();
-      _decoderProbeTimer = null;
-      _decoderProbeParams = null;
+      _decoderDiagnostics.invalidateParams();
       _rendererStartupGuardToken++;
       _rendererStartupValidationGeneration = -1;
       return;
     }
-    _decoderProbeParams = params;
-    _scheduleDecoderProbe();
+    _decoderDiagnostics.updateParams(params);
     _scheduleRendererStartupValidation();
     final remedy = _tvosDecodeRemedy;
     if (remedy != null) {
@@ -2907,7 +2909,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     try {
       await platform.observeProperty('hwdec-current', (value) async {
         if (mounted && instanceGeneration == _playerInstanceGeneration) {
-          _scheduleDecoderProbe();
+          _decoderDiagnostics.schedule();
         }
       });
     } catch (_) {
@@ -2916,7 +2918,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     try {
       await platform.observeProperty('current-vo', (value) async {
         if (mounted && instanceGeneration == _playerInstanceGeneration) {
-          _scheduleDecoderProbe();
+          _decoderDiagnostics.schedule();
         }
       });
     } catch (_) {
@@ -3153,204 +3155,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     }
   }
 
-  void _scheduleDecoderProbe() {
-    final params = _decoderProbeParams;
-    if (params == null) return;
-    _decoderProbeTimer?.cancel();
-    final generation = _decoderProbeGeneration;
-    final token = ++_decoderProbeToken;
-    _decoderProbeTimer = Timer(const Duration(milliseconds: 150), () {
-      unawaited(
-        _reportActiveVideoDecoder(
-          params: params,
-          generation: generation,
-          token: token,
-        ),
-      );
-    });
-  }
-
-  Future<void> _reportActiveVideoDecoder({
-    required mk.VideoParams params,
-    required int generation,
-    required int token,
-  }) async {
-    final platform = _player.platform;
-    if (platform is! mk.NativePlayer) {
-      _emitDecoderDiagnosticOnce(
-        generation: generation,
-        signature: 'web',
-        fields:
-            'phase=stable status=unavailable platform=web backend=web '
-            'reason=no_native_decoder',
-      );
-      return;
-    }
-
-    var decoder = '';
-    var codec = '';
-    var output = '';
-    var previousDecoder = '';
-    var previousOutput = '';
-    var stable = false;
-    // Audio, read on the DEVICE side (AUDIO_FIDELITY_PLAN.md): what the AO
-    // actually writes, not what the decoder produced — the gap between the
-    // two is the downgrade being diagnosed.
-    var aoName = '';
-    var audioChannels = '';
-    var previousAo = '';
-    var previousAudioChannels = '';
-    var audioCodec = '';
-    var decodedChannels = '';
-    var audioFormat = '';
-
-    try {
-      // VideoParams means a decoder has produced metadata, not necessarily
-      // that the output surface has finished attaching. Require two matching
-      // reads so an early `current-vo=null` is never presented as the verdict.
-      // Audio joins the match condition but not the readiness one: a
-      // video-only file has no AO to wait for, and empty-matches-empty.
-      for (var attempt = 0; attempt < 12; attempt++) {
-        if (!mounted ||
-            generation != _decoderProbeGeneration ||
-            token != _decoderProbeToken) {
-          return;
-        }
-        decoder = await platform.getProperty('hwdec-current');
-        output = await platform.getProperty('current-vo');
-        aoName = await platform.getProperty('current-ao');
-        audioChannels = await platform.getProperty(
-          'audio-out-params/channel-count',
-        );
-        final outputReady = output.isNotEmpty && output != 'null';
-        final decoderReady = decoder.isNotEmpty;
-        if (decoderReady &&
-            outputReady &&
-            decoder == previousDecoder &&
-            output == previousOutput &&
-            aoName == previousAo &&
-            audioChannels == previousAudioChannels) {
-          stable = true;
-          break;
-        }
-        previousDecoder = decoder;
-        previousOutput = output;
-        previousAo = aoName;
-        previousAudioChannels = audioChannels;
-        await Future<void>.delayed(const Duration(milliseconds: 250));
-      }
-      if (!mounted ||
-          generation != _decoderProbeGeneration ||
-          token != _decoderProbeToken) {
-        return;
-      }
-      codec = await platform.getProperty('video-codec');
-      audioCodec = await platform.getProperty('audio-codec-name');
-      decodedChannels = await platform.getProperty(
-        'audio-params/channel-count',
-      );
-      audioFormat = await platform.getProperty('audio-out-params/format');
-    } catch (_) {
-      if (!mounted || generation != _decoderProbeGeneration) return;
-      _emitDecoderDiagnosticOnce(
-        generation: generation,
-        signature: 'error',
-        fields:
-            'phase=error status=unavailable '
-            'platform=${Platform.operatingSystem} reason=property_query_failed',
-      );
-      return;
-    }
-
-    final width = params.dw ?? params.w ?? 0;
-    final height = params.dh ?? params.h ?? 0;
-    final status = decoder == 'no'
-        ? 'software'
-        : decoder.isEmpty
-        ? 'unavailable'
-        : 'hardware';
-    final normalizedOutput = output.isEmpty || output == 'null'
-        ? 'unknown'
-        : output;
-    final requestedRenderer = Platform.isAndroid
-        ? _androidVideoRendererMode.storageKey
-        : 'platform_default';
-    // The remedy journey (tvOS): what the decoder produced originally, what
-    // it produces now, and where the ladder settled. In the signature too —
-    // a settle re-arms this probe, and dedupe on the old signature would
-    // swallow exactly the report that proves the remedy ran.
-    final remedy = _tvosDecodeRemedy;
-    final remedyState = switch (remedy?.state) {
-      null || TvosRemedyState.none => 'none',
-      TvosRemedyState.nv12 => 'nv12',
-      TvosRemedyState.software => 'software',
-      TvosRemedyState.gaveUp => 'gave_up',
-    };
-    // confirmed/failed mean the remedy's own settling poll verified the
-    // format by DIRECT read — the stream-captured params above can lag
-    // behind a settle (no final event is guaranteed after reconfig).
-    final remedyOutcome = remedy == null
-        ? 'none'
-        : remedy.applying
-        ? 'pending'
-        : switch (remedy.state) {
-            TvosRemedyState.none => 'none',
-            TvosRemedyState.nv12 || TvosRemedyState.software => 'confirmed',
-            TvosRemedyState.gaveUp => 'failed',
-          };
-    final remedyFields = remedy == null
-        ? ''
-        : 'pixelformat=${params.pixelformat ?? 'unknown'} '
-              'hw_pixelformat=${params.hwPixelformat ?? 'none'} '
-              'detected_hw_pixelformat=${remedy.detectedHwPixelformat ?? 'none'} '
-              'verified_hw_pixelformat=${remedy.verifiedHwPixelformat ?? 'none'} '
-              'gamma=${params.gamma ?? 'unknown'} '
-              'primaries=${params.primaries ?? 'unknown'} '
-              'remedy=$remedyState remedy_outcome=$remedyOutcome ';
-    final signature =
-        '$decoder|$normalizedOutput|$codec|${width}x$height|'
-        '$remedyState|$remedyOutcome';
-    _emitDecoderDiagnosticOnce(
-      generation: generation,
-      signature: signature,
-      fields:
-          'phase=${stable ? 'stable' : 'partial'} status=$status '
-          'platform=${Platform.operatingSystem} backend=libmpv '
-          'codec=${codec.isEmpty ? 'unknown' : codec} '
-          'decoder=${decoder.isEmpty ? 'unknown' : decoder} '
-          'output=$normalizedOutput '
-          '$remedyFields'
-          'audio_codec=${audioCodec.isEmpty ? 'none' : audioCodec} '
-          'decoded_channels=${decodedChannels.isEmpty ? 'none' : decodedChannels} '
-          'audio_channels=${audioChannels.isEmpty ? 'none' : audioChannels} '
-          'audio_format=${audioFormat.isEmpty ? 'none' : audioFormat} '
-          'ao=${aoName.isEmpty ? 'none' : aoName} '
-          'requested_renderer=$requestedRenderer '
-          'resolution=${width}x$height',
-    );
-  }
-
-  void _emitDecoderDiagnosticOnce({
-    required int generation,
-    required String signature,
-    required String fields,
-  }) {
-    if (generation != _decoderProbeGeneration) return;
-    final taggedSignature = '$generation|$signature';
-    if (_lastDecoderDiagnosticSignature == taggedSignature) return;
-    _lastDecoderDiagnosticSignature = taggedSignature;
-    _releasePlayerDiagnostic('generation=$generation $fields');
-  }
-
   void _beginMediaGeneration() {
     _decoderProbeGeneration++;
-    _decoderProbeToken++;
+    _decoderDiagnostics.invalidateToken();
     _rendererStartupGuardToken++;
     _rendererStartupValidationGeneration = -1;
-    _decoderProbeTimer?.cancel();
-    _decoderProbeTimer = null;
-    _decoderProbeParams = null;
-    _lastDecoderDiagnosticSignature = null;
+    _decoderDiagnostics.clearForMedia();
     _playbackUiClock.beginMedia();
     _activeSkipSegmentUi.clear();
   }
@@ -8301,11 +8111,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     _subtitleDiagnosticGeneration++;
     _activeSubtitleApplyAttempt = null;
     _decoderProbeGeneration++;
-    _decoderProbeToken++;
+    _decoderDiagnostics.invalidateToken();
     _rendererStartupGuardToken++;
     _playerInstanceGeneration++;
-    _decoderProbeTimer?.cancel();
-    _decoderProbeTimer = null;
+    _decoderDiagnostics.cancelTimer();
     _posSub?.cancel();
     _durSub?.cancel();
     _playbackUiClock.dispose();
