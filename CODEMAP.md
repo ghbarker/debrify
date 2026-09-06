@@ -37,8 +37,8 @@ Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.
 `search_screen_shells.dart` (tab/variant/landing/dropdown contracts),
 `keyword_search_controller.dart` + `keyword_search_screen.dart` (in-tab keyword
 torrent search; G1'-3).
-TV Home stages (two remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
-— `_CanvasBoardStage`, `_AtriumBoardStage`.
+TV Home stages (one remaining part of `search_screen.dart`): `lib/screens/search/stages/`
+— `_AtriumBoardStage`. Canvas uses public `CanvasStage` in `canvas_board_stage.dart`.
 Promenade uses public `PromenadeStage` in `promenade_board_stage.dart`.
 Mosaic uses public `MosaicStage` in `mosaic_board_stage.dart`.
 Deck uses public `DeckStage` in `deck_board_stage.dart` and shared `search/stage_visuals.dart`. Tonight uses public `TonightStage`, `TonightStageContent` in
@@ -198,7 +198,7 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   action `use_build_context_synchronously` covers only the lazy context read after delegated actual
   State.mounted, with no intervening await (remove with reviewed paired guard/context ownership cleanup).
   No baseline allowance increase, pure-logic/performance savings or automatic gate closure claimed.
-  TV Home stage layouts are `lib/screens/search/stages/` (`_CanvasBoardStage` and friends);
+  TV Home stage layouts are `lib/screens/search/stages/` (public stage widgets plus the remaining `_AtriumBoardStage` part);
   the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
   G1'-8 Spotlight (product f9059ae4): `SpotlightStage` is a real imported widget;
   `SpotlightStageContent` owns catalog/collection, CW and favourite shelf/card assembly.
@@ -241,7 +241,7 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   (existing callers retain null keys). This is not native/cache-algorithm coverage.
   `DeckStageBindings` retains 22 live/reference members, including two lazy native
   constructor closures on the host; these and the label boundaries above expire
-  for removal/review at final composition / phase completion. Two stage parts and
+  for removal/review at final composition / phase completion. One stage part and
   the aggregate stage target remain open; prior shared-shelf accounting is separate.
   Actual `MosaicStage` owns its complete layout and exclusive header geometry;
   its State extension/part is removed using the existing public visual core.
@@ -255,8 +255,16 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   **+49**, not deletion credit. Twenty live/reference bindings retain two lazy
   native constructors and one existing shared-scrim constructor, for removal/review
   at final composition / phase completion. Cell/label policy and shared visual/native
-  implementations stay with their current owners; Canvas/Atrium and the host target
+  implementations stay with their current owners; Atrium and the host target
   remain open.
+  Actual `CanvasStage` owns its complete layout and inline cell policy, removing
+  its State extension/part. Host 6506 -> 6539 (**+33**); whole production **+52**,
+  not deletion credit. Nineteen top-level bindings plus nine reused shelf-policy
+  operations and the existing board/map remain explicit dependencies, for removal/
+  review at final composition / phase completion. No `shelf.cell()` call or extra
+  focused-column write is introduced. The shelf already initializes in `initState`;
+  there is no earlier-allocation delta. Two native constructors and one shared-scrim
+  boundary retain their owners; only the held Atrium part and host target remain.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
