@@ -146,7 +146,18 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   Favourites state, loaders and action flows live in
   `lib/screens/search/fav_rows_controller.dart` (`FavRowsController`,
   `FavouritesIptvListRow`); classic rows render through
-  `lib/screens/search/fav_row.dart` (`FavRow`). These retain screen/UI dependencies.
+  `lib/screens/search/fav_row.dart` (`FavRow`). Shared `FavArtCell` / `ArtPoster`
+  and their single caption-metrics owner live in `search/favourite_art_cell.dart`;
+  classic rows import these directly, and the host re-exports the same public types.
+  `search/stages/stage_favourite_cells.dart` (`StageFavouriteCells`) owns the shared
+  235-line stage builder, used by six existing stage call/tearoff sites without a
+  host builder forwarder. Four live capabilities retain lazy controller/title reads,
+  rail switching and host focus publication for review at final composition / phase
+  completion. The plain holder allocates when Tonight first captures its build
+  tearoff; no controller read or callback is invoked by construction. Host 6539 ->
+  6291 (**-248**); whole production **+45**, relocation/ownership rather than algorithm
+  deletion or Search closure. Borrowed focus, host preview/lifetime and controller
+  ownership remain; live IPTV focus/native transition is unproven. These retain UI dependencies.
   Session wires live actual-State context/update and shared runtime cross-row callbacks;
   compositions dispose favourites nodes in the existing order. The full Fav adapter is retained,
   including hidden Discover watchlist effects; private-node/independent-await proof remains absent.
@@ -284,17 +295,21 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   **S2-4:** sync style caches (looks, docks, chrome, launch ident, Discover
   layout, TV UI scale / hero artwork) live in
   `lib/services/storage/app_style_prefs.dart` (`AppStylePrefs`).
+  It also owns the three profile scalar pairs for series density, merged-detail
+  routing preference and Addons hub; their six public host facades remain.
   **S2-5:** tracking source policy, catalog-sync switches, and Trakt / Simkl /
   MDBList credentials live in `lib/services/storage/tracking_prefs.dart`
   (`TrackingPrefs`, owns `trackingSourceRevision`). `home_tick_sources` stays
   on HomePrefs; TrackingPrefs bumps the revision after that write.
   **Ambient trailer policy:** `lib/services/storage/ambient_trailer_prefs.dart`
-  owns two detail audio/volume keys and five preference bodies; HomePrefs keeps
+  owns detail audio/volume plus the autoplay scalar pair (three keys); HomePrefs keeps
   the two home keys. StorageService re-exports the same AmbientTrailerSurface
   enum for public type compatibility; Q2 retired four facades and routes
   consumers directly to AmbientTrailerPrefs. Retirement removes15 host lines
   (14 declarations + import), whole production -10; prior owner move -69 host
   included docs/separators and added32 whole. Strict ownership remains OPEN.
+  The two new autoplay host facades remain; defaults migration retains its
+  ordered direct autoplay write. No runtime trailer authority or cache moves.
   **TV keyboard policy:** AppStylePrefs owns the profile bool/generation pair,
   two migration/access bodies and one synchronous keyboard cache. StorageService
   retains two nonasync APIs and sync cache accessors; its original first reset
@@ -494,6 +509,14 @@ is an editor mirror, not the source of truth. How to add a provider:
   Preserve earlier inert speed-HUD allocation, its original disposal slot, and
   original aspect-HUD nondisposal / overlapping 1500ms mounted callbacks.
   Host -124 lines / whole production +57; no native or full V1-7 closure claim.
+  Transport visibility and menu-focus transitions:
+  `lib/screens/video_player/player_transport_visibility.dart`
+  (`PlayerTransportVisibility`) owns the auto-hide timer, blocked-interval latch
+  and menu-visible state. Four lazy capabilities retain live host guards/commit;
+  visibility notifier and three focus resources are borrowed, with construction,
+  listeners and ordered disposal retained in host. Clock/banner/recording effects,
+  route/scrub guards and overlay priority remain host; no native or full transport
+  closure claim. Host -80 lines / whole production +53; partial ownership only.
   IPTV recording (libmpv tee, Android engine, desktop capture):
   `lib/services/playback/iptv_recording_controller.dart`
   (`IptvRecordingController` + `IptvRecordingSession`; host keeps
@@ -795,7 +818,7 @@ update this file in the same PR. Line counts come from `wc -l`, not estimates._
 - `lib/services/storage/playback_progress_store.dart` owns continue-watching, local completion and playback JSON, tracker snapshot writes, track preferences, playlist metadata (TVMaze mappings, poster overrides and their shared item identity) and `buildPlaylistProgressMap` (title matching and derived progress); Q2 callers now use PlaybackProgressStore directly for progress assembly and all ten metadata APIs. The two obsolete metadata key aliases remain removed. `localCompletionRevision` is one shared notifier; `readPlaybackStateMap` always reads fresh preferences.
 - `PlaybackProgressStore` also owns local completion thresholds, imported-playback rearming, ghost purge and completion migration. Q2 retires the seven repair/threshold method facades; `StorageService` retains the public constant aliases. The three obsolete private repair bridges remain removed. Captured preferences, later reacquisition and failure/notification ordering are preserved, not a profile-safety fix. The remote `movieFinishedRevision`, defaults migration orchestration and `IptvMediaStore` SQLite resume backend retain their existing owners. Key strings remain frozen in `storage_key_ownership.dart`.
 - Origin compatibility: `test/playback_progress_store_origin_compatibility_test.dart`; store/facade identity: `test/playback_progress_store_test.dart`.
-- `lib/services/storage/quick_play_policy_prefs.dart` (`QuickPlayPolicyPrefs`) owns the seven movie/series Quick Play policy keys, legacy decoding/mirrors, sibling snapshot and ordered reset/clear. Thirteen unchanged bodies move; `StorageService` retains twelve nonasync facades (29 lines) until separately scoped Q2 caller retirement. VR, independent auto-pin and timeout settings remain outside. Host 2833 -> 2712 (-121), new owner 188 and registry +2 yield whole production +69; strict facade-only/remaining-owner closure stays open. Actual pre-S2 export/restore and public failure/ordering pins do not claim complete sync or profile safety.
+- `lib/services/storage/quick_play_policy_prefs.dart` (`QuickPlayPolicyPrefs`) owns ten movie/series Quick Play policy keys, including the three later scalar keys, legacy decoding/mirrors, sibling snapshot and ordered reset/clear. The initial thirteen unchanged bodies moved; `StorageService` retains twelve nonasync facades (29 lines) until separately scoped Q2 caller retirement. VR remains with PlayerPrefs. Independent series auto-pin and both search/source timeout scalar pairs now belong here, preserving independence, defaults and unclamped integers. The combined fourteen-body scalar batch across AppStylePrefs, AmbientTrailerPrefs and this owner changes host -30 / whole production +51; fourteen nonasync facades (28 declaration lines) remain until a meaningful Q2 caller-owner batch or phase review. Caches, reset ordering and the host migration write remain unchanged; strict storage closure is not claimed. Host 2833 -> 2712 (-121), new owner 188 and registry +2 yield whole production +69; strict facade-only/remaining-owner closure stays open. Actual pre-S2 export/restore and public failure/ordering pins do not claim complete sync or profile safety.
 - `lib/services/storage/player_prefs.dart` (`PlayerPrefs`) also owns the five scalar Quick Play VR preferences and their ordered clear. Eleven unchanged bodies retain eleven nonasync `StorageService` facades (22 lines), expiring only after separately scoped Q2 caller compatibility retirement. Captured preferences, raw types/defaults and clear failure order remain unchanged. Host 2712 -> 2678 (-34), existing store +74, whole production +40: scalar ownership consolidation, not a new line-goal claim; strict facade closure remains open. Actual pre-S2 export/current restore and public failure/order pins do not prove native VR launch or profile safety.
 - **Q2 caller retirement:** 77 PlaybackProgressStore, 98 ProviderCredentialPrefs and 48 IptvPrefs method facades retire; their callers use the unchanged owners. Retain `getVideoPlaybackState` and every caller for strict identical native-origin/current test bytes. Retain eight Android bridge APIs and every caller: `setIptvChannelFavorited`, `setIptvChannelInList`, `getIptvListsForChannel`, `recordIptvWatch`, `getIptvResumePositions`, `getIptvDecoderMode`, `setIptvSeriesAudioLanguage`, `setIptvLastLiveChannel`. These nine expire only after separately accepted Android-positive/native-origin compatibility proof; bridge wire strings stay frozen. `localCompletionRevision`, startup cache accessors, constants and SQLite facades retain their existing identities. Host 3498 -> 2833 (-662 method lines, -3 unused imports); whole production -592. The 2800 target remains open by33 and strict facade-only ownership remains open; the 97 residual members are not waived.
 

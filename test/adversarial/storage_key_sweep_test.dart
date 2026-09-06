@@ -115,7 +115,7 @@ void main() {
     );
     expect(
       StorageKeyOwnership.byKey['series_browser_dense_view'],
-      StorageKeyStore.storageService,
+      StorageKeyStore.appStylePrefs,
     );
     expect(
       StorageKeyOwnership.byKey['home_tick_sources'],

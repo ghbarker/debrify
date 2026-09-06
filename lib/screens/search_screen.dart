@@ -1,3 +1,5 @@
+import 'search/favourite_art_cell.dart';
+import 'search/stages/stage_favourite_cells.dart';
 import 'search/board_cell.dart';
 import 'search/stage_visuals.dart';
 import 'search/stages/deck_board_stage.dart';
@@ -114,6 +116,7 @@ import 'settings/tv_home_style_page.dart'
     show effectiveOffTvHomeStyle, shouldUseOffTvSpotlightShell;
 
 export 'search/fav_row_ref.dart' show FavKind, FavRowRef;
+export 'search/favourite_art_cell.dart' show ArtPoster, FavArtCell;
 
 part 'search/search_sources.dart';
 part 'search/search_card_widgets.dart';
@@ -259,23 +262,6 @@ bool discoverLandingLoadIsCurrent({
   required int currentRevision,
   required bool hasPendingHandoff,
 }) => !hasPendingHandoff && capturedRevision == currentRevision;
-
-// Metrics for the inline caption under an [ArtPoster] (the favourites rails).
-// Kept as the single source of truth so anything reserving vertical space for
-// the caption (the cell height, the hero's row-reserve budget) can't drift from
-// the widget's own layout.
-const double _kArtTitleGap = 10;
-const double _kArtTitleFontSize = 14;
-const double _kArtTitleHeight = 1.25;
-const int _kArtTitleMaxLines = 2;
-
-/// Height of the caption band under an [ArtPoster]: the gap plus its up-to-two
-/// lines at the current text scale.
-double _artPosterCaptionBand(BuildContext context) =>
-    _kArtTitleGap +
-    MediaQuery.textScalerOf(context).scale(_kArtTitleFontSize) *
-        _kArtTitleHeight *
-        _kArtTitleMaxLines;
 
 // Metrics for the Canvas bottom column (rail tabs + shelf). Same contract as
 // the caption band above: the widgets and the identity block that has to stay
@@ -759,7 +745,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       railBoxHeight: _stageRailBoxH,
       posterWidth: _stagePosterW,
       favouriteWidth: _stageFavW,
-      buildFavCell: _canvasFavCell,
+      buildFavCell: _stageFavouriteCells.build,
       buildRailLabel: _deckRailLabel,
       buildCardLayers: _tonightCardLayers,
       labelGap: _kAtriumLabelGap,
@@ -2072,7 +2058,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       _homeCardOrientation == HomeCardOrientation.landscape;
 
   double get _homeArtPosterCaptionBand =>
-      _hideHomeCardTitlesAndRatings ? 0 : _artPosterCaptionBand(context);
+      _hideHomeCardTitlesAndRatings ? 0 : artPosterCaptionBand(context);
 
   bool get _homeBoardMode =>
       widget.isTelevision && !widget.searchMode;
@@ -2396,246 +2382,12 @@ class _SearchScreenState extends State<SearchScreenHost>
     _canvasFavFocus.value = focus;
   }
 
-  /// One favourites cell on the Canvas shelf — the SAME [FavArtCell] +
-  /// [ArtPoster] stack the classic rows use (identical art, badges, hold
-  /// behaviour and open actions), with UP/DOWN rewired to rail switching and
-  /// focus driving the Canvas stage override (and the full-bleed live
-  /// preview, for IPTV).
-  Widget _canvasFavCell(
-    FavRowRef ref,
-    String railKey,
-    int col, {
-    VoidCallback? onUp,
-    VoidCallback? onDown,
-    VoidCallback? onLeft,
-    VoidCallback? onRight,
-    VoidCallback? onUpHold,
-    VoidCallback? onDownHold,
-  }) {
-    final nodes = _favourites.favNodesFor(ref);
-    // Rail switching is the default vertical grammar; Mosaic (grid) and
-    // Tonight (zones) pass their own.
-    final up = onUp ?? () => _stageSwitchRail(-1);
-    final down = onDown ?? () => _stageSwitchRail(1);
-    // An IPTV custom-list row: same cell stack as the favourites row below,
-    // but channels come from the list, play routes by CONTENT TYPE (a list
-    // can hold VOD), and only a live entry retunes the stage's live preview.
-    if (ref.isIptvList) {
-      final row = _favourites.iptvListRows[ref.list];
-      final channel = row.channels[col];
-      final live = channel.isLive;
-      return FavArtCell(
-        isTelevision: true,
-        column: col,
-        rowNodes: nodes,
-        onUp: up,
-        onDown: down,
-        onLeft: onLeft,
-        onRight: onRight,
-        onUpHold: onUpHold,
-        onDownHold: onDownHold,
-        child: ArtPoster(
-          imageUrl: channel.logoUrl,
-          title: channel.name,
-          showTitle: !_hideHomeCardTitlesAndRatings,
-          imageFit: BoxFit.contain,
-          isTelevision: true,
-          ringColor: Colors.white,
-          focusNode: nodes[col],
-          onOpen: () => _favourites.playIptvListChannel(channel),
-          onFocused: () => _canvasFavFocused(
-            railKey,
-            col,
-            CanvasFavFocus(
-              art: channel.logoUrl,
-              fit: BoxFit.contain,
-              title: channel.name,
-              subtitle: 'IPTV · ${row.title.toUpperCase()}',
-            ),
-            liveChannel: live ? channel : null,
-          ),
-        ),
-      );
-    }
-    switch (ref.kind) {
-      case FavKind.watchlistMovies:
-      case FavKind.watchlistSeries:
-        final items = ref.kind == FavKind.watchlistMovies
-            ? _favourites.watchlistMovieItems
-            : _favourites.watchlistSeriesItems;
-        final item = items[col];
-        return FavArtCell(
-          isTelevision: true,
-          column: col,
-          rowNodes: nodes,
-          onUp: up,
-          onDown: down,
-          onLeft: onLeft,
-          onRight: onRight,
-          onUpHold: onUpHold,
-          onDownHold: onDownHold,
-          child: ArtPoster(
-            imageUrl: item.poster,
-            title: item.name,
-            showTitle: !_hideHomeCardTitlesAndRatings,
-            isTelevision: true,
-            ringColor: Colors.white,
-            focusNode: nodes[col],
-            onOpen: () => _favourites.openMyWatchlistItem(item),
-            onFocused: () => _canvasFavFocused(
-              railKey,
-              col,
-              CanvasFavFocus(
-                art: _favourites.firstNonEmpty(item.background, item.poster),
-                title: item.name,
-                subtitle: 'MY WATCHLIST · ${item.type.toUpperCase()}',
-              ),
-            ),
-          ),
-        );
-      case FavKind.iptv:
-        final channel = _favourites.iptvFavChannels[col];
-        return FavArtCell(
-          isTelevision: true,
-          column: col,
-          rowNodes: nodes,
-          onUp: up,
-          onDown: down,
-          onLeft: onLeft,
-          onRight: onRight,
-          onUpHold: onUpHold,
-          onDownHold: onDownHold,
-          child: ArtPoster(
-            imageUrl: channel.logoUrl,
-            title: channel.name,
-            showTitle: !_hideHomeCardTitlesAndRatings,
-            imageFit: BoxFit.contain,
-            isTelevision: true,
-            ringColor: Colors.white,
-            focusNode: nodes[col],
-            onOpen: () => _favourites.playIptvChannel(channel),
-            // Focus lights the whole stage with this channel's live feed —
-            // the classic boxed preview, promoted to full-bleed.
-            onFocused: () => _canvasFavFocused(
-              railKey,
-              col,
-              CanvasFavFocus(
-                art: channel.logoUrl,
-                fit: BoxFit.contain,
-                title: channel.name,
-                subtitle: 'IPTV · FAVORITES',
-              ),
-              liveChannel: channel,
-            ),
-          ),
-        );
-      case FavKind.debrify:
-        final channel = _favourites.tvFavChannels[col];
-        final number = channel.channelNumber > 0
-            ? channel.channelNumber
-            : col + 1;
-        return FavArtCell(
-          isTelevision: true,
-          column: col,
-          rowNodes: nodes,
-          onUp: up,
-          onDown: down,
-          onLeft: onLeft,
-          onRight: onRight,
-          onUpHold: onUpHold,
-          onDownHold: onDownHold,
-          child: ArtPoster(
-            imageUrl: null,
-            title: channel.name,
-            showTitle: !_hideHomeCardTitlesAndRatings,
-            badge: '$number',
-            isTelevision: true,
-            ringColor: Colors.white,
-            focusNode: nodes[col],
-            onOpen: () => _favourites.playChannel(channel),
-            onFocused: () => _canvasFavFocused(
-              railKey,
-              col,
-              CanvasFavFocus(
-                art: null,
-                title: channel.name,
-                subtitle: 'DEBRIFY TV · CHANNEL $number',
-              ),
-            ),
-          ),
-        );
-      case FavKind.stremio:
-        final channel = _favourites.stvFavChannels[col];
-        final item = _favourites.stvNowPlaying(channel)?.item;
-        return FavArtCell(
-          isTelevision: true,
-          column: col,
-          rowNodes: nodes,
-          onUp: up,
-          onDown: down,
-          onLeft: onLeft,
-          onRight: onRight,
-          onUpHold: onUpHold,
-          onDownHold: onDownHold,
-          child: ArtPoster(
-            imageUrl: _favourites.firstNonEmpty(item?.poster, item?.background),
-            title: channel.displayName,
-            showTitle: !_hideHomeCardTitlesAndRatings,
-            live: true,
-            isTelevision: true,
-            ringColor: Colors.white,
-            focusNode: nodes[col],
-            onOpen: () => _favourites.playStremioTvChannel(channel),
-            onFocused: () => _canvasFavFocused(
-              railKey,
-              col,
-              CanvasFavFocus(
-                // The stage prefers the WIDE art; the card keeps the poster.
-                art: _favourites.firstNonEmpty(item?.background, item?.poster),
-                title: channel.displayName,
-                subtitle: item != null
-                    ? 'STREMIO TV · NOW: ${item.name}'
-                    : 'STREMIO TV · CHANNEL',
-              ),
-            ),
-          ),
-        );
-      case FavKind.playlist:
-        final item = _favourites.playlistItems[col];
-        final posterUrl = item['posterUrl'] as String?;
-        final title = (item['title'] as String?) ?? 'Unknown';
-        return FavArtCell(
-          isTelevision: true,
-          column: col,
-          rowNodes: nodes,
-          onUp: up,
-          onDown: down,
-          onLeft: onLeft,
-          onRight: onRight,
-          onUpHold: onUpHold,
-          onDownHold: onDownHold,
-          child: ArtPoster(
-            imageUrl: posterUrl,
-            title: title,
-            showTitle: !_hideHomeCardTitlesAndRatings,
-            progress: _favourites.playlistProgressFor(item),
-            isTelevision: true,
-            ringColor: Colors.white,
-            focusNode: nodes[col],
-            onOpen: () => _favourites.onPlaylistItemTap(item),
-            onFocused: () => _canvasFavFocused(
-              railKey,
-              col,
-              CanvasFavFocus(
-                art: posterUrl,
-                title: title,
-                subtitle: 'PLAYLIST · SAVED',
-              ),
-            ),
-          ),
-        );
-    }
-  }
+  late final StageFavouriteCells _stageFavouriteCells = StageFavouriteCells(
+    readFavourites: () => _favourites,
+    readHideTitles: () => _hideHomeCardTitlesAndRatings,
+    switchRail: _stageSwitchRail,
+    focused: _canvasFavFocused,
+  );
 
   /// Theater mode: after the ambient trailer has been SHOWING frames for a
   /// dwell, the shelf/tabs (and their bottom scrim) recede so the video owns
@@ -2967,7 +2719,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     readCaptionBand: () => _homeArtPosterCaptionBand,
     tabsHeight: _canvasTabsHeight,
     tabs: _canvasTabs,
-    favouriteCell: _canvasFavCell,
+    favouriteCell: _stageFavouriteCells.build,
     shelf: _stageShelf,
   );
 
@@ -3010,7 +2762,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     favouriteWidth: _stageFavW,
     labelHeight: _promenadeLabelHeight,
     railLabel: _promenadeLabel,
-    favouriteCell: _canvasFavCell,
+    favouriteCell: _stageFavouriteCells.build,
     cell: _promenadeCell,
   );
 
@@ -3060,7 +2812,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     labelHeight: _atriumLabelHeight,
     favouriteWidth: _stageFavW,
     posterWidth: _stagePosterW,
-    favouriteCell: _canvasFavCell,
+    favouriteCell: _stageFavouriteCells.build,
     railLabel: _deckRailLabel,
     buildTrailer: (cardH) => _HeroTrailerLayer(
       trailer: _heroTrailer,
@@ -3577,7 +3329,7 @@ class _SearchScreenState extends State<SearchScreenHost>
                 child: SizedBox(
                   width: cardW,
                   child: favRail
-                      ? _canvasFavCell(
+                      ? _stageFavouriteCells.build(
                           rail.favKind!,
                           railKey,
                           col,
@@ -3731,7 +3483,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     });
 
     if (rail.favKind != null) {
-      return _canvasFavCell(
+      return _stageFavouriteCells.build(
         rail.favKind!,
         railKey,
         col,
