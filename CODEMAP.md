@@ -438,6 +438,12 @@ is an editor mirror, not the source of truth. How to add a provider:
   `lib/screens/video_player/subtitle_track_controller.dart`
   (`SubtitleTrackController` + `SubtitleTrackSession`; host keeps
   `_SubtitleTrackSession` adapter and title/season resolvers).
+  Decoder diagnostics: `lib/services/playback/decoder_diagnostics.dart`
+  (`DecoderDiagnostics`) owns four state fields, debounce timer, matching polls
+  and report deduplication. Six explicit live capabilities retain host coupling;
+  shared media generation, renderer recovery and native diagnostic sink stay in
+  the host, with interleaved reset ordering preserved. Host -191 lines / whole
+  production +61; partial ownership, not independent logic or full V1-6 closure.
   IPTV recording (libmpv tee, Android engine, desktop capture):
   `lib/services/playback/iptv_recording_controller.dart`
   (`IptvRecordingController` + `IptvRecordingSession`; host keeps
