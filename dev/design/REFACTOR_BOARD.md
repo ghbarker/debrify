@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main 03b125ef
+## Current roadmap — September 6, main 719e96ed
 
 ### God-file line counts — original → current merged main
 
 - **Search:** 19,070 → **6,293** (12,777 fewer)
 - **Player:** 16,278 → **11,535** (4,743 fewer)
 - **Magic TV:** 10,716 → **3,322** (7,394 fewer)
-- **Storage:** 9,963 → **1,777** (8,186 fewer)
-- **Settings:** 7,905 → **2,907** (4,998 fewer)
+- **Storage:** 9,963 → **1,760** (8,203 fewer)
+- **Settings:** 7,905 → **2,908** (4,997 fewer)
 
-Counted from actual merged main 03b125ef. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
+Counted from actual merged main 719e96ed. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
 
 ### The same six outcomes — stable roadmap
 
@@ -50,11 +50,11 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 ### Current work — latest verified checkpoint
 
-- **Locke / Storage:** #213 merged; independently accepted DeviceMaintenance #214 is integrating onto main before fresh CI.
-- **Cicero / Review:** full actual-main 98cae882 gate PASSED; reviewing next bounded AppStyle proposal.
+- **Locke / Storage:** #214 merged; remaining eligible Storage ownership/retention closeout packet assigned, read-only.
+- **Cicero / Review:** full actual-main 98cae882 gate PASSED; auditing six-outcome roadmap evidence and remaining acceptance gaps, read-only.
 - **Ampere / Search and upstream:** local upstream catalog trial independently accepted, unpublished. Search final composition and Atrium remain open; no new implementation assignment claimed.
 - **Wegener / Player:** presentation #201 and transport #205 merged; remaining decoder/state/UI work open, bounded unsuccessful experiments retained as debt.
-- **Parent:** #212 merged at 98cae882. Full98ca gate passed; #213 is the first production merge since that gate. No user/manual-smoke blocker.
+- **Parent:** #212 merged at 98cae882. Full98ca gate passed; #213/#214 are two production merges since that gate; next production merge triggers full gate. No user/manual-smoke blocker.
 ### Next steps — working checklist
 
 - [x] Merge #199/#204/#206 and pass their full integrated gate896a168d.
@@ -66,6 +66,9 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - [ ] Run final integrated acceptance only after the remaining architectural outcomes are fulfilled.
 
 ### Latest completed milestones
+
+- #214 merged **719e96ed**, exacte8aaf4c6, independent90PASS/exactunion/allthreeCIgreen. EightDeviceMaintenanceforwards removed; host-17/prod-15/all7-1, one actual SupportRemoteConfigService dependency removed. Owner/global/native/auth/cache unchanged. Did we make a difference? Direct maintenance ownership replaces a needless service dependency; remaining ownership/native obligations stayopen. Counter2since98ca; Locke closeout inventory and Cicero six-outcome evidence audit assigned.
+
 
 - #213 merged **03b125ef**, exact862bca0f, independent161PASS/maincontained/allthreeCIgreen. AppStyle25forwards removed andfive realhostdependencies eliminated; host-25/prod-18/all27includingREADME+4, notwhole-project deletion. Protected40/cache/reset unchanged. Did we make a difference? Application appearance callers now reach existingowner directly; strictownership/nativeclosure remainsopen. #214 independent90PASSawaitsmainunion/freshCI. Firstproductionmerge since98ca gate.
 
