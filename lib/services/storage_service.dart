@@ -1699,35 +1699,15 @@ class StorageService {
       QuickPlayPolicyPrefs.setQuickPlayHonorsFilters(value);
 
   // Default Torrent Filter Settings
-  static Future<List<String>> getDefaultFilterQualities() =>
-      DefaultTorrentFilterPrefs.getDefaultFilterQualities();
 
-  static Future<void> setDefaultFilterQualities(List<String> qualities) =>
-      DefaultTorrentFilterPrefs.setDefaultFilterQualities(qualities);
 
-  static Future<List<String>> getDefaultFilterRipSources() =>
-      DefaultTorrentFilterPrefs.getDefaultFilterRipSources();
 
-  static Future<void> setDefaultFilterRipSources(List<String> ripSources) =>
-      DefaultTorrentFilterPrefs.setDefaultFilterRipSources(ripSources);
 
-  static Future<List<String>> getDefaultFilterLanguages() =>
-      DefaultTorrentFilterPrefs.getDefaultFilterLanguages();
 
-  static Future<void> setDefaultFilterLanguages(List<String> languages) =>
-      DefaultTorrentFilterPrefs.setDefaultFilterLanguages(languages);
 
-  static Future<List<String>> getDefaultFilterSizes() =>
-      DefaultTorrentFilterPrefs.getDefaultFilterSizes();
 
-  static Future<void> setDefaultFilterSizes(List<String> sizes) =>
-      DefaultTorrentFilterPrefs.setDefaultFilterSizes(sizes);
 
-  static Future<List<String>> getDefaultFilterDynamicRanges() =>
-      DefaultTorrentFilterPrefs.getDefaultFilterDynamicRanges();
 
-  static Future<void> setDefaultFilterDynamicRanges(List<String> ranges) =>
-      DefaultTorrentFilterPrefs.setDefaultFilterDynamicRanges(ranges);
 
   // Debrify TV Filter Settings — forwarding façade; bodies live on DebrifyTvPrefs.
   static Future<List<String>> getDebrifyTvFilterQualities() =>

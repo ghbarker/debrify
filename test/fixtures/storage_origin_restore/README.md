@@ -183,6 +183,15 @@ malformed JSON, wrong JSON roots/elements and physical StringList errors; ordere
 reset, failure at each of the six removals, and both held profile-switch points.
 No product extraction, global cache, resource graph or complete-sync claim.
 
+For reproduction from the current Q2 harness, adapt the copied
+`test/default_torrent_filter_prefs_origin_test.dart` helper in the isolated
+pre-S2 checkout: remove its `DefaultTorrentFilterPrefs` owner import and change
+exactly ten read/write tearoff receivers from `DefaultTorrentFilterPrefs` to
+`StorageService` (get/set Qualities, RipSources, Languages, Sizes and DynamicRanges).
+Keep the three `StorageService.clearAllFilterSettings` calls and every assertion
+unchanged. This is a test-harness adapter to the actual old APIs, not a production
+backport or an identical-harness claim; existing artifact bytes are unchanged.
+
 Reproduction (PowerShell, dependencies already resolved to each own checkout):
 
 ```powershell

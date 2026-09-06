@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import '../profiles/profile_preferences.dart';
 
-/// Default torrent filter encodings; public callers retain StorageService APIs.
+/// Default torrent filter encodings; callers use this owner directly.
 class DefaultTorrentFilterPrefs {
   DefaultTorrentFilterPrefs._();
 

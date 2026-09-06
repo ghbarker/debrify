@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
+import 'package:debrify/services/storage/default_torrent_filter_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,28 +23,28 @@ final filterDefaultCases =
     >[
       (
         key: 'default_filter_qualities_v1',
-        read: StorageService.getDefaultFilterQualities,
-        write: StorageService.setDefaultFilterQualities,
+        read: DefaultTorrentFilterPrefs.getDefaultFilterQualities,
+        write: DefaultTorrentFilterPrefs.setDefaultFilterQualities,
       ),
       (
         key: 'default_filter_rip_sources_v1',
-        read: StorageService.getDefaultFilterRipSources,
-        write: StorageService.setDefaultFilterRipSources,
+        read: DefaultTorrentFilterPrefs.getDefaultFilterRipSources,
+        write: DefaultTorrentFilterPrefs.setDefaultFilterRipSources,
       ),
       (
         key: 'default_filter_languages_v1',
-        read: StorageService.getDefaultFilterLanguages,
-        write: StorageService.setDefaultFilterLanguages,
+        read: DefaultTorrentFilterPrefs.getDefaultFilterLanguages,
+        write: DefaultTorrentFilterPrefs.setDefaultFilterLanguages,
       ),
       (
         key: 'default_filter_sizes_v1',
-        read: StorageService.getDefaultFilterSizes,
-        write: StorageService.setDefaultFilterSizes,
+        read: DefaultTorrentFilterPrefs.getDefaultFilterSizes,
+        write: DefaultTorrentFilterPrefs.setDefaultFilterSizes,
       ),
       (
         key: 'default_filter_dynamic_ranges_v1',
-        read: StorageService.getDefaultFilterDynamicRanges,
-        write: StorageService.setDefaultFilterDynamicRanges,
+        read: DefaultTorrentFilterPrefs.getDefaultFilterDynamicRanges,
+        write: DefaultTorrentFilterPrefs.setDefaultFilterDynamicRanges,
       ),
     ];
 

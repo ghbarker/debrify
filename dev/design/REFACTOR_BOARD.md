@@ -1,16 +1,52 @@
 # Refactor board
 
-## Current roadmap — September 6, main c7a332bd
+## Current roadmap — September 6, main 56788ddb
 
 ### God-file line counts — original → current merged main
 
 - **Search:** 19,070 → **6,551** (12,519 fewer)
 - **Player:** 16,278 → **11,928** (4,350 fewer)
 - **Magic TV:** 10,716 → **3,321** (7,395 fewer)
-- **Storage:** 9,963 → **2,538** (7,425 fewer)
+- **Storage:** 9,963 → **2,518** (7,445 fewer)
 - **Settings:** 7,905 → **2,901** (5,004 fewer)
 
-Counted from actual merged main c7a332bd. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion percentage remains withdrawn: remaining architectural work lacks a reliable denominator.
+Counted from actual merged main 56788ddb. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion percentage remains withdrawn: remaining architectural work lacks a reliable denominator.
+
+### The same six outcomes — stable roadmap
+
+These are the six outcomes previously agreed with the user. Keep their numbers and titles stable. PRs are steps within them, not replacement outcomes. No scope expansion or new acceptance requirement is introduced here. Changes to scope must be identified explicitly rather than folded into a status rewrite.
+
+1. **Finish Search stage layouts and final shared composition — IN PROGRESS.**
+   Done: standalone Discover, Spotlight, Tonight and shared BoardCell merged.
+   Left: Atrium, Deck, Canvas, Mosaic and Promenade stage work plus final shared composition. Atrium's origin test is held on rendering failure; the standalone Mosaic proposal was held for insufficient benefit, not completed.
+   Next: a bounded composition change that removes dependencies rather than adding more forwarding callbacks. Close against the existing Search lane criteria, not merely a smaller host file.
+
+2. **Complete player decoder/state/UI separation — IN PROGRESS, CURRENT PIN BLOCKER.**
+   Done: earlier player slices and retained overlay/guide behavior pins.
+   Left: remaining decoder/state/UI separation and tracker pin debt. Recent tracker attempts did not reach the behavior being tested; no completion credit.
+   Next: resolve a deterministic origin-test path before moving the affected behavior. This remains the least advanced of these outcomes.
+
+3. **Finish storage business-logic ownership and eligible temporary facade removal — IN PROGRESS.**
+   Done: storage size target reached, multiple domain owners and pre-refactor restore fixtures merged, earlier223 facades retired.
+   Left: remaining domain logic and eligible forwarding APIs; native-sensitive exceptions remain explicit.
+   Next: history/watchlist caller retirement and download-destination ownership; filter facade retirement (#182) is now merged. These are steps within outcome3, not new top-level goals.
+
+4. **Finish M1-7 genuine common-flow dedup and dependency cleanup — PARTIAL MILESTONE COMPLETE.**
+   Done: shared flow programmes merged, provider-leaf target met (627 current lines versus under800), two cached-entry wrappers removed.
+   Left: three captured-key provider operations still bypass the provider interface at ten call sites, plus the existing finite Q2 retention decisions. Distinct provider algorithms are intentional and do not all need unification.
+   Next: route those three operations through the existing provider contract while preserving captured credentials and timing, then verify the actual consumers. No new autonomous-provider-framework or zero-UI-callback requirement. This is closest to closure, but the whole outcome is not marked complete.
+
+5. **Q-phase dependency/rule cleanup, compatibility expiry and upstream contribution work — PARTLY STARTED.**
+   Done: some compatibility retirement is underway with outcome3 and4; upstream contribution intent established.
+   Left: remaining Q1/Q2/Q3 work and upstream-ready contribution work.
+   Next: continue eligible cleanup alongside lanes. Shared PRs may advance multiple outcomes, but count their benefit once.
+
+6. **Final integrated acceptance of completed architecture — PENDING COMPLETION OF THE ABOVE.**
+   Done: repeated intermediate full gates; latest95c93 passed with documented known failures.
+   Left: final gate on the completed architecture. Earlier builds and device smoke are not the final acceptance build.
+   Next: keep intermediate gates running; no new manual-smoke blocker is added against the user's standing instruction.
+
+**Where we are:** implementation and verification are still in progress. Since this six-outcome list was introduced, we have landed additional milestones, especially M1 flow consolidation and Tonight. We have not completed all six or established a defensible overall percentage. The most recent PR is not the whole trek.
 
 ### Current work
 
@@ -18,31 +54,25 @@ Counted from actual merged main c7a332bd. These are physical file lines, not who
 - Locke: download-destination origin28 passed; actual pre-refactor exclusion fixture work, no production grant yet.
 - Ampere: Q2 history/watchlist caller retirement, exact19-file scope after46 green origin cases; owner bodies/fixture payloads frozen.
 - Wegener: Q2 filter PR182 independently accepted199 tests; download-origin review accepted. Shared-visuals proposal held; no additional layout-only extraction authorized.
-- PR182 finaldf41 independently accepted, CI pending. Separate recovered worktree; quarantined corrupt worktree remains untouched.
+- PR182 merged56788ddb; ten filter facades retired. PR183 depends on its merged ancestry and awaits final CI/main-union verification. Quarantined corrupt worktree remains untouched.
 - Parent: handle reports/decisions, merge exact accepted green heads, update this board once per merge. No user blocker. CODEMAP lock released.
 
 ### Latest completed milestones
+
+- #182 merged56788ddb exactdf41 after independent199PASS and allCIaccepted. Native attempt1 hung600s without assertion; one authorized same-head/runtime/test retry passed both origin/current. Cause remains UNKNOWN, original evidence retained; not first-pass green. Host−20/wholeproduction−19, ten facades retired. Did we make a difference? Actual callers now use the existing owner directly; remaining storage/Q-phase work stays open.
+
 
 - #180 history owner merged95c93: host−44, whole production+34, five facades retained. Actual old-export restore evidence and independent87 cases passed.
 - Full gate95c93 PASSED: generic5,789 passes/12 known failures/2 skips; goldens21 known errors after configured retries. Both helpers0, no unexpected or unused failure allowances. Not pixel-green.
 - Gate pinned analyzer431/449, zero errors/new issues; layering77→77; Python55 passed; originalbc46/current native pair passed first try. Initial wrong-PATH analyzer output retained separately and corrected using pinned SDK; no baseline edit.
 - Windows226.2s/68files and ARM64171.9s builds passed. ZIP SHA256b96b7a4bd0b98a4f9de799ef3242bebf18a150d3c49c0113ad0566d10f1d729f; APK80811b556495c20078920091643b91cbcde5bc236d89737bd3bed7d1479e8cb5. No fresh manual/device smoke claimed.
 - #181 BoardCell mergedc7a332bd exact932 after independent140 passes plus the exact known sidebar failure, final integration review and all3CI green. Shared renderer owns card state/shuttle; 669 declaration lines relocated, whole production+17, zero host-file reduction. Did we make a difference? Removed private host-library access at real consumers; remaining stage navigation/composition is still open.
-- Production merge counter: **1 since gate95c93** (#181). Gate excludes181; source/build evidence remains attached to95c93.
+- Production merge counter: **2 since gate95c93** (#181, #182). Gate excludes181; source/build evidence remains attached to95c93.
 
 ### Forwarders at the last full gate95c93
 
 - Storage432 total /143 single-line; Search133/117; Player161/112; Magic TV23/12; Settings0/0.
 - Same expanded AST classifier as prior gates. Legacy Search classifier60 separately retained; do not silently substitute classifiers. Not recounted for181.
-
-### Remaining outcomes
-
-1. Search: standalone Discover, Spotlight, Tonight and shared BoardCell merged. Remaining stage navigation/visual composition stays open. Mosaic standalone deferred: host−5/whole+112/15 retained operations was insufficient benefit.
-2. Player: decoder/state/UI separation remains substantial. Overlay/guide pins retained, weak partial moves held. V1-9 startup-before-lookup attempts held; no further automatic native retries.
-3. Storage: size target met; remaining business-logic ownership and eligible facade retirement open. Native-sensitive APIs and explicit coordinator semantics retained.
-4. M1-7: common-flow extraction and provider-leaf target achieved; four leaves627. Shared programmes and distinct algorithms counted separately. Live host/UI coupling remains OPEN; no claim of autonomous provider architecture.
-5. Q-phase dependency/rule cleanup, compatibility expiry and upstream contribution work.
-6. Final integrated acceptance of completed architecture. Prior accepted phone/TV smoke applies to installedf75fa016, not these builds or direct SHIELD execution.
 
 ### Decisions, limits and recovery
 
