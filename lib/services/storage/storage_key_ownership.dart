@@ -9,6 +9,8 @@
 /// [StorageKeyStore] ownership when a domain store is extracted; they must
 /// not change the string.
 enum StorageKeyStore {
+  /// Profile-scoped download destination strings (DownloadDestinationPrefs).
+  downloadDestinationPrefs,
   /// Torrent search history and its recording preference.
   torrentSearchHistoryStore,
   /// Installation-wide remote device preferences (RemoteDevicePrefs).
@@ -314,9 +316,9 @@ class StorageKeyOwnership {
     'sidebar_configuration_v1': StorageKeyStore.appStylePrefs,
     'mdblist_saved_clones': StorageKeyStore.trackingPrefs,
     'mdblist_sync_checkpoint_v1': StorageKeyStore.trackingPrefs,
-    'download_tree_uri_v1': StorageKeyStore.storageService,
-    'download_tree_display_name_v1': StorageKeyStore.storageService,
-    'download_dir_path_v1': StorageKeyStore.storageService,
+    'download_tree_uri_v1': StorageKeyStore.downloadDestinationPrefs,
+    'download_tree_display_name_v1': StorageKeyStore.downloadDestinationPrefs,
+    'download_dir_path_v1': StorageKeyStore.downloadDestinationPrefs,
     'episode_trakt_progress_v2': StorageKeyStore.playbackProgressStore,
     'episode_simkl_progress_v1': StorageKeyStore.playbackProgressStore,
     'episode_mdblist_progress_v1': StorageKeyStore.playbackProgressStore,
