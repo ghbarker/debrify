@@ -250,7 +250,7 @@ extension on _SearchScreenState {
                                         child: SizedBox(
                                           width: cardW,
                                           height: cardH,
-                                          child: _BoardCell(
+                                          child: BoardCell(
                                             item: item,
                                             isTelevision: true,
                                             focusNode: nodes[col],

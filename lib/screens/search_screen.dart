@@ -1,3 +1,4 @@
+import 'search/board_cell.dart';
 import 'search/stages/tonight_board_stage.dart';
 import 'search/stages/tonight_stage_content.dart';
 import 'search/stages/tonight_stage_widgets.dart';
@@ -86,7 +87,6 @@ import '../widgets/home/card_focus_rise.dart';
 import '../widgets/home/home_theme.dart';
 import '../widgets/home/row_tag_pill.dart';
 import '../widgets/home/spotlight_board.dart';
-import '../widgets/movie_watched_badge.dart';
 import '../widgets/skeleton_poster.dart';
 import '../widgets/source_row.dart';
 import '../widgets/torrent_filters_sheet.dart';
@@ -127,7 +127,7 @@ part 'search/stages/deck_board_stage.dart';
 const Color kStremioFocusRing = kCardFocusRing;
 
 /// Continue Watching progress-bar fill (Stremio shows a white line; we use red).
-const Color _kCwProgressRed = Color(0xFFE50914);
+const Color _kCwProgressRed = boardCwProgressRed;
 
 /// Board (homepage) infinite scroll: how many catalog rows to fetch per batch as
 /// the user scrolls, and how many items to keep per row. Enumerating catalogs is
@@ -3195,7 +3195,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     int col,
   ) {
     final item = items[col];
-    return _BoardCell(
+    return BoardCell(
       item: item,
       isTelevision: true,
       focusNode: nodes[col],
@@ -3451,7 +3451,7 @@ class _SearchScreenState extends State<SearchScreenHost>
                         )
                       : SizedBox(
                           height: rowBoxH,
-                          child: _BoardCell(
+                          child: BoardCell(
                             item: items[col],
                             isTelevision: true,
                             focusNode: nodes[col],
@@ -3605,7 +3605,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     final item = items[col];
     return SizedBox(
       height: cellW / _titleCardAspect,
-      child: _BoardCell(
+      child: BoardCell(
         item: item,
         isTelevision: true,
         focusNode: nodes[col],
@@ -3768,7 +3768,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     VoidCallback? onFocusedExtra,
   }) {
     final item = items[col];
-    return _BoardCell(
+    return BoardCell(
       item: item,
       isTelevision: true,
       focusNode: nodes[col],
@@ -6390,7 +6390,7 @@ class _SearchScreenState extends State<SearchScreenHost>
                         child: SizedBox(
                           width: posterW,
                           height: cellH,
-                          child: _BoardCell(
+                          child: BoardCell(
                             item: item,
                             isTelevision: tv,
                             focusNode: nodes[col],
@@ -6462,7 +6462,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       posterW: posterW,
       cellH: cellH,
       header: _railHeader(title: row.title, tag: row.tag, onSeeAll: row.onSeeAll),
-      cellBuilder: (context, col, item, node, nodes) => _BoardCell(
+      cellBuilder: (context, col, item, node, nodes) => BoardCell(
         item: item,
         isTelevision: tv,
         focusNode: node,
