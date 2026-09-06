@@ -1,38 +1,80 @@
-part of '../../search_screen.dart';
+import 'dart:math';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import '../../../models/stremio_addon.dart';
+import '../../../models/iptv_playlist.dart';
+import '../../../theme/app_theme.dart';
+import '../../../widgets/skeleton_poster.dart';
+import '../fav_row_ref.dart';
+import '../search_board_runtime.dart';
+import '../stage_visuals.dart';
 
-/// MOSAIC: a wall of posters, no hero — the lightest layout.
-///
-/// Host owns `_homeStyleEffective`, rails, and focus. Layout only.
-class _MosaicBoardStage extends StatelessWidget {
-  const _MosaicBoardStage({required this.host});
+typedef MosaicStageBindings = ({
+  AppTheme Function() readTheme,
+  StageRailView? Function() resolveRail,
+  VoidCallback seedFocus,
+  int Function(FavRowRef) favouriteCount,
+  double Function() readAspect,
+  double Function() readCaptionBand,
+  int Function() cacheWidth,
+  int Function() cacheHeight,
+  ValueListenable<StremioMeta?> heroItem,
+  ValueListenable<StremioMeta?> enriched,
+  ValueListenable<CanvasFavFocus?> favourite,
+  ValueListenable<bool> trailerShowing,
+  ValueListenable<IptvChannel?> liveChannel,
+  bool Function() readTrailerActive,
+  Widget Function(double) buildLive,
+  Widget Function(StageRailView, {MainAxisAlignment align}) railLabel,
+  Widget Function(CanvasRail, String, List<StremioMeta>, List<FocusNode>, int, int, int, double) cell,
+});
 
-  final _SearchScreenState host;
+// MOSAIC metrics. The head band is a FIXED height so the wall below it never
+// shifts when a title's logo is taller than the last one's.
+const double _kMosaicPadX = 48;
+const double _kMosaicGap = 16;
+const double _kMosaicHeadTop = 26;
+const double _kMosaicHeadGap = 18;
 
-  @override
-  Widget build(BuildContext context) => host._buildMosaicBoard();
+/// The identity band's height is DERIVED from the scaled content it holds —
+/// a fixed band clipped the logo and its meta line at large text scales.
+double _mosaicHeadHeight(BuildContext context) {
+  final t = MediaQuery.textScalerOf(context);
+  // A title with no logo art falls back to TEXT, which scales — the band has
+  // to reserve whichever of the two is taller.
+  final titleH = max(stageMosaicLogoHeight, t.scale(stageHeadlineTitleSize) * 1.25);
+  // Facts line, then the genres on their own line beneath it. The right-hand
+  // column (rail label + hold hint) is shorter than that, so the identity
+  // still sets the band's height.
+  return titleH + 10 + t.scale(12.5) * 1.4 + 6 + t.scale(12.5) * 1.4 + 6;
 }
 
-extension on _SearchScreenState {
+class MosaicStage extends StatelessWidget {
+  const MosaicStage({super.key, required this.bindings, required this.isTelevision});
+  final MosaicStageBindings bindings;
+  final bool isTelevision;
+
   // ── MOSAIC view ──────────────────────────────────────────────────────────
 
   /// MOSAIC: no hero at all. The active rail becomes a WALL of posters on a
   /// heavily veiled wash of the focused title's art, with the identity moved
   /// to a fixed top band. The cheapest layout on the list: one image, one
-  /// flat veil, one grid — and no ambient video (see [_stageWantsAmbient]),
+  /// flat veil, one grid — and no ambient video (see `_stageWantsAmbient` on the host),
   /// which is why it stays smooth on weak TV hardware.
-  Widget _buildMosaicBoard() {
-    final app = AppThemeScope.of(context);
-    final view = _resolveStageRail();
+  @override
+  Widget build(BuildContext context) {
+    final app = bindings.readTheme();
+    final view = bindings.resolveRail();
     if (view == null) {
-      return BrandLoadingStage(isTelevision: widget.isTelevision);
+      return BrandLoadingStage(isTelevision: isTelevision);
     }
-    _seedStageFocusOnce();
+    bindings.seedFocus();
     final rail = view.rail;
     final railKey = view.key;
     final favRail = rail.favKind != null;
     final items = view.items;
     final nodes = view.nodes;
-    final count = favRail ? _canvasFavItemCount(rail.favKind!) : items.length;
+    final count = favRail ? bindings.favouriteCount(rail.favKind!) : items.length;
 
     return LayoutBuilder(
       builder: (context, cons) {
@@ -44,7 +86,7 @@ extension on _SearchScreenState {
         // A grid only ever shows ONE rail, and a rail is homogeneous — so
         // the whole wall takes one shape: favourites are always portrait,
         // title cells follow the Home Cards orientation.
-        final cellAspect = favRail ? 2 / 3 : _titleCardAspect;
+        final cellAspect = favRail ? 2 / 3 : bindings.readAspect();
         // Aim for a cell about a third of the board's height — landscape a
         // little shorter, or three backdrops swallow the whole wall — then
         // take whatever whole number of columns actually FITS, as few as one.
@@ -55,24 +97,24 @@ extension on _SearchScreenState {
         // The extent is exactly what this rail's kind needs: the art box,
         // plus the caption band only when the cells actually carry one.
         final extent =
-            cellW / cellAspect + (favRail ? _homeArtPosterCaptionBand : 0);
+            cellW / cellAspect + (favRail ? bindings.readCaptionBand() : 0);
 
         return Stack(
           fit: StackFit.expand,
           children: [
             CanvasArtLayer(
-              item: _heroItem,
-              enriched: _heroEnriched,
-              fav: _canvasFavFocus,
-              cacheWidth: _tvHeroArtworkCacheWidth,
-              cacheHeight: _tvHeroArtworkCacheHeight,
+              item: bindings.heroItem,
+              enriched: bindings.enriched,
+              fav: bindings.favourite,
+              cacheWidth: bindings.cacheWidth(),
+              cacheHeight: bindings.cacheHeight(),
             ),
             // Constant veil. It SNAPS (no tween): a full-screen gradient
             // tween is the single most expensive thing this board could do.
             // While a favourite CHANNEL is previewing, the veil lifts so the
             // live picture is actually visible behind the wall.
             ValueListenableBuilder<IptvChannel?>(
-              valueListenable: _heroLiveChannel,
+              valueListenable: bindings.liveChannel,
               builder: (context, live, _) => IgnorePointer(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
@@ -86,18 +128,10 @@ extension on _SearchScreenState {
             ),
             // The live feed sits ABOVE the veil (a veiled video is a waste of
             // a decoder) with its own lighter scrim for the grid's sake.
-            if (_heroTrailerActive)
-              _HeroLiveLayer(
-                channel: _heroLiveChannel,
-                streamUrl: _heroLiveUrl,
-                heroHeight: boardH,
-                fullBleed: true,
-                volume: _heroTrailerVolume,
-                onPlayingChanged: _onHeroTrailerPlaying,
-                onPlaybackFailed: _onHeroLivePlaybackFailed,
-              ),
+            if (bindings.readTrailerActive())
+              bindings.buildLive(boardH),
             ValueListenableBuilder<IptvChannel?>(
-              valueListenable: _heroLiveChannel,
+              valueListenable: bindings.liveChannel,
               builder: (context, live, _) => IgnorePointer(
                 child: live == null
                     ? const SizedBox.shrink()
@@ -135,15 +169,15 @@ extension on _SearchScreenState {
                       children: [
                         Expanded(
                           child: ValueListenableBuilder<CanvasFavFocus?>(
-                            valueListenable: _canvasFavFocus,
+                            valueListenable: bindings.favourite,
                             builder: (context, fav, _) => Align(
                               alignment: Alignment.bottomLeft,
                               child: fav != null
                                   ? StageFavIdentity(fav: fav)
                                   : CanvasIdentity(
-                                      item: _heroItem,
-                                      enriched: _heroEnriched,
-                                      trailerShowing: _heroTrailerShowing,
+                                      item: bindings.heroItem,
+                                      enriched: bindings.enriched,
+                                      trailerShowing: bindings.trailerShowing,
                                       variant: StageIdentityVariant.headline,
                                       maxWidth: max(1.0, gridW * 0.5),
                                     ),
@@ -166,7 +200,7 @@ extension on _SearchScreenState {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _promenadeLabel(
+                                bindings.railLabel(
                                   view,
                                   align: MainAxisAlignment.end,
                                 ),
@@ -215,7 +249,7 @@ extension on _SearchScreenState {
                       itemBuilder: (context, col) => Center(
                         child: SizedBox(
                           width: cellW,
-                          child: _mosaicCell(
+                          child: bindings.cell(
                             rail,
                             railKey,
                             items,
