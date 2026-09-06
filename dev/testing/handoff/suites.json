@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "flutter_version": "3.44.8",
+  "suites": {
+    "profile-path": {
+      "engine": "flutter",
+      "cwd": ".",
+      "selectors": [
+        "test/profile_scope_test.dart",
+        "test/profiles/profile_scope_test.dart"
+      ],
+      "kinds": [
+        "behavioral"
+      ],
+      "owner_module": "lib/services/profiles/profile_scope.dart",
+      "purpose": "Generation-aware native paths and preference keys remain scoped; traversal and drive-relative escapes are rejected.",
+      "failure_triage": "Read failing input and host path semantics; do not normalize away a Windows-only failure.",
+      "evidence": "Includes characterization commit 50f576a7 at the inspected base. See VERIFICATION.md for the exact tested checkout and raw Windows result; this catalog does not track later main or PR status.",
+      "run_command": "python dev/testing/handoff/run.py profile-path",
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
+    },
+    "profile-lifecycle": {
+      "engine": "flutter",
+      "cwd": ".",
+      "selectors": [
+        "test/profiles/profile_lifecycle_test.dart"
+      ],
+      "kinds": [
+        "behavioral",
+        "integration"
+      ],
+      "owner_module": "lib/services/profiles/profile_lifecycle.dart",
+      "purpose": "Candidate initialization observes committed publication; post-commit failure rolls forward to the authoritative profile.",
+      "failure_triage": "Separate SQLite setup errors from ordering failures; inspect registry and ProfileRuntime together. VM integration, not device lifecycle.",
+      "evidence": "Existing main tests; historical before/after execution not independently verified by this kit.",
+      "run_command": "python dev/testing/handoff/run.py profile-lifecycle",
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
+    },
+    "profile-isolation": {
+      "engine": "flutter",
+      "cwd": ".",
+      "selectors": [
+        "test/profiles/isolation_suite"
+      ],
+      "kinds": [
+        "behavioral",
+        "integration",
+        "sourceguard"
+      ],
+      "owner_module": "lib/services/profiles",
+      "purpose": "Preference classification and live-switch participants do not retain prior profile state.",
+      "failure_triage": "Read test/profiles/isolation_suite/README.md; source matches do not prove native stores or process-death safety.",
+      "evidence": "Existing main tests; historical before/after execution not independently verified by this kit.",
+      "run_command": "python dev/testing/handoff/run.py profile-isolation",
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
+    },
+    "cloud-core": {
+      "engine": "flutter",
+      "cwd": ".",
+      "selectors": [
+        "test/cloud_playback_characterization_test.dart"
+      ],
+      "kinds": [
+        "behavioral"
+      ],
+      "owner_module": "lib/services/cloud",
+      "purpose": "Stored/playback provider aliases, precedence and negative-pack cache TTL/cap remain compatible.",
+      "failure_triage": "Inspect provider IDs and cache keys/clock; this suite does not contact live providers.",
+      "evidence": "Existing main tests; historical before/after execution not independently verified by this kit.",
+      "run_command": "python dev/testing/handoff/run.py cloud-core",
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
+    },
+    "cloud-provider": {
+      "engine": "flutter",
+      "cwd": ".",
+      "selectors": [
+        "test/adversarial/provider_matrix_test.dart"
+      ],
+      "kinds": [
+        "behavioral"
+      ],
+      "owner_module": "lib/services/cloud/cloud_provider_registry.dart",
+      "purpose": "Missing configuration, empty files, cache misses and malformed HTTP errors remain observable through the registry.",
+      "failure_triage": "Inspect injected clients and provider adapters before changing expected errors; no live-account validation.",
+      "evidence": "Existing main tests; historical before/after execution not independently verified by this kit.",
+      "run_command": "python dev/testing/handoff/run.py cloud-provider",
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
+    },
+    "keyword-state": {
+      "engine": "flutter",
+      "cwd": ".",
+      "selectors": [
+        "test/keyword_search_origin_widget_test.dart",
+        "test/keyword_search_screen_pin_test.dart",
+        "test/keyword_search_controller_lib_test.dart"
+      ],
+      "kinds": [
+        "widget",
+        "behavioral"
+      ],
+      "owner_module": "lib/screens/search",
+      "purpose": "Real SearchScreen submit/clear, imported results and Name-sort reset, extracted State notifications, filtering and controller bookkeeping stay pinned.",
+      "failure_triage": "Distinguish outer SearchScreen from extracted widget/controller; check engine mocks and state notifications.",
+      "evidence": "origin_widget is retrospective (#101): source records unchanged execution on pre-move ee33b3cba678ab914ed242e484cc9e5aed15e3c0 and main, not pre-extraction authorship. screen_pin is post-move (#98) and requires extracted classes. This kit has not rerun the historical tree.",
+      "run_command": "python dev/testing/handoff/run.py keyword-state",
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
+    },
+    "keyword-source": {
+      "engine": "flutter",
+      "cwd": ".",
+      "selectors": [
+        "test/keyword_search_pin_test.dart"
+      ],
+      "kinds": [
+        "sourceguard",
+        "behavioral-model"
+      ],
+      "owner_module": "lib/screens/search",
+      "purpose": "Source-shape expectations and locally reproduced keyword helper examples remain visible.",
+      "failure_triage": "A green result is not a functional pin of real State: this file greps source and reproduces helper logic. Prefer keyword-state for runtime evidence.",
+      "evidence": "Original characterization intent is stated in file; source guards and test-local reimplementations are weaker evidence than original production-path execution.",
+      "run_command": "python dev/testing/handoff/run.py keyword-source",
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
+    },
+    "backup-export": {
+      "engine": "flutter",
+      "cwd": ".",
+      "selectors": [
+        "test/backup_encryption_test.dart",
+        "test/backup_restore_page_test.dart",
+        "test/profiles/portable_profile_package_test.dart",
+        "test/profiles/profile_database_snapshot_test.dart",
+        "test/profiles/profile_audit_report_test.dart"
+      ],
+      "kinds": [
+        "behavioral",
+        "integration",
+        "sourceguard"
+      ],
+      "owner_module": "lib/services/backup_restore_service.dart; lib/services/profiles",
+      "purpose": "Encryption rejects unsafe envelopes; portable packages preserve legacy inventory and digests; database export preserves durable state; audit export omits private data.",
+      "failure_triage": "Identify encryption, SQLite, audit privacy or source-contract failure first. backup_restore_page tests helpers and source text, not a rendered widget; no native sharing/file-picker guarantee.",
+      "evidence": "Existing main tests; historical before/after execution not independently verified by this kit.",
+      "run_command": "python dev/testing/handoff/run.py backup-export",
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
+    },
+    "ci-selftests": {
+      "engine": "python",
+      "cwd": "tool",
+      "selectors": [
+        "tool/ci_test_allowlist_test.py",
+        "tool/analyze_baseline_test.py",
+        "tool/ci_layering_delta_test.py"
+      ],
+      "kinds": [
+        "behavioral",
+        "tooling"
+      ],
+      "owner_module": "tool",
+      "purpose": "CI matcher and layering-delta self-tests run exactly the three modules selected by the Test workflow.",
+      "failure_triage": "These exercise gate logic only, not app tests, analyzer output or actual layering state.",
+      "evidence": "Existing main tests; historical before/after execution not independently verified by this kit.",
+      "run_command": "python dev/testing/handoff/run.py ci-selftests",
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
+    },
+    "full": {
+      "engine": "flutter",
+      "cwd": ".",
+      "selectors": [
+        "test"
+      ],
+      "kinds": [
+        "behavioral",
+        "widget",
+        "integration",
+        "sourceguard",
+        "golden"
+      ],
+      "owner_module": "lib; test",
+      "purpose": "Run all Flutter tests discovered under test, including tagged pixel goldens, with raw exit status.",
+      "failure_triage": "Read raw failing test names; goldens may vary by host. No retries, golden updates, baseline suppression or native device tests are added.",
+      "evidence": "Directory discovery follows current checkout; classification is mixed, not a claim that every file exercises every type.",
+      "run_command": "python dev/testing/handoff/run.py full",
+      "inspected_commit": "843d631b780cf5c04f14e3f3e1070bb914e8e197"
+    }
+  }
+}
