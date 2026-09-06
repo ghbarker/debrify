@@ -1,8 +1,10 @@
 # Refactor board
 
-## Current roadmap — September 6, main 94c38b32
+## Current roadmap — September 6, merged production main 94c38b32
 
-### God-file line counts — original → current merged main
+**Overall estimate: approximately 75%.** Architectural judgment, not a measured checklist percentage. Open PRs are not completed work. This checklist preserves the same six outcomes; historical evidence follows below.
+
+### God-file line counts — original → merged main
 
 - **Search:** 19,070 → **6,343** (12,727 fewer)
 - **Player:** 16,278 → **11,535** (4,743 fewer)
@@ -10,61 +12,79 @@
 - **Storage:** 9,963 → **1,741** (8,222 fewer)
 - **Settings:** 7,905 → **2,908** (4,997 fewer)
 
-Counted from actual merged main 94c38b32. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
+Physical lines, not whole-project deletions. Last full gate: **bc017 PASSED**; its forwarder ledger was Storage204 / Search133 / Player161 / Magic23 / Settings0. Later #216/#217 are individually verified, not included in that gate. Forbidden imports: **77 → 62 on merged main**; #218 would bring them to56, not yet merged. No baseline increase.
 
-### The same six outcomes — stable roadmap
+### Do next — actual execution order
 
-These are the six outcomes previously agreed with the user. Keep their numbers and titles stable. PRs are steps within them, not replacement outcomes. No scope expansion or new acceptance requirement is introduced here. Changes to scope must be identified explicitly rather than folded into a status rewrite.
+- [ ] **Parent: merge #218, shared TV focus owner.** Independent22 tests and integration review passed; exact94645 CI tests/goldens running, native passed. Merge only after remaining checks pass.
+- [ ] **Cicero: run full integrated gate after #218 merges.** #216/#217 are two production merges sincebc017; #218 is the third. Actual-main full tests, goldens, analysis, layering/forwarder ledger, native pair, Windows and ARM64 builds. Record known failures separately.
+- [ ] **Locke + parent: integrate and merge #219, public Atrium stage, after that gate passes.** Independent28 checks passed; exact3e613 CI tests/goldens running, native passed. Reconcile latest main and verify unchanged payload before merging. No duplicate behavior run for an unchanged union.
+- [ ] **Locke: prepare a bounded Sources-route ownership proposal.** Read-only import/symbol closure and actual public-behavior pin matrix first. Implementation and new test runs require the next bounded grant; this is not approved production scope.
+- [ ] **Parent + reviewers: choose the next player/native ownership step from recorded evidence.** Tracker terminal experiment is stopped after four failed runs; no automatic fifth attempt or timer/pump workaround.
 
-1. **Finish Search stage layouts and final shared composition — IN PROGRESS.**
-   Done: standalone Discover, Spotlight, Tonight and shared BoardCell merged.
-   Deck/shared visuals (#195), Mosaic (#196), Promenade (#198), Canvas (#200) and shared favourites (#203) are merged. Left: Atrium and final shared composition. Atrium overflow fix #216 is merged; extraction still requires a new bounded origin checkpoint on fixed main; stage extraction is 638 lines short of its existing target. The retained Mosaic policy is not another pending wrapper move.
-   Next: a bounded composition change that removes dependencies rather than adding more forwarding callbacks. Close against the existing Search lane criteria, not merely a smaller host file.
+### 1. Finish Search stage layouts and final shared composition — OPEN
 
-2. **Complete player decoder/state/UI separation — IN PROGRESS, CURRENT PIN BLOCKER.**
-   Done: earlier slices, retained overlay/guide pins, terminal test seam (#190), diagnostic state ownership (#193), presentation (#201) and transport (#205).
-   Left: remaining decoder/state/UI separation and tracker pin debt. Recent tracker attempts did not reach the behavior being tested; no completion credit.
-   Next: a finite proposal resolving remaining tracker/renderer evidence or cohesive state ownership before any further runtime. Renderer retries remain held; scrub ownership still spans eleven invalidation transitions. This remains the least advanced outcome.
+- [x] Merge standalone Discover, Spotlight, Tonight, Deck, Mosaic, Promenade and Canvas work; shared BoardCell and favourites #203.
+- [x] Diagnose and fix Atrium overflow in #216; independent geometry tests and CI passed.
+- [x] Pin Atrium navigation on the fixed original path: three cases passed before the move.
+- [ ] **Merge seventh public stage in #219.** Reviewed but unmerged. Its seven explicit callbacks remain; +60 host/+35 production lines are growth, not extraction credit.
+- [ ] **Finish Sources route/library ownership.** Current 2,775-line part and two consumers importing the legacy host remain. Proposed four-file boundary uses the existing public route API; inspect closure and pin lifecycle before approval.
+- [ ] **Resolve the 1,993-line hero part against the existing part-size criterion.** Native-bearing content remains; no extraction grant or blanket waiver.
+- [ ] **Close final shared-composition and original rebuild obligations with evidence.** Retained callback inventories are not automatically unused forwarders. Preserve accepted Mosaic focus/prefetch policy.
+- [ ] **Reconcile the existing 1,400-line stage target.** Recorded762 leaves /638 short remains explicit. Do not count already-external part lines, wrapper growth or the overflow fix toward it.
 
-3. **Finish storage business-logic ownership and eligible temporary facade removal — IN PROGRESS.**
-   Done: storage size target reached, multiple domain owners and pre-refactor restore fixtures merged, earlier223 facades retired.
-   Left: remaining domain logic and eligible forwarding APIs; native-sensitive exceptions remain explicit.
-   History/watchlist, filter, download, Ambient, keyboard, catalog (#197), indexer (#199), device (#202), scalar (#204), adult (#206) and caller retirements #207–#214 are merged. Milestone ACCEPTED at bc017: extracted/key-compatible Storage and completed eligible Q2 routing, after independent contract review and full gate. Next: address separately deferred native ownership evidence. Five coordinators remain explicitly retained; size does not establish strict ownership closure.
+### 2. Complete player decoder/state/UI separation — OPEN
 
-4. **Finish M1-7 genuine common-flow dedup and dependency cleanup — COMPLETE against the agreed finite scope.**
-   Done: shared flow programmes merged, provider-leaf target met (627 current lines versus under800), two cached-entry wrappers removed.
-   Integrated acceptance: gate e78d100e PASSED, including merged186. Three captured-key operations now use the provider interface at ten call sites. Finite Windowed/UI retention decisions are accepted and recorded in NOTES. Distinct provider algorithms are intentional and do not all need unification.
-   No remaining M1-7 implementation obligation; independent88-case verification and integrated gate passed. No new autonomous-provider-framework or zero-UI-callback requirement. Outcome4 is closed; wider Q-phase/native obligations remain in their existing outcomes.
+- [x] Merge terminal seam #190, diagnostic ownership #193, presentation #201 and transport #205; retain existing overlay/guide pins.
+- [ ] **Obtain a fully passing tracker origin pin before moving tracker ownership.** Real selected21s resume was observed, but the final test still failed on an initial-resume delayed Future/fake-clock cleanup obligation. No green-pin credit. Four failures and attribution are retained in NOTES.
+- [ ] **Resolve remaining cohesive decoder/state/UI ownership.** Propose exact ownership boundaries and actual origin entry before code changes; no new callback bag.
+- [ ] **Disposition renderer and scrub evidence gaps under existing criteria.** Renderer attempts remain held. Scrub's eleven invalidation transitions make an isolated helper move insufficient; retention is explicit, not completion of the broader player outcome.
 
-5. **Q-phase dependency/rule cleanup, compatibility expiry and upstream contribution work — PARTLY STARTED.**
-   Done: compatibility retirements advance with outcomes3/4; canonical rules (#188) merged; upstream contribution intent established.
-   Left: strict Q1 closure, remaining eligible Q2 work and upstream-ready contribution work. The defined Q3 canonical-rule migration (#188) and provider guide (#192) are complete.
-   Next: continue eligible cleanup and decide publication of the independently tested local upstream catalog candidate. That candidate remains unpublished; do not repeat candidate surveys. Shared benefit is counted once.
+### 3. Finish storage business-logic ownership and eligible temporary facade removal — OPEN, MAJOR MILESTONE ACCEPTED
 
-6. **Final integrated acceptance of completed architecture — PENDING COMPLETION OF THE ABOVE.**
-   Done: repeated intermediate full gates; latest bc017b87 PASSED with exact known failures, native first-pair success and both builds, including #213/#214/#215.
-   Left: final gate on the completed architecture. Earlier builds and device smoke are not the final acceptance build.
-   Next: keep intermediate gates running; no new manual-smoke blocker is added against the user's standing instruction.
+- [x] Reach the host-size target and extract domain owners with key-compatible origin/restore evidence.
+- [x] Merge eligible routing/forwarder retirements through #215.
+- [x] Accept the bounded extraction/key-compatibility/eligible-Q2 milestone at full gatebc017.
+- [ ] **Resolve separately deferred native/render ownership evidence.** Six policy methods42 lines plus debug3 remain deferred; this is distinct from nine already-owned native-sensitive forwarding APIs.
+- [ ] **Close strict Storage acceptance only against its existing contract.** Five coordinators74 lines and battery/fixed14 lines are already accepted retentions, not newly assigned cleanup. Native-sensitive retirement requires its named evidence.
 
-**Where we are:** implementation and verification are still in progress. Since this six-outcome list was introduced, we have landed additional milestones, especially M1 flow consolidation and Tonight. One outcome is complete; the rough 70% estimate is judgment, not a measured acceptance score. The most recent PR is not the whole trek.
+Finite pre-S2 fixtures are not proof of every pre-refactor backup. Indexer export, adult held lookup, Android-positive and lifetime gaps remain recorded. No more tiny forwarding batches are assigned merely to lower line counts.
 
-### Current work — latest verified checkpoint
+### 4. Finish M1-7 genuine common-flow dedup and dependency cleanup — COMPLETE
 
-- **Locke / Storage:** #215 merged; contractual Storage acceptance versus deferred-native evidence packet assigned, read-only; no further tiny-batch survey.
-- **Cicero / Review:** full actual-main bc017b87 gate PASSED; Storage limited milestone accepted against the contract; strict native ownership remains open.
-- **Ampere / Search and upstream:** local upstream catalog trial independently accepted, unpublished. Search final composition and Atrium remain open; no new implementation assignment claimed.
-- **Wegener / Player:** presentation #201 and transport #205 merged; remaining decoder/state/UI work open, bounded unsuccessful experiments retained as debt.
-- **Parent:** #212 merged at 98cae882. Full98ca gate passed; Fullbc017 gate passed; production counter reset0. No user/manual-smoke blocker.
-### Next steps — working checklist
+- [x] Meet the provider-leaf target:627 lines versus under800.
+- [x] Merge common programmes and captured-provider operations; remove the two cached-entry wrappers.
+- [x] Pass independent88-case verification and integrated gatee78d100e.
+- [x] Record finite Windowed/UI retention decisions. No new zero-callback or autonomous-provider requirement.
 
-- [x] Merge #199/#204/#206 and pass their full integrated gate896a168d.
-- [x] Merge Search favourite cells203 and corrected provider guide192.
-- [x] Merge QuickPlay #207, Social #208, Stremio #209 and Debrify TV #210 caller cleanup with independent review and exact CI.
-- [ ] Reconcile remaining Q2 expiry and native ownership obligations without treating retained code as deleted.
-- [ ] Resolve Search Atrium/final composition and player remaining architectural outcomes under a separately justified scope; no blind retries or wrapper padding.
-- [ ] Decide whether to publish the independently reviewed local upstream catalog candidate; nothing submitted upstream.
-- [ ] Run final integrated acceptance only after the remaining architectural outcomes are fulfilled.
+### 5. Q-phase dependency/rule cleanup, compatibility expiry and upstream contribution work — OPEN
 
+- [x] Complete canonical-rule migration #188 and provider guide #192.
+- [x] Merge neutral PlaylistEntry owner #217:15 forbidden imports removed, old import compatibility preserved.
+- [ ] **Merge shared focus-wrapper owner #218:** six additional forbidden imports removed; reviewed, not yet merged.
+- [ ] **Close remaining strict Q1 dependencies through separately owned lanes.** Main currently62; projected56 after #218. Ceiling77/no-growth is not strict zero-violation acceptance. Do not loosen the checker or hide dependencies behind exports.
+- [ ] **Finish compatibility expiry accounting.** Distinguish still-used exports and accepted/native-sensitive APIs from genuinely obsolete facades; do not delete all aliases blindly.
+- [x] Prepare and independently verify the two-commit upstream catalog candidate locally,24 tests before/after/independent.
+- [x] **Honor user decision: keep upstream contribution local.** Publication is intentionally parked, not awaiting an answer. Do not publish or repeatedly ask. This is not an upstream-merged contribution claim.
+
+### 6. Final integrated acceptance of completed architecture — PENDING
+
+- [x] Pass the latest completed intermediate gatebc017:6,095 tests passed /12 exact known exceptions /2 skips; goldens21 known; native first pair, Windows and ARM64 passed; analyzer431/449; layering77 at that gate.
+- [ ] Finish or explicitly disposition the remaining contractual outcomes above without quietly changing their meaning.
+- [ ] Run final integrated acceptance on the resulting actual main and record exact source/artifact hashes, complete failures, dependency count and god-file/forwarder ledger.
+- [ ] Report final accepted outcomes and retained debt. Prior phone/TV acceptance stays historical; do not label it new-build device proof. Manual smoke does not block authorized progress.
+
+### Who owns the next action
+
+- **Locke:** #219 author; Sources proposal read-only. No edits to Q1 lanes.
+- **Cicero:** #219 independent review complete; next full integrated gate after #218. Tracker experiment stopped and documented.
+- **Arendt:** #218 integration complete; frozen while CI runs. No further unchanged local tests.
+- **Confucius:** #217/#218 independent verification and union review complete; available for the next assigned review. Upstream stays local.
+- **Parent:** merge queue, grants, coordination, this board and NOTES. **No task is waiting on the user.** CI/gate dependencies are stated above; available reviewers are not mislabeled as actively coding.
+
+### Update rules for this checklist
+
+Check off an item only when its stated result is achieved. Update its owner/blocker when it changes; retain these six outcome names. Record merged work separately from prepared/reviewed PRs. Keep original/current god lines visible. After each merge explain the actual benefit and remaining work; preserve detailed evidence in the history below.
 ### Latest completed milestones
 
 - #217 merged **94c38b32**, exactdb6f19fd, independent24PASS/exact20payloadunion/allthreeCIgreen. PlaylistEntry70lineclass now neutral/importfree; oldexport sameidentity and15consumerimports redirect. MeasuredQ1 imports77→62 with15removed0added; production+1compatibilityexport, ZEROgodlinecredit. Did we make a difference? Fifteen forbiddendependencies removed withoutbusinesslogicchanges; strictQ1 remainsOPEN. Counter2sincebc017. #218 nowintegratesmain; #219 independent28PASSawaitsCI/queue and willremainafterthirdmergegate.
