@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/ambient_trailer_prefs.dart' show AmbientTrailerPrefs;
 import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:flutter/material.dart';
 import '../../models/stremio_addon.dart';
@@ -117,22 +118,22 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
   /// rather than the detail page silently inheriting the hero's preference,
   /// which is what a platform-keyed lookup would have done.
   Future<void> _setAmbientAudio(bool value) async {
-    await StorageService.setAmbientTrailerAudioEnabled(
+    await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(
       AmbientTrailerSurface.detail,
       value,
     );
-    await StorageService.setAmbientTrailerAudioEnabled(
+    await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(
       AmbientTrailerSurface.homeHero,
       value,
     );
   }
 
   Future<void> _setAmbientVolume(int value) async {
-    await StorageService.setAmbientTrailerVolume(
+    await AmbientTrailerPrefs.setAmbientTrailerVolume(
       AmbientTrailerSurface.detail,
       value,
     );
-    await StorageService.setAmbientTrailerVolume(
+    await AmbientTrailerPrefs.setAmbientTrailerVolume(
       AmbientTrailerSurface.homeHero,
       value,
     );
@@ -231,8 +232,8 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
       // enabled detail trailer played at its own default of on. Read the shown
       // surface, then write it through to the other.
       final ambientTrailerAudioEnabled =
-          await StorageService.getAmbientTrailerAudioEnabled(_ambientSurface);
-      final ambientTrailerVolume = await StorageService.getAmbientTrailerVolume(
+          await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(_ambientSurface);
+      final ambientTrailerVolume = await AmbientTrailerPrefs.getAmbientTrailerVolume(
         _ambientSurface,
       );
       if (PlatformUtil.isTelevision) {

@@ -1053,3 +1053,23 @@ raw physical values from public read clamps across both Ambient surfaces.
 Is there more we could do? The exact owner move requires a separate scope grant;
 this checkpoint adds no facades and earns zero production line credit. It does
 not close the remaining Storage ownership outcome.
+
+
+### Q2 Ambient caller retirement
+
+Current callers route the four Ambient audio/volume APIs directly to
+AmbientTrailerPrefs. StorageService retains its export of the single
+AmbientTrailerSurface enum for public import/type compatibility. Owner bodies,
+HomePrefs, historical origin80f3/fixtureee778, recipe and encrypted/manifest
+bytes are unchanged. No rendering/native authority or playback behavior changes.
+
+For actual unchanged pre-S2 6d26 generation, the copied fixture loader now
+removes its AmbientTrailerPrefs import and reverses exactly six Ambient
+receivers to StorageService. The old host already defines the same enum, so no
+enum backport or shim is needed. Retain all previously documented unrelated
+harness adaptations, including183 two history/two MyWatchlist readers, filter
+ten tearoffs, playlist four receivers and original IPTV/provider/playback routes.
+Optional standalone origin-test copying reverses13 Ambient receivers and removes
+the owner import, retaining the host import show AmbientTrailerSurface. No new
+package generation or assertions are necessary; this is namespace adaptation,
+not a claim that the complete old/current harness is byte-identical.

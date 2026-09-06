@@ -1,4 +1,3 @@
-import 'storage/ambient_trailer_prefs.dart';
 export 'storage/ambient_trailer_prefs.dart' show AmbientTrailerSurface;
 
 import 'package:flutter/foundation.dart';
@@ -456,23 +455,9 @@ class StorageService {
   static Future<void> setHomeHeroTrailerEnabled(bool enabled) =>
       HomePrefs.setHomeHeroTrailerEnabled(enabled);
 
-  static Future<bool> getAmbientTrailerAudioEnabled(
-    AmbientTrailerSurface surface,
-  ) => AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(surface);
 
-  static Future<void> setAmbientTrailerAudioEnabled(
-    AmbientTrailerSurface surface,
-    bool enabled,
-  ) => AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(surface, enabled);
 
-  static Future<int> getAmbientTrailerVolume(
-    AmbientTrailerSurface surface,
-  ) => AmbientTrailerPrefs.getAmbientTrailerVolume(surface);
 
-  static Future<void> setAmbientTrailerVolume(
-    AmbientTrailerSurface surface,
-    int percent,
-  ) => AmbientTrailerPrefs.setAmbientTrailerVolume(surface, percent);
 
   /// Android TV: render ambient trailers on a native SurfaceView *under* a
   /// translucent Flutter surface (a hardware overlay plane — Flutter never
