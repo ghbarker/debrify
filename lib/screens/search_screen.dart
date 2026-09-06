@@ -2,6 +2,7 @@ import '../widgets/see_all/discover_browsing_input.dart';
 import '../services/home_catalog_refresh.dart';
 import '../services/home_load_deadline.dart';
 import '../widgets/home/home_row_focus.dart';
+import '../widgets/home/home_continuation_focus.dart';
 import '../services/home_row_refresh.dart';
 import '../services/profiles/connection_resource_service.dart';
 import 'dart:async';
@@ -687,6 +688,7 @@ class _SearchScreenState extends State<SearchScreen>
   // is currently shown (homepage OR per-addon catalog search results). Both the
   // board and catalog search render through the same horizontal-row layout.
   final _catalogContinueNode = FocusNode(debugLabel: 'catalog_continue');
+  FocusNode? _catalogReturnFocus;
   bool _catalogContinuing = false;
   int _catalogContinueCursor = 0;
   bool _loading = true;
@@ -7782,12 +7784,13 @@ class _SearchScreenState extends State<SearchScreen>
     final current = _resolveCanvasRailIndex(rails);
     final next = (current + delta).clamp(0, rails.length - 1);
     if (next == current) {
-      if (delta > 0 && _focusCatalogContinuation()) return;
       if (delta > 0 && _boardHasMore) {
         // Remember the move so it COMPLETES when the batch lands — otherwise
         // the keypress is silently eaten and the user has to press again.
         _deferStageAdvance(_canvasRailKeyOf(rails[current]));
         _loadMoreBoard();
+      } else if (delta > 0) {
+        _focusCatalogContinuation();
       }
       return;
     }
@@ -17629,8 +17632,21 @@ class _SearchScreenState extends State<SearchScreen>
 
   bool _focusCatalogContinuation() {
     if (!(_catalogContinueNode.context?.mounted ?? false)) return false;
+    final origin = FocusManager.instance.primaryFocus;
+    if (!identical(origin, _catalogContinueNode)) _catalogReturnFocus = origin;
     _catalogContinueNode.requestFocus();
     return true;
+  }
+
+  void _restoreCatalogContinuationFocus() {
+    if (focusMountedHomeNode([
+      _catalogReturnFocus,
+      _stageFocusTarget(),
+      for (final rail in _canvasRails) ..._canvasRailNodes(rail),
+    ])) {
+      return;
+    }
+    MainPageBridge.focusTvSidebar?.call();
   }
 
   Widget _buildBoard() {
@@ -17638,8 +17654,14 @@ class _SearchScreenState extends State<SearchScreen>
       for (var i = 0; i < _sections.length; i++)
         if (_sections[i].pagingPaused && !_sections[i].exhausted) i,
     ];
+    final hasMoreCatalogs = _boardHasMore;
+    final showContinuation =
+        pending.isNotEmpty ||
+        (hasMoreCatalogs && _sections.every((s) => s.items.isEmpty));
     final busy =
-        _catalogContinuing || pending.any((i) => _sections[i].loadingMore);
+        _catalogContinuing ||
+        _boardLoadingMore ||
+        pending.any((i) => _sections[i].loadingMore);
     return Column(
       children: [
         Expanded(
@@ -17652,25 +17674,23 @@ class _SearchScreenState extends State<SearchScreen>
                   !_anyFavVisible
               ? _message(
                   Icons.movie_filter_rounded,
-                  pending.isEmpty
+                  !showContinuation
                       ? 'No unwatched titles found'
                       : 'No new titles loaded yet',
-                  pending.isEmpty
+                  !showContinuation
                       ? 'Try another catalog or turn off Hide watched titles in Tracking settings.'
                       : 'Continue browsing to check more titles in these catalogs.',
                 )
               : _buildBoardContent(),
         ),
-        if (!_loading && pending.isNotEmpty)
+        if (!_loading && showContinuation)
           SafeArea(
             top: false,
             child: Focus(
               onKeyEvent: (_, event) {
                 if (event is KeyDownEvent &&
                     event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                  if (!_focusHomeRailAt(0, 0)) {
-                    MainPageBridge.focusTvSidebar?.call();
-                  }
+                  _restoreCatalogContinuationFocus();
                   return KeyEventResult.handled;
                 }
                 return KeyEventResult.ignored;
@@ -17682,21 +17702,29 @@ class _SearchScreenState extends State<SearchScreen>
                     ? null
                     : () async {
                         final gen = _boardLoadGen;
-                        final offset = _catalogContinueCursor % pending.length;
-                        final batch = [
-                          ...pending.skip(offset),
-                          ...pending.take(offset),
-                        ].take(4).map((i) => _sections[i]).toList();
-                        _catalogContinueCursor =
-                            (offset + batch.length) % pending.length;
+                        final wasEmpty = _sections.every(
+                          (s) => s.items.isEmpty,
+                        );
                         setState(() => _catalogContinuing = true);
                         try {
-                          // Rotate bounded batches so a faulty addon cannot
-                          // strand the catalogs behind it.
-                          for (final section in batch) {
-                            if (!mounted || gen != _boardLoadGen) return;
-                            final i = _sections.indexOf(section);
-                            if (i >= 0) await _loadMoreRow(i, resume: true);
+                          // Vertical paging must remain independent of a
+                          // watched-only or failing row already on the board.
+                          if (_boardHasMore) {
+                            await _loadMoreBoard();
+                          } else if (pending.isNotEmpty) {
+                            final offset =
+                                _catalogContinueCursor % pending.length;
+                            final batch = [
+                              ...pending.skip(offset),
+                              ...pending.take(offset),
+                            ].take(4).map((i) => _sections[i]).toList();
+                            _catalogContinueCursor =
+                                (offset + batch.length) % pending.length;
+                            for (final section in batch) {
+                              if (!mounted || gen != _boardLoadGen) return;
+                              final i = _sections.indexOf(section);
+                              if (i >= 0) await _loadMoreRow(i, resume: true);
+                            }
                           }
                         } finally {
                           if (mounted) {
@@ -17706,12 +17734,13 @@ class _SearchScreenState extends State<SearchScreen>
                         if (mounted && gen == _boardLoadGen) {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             if (!mounted || gen != _boardLoadGen) return;
-                            if (!_sections.any(
-                              (s) => s.pagingPaused && !s.exhausted,
-                            )) {
-                              if (!_focusHomeRailAt(0, 0)) {
-                                MainPageBridge.focusTvSidebar?.call();
-                              }
+                            if ((wasEmpty &&
+                                    _sections.any((s) => s.items.isNotEmpty)) ||
+                                (!_boardHasMore &&
+                                    !_sections.any(
+                                      (s) => s.pagingPaused && !s.exhausted,
+                                    ))) {
+                              _restoreCatalogContinuationFocus();
                             }
                           });
                         }

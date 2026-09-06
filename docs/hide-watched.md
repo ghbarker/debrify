@@ -45,7 +45,10 @@ addon as the end of the catalog. Skip offsets advance by the addon's raw counts
 so paging stays aligned. Repeated items are deduplicated across the windows.
 If a batch has no visible titles but the addon has more, Home and See All show
 **Continue loading**. This resumes at the saved offset instead of restarting or
-marking the catalog exhausted. A failed request without a raw count also keeps
+marking the catalog exhausted. On Home, additional catalog rows load before
+paused rows are retried, so one watched-only source cannot block the rest of
+the board. MDBList also offers continuation when its filtered first page is
+empty and the provider returns a next cursor. A failed request without a raw count also keeps
 its cursor for retry. With the switch off each pager call makes one fetch.
 
 Collection folders use their existing raw cursor pager with the same watched

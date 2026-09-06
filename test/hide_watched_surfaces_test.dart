@@ -1,3 +1,5 @@
+import 'package:debrify/services/mdblist/mdblist_discover_models.dart';
+import 'package:debrify/widgets/see_all/stremio_dropdown.dart';
 import 'dart:convert';
 
 import 'package:debrify/models/stremio_addon.dart';
@@ -177,4 +179,74 @@ void main() {
       });
     }
   }
+  testWidgets(
+    'watched recommendation pages remain resumable with the TV remote',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final requests = <String>[];
+      final service = MdblistService.forTesting(
+        client: MockClient((request) async {
+          requests.add(request.url.toString());
+          if (request.url.path == '/lists/recommended') {
+            return http.Response(
+              jsonEncode({
+                'sections': [
+                  {'section': 'rising', 'name': 'Rising'},
+                ],
+              }),
+              200,
+            );
+          }
+          if (request.url.path == '/lists/recommended/rising/items') {
+            final second = request.url.queryParameters['cursor'] == 'next';
+            return http.Response(
+              jsonEncode({
+                'movies': [
+                  {
+                    'imdb_id': second ? 'tt99' : 'tt1',
+                    'title': second ? 'Unseen next page' : 'Watched first page',
+                    'mediatype': 'movie',
+                  },
+                ],
+                'pagination': {'next_cursor': second ? null : 'next'},
+              }),
+              200,
+            );
+          }
+          return http.Response(jsonEncode({'movies': []}), 200);
+        }),
+        apiKeyProvider: () async => 'test-key',
+      );
+      await tester.pumpWidget(
+        host(
+          MdblistSeeAllScreen(
+            source: MdblistDiscoverSource.forTesting(service),
+            isAuthenticated: () async => true,
+            isTelevision: true,
+            onOpen: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(StremioDropdown<MdblistDiscoverGroup>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('For You').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Nothing matches these filters'), findsOneWidget);
+      expect(requests.where((r) => r.contains('/rising/items')), hasLength(1));
+      expect(find.text('Continue loading'), findsOneWidget);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'msa_more');
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(requests.where((r) => r.contains('/rising/items')), hasLength(2));
+      expect(requests.last, contains('cursor=next'));
+      final grid = tester.widget<SeeAllPosterGrid>(
+        find.byType(SeeAllPosterGrid),
+      );
+      expect(grid.items.map((m) => m.id), ['tt99']);
+      expect(find.text('Continue loading'), findsNothing);
+    },
+  );
 }
