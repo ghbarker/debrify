@@ -1602,3 +1602,16 @@ Optional historical correspondence reverses131candidate sites across13current
 tests; preexisting extracted-owner references remain, so this alone is not an
 old-compatible whole-suite harness. Actual export uses only the copied loader
 and its two existing adapted helpers. No identical-harness or native proof claim.
+
+
+### Q2 DeviceMaintenancePrefs caller retirement: old-loader adapter
+
+In the copied loader for unchanged6d26, reverse exactly4same-method
+DeviceMaintenancePrefs readers to StorageService and remove its owner import.
+Keep all prior adapters, including AppStyle6/Home19/Tracking15, and all recipe
+and artifact bytes. The fixture proves exclusions and destination globals,
+not portable sender identity or imported device configuration.
+
+Optional public-origin correspondence reverses23sites including4staticgetter
+tearoffs. Neither that reversal nor this adapter claims an identical whole old
+harness; existing helpers and adapters remain necessary. No newgeneration.

@@ -62,6 +62,7 @@ import 'models/sidebar_configuration.dart';
 import 'services/secret_vault.dart';
 import 'services/play_loader_style.dart';
 import 'package:debrify/services/storage/app_style_prefs.dart';
+import 'package:debrify/services/storage/device_maintenance_prefs.dart';
 import 'services/storage_service.dart';
 import 'services/tv_hero_artwork_quality_controller.dart';
 import 'services/tvos_top_shelf_service.dart';
@@ -2292,7 +2293,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
       return true;
     }
 
-    final dismissedIds = await StorageService.getDismissedDonationCampaignIds();
+    final dismissedIds = await DeviceMaintenancePrefs.getDismissedDonationCampaignIds();
     if (dismissedIds.contains(campaign.id)) return true;
     if (!mounted) return false;
 
@@ -2303,7 +2304,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
         builder: (dialogContext) => _SupportCampaignDialog(
           campaign: campaign,
           onDismissForever: () async {
-            await StorageService.dismissDonationCampaign(campaign.id);
+            await DeviceMaintenancePrefs.dismissDonationCampaign(campaign.id);
           },
         ),
       );
@@ -2324,7 +2325,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
   Future<bool> _performAutoUpdateCheck() async {
     try {
       if (!_allowsProfileFeature(ProfileFeature.appUpdates)) return true;
-      final autoEnabled = await StorageService.getUpdateAutoCheckEnabled();
+      final autoEnabled = await DeviceMaintenancePrefs.getUpdateAutoCheckEnabled();
       if (!autoEnabled) return true;
       final packageInfo = await AppVersionInfo.get();
       UpdateSummary summary;
@@ -2336,7 +2337,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
         return true;
       }
       if (!summary.updateAvailable) return true;
-      final ignored = await StorageService.getIgnoredUpdateVersion();
+      final ignored = await DeviceMaintenancePrefs.getIgnoredUpdateVersion();
       final releaseVersion = summary.release.versionLabel;
       if (ignored != null &&
           releaseVersion.isNotEmpty &&
@@ -2470,7 +2471,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                     TextButton(
                       onPressed: () async {
                         final navigator = Navigator.of(dialogContext);
-                        await StorageService.setIgnoredUpdateVersion(
+                        await DeviceMaintenancePrefs.setIgnoredUpdateVersion(
                           release.versionLabel,
                         );
                         navigator.pop();

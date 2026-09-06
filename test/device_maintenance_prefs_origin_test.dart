@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/device_maintenance_prefs.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
@@ -144,20 +144,20 @@ void main() {
   test(
     'absent defaults do not write and dismissal list is independent',
     () async {
-      expect(await StorageService.getSupportRemoteConfigCache(), isNull);
-      expect(await StorageService.getUpdateAutoCheckEnabled(), isTrue);
-      expect(await StorageService.getIgnoredUpdateVersion(), isNull);
-      final ids = await StorageService.getDismissedDonationCampaignIds();
+      expect(await DeviceMaintenancePrefs.getSupportRemoteConfigCache(), isNull);
+      expect(await DeviceMaintenancePrefs.getUpdateAutoCheckEnabled(), isTrue);
+      expect(await DeviceMaintenancePrefs.getIgnoredUpdateVersion(), isNull);
+      final ids = await DeviceMaintenancePrefs.getDismissedDonationCampaignIds();
       ids.add('local');
-      expect(await StorageService.getDismissedDonationCampaignIds(), isEmpty);
+      expect(await DeviceMaintenancePrefs.getDismissedDonationCampaignIds(), isEmpty);
       expect(backend.calls, isEmpty);
     },
   );
   final readers = <String, Future<Object?> Function()>{
-    _cache: StorageService.getSupportRemoteConfigCache,
-    _dismissed: StorageService.getDismissedDonationCampaignIds,
-    _auto: StorageService.getUpdateAutoCheckEnabled,
-    _ignored: StorageService.getIgnoredUpdateVersion,
+    _cache: DeviceMaintenancePrefs.getSupportRemoteConfigCache,
+    _dismissed: DeviceMaintenancePrefs.getDismissedDonationCampaignIds,
+    _auto: DeviceMaintenancePrefs.getUpdateAutoCheckEnabled,
+    _ignored: DeviceMaintenancePrefs.getIgnoredUpdateVersion,
   };
   for (final entry in readers.entries) {
     test(
@@ -174,8 +174,8 @@ void main() {
     'support cache remains opaque, including malformed and blank JSON',
     () async {
       for (final raw in ['{not JSON', '', '  ']) {
-        await StorageService.setSupportRemoteConfigCache(raw);
-        expect(await StorageService.getSupportRemoteConfigCache(), raw);
+        await DeviceMaintenancePrefs.setSupportRemoteConfigCache(raw);
+        expect(await DeviceMaintenancePrefs.getSupportRemoteConfigCache(), raw);
       }
       expect(backend.calls.length, 3);
     },
@@ -186,7 +186,7 @@ void main() {
       () async {
         install({_ignored: raw});
         expect(
-          await StorageService.getIgnoredUpdateVersion(),
+          await DeviceMaintenancePrefs.getIgnoredUpdateVersion(),
           raw.trim().isEmpty ? null : raw,
         );
         expect(backend.calls, isEmpty);
@@ -197,7 +197,7 @@ void main() {
   for (final value in <String?>[null, '', '  ', ' version ']) {
     test('ignored setter removes blank or stores original: $value', () async {
       install({_ignored: 'before'});
-      await StorageService.setIgnoredUpdateVersion(value);
+      await DeviceMaintenancePrefs.setIgnoredUpdateVersion(value);
       final remove = value == null || value.trim().isEmpty;
       expect(backend.calls, [
         (remove ? 'remove' : 'set', 'flutter.$_ignored', remove ? null : value),
@@ -214,13 +214,13 @@ void main() {
       install({
         _dismissed: <String>['A', ' A ', 'A'],
       });
-      final copy = await StorageService.getDismissedDonationCampaignIds();
+      final copy = await DeviceMaintenancePrefs.getDismissedDonationCampaignIds();
       copy.add('local');
-      await StorageService.dismissDonationCampaign('A');
+      await DeviceMaintenancePrefs.dismissDonationCampaign('A');
       expect(backend.calls, isEmpty);
-      await StorageService.dismissDonationCampaign('a');
-      await StorageService.dismissDonationCampaign('');
-      expect(await StorageService.getDismissedDonationCampaignIds(), [
+      await DeviceMaintenancePrefs.dismissDonationCampaign('a');
+      await DeviceMaintenancePrefs.dismissDonationCampaign('');
+      expect(await DeviceMaintenancePrefs.getDismissedDonationCampaignIds(), [
         'A',
         ' A ',
         'A',
@@ -244,31 +244,31 @@ void main() {
           label: 'cache',
           key: _cache,
           value: '{new',
-          call: () => StorageService.setSupportRemoteConfigCache('{new'),
+          call: () => DeviceMaintenancePrefs.setSupportRemoteConfigCache('{new'),
         ),
         (
           label: 'dismiss',
           key: _dismissed,
           value: <String>['old', 'new'],
-          call: () => StorageService.dismissDonationCampaign('new'),
+          call: () => DeviceMaintenancePrefs.dismissDonationCampaign('new'),
         ),
         (
           label: 'auto',
           key: _auto,
           value: false,
-          call: () => StorageService.setUpdateAutoCheckEnabled(false),
+          call: () => DeviceMaintenancePrefs.setUpdateAutoCheckEnabled(false),
         ),
         (
           label: 'ignored',
           key: _ignored,
           value: ' new ',
-          call: () => StorageService.setIgnoredUpdateVersion(' new '),
+          call: () => DeviceMaintenancePrefs.setIgnoredUpdateVersion(' new '),
         ),
         (
           label: 'remove',
           key: _ignored,
           value: null,
-          call: () => StorageService.setIgnoredUpdateVersion(null),
+          call: () => DeviceMaintenancePrefs.setIgnoredUpdateVersion(null),
         ),
       ];
   for (final entry in writes) {

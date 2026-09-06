@@ -31,6 +31,7 @@ import 'package:debrify/services/storage/download_destination_prefs.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'package:debrify/services/storage/app_style_prefs.dart';
+import 'package:debrify/services/storage/device_maintenance_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -777,10 +778,10 @@ void main() {
   Future<void> expectMaintenance(Map values) async {
     final prefs = await SharedPreferences.getInstance();
     _expectSettings({for (final key in maintenanceKeys) key: prefs.get(key)}, Map<String, Object?>.from(values));
-    expect(await StorageService.getSupportRemoteConfigCache(), values['support_remote_config_cache_v1']);
-    expect(await StorageService.getDismissedDonationCampaignIds(), values['dismissed_donation_campaign_ids_v1']);
-    expect(await StorageService.getUpdateAutoCheckEnabled(), values['update_auto_check_enabled']);
-    expect(await StorageService.getIgnoredUpdateVersion(), values['update_ignored_version']);
+    expect(await DeviceMaintenancePrefs.getSupportRemoteConfigCache(), values['support_remote_config_cache_v1']);
+    expect(await DeviceMaintenancePrefs.getDismissedDonationCampaignIds(), values['dismissed_donation_campaign_ids_v1']);
+    expect(await DeviceMaintenancePrefs.getUpdateAutoCheckEnabled(), values['update_auto_check_enabled']);
+    expect(await DeviceMaintenancePrefs.getIgnoredUpdateVersion(), values['update_ignored_version']);
     _expectSettings({for (final key in maintenanceKeys) key: prefs.get(key)}, Map<String, Object?>.from(values));
   }
   void expectMaintenanceExclusions(Map values) {
