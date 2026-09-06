@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/ambient_trailer_prefs.dart' show AmbientTrailerPrefs;
 import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
@@ -1120,10 +1121,10 @@ class _MergedDetailScreenState extends State<MergedDetailScreen>
     // platform), so off-TV it governs this backdrop. Read unconditionally so
     // all three land in the one setState below — [autoplay] is false on TV
     // anyway, and these are two prefs reads.
-    final soundOn = await StorageService.getAmbientTrailerAudioEnabled(
+    final soundOn = await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(
       AmbientTrailerSurface.detail,
     );
-    final volume = await StorageService.getAmbientTrailerVolume(
+    final volume = await AmbientTrailerPrefs.getAmbientTrailerVolume(
       AmbientTrailerSurface.detail,
     );
     if (!mounted) return;

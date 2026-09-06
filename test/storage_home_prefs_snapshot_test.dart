@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/ambient_trailer_prefs.dart' show AmbientTrailerPrefs;
 import 'dart:convert';
 
 import 'package:debrify/models/tracking_source.dart';
@@ -197,11 +198,11 @@ void main() {
     ));
     await StorageService.setHomeTickSources({TrackingSource.trakt});
     await StorageService.setHomeHeroTrailerEnabled(false);
-    await StorageService.setAmbientTrailerAudioEnabled(
+    await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(
       AmbientTrailerSurface.homeHero,
       false,
     );
-    await StorageService.setAmbientTrailerVolume(
+    await AmbientTrailerPrefs.setAmbientTrailerVolume(
       AmbientTrailerSurface.homeHero,
       40,
     );
@@ -320,13 +321,13 @@ void main() {
     );
     expect(await StorageService.getHomeHeroTrailerEnabled(), isTrue);
     expect(
-      await StorageService.getAmbientTrailerAudioEnabled(
+      await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(
         AmbientTrailerSurface.homeHero,
       ),
       isTrue,
     );
     expect(
-      await StorageService.getAmbientTrailerVolume(
+      await AmbientTrailerPrefs.getAmbientTrailerVolume(
         AmbientTrailerSurface.homeHero,
       ),
       70,
@@ -353,11 +354,11 @@ void main() {
         TrackingSource.simkl,
       });
       await StorageService.setHomeHeroTrailerEnabled(false);
-      await StorageService.setAmbientTrailerAudioEnabled(
+      await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(
         AmbientTrailerSurface.homeHero,
         false,
       );
-      await StorageService.setAmbientTrailerVolume(
+      await AmbientTrailerPrefs.setAmbientTrailerVolume(
         AmbientTrailerSurface.homeHero,
         40,
       );
@@ -428,13 +429,13 @@ void main() {
       });
       expect(await StorageService.getHomeHeroTrailerEnabled(), isFalse);
       expect(
-        await StorageService.getAmbientTrailerAudioEnabled(
+        await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(
           AmbientTrailerSurface.homeHero,
         ),
         isFalse,
       );
       expect(
-        await StorageService.getAmbientTrailerVolume(
+        await AmbientTrailerPrefs.getAmbientTrailerVolume(
           AmbientTrailerSurface.homeHero,
         ),
         15,
@@ -612,11 +613,11 @@ void main() {
   test(
     'home hero trailer volume clamps to 10–100; detail keys stay separate',
     () async {
-      await StorageService.setAmbientTrailerVolume(
+      await AmbientTrailerPrefs.setAmbientTrailerVolume(
         AmbientTrailerSurface.homeHero,
         1,
       );
-      await StorageService.setAmbientTrailerVolume(
+      await AmbientTrailerPrefs.setAmbientTrailerVolume(
         AmbientTrailerSurface.detail,
         1000,
       );
@@ -624,23 +625,23 @@ void main() {
       expect(prefs.getInt('home_hero_trailer_volume'), 10);
       expect(prefs.getInt('detail_trailer_volume'), 100);
       expect(
-        await StorageService.getAmbientTrailerVolume(
+        await AmbientTrailerPrefs.getAmbientTrailerVolume(
           AmbientTrailerSurface.homeHero,
         ),
         10,
       );
       expect(
-        await StorageService.getAmbientTrailerVolume(
+        await AmbientTrailerPrefs.getAmbientTrailerVolume(
           AmbientTrailerSurface.detail,
         ),
         100,
       );
 
-      await StorageService.setAmbientTrailerAudioEnabled(
+      await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(
         AmbientTrailerSurface.homeHero,
         false,
       );
-      await StorageService.setAmbientTrailerAudioEnabled(
+      await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(
         AmbientTrailerSurface.detail,
         true,
       );
@@ -677,11 +678,11 @@ void main() {
       ));
       await StorageService.setHomeTickSources({TrackingSource.simkl});
       await StorageService.setHomeHeroTrailerEnabled(false);
-      await StorageService.setAmbientTrailerAudioEnabled(
+      await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(
         AmbientTrailerSurface.homeHero,
         false,
       );
-      await StorageService.setAmbientTrailerVolume(
+      await AmbientTrailerPrefs.setAmbientTrailerVolume(
         AmbientTrailerSurface.homeHero,
         40,
       );
@@ -743,13 +744,13 @@ void main() {
       });
       expect(await StorageService.getHomeHeroTrailerEnabled(), isTrue);
       expect(
-        await StorageService.getAmbientTrailerAudioEnabled(
+        await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(
           AmbientTrailerSurface.homeHero,
         ),
         isTrue,
       );
       expect(
-        await StorageService.getAmbientTrailerVolume(
+        await AmbientTrailerPrefs.getAmbientTrailerVolume(
           AmbientTrailerSurface.homeHero,
         ),
         70,

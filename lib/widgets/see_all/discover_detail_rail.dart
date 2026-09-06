@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/ambient_trailer_prefs.dart' show AmbientTrailerPrefs;
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -198,10 +199,10 @@ class _DiscoverDetailRailState extends State<DiscoverDetailRail>
     // both living surfaces; volume is 0 when the sound sub-toggle is off.
     Future.wait([
       StorageService.getHomeHeroTrailerEnabled(),
-      StorageService.getAmbientTrailerAudioEnabled(
+      AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(
         AmbientTrailerSurface.homeHero,
       ),
-      StorageService.getAmbientTrailerVolume(AmbientTrailerSurface.homeHero),
+      AmbientTrailerPrefs.getAmbientTrailerVolume(AmbientTrailerSurface.homeHero),
     ]).then((v) {
       if (!mounted || !(v[0] as bool)) return;
       _trailerEnabled = true;
