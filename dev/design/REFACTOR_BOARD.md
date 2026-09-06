@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main 9fd6c24f
+## Current roadmap — September 6, main 618659a5
 
 ### God-file line counts — original → current merged main
 
 - **Search:** 19,070 → **6,506** (12,564 fewer)
 - **Player:** 16,278 → **11,738** (4,540 fewer)
 - **Magic TV:** 10,716 → **3,321** (7,395 fewer)
-- **Storage:** 9,963 → **2,331** (7,632 fewer)
+- **Storage:** 9,963 → **2,306** (7,657 fewer)
 - **Settings:** 7,905 → **2,903** (5,002 fewer)
 
-Counted from actual merged main 9fd6c24f. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
+Counted from actual merged main 618659a5. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
 
 ### The same six outcomes — stable roadmap
 
@@ -68,6 +68,10 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 ### Latest completed milestones
 
+- **Full gate9fd6c24f PASSED:** 5906 passes/12 exact known failures/2 skips; goldens21 known with configured retries, helpers0/unexpected0/unused0. Native firstpairPASS; analyzer431/449 zero new; Python55; layer77 unchanged; Windows/ARM64 buildsPASS. Forwarders Storage415/Search133/Player161/Magic23/Settings0; Storage+4 keyboard accessors explicitly counted. No fresh manual smoke. ZIP SHA5ae464f5f54c5c531a7b1a5ab2f93ece983b3672d7533cd808fff23d5cfba6eb; APK987468971513aac4133e2cab451938b850781218d6142d6052ec67f852a56222.
+
+- #197 merged **618659a5**, exact83b6, independent88PASS/finalunion/allCIgreen. Catalog preference owner preserves raw-key/order/restore behavior; host-25/whole+21/twofacades retained. Did we make a difference? Real ownership with old-export proof; scalar/device/indexer and remaining authority still open. #199 native600s timeout remains held with unknown cause. #200/#201/#202 independently accepted pending CI/integration; #203 favourite review queued.
+
 - #198 merged **9fd6c24f**, exact reviewed3641057, both CI runs fully passed. Actual Promenade stage boundary extracted, independent117PASS/1knownsidebar; host+38/whole+49,20bindings retained. Did we make a difference? Yes: another stage is independent of the host library; Canvas/Atrium/final composition remain. Third production merge triggers full integrated gate. #197 CI green held for gate; #199 native CI failed and is under log diagnosis, no blind retry. #201 player independent44PASS; #202 device review queued/running; #200 integration follows merged198.
 
 - #194 merged **c60f3f1f**, exact reviewed bede8cf, all three CI checks passed. Keyboard preferences use AppStylePrefs with one cache and unchanged reset/migration behavior. Independent 101 tests passed; host -37, whole production +13; compatibility cache accessors retained. Did we make a difference? Yes: ownership is explicit with old-export fixtures; broader storage and native warmup remain. #197 needs an additive fixture/registry union; #199 import conflict must be resolved to start CI. Next production merge triggers a full gate.
@@ -112,12 +116,11 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Gate pinned analyzer431/449, zero errors/new issues; layering77→77; Python55 passed; originalbc46/current native pair passed first try. Initial wrong-PATH analyzer output retained separately and corrected using pinned SDK; no baseline edit.
 - Windows226.2s/68files and ARM64171.9s builds passed. ZIP SHA256b96b7a4bd0b98a4f9de799ef3242bebf18a150d3c49c0113ad0566d10f1d729f; APK80811b556495c20078920091643b91cbcde5bc236d89737bd3bed7d1479e8cb5. No fresh manual/device smoke claimed.
 - #181 BoardCell mergedc7a332bd exact932 after independent140 passes plus the exact known sidebar failure, final integration review and all3CI green. Shared renderer owns card state/shuttle; 669 declaration lines relocated, whole production+17, zero host-file reduction. Did we make a difference? Removed private host-library access at real consumers; remaining stage navigation/composition is still open.
-- Production merge counter: **3 since completed gate dcdc8385** (#196, #194, #198); full gate 9fd6c24f now assigned, further production merges held. Includes #193/#195/#191; excludes subsequent #196 and pending #194/#197/#198/#199. Next full gate after three additional production merges.
+- Production merge counter: **1 since completed gate9fd6c24f** (#197). Next full gate after two more production merges.
 
-### Forwarders at the latest full gate dcdc8385
+### Forwarders at the latest full gate9fd6c24f
 
-- Storage **411 total /143 single-line**; Search **133/117**; Player **161/112**; Magic TV **23/12**; Settings **0/0**.
-- Same expanded AST classifier; legacy Search **60** separately retained. Storage415 to411 is four Ambient facades retired by #191, not a rebaseline.
+- Storage415/143 single-line; Search133/117; Player161/112; Magic23/12; Settings0/0. Legacy Search60 separate. Storage+4 is keyboard accessors added in194, no classifier change.
 
 ### Decisions, limits and recovery
 

@@ -758,6 +758,14 @@ update this file in the same PR. Line counts come from `wc -l`, not estimates._
 
 - `lib/services/remote_control/remote_device_prefs.dart` (`RemoteDevicePrefs`) owns the four installation-wide remote preference keys and remembered-device JSON; pairing, identity and network/session lifetimes remain with their existing owners. Nine unchanged bodies retain nine nonasync `StorageService` facades (18 lines), expiring only after separately scoped Q2 caller compatibility retirement. `DevicePreferences` globals, raw types, JSON/default/error behavior and held-write lifetime remain unchanged. Host 2609 -> 2582 (-27), new owner 69 and registry +2 yield whole production +44: modest scalar/JSON ownership, no line-target or portable-identity claim. Actual pre-S2 export excludes all four keys and profile shadows; current restore preserves destination globals.
 
+- `lib/services/storage/catalog_search_prefs.dart` (`CatalogSearchPrefs`) owns
+  `catalog_search_disabled_addons_v1` and its two JSON read/write policy bodies.
+  StorageService retains two nonasync facades (4 declaration lines), expiring
+  only in a meaningful same-caller Q2 batch. Raw-type/catch boundaries, ordered
+  dedup without rewrite, live Set after acquisition and false/throw behavior
+  remain unchanged. Host -25; whole production +21. Storage ownership closure
+  remains open; no native, runtime source-selection or profile-safety claim.
+
 - `lib/services/storage/torrent_search_history_store.dart` (`TorrentSearchHistoryStore`) owns the two profile history keys and the unchanged decode/dedup/order/five-item-cap persistence bodies. Q2 retires all five direct `StorageService` history APIs (12 declaration lines); callers now use `TorrentSearchHistoryStore` directly. Captured write preferences, reacquired history reads, raw types, timestamp/error ordering and false-versus-throw behavior are preserved. Host 2582 -> 2538 (-44), new owner76 and registry+2 yield whole production+34. The actual old-export/current-restore fixture covers both physical keys; the fixture union retains40 artifacts plus README/recipe. No live history capture feature or profile-safety claim; strict storage ownership closure remains open.
 
 - `lib/services/storage/device_maintenance_prefs.dart` (`DeviceMaintenancePrefs`) owns four installation-wide support/update preference keys and their unchanged eight persistence bodies. `DevicePreferences` global authority, raw JSON/list values, defaults and false-versus-throw ordering remain unchanged; HTTP, installation, native behavior and callers remain outside. Eight nonasync `StorageService` facades (16 declaration lines) remain until a meaningful Q2 caller-owner batch or phase-completion review. Host 2368 -> 2337 (-31), owner +68 and registry +1 yield whole production +38; strict storage ownership remains open. Actual pre-S2 export excludes the four globals and profile shadows; current restore preserves destination globals.

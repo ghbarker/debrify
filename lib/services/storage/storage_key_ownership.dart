@@ -10,6 +10,7 @@
 /// not change the string.
 enum StorageKeyStore {
   deviceMaintenancePrefs,
+  catalogSearchPrefs,
   ambientTrailerPrefs,
   /// Profile-scoped download destination strings (DownloadDestinationPrefs).
   downloadDestinationPrefs,
@@ -331,7 +332,7 @@ class StorageKeyOwnership {
     'startup_iptv_mode': StorageKeyStore.iptvPrefs,
     'startup_iptv_channel': StorageKeyStore.iptvPrefs,
     'stremio_tv_disabled_channel_filters_v1': StorageKeyStore.stremioTvPrefs,
-    'catalog_search_disabled_addons_v1': StorageKeyStore.storageService,
+    'catalog_search_disabled_addons_v1': StorageKeyStore.catalogSearchPrefs,
     'home_disabled_sections_v1': StorageKeyStore.homePrefs,
     'home_extra_rows_v1': StorageKeyStore.homePrefs,
     'home_row_order_v1': StorageKeyStore.homePrefs,
