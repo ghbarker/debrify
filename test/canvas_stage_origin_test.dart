@@ -100,7 +100,9 @@ void main() {
       }
     }, () => MockClient((request) async {
       if (request.url.toString() ==
-          'https://board-origin.invalid/catalog/movie/rail.json') return page(0, 12);
+          'https://board-origin.invalid/catalog/movie/rail.json') {
+        return page(0, 12);
+      }
       if (request.url.toString() ==
           'https://board-origin.invalid/catalog/movie/rail/skip=12.json') {
         pageRequests++;
