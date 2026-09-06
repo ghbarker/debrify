@@ -5,6 +5,7 @@ enum AmbientTrailerSurface { homeHero, detail }
 
 class AmbientTrailerPrefs {
   static const ownedKeys = <String>{
+    'detail_trailer_autoplay_enabled',
     'detail_trailer_audio_enabled',
     'detail_trailer_volume',
   };
@@ -97,4 +98,14 @@ class AmbientTrailerPrefs {
     );
   }
 
+
+  static Future<bool> getDetailTrailerAutoplayEnabled() async {
+    final prefs = await ProfilePreferences.instance();
+    return prefs.getBool('detail_trailer_autoplay_enabled') ?? true;
+  }
+
+  static Future<void> setDetailTrailerAutoplayEnabled(bool enabled) async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.setBool('detail_trailer_autoplay_enabled', enabled);
+  }
 }
