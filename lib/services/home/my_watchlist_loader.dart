@@ -1,12 +1,12 @@
+import 'package:debrify/services/storage/my_watchlist_store.dart';
 import '../../models/stremio_addon.dart';
-import '../storage_service.dart';
 
 /// Reads the local watchlist without owning UI, refresh policy, or cached data.
 class MyWatchlistLoader {
   MyWatchlistLoader._();
 
   static Future<({List<StremioMeta> movies, List<StremioMeta> series})> load() async {
-    final items = await StorageService.getMyWatchlistItems();
+    final items = await MyWatchlistStore.getMyWatchlistItems();
     return (
       movies: [
         for (final item in items)

@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:convert';
@@ -26,7 +27,7 @@ void main() {
     'origin favourites split watchlist and sort playlist before menus',
     (tester) async {
       await prepareFavourites(tester);
-      await StorageService.setMyWatchlistItem(
+      await MyWatchlistStore.setMyWatchlistItem(
         const StremioMeta(
           id: 'movie',
           type: 'movie',
@@ -35,7 +36,7 @@ void main() {
         ),
         true,
       );
-      await StorageService.setMyWatchlistItem(
+      await MyWatchlistStore.setMyWatchlistItem(
         const StremioMeta(
           id: 'series',
           type: 'series',
@@ -272,19 +273,19 @@ void main() {
           manifestUrl: '',
         ),
       );
-      await StorageService.setMyWatchlistItem(item, true);
+      await MyWatchlistStore.setMyWatchlistItem(item, true);
       await mountFavourites(tester);
       tester.widget<ArtPoster>(find.byType(ArtPoster)).onOpen();
       await tester.pumpAndSettle();
       expect(find.text('Series unavailable'), findsOneWidget);
       await tester.tap(find.text('Keep'));
       await tester.pumpAndSettle();
-      expect(await StorageService.isInMyWatchlist(item), isTrue);
+      expect(await MyWatchlistStore.isInMyWatchlist(item), isTrue);
       tester.widget<ArtPoster>(find.byType(ArtPoster)).onOpen();
       await tester.pumpAndSettle();
       await tester.tap(find.text('Remove'));
       await pumpFavourites(tester);
-      expect(await StorageService.isInMyWatchlist(item), isFalse);
+      expect(await MyWatchlistStore.isInMyWatchlist(item), isFalse);
       expect(find.byType(ArtPoster), findsNothing);
       expect(find.text('Removed from My Watchlist'), findsOneWidget);
       await closeFavourites(tester);

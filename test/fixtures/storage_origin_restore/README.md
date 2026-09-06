@@ -894,6 +894,24 @@ history values and distinguishes preserved raw data from filtered public reads.
 Is there more we could do? A separately authorized five-body owner move remains;
 this fixture contributes zero production line credit and no new history feature.
 
+### Q2 history and My Watchlist caller retirement
+
+Current callers now use `TorrentSearchHistoryStore` and `MyWatchlistStore`
+for the eleven approved direct APIs. Owner bodies, historical origin commits,
+recipe entries and encrypted/manifest bytes are unchanged. The fixture loader
+changes only two history and two My Watchlist read receivers plus imports.
+To compile that loader against unchanged pre-S2 `6d26d7a`, remove both new
+store imports and route exactly those four readers back to `StorageService`,
+in addition to the previously documented harness adaptations. No package
+regeneration or expected-value/assertion change is required.
+
+The history origin test is not imported by the generator. If separately copied
+to that old checkout, replace its history-store import with the old storage
+import and reverse its 22 receiver substitutions. The copied filter and playlist
+helpers retain their separately documented correspondence. Native playback
+removal, My Watchlist identity-key/cap/debug aliases and owner internal calls
+remain outside this retirement. No new export or native coverage is claimed.
+
 ## Download destination exclusions (separate three-key domain)
 
 `download-destination-exclusion.encrypted.json` was generated through unchanged

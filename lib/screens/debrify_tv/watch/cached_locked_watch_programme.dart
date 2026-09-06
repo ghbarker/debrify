@@ -130,7 +130,7 @@ Future<void> runCachedLockedWatch(
           if (link.isEmpty) continue;
           try {
             final started = DateTime.now();
-            final unrestrict = await host.unrestrictLink(apiKey, link);
+            final unrestrict = await host.rdUnlock.unrestrictLinkWithKey(apiKey, link);
             if (!host.cacheWarmer.rdLinkPassesSizeRules(unrestrict)) continue;
             final elapsed = DateTime.now().difference(started).inSeconds;
             final videoUrl = unrestrict['download'] as String?;
@@ -176,7 +176,7 @@ Future<void> runCachedLockedWatch(
               host.seenRestrictedLinks.add(selectedLink);
               host.seenLinkWithTorrentId.add('$torrentId|$selectedLink');
 
-              final unrestrict = await host.unrestrictLink(
+              final unrestrict = await host.rdUnlock.unrestrictLinkWithKey(
                 apiKey,
                 selectedLink,
               );
@@ -216,7 +216,7 @@ Future<void> runCachedLockedWatch(
           final String link = item['allDebridLink'] as String? ?? '';
           if (link.isEmpty) continue;
           try {
-            final videoUrl = await host.unlockLink(apiKey, link);
+            final videoUrl = await host.adUnlock.unlockLinkWithKey(apiKey, link);
             if (videoUrl.isNotEmpty) {
               final inferred = _inferTitleFromUrl(videoUrl).trim();
               final display = (item['displayName'] as String?)?.trim();
@@ -253,7 +253,7 @@ Future<void> runCachedLockedWatch(
             });
           }
           try {
-            final videoUrl = await host.unlockLink(apiKey, headLink);
+            final videoUrl = await host.adUnlock.unlockLinkWithKey(apiKey, headLink);
             if (videoUrl.isNotEmpty) {
               final inferred = _inferTitleFromUrl(videoUrl).trim();
               final chosenTitle = inferred.isNotEmpty

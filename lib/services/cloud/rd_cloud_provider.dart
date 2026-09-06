@@ -24,7 +24,8 @@ class RealDebridCloudProvider extends CloudProviderAdapter
         CloudMagnetAdd,
         CloudPlaylist,
         CloudMagicTvLockedLinks,
-        CloudMagicTvRdUnlock {
+        CloudMagicTvRdUnlock,
+        CloudMagicTvCapturedRdUnlock {
   const RealDebridCloudProvider();
 
   @override
@@ -383,4 +384,14 @@ class RealDebridCloudProvider extends CloudProviderAdapter
     }
     return DebridService.addTorrentToDebridPreferVideos(apiKey, magnet);
   }
+
+  @override
+  Future<Map<String, dynamic>> unrestrictLinkWithKey(String apiKey, String link) =>
+      DebridService.unrestrictLink(apiKey, link);
+
+  @override
+  Future<Map<String, dynamic>> addTorrentPreferVideosWithKey(
+    String apiKey,
+    String magnet,
+  ) => DebridService.addTorrentToDebridPreferVideos(apiKey, magnet);
 }
