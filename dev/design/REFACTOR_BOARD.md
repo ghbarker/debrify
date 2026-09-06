@@ -1,6 +1,6 @@
 # Refactor board
 
-## Current roadmap — September 6, merged production main 94c38b32
+## Current roadmap — September 6, merged production main b6a71b0e
 
 **Overall estimate: approximately 75%.** Architectural judgment, not a measured checklist percentage. Open PRs are not completed work. This checklist preserves the same six outcomes; historical evidence follows below.
 
@@ -12,12 +12,12 @@
 - **Storage:** 9,963 → **1,741** (8,222 fewer)
 - **Settings:** 7,905 → **2,908** (4,997 fewer)
 
-Physical lines, not whole-project deletions. Last full gate: **bc017 PASSED**; its forwarder ledger was Storage204 / Search133 / Player161 / Magic23 / Settings0. Later #216/#217 are individually verified, not included in that gate. Forbidden imports: **77 → 62 on merged main**; #218 would bring them to56, not yet merged. No baseline increase.
+Physical lines, not whole-project deletions. Last full gate: **bc017 PASSED**; its forwarder ledger was Storage204 / Search133 / Player161 / Magic23 / Settings0. Later #216/#217 are individually verified, not included in that gate. Forbidden imports: **77 → 56 on merged main**, including #217/#218. No baseline increase.
 
 ### Do next — actual execution order
 
-- [ ] **Parent: merge #218, shared TV focus owner.** Independent22 tests and integration review passed; exact94645 CI tests/goldens running, native passed. Merge only after remaining checks pass.
-- [ ] **Cicero: run full integrated gate after #218 merges.** #216/#217 are two production merges sincebc017; #218 is the third. Actual-main full tests, goldens, analysis, layering/forwarder ledger, native pair, Windows and ARM64 builds. Record known failures separately.
+- [x] **Merge #218, shared TV focus owner.** Merged b6a71b0e after independent22 tests, exact union review and all CI checks passed.
+- [ ] **Cicero: run full integrated gate at b6a71b0e — ASSIGNED.** #216/#217/#218 are three production merges sincebc017. Actual-main full tests, goldens, analysis, layering/forwarder ledger, native pair, Windows and ARM64 builds. Record known failures separately.
 - [ ] **Locke + parent: integrate and merge #219, public Atrium stage, after that gate passes.** Independent28 checks passed; exact3e613 CI tests/goldens running, native passed. Reconcile latest main and verify unchanged payload before merging. No duplicate behavior run for an unchanged union.
 - [ ] **Locke: prepare a bounded Sources-route ownership proposal.** Read-only import/symbol closure and actual public-behavior pin matrix first. Implementation and new test runs require the next bounded grant; this is not approved production scope.
 - [ ] **Parent + reviewers: choose the next player/native ownership step from recorded evidence.** Tracker terminal experiment is stopped after four failed runs; no automatic fifth attempt or timer/pump workaround.
@@ -61,8 +61,8 @@ Finite pre-S2 fixtures are not proof of every pre-refactor backup. Indexer expor
 
 - [x] Complete canonical-rule migration #188 and provider guide #192.
 - [x] Merge neutral PlaylistEntry owner #217:15 forbidden imports removed, old import compatibility preserved.
-- [ ] **Merge shared focus-wrapper owner #218:** six additional forbidden imports removed; reviewed, not yet merged.
-- [ ] **Close remaining strict Q1 dependencies through separately owned lanes.** Main currently62; projected56 after #218. Ceiling77/no-growth is not strict zero-violation acceptance. Do not loosen the checker or hide dependencies behind exports.
+- [x] **Merge shared focus-wrapper owner #218:** six additional forbidden imports removed and verified.
+- [ ] **Close remaining strict Q1 dependencies through separately owned lanes.** Main currently56. Ceiling77/no-growth is not strict zero-violation acceptance. Do not loosen the checker or hide dependencies behind exports.
 - [ ] **Finish compatibility expiry accounting.** Distinguish still-used exports and accepted/native-sensitive APIs from genuinely obsolete facades; do not delete all aliases blindly.
 - [x] Prepare and independently verify the two-commit upstream catalog candidate locally,24 tests before/after/independent.
 - [x] **Honor user decision: keep upstream contribution local.** Publication is intentionally parked, not awaiting an answer. Do not publish or repeatedly ask. This is not an upstream-merged contribution claim.
@@ -78,14 +78,17 @@ Finite pre-S2 fixtures are not proof of every pre-refactor backup. Indexer expor
 
 - **Locke:** #219 author; Sources proposal read-only. No edits to Q1 lanes.
 - **Cicero:** #219 independent review complete; next full integrated gate after #218. Tracker experiment stopped and documented.
-- **Arendt:** #218 integration complete; frozen while CI runs. No further unchanged local tests.
-- **Confucius:** #217/#218 independent verification and union review complete; available for the next assigned review. Upstream stays local.
+- **Arendt:** #218 merged; icon/subtitle proposals held for explicit compatibility/guard limitations, no implementation assigned.
+- **Confucius:** #217/#218 review complete; assigned read-only Sources origin evidence review while Cicero runs the gate. Upstream stays local.
 - **Parent:** merge queue, grants, coordination, this board and NOTES. **No task is waiting on the user.** CI/gate dependencies are stated above; available reviewers are not mislabeled as actively coding.
 
 ### Update rules for this checklist
 
 Check off an item only when its stated result is achieved. Update its owner/blocker when it changes; retain these six outcome names. Record merged work separately from prepared/reviewed PRs. Keep original/current god lines visible. After each merge explain the actual benefit and remaining work; preserve detailed evidence in the history below.
 ### Latest completed milestones
+
+- #218 merged **b6a71b0e**, exact94645fe5, independent22PASS/unionaccepted/allCIgreen. ActualcombinedQ1 77→56,+0/-21; thisPR6edges, production+1compat export, no god-linecredit. Did we make a difference? Sharedwidget no longer belongs to a screen layer; strictQ1 remainsopen. Third216217218 triggersfullb6a gate withCicero. Sourcesfirst3originPASS pendingreadonlyreview; icons/subtitle held on compatibility/guardcost, no newparser/runtime. #219 waits gate.
+
 
 - #217 merged **94c38b32**, exactdb6f19fd, independent24PASS/exact20payloadunion/allthreeCIgreen. PlaylistEntry70lineclass now neutral/importfree; oldexport sameidentity and15consumerimports redirect. MeasuredQ1 imports77→62 with15removed0added; production+1compatibilityexport, ZEROgodlinecredit. Did we make a difference? Fifteen forbiddendependencies removed withoutbusinesslogicchanges; strictQ1 remainsOPEN. Counter2sincebc017. #218 nowintegratesmain; #219 independent28PASSawaitsCI/queue and willremainafterthirdmergegate.
 
