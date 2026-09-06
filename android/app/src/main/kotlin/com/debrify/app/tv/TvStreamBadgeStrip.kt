@@ -10,7 +10,7 @@ import com.bumptech.glide.Glide
 
 /** Non-focusable bounded wrapping chips. Matching is performed by Flutter's
  * cancellable worker; the native UI receives only finished display records. */
-class TvStreamBadgeStrip(context: Context) : ViewGroup(context) {
+class TvStreamBadgeStrip(context: Context, private val chipHeightDp: Int = 24) : ViewGroup(context) {
     private var shown: List<Map<*, *>>? = null
     private val positions = mutableListOf<Pair<Int, Int>>()
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
@@ -29,31 +29,35 @@ class TvStreamBadgeStrip(context: Context) : ViewGroup(context) {
             val chip: View = if (image.isNullOrBlank()) {
                 TextView(context).apply {
                     text = label.uppercase()
-                    textSize = 11f
+                    textSize = if (chipHeightDp == 22) 11f else chipHeightDp * .55f
+                    if (chipHeightDp != 22) setTypeface(typeface, android.graphics.Typeface.BOLD)
                     setTextColor(foreground)
                     setSingleLine(true)
                     ellipsize = android.text.TextUtils.TruncateAt.END
                     maxWidth = dp(180)
                     gravity = android.view.Gravity.CENTER
                     setPadding(dp(7), 0, dp(7), 0)
-                    layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, dp(22))
+                    layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, dp(chipHeightDp))
                 }
             } else {
-                ImageView(context).apply {
+                BadgeArtworkView(context).apply {
                     contentDescription = label
                     scaleType = ImageView.ScaleType.FIT_CENTER
-                    setPadding(dp(3), dp(2), dp(3), dp(2))
-                    layoutParams = LayoutParams(dp(110), dp(22))
-                    Glide.with(this).load(image).fitCenter().override(dp(110), dp(22))
-                        .placeholder(BadgeLabelDrawable(label, resources.displayMetrics.density))
-                        .error(BadgeLabelDrawable(label, resources.displayMetrics.density)).into(this)
+                    setPadding(dp(5), dp(2), dp(5), dp(2))
+                    maxWidth = dp(chipHeightDp * 7 + 10)
+                    layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, dp(chipHeightDp))
+                    // Decode at display density, retaining aspect ratio. The
+                    // drawable's dimensions determine width after loading.
+                    Glide.with(this).load(image).fitCenter().override(dp(chipHeightDp * 7), dp(chipHeightDp - 4))
+                        .placeholder(BadgeLabelDrawable(label, foreground, dp(chipHeightDp) * .55f))
+                        .error(BadgeLabelDrawable(label, foreground, dp(chipHeightDp) * .55f)).into(this)
                 }
             }
             chip.isFocusable = false
             chip.isClickable = false
             chip.background = GradientDrawable().apply {
-                setColor(if (image.isNullOrBlank()) fill else 0xFF2A2A2A.toInt())
-                cornerRadius = dp(4).toFloat()
+                setColor(fill)
+                cornerRadius = dp(chipHeightDp).toFloat() * .23f
                 if (border != null) setStroke(dp(1), border)
             }
             addView(chip)
@@ -75,7 +79,7 @@ class TvStreamBadgeStrip(context: Context) : ViewGroup(context) {
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
-        val gap = dp(4)
+        val gap = dp(6)
         var x = 0
         var y = if (childCount > 0) dp(8) else 0
         var rowHeight = 0
@@ -85,7 +89,7 @@ class TvStreamBadgeStrip(context: Context) : ViewGroup(context) {
             val available = if (child.layoutParams.width > 0) minOf(width, child.layoutParams.width) else width
             child.measure(MeasureSpec.makeMeasureSpec(available,
                 if (child.layoutParams.width > 0) MeasureSpec.EXACTLY else MeasureSpec.AT_MOST),
-                MeasureSpec.makeMeasureSpec(dp(22), MeasureSpec.EXACTLY))
+                MeasureSpec.makeMeasureSpec(dp(chipHeightDp), MeasureSpec.EXACTLY))
             if (x > 0 && x + child.measuredWidth > width) {
                 x = 0; y += rowHeight + gap; rowHeight = 0
             }
@@ -105,12 +109,32 @@ class TvStreamBadgeStrip(context: Context) : ViewGroup(context) {
     }
 }
 
-private class BadgeLabelDrawable(private val label: String, density: Float) : android.graphics.drawable.Drawable() {
+private class BadgeArtworkView(context: Context) : ImageView(context) {
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val height = MeasureSpec.getSize(heightMeasureSpec)
+        val horizontalPadding = paddingLeft + paddingRight
+        val available = when (MeasureSpec.getMode(widthMeasureSpec)) {
+            MeasureSpec.UNSPECIFIED -> maxWidth
+            else -> minOf(maxWidth, MeasureSpec.getSize(widthMeasureSpec))
+        }
+        val contentWidth = badgeArtworkWidth(
+            drawable?.intrinsicWidth ?: 0, drawable?.intrinsicHeight ?: 0,
+            (height - paddingTop - paddingBottom).coerceAtLeast(0),
+            (available - horizontalPadding).coerceAtLeast(0),
+        )
+        setMeasuredDimension(resolveSize(contentWidth + horizontalPadding, widthMeasureSpec), height)
+    }
+}
+
+private class BadgeLabelDrawable(private val label: String, foreground: Int, textSizePx: Float) : android.graphics.drawable.Drawable() {
     private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-        color = android.graphics.Color.WHITE
-        textSize = 11 * density
+        color = foreground
+        textSize = textSizePx
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
         textAlign = android.graphics.Paint.Align.CENTER
     }
+    override fun getIntrinsicWidth() = kotlin.math.ceil(paint.measureText(label).toDouble()).toInt().coerceAtLeast(1)
+    override fun getIntrinsicHeight() = kotlin.math.ceil((paint.descent() - paint.ascent()).toDouble()).toInt().coerceAtLeast(1)
     override fun draw(canvas: android.graphics.Canvas) {
         val text = android.text.TextUtils.ellipsize(label, android.text.TextPaint(paint), bounds.width().toFloat(), android.text.TextUtils.TruncateAt.END).toString()
         canvas.drawText(text, bounds.exactCenterX(), bounds.exactCenterY() - (paint.ascent() + paint.descent()) / 2, paint)

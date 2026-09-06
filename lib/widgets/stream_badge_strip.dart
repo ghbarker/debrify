@@ -5,13 +5,12 @@ import 'package:flutter/material.dart';
 import '../models/stream_badge_rules.dart';
 import '../services/stream_badge_matcher.dart';
 import '../services/stream_badges_service.dart';
+import '../utils/stream_badge_appearance.dart';
 
 /// A row of stream badge chips, in ruleset order.
 ///
-/// Rendering follows the Nuvio Badge Studio so a preset looks the same in
-/// every client: colours come from the ruleset, never the theme; a rule with
-/// an image shows it (its name if the image fails to load), otherwise its
-/// name in small bold capitals.
+/// Uses the preset's fill and border for both text and image chips. Artwork
+/// keeps its original colours; labels receive a contrast-safe fallback.
 class StreamBadgeStrip extends StatelessWidget {
   final List<StreamBadgeRule> badges;
 
@@ -23,7 +22,7 @@ class StreamBadgeStrip extends StatelessWidget {
     super.key,
     required this.badges,
     this.height = 16,
-    this.spacing = 4,
+    this.spacing = 6,
   });
 
   @override
@@ -60,7 +59,7 @@ class StreamBadgeStripFor extends StatelessWidget {
     required this.name,
     this.description,
     this.height = 16,
-    this.spacing = 4,
+    this.spacing = 6,
     this.builder,
   });
 
@@ -97,76 +96,100 @@ class StreamBadgeChip extends StatelessWidget {
 
   const StreamBadgeChip({super.key, required this.rule, this.height = 16});
 
-  /// Dark backing under every image chip — the grey that shields.io-style
-  /// badges carry themselves — so transparent artwork stays legible on a
-  /// dark row and image and text chips read as one strip.
-  static const Color imageBacking = Color(0xFF2A2A2A);
-
-  /// Rulesets are designed for dark source rows, so a rule without a text
-  /// colour gets white rather than the theme's foreground.
-  static const Color _fallbackTextColor = Colors.white;
+  /// Fallback surface when the preset does not supply a filled background.
+  static const Color imageBacking = StreamBadgeAppearance.darkBacking;
 
   @override
   Widget build(BuildContext context) {
+    return Semantics(
+      label: rule.name,
+      image: rule.imageUrl != null,
+      child: ExcludeSemantics(
+        child: Tooltip(
+          message: rule.name,
+          // Mouse hover still works; touch gestures belong to the source row.
+          triggerMode: TooltipTriggerMode.manual,
+          excludeFromSemantics: true,
+          child: _buildChip(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChip() {
     final image = rule.imageUrl;
-    if (image == null) return _textChip();
+    final appearance = StreamBadgeAppearance(rule);
+    if (image == null) return _textChip(appearance);
     final inner = height - 4;
     // No alignment on this container: with one set it would expand to the
     // row's full width instead of hugging the image.
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: imageBacking,
-        borderRadius: BorderRadius.circular(3),
+        color: appearance.background,
+        borderRadius: BorderRadius.circular(height * 0.23),
+        border: Border.all(color: appearance.outline, width: 1),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: height * 8, maxHeight: inner),
+          constraints: BoxConstraints(
+            minWidth: inner,
+            maxWidth: height * 7,
+            minHeight: inner,
+            maxHeight: inner,
+          ),
           child: CachedNetworkImage(
             imageUrl: image,
             height: inner,
             fit: BoxFit.contain,
             memCacheHeight: (inner * 3).round(),
             fadeInDuration: Duration.zero,
-            placeholder: (_, __) => SizedBox(width: inner * 2),
+            placeholder: (_, __) => _imageLabel(appearance),
             // The backing already frames the fallback; no second chip.
-            errorWidget: (_, __, ___) => _text(fontSize: height * 0.55),
+            errorWidget: (_, __, ___) => _imageLabel(appearance),
           ),
         ),
       ),
     );
   }
 
-  Widget _textChip() {
-    final style = rule.style;
-    final fill = (style.fills ? rule.tagColor : null) ?? imageBacking;
-    final border = style.borders ? (rule.borderColor ?? rule.tagColor) : null;
+  Widget _imageLabel(StreamBadgeAppearance appearance) => Align(
+    widthFactor: 1,
+    heightFactor: 1,
+    child: _text(appearance, fontSize: height * 0.55),
+  );
+
+  Widget _textChip(StreamBadgeAppearance appearance) {
     return Container(
       height: height,
       padding: EdgeInsets.symmetric(horizontal: height * 0.35),
       constraints: BoxConstraints(maxWidth: height * 10),
       decoration: BoxDecoration(
-        color: fill,
-        borderRadius: BorderRadius.circular(height * 0.25),
-        border: border == null ? null : Border.all(color: border, width: 1),
+        color: appearance.background,
+        borderRadius: BorderRadius.circular(height * 0.23),
+        border: Border.all(color: appearance.outline, width: 1),
       ),
       child: Align(
         widthFactor: 1,
         heightFactor: 1,
-        child: _text(fontSize: height * 0.6, letterSpacing: 0.3),
+        child: _text(appearance, fontSize: height * 0.6, letterSpacing: 0.3),
       ),
     );
   }
 
-  Text _text({required double fontSize, double letterSpacing = 0}) => Text(
+  Text _text(
+    StreamBadgeAppearance appearance, {
+    required double fontSize,
+    double letterSpacing = 0,
+  }) => Text(
     rule.name.toUpperCase(),
     maxLines: 1,
     softWrap: false,
-    overflow: TextOverflow.clip,
+    overflow: TextOverflow.ellipsis,
     style: TextStyle(
-      color: rule.textColor ?? _fallbackTextColor,
+      color: appearance.foreground,
       fontSize: fontSize,
-      fontWeight: FontWeight.w800,
+      fontWeight: FontWeight.w700,
       height: 1,
       letterSpacing: letterSpacing,
     ),

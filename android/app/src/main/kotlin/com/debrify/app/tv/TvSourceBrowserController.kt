@@ -47,7 +47,7 @@ class TvSourceBrowserController(
         fun requestLoadMore(mode: String)
         fun onSourceSelected(index: Int)
         fun onHidden()
-        fun requestBadges(entry: TvSourceBrowserEntry, complete: (List<Map<*, *>>?) -> Unit) { complete(emptyList()) }
+        fun requestBadges(entry: TvSourceBrowserEntry, complete: (TvSourceBadgeResult?) -> Unit) { complete(TvSourceBadgeResult(false, emptyList())) }
 
         /** Applicable addons with no entries yet, as (groupId, label) — shown
          * as zero-count rail groups so a silent addon stays visible. */
@@ -101,7 +101,25 @@ class TvSourceBrowserController(
     }
     private val badgeLayoutListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> requestVisibleBadges() }
     private val badgeScrollListener = android.view.ViewTreeObserver.OnScrollChangedListener { requestVisibleBadges() }
-    private data class BadgeSlot(val entry: TvSourceBrowserEntry, val view: TvStreamBadgeStrip)
+    private var customBadgesConfigured = false
+    private data class BadgeSlot(
+        val entry: TvSourceBrowserEntry,
+        val view: TvStreamBadgeStrip,
+        val builtIn: TvStreamBadgeStrip,
+        val quality: Map<String, Any>?,
+        val metadata: List<Map<String, Any>>,
+    ) {
+        fun showBuiltIn(configured: Boolean) {
+            builtIn.show(if (configured) metadata else listOfNotNull(quality) + metadata)
+        }
+    }
+    private fun updateBadgeMode(configured: Boolean) {
+        if (customBadgesConfigured == configured) return
+        customBadgesConfigured = configured
+        for (i in 0 until results.childCount) {
+            (results.getChildAt(i).tag as? BadgeSlot)?.showBuiltIn(configured)
+        }
+    }
     private fun badgeKey(entry: TvSourceBrowserEntry) = "${entry.badgeName}\u0000${entry.badgeDescription.orEmpty()}"
 
     private fun clearBadgeRequests() {
@@ -212,11 +230,13 @@ class TvSourceBrowserController(
             // Covers startup, preparation, cold execution and the bounded
             // shared worker queue. Hidden pickers cancel this fallback.
             root.postDelayed(timeout, 45_000)
-            callbacks.requestBadges(slot.entry) { badges ->
+            callbacks.requestBadges(slot.entry) { reply ->
                 root.removeCallbacks(timeout)
                 badgeTimeouts.remove(timeout)
                 if (generation == badgeGeneration && pendingBadges[key] === admission) {
                     pendingBadges.remove(key)
+                    if (reply != null) updateBadgeMode(reply.configured)
+                    val badges = reply?.badges
                     if (badges == null) {
                         retryBadge(key)
                     } else {
@@ -484,16 +504,16 @@ class TvSourceBrowserController(
             textSize = 14f
             setTypeface(typeface, 1)
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
-        val tags = listOfNotNull(entry.quality.takeIf { it.isNotBlank() }, entry.size,
+        val tags = listOfNotNull(entry.size,
             if (!entry.direct && entry.seeders > 0) "${entry.seeders} seeders" else null,
             if (entry.direct) "DIRECT" else null, if (current) "▮▮▮" else null)
-        addView(TvStreamBadgeStrip(activity).apply {
-            show(tags.map { mapOf("label" to it,
-                "textColor" to if (current && it == "▮▮▮") {
+        fun builtInTag(label: String): Map<String, Any> = mapOf("label" to label,
+                "textColor" to if (current && label == "▮▮▮") {
                     if (active) 0xFFAB2733.toInt() else 0xFFE23D4C.toInt()
                 } else if (active) Color.BLACK else 0xCCFFFFFF.toInt(),
-                "fillColor" to if (active) 0x0F000000 else 0x14FFFFFF) })
-        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+                "fillColor" to if (active) 0x0F000000 else 0x14FFFFFF)
+        val builtIn = TvStreamBadgeStrip(activity, chipHeightDp = 22)
+        addView(builtIn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         val badges = TvStreamBadgeStrip(activity)
         addView(badges, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         // Unlike Flutter's lazy list, every native row remains laid out. The
@@ -501,7 +521,10 @@ class TvSourceBrowserController(
         addOnLayoutChangeListener { view, _, top, _, _, _, oldTop, _, oldBottom ->
             preserveBadgeAnchor(view, top, oldTop, oldBottom - oldTop)
         }
-        tag = BadgeSlot(entry, badges)
+        val slot = BadgeSlot(entry, badges, builtIn,
+            entry.quality.takeIf { it.isNotBlank() }?.let(::builtInTag), tags.map(::builtInTag))
+        tag = slot
+        slot.showBuiltIn(customBadgesConfigured)
         badgeCache[badgeKey(entry)]?.let { badges.show(it) }
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(5) }
     }

@@ -109,7 +109,8 @@ void main() {
     );
     expect(find.text('2160p REMUX HDR IMAX'), findsOneWidget);
     expect(find.textContaining('Torrentio'), findsOneWidget);
-    expect(find.text('⚡ TB | PM'), findsOneWidget);
+    expect(find.text('TB | PM'), findsOneWidget);
+    expect(find.byIcon(Icons.bolt_rounded), findsOneWidget);
     expect(find.byType(FormatBadge), findsNWidgets(tags.length));
   });
 

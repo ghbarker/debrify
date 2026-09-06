@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../../models/torrent.dart';
 import '../../../services/series_source_fetcher.dart';
+import '../../../services/stream_badges_service.dart';
 import '../../../utils/platform_util.dart';
 import '../../../utils/source_quality.dart';
 import '../../../utils/tv_keys.dart';
@@ -1047,7 +1048,12 @@ class _SourceRow extends StatelessWidget {
     required this.onTap,
   });
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: StreamBadgesService.instance.matcher,
+    builder: (_, matcher, __) => _buildRow(!matcher.isEmpty),
+  );
+
+  Widget _buildRow(bool customBadgesConfigured) {
     final torrent = entry.torrent;
     final inverse = focused;
     final tags = <String>[
@@ -1066,13 +1072,13 @@ class _SourceRow extends StatelessWidget {
       ),
     );
     final badges = <Widget>[
-      if (quality != null)
+      if (!customBadgesConfigured && quality != null)
         _Pill(label: quality, inverse: inverse, emphasis: true),
       for (final tag in tags) _Pill(label: tag, inverse: inverse),
       StreamBadgeStripFor(
         name: torrent.name,
         description: torrent.badgeDescription,
-        height: 20,
+        height: 24,
         spacing: 6,
       ),
     ];

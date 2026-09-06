@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart' show debugPrint;
 
 import '../utils/format_tag_detector.dart';
+import '../utils/stream_badge_appearance.dart';
 import '../utils/movie_parser.dart';
 import '../utils/series_parser.dart';
 import 'analytics_service.dart';
@@ -322,20 +323,15 @@ class AndroidTvPlayerBridge {
               )) {
             return null;
           }
-          if (result.status != StreamBadgeMatchStatus.resolved) return null;
-          return [
-            for (final rule in result.badges)
-              {
-                'label': rule.name,
-                if (rule.imageUrl != null) 'imageUrl': rule.imageUrl,
-                'textColor': rule.textColor?.toARGB32() ?? 0xFFFFFFFF,
-                'fillColor':
-                    (rule.style.fills ? rule.tagColor?.toARGB32() : null) ??
-                    0xFF2A2A2A,
-                if (rule.style.borders)
-                  'borderColor': (rule.borderColor ?? rule.tagColor)?.toARGB32(),
-              },
-          ];
+          return {
+            'configured': !activeMatcher.isEmpty,
+            'badges': result.status != StreamBadgeMatchStatus.resolved
+                ? null
+                : [
+                    for (final rule in result.badges)
+                      StreamBadgeAppearance(rule).nativeBadge(rule),
+                  ],
+          };
 
         case 'requestTorboxNext':
         case 'requestRealDebridNext':

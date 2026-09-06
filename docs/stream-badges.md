@@ -9,6 +9,10 @@ audio codec and channels, language flags.
 Rulesets come from a link (refreshable later), a file, or pasted text.
 Several can be active at once and apply in list order; each can be disabled
 or deleted, and the page has an on/off switch for the whole feature.
+While enabled presets contain active valid rules, imported badges replace
+Debrify's built-in format/quality tags, including for sources with no match.
+Disabling the feature or all active rules restores the built-in tags. Cache
+status, size, seeders, coverage, and playing indicators remain visible.
 Rulesets are stored per profile and are included in Backup & Restore and in
 Remote's Send Setup and Transfer Everything (the `streamBadges` payload in
 both).
@@ -114,9 +118,20 @@ with backoff up to ten seconds while visible. Hiding or destroying the picker
 cancels pending requests, retry timers and scroll animations. Unchanged badge
 configuration retains its matcher across preference refreshes.
 
-Text and image chips have bounded widths and wrap below source titles. A dark
-backing is used consistently under image chips and text chips without an
-authored fill, keeping them readable when a source row becomes focused.
+Text and image chips have bounded widths and wrap below source titles. Both
+honor the preset's filled/outlined/bordered style. Image pixels retain their
+original colours: black artwork can use the preset's yellow or white fill.
+Missing fills use a dark backing; translucent fills are composited on that
+backing so row focus cannot change their contrast. Text and image loading/error
+labels retain the requested text colour when readable, otherwise use black or
+white for contrast. Flutter and native TV share these resolved display colours.
+Artwork uses compact aspect-ratio widths instead of equal-width native slots.
+Source-list tiles are 24 pixels high (26 on Flutter TV), with six-pixel gaps,
+consistent rounded corners, and a subtle outline unless the preset supplies one.
+Image loading/error labels keep the chip height stable. Flutter badges expose
+their full names to screen readers and pointer tooltips; truncated text uses an
+ellipsis. Every match remains visible through wrapping, without extra TV focus
+stops or disclosure controls.
 Android TV requests matches only for visible rows, checks the playback session,
 and ignores results from a closed browser generation. Artwork falls back to its
 label if loading fails. Badge updates do not invoke source selection or move

@@ -2454,7 +2454,7 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
                         )
                     }
 
-                    override fun requestBadges(entry: TvSourceBrowserEntry, complete: (List<Map<*, *>>?) -> Unit) {
+                    override fun requestBadges(entry: TvSourceBrowserEntry, complete: (TvSourceBadgeResult?) -> Unit) {
                         val channel = MainActivity.getAndroidTvPlayerChannel()
                         if (channel == null) { complete(null); return }
                         channel.invokeMethod("requestStreamBadges", mapOf(
@@ -2463,7 +2463,7 @@ class AndroidTvTorrentPlayerActivity : AppCompatActivity() {
                             "description" to entry.badgeDescription,
                         ), object : io.flutter.plugin.common.MethodChannel.Result {
                             override fun success(result: Any?) {
-                                complete(if (isFinishing || isDestroyed) null else (result as? List<*>)?.filterIsInstance<Map<*, *>>())
+                                complete(if (isFinishing || isDestroyed) null else TvSourceBadgeResult.parse(result))
                             }
                             override fun error(code: String, message: String?, details: Any?) { complete(null) }
                             override fun notImplemented() { complete(null) }
