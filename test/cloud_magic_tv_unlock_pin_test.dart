@@ -44,9 +44,11 @@ String _magicTvSources() {
   buf.writeln(_read('lib/services/debrify_tv/channel_cache_warmer.dart'));
   buf.writeln(_read('lib/services/debrify_tv/queue_prefetcher.dart'));
   for (final provider in [
-    'provider', 'real_debrid', 'torbox', 'pikpak', 'premiumize', 'alldebrid',
+    'provider_watch_flow', 'real_debrid_watch_flow', 'torbox_watch_flow',
+    'pikpak_watch_flow', 'premiumize_watch_flow', 'alldebrid_watch_flow',
+    'cached_locked_watch_programme',
   ]) {
-    var flow = _read('lib/screens/debrify_tv/watch/${provider}_watch_flow.dart');
+    var flow = _read('lib/screens/debrify_tv/watch/${provider}.dart');
     for (final alias in aliases.entries) {
       flow = flow.replaceAll('host.${alias.key}(', '${alias.value}(');
     }

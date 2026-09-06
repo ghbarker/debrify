@@ -46,11 +46,12 @@ const List<String> kStillFrozenPaths = [
 /// call site written by pattern-matching on neighbouring code) will not.
 // Exact destinations relocated from Magic TV; no directory exemptions.
 const _watchFlowPlayerCounts = <String, int>{
-  'lib/screens/debrify_tv/watch/alldebrid_watch_flow.dart': 2,
+  'lib/screens/debrify_tv/watch/alldebrid_watch_flow.dart': 1,
   'lib/screens/debrify_tv/watch/pikpak_watch_flow.dart': 1,
   'lib/screens/debrify_tv/watch/premiumize_watch_flow.dart': 0,
   'lib/screens/debrify_tv/watch/provider_watch_flow.dart': 3,
-  'lib/screens/debrify_tv/watch/real_debrid_watch_flow.dart': 1,
+  'lib/screens/debrify_tv/watch/real_debrid_watch_flow.dart': 0,
+  'lib/screens/debrify_tv/watch/cached_locked_watch_programme.dart': 1,
   'lib/screens/debrify_tv/watch/torbox_watch_flow.dart': 0,
   'lib/screens/debrify_tv/watch/quick_windowed_watch_programme.dart': 1,
 };
