@@ -439,6 +439,15 @@ is an editor mirror, not the source of truth. How to add a provider:
   no live-builder-time change, valid channel-switch or native playback proof.
   Windowed slice removes 19 net production lines: five flows 2081 (-202), common
   1384 (-47), new owner 217 and model growth 13 fully charged; no host reduction.
+  `runQuickWatchSearch` in `provider_watch_flow.dart` shares TB/PM/AD/PP quick
+  admission and search; migrated settings receivers, captured keys, distinct result
+  cancellation and progressive publication remain. Four provider continuations own
+  their preparation/launch bodies and original cleanup; review this retained
+  composition before Phase 2 completion. Admission removes 135 net production lines
+  (302 leaf deletion - 167 common growth): five flows 1782, common 1551; Windowed
+  owner remains 217. Under-800 and dependency closure remain open. New live PM/AD
+  pins: `test/magic_tv_watch_admission_origin_test.dart`; error/read-failure,
+  reentrancy and native-positive coverage remain incomplete.
   Its 24 binding/tear-off lines are retained for Q2 composition review/removal before
   Phase 2 completion. These shared phases do not complete the five-flow dedup target. `WatchFlowBindings` keeps live host
   state, navigation, existing preparation/prefetch/launcher callbacks and
