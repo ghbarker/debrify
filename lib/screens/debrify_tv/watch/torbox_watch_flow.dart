@@ -5,12 +5,9 @@ import 'package:flutter/material.dart';
 import '../../../models/torrent.dart';
 import '../../../services/storage_service.dart';
 import '../../../services/main_page_bridge.dart';
-import '../../../theme/app_surfaces.dart';
-import '../../video_player_screen.dart';
-import '../../magic_tv_screen.dart'
-    show MagicTvDispatch, MagicTvNextChannelQuirk;
 
 import 'provider_watch_flow.dart';
+import 'quick_windowed_watch_programme.dart';
 import 'windowed_watch_queue.dart';
 
 class TorboxWatchFlow {
@@ -25,159 +22,14 @@ class TorboxWatchFlow {
     provider: QuickWatchProvider.torbox,
     keywords: keywords,
     log: log,
-    continueWith: (combinedList, apiKey) async {
-    try {
-      if (host.mounted) {
-        host.setState(() {
-          host.status = 'Checking Torbox cache...';
-        });
-      }
-
-      final run = WindowedWatchRun(
-        host: host,
-        candidates: combinedList,
-        fetchWindow: (startIndex) => host.cacheWarmer.fetchTorboxCacheWindow(
-          candidates: combinedList,
-          startIndex: startIndex,
-          apiKey: apiKey,
-        ),
-        batchReady: (count) => log('✅ Found $count cached Torbox torrent(s)'),
-        prepare: (candidate) => host.prepareTorboxTorrent(
-          candidate: candidate,
-          apiKey: apiKey,
-          log: log,
-        ),
-        provider: WindowedProvider.torbox,
-        log: log,
-      );
-      final populateQueue = run.populate;
-
-      bool seeded;
-      try {
-        seeded = await populateQueue();
-      } catch (e) {
-        log('❌ Torbox cache check failed: $e');
-        host.closeProgressDialog();
-        if (host.mounted) {
-          host.setState(() {
-            host.status = 'Torbox cache check failed. Try again.';
-          });
-          host.showSnack(
-            'Torbox cache check failed: ${host.formatTorboxError(e)}',
-            color: Colors.red,
-          );
-        }
-        return;
-      }
-
-      if (!seeded) {
-        host.closeProgressDialog();
-        if (host.mounted) {
-          host.setState(() {
-            host.status = 'Torbox has no cached results for these keywords.';
-          });
-          host.showSnack(
-            'Torbox has no cached results for these keywords.',
-            color: Colors.orange,
-          );
-        }
-        return;
-      }
-
-      final requestTorboxNext = run.nextQuick;
-
-      final first = await requestTorboxNext();
-      if (host.watchCancelled) {
-        return;
-      }
-      if (first == null) {
-        host.closeProgressDialog();
-        if (host.mounted && !host.watchCancelled) {
-          host.setState(() {
-            host.status =
-                'No playable Torbox streams found. Try different keywords.';
-          });
-          host.showSnack(
-            'No playable Torbox streams found. Try different keywords.',
-            color: Colors.red,
-          );
-        }
-        return;
-      }
-
-      host.closeProgressDialog();
-      if (!host.mounted) return;
-
-      if (await host.handOffToExternalPlayer(
-        first['url'] ?? '',
-        first['title'] ?? 'Debrify TV',
-      )) {
-        return;
-      }
-
-      final launchedOnTv = await host.launchTorboxOnAndroidTv(
-        firstStream: first,
-        requestNext: requestTorboxNext,
-        showChannelNameOverride: host.quickShowChannelName,
-        channelName: null,
-        channelId: null,
-        channelNumber: null,
-        channelDirectory: null,
-      );
-      if (host.watchCancelled) {
-        return;
-      }
-      if (launchedOnTv) {
-        return;
-      }
-
-      if (!host.watchCancelled) {
-        // Hide auto-launch overlay before launching player
-        MainPageBridge.notifyPlayerLaunching();
-
-        await host.navigator().push(
-          FrozenLegacyPageRoute(
-            builder: (_) => VideoPlayerScreen(
-              videoUrl: first['url'] ?? '',
-              title: first['title'] ?? 'Debrify TV',
-              startFromRandom: host.startRandom,
-              randomStartMaxPercent: host.randomStartPercent,
-              hideSeekbar: host.hideSeekbar,
-              showChannelName: host.showChannelName,
-              channelName: null,
-              channelNumber: null,
-              showVideoTitle: host.showVideoTitle,
-              hideOptions: host.hideOptions,
-              requestMagicNext: requestTorboxNext,
-              requestNextChannel:
-                  host.channels.length > 1 &&
-                      MagicTvDispatch.allowsNextChannel(
-                        host.quickProvider,
-                        MagicTvNextChannelQuirk.rdTorboxPikPak,
-                      )
-                  ? host.requestNextChannel
-                  : null,
-            ),
-          ),
-        );
-      }
-
-      if (host.mounted && !host.watchCancelled) {
-        host.setState(() {
-          host.status = host.queue.isEmpty
-              ? ''
-              : 'Queue has ${host.queue.length} remaining';
-        });
-      }
-    } finally {
-      host.closeProgressDialog();
-      if (host.mounted) {
-        host.setState(() {
-          host.isBusy = false;
-        });
-      }
-    }
-  });
+    continueWith: (combinedList, apiKey) => runQuickWindowedWatch(
+      host,
+      provider: WindowedProvider.torbox,
+      candidates: combinedList,
+      apiKey: apiKey,
+      log: log,
+    ),
+  );
 
   Future<void> watchTorboxWithCachedTorrents(
     List<Torrent> cachedTorrents, {
