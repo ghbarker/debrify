@@ -1088,6 +1088,111 @@
           "value": false
         }
       }
+    },
+    "torrent-search-history": {
+      "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+      "namedKeyCount": 2,
+      "excludedKeys": [],
+      "values": {
+        "torrent_search_history_v1": "[{\"torrent\": {\"infohash\": \"same\", \"name\": \"Synthetic 1\", \"size\": 1, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"first\", \"clickedAt\": 1}, null, {\"torrent\": {\"infohash\": \"SAME\", \"name\": \"Synthetic 2\", \"size\": 2, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"second\", \"clickedAt\": 2}, {\"torrent\": {\"infohash\": \"same\", \"name\": \"Synthetic 3\", \"size\": 3, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"third\", \"clickedAt\": 3}, \"ignored\", {\"torrent\": {\"infohash\": \"four\", \"name\": \"Synthetic 4\", \"size\": 4, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"fourth\", \"clickedAt\": 4}, {\"torrent\": {\"infohash\": \"five\", \"name\": \"Synthetic 5\", \"size\": 5, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"fifth\", \"clickedAt\": 5}, {\"torrent\": {\"infohash\": \"six\", \"name\": \"Synthetic 6\", \"size\": 6, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"sixth\", \"clickedAt\": 6}]",
+        "torrent_search_history_enabled": false
+      },
+      "expectedReads": [
+        {
+          "torrent": {
+            "infohash": "same",
+            "name": "Synthetic 1",
+            "size": 1,
+            "metadata": {
+              "flag": false,
+              "optional": null
+            }
+          },
+          "service": "first",
+          "clickedAt": 1
+        },
+        {
+          "torrent": {
+            "infohash": "SAME",
+            "name": "Synthetic 2",
+            "size": 2,
+            "metadata": {
+              "flag": false,
+              "optional": null
+            }
+          },
+          "service": "second",
+          "clickedAt": 2
+        },
+        {
+          "torrent": {
+            "infohash": "same",
+            "name": "Synthetic 3",
+            "size": 3,
+            "metadata": {
+              "flag": false,
+              "optional": null
+            }
+          },
+          "service": "third",
+          "clickedAt": 3
+        },
+        {
+          "torrent": {
+            "infohash": "four",
+            "name": "Synthetic 4",
+            "size": 4,
+            "metadata": {
+              "flag": false,
+              "optional": null
+            }
+          },
+          "service": "fourth",
+          "clickedAt": 4
+        },
+        {
+          "torrent": {
+            "infohash": "five",
+            "name": "Synthetic 5",
+            "size": 5,
+            "metadata": {
+              "flag": false,
+              "optional": null
+            }
+          },
+          "service": "fifth",
+          "clickedAt": 5
+        },
+        {
+          "torrent": {
+            "infohash": "six",
+            "name": "Synthetic 6",
+            "size": 6,
+            "metadata": {
+              "flag": false,
+              "optional": null
+            }
+          },
+          "service": "sixth",
+          "clickedAt": 6
+        }
+      ],
+      "mutations": {
+        "history-key": {
+          "key": "torrent_search_history_v1",
+          "operation": "rename"
+        },
+        "history-type": {
+          "key": "torrent_search_history_enabled",
+          "operation": "replace",
+          "value": "false"
+        },
+        "history-order": {
+          "key": "torrent_search_history_v1",
+          "operation": "replace",
+          "value": "[{\"torrent\": {\"infohash\": \"SAME\", \"name\": \"Synthetic 2\", \"size\": 2, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"second\", \"clickedAt\": 2}, null, {\"torrent\": {\"infohash\": \"same\", \"name\": \"Synthetic 1\", \"size\": 1, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"first\", \"clickedAt\": 1}, {\"torrent\": {\"infohash\": \"same\", \"name\": \"Synthetic 3\", \"size\": 3, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"third\", \"clickedAt\": 3}, \"ignored\", {\"torrent\": {\"infohash\": \"four\", \"name\": \"Synthetic 4\", \"size\": 4, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"fourth\", \"clickedAt\": 4}, {\"torrent\": {\"infohash\": \"five\", \"name\": \"Synthetic 5\", \"size\": 5, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"fifth\", \"clickedAt\": 5}, {\"torrent\": {\"infohash\": \"six\", \"name\": \"Synthetic 6\", \"size\": 6, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"sixth\", \"clickedAt\": 6}]"
+        }
+      }
     }
   }
 }
