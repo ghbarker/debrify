@@ -1075,6 +1075,89 @@ package generation or assertions are necessary; this is namespace adaptation,
 not a claim that the complete old/current harness is byte-identical.
 
 
+## TV keyboard: legacy and committed two-key domain
+
+Actual unchanged exporter `6d26d7a1a98c7ddd37b4a25815f74123c1e29126` generated
+`tv-keyboard-legacy.encrypted.json` and `tv-keyboard-committed.encrypted.json`
+in fresh isolated `C:/Users/hunth/debrify/debrify-tv-keyboard-fixture-origin`.
+Current restore runs in `C:/Users/hunth/debrify/debrify-s2-tv-keyboard-prefs`,
+after public origin pin `8a071c0df888ee4b8a59a3e1238291510526bc3c` on main
+`cb261b5bdd6540d562b503adaaee62e937b97d51`.
+
+Both synthetic packages contain `tv_keyboard_enabled` bool true. Legacy omits
+`tvos_keyboard_default_generation`; committed includes int1. Seeds use raw
+ProfilePreferences bool/int writes without invoking the public migration getter
+before export. Coverage is1/2 admitted keys per case, union2, zero exclusions,
+separately counted from the historical141-key domain. This encrypted portable
+policy is distinct from sanitized shareable policy, which admits the bool but
+not the generation marker. These fixtures do not claim sanitized marker transfer.
+
+Current restore first publishes generation2 and compares physical presence,
+type and value before any public getter. The old destination has boolfalse and
+no marker. Actual `getTvKeyboardEnabled(tvOs: true)` then changes the legacy
+case to boolfalse/int1 and leaves the committed case booltrue/int1. The public
+mirror matches, a second read is idempotent, and re-export with secrets off/on
+matches the post-reader values plus destination sentinel. Oldgeneration1,
+othergeneration7 and other-profile values remain unchanged. This uses the
+coordinator's default empty lifecycle-participant list and an explicit reader;
+not application auto-warm, native keyboard or all-interleaving proof.
+
+The previously committed public origin pin separately records a held-write
+quirk: profile switching lets the old bool write complete but the next marker
+write throws a stale-instance StateError, leaving the mirror unchanged. No
+transactionality, profile safety or serialization fix is implied by this fixture.
+
+### Exact old exporter harness correspondence
+
+Old lib stays unchanged. The copied fixture loader removes five store imports
+and reverses same-method receivers to old StorageService: IptvPrefs3,
+PlaybackProgressStore14, ProviderCredentialPrefs19, TorrentSearchHistoryStore2,
+MyWatchlistStore2. The copied filter helper removes its owner import and reverses
+ten tearoffs; the copied playlist helper removes its owner import and reverses
+four receivers. Recipe and keyboard seed/assertion code are identical. At this
+frozen generation base there are zero DownloadDestinationPrefs or
+AmbientTrailerPrefs loader receivers; later integrations require their exact
+additional reverse adapters. This is not a whole-harness byte-identity claim.
+The old/current lock difference is only shared_preferences_platform_interface
+transitive versus direct-dev classification, version2.4.1/archive unchanged.
+Each own package config resolves the app locally and Flutter/test to3.44.8.
+
+All42 prior artifacts and previous recipe entries are unchanged. The two new
+pairs give46 artifacts plus README/recipe =48 directory files. Both pairs were
+copied byte-for-byte from the old exporter, with no later regeneration.
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# Own unchanged6d26 checkout with the exact adapters above:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --plain-name 'tv-keyboard-' --reporter json
+# Current candidate:
+& $flutter test --no-pub test/tv_keyboard_prefs_origin_test.dart test/storage_origin_restore_fixture_test.dart --reporter json
+& 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/cache/dart-sdk/bin/dart.exe' analyze test/storage_origin_restore_fixture_test.dart
+foreach ($variant in @('keyboard-key', 'keyboard-type', 'keyboard-generation')) {
+  & $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'tv-keyboard-committed: restore' "--dart-define=STORAGE_FIXTURE_MUTATION=$variant" --reporter json
+}
+```
+
+Generation2PASS; combined75PASS =25public-origin+50fixture, zero skips/errors;
+loader analysis0. Three valid packages rebuild section hashes and pass actual
+encryption/decryption and restore, then fail the first physical assertion:
+renamed bool key retains destinationfalse; markerint1 becomes String1; marker1
+becomes int0. Each exits1 at loader503 (`_expectSettings`154). These are semantic
+post-restore failures, not codec rejection. Later public reads are not reached
+in negative runs. No production mutation or new seam.
+
+Ciphertext SHA256:
+- Legacy: `ff970275d9646201eb59ee601088ef92f1cdff98cdce76a0ed894e1aa474b42e`.
+- Committed: `5946b2d324b0b5ce55a0e91a95f4890f16b5babcb3170a8c2e70596194f9bc00`.
+
+Did we make a difference? Actual old export/current restore now distinguishes
+raw portable state from the subsequent public migration policy, including
+markerabsence versus committedgeneration. Is there more we could do? Exact
+owner scope/independent fixture review precede any production move. This adds
+zero production credit/facades and does not close Storage ownership or verify
+native/render/underlay behavior.
+
+
 ## Catalog search: one raw JSON preference
 
 Actual unchanged pre-S2 exporter `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`

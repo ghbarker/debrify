@@ -1,0 +1,31 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "scenario": "tv-keyboard-committed",
+  "syntheticOnly": true,
+  "sha256": "5946b2d324b0b5ce55a0e91a95f4890f16b5babcb3170a8c2e70596194f9bc00",
+  "includeSecrets": false,
+  "representedSettings": {
+    "tv_keyboard_enabled": true,
+    "tvos_keyboard_default_generation": 1
+  },
+  "keyTypes": {
+    "tv_keyboard_enabled": "bool",
+    "tvos_keyboard_default_generation": "int"
+  },
+  "absentKeys": [],
+  "excludedKeys": [],
+  "expectedPublicRead": true,
+  "rawSeed": "ProfilePreferences bool/int; no public migration getter before export",
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}

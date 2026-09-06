@@ -1285,6 +1285,40 @@
         }
       }
     },
+    "tv-keyboard": {
+      "cases": {
+        "tv-keyboard-legacy": {
+          "values": {
+            "tv_keyboard_enabled": true
+          },
+          "expectedRead": false
+        },
+        "tv-keyboard-committed": {
+          "values": {
+            "tv_keyboard_enabled": true,
+            "tvos_keyboard_default_generation": 1
+          },
+          "expectedRead": true
+        }
+      },
+      "excludedKeys": [],
+      "mutations": {
+        "keyboard-key": {
+          "operation": "rename",
+          "key": "tv_keyboard_enabled"
+        },
+        "keyboard-type": {
+          "operation": "replace",
+          "key": "tvos_keyboard_default_generation",
+          "value": "1"
+        },
+        "keyboard-generation": {
+          "operation": "replace",
+          "key": "tvos_keyboard_default_generation",
+          "value": 0
+        }
+      }
+    },
     "catalog-search": {
       "values": {
         "catalog_search_disabled_addons_v1": "[\" z \",\"b\",\" z \",\"\",\"B\",\"b\"]"

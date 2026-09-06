@@ -37,8 +37,9 @@ Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.
 `search_screen_shells.dart` (tab/variant/landing/dropdown contracts),
 `keyword_search_controller.dart` + `keyword_search_screen.dart` (in-tab keyword
 torrent search; G1'-3).
-TV Home stages (four remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
-— `_CanvasBoardStage`, `_AtriumBoardStage`, `_MosaicBoardStage`, `_PromenadeBoardStage`.
+TV Home stages (three remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
+— `_CanvasBoardStage`, `_AtriumBoardStage`, `_PromenadeBoardStage`.
+Mosaic uses public `MosaicStage` in `mosaic_board_stage.dart`.
 Deck uses public `DeckStage` in `deck_board_stage.dart` and shared `search/stage_visuals.dart`. Tonight uses public `TonightStage`, `TonightStageContent` in
 `tonight_stage_content.dart`, and `TonightQueueRow`/State, `TonightCardInfo` and
 `TonightQueueEntry` in `tonight_stage_widgets.dart`. Neutral `StageRailView` lives
@@ -239,8 +240,15 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   (existing callers retain null keys). This is not native/cache-algorithm coverage.
   `DeckStageBindings` retains 22 live/reference members, including two lazy native
   constructor closures on the host; these and the label boundaries above expire
-  for removal/review at final composition / phase completion. Four stage parts and
+  for removal/review at final composition / phase completion. Three stage parts and
   the aggregate stage target remain open; prior shared-shelf accounting is separate.
+  Actual `MosaicStage` owns its complete layout and exclusive header geometry;
+  its State extension/part is removed using the existing public visual core.
+  Host 6457 -> 6468 (**+11**); whole production **+45**, not deletion credit.
+  Seventeen live/reference bindings include one lazy native constructor boundary,
+  retained for removal/review at final composition / phase completion. Existing
+  host cell/deferred-focus/label policy is unchanged; the held Mosaic cell/content
+  owner is not closed by this slice, nor is the aggregate host target.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
@@ -271,6 +279,13 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   consumers directly to AmbientTrailerPrefs. Retirement removes15 host lines
   (14 declarations + import), whole production -10; prior owner move -69 host
   included docs/separators and added32 whole. Strict ownership remains OPEN.
+  **TV keyboard policy:** AppStylePrefs owns the profile bool/generation pair,
+  two migration/access bodies and one synchronous keyboard cache. StorageService
+  retains two nonasync APIs and sync cache accessors; its original first reset
+  assignment and AppStylePrefs.resetCaches are unchanged. Only the owner tvOs
+  parameter loses its testing annotation for forwarding; the host retains it.
+  Host -37 includes docs; whole production +13. Q2 compatibility and strict
+  Storage ownership closure remain open; no native keyboard proof is claimed.
   **Download destinations:** `lib/services/storage/download_destination_prefs.dart`
   owns three profile-scoped String keys and seven persistence bodies; OS grants
   remain with callers. Q2 retired all seven StorageService APIs; callers route
