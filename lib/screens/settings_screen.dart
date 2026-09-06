@@ -44,6 +44,7 @@ import '../services/simkl/simkl_service.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'package:debrify/services/storage/app_style_prefs.dart';
+import 'package:debrify/services/storage/device_maintenance_prefs.dart';
 import '../services/storage_service.dart';
 import '../services/support_remote_config_service.dart';
 import '../services/torbox_account_service.dart';
@@ -366,7 +367,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       TrackingPrefs.getTraktUsername(),
       AppVersionInfo.get(),
       AndroidNativeDownloader.isTelevision(),
-      StorageService.getUpdateAutoCheckEnabled(),
+      DeviceMaintenancePrefs.getUpdateAutoCheckEnabled(),
       StorageService.getIndexerManagerConfigs(forSettings: true),
       StorageService.hasPremiumizeCredential(),
       StorageService.hasAllDebridCredential(),
@@ -1966,7 +1967,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _checkForAppUpdates() async {
     if (_checkingUpdates) return;
     if (_currentVersionName.isEmpty) return;
-    await StorageService.setIgnoredUpdateVersion(null);
+    await DeviceMaintenancePrefs.setIgnoredUpdateVersion(null);
 
     setState(() {
       _checkingUpdates = true;
@@ -2169,7 +2170,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _autoUpdateChecksEnabled = enabled;
     });
-    await StorageService.setUpdateAutoCheckEnabled(enabled);
+    await DeviceMaintenancePrefs.setUpdateAutoCheckEnabled(enabled);
   }
 
   Future<void> _toggleTvKeyboard(bool enabled) async {

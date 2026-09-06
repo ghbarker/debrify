@@ -1,7 +1,6 @@
 import 'storage/indexer_manager_config_store.dart';
 import 'profiles/profile_policy_guard.dart';
 import 'storage/ambient_trailer_prefs.dart';
-import 'storage/device_maintenance_prefs.dart';
 import 'storage/catalog_search_prefs.dart';
 export 'storage/ambient_trailer_prefs.dart' show AmbientTrailerSurface;
 
@@ -1274,17 +1273,9 @@ class StorageService {
     List<IndexerManagerConfig> configs,
   ) => IndexerManagerConfigStore.setIndexerManagerConfigs(configs);
 
-  static Future<String?> getSupportRemoteConfigCache() =>
-      DeviceMaintenancePrefs.getSupportRemoteConfigCache();
 
-  static Future<void> setSupportRemoteConfigCache(String json) =>
-      DeviceMaintenancePrefs.setSupportRemoteConfigCache(json);
 
-  static Future<List<String>> getDismissedDonationCampaignIds() =>
-      DeviceMaintenancePrefs.getDismissedDonationCampaignIds();
 
-  static Future<void> dismissDonationCampaign(String campaignId) =>
-      DeviceMaintenancePrefs.dismissDonationCampaign(campaignId);
 
   // Quick Play VR Settings methods
 
@@ -1639,17 +1630,9 @@ class StorageService {
   static Future<bool> getRemoteControlEnabled() =>
       RemoteDevicePrefs.getRemoteControlEnabled();
 
-  static Future<bool> getUpdateAutoCheckEnabled() =>
-      DeviceMaintenancePrefs.getUpdateAutoCheckEnabled();
 
-  static Future<void> setUpdateAutoCheckEnabled(bool enabled) =>
-      DeviceMaintenancePrefs.setUpdateAutoCheckEnabled(enabled);
 
-  static Future<String?> getIgnoredUpdateVersion() =>
-      DeviceMaintenancePrefs.getIgnoredUpdateVersion();
 
-  static Future<void> setIgnoredUpdateVersion(String? version) =>
-      DeviceMaintenancePrefs.setIgnoredUpdateVersion(version);
 
   /// Set whether remote control feature is enabled
   static Future<void> setRemoteControlEnabled(bool enabled) =>
