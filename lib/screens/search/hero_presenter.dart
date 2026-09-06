@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../models/iptv_playlist.dart';
 import '../../models/stremio_addon.dart';
+import '../../services/home_collection_rows.dart';
 import '../../services/imdb_trailer_service.dart';
 import '../../services/main_page_bridge.dart';
 import '../../services/storage_service.dart';
@@ -187,6 +188,49 @@ class HeroPresenter {
   bool get active =>
       environment().isTelevision &&
       (!environment().searchMode || environment().catalogQuery.isNotEmpty);
+
+  void seedSections(List<CatalogSection> sections) {
+    // Seed the hero with the first item so it isn't blank before DPAD focus
+    // lands (see [active] for when the hero is shown).
+    if (active) {
+      // Seed from the first real title: a pinned collection row can lead the
+      // board, and folder tiles can't drive the hero.
+      StremioMeta? first;
+      for (final section in sections) {
+        if (section is HomeCollectionSection) continue;
+        if (section.items.isNotEmpty) {
+          first = section.items.first;
+          break;
+        }
+      }
+      heroItem.value = first;
+      heroEnriched.value = null;
+      // Outside the null-check: a board that reloads EMPTY must clear the
+      // shell stage too (null item → null art), not keep the last title's.
+      publishAmbientArt(first, null);
+      if (first != null) {
+        enrich(first);
+        updateTint(first);
+        // Billboard effect: the seeded spotlight starts its trailer too, so
+        // opening Home settles into a living hero without any DPAD input.
+        // A board reload is a fresh visit — lift any after-the-feature
+        // suppression, and drop any Canvas favourites override + live feed
+        // (a reload landing while a favourite held focus would otherwise
+        // keep its stale art/title on the stage — or resume its stream —
+        // with no cell focused, and let the seeded trailer start beneath).
+        trailerSuppressed = false;
+        clearFavouriteFocus();
+        clearLiveIptv();
+        scheduleTrailer(first);
+      } else {
+        clearTrailer();
+        // Clear the COLOUR too, not just the art — an empty reload otherwise
+        // left the departed title's tint on the shell stage + sidebar glass.
+        tint.value = null;
+        publishTintToShell(null);
+      }
+    }
+  }
 
   void setHero(StremioMeta item) {
     // Off-TV / blank search prompt the hero isn't rendered, so don't track focus

@@ -56,8 +56,6 @@ class SearchBoardRuntime {
   Function()
   environment;
   late Future<void> Function() refreshBoundSources;
-  late VoidCallback completeStageAdvance;
-  late VoidCallback completeStageRight;
   late VoidCallback leaveBoardTop;
   bool get mounted => isLive();
 
@@ -464,4 +462,72 @@ class SearchBoardRuntime {
       if (moved) clearDeferredDown();
     });
   }
+  // Only a mounted Home stage can arm these requests. Discover executes the
+  // same null-pending guards; it needs no fake stage renderer or no-op hook.
+  String? pendingStageAdvanceKey;
+  DateTime? pendingStageAdvanceAt;
+  FocusNode? pendingStageOrigin;
+  bool pendingStageAdvanceFillsLower = false;
+  String? pendingStageRightKey;
+  int pendingStageRightCol = -1;
+  DateTime? pendingStageRightAt;
+  FocusNode? pendingStageRightOrigin;
+  late bool Function() stageActive;
+  late String? Function() stageRailKey;
+  late void Function(String key, int col, FocusNode? origin) continueStageRight;
+  late void Function(String key, bool fillLower, FocusNode? origin) continueStageAdvance;
+
+  void deferStageRight(String railKey, int col) {
+    final origin = FocusManager.instance.primaryFocus;
+    if (origin == null) return;
+    pendingStageRightKey = railKey;
+    pendingStageRightCol = col;
+    pendingStageRightAt = DateTime.now();
+    pendingStageRightOrigin = origin;
+  }
+
+  void deferStageAdvance(String railKey, {bool fillsLower = false}) {
+    final origin = FocusManager.instance.primaryFocus;
+    if (origin == null) return;
+    pendingStageAdvanceKey = railKey;
+    pendingStageAdvanceAt = DateTime.now();
+    pendingStageAdvanceFillsLower = fillsLower;
+    pendingStageOrigin = origin;
+  }
+
+  bool stageDeferralStillValid(DateTime at, FocusNode? origin) =>
+      stageActive() &&
+      origin != null &&
+      identical(FocusManager.instance.primaryFocus, origin) &&
+      DateTime.now().difference(at) <= SearchBoardRuntime.pendingDownMaxAge;
+
+  void completeStageRight() {
+    final key = pendingStageRightKey;
+    final at = pendingStageRightAt;
+    final col = pendingStageRightCol;
+    final origin = pendingStageRightOrigin;
+    if (key == null || at == null) return;
+    pendingStageRightKey = null;
+    pendingStageRightAt = null;
+    pendingStageRightCol = -1;
+    pendingStageRightOrigin = null;
+    if (stageRailKey() != key) return;
+    if (!stageDeferralStillValid(at, origin)) return;
+    continueStageRight(key, col, origin);
+  }
+
+  void completeStageAdvance() {
+    final key = pendingStageAdvanceKey;
+    final at = pendingStageAdvanceAt;
+    final fillLower = pendingStageAdvanceFillsLower;
+    final origin = pendingStageOrigin;
+    if (key == null || at == null) return;
+    pendingStageAdvanceKey = null;
+    pendingStageAdvanceAt = null;
+    pendingStageAdvanceFillsLower = false;
+    pendingStageOrigin = null;
+    if (!stageDeferralStillValid(at, origin)) return;
+    continueStageAdvance(key, fillLower, origin);
+  }
+
 }

@@ -40,7 +40,8 @@ TV Home stages (parts of `search_screen.dart`, G1 step 5): `lib/screens/search/s
 `_DeckBoardStage`, `_TonightBoardStage`, `_SpotlightBoardStage`. Dispatch helper:
 `tv_home_stage_dispatch.dart` (`resolveTvHomeStageLayout`). Empty Spotlight shelves
 fall through to classic. Discover grid/stage chrome is `search/discover_view.dart`
-(`DiscoverView`); the host still supplies the actual source panel.
+(`DiscoverView`); its source panel comes from the private composition in `discover_screen.dart`,
+using `search_content_session.dart` and `search_content_actions.dart` shared with Home/Search.
 
 🔴 huge: `lib/screens/search_screen.dart` (13 105) · `lib/screens/video_player_screen.dart`
 (16 278) · `lib/screens/magic_tv_screen.dart` (10 716) · `lib/services/storage_service.dart`
@@ -98,81 +99,95 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   favourites rows, the D-pad `_BoardCell` focus grid, poster sizing (`_railPosterW`), bind-sources entry.
   Public `SearchScreen` is a G4-style wrapper (`main.dart` constructors unchanged). Search tab is
   `lib/screens/search/catalog_search_screen.dart` (`CatalogSearchScreen`, MainTab 17); Discover is
-  `lib/screens/search/discover_screen.dart` (`DiscoverScreen`, MainTab 18). Both wrap the same host
-  so they share `HomeBoardController`, `CatalogSearchController`, and `TitleOpener`. Shell contracts
+  `lib/screens/search/discover_screen.dart` (`DiscoverScreen`, MainTab 18). Discover is a Stateless
+  override/dispatch wrapper over its own private Stateful composition, with no legacy Search State.
+  Home/Search and Discover both own a `search/search_content_session.dart` (`SearchContentSession`)
+  instance: board/catalog/keyword/CW/full Fav construction, shared data, auth and refresh ordering.
+  Actions are `search/search_content_actions.dart` (`SearchContentActions`), not session UI policy.
+  Direct legacy Discover constructors use a compatibility State; Home State identity is retained. Shell contracts
   live in `lib/screens/search/search_screen_shells.dart`.
   Detail opening is `lib/screens/search/title_opener.dart` (`TitleOpener`; State `_openItem` is a forward).
   Catalog play/resume resolve is `lib/services/playback/catalog_play_resolver.dart`
   (`CatalogPlayResolver` — meta + tracker snapshots → `PlaySelection`/`ResumeInfo`;
-  host `_onCatalogPlay` keeps the overlay and resolver orchestration).
+  `SearchContentActions.onCatalogPlay` keeps the overlay and resolver orchestration).
   Selection metadata/art, addon identity, service launch and Sources navigation are
   `lib/screens/search/selection_playback_owner.dart` (`SelectionPlaybackOwner`,
   `SelectionPlaybackRoutes`: live TV read, bound refresh, full refresh).
   `buildSearchSources` in `lib/screens/search/search_sources.dart` forwards to the
   unchanged private Sources widget. Owner → legacy host library → owner remains
-  a legal cycle, not independent Discover ownership. Host `_playSelection` (32
-  lines) retains async entry/listener try/finally/State.mounted; `_browseSelection`
-  (24 lines) retains logging and the empty-ID guard before State.context. Both
-  adapters expire with real G17/Q2 migration. G17e: 93 net host Leaves, production
-  +90 net lines before docs; **zero** credit against the 750 standalone target.
+  a legal library dependency despite standalone Discover State ownership.
+  `SearchContentActions.playSelection` retains async entry/listener try/finally and delegated
+  actual State.mounted; `browseSelection` keeps logging/empty-ID guard before lazy context.
   Source edit/add dialogs are `lib/widgets/sources/source_binding_dialogs.dart`
   (`SourceBindingDialogs` — meta + configured cloud/local options → persist /
-  torrent+keyword bind callbacks; host `_handleEditOrSelectSource` stays the entry).
+  torrent+keyword bind callbacks; `SearchContentActions.handleEditOrSelectSource` is the entry).
   Cloud route callbacks: `lib/screens/search/source_binding_routes.dart`
   (`SourceBindingRoutes.cloud`).
   In-tab keyword torrent search is `lib/screens/search/keyword_search_controller.dart`
   (`KeywordSearchController`, `KwPreservedState`) +
   `lib/screens/search/keyword_search_screen.dart` (`KeywordSearchScreen`).
   Host `_switchMode` is the thin launcher (policy + query handoff);
-  `_openKeywordBind` still pushes `_SourcesScreen` with `keywordSeed`.
+  `SearchContentActions.openKeywordBind` uses `buildSearchSources` with `keywordSeed`.
   Tracker + local Continue Watching is `lib/screens/search/continue_watching_controller.dart`
   (`ContinueWatchingController`, `CwRow`, `CwKind`) +
   `lib/screens/search/continue_watching_row.dart` (`ContinueWatchingRow`,
-  `CwFocusOwner`, `syncCwNodes`). Host keeps Home board chrome, Discover
-  CW landing, `_addonForContinue`, and thin loader/open wrappers.
+  `CwFocusOwner`, `syncCwNodes`). The session owns these controllers/flows and
+  `addonForContinue`; each composition retains its actual render/lifetime slots.
   Favourites state, loaders and action flows live in
   `lib/screens/search/fav_rows_controller.dart` (`FavRowsController`,
   `FavouritesIptvListRow`); classic rows render through
   `lib/screens/search/fav_row.dart` (`FavRow`). These retain screen/UI dependencies.
-  Host supplies live State/context/update and cross-row callbacks, keeps stage
-  composition, and disposes the favourites nodes in its existing disposal order.
+  Session wires live actual-State context/update and shared runtime cross-row callbacks;
+  compositions dispose favourites nodes in the existing order. The full Fav adapter is retained,
+  including hidden Discover watchlist effects; private-node/independent-await proof remains absent.
   `FavRowsController.loadMyWatchlist` delegates read/partition to
   `lib/services/home/my_watchlist_loader.dart` (`MyWatchlistLoader.load`);
   the adapter retains mounted/commit, node synchronization and autofocus.
   Shared board runtime is `lib/screens/search/search_board_runtime.dart`
   (`SearchBoardRuntime`, `CanvasRail`): displayed sections, catalog nodes/column
   memory, scroll/paging, canonical/classic rail navigation and deferred Down.
-  Home and Discover's existing host use the same runtime implementation; existing
-  HomeBoardController/CatalogSearchController/CW/Fav instances remain borrowed.
-  Host retains hero/top-shelf effects, stage hooks and ordered disposal; seven live
-  environment/effect capabilities remain. Fav types still import the legacy host
+  Home and standalone Discover adopt the runtime through their shared session; concrete
+  HomeBoardController/CatalogSearchController/CW/Fav instances remain borrowed by runtime.
+  Runtime owns pending stage requests and real null/expiry/identity guards; Home supplies the
+  original stage continuations. Discover returns on null-pending guards before renderer reads.
+  Compositions retain hero/top-shelf effects and ordered disposal. Fav types still import the legacy host
   library: this is screen-layer ownership, not an independent pure-data layer.
   Renderer/stage aliases expire with real G17/G1'-8 caller migration and Q2 cleanup.
   Origin: `test/search_board_runtime_origin_test.dart` (3 mounted Home cases), plus
   existing favourites and held-bound Home focus pins; no hidden Discover-node proof.
   Actual host 8615 -> 8349 (-266); Fav -75, stage type -20, new runtime +467:
-  production +106. This closes board-runtime ownership, not standalone Discover.
+  production +106 was the prerequisite's accounting, not the subsequent cutover's.
   Bound-source data and sequential reads live in
   `lib/screens/search/search_content_data.dart` (`SearchContentData`);
-  the host retains snapshot capture, mounted checks and stable-map UI commits.
+  the shared session retains snapshot capture, actual mounted checks and stable-map commits.
   Discover focus/trailer signals, layout cache, settings bridges and timer live in
-  `lib/screens/search/discover_lifecycle.dart` (`DiscoverLifecycle`); eager host
-  retains construction, preference listener and disposal. Three live aliases and
-  focus forwarding expire with real G17 ownership / Q2; content/actions stay hosted.
+  `lib/screens/search/discover_lifecycle.dart` (`DiscoverLifecycle`); the actual Discover
+  composition owns eager construction, preference listener, focus forwarding and disposal.
   `lib/screens/search/discover_view.dart` (`DiscoverView`) borrows that lifecycle,
   TV flag and raw panel; owns grid/stage composition and private backdrop/veils/dim.
   Shared `HeroTrailerLoadingPill` / `HeroAmbientChip` and private States live in
   `lib/screens/search/trailer_status_chips.dart`, also used by existing Home consumers.
-  No view/chip import of the legacy host. Fav/CW effects and init/dispose remain
-  hosted: 419 physical host Leaves, production +37 net lines, UI relocation rather
-  than pure logic. This is not standalone Discover or automatic 750-target closure.
+  No view/chip import of the legacy host. The earlier presentation prerequisite was
+  419 host Leaves / production +37; standalone ownership now comes from composition adoption.
   Hero state, focus-rest/enrichment timers, ambient trailers/live IPTV and shell
   art/tint/chrome relays live in `lib/screens/search/hero_presenter.dart`
   (`HeroPresenter`, `HeroEnvironment`). This remains screen/UI presentation,
   with typed environment/context/update callbacks; no pure-logic claim.
+  `HeroPresenter.seedSections` owns the exact section-seeding policy for both compositions,
+  at the original post-bound-launch slot, using existing `clearFavouriteFocus`.
   Host keeps PageRoute subscription and focus recovery before trailer rearming.
   Its 15 property and 5 callback aliases (21 physical lines) serve existing
   host/stage consumers; removal with caller migration is G1'-8, not a new part.
+  Cutover accounting (production e8a6feff): host 8349 -> 7053, **1296 net Leaves**;
+  whole production **+591**. Retained host forwards/accessors: **112 declarations / 383
+  physical lines including pre-existing aliases**; exact per-declaration ledger accompanies review.
+  52 mapped method-body comparisons preserve tokens after recorded receiver/format substitutions;
+  these are structural comparisons, not 52 runtime cases. Hero seeding has its own body diff.
+  Two explicit line-local review exceptions: host `no_logic_in_create_state` preserves Home State
+  identity/direct Discover pre-initialization dispatch (remove with Q2 legacy constructor migration);
+  action `use_build_context_synchronously` covers only the lazy context read after delegated actual
+  State.mounted, with no intervening await (remove with reviewed paired guard/context ownership cleanup).
+  No baseline allowance increase, pure-logic/performance savings or automatic gate closure claimed.
   TV Home stage layouts are `lib/screens/search/stages/` (`_CanvasBoardStage` and friends);
   the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted

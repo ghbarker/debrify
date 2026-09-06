@@ -1,7 +1,6 @@
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:debrify/models/stremio_addon.dart';
-import 'package:debrify/screens/search_screen.dart';
 import 'package:debrify/screens/see_all/continue_watching_see_all_screen.dart';
 import 'package:debrify/services/discover_prefs.dart';
 import 'package:debrify/services/main_page_bridge.dart';
@@ -41,7 +40,8 @@ void main() {
     'origin Discover card settings retain panel State and source focus',
     (tester) async {
       await _mountOrigin(tester, 'grid');
-      final host = tester.state(find.byType(SearchScreenHost));
+      final host = tester.state(find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_DiscoverComposition'));
       final panel = tester.state(find.byType(ContinueWatchingSeeAllScreen));
       final node = discoverSource(tester).focusNode!;
       node.requestFocus();
@@ -64,7 +64,8 @@ void main() {
         !before,
       );
       expect(
-        identical(tester.state(find.byType(SearchScreenHost)), host),
+        identical(tester.state(find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_DiscoverComposition')), host),
         isTrue,
       );
       expect(
@@ -85,7 +86,8 @@ void main() {
     'origin Discover layout and narrow canvas remount panel with same source node',
     (tester) async {
       await _mountOrigin(tester, 'grid');
-      final host = tester.state(find.byType(SearchScreenHost));
+      final host = tester.state(find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_DiscoverComposition'));
       final node = discoverSource(tester).focusNode!;
       var panel = tester.state(find.byType(ContinueWatchingSeeAllScreen));
       node.requestFocus();
@@ -95,7 +97,8 @@ void main() {
       await pumpFavourites(tester);
       expect(panel.mounted, isFalse);
       expect(
-        identical(tester.state(find.byType(SearchScreenHost)), host),
+        identical(tester.state(find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_DiscoverComposition')), host),
         isTrue,
       );
       expect(identical(discoverSource(tester).focusNode, node), isTrue);
@@ -122,7 +125,8 @@ void main() {
       expect(identical(discoverSource(tester).focusNode, node), isTrue);
       expect(node.hasFocus, isTrue);
       expect(
-        identical(tester.state(find.byType(SearchScreenHost)), host),
+        identical(tester.state(find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_DiscoverComposition')), host),
         isTrue,
       );
       await closeFavourites(tester);
