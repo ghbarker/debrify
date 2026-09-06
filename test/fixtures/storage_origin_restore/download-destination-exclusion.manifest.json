@@ -1,0 +1,36 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "scenario": "download-destination-exclusion",
+  "syntheticOnly": true,
+  "includeSecrets": false,
+  "sha256": "284b97fc04dc9ea307cafc6ade603d625e0bf2698ab732f335ffa70e0c3ae2a4",
+  "sourceValues": {
+    "download_tree_uri_v1": "content://synthetic.example.invalid/tree/source",
+    "download_tree_display_name_v1": "  Synthetic source folder  ",
+    "download_dir_path_v1": "C:/synthetic-not-a-real-directory/source"
+  },
+  "excludedKeys": [
+    "download_tree_uri_v1",
+    "download_tree_display_name_v1",
+    "download_dir_path_v1"
+  ],
+  "representedSettings": {},
+  "keyTypes": {},
+  "sourcePhysicalTypes": {
+    "download_tree_uri_v1": "String",
+    "download_tree_display_name_v1": "String",
+    "download_dir_path_v1": "String"
+  },
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}

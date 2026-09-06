@@ -26,3 +26,16 @@ abstract class CloudMagicTvAdUnlock implements CloudMagicTvUnlock {
   /// Same String as `AllDebridService.unlockLink(apiKey, lockedLink)`.
   Future<String> unlockLink(String lockedLink);
 }
+
+/// Magic TV operations with the caller's already-captured key. No key reread.
+abstract class CloudMagicTvCapturedRdUnlock implements CloudMagicTv {
+  Future<Map<String, dynamic>> unrestrictLinkWithKey(String apiKey, String link);
+  Future<Map<String, dynamic>> addTorrentPreferVideosWithKey(
+    String apiKey,
+    String magnet,
+  );
+}
+
+abstract class CloudMagicTvCapturedAdUnlock implements CloudMagicTv {
+  Future<String> unlockLinkWithKey(String apiKey, String link);
+}
