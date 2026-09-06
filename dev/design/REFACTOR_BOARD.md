@@ -1,13 +1,13 @@
 # Refactor board
 
-## Current roadmap — September 6, merged production main 9d4cf518
+## Current roadmap — September 6, merged production main d7cdffb7
 
 **Overall estimate: approximately 75%.** Architectural judgment, not a measured checklist percentage. Open PRs are not completed work. This checklist preserves the same six outcomes; historical evidence follows below.
 
 ### God-file line counts — original → merged main
 
 - **Search:** 19,070 → **6,387** (12,683 fewer)
-- **Player:** 16,278 → **11,535** (4,743 fewer)
+- **Player:** 16,278 → **11,539** (4,739 fewer)
 - **Magic TV:** 10,716 → **3,322** (7,394 fewer)
 - **Storage:** 9,963 → **1,741** (8,222 fewer)
 - **Settings:** 7,905 → **2,908** (4,997 fewer)
@@ -20,7 +20,8 @@ Physical lines, not whole-project deletions. Last full gate: **b6a71b0e PASSED**
 - [x] **Run full integrated gate at b6a71b0e — PASSED.** #216/#217/#218 are three production merges sincebc017. Actual-main full tests, goldens, analysis, layering/forwarder ledger, native pair, Windows and ARM64 builds. Record known failures separately.
 - [x] **Merge #219, public Atrium stage, after the passing integrated gate.** Exact56ff union and allCI passed.
 - [x] **Merge Sources #220.** Merged9d4cf518: exacta2e4 union independently accepted; all three CI checks passed. Independent145PASS/one existing known shape failure retained. Counter2 sinceb6a; next production merge triggers full gate.
-- [ ] **Parent + reviewers: choose the next player/native ownership step from recorded evidence.** Tracker terminal experiment is stopped after four failed runs; no automatic fifth attempt or timer/pump workaround.
+- [x] **Merge player verification lifetime correction #221.** Merged d7cdffb7 after independent26PASS, unchanged analyzer/layering and exact-head CI passed. Production+98/host+4, zero extraction credit; original tracker experiment remains stopped.
+- [ ] **Run full integrated gate at exact d7cdffb7.** Cicero owns exclusive runtime; third production merge sinceb6a. Hero independent production run waits for gate terminal.
 
 ### 1. Finish Search stage layouts and final shared composition — OPEN
 
@@ -76,15 +77,17 @@ Finite pre-S2 fixtures are not proof of every pre-refactor backup. Indexer expor
 
 ### Who owns the next action
 
-- **Locke:** Search hero cache fixture setup/cleanup correction; prepared revision must pass review before another run. Production remains unapplied.
-- **Cicero:** independent hero fixture/evidence review. Search startup failure and timed-out replacement retained, no green origin yet.
-- **Arendt:** player cancellation patch applied; first batch24PASS/2ERROR, no commit/retry until attribution reviewed.
-- **Confucius:** independent player failure attribution; frozen15 origin tests passed, two lifecycle timer-callback assertions failed.
-- **Parent:** merge queue, grants, board/notes; #220 merged, counter2 sinceb6a. No user blocker. Runtime serialized; reviews can proceed in parallel.
+- **Cicero:** full integrated gate at frozen d7cdffb7; exclusive runtime. Hero author evidence and docs accepted, independent production run remains pending.
+- **Locke:** hero draft PR and current-main union proof. Product8827/docs454f; author136PASS/one unchanged known sidebar failure, three negative probes caught and pristine guards passed. No runtime during gate.
+- **Arendt:** re-pin unapplied renderer OS-admission proposal against merged d7cdffb7; no application/runtime.
+- **Confucius:** independent review of that exact seam proposal; renderer async choreography remains unrun, no held experiment restart.
+- **Parent:** merges, grants, board/notes. #221 merged; counter3 sinceb6a, gate pending. No user blocker.
 ### Update rules for this checklist
 
 Check off an item only when its stated result is achieved. Update its owner/blocker when it changes; retain these six outcome names. Record merged work separately from prepared/reviewed PRs. Keep original/current god lines visible. After each merge explain the actual benefit and remaining work; preserve detailed evidence in the history below.
 ### Latest completed milestones
+
+- #221 merged **d7cdffb7**, exacta691/treecad540 independent26PASS and union accepted, allCI passed. Author initial24PASS2ERROR fixture guard conflict retained; one expectSync correction yielded26PASS. Analyzer431 unchanged/scoped61 unchanged/layer56 unchanged. Production+98/host+4, Leaves0. Did we make a difference? Resume verification jobs now have explicit cancellation and retirement ownership; full player separation remains open. Third merge triggers frozen d7cd full gate; no new device proof.
 
 - #220 merged **9d4cf518**, exacta2e4 independent union accepted and allCI passed. Independent145PASS/one existing known shape failure retained. Search6403→6387; production+12, zero stage-target credit. Did we make a difference? Sources owns its standalone library and two consumers no longer import the host. Hero/final composition remain open. Counter2 sinceb6a.
 
