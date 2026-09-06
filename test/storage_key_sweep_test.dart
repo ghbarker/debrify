@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/download_destination_prefs.dart';
 import 'package:debrify/services/storage/torrent_search_history_store.dart';
 import 'package:debrify/services/remote_control/remote_device_prefs.dart';
 import 'package:debrify/services/profiles/profile_onboarding_state.dart';
@@ -121,6 +122,7 @@ Set<String> inlinePrefsKeysOnStorageService() {
 /// Every name the completed registry must own: declared consts, store-owned
 /// keys, undeclared inline literals, and documented interpolated names.
 Set<String> allDiscoveredPrefsKeys() => {
+  ...DownloadDestinationPrefs.ownedKeys,
   ...TorrentSearchHistoryStore.ownedKeys,
   ...RemoteDevicePrefs.ownedKeys,
   ...ProfileOnboardingState.ownedKeys,
@@ -148,6 +150,23 @@ Set<String> unownedDiscoveredPrefsKeys() =>
     allDiscoveredPrefsKeys().difference(StorageKeyOwnership.byKey.keys.toSet());
 
 void main() {
+  test('download destinations have exact ownership and every missing row fails', () {
+    const expected = {
+      'download_tree_uri_v1',
+      'download_tree_display_name_v1',
+      'download_dir_path_v1',
+    };
+    expect(DownloadDestinationPrefs.ownedKeys, expected);
+    expect(StorageKeyOwnership.keysFor(StorageKeyStore.downloadDestinationPrefs), expected);
+    expect(declaredOnStorageService().intersection(expected), isEmpty);
+    expect(allDiscoveredPrefsKeys(), containsAll(expected));
+    for (final key in expected) {
+      expect(allDiscoveredPrefsKeys().difference(
+        StorageKeyOwnership.byKey.keys.toSet().difference({key})), {key});
+    }
+  });
+
+
   test('history keys are discovered and either missing registry row fails', () {
     const expected = {'torrent_search_history_v1', 'torrent_search_history_enabled'};
     expect(TorrentSearchHistoryStore.ownedKeys, expected);
@@ -349,6 +368,8 @@ void main() {
       }
     }
 
+    expectStore(DownloadDestinationPrefs.ownedKeys,
+        StorageKeyStore.downloadDestinationPrefs, 'DownloadDestinationPrefs');
     expectStore(TorrentSearchHistoryStore.ownedKeys,
         StorageKeyStore.torrentSearchHistoryStore, 'TorrentSearchHistoryStore');
     expectStore(RemoteDevicePrefs.ownedKeys,
@@ -373,6 +394,7 @@ void main() {
         StorageKeyStore.defaultTorrentFilterPrefs, 'DefaultTorrentFilterPrefs');
 
     final extracted = {
+      ...DownloadDestinationPrefs.ownedKeys,
       ...TorrentSearchHistoryStore.ownedKeys,
       ...RemoteDevicePrefs.ownedKeys,
       ...ProfileOnboardingState.ownedKeys,
