@@ -1,6 +1,7 @@
 import '../../theme/app_theme_controller.dart';
 import '../discover_prefs.dart';
 import '../engine/engine_profile_lifecycle.dart';
+import '../engine/local_engine_storage.dart';
 import '../main_page_bridge.dart';
 import '../play_loader_style.dart';
 import '../storage_service.dart';
@@ -98,10 +99,18 @@ final class DefaultWebDavSyncActiveProfileRefresher
     }
     if (changedKeys.any((key) => key.startsWith('engine_'))) {
       await guarded(EngineProfileLifecycle.warmCurrentScope);
+      if (changedKeys.any(
+        (key) => key.startsWith(LocalEngineStorage.definitionPrefix),
+      )) {
+        authorizationBarrier();
+        LocalEngineStorage.changes.value++;
+        authorizationBarrier();
+      }
     }
-    if (changedKeys.contains('stremio_metadata_provider_v1')) {
+    if (changedKeys.contains('stremio_addons_v1') ||
+        changedKeys.contains('stremio_metadata_provider_v1')) {
       authorizationBarrier();
-      StremioService.instance.invalidateCache();
+      StremioService.instance.refreshAfterExternalChange();
       authorizationBarrier();
     }
 

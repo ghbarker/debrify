@@ -1,5 +1,9 @@
 import 'dart:convert';
+import 'package:debrify/services/stremio_service.dart';
 import 'dart:io';
+import 'package:debrify/services/engine/local_engine_storage.dart';
+import 'package:debrify/services/webdav_sync/webdav_sync_active_profile_refresh.dart';
+import 'package:debrify/utils/app_storage.dart';
 
 import 'package:debrify/models/profiles/connection_resource.dart';
 import 'package:debrify/models/profiles/profile_policy.dart';
@@ -86,6 +90,158 @@ void main() {
     await registry.close();
     await directory.delete(recursive: true);
   });
+
+  test(
+    'engine files apply through the hot adapter without filling preferences',
+    () async {
+      final documents = Directory(p.join(directory.path, 'documents'));
+      await documents.create();
+      AppStorage.debugOverride(documents: documents);
+      addTearDown(AppStorage.debugReset);
+      final refresh = _EngineRefreshRecorder();
+      final local = ProfileWebDavSyncLocalAdapter(
+        registry,
+        activeProfileRefresher: refresh,
+      );
+      final key = LocalEngineStorage.definitionKey('custom');
+      final values = <String, Object>{
+        key: jsonEncode({
+          'id': 'custom',
+          'deleted': false,
+          'name': 'Custom',
+          'icon': null,
+          'yaml': '''id: custom
+version: one
+''',
+        }),
+      };
+      var journalWritten = false;
+      final applied = await local.applyProfile(
+        session,
+        activeId,
+        values,
+        beforeWrite: () async {
+          journalWritten = true;
+        },
+      );
+      expect(journalWritten, isTrue);
+      expect(applied, {key});
+      expect((await ProfilePreferences.instance()).containsKey(key), isFalse);
+      expect(
+        (await local.readProfile(session, activeId)).portablePreferences[key],
+        values[key],
+      );
+      expect(refresh.keys, [
+        {key},
+      ]);
+      expect(await local.applyProfile(session, activeId, values), isEmpty);
+      expect(refresh.keys, [
+        {key},
+      ], reason: 'No-op cycles must not reload engines');
+      await local.applyProfile(
+        session,
+        activeId,
+        values,
+        replayingPending: true,
+      );
+      expect(refresh.keys, [
+        {key},
+        {key},
+      ], reason: 'Recovery must refresh committed files');
+      final token = await ProfilePreferences.captureMutationToken();
+      await (await ProfilePreferences.instance()).setBool(
+        'test_local_edit',
+        true,
+      );
+      await expectLater(
+        local.applyProfile(session, activeId, {
+          key: jsonEncode({'id': 'custom', 'deleted': true}),
+        }, expectedMutationToken: token),
+        throwsA(isA<ProfilePreferenceMutationConflict>()),
+      );
+      expect(
+        (await local.readProfile(session, activeId)).portablePreferences[key],
+        values[key],
+      );
+    },
+  );
+
+  test(
+    'synced addon toggle refreshes an existing management listener after commit',
+    () async {
+      final stremio = StremioService.instance;
+      stremio.invalidateCache();
+      final resource =
+          await ConnectionResourceService(
+            registry: registry,
+            cipher: cipher,
+          ).create(
+            context: await ProfileAuthorizationContext.capture(registry),
+            type: ConnectionResourceType.stremioAddon,
+            label: 'Watch Next',
+            publicConfig: const {'addonName': 'Watch Next'},
+            secretConfig: const {
+              'id': 'watch-next',
+              'name': 'Watch Next',
+              'version': '1.0',
+              'manifest_url': 'https://watch.invalid/manifest.json',
+              'base_url': 'https://watch.invalid',
+              'resources': ['stream'],
+            },
+          );
+      var displayedEnabled =
+          (await stremio.getAddonsForManagement()).single.enabled;
+      expect(displayedEnabled, isTrue);
+      final reloads = <Future<void>>[];
+      void listener() {
+        reloads.add(() async {
+          displayedEnabled =
+              (await stremio.getAddonsForManagement()).single.enabled;
+        }());
+      }
+
+      stremio.addAddonsChangedListener(listener);
+      addTearDown(() {
+        stremio.removeAddonsChangedListener(listener);
+        stremio.invalidateCache();
+      });
+      final request = _request(
+        root: circleRoot,
+        profiles: _profiles({}),
+        resources: WebDavSyncResourcesDocument(
+          resources: const {},
+          grants: const {},
+          bindings: const {},
+          settings: {
+            'p-active': {
+              'r-addon': WebDavSyncCircleLeaf(
+                stamp: _stamp(DateTime.now().millisecondsSinceEpoch + 1000),
+                value: const WebDavSyncSettingsValue(
+                  enabled: false,
+                  settings: {},
+                ),
+              ),
+            },
+          },
+        ),
+        profileMap: {'p-active': activeId},
+        resourceMap: {'r-addon': resource.id},
+      );
+      expect(
+        await adapter.applyCircleState(session, request),
+        WebDavSyncCircleApplyResult.applied,
+      );
+      await Future.wait(reloads);
+      expect(reloads, hasLength(1));
+      expect(displayedEnabled, isFalse);
+      await adapter.applyCircleState(session, request);
+      expect(
+        reloads,
+        hasLength(1),
+        reason: 'An unchanged sync must not reload the screen',
+      );
+    },
+  );
 
   test('an unchanged playback target reports zero applied keys', () async {
     const playback = '{"movie":{"positionMs":42000}}';
@@ -829,3 +985,16 @@ int _allPermissions() => ResourcePermission.values.fold<int>(
   0,
   (mask, permission) => mask | permission.bit,
 );
+
+class _EngineRefreshRecorder implements WebDavSyncActiveProfileRefresher {
+  final keys = <Set<String>>[];
+  @override
+  Future<void> refresh(
+    Set<String> changedKeys, {
+    required void Function() authorizationBarrier,
+  }) async {
+    authorizationBarrier();
+    if (changedKeys.isNotEmpty) keys.add(Set.of(changedKeys));
+    authorizationBarrier();
+  }
+}

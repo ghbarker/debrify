@@ -723,7 +723,7 @@ class _InitialSetupFlowState extends State<InitialSetupFlow> {
           await EngineRegistry.instance.reload();
           return;
         }
-        transaction.commit();
+        await transaction.commit();
         _importedEngineNames = <String>[
           for (final item in prepared) item.engine.displayName,
         ];

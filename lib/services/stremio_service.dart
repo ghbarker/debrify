@@ -3071,6 +3071,21 @@ class StremioService {
     return addons.length;
   }
 
+  /// Replay local addon notifications after an external registry commit.
+  void refreshAfterExternalChange() {
+    invalidateCache();
+    _recommendationsCache.clear();
+    _metaDetailsCache.clear();
+    _nonRecommendationAddonIds.clear();
+    for (final listener in List<VoidCallback>.of(_addonsChangedListeners)) {
+      try {
+        listener();
+      } catch (_) {
+        // A stale UI listener must not prevent other views from refreshing.
+      }
+    }
+  }
+
   /// Invalidate cache (call after external changes)
   void invalidateCache() {
     _addonsCache = null;

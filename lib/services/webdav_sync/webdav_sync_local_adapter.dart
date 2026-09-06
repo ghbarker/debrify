@@ -1,4 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:collection/collection.dart';
+import '../engine/local_engine_storage.dart';
+import '../../utils/app_storage.dart';
 
 import 'package:crypto/crypto.dart' as crypto;
 
@@ -347,10 +351,19 @@ final class ProfileWebDavSyncLocalAdapter
       final raw = <String, Object?>{
         for (final key in prefs.getKeys()) key: prefs.get(key),
       };
-      final portable = await ProfilePackageService.exportPortablePreferences(
-        scope,
-        includeCredentialEngineSettings: false,
+      final portable = Map<String, Object?>.of(
+        await ProfilePackageService.exportPortablePreferences(
+          scope,
+          includeCredentialEngineSettings: false,
+        ),
       );
+      final engineValues = await LocalEngineStorage.forDirectory(
+        Directory(
+          '${scope.storageDirectory(await AppStorage.documents(), 'documents').path}/engines',
+        ),
+      ).exportSyncDefinitions();
+      raw.addAll(engineValues);
+      portable.addAll(engineValues);
       _validateSession(session);
       return WebDavSyncLocalProfileSnapshot(
         localProfileId: localProfileId,
@@ -387,20 +400,51 @@ final class ProfileWebDavSyncLocalAdapter
       scope,
       CapturedProfilePreferenceAccess.syncApply,
     );
+    final engineValues = <String, Object>{
+      for (final entry in values.entries)
+        if (entry.key.startsWith(LocalEngineStorage.definitionPrefix))
+          entry.key: entry.value,
+    };
+    final preferenceValues = <String, Object>{
+      for (final entry in values.entries)
+        if (!entry.key.startsWith(LocalEngineStorage.definitionPrefix))
+          entry.key: entry.value,
+    };
+    var engineAppliedKeys = <String>{};
+    var preferenceAppliedKeys = <String>{};
     var appliedKeys = const <String>{};
     if (!await prefs.applySyncBatch(
-      values,
+      preferenceValues,
       authorizationBarrier: () => _validateSession(session),
       expectedMutationToken: expectedMutationToken,
-      beforeWrite: beforeWrite,
-      replayCommittedTarget: replayingPending,
+      beforeWrite: () async {
+        preferenceAppliedKeys = {
+          for (final entry in preferenceValues.entries)
+            if (!const DeepCollectionEquality().equals(
+              prefs.get(entry.key),
+              entry.value,
+            ))
+              entry.key,
+        };
+        await beforeWrite?.call();
+        _validateSession(session);
+        if (engineValues.isNotEmpty) {
+          engineAppliedKeys = await LocalEngineStorage.forDirectory(
+            Directory(
+              '${scope.storageDirectory(await AppStorage.documents(), 'documents').path}/engines',
+            ),
+          ).applySyncDefinitions(engineValues);
+          _validateSession(session);
+        }
+      },
+      replayCommittedTarget: replayingPending || engineValues.isNotEmpty,
       afterApply: (appliedScope, changedKeys) async {
         // A pending target may have committed only a prefix before the prior
         // process stopped. Replaying that durable batch must republish every
         // key in the target, including values already present on re-entry.
         appliedKeys = replayingPending
             ? Set<String>.unmodifiable(values.keys)
-            : changedKeys;
+            : <String>{...preferenceAppliedKeys, ...engineAppliedKeys};
         if (appliedScope != session.scope) return;
         await _activeProfileRefresher.refresh(
           appliedKeys,
@@ -1982,6 +2026,50 @@ final class ProfileWebDavSyncLocalAdapter
       return WebDavSyncCircleApplyResult.conflict;
     }
     _validateSession(session);
+
+    final activeId = session.scope.profileId;
+    final addonIds = {
+      for (final resource in currentResources.values)
+        if (resource.type == ConnectionResourceType.stremioAddon) resource.id,
+      for (final item in resourceRecords)
+        if (item.resource.type == ConnectionResourceType.stremioAddon)
+          item.resource.id,
+    };
+    final activeResourceIds = {
+      for (final grant in currentRegistry.grants)
+        if (grant.profileId == activeId) grant.resourceId,
+      for (final grant in grantRecords)
+        if (grant.profileId == activeId) grant.resourceId,
+    };
+    final addonsChanged =
+        settingRecords.any(
+          (item) =>
+              item.profileId == activeId && addonIds.contains(item.resourceId),
+        ) ||
+        grantRecords.any(
+          (item) =>
+              item.profileId == activeId && addonIds.contains(item.resourceId),
+        ) ||
+        nestedDeletes.any(
+          (item) =>
+              item.record.profileId == activeId &&
+              addonIds.contains(item.record.resourceId),
+        ) ||
+        resourceRecords.any(
+          (item) =>
+              addonIds.contains(item.resource.id) &&
+              activeResourceIds.contains(item.resource.id),
+        ) ||
+        resourceDeletes.any(
+          (item) =>
+              addonIds.contains(item.record.resourceId) &&
+              activeResourceIds.contains(item.record.resourceId),
+        );
+    if (addonsChanged) {
+      await _activeProfileRefresher.refresh(const {
+        'stremio_addons_v1',
+      }, authorizationBarrier: () => _validateSession(session));
+    }
 
     for (final item in profileRecords) {
       if (item.id != session.scope.profileId) continue;
