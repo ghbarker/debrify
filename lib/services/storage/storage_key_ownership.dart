@@ -9,6 +9,7 @@
 /// [StorageKeyStore] ownership when a domain store is extracted; they must
 /// not change the string.
 enum StorageKeyStore {
+  deviceMaintenancePrefs,
   ambientTrailerPrefs,
   /// Profile-scoped download destination strings (DownloadDestinationPrefs).
   downloadDestinationPrefs,
@@ -141,8 +142,8 @@ class StorageKeyOwnership {
     'home_card_orientation': StorageKeyStore.homePrefs,
     'home_hide_card_titles_and_ratings': StorageKeyStore.homePrefs,
     'home_hide_catalog_addon_names': StorageKeyStore.homePrefs,
-    'support_remote_config_cache_v1': StorageKeyStore.storageService,
-    'dismissed_donation_campaign_ids_v1': StorageKeyStore.storageService,
+    'support_remote_config_cache_v1': StorageKeyStore.deviceMaintenancePrefs,
+    'dismissed_donation_campaign_ids_v1': StorageKeyStore.deviceMaintenancePrefs,
     'startup_auto_launch_enabled': StorageKeyStore.storageService,
     'startup_channel_id': StorageKeyStore.storageService,
     'startup_stremio_tv_channel_id': StorageKeyStore.storageService,
@@ -169,8 +170,8 @@ class StorageKeyOwnership {
     'network_connect_patience': StorageKeyStore.playerPrefs,
     'iptv_decoder_mode': StorageKeyStore.iptvPrefs,
     'network_buffer_size': StorageKeyStore.playerPrefs,
-    'update_auto_check_enabled': StorageKeyStore.storageService,
-    'update_ignored_version': StorageKeyStore.storageService,
+    'update_auto_check_enabled': StorageKeyStore.deviceMaintenancePrefs,
+    'update_ignored_version': StorageKeyStore.deviceMaintenancePrefs,
     'default_player_mode': StorageKeyStore.playerPrefs,
     'external_player_preferred': StorageKeyStore.playerPrefs,
     'external_player_custom_path': StorageKeyStore.playerPrefs,
