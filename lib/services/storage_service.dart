@@ -1,5 +1,4 @@
 import 'storage/indexer_manager_config_store.dart';
-import 'storage/ambient_trailer_prefs.dart';
 export 'storage/ambient_trailer_prefs.dart' show AmbientTrailerSurface;
 
 import 'package:flutter/foundation.dart';
@@ -307,53 +306,16 @@ class StorageService {
     await prefs.setBool('merged_series_page_enabled', enabled);
   }
 
-  /// Use the in-app DPAD keyboard for text fields on TV (TvTextField) instead
-  /// of the system IME, which can't be navigated with the remote on many
-  /// devices (flutter/flutter#177360 — Chromecast/Google TV, some
-  /// Philips/Samsung panels). On by default on Android TV. Apple TV defaults
-  /// to its system keyboard; the Settings toggle still lets users opt into the
-  /// Debrify keyboard.
-  ///
-  /// [tvKeyboardEnabledCached] mirrors the stored value for synchronous widget
-  /// builds — warmed at startup (main.dart) and kept in sync by the setter.
-  static bool tvKeyboardEnabledCached = !PlatformUtil.isTvOS;
-
-  // Apple TV keyboard default, generation 1 (2026-08): disable the Debrify
-  // keyboard once for every profile, including profiles whose user explicitly
-  // enabled it in an older build. The generation is committed only after the
-  // new value, so a failed/interrupted write retries safely next launch. Once
-  // committed, [setTvKeyboardEnabled] is authoritative and later user changes
-  // are never overwritten.
-  static const int _currentTvosKeyboardDefaultGeneration = 1;
-  static const String _tvosKeyboardDefaultGenerationKey =
-      'tvos_keyboard_default_generation';
+  static bool get tvKeyboardEnabledCached => AppStylePrefs.tvKeyboardEnabledCached;
+  static set tvKeyboardEnabledCached(bool value) =>
+      AppStylePrefs.tvKeyboardEnabledCached = value;
 
   static Future<bool> getTvKeyboardEnabled({
     @visibleForTesting bool? tvOs,
-  }) async {
-    final prefs = await ProfilePreferences.instance();
-    final runningOnTvOs = tvOs ?? PlatformUtil.isTvOS;
-    final generation = prefs.getInt(_tvosKeyboardDefaultGenerationKey) ?? 0;
-    if (runningOnTvOs && generation < _currentTvosKeyboardDefaultGeneration) {
-      final disabled = await prefs.setBool('tv_keyboard_enabled', false);
-      if (disabled) {
-        await prefs.setInt(
-          _tvosKeyboardDefaultGenerationKey,
-          _currentTvosKeyboardDefaultGeneration,
-        );
-      }
-    }
-    tvKeyboardEnabledCached =
-        prefs.getBool('tv_keyboard_enabled') ?? !runningOnTvOs;
-    return tvKeyboardEnabledCached;
-  }
+  }) => AppStylePrefs.getTvKeyboardEnabled(tvOs: tvOs);
 
-  static Future<void> setTvKeyboardEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool('tv_keyboard_enabled', enabled);
-    tvKeyboardEnabledCached = enabled;
-  }
-
+  static Future<void> setTvKeyboardEnabled(bool enabled) =>
+      AppStylePrefs.setTvKeyboardEnabled(enabled);
 
   /// Android TV rendering mode — whether the Flutter UI is rastered at the
   /// panel's own resolution or at a ~720p buffer the TV's scaler blows back
@@ -452,23 +414,9 @@ class StorageService {
   static Future<void> setHomeHeroTrailerEnabled(bool enabled) =>
       HomePrefs.setHomeHeroTrailerEnabled(enabled);
 
-  static Future<bool> getAmbientTrailerAudioEnabled(
-    AmbientTrailerSurface surface,
-  ) => AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(surface);
 
-  static Future<void> setAmbientTrailerAudioEnabled(
-    AmbientTrailerSurface surface,
-    bool enabled,
-  ) => AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(surface, enabled);
 
-  static Future<int> getAmbientTrailerVolume(
-    AmbientTrailerSurface surface,
-  ) => AmbientTrailerPrefs.getAmbientTrailerVolume(surface);
 
-  static Future<void> setAmbientTrailerVolume(
-    AmbientTrailerSurface surface,
-    int percent,
-  ) => AmbientTrailerPrefs.setAmbientTrailerVolume(surface, percent);
 
   /// Android TV: render ambient trailers on a native SurfaceView *under* a
   /// translucent Flutter surface (a hardware overlay plane — Flutter never
