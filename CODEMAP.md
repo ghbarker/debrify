@@ -486,6 +486,14 @@ is an editor mirror, not the source of truth. How to add a provider:
   Preserve earlier inert speed-HUD allocation, its original disposal slot, and
   original aspect-HUD nondisposal / overlapping 1500ms mounted callbacks.
   Host -124 lines / whole production +57; no native or full V1-7 closure claim.
+  Transport visibility and menu-focus transitions:
+  `lib/screens/video_player/player_transport_visibility.dart`
+  (`PlayerTransportVisibility`) owns the auto-hide timer, blocked-interval latch
+  and menu-visible state. Four lazy capabilities retain live host guards/commit;
+  visibility notifier and three focus resources are borrowed, with construction,
+  listeners and ordered disposal retained in host. Clock/banner/recording effects,
+  route/scrub guards and overlay priority remain host; no native or full transport
+  closure claim. Host -80 lines / whole production +53; partial ownership only.
   IPTV recording (libmpv tee, Android engine, desktop capture):
   `lib/services/playback/iptv_recording_controller.dart`
   (`IptvRecordingController` + `IptvRecordingSession`; host keeps
