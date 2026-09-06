@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/ambient_trailer_prefs.dart' show AmbientTrailerPrefs;
 import 'package:debrify/services/storage/torrent_search_history_store.dart';
 import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/iptv_prefs.dart';
@@ -407,8 +408,8 @@ void main() {
   final ambientValues = Map<String, Object?>.from(ambientDomain['values'] as Map);
   final ambientReads = Map<String, Object?>.from(ambientDomain['publicReads'] as Map);
   Future<void> seedAmbient() async {
-    await StorageService.setAmbientTrailerAudioEnabled(AmbientTrailerSurface.homeHero, false);
-    await StorageService.setAmbientTrailerAudioEnabled(AmbientTrailerSurface.detail, true);
+    await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(AmbientTrailerSurface.homeHero, false);
+    await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(AmbientTrailerSurface.detail, true);
     final prefs = await ProfilePreferences.instance();
     // Deliberate raw legacy values: public setters would clamp these first.
     await prefs.setInt('home_hero_trailer_volume', ambientValues['home_hero_trailer_volume'] as int);
@@ -418,10 +419,10 @@ void main() {
     final prefs = await ProfilePreferences.instance();
     final before = {for (final key in ambientValues.keys) key: prefs.get(key)};
     _expectSettings({
-      'home_hero_trailer_audio_enabled': await StorageService.getAmbientTrailerAudioEnabled(AmbientTrailerSurface.homeHero),
-      'home_hero_trailer_volume': await StorageService.getAmbientTrailerVolume(AmbientTrailerSurface.homeHero),
-      'detail_trailer_audio_enabled': await StorageService.getAmbientTrailerAudioEnabled(AmbientTrailerSurface.detail),
-      'detail_trailer_volume': await StorageService.getAmbientTrailerVolume(AmbientTrailerSurface.detail),
+      'home_hero_trailer_audio_enabled': await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(AmbientTrailerSurface.homeHero),
+      'home_hero_trailer_volume': await AmbientTrailerPrefs.getAmbientTrailerVolume(AmbientTrailerSurface.homeHero),
+      'detail_trailer_audio_enabled': await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(AmbientTrailerSurface.detail),
+      'detail_trailer_volume': await AmbientTrailerPrefs.getAmbientTrailerVolume(AmbientTrailerSurface.detail),
     }, ambientReads);
     _expectSettings({for (final key in ambientValues.keys) key: prefs.get(key)}, before);
   }
