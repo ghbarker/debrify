@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -132,7 +133,7 @@ void main() {
   ) async {
     await prepareFavourites(tester);
     await installCatalog();
-    await StorageService.setMyWatchlistItem(
+    await MyWatchlistStore.setMyWatchlistItem(
       const StremioMeta(
         id: 'saved',
         type: 'movie',

@@ -12,7 +12,6 @@ import 'profiles/profile_onboarding_state.dart';
 import 'profiles/profile_bootstrap.dart';
 import 'profiles/profile_runtime.dart';
 import 'storage/my_watchlist_store.dart';
-import 'storage/torrent_search_history_store.dart';
 import '../models/profiles/connection_resource.dart';
 import '../models/profiles/profile_policy.dart';
 import 'secret_vault.dart';
@@ -1063,16 +1062,10 @@ class StorageService {
   /// so the same title coming from two addons is one entry; fall back to the
   /// source addon + its content id for titles that do not expose IMDb metadata.
   /// Addon ids are part of that fallback because content ids are addon-local.
-  static bool supportsMyWatchlistItem(StremioMeta item) =>
-      MyWatchlistStore.supportsMyWatchlistItem(item);
 
   /// Returns the identity-bearing item used by both watchlist reads and
   /// writes. A stored source is authoritative for non-IMDb ids; [fallback]
   /// only fills in a source for a newly opened source-less item.
-  static StremioMeta withMyWatchlistSource(
-    StremioMeta item,
-    StremioAddon fallback,
-  ) => MyWatchlistStore.withMyWatchlistSource(item, fallback);
 
   static String myWatchlistItemKey(StremioMeta item) =>
       MyWatchlistStore.myWatchlistItemKey(item);
@@ -1099,17 +1092,11 @@ class StorageService {
 
   /// Saved titles, newest first. Corrupt individual rows are ignored so one
   /// bad addon payload cannot make the whole shelf disappear.
-  static Future<List<StremioMeta>> getMyWatchlistItems() =>
-      MyWatchlistStore.getMyWatchlistItems();
 
-  static Future<bool> isInMyWatchlist(StremioMeta item) =>
-      MyWatchlistStore.isInMyWatchlist(item);
 
   /// Adds, refreshes, or removes a title. Adding stores the full presentation
   /// metadata needed by Home, not just an id, so My Watchlist paints instantly
   /// offline and can route back through the source addon when it is installed.
-  static Future<void> setMyWatchlistItem(StremioMeta item, bool saved) =>
-      MyWatchlistStore.setMyWatchlistItem(item, saved);
 
   /// Removes a saved movie/series once actual playback is about to launch.
   /// IMDb is authoritative. Older/addon-local items without IMDb metadata use
@@ -1126,8 +1113,6 @@ class StorageService {
     addonId: addonId,
   );
 
-  static Future<void> clearMyWatchlist() =>
-      MyWatchlistStore.clearMyWatchlist();
 
   // Debrify TV Channel Favorites — forwarding façade; bodies live on DebrifyTvPrefs.
   static Future<bool> isDebrifyTvChannelFavorited(String channelId) =>
@@ -1665,27 +1650,15 @@ class StorageService {
 
   /// Get torrent search history
   /// Returns list of maps containing torrent JSON + service + timestamp
-  static Future<List<Map<String, dynamic>>> getTorrentSearchHistory() =>
-      TorrentSearchHistoryStore.getTorrentSearchHistory();
 
   /// Add torrent to search history with deduplication
   /// Deduplicates by infohash, keeps max 5 items (FIFO)
-  static Future<void> addTorrentToHistory(
-    Map<String, dynamic> torrentJson,
-    String service,
-  ) => TorrentSearchHistoryStore.addTorrentToHistory(torrentJson, service);
 
   /// Clear all search history
-  static Future<void> clearTorrentSearchHistory() =>
-      TorrentSearchHistoryStore.clearTorrentSearchHistory();
 
   /// Get whether search history tracking is enabled
-  static Future<bool> getTorrentSearchHistoryEnabled() =>
-      TorrentSearchHistoryStore.getTorrentSearchHistoryEnabled();
 
   /// Set whether search history tracking is enabled
-  static Future<void> setTorrentSearchHistoryEnabled(bool enabled) =>
-      TorrentSearchHistoryStore.setTorrentSearchHistoryEnabled(enabled);
 
   /// Whether quick-play ranks candidates by the default filters (the
   /// FilterLadder). ON by default — the ladder only reorders, never drops.

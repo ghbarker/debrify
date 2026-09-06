@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/torrent_search_history_store.dart';
+import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:debrify/services/storage/provider_credential_prefs.dart';
@@ -800,8 +802,8 @@ void main() {
       if (isHistory) {
         final prefs = await ProfilePreferences.instance();
         final before = {for (final key in prefs.getKeys()) key: prefs.get(key)};
-        expect(await StorageService.getTorrentSearchHistory(), domain['expectedReads']);
-        expect(await StorageService.getTorrentSearchHistoryEnabled(), isFalse);
+        expect(await TorrentSearchHistoryStore.getTorrentSearchHistory(), domain['expectedReads']);
+        expect(await TorrentSearchHistoryStore.getTorrentSearchHistoryEnabled(), isFalse);
         expect(prefs.get('torrent_search_history_v1'), isA<String>());
         expect(prefs.get('torrent_search_history_v1'), expected['torrent_search_history_v1']);
         expect(prefs.get('torrent_search_history_enabled'), isA<bool>());
@@ -843,7 +845,7 @@ void main() {
         final before = prefs.get('my_watchlist_v1');
         expect(before, isA<String>());
         expect(before, expected['my_watchlist_v1']);
-        final items = await StorageService.getMyWatchlistItems();
+        final items = await MyWatchlistStore.getMyWatchlistItems();
         expect([
           for (final item in items) {
             'id': item.id, 'imdbId': item.imdbId, 'type': item.type,
@@ -854,7 +856,7 @@ void main() {
           },
         ], domain['expectedReads']);
         for (final item in items) {
-          expect(await StorageService.isInMyWatchlist(item), isTrue);
+          expect(await MyWatchlistStore.isInMyWatchlist(item), isTrue);
         }
         // Reading canonical identities must not persist over legacy row keys.
         expect(prefs.get('my_watchlist_v1'), before);
