@@ -66,7 +66,7 @@ extension on _SearchScreenState {
           children: [
             // Stage floor + full-bleed key art, BELOW the punch hole so the
             // video replaces it in place when the trailer starts.
-            _CanvasArtLayer(
+            CanvasArtLayer(
               item: _heroItem,
               enriched: _heroEnriched,
               fav: _canvasFavFocus,
@@ -134,15 +134,15 @@ extension on _SearchScreenState {
                           ? const Duration(milliseconds: 900)
                           : const Duration(milliseconds: 250),
                       curve: Curves.easeInOutCubic,
-                      child: ValueListenableBuilder<_CanvasFavFocus?>(
+                      child: ValueListenableBuilder<CanvasFavFocus?>(
                         valueListenable: _canvasFavFocus,
                         builder: (context, fav, _) => fav != null
-                            ? _StageFavIdentity(fav: fav, centered: true)
-                            : _CanvasIdentity(
+                            ? StageFavIdentity(fav: fav, centered: true)
+                            : CanvasIdentity(
                                 item: _heroItem,
                                 enriched: _heroEnriched,
                                 trailerShowing: _heroTrailerShowing,
-                                variant: _StageIdentityVariant.centered,
+                                variant: StageIdentityVariant.centered,
                                 maxWidth: boardW - 96,
                               ),
                       ),

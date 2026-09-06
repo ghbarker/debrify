@@ -68,6 +68,29 @@ String _homeSwitchChunk(String host) {
   return host.substring(idx, classic);
 }
 
+const _deckDispatch =
+    'return DeckStage(bindings: _deckBindings, isTelevision: widget.isTelevision);';
+
+String _deckSource() =>
+    File('lib/screens/search/stages/deck_board_stage.dart').readAsStringSync();
+
+void _expectDeckEmpty(String stage) {
+  final body = _methodBody(stage, 'build');
+  expect(body, contains('bindings.resolveRail()'));
+  expect(body, matches(RegExp(
+    r'if \(view == null\)\s*\{\s*'
+    r'return BrandLoadingStage\(isTelevision: isTelevision\);\s*\}',
+  )));
+}
+
+void _expectDeckSource(String host, String stage) {
+  expect(_homeSwitchChunk(host), contains(_deckDispatch));
+  expect(stage, contains('class DeckStage extends StatelessWidget'));
+  expect(_methodBody(stage, 'build'), contains('return LayoutBuilder('));
+  _expectDeckEmpty(stage);
+  expect(_methodBody(stage, 'build'), contains('bindings.seedFocus();'));
+}
+
 void main() {
   late String host;
   late String layouts;
@@ -175,7 +198,7 @@ void main() {
       expect(chunk, contains('return _AtriumBoardStage(host: this);'));
       expect(chunk, contains('return _MosaicBoardStage(host: this);'));
       expect(chunk, contains('return _PromenadeBoardStage(host: this);'));
-      expect(chunk, contains('return _DeckBoardStage(host: this);'));
+      expect(chunk, contains(_deckDispatch));
       expect(chunk, contains('return TonightStage(content: _tonight, isTelevision: widget.isTelevision);'));
       expect(chunk, contains('return SpotlightStage(readFrame: () {'));
     });
@@ -193,8 +216,34 @@ void main() {
   });
 
   group('stage builders (source pin)', () {
+    test('Deck source inventory rejects dispatch, empty guard and seed removal', () {
+      final stage = _deckSource();
+      _expectDeckSource(host, stage);
+      // Finite source-copy controls, not runtime or origin behavior evidence.
+      expect(
+        () => _expectDeckSource(host.replaceFirst(_deckDispatch, ''), stage),
+        throwsA(isA<TestFailure>()),
+      );
+      final emptyGuard = RegExp(
+        r'if \(view == null\)\s*\{\s*'
+        r'return BrandLoadingStage\(isTelevision: isTelevision\);\s*\}',
+      );
+      expect(emptyGuard.allMatches(stage), hasLength(1));
+      expect(
+        () => _expectDeckSource(host, stage.replaceFirst(emptyGuard, '')),
+        throwsA(isA<TestFailure>()),
+      );
+      expect(
+        () => _expectDeckSource(host, stage.replaceFirst('bindings.seedFocus();', '')),
+        throwsA(isA<TestFailure>()),
+      );
+    });
     test('all seven Home stage builders exist', () {
       for (final name in kTvHomeStageBuilderNames) {
+        if (name == '_buildDeckBoard') {
+          expect(_methodBody(_deckSource(), 'build'), contains('return LayoutBuilder('));
+          continue;
+        }
         if (name == '_buildTonightBoard') {
           final stage = File(
             'lib/screens/search/stages/tonight_board_stage.dart',
@@ -222,7 +271,7 @@ void main() {
         '_AtriumBoardStage',
         '_MosaicBoardStage',
         '_PromenadeBoardStage',
-        '_DeckBoardStage',
+        'DeckStage',
         'TonightStage',
         'SpotlightStage',
       ];
@@ -245,6 +294,10 @@ void main() {
           '_buildPromenadeBoard',
           '_buildDeckBoard',
         ]) {
+          if (name == '_buildDeckBoard') {
+            _expectDeckEmpty(_deckSource());
+            continue;
+          }
           final body = _methodBody(layouts, name);
           expect(
             body,
@@ -346,6 +399,10 @@ void main() {
           '_buildMosaicBoard',
           '_buildDeckBoard',
         ]) {
+          if (name == '_buildDeckBoard') {
+            expect(_methodBody(_deckSource(), 'build'), contains('bindings.seedFocus();'));
+            continue;
+          }
           expect(
             _methodBody(layouts, name),
             contains('_seedStageFocusOnce();'),

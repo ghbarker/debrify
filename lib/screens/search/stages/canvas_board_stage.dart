@@ -61,7 +61,7 @@ extension on _SearchScreenState {
             // so the video replaces it in place when the trailer starts.
             // While a favourites cell has focus, the favourite's own art
             // overrides the hero pipeline's.
-            _CanvasArtLayer(
+            CanvasArtLayer(
               item: _heroItem,
               enriched: _heroEnriched,
               fav: _canvasFavFocus,
@@ -139,11 +139,11 @@ extension on _SearchScreenState {
                       // the hero identity (favourites aren't StremioMeta, so
                       // the logo/meta pipeline has nothing true to say).
                       // Notifier-driven, so a fav scrub repaints only this.
-                      child: ValueListenableBuilder<_CanvasFavFocus?>(
+                      child: ValueListenableBuilder<CanvasFavFocus?>(
                         valueListenable: _canvasFavFocus,
                         builder: (context, fav, _) => fav != null
-                            ? _StageFavIdentity(fav: fav)
-                            : _CanvasIdentity(
+                            ? StageFavIdentity(fav: fav)
+                            : CanvasIdentity(
                                 item: _heroItem,
                                 enriched: _heroEnriched,
                                 trailerShowing: _heroTrailerShowing,
