@@ -403,6 +403,111 @@ void main() {
       );
 
 
+  const catalogScenario = 'catalog-search';
+  const catalogKey = 'catalog_search_disabled_addons_v1';
+  final catalogDomain = _recipe['residualDomains'][catalogScenario] as Map;
+  final catalogValues = Map<String, Object?>.from(catalogDomain['values'] as Map);
+  final catalogRead = (catalogDomain['expectedPublicRead'] as List).cast<String>();
+  Future<void> expectCatalogReader() async {
+    final prefs = await ProfilePreferences.instance();
+    final before = prefs.get(catalogKey);
+    expect((await StorageService.getCatalogSearchDisabledAddons()).toList(), catalogRead);
+    expect(prefs.get(catalogKey), before, reason: 'Public dedup must not rewrite raw JSON');
+  }
+  if (_generate) {
+    test('$catalogScenario: generate actual pre-S2 raw JSON export', () async {
+      final head = await Process.run('git', ['rev-parse', 'HEAD']);
+      expect(head.exitCode, 0);
+      expect(head.stdout.toString().trim(), _origin);
+      final diff = await Process.run('git', ['diff', '--exit-code', _origin, '--', 'lib']);
+      expect(diff.exitCode, 0, reason: 'Never generate from modified production');
+      final config = File('.dart_tool/package_config.json');
+      final metadata = jsonDecode(await config.readAsString()) as Map;
+      final app = (metadata['packages'] as List).cast<Map>().singleWhere((e) => e['name'] == 'debrify');
+      final library = config.absolute.uri.resolve(app['rootUri'] as String).resolve(app['packageUri'] as String).resolve('services/storage_service.dart');
+      expect(p.equals(library.toFilePath(), p.join(Directory.current.path, 'lib', 'services', 'storage_service.dart')), isTrue);
+      expect(catalogValues.keys, [catalogKey]);
+      final prefs = await ProfilePreferences.instance();
+      // Seed physical JSON, preserving duplicates that the public Set setter cannot represent.
+      await prefs.setString(catalogKey, catalogValues[catalogKey] as String);
+      await expectCatalogReader();
+      final package = await export();
+      _expectSettings(_values(package), catalogValues);
+      expect(package.resources, isEmpty);
+      final bytes = await PortableProfilePackage.encodeEncryptedBytes(package, _passphrase);
+      final decoded = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+      _expectSettings(_values(decoded), catalogValues);
+      await File('$_directory/$catalogScenario.encrypted.json').writeAsBytes(bytes);
+      await File('$_directory/$catalogScenario.manifest.json').writeAsString(const JsonEncoder.withIndent('  ').convert({
+        'origin': _origin, 'scenario': catalogScenario, 'syntheticOnly': true,
+        'sha256': await _digest(bytes), 'includeSecrets': false,
+        'representedSettings': catalogValues, 'keyTypes': {catalogKey: 'String'},
+        'excludedKeys': <String>[], 'expectedPublicRead': catalogRead,
+        'rawSeed': 'ProfilePreferences.setString; duplicate/whitespace/order preserved, not public Set setter',
+        'omissions': package.omissions,
+      }));
+    });
+  } else {
+    test('$catalogScenario: restore physical JSON before public dedup without rewrite', () async {
+      final manifest = jsonDecode(await File('$_directory/$catalogScenario.manifest.json').readAsString()) as Map;
+      final bytes = await File('$_directory/$catalogScenario.encrypted.json').readAsBytes();
+      expect(manifest['origin'], _origin);
+      expect(manifest['syntheticOnly'], isTrue);
+      expect(manifest['sha256'], await _digest(bytes));
+      expect(manifest['representedSettings'], catalogValues);
+      expect(manifest['keyTypes'], {catalogKey: 'String'});
+      expect(manifest['expectedPublicRead'], catalogRead);
+      expect(manifest['excludedKeys'], isEmpty);
+      var package = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+      _expectSettings(_values(package), catalogValues);
+      expect(package.resources, isEmpty);
+      if (_mutation.isNotEmpty) {
+        final mutation = (catalogDomain['mutations'] as Map)[_mutation] as Map?;
+        expect(mutation, isNotNull);
+        final values = {..._values(package)};
+        if (mutation!['operation'] == 'rename') {
+          values['synthetic_wrong_catalog_key'] = values.remove(catalogKey);
+        } else {
+          values[catalogKey] = mutation['value'];
+        }
+        final mutant = PortableProfilePackage(
+          mode: package.mode, createdAt: package.createdAt, profiles: package.profiles,
+          resources: package.resources, omissions: package.omissions,
+          sections: {...package.sections,
+            package.profiles.single['preferencesSection'] as String: await PortableProfilePackage.buildSection(values)},
+        );
+        package = await PortableProfilePackage.decrypt(await PortableProfilePackage.encrypt(mutant, _passphrase), _passphrase);
+        _expectSettings(_values(package), values);
+      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('p.$profileId.g.1.$catalogKey', '["destination"]');
+      await prefs.setString('p.$otherProfileId.g.1.$catalogKey', '["other-profile"]');
+      await prefs.setString('p.$profileId.g.7.$catalogKey', '["other-generation"]');
+      await prefs.setString(catalogKey, '["legacy"]');
+      await prefs.setString('p.$profileId.g.1.catalog_fixture_sentinel', 'untouched');
+      final report = await ProfileRestoreCoordinator(registry: registry, cipher: cipher).restore(
+        package: package, destinationProfileId: profileId,
+        authorization: await ProfileAuthorizationContext.capture(registry),
+      );
+      expect(report.publishedGeneration, 2);
+      final prefix = ProfileRuntime.capture().preferencePrefix;
+      // Valid codec mutations reach actual restore and fail this physical comparison first.
+      _expectSettings({catalogKey: prefs.get('$prefix$catalogKey')}, catalogValues);
+      await expectCatalogReader();
+      expect(prefs.get('p.$profileId.g.1.$catalogKey'), '["destination"]');
+      expect(prefs.get('p.$otherProfileId.g.1.$catalogKey'), '["other-profile"]');
+      expect(prefs.get('p.$profileId.g.7.$catalogKey'), '["other-generation"]');
+      expect(prefs.get(catalogKey), '["legacy"]');
+      expect(prefs.get('${prefix}catalog_fixture_sentinel'), 'untouched');
+      expect(prefs.get('p.$profileId.g.1.catalog_fixture_sentinel'), 'untouched');
+      for (final secrets in [false, true]) {
+        _expectSettings(_values(await export(includeSecrets: secrets)), {
+          ...catalogValues, 'catalog_fixture_sentinel': 'untouched',
+        });
+      }
+    });
+  }
+
   // Four independent raw bool/int values; volume readers clamp, export does not.
   const ambientScenario = 'ambient-trailer';
   final ambientDomain = _recipe['residualDomains'][ambientScenario] as Map;
