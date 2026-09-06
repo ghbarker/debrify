@@ -1,6 +1,6 @@
 # Refactor board
 
-## Current roadmap — September 6, main f4f786fd
+## Current roadmap — September 6, main 95c93caa
 
 Overall percentage remains withdrawn: no reliable remaining-work denominator. Size targets and architectural closure are distinct.
 
@@ -17,6 +17,12 @@ Overall percentage remains withdrawn: no reliable remaining-work denominator. Si
 - Wegener: Tonight #177 on refactor/g1-8-tonight-stage; frozen production2392376e, docs8ef3ef0b. Single91-test batch passed; narrow baseline path/line relocation granted after independent mapping. Next stage scope read-only afterward.
 - Parent: exact-head review/merge coordination. No user blocker. Workers report completion/blockers; next bounded work assigned on handoff.
 
+### Latest history merge and recovery — supersedes earlier snapshots
+- #180 MERGED95c93caa exact266fd515 after independent87PASS/scoped0 and all3CIgreen. Storage2582→2538; wholeproduction+34, five12-line-total facades retained. Did we make a difference? History persistence has one tested owner; more domain ownership and facade retirement remain, no livecapture feature.
+- Thirdproductionmerge177179180 sincebb843: fullgate95c93 assignedCicero, NOT yetpassed. #181 final932 integrationreview/CI pending; mergeheldgate.
+- Localincident: sharedconfig21446bytes andFETCH_HEAD95bytes allNUL; newQ2worktreeindex322204bytes andsampledREADME/main/pubspec allNUL. Userauthorizedrecovery. Originals preserved .git/recovery-20260906-001041. Minimalcore/remotes reconstructed, not originalbranchsettings restored. Q2index reconstructed fromHEAD without overwritingworkfiles; affectedworktree retained/quarantined, newrecoveredworktree required.
+- gitfsck connectivity PASS afterrecovery; parentcleanfetch/ff95c93; HEAD/refs/worktreeHEADs verified. Causeunknown, no claimalluntrackedfiles checked. Missingtracking settings useexplicitremote/branch.
+- C0 resumesgate afterowncheckout/runtimechecks; Locke restartsboundedQ2origin innewworktree; Ampere/Wegener resume181review/scope afterhealthchecks. No userblocker. No diskpartition/powerchanges.
 ### Latest compatibility cleanup — supersedes earlier snapshots
 - #179 MERGEDf4f786fd exact46db8490 after independent73PASS + cleanactualmainunion + completeall3green CIrun34009018766. Duplicatepush/base-change run34009017923 golden stillpending atmerge; samehead, onecompletegreenpipeline confirmed, no newfailureknown.
 - Did we make a difference? Removedtwo cached-entry trampolines and RDwrapper library/holder,37wholeproduction lines deleted. Magic host+3→3321; fourremainingproviderleaves627. Sharedlivehost/UIcoupling stillOPEN, no furtheralgorithmclaim.
@@ -55,7 +61,7 @@ Overall percentage remains withdrawn: no reliable remaining-work denominator. Si
 6. Final integrated acceptance of completed architecture; prior device smoke is not a new-build smoke.
 
 ### Current measurements and gate
-- Search6551/19070; Player11928/16278; MagicTV3321/10716; Storage2582/9963; Settings2901/7905 (current/original physical lines).
+- Search6551/19070; Player11928/16278; MagicTV3321/10716; Storage2538/9963; Settings2901/7905 (current/original physical lines).
 - Gate730b18fa: generic5708 passes/12 exact known failures/2 skips; goldens21 known errors after configured retries, both helpers0 with0 unexpected/unused. Not pixel-green.
 - Gate analyzer436/452 with0new, layering77/77 +0/-0, Python55PASS. Strict originalbc46/current native first pair PASS, no retry. Prior2ecd transient exit79 remains recorded, unexplained.
 - Gate Windows68files/217s PASS, ARM64 APK118.4s PASS. ZIP SHA2566c507b2444b5ae5490cceb263a541e3b6f2d3a57b292197942c774d2d2035ee4; APK SHA256f6d3675af1d7e97429516ef4afd1042b78be46a206830bb299b2bf1b83b3c41c.
@@ -427,7 +433,7 @@ User correctly challenged unchanged65% repeatedover6hours. Estimatewithdrawn, no
 Exact reviewed97db merged as79547771. All3CIchecks passed; independent495focusedpass; generic5593pass/12known/2skip, goldens21known, analyzer436/452 and layering77 unchanged.223facades retired, host665lines fewer, wholeproduction592lines fewer.33targetshortfall and97residual members remain open. Pin-before-move preserved in merge history. One batched board commit for this merge; no new manual smoke claim. Active follow-ons: M1 shared admission and board runtime, independent reviewers assigned. No user blockers; parked112/109/56 unchanged.
 
 ## Merges166 and167 — September6
-Both exact reviewed heads41bf90c8 and6c0fc23 passed test/goldens/native CI and merged sequentially into58864c1d.166 removes135 production lines through four-provider shared admission/search (five leaves1782/common1551; targetopen).167 removes266 host lines but adds106 wholeproduction lines; actualnavigation/paging/deferred-focus ownership removes threeFavhostdependencies, not standaloneDiscover completion. Combined net29 production lines removed; architectural and relocation accounting remain separate. Godcounts Search6551/19070,Player11928/16278,Magic3318/10716,Storage2582/9963,Settings2901/7905. Threeproduction merges sincec1ca trigger full integrated gate at58864c1d (Cicero), now running withallfiveforwarderledger. Active Discover composition(Wegener) and QuickPlay policy origin/restorefixtures(Locke); no newmergebeforegate. No userblocker/performance scope added. One batched board commit for these merges.
+Both exact reviewed heads41bf90c8 and6c0fc23 passed test/goldens/native CI and merged sequentially into58864c1d.166 removes135 production lines through four-provider shared admission/search (five leaves1782/common1551; targetopen).167 removes266 host lines but adds106 wholeproduction lines; actualnavigation/paging/deferred-focus ownership removes threeFavhostdependencies, not standaloneDiscover completion. Combined net29 production lines removed; architectural and relocation accounting remain separate. Godcounts Search6551/19070,Player11928/16278,Magic3318/10716,Storage2538/9963,Settings2901/7905. Threeproduction merges sincec1ca trigger full integrated gate at58864c1d (Cicero), now running withallfiveforwarderledger. Active Discover composition(Wegener) and QuickPlay policy origin/restorefixtures(Locke); no newmergebeforegate. No userblocker/performance scope added. One batched board commit for these merges.
 
 ## Corrective merge169
 Test-only fixture correction4ea3520a mergedb19cd9e9 after8author tests/cleananalysis andall3CIchecks. No independenttest-onlyrerun, production/allowances unchanged. Actualmain genericrerun assignedC0; prior58864 build/native evidence retains exactsource labels. PR168 HomeDown duplicate-request assertion failedCI and is underboundeddiagnostic review; notwaived. Godfiles unchanged8349/11928/3318/2833/2901 versus originals19070/16278/10716/9963/7905. Did we make a difference: fixed provenUTC/local testfixture error, noappbehaviorchange. More remains: Discovercutover,168CIresolution and architectureoutcomes above.
