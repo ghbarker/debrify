@@ -1985,8 +1985,8 @@
       "severity": "INFO",
       "type": "HINT",
       "code": "DEPRECATED_MEMBER_USE",
-      "path": "lib/screens/search_screen.dart",
-      "line": 10147,
+      "path": "lib/screens/search/stages/tonight_stage_content.dart",
+      "line": 375,
       "column": 13,
       "length": 11,
       "message": "'cacheExtent' is deprecated and shouldn't be used. Use scrollCacheExtent instead. This feature was deprecated after v3.41.0-0.0.pre."
