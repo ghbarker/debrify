@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main c60f3f1f
+## Current roadmap — September 6, main 9fd6c24f
 
 ### God-file line counts — original → current merged main
 
-- **Search:** 19,070 → **6,468** (12,602 fewer)
+- **Search:** 19,070 → **6,506** (12,564 fewer)
 - **Player:** 16,278 → **11,738** (4,540 fewer)
 - **Magic TV:** 10,716 → **3,321** (7,395 fewer)
 - **Storage:** 9,963 → **2,331** (7,632 fewer)
 - **Settings:** 7,905 → **2,903** (5,002 fewer)
 
-Counted from actual merged main c60f3f1f. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
+Counted from actual merged main 9fd6c24f. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
 
 ### The same six outcomes — stable roadmap
 
@@ -18,7 +18,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 1. **Finish Search stage layouts and final shared composition — IN PROGRESS.**
    Done: standalone Discover, Spotlight, Tonight and shared BoardCell merged.
-   Deck/shared visuals (#195) and Mosaic (#196) are now merged. Left: Canvas, Promenade (#198), Atrium and final shared composition. Atrium remains held on its origin rendering failure. The older Mosaic cell-owner proposal remains held; #196 is a different actual stage-boundary extraction.
+   Deck/shared visuals (#195), Mosaic (#196) and Promenade (#198) are now merged. Left: Canvas, Atrium and final shared composition. Atrium remains held on its origin rendering failure. The older Mosaic cell-owner proposal remains held; #196 is a different actual stage-boundary extraction.
    Next: a bounded composition change that removes dependencies rather than adding more forwarding callbacks. Close against the existing Search lane criteria, not merely a smaller host file.
 
 2. **Complete player decoder/state/UI separation — IN PROGRESS, CURRENT PIN BLOCKER.**
@@ -68,6 +68,8 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 ### Latest completed milestones
 
+- #198 merged **9fd6c24f**, exact reviewed3641057, both CI runs fully passed. Actual Promenade stage boundary extracted, independent117PASS/1knownsidebar; host+38/whole+49,20bindings retained. Did we make a difference? Yes: another stage is independent of the host library; Canvas/Atrium/final composition remain. Third production merge triggers full integrated gate. #197 CI green held for gate; #199 native CI failed and is under log diagnosis, no blind retry. #201 player independent44PASS; #202 device review queued/running; #200 integration follows merged198.
+
 - #194 merged **c60f3f1f**, exact reviewed bede8cf, all three CI checks passed. Keyboard preferences use AppStylePrefs with one cache and unchanged reset/migration behavior. Independent 101 tests passed; host -37, whole production +13; compatibility cache accessors retained. Did we make a difference? Yes: ownership is explicit with old-export fixtures; broader storage and native warmup remain. #197 needs an additive fixture/registry union; #199 import conflict must be resolved to start CI. Next production merge triggers a full gate.
 
 - #196 merged **7f3e55bb**, exact reviewed head d11a39f, after all CI passed. Actual Mosaic stage boundary removed; host +11, whole production +45, 17 bindings retained. Independent 114 passed /1 exact known sidebar failure. Did we make a difference? Yes: a real stage no longer depends on the host library; cell ownership and final Search composition remain. #198 must reconcile its merged dependency before landing.
@@ -110,7 +112,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Gate pinned analyzer431/449, zero errors/new issues; layering77→77; Python55 passed; originalbc46/current native pair passed first try. Initial wrong-PATH analyzer output retained separately and corrected using pinned SDK; no baseline edit.
 - Windows226.2s/68files and ARM64171.9s builds passed. ZIP SHA256b96b7a4bd0b98a4f9de799ef3242bebf18a150d3c49c0113ad0566d10f1d729f; APK80811b556495c20078920091643b91cbcde5bc236d89737bd3bed7d1479e8cb5. No fresh manual/device smoke claimed.
 - #181 BoardCell mergedc7a332bd exact932 after independent140 passes plus the exact known sidebar failure, final integration review and all3CI green. Shared renderer owns card state/shuttle; 669 declaration lines relocated, whole production+17, zero host-file reduction. Did we make a difference? Removed private host-library access at real consumers; remaining stage navigation/composition is still open.
-- Production merge counter: **2 since completed gate dcdc8385** (#196, #194). Includes #193/#195/#191; excludes subsequent #196 and pending #194/#197/#198/#199. Next full gate after three additional production merges.
+- Production merge counter: **3 since completed gate dcdc8385** (#196, #194, #198); full gate 9fd6c24f now assigned, further production merges held. Includes #193/#195/#191; excludes subsequent #196 and pending #194/#197/#198/#199. Next full gate after three additional production merges.
 
 ### Forwarders at the latest full gate dcdc8385
 
