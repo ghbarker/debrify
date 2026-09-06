@@ -60,6 +60,7 @@ import 'video_player/utils/gesture_helpers.dart';
 import 'video_player/utils/language_mapping.dart';
 import 'video_player/utils/aspect_mode_utils.dart';
 import 'video_player/player_presentation_controls.dart';
+import 'video_player/player_transport_visibility.dart';
 import 'video_player/constants/timing_constants.dart';
 import 'video_player/widgets/auto_sync_pill.dart';
 import 'video_player/widgets/seek_hud.dart';
@@ -437,7 +438,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     return _cachedSeriesPlaylist;
   }
 
-  Timer? _hideTimer;
 
   // ---- Television transport bar -------------------------------------------
   // The TV bar is a separate widget with real focus; these are the pieces the
@@ -786,7 +786,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   // Unified player menu (Spotlight panel) state. The subtitle-identity
   // context is captured at open time, exactly like the old tracks sheet
   // captured it in its `show` arguments.
-  bool _showPlayerMenu = false;
   PlayerMenuSection _playerMenuInitialSection = PlayerMenuSection.subtitles;
   final GlobalKey<PlayerMenuPanelState> _playerMenuKey =
       GlobalKey<PlayerMenuPanelState>();
@@ -1002,6 +1001,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   final ValueNotifier<VerticalHudState?> _verticalHud =
       ValueNotifier<VerticalHudState?>(null);
   final _presentation = PlayerPresentationControls();
+  late final PlayerTransportVisibility _transportVisibility;
 
   // Aspect / speed
 
@@ -1118,11 +1118,27 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   @override
   void initState() {
     super.initState();
+    _transportVisibility = PlayerTransportVisibility(
+      visible: _controlsVisible,
+      barScope: _tvBarScope,
+      playPauseFocus: _tvPlayPauseFocus,
+      rootFocus: _tvRootFocus,
+      isMounted: () => mounted,
+      anyOverlayOpen: () => _anyPlayerOverlayOpen,
+      readAutoHideBlocker: () {
+        final route = ModalRoute.of(context);
+        return _tvScrubTarget != null ||
+            !_isPlaying ||
+            (route != null && !route.isCurrent) ||
+            _anyPlayerOverlayOpen;
+      },
+      commit: setState,
+    );
     _presentation.bind(
       readPlayer: () => _player,
       commit: setState,
       saveResume: () => _resume.saveResume(),
-      autoHide: () => _scheduleAutoHide(),
+      autoHide: () => _transportVisibility.scheduleAutoHide(),
       isMounted: () => mounted,
     );
     _decoderDiagnostics = DecoderDiagnostics(
@@ -1138,7 +1154,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     _activePlaylist = config.playlist;
     _seriesImdbKnownAtLaunch = config.contentImdbId?.trim().isNotEmpty == true;
     // The dock and the zap banner share the bottom strip, and the dock is
-    // raised from several places that never go through _toggleControls
+    // raised from several places that never go through _transportVisibility.toggleControls
     // (volume keys, pointer wake). Watching the notifier catches all of them.
     _controlsVisible.addListener(_onControlsVisibilityChanged);
 
@@ -2244,7 +2260,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     _playerPresentationInitialized = true;
     final iptvChannel = _currentIptvChannel;
     if (iptvChannel != null && iptvChannel.isLive) {
-      _hideTimer?.cancel();
+      _transportVisibility.cancelAutoHide();
       _controlsVisible.value = false;
       _zap.prepareBannerData(iptvChannel);
       _zap.raiseBanner();
@@ -2612,7 +2628,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           } else {
             await _resume.maybeRestoreResume(verifyLanding: true);
           }
-          _scheduleAutoHide();
+          _transportVisibility.scheduleAutoHide();
           await _subs.restoreTrackPreferences();
           if (hasExternalAudio) await _player.play();
           // The candidate is now decoded, resume has been applied, and track
@@ -3898,7 +3914,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       return;
     }
 
-    _hideTimer?.cancel();
+    _transportVisibility.cancelAutoHide();
     final choice = await showDialog<String>(
       context: context,
       builder: (context) {
@@ -3940,7 +3956,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     );
 
     if (!mounted) return;
-    _scheduleAutoHide();
+    _transportVisibility.scheduleAutoHide();
 
     if (choice == 'once') {
       await _playRandomOnce(disableContinuousShuffle: true);
@@ -7942,7 +7958,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   void _onPipModeChanged(bool inPip) {
     if (!mounted) return;
     if (inPip) {
-      _hideTimer?.cancel();
+      _transportVisibility.cancelAutoHide();
       _controlsVisible.value = false;
       _pushPipState();
     }
@@ -8082,7 +8098,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     _skipSegmentsFetchGeneration++;
     _skipSegmentProvider?.close();
     _skipSegmentProvider = null;
-    _hideTimer?.cancel();
+    _transportVisibility.cancelAutoHide();
     _autosaveTimer?.cancel();
     _manualSelectionResetTimer?.cancel();
     _debrifyBannerTimer?.cancel();
@@ -8177,89 +8193,15 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   /// True while the auto-hide poll is being held off by a scrub, a pause, a
   /// route or an overlay — so the tick that finds the blocker gone can grant a
   /// full interval instead of hiding on the spot.
-  bool _tvAutoHideBlocked = false;
 
-  void _scheduleAutoHide() {
-    _hideTimer?.cancel();
-    _hideTimer = Timer(VideoPlayerTimingConstants.controlsAutoHideDuration, () {
-      if (!mounted) return;
-      // Televisions dismiss the dock on INACTIVITY, the way an OTT transport
-      // bar does, and only while something is actually playing. A paused TV
-      // bar staying up is correct — BACK is how you dismiss that one.
-      if (PlatformUtil.isTelevision) {
-        // Nothing on screen to dismiss — let the timer lapse rather than
-        // re-arming one that would poll forever behind a hidden bar.
-        if (!_controlsVisible.value) return;
-        // BLOCKED, not finished. A tracks/episodes sheet is a ROUTE: it takes
-        // focus, and the bar would be excluded underneath it, leaving nothing
-        // sane to focus when the sheet closes. A scrub owns the bar outright,
-        // and a paused player is meant to keep it.
-        //
-        // Re-arm instead of returning: this is a one-shot Timer, so a bare
-        // return SPENT it — a scrub or a sheet lasting longer than the
-        // interval meant the dock never auto-hid again for the rest of the
-        // session. Re-arming makes the block a pause, not a cancellation.
-        final route = ModalRoute.of(context);
-        if (_tvScrubTarget != null ||
-            !_isPlaying ||
-            (route != null && !route.isCurrent) ||
-            _anyPlayerOverlayOpen) {
-          _tvAutoHideBlocked = true;
-          _scheduleAutoHide();
-          return;
-        }
-        if (_tvAutoHideBlocked) {
-          // The blocker cleared somewhere inside the last poll. Start the
-          // interval again from NOW: closing a sheet must not be met by a
-          // countdown that already ran out behind it.
-          _tvAutoHideBlocked = false;
-          _scheduleAutoHide();
-          return;
-        }
-        // Deliberately NOT gated on "focus is inside the bar". Raising the bar
-        // always focuses Play/Pause, so that test is true for the entire life
-        // of the bar and the timer could never fire — the dock sat over
-        // playing video until the user pressed BACK. Every key that reaches
-        // the player and every bar action reschedules this timer, so what
-        // actually elapses here is INACTIVITY, which is what an OTT dock
-        // dismisses on. Route through _tvHideBar so focus leaves the bar
-        // before it is excluded; setting the flag alone would strand the
-        // remote on a node that no longer exists.
-        _tvHideBar();
-        return;
-      }
-      _controlsVisible.value = false;
-    });
-  }
 
   // ---- Television transport bar -------------------------------------------
 
   /// Raise the bar and put focus on Play/Pause (not the first button — the
   /// control you want 90% of the time should be under the thumb already).
-  void _tvShowBar() {
-    _controlsVisible.value = true;
-    // A fresh raise starts from a clean slate: a stale "was blocked" left over
-    // from the previous time the bar was up would silently buy this one an
-    // extra interval before it could hide.
-    _tvAutoHideBlocked = false;
-    _scheduleAutoHide();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_controlsVisible.value) return;
-      // An open overlay owns the remote — the bar must not pull focus out
-      // from under it.
-      if (_anyPlayerOverlayOpen) return;
-      if (!_tvBarScope.hasFocus) _tvPlayPauseFocus.requestFocus();
-    });
-  }
 
   /// Lower the bar and take focus back to the player root. Without the second
   /// half the focused control is excluded from the tree and the remote dies.
-  void _tvHideBar() {
-    _controlsVisible.value = false;
-    // With an overlay up, focus belongs to the overlay (its claim may still
-    // be a frame away) — grabbing the root here would strand its DPAD.
-    if (!_anyPlayerOverlayOpen) _tvRootFocus.requestFocus();
-  }
 
   /// Cinema scrub: hold LEFT/RIGHT to pause and preview a destination, OK to
   /// confirm, BACK/DOWN to cancel. One seek on confirm, so the trackers and
@@ -8270,7 +8212,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     _tvScrubWasPlaying = _isPlaying;
     if (_isPlaying) _player.pause();
     _tvScrubTarget = _position;
-    _tvShowBar();
+    _transportVisibility.showBar();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _tvScrubTarget != null) _tvProgressFocus.requestFocus();
     });
@@ -8294,7 +8236,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           ? Duration.zero
           : (next > _duration ? _duration : next);
     });
-    _scheduleAutoHide();
+    _transportVisibility.scheduleAutoHide();
   }
 
   void _tvScrubCommit() {
@@ -8315,7 +8257,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     if (!_anyPlayerOverlayOpen) _tvPlayPauseFocus.requestFocus();
     // Fresh interval: the countdown that was running belonged to the scrub,
     // and inheriting its remainder could drop the bar the instant OK lands.
-    _scheduleAutoHide();
+    _transportVisibility.scheduleAutoHide();
   }
 
   /// Drop a scrub without seeking and without touching playback — the item it
@@ -8333,7 +8275,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     _tvScrubRepeats = 0;
     if (_tvScrubWasPlaying) _player.play();
     if (!_anyPlayerOverlayOpen) _tvPlayPauseFocus.requestFocus();
-    _scheduleAutoHide();
+    _transportVisibility.scheduleAutoHide();
   }
 
   /// The television bar. Reuses every flag the touch call site already
@@ -8372,13 +8314,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           _closeTopPlayerOverlay();
           return;
         }
-        if (_controlsVisible.value) _tvHideBar();
+        if (_controlsVisible.value) _transportVisibility.hideBar();
       },
       child: TvControlsScope(
         seek: (target) {
           _player.seek(target);
           _scrobbleSeek(target);
-          _scheduleAutoHide();
+          _transportVisibility.scheduleAutoHide();
         },
         // `_` on purpose: `context` inside must keep resolving to the State's
         // context, exactly as before this wrapper existed — sheet callbacks
@@ -8412,7 +8354,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
               progressFocusable: !_tvNoTimeline,
               // OK is claimed by the dock's own buttons, so those presses never
               // reach _handleTvKey and never restarted the countdown.
-              onInteract: _scheduleAutoHide,
+              onInteract: _transportVisibility.scheduleAutoHide,
               scrubPreview: _tvScrubTarget,
               onPlayPause: _togglePlay,
               onShowTracks: () => _showTracksSheet(context),
@@ -8484,19 +8426,19 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       _showIptvChannelSheet ||
       _showSourceSheet ||
       _showStremioTvGuide ||
-      _showPlayerMenu;
+      _transportVisibility.menuVisible;
 
   /// Closes the topmost overlay and returns focus to the player root, which the
   /// individual hide methods do not do on their own.
   void _closeTopPlayerOverlay() {
-    if (_showPlayerMenu) {
+    if (_transportVisibility.menuVisible) {
       // Delegate: BACK inside the menu walks values -> rail before closing
       // (tvOS Menu arrives here via PopScope, never as a key).
       if (_playerMenuKey.currentState?.handleHostBack() != true) {
-        _hidePlayerMenu();
+        _transportVisibility.hideMenu();
       }
       // Still open means the press was spent on a pane change.
-      if (_showPlayerMenu) return;
+      if (_transportVisibility.menuVisible) return;
     } else if (_showSyncOverlay) {
       _hideSyncOverlay();
     } else if (_showChannelGuide) {
@@ -8597,11 +8539,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         }
         // Native TV player: OK both toggles playback and raises the bar.
         _togglePlay();
-        _tvShowBar();
+        _transportVisibility.showBar();
         return KeyEventResult.handled;
       }
       if (key == LogicalKeyboardKey.arrowDown) {
-        _tvShowBar();
+        _transportVisibility.showBar();
         return KeyEventResult.handled;
       }
       // UP opens the guide, matching the native TV player. The desktop mapping
@@ -8609,7 +8551,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       // session it fell through to volume and UP appeared dead.
       if (key == LogicalKeyboardKey.arrowUp) {
         if (_openTvGuide()) return KeyEventResult.handled;
-        _tvShowBar();
+        _transportVisibility.showBar();
         return KeyEventResult.handled;
       }
       if ((isLeft || isRight) && _tvNoTimeline) {
@@ -8645,7 +8587,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
     // Bar up: it owns the DPAD and OK.
     if (isBack) {
-      _tvHideBar();
+      _transportVisibility.hideBar();
       return KeyEventResult.handled;
     }
     if ((isLeft || isRight) && _tvProgressFocus.hasFocus) {
@@ -8655,19 +8597,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       }
       return KeyEventResult.handled; // nothing to scrub; don't fall through
     }
-    _scheduleAutoHide();
+    _transportVisibility.scheduleAutoHide();
     // Traversal and activation belong to the bar's own focus tree.
     return KeyEventResult.ignored;
   }
 
-  void _toggleControls() {
-    _controlsVisible.value = !_controlsVisible.value;
-    if (_controlsVisible.value) {
-      _scheduleAutoHide();
-      // Identity rides IN the bar (IPTV zap panel / Debrify TV banner both
-      // embed as the dock's info panel), so nothing floats when it rises.
-    }
-  }
 
   void _onControlsVisibilityChanged() {
     _syncPlaybackClockVisibility();
@@ -8851,7 +8785,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       _activeMediaShouldPlay = true;
       _player.play();
     }
-    _scheduleAutoHide();
+    _transportVisibility.scheduleAutoHide();
   }
 
   /// Sets manual episode selection mode with automatic reset after 30 seconds
@@ -8894,7 +8828,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       _openPlayerMenuQuick(PlayerMenuSection.sleep);
       return;
     }
-    _hideTimer?.cancel();
+    _transportVisibility.cancelAutoHide();
     final picked = await SleepTimerSheet.show(
       context,
       current: _sleepTimerMode,
@@ -8905,7 +8839,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       allowEndOfItem: _currentIptvChannel?.isLive != true,
     );
     if (!mounted) return;
-    _scheduleAutoHide();
+    _transportVisibility.scheduleAutoHide();
     if (picked == null) return;
     _applySleepTimerSelection(picked);
   }
@@ -9040,7 +8974,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     }
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     if (mounted) setState(() {});
-    _scheduleAutoHide();
+    _transportVisibility.scheduleAutoHide();
   }
 
   BoxFit _currentFit() => AspectModeUtils.getBoxFitForMode(_presentation.aspectMode);
@@ -9548,7 +9482,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
             // Unified menu is open. Like the IPTV sheet, it owns every key
             // including BACK (values -> rail -> close, with TvOverlayBack
             // marking the closing press); its KeyboardListener holds focus.
-            if (_showPlayerMenu) {
+            if (_transportVisibility.menuVisible) {
               return KeyEventResult.ignored;
             }
 
@@ -9680,7 +9614,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
               // Otherwise, control volume
               _controlsVisible.value = true;
-              _scheduleAutoHide();
+              _transportVisibility.scheduleAutoHide();
 
               // Increase volume
               final currentVolume = (_player.state.volume / 100.0).clamp(
@@ -9707,7 +9641,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
             if (key == LogicalKeyboardKey.arrowDown) {
               // Show controls first
               _controlsVisible.value = true;
-              _scheduleAutoHide();
+              _transportVisibility.scheduleAutoHide();
 
               // Decrease volume
               final currentVolume = (_player.state.volume / 100.0).clamp(
@@ -9736,7 +9670,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
               if (_controlsVisible.value) {
                 _togglePlay();
               } else {
-                _toggleControls();
+                _transportVisibility.toggleControls();
               }
               return KeyEventResult.handled;
             }
@@ -10210,7 +10144,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                         controlsVisible: _controlsVisible.value,
                         bottomBar: _dockBand(72.0),
                       )) {
-                        _toggleControls();
+                        _transportVisibility.toggleControls();
                       }
                     },
                     onDoubleTapDown: _handleDoubleTap,
@@ -10354,7 +10288,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                                   },
                                   onSeekBarChangeEnd: () {
                                     _isSeekingWithSlider = false;
-                                    _scheduleAutoHide();
+                                    _transportVisibility.scheduleAutoHide();
                                     if (_lastSliderSeekPos != null) {
                                       _scrobbleSeek(_lastSliderSeekPos!);
                                       _lastSliderSeekPos = null;
@@ -10691,7 +10625,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                     ),
                   ),
                 // Unified player menu (Spotlight panel)
-                if (_showPlayerMenu && !inPip)
+                if (_transportVisibility.menuVisible && !inPip)
                   Positioned.fill(child: _buildPlayerMenuPanel()),
                 // Subtitle sync overlay
                 if (_showSyncOverlay && !inPip) _buildSyncOverlay(),
@@ -10707,7 +10641,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                 cursor: hideCursor
                     ? SystemMouseCursors.none
                     : MouseCursor.defer,
-                onHover: (_) => _wakeControlsOnPointer(),
+                onHover: (_) => _transportVisibility.wakeOnPointer(),
                 child: child,
               );
             },
@@ -10725,19 +10659,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       _showIptvChannelSheet ||
       _showSourceSheet ||
       _showStremioTvGuide ||
-      _showPlayerMenu;
+      _transportVisibility.menuVisible;
 
   /// Called on mouse movement: reveal controls (and the cursor) if hidden and
   /// (re)start the auto-hide countdown so continuous movement keeps them alive.
-  void _wakeControlsOnPointer() {
-    // Don't disturb the base controls while an overlay owns the screen; the
-    // cursor is already kept visible by _isAnyOverlayOpen in the builder.
-    if (_isAnyOverlayOpen) return;
-    if (!_controlsVisible.value) {
-      _controlsVisible.value = true;
-    }
-    _scheduleAutoHide();
-  }
 
   String _currentPlaybackTitleForIdentity() {
     if (_activePlaylist != null &&
@@ -10979,7 +10904,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     String? cacheKey,
   }) {
     _zap.hideBanner();
-    _hideTimer?.cancel();
+    _transportVisibility.cancelAutoHide();
     _tvReleaseFocusForOverlay();
     setState(() {
       _playerMenuInitialSection = section;
@@ -10989,7 +10914,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       _menuEpisode = episode;
       _menuCachedSlots = cachedSlots;
       _menuCacheKey = cacheKey;
-      _showPlayerMenu = true;
+      _transportVisibility.menuVisible = true;
       _controlsVisible.value = false;
     });
   }
@@ -11053,11 +10978,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     );
   }
 
-  void _hidePlayerMenu() {
-    if (!_showPlayerMenu) return;
-    setState(() => _showPlayerMenu = false);
-    if (PlatformUtil.isTelevision) _tvRootFocus.requestFocus();
-  }
 
   /// The old tracks-sheet `onTrackChanged` closure, verbatim: shared tail of
   /// every track selection made from the menu.
@@ -11200,7 +11120,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     return PlayerMenuPanel(
       key: _playerMenuKey,
       initialSection: _playerMenuInitialSection,
-      onClose: _hidePlayerMenu,
+      onClose: _transportVisibility.hideMenu,
       // mpv's `auto` pseudo-entry heads the list, labeled for what it is —
       // and kept, because persisting 'auto' is the only way to un-pin a
       // stored explicit track for this title (restore treats a stored 'auto'
@@ -11260,7 +11180,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           _canFetchEpisodes,
       continuousShuffle: _continuousShuffleEnabled,
       onShuffleOnce: () {
-        _hidePlayerMenu();
+        _transportVisibility.hideMenu();
         unawaited(_playRandomOnce(disableContinuousShuffle: true));
       },
       onShuffleContinuousToggle: () => unawaited(_toggleContinuousShuffle()),
@@ -11453,7 +11373,7 @@ class _SubtitleTrackSession implements SubtitleTrackSession {
   @override void hidePlayerMenuOnContentChange() {
     _s._showSyncOverlay = false;
     // The menu's subtitle pane is keyed to the outgoing item's identity.
-    _s._showPlayerMenu = false;
+    _s._transportVisibility.menuVisible = false;
   }
   @override void reconcileMenuSubtitleSelection(String restoredSelection) {
     _s._playerMenuKey.currentState?.reconcileSubtitleSelection(
