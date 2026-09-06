@@ -42,7 +42,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
    Next: continue eligible cleanup and decide publication of the independently tested local upstream catalog candidate. That candidate remains unpublished; do not repeat candidate surveys. Shared benefit is counted once.
 
 6. **Final integrated acceptance of completed architecture — PENDING COMPLETION OF THE ABOVE.**
-   Done: repeated intermediate full gates; latest 98cae882 PASSED with exact known failures, native first-pair success and both builds. Later #213/#214 have individual review and CI evidence but are not in those gate artifacts.
+   Done: repeated intermediate full gates; latest bc017b87 PASSED with exact known failures, native first-pair success and both builds, including #213/#214/#215.
    Left: final gate on the completed architecture. Earlier builds and device smoke are not the final acceptance build.
    Next: keep intermediate gates running; no new manual-smoke blocker is added against the user's standing instruction.
 
@@ -51,10 +51,10 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 ### Current work — latest verified checkpoint
 
 - **Locke / Storage:** #215 merged; contractual Storage acceptance versus deferred-native evidence packet assigned, read-only; no further tiny-batch survey.
-- **Cicero / Review:** full actual-main bc017b87 gate assigned after #213/#214/#215; prior98ca passed.
+- **Cicero / Review:** full actual-main bc017b87 gate PASSED; Storage contractual acceptance packet under read-only review.
 - **Ampere / Search and upstream:** local upstream catalog trial independently accepted, unpublished. Search final composition and Atrium remain open; no new implementation assignment claimed.
 - **Wegener / Player:** presentation #201 and transport #205 merged; remaining decoder/state/UI work open, bounded unsuccessful experiments retained as debt.
-- **Parent:** #212 merged at 98cae882. Full98ca gate passed; #213/#214/#215 are three production merges since that gate; fullbc017 gate now assigned. No user/manual-smoke blocker.
+- **Parent:** #212 merged at 98cae882. Full98ca gate passed; Fullbc017 gate passed; production counter reset0. No user/manual-smoke blocker.
 ### Next steps — working checklist
 
 - [x] Merge #199/#204/#206 and pass their full integrated gate896a168d.
@@ -66,6 +66,9 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - [ ] Run final integrated acceptance only after the remaining architectural outcomes are fulfilled.
 
 ### Latest completed milestones
+
+- **Fullbc017 gate PASSED:**6095PASS/12exactknown/2skip;goldens21exactknown/configured2retries/actualhelpers0/unexpected0unused0;raw failures retained. Nativeoriginal/currentFIRSTPAIRPASS,analyzer431/449zeroNew/Python55/layer77+0-0. AST204/133/161/23/0:42Storage removed0added, others unchanged;legacySearch60 separate. Windows162.7s68files ZIPefb4ad80c919716a9fda0e362b2deeaed30a486b9c6ab1c13c46667720982f9e; ARM64APK05d2a54ad4e6527db77472032ff59ed5761783b84201078b5fcb7e3b6ad9e3c7. Generatedowncheckout line-ending noise verified/restored, finalclean. Counter0; Storage milestone disposition awaitscontractreview, strictoutcome3 remainsOPEN. No device or finalarchitecture claim.
+
 
 - #215 merged **bc017b87**, exactf03ddf1c, independent87PASS/maincontained/allthreeCIgreen. NineRemoteforwards removed; host-19/prod-16/all8-2, one actualrolepicker dependency removed. Native/network/lifecycle/auth unchanged. Did we make a difference? Existingowner routing reducescoupling; no positivepairing/native or strictclosure claim. Third213214215 triggers fullactual-main bc017gate withCicero; Locke boundedcontractualcloseout packet assigned.
 
