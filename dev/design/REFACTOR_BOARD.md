@@ -10,7 +10,7 @@
 - **Storage:** 9,963 → **2,368** (7,595 fewer)
 - **Settings:** 7,905 → **2,903** (5,002 fewer)
 
-Counted from actual merged main dcdc8385. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion percentage remains withdrawn: remaining architectural work lacks a reliable denominator.
+Counted from actual merged main dcdc8385. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
 
 ### The same six outcomes — stable roadmap
 
@@ -18,18 +18,18 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 1. **Finish Search stage layouts and final shared composition — IN PROGRESS.**
    Done: standalone Discover, Spotlight, Tonight and shared BoardCell merged.
-   Left: Atrium, Deck, Canvas, Mosaic and Promenade stage work plus final shared composition. Atrium's origin test is held on rendering failure; the standalone Mosaic proposal was held for insufficient benefit, not completed.
+   Deck and shared visuals (#195) are now merged. Left: Canvas, Mosaic (#196), Promenade (#198), Atrium and final shared composition. Atrium remains held on its origin rendering failure. The older Mosaic cell-owner proposal remains held; #196 is a different actual stage-boundary extraction.
    Next: a bounded composition change that removes dependencies rather than adding more forwarding callbacks. Close against the existing Search lane criteria, not merely a smaller host file.
 
 2. **Complete player decoder/state/UI separation — IN PROGRESS, CURRENT PIN BLOCKER.**
-   Done: earlier player slices and retained overlay/guide behavior pins.
+   Done: earlier slices, retained overlay/guide pins, terminal test seam (#190) and diagnostic state ownership (#193).
    Left: remaining decoder/state/UI separation and tracker pin debt. Recent tracker attempts did not reach the behavior being tested; no completion credit.
-   Next: resolve a deterministic origin-test path before moving the affected behavior. This remains the least advanced of these outcomes.
+   Next: bounded V1-7 speed/aspect design and public origin-test path. Renderer experiments remain held. This remains the least advanced outcome.
 
 3. **Finish storage business-logic ownership and eligible temporary facade removal — IN PROGRESS.**
    Done: storage size target reached, multiple domain owners and pre-refactor restore fixtures merged, earlier223 facades retired.
    Left: remaining domain logic and eligible forwarding APIs; native-sensitive exceptions remain explicit.
-   Next: history/watchlist caller retirement and download-destination ownership; filter facade retirement (#182) is now merged. These are steps within outcome3, not new top-level goals.
+   History/watchlist, filter, download and Ambient caller retirements are merged. Next: keyboard (#194), catalog-search (#197), indexer (#199), then engine reset, device maintenance, adult access and remaining scalar policy. Cross-owner coordinators and native APIs retain explicit evidence requirements.
 
 4. **Finish M1-7 genuine common-flow dedup and dependency cleanup — COMPLETE against the agreed finite scope.**
    Done: shared flow programmes merged, provider-leaf target met (627 current lines versus under800), two cached-entry wrappers removed.
@@ -37,25 +37,39 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
    No remaining M1-7 implementation obligation; independent88-case verification and integrated gate passed. No new autonomous-provider-framework or zero-UI-callback requirement. Outcome4 is closed; wider Q-phase/native obligations remain in their existing outcomes.
 
 5. **Q-phase dependency/rule cleanup, compatibility expiry and upstream contribution work — PARTLY STARTED.**
-   Done: some compatibility retirement is underway with outcome3 and4; upstream contribution intent established.
+   Done: compatibility retirements advance with outcomes3/4; canonical rules (#188) merged; upstream contribution intent established.
    Left: remaining Q1/Q2/Q3 work and upstream-ready contribution work.
    Next: continue eligible cleanup alongside lanes. Shared PRs may advance multiple outcomes, but count their benefit once.
 
 6. **Final integrated acceptance of completed architecture — PENDING COMPLETION OF THE ABOVE.**
-   Done: repeated intermediate full gates; latest95c93 passed with documented known failures.
+   Done: repeated intermediate full gates; latest dcdc8385 PASSED with exact known failures and both native builds.
    Left: final gate on the completed architecture. Earlier builds and device smoke are not the final acceptance build.
    Next: keep intermediate gates running; no new manual-smoke blocker is added against the user's standing instruction.
 
-**Where we are:** implementation and verification are still in progress. Since this six-outcome list was introduced, we have landed additional milestones, especially M1 flow consolidation and Tonight. We have not completed all six or established a defensible overall percentage. The most recent PR is not the whole trek.
+**Where we are:** implementation and verification are still in progress. Since this six-outcome list was introduced, we have landed additional milestones, especially M1 flow consolidation and Tonight. One outcome is complete; the rough 70% estimate is judgment, not a measured acceptance score. The most recent PR is not the whole trek.
 
-### Current work
+### Current work — refreshed after gate dcdc8385
 
-- Ampere/Search: PR195 actualDeck/publicvisuals under independent review; Mosaic origin/composition test-only follow-on authorized.
-- Wegener/Player: PR193 diagnostic owner accepted, finalCI pending; separate two-site Android experiment red/held, read-only await-boundary trace assigned.
-- Locke/Storage: PR194 keyboard owner accepted, finalCI pending; catalog-search five-file actual old-export fixture authorized after parent origin review. PR191 caller retirement accepted pending CI.
-- Cicero/review: full334145 gate PASSED; independent195 production review now. No duplicate catalog-origin review (parent completed it).
-- Parent: merge exact reviewed/CI-green heads, keep six outcomes stable and BOARD/NOTES current. M1-7 outcome4 complete; no user blocker. CODEMAP lock currently released.
+- **Ampere / Search:** #196 integration accepted, CI pending; #198 `5ea5bfb` under independent review. Canvas origin `84e8bf6`: 3 tests passed first run; exact unapplied extraction awaits decision. Atrium held.
+- **Wegener / Player:** #193 merged. Renderer experiment held after finite attempts; assigned read-only V1-7 speed/aspect ownership and public-testability design, no renderer retries.
+- **Locke / Storage:** #194 `bede8cf` and #197 `ca9c2ea` integrations accepted, CI pending. Draft #199 `1356c0f`: 13 green origin tests before move, 60 combined tests passed; independent review queued. Next read-only engine-reset assessment.
+- **Cicero / Review:** full dcdc8385 gate PASSED. Review #198 then #199; #194/#196/#197 integration deltas accepted without duplicate suite runs.
+- **Parent:** decide Canvas scope, review #192 documentation, merge exact reviewed CI-green heads and reconcile dependencies. CODEMAP lock released. No user/manual-smoke blocker.
+
+### Next steps — working checklist
+
+- [x] Full gate covering #193, #195 and #191.
+- [ ] Finish CI and merge eligible #194, #196 and #197 heads; reconcile dependent branches after each merge.
+- [ ] Complete independent production reviews of #198 and #199.
+- [ ] Decide Canvas extraction from its exact body-diff packet, preserving green origin commit.
+- [ ] Review player speed/aspect and storage engine-reset scope packets before implementation grants.
+- [ ] Finish provider-guide #192 review and upstream contribution preparation.
+- [ ] Run the next full integrated gate after three additional production merges.
+
 ### Latest completed milestones
+
+- **Full gate dcdc8385 PASS:** 5,870 passed /12 exact known failures /2 skipped; goldens21 exact known failures with existing configured retries. Actual helpers exit0, unexpected0/unused0; raw failures retained, not pixel-green. Native original/current first pair passed; analyzer431/449 zero errors/new; Python55; layering77/77 unchanged. Windows and ARM64 builds passed. Report: `debrify-c0-post-193-195-191-gate/.dart_tool/main-gate/REPORT.md`. ZIP SHA256 `f1359ee4ec8c715c6fde7f0800802b5ec31661359ba6eba866f5e65aa2105c0b`; APK `bc66beda3ed7d037baeac19205bb6adf95df5c05b9db9d9bf5b96198a486b7bf`. No fresh device/manual smoke claimed.
+
 
 - #191 mergeddcdc8385 exacte522 after independent113PASS/allCIgreen and final10blob/CODEMAPunion. FourAmbientfacades retired,52callerreceivers directowner, hostminus15/wholeminus10; enumexportcompat retained. Did we make a difference? Callers use actualowner with unchangedarguments/order; Storage stillhasidentifiedpolicygroups, notclosed.
 
@@ -92,12 +106,12 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Gate pinned analyzer431/449, zero errors/new issues; layering77→77; Python55 passed; originalbc46/current native pair passed first try. Initial wrong-PATH analyzer output retained separately and corrected using pinned SDK; no baseline edit.
 - Windows226.2s/68files and ARM64171.9s builds passed. ZIP SHA256b96b7a4bd0b98a4f9de799ef3242bebf18a150d3c49c0113ad0566d10f1d729f; APK80811b556495c20078920091643b91cbcde5bc236d89737bd3bed7d1479e8cb5. No fresh manual/device smoke claimed.
 - #181 BoardCell mergedc7a332bd exact932 after independent140 passes plus the exact known sidebar failure, final integration review and all3CI green. Shared renderer owns card state/shuttle; 669 declaration lines relocated, whole production+17, zero host-file reduction. Did we make a difference? Removed private host-library access at real consumers; remaining stage navigation/composition is still open.
-- Production merge counter: **3 since gate334145c6** (#193, #195, #191); fulldcdc8385 gate assigned, further production merges held, which includes181/182/183. Gate excludes181; source/build evidence remains attached to95c93.
+- Production merge counter: **0 since completed gate dcdc8385**. Includes #193/#195/#191; excludes pending #194/#196/#197/#198/#199. Next full gate after three additional production merges.
 
-### Forwarders at the last full gate95c93
+### Forwarders at the latest full gate dcdc8385
 
-- Storage432 total /143 single-line; Search133/117; Player161/112; Magic TV23/12; Settings0/0.
-- Same expanded AST classifier as prior gates. Legacy Search classifier60 separately retained; do not silently substitute classifiers. Not recounted for181.
+- Storage **411 total /143 single-line**; Search **133/117**; Player **161/112**; Magic TV **23/12**; Settings **0/0**.
+- Same expanded AST classifier; legacy Search **60** separately retained. Storage415 to411 is four Ambient facades retired by #191, not a rebaseline.
 
 ### Decisions, limits and recovery
 
