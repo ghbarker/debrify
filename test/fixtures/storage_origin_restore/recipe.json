@@ -1378,6 +1378,34 @@
         "update_auto_check_enabled": true,
         "update_ignored_version": " destination-version "
       }
+    },
+    "profile-scalars": {
+      "values": {
+        "series_browser_dense_view": true,
+        "merged_series_page_enabled": false,
+        "stremio_addon_hub_enabled": false,
+        "detail_trailer_autoplay_enabled": false,
+        "series_auto_pin_on_play": false,
+        "quick_play_search_timeout": -7,
+        "stremio_sources_timeout": 2147483647
+      },
+      "excludedKeys": [],
+      "mutations": {
+        "scalar-key": {
+          "operation": "rename",
+          "key": "series_browser_dense_view"
+        },
+        "scalar-type": {
+          "operation": "replace",
+          "key": "quick_play_search_timeout",
+          "value": "-7"
+        },
+        "scalar-value": {
+          "operation": "replace",
+          "key": "stremio_sources_timeout",
+          "value": 15
+        }
+      }
     }
   }
 }

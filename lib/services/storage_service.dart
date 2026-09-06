@@ -1,3 +1,4 @@
+import 'storage/ambient_trailer_prefs.dart';
 import 'storage/device_maintenance_prefs.dart';
 import 'storage/catalog_search_prefs.dart';
 export 'storage/ambient_trailer_prefs.dart' show AmbientTrailerSurface;
@@ -233,7 +234,7 @@ class StorageService {
   /// The moved legacy mirror is written by [setQuickPlayRules] to carry
   /// `preferSeriesPacks` for downgrade builds, and read once by
   /// `QuickPlayPolicyPrefs` legacy decoder to migrate pre-v2 profiles. Nothing on the live
-  /// playback path may read it — see [_seriesAutoPinOnPlayKey].
+  /// playback path may read it — see [QuickPlayPolicyPrefs.getSeriesAutoPinOnPlay].
 
   /// Whether a series play pins the source that played. Split out of
   /// `auto_bind_series_packs_on_play` because that key doubles as the legacy mirror of
@@ -242,7 +243,6 @@ class StorageService {
   /// and Quick Play lost its fast path. Deliberately does NOT inherit the old
   /// key's value — a `false` there was the packs toggle bleeding through, never
   /// an auto-pin choice (no UI ever wrote it directly).
-  static const String _seriesAutoPinOnPlayKey = 'series_auto_pin_on_play';
 
   // Remote Control Settings
 
@@ -283,28 +283,20 @@ class StorageService {
   static Future<void> deleteTorboxApiKey() =>
       CloudSecretPrefs.delete(_torboxApiKey);
 
-  static Future<bool> getSeriesBrowserDenseView() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool('series_browser_dense_view') ?? false;
-  }
+  static Future<bool> getSeriesBrowserDenseView() =>
+      AppStylePrefs.getSeriesBrowserDenseView();
 
-  static Future<void> setSeriesBrowserDenseView(bool dense) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool('series_browser_dense_view', dense);
-  }
+  static Future<void> setSeriesBrowserDenseView(bool dense) =>
+      AppStylePrefs.setSeriesBrowserDenseView(dense);
 
   /// Route series & movies to the merged detail+episodes page (the Stremio-styled
   /// single screen) instead of the separate detail → episodes flow. On by
   /// default; can be turned off per-device via [setMergedSeriesPageEnabled].
-  static Future<bool> getMergedSeriesPageEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool('merged_series_page_enabled') ?? true;
-  }
+  static Future<bool> getMergedSeriesPageEnabled() =>
+      AppStylePrefs.getMergedSeriesPageEnabled();
 
-  static Future<void> setMergedSeriesPageEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool('merged_series_page_enabled', enabled);
-  }
+  static Future<void> setMergedSeriesPageEnabled(bool enabled) =>
+      AppStylePrefs.setMergedSeriesPageEnabled(enabled);
 
   static bool get tvKeyboardEnabledCached => AppStylePrefs.tvKeyboardEnabledCached;
   static set tvKeyboardEnabledCached(bool value) =>
@@ -377,15 +369,11 @@ class StorageService {
   /// purple Discover theme, 1-click marketplace) instead of the classic two-tab
   /// Addons screen. On by default; can be turned off per-device via
   /// [setStremioAddonHubEnabled].
-  static Future<bool> getStremioAddonHubEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool('stremio_addon_hub_enabled') ?? true;
-  }
+  static Future<bool> getStremioAddonHubEnabled() =>
+      AppStylePrefs.getStremioAddonHubEnabled();
 
-  static Future<void> setStremioAddonHubEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool('stremio_addon_hub_enabled', enabled);
-  }
+  static Future<void> setStremioAddonHubEnabled(bool enabled) =>
+      AppStylePrefs.setStremioAddonHubEnabled(enabled);
 
   /// Autoplay a trailer behind the detail-page backdrop (OTT-style), when the
   /// metadata addon provides one.
@@ -398,15 +386,11 @@ class StorageService {
   /// hold-back of OFF-on-TV existed only so an existing box wouldn't start
   /// playing trailers on a page that never did, which the generation
   /// migration now handles deliberately rather than by omission.
-  static Future<bool> getDetailTrailerAutoplayEnabled() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool('detail_trailer_autoplay_enabled') ?? true;
-  }
+  static Future<bool> getDetailTrailerAutoplayEnabled() =>
+      AmbientTrailerPrefs.getDetailTrailerAutoplayEnabled();
 
-  static Future<void> setDetailTrailerAutoplayEnabled(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool('detail_trailer_autoplay_enabled', enabled);
-  }
+  static Future<void> setDetailTrailerAutoplayEnabled(bool enabled) =>
+      AmbientTrailerPrefs.setDetailTrailerAutoplayEnabled(enabled);
 
   static Future<bool> getHomeHeroTrailerEnabled() =>
       HomePrefs.getHomeHeroTrailerEnabled();
@@ -1746,16 +1730,12 @@ class StorageService {
   ///
   /// Independent of "Prefer season packs" — the two shared a key until this
   /// split, which meant turning packs off silently killed pinning. See
-  /// [_seriesAutoPinOnPlayKey].
-  static Future<bool> getSeriesAutoPinOnPlay() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_seriesAutoPinOnPlayKey) ?? true;
-  }
+  /// [QuickPlayPolicyPrefs.getSeriesAutoPinOnPlay].
+  static Future<bool> getSeriesAutoPinOnPlay() =>
+      QuickPlayPolicyPrefs.getSeriesAutoPinOnPlay();
 
-  static Future<void> setSeriesAutoPinOnPlay(bool enabled) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_seriesAutoPinOnPlayKey, enabled);
-  }
+  static Future<void> setSeriesAutoPinOnPlay(bool enabled) =>
+      QuickPlayPolicyPrefs.setSeriesAutoPinOnPlay(enabled);
 
   /// Get max number of torrents to try before giving up
   /// Default: 5, Range: 2-10
@@ -1765,29 +1745,19 @@ class StorageService {
   static Future<void> setQuickPlayMaxRetries(int maxRetries) =>
       QuickPlayPolicyPrefs.setQuickPlayMaxRetries(maxRetries);
 
-  static const String _quickPlaySearchTimeoutKey = 'quick_play_search_timeout';
 
-  static Future<int> getQuickPlaySearchTimeout() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getInt(_quickPlaySearchTimeoutKey) ?? 5;
-  }
+  static Future<int> getQuickPlaySearchTimeout() =>
+      QuickPlayPolicyPrefs.getQuickPlaySearchTimeout();
 
-  static Future<void> setQuickPlaySearchTimeout(int seconds) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setInt(_quickPlaySearchTimeoutKey, seconds);
-  }
+  static Future<void> setQuickPlaySearchTimeout(int seconds) =>
+      QuickPlayPolicyPrefs.setQuickPlaySearchTimeout(seconds);
 
-  static const String _stremioSourcesTimeoutKey = 'stremio_sources_timeout';
 
-  static Future<int> getStremioSourcesTimeout() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getInt(_stremioSourcesTimeoutKey) ?? 15;
-  }
+  static Future<int> getStremioSourcesTimeout() =>
+      QuickPlayPolicyPrefs.getStremioSourcesTimeout();
 
-  static Future<void> setStremioSourcesTimeout(int seconds) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setInt(_stremioSourcesTimeoutKey, seconds);
-  }
+  static Future<void> setStremioSourcesTimeout(int seconds) =>
+      QuickPlayPolicyPrefs.setStremioSourcesTimeout(seconds);
 
   /// Clear all Quick Play Cache Fallback settings
   static Future<void> clearQuickPlayCacheFallbackSettings() =>

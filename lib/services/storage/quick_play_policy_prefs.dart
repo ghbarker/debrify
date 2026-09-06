@@ -22,7 +22,14 @@ class QuickPlayPolicyPrefs {
   static const String _autoBindSeriesPacksKey =
       'auto_bind_series_packs_on_play';
 
+  static const String _seriesAutoPinOnPlayKey = 'series_auto_pin_on_play';
+  static const String _quickPlaySearchTimeoutKey = 'quick_play_search_timeout';
+  static const String _stremioSourcesTimeoutKey = 'stremio_sources_timeout';
+
   static const Set<String> ownedKeys = {
+    'series_auto_pin_on_play',
+    'quick_play_search_timeout',
+    'stremio_sources_timeout',
     _quickPlayHonorsFiltersKey,
     _quickPlayTryMultipleTorrentsKey,
     _quickPlayMaxRetriesKey,
@@ -184,5 +191,35 @@ class QuickPlayPolicyPrefs {
     await prefs.remove(_quickPlayMaxRetriesKey);
     await prefs.remove(_quickPlayMovieRulesKey);
     await prefs.remove(_quickPlaySeriesRulesKey);
+  }
+
+  static Future<bool> getSeriesAutoPinOnPlay() async {
+    final prefs = await ProfilePreferences.instance();
+    return prefs.getBool(_seriesAutoPinOnPlayKey) ?? true;
+  }
+
+  static Future<void> setSeriesAutoPinOnPlay(bool enabled) async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.setBool(_seriesAutoPinOnPlayKey, enabled);
+  }
+
+  static Future<int> getQuickPlaySearchTimeout() async {
+    final prefs = await ProfilePreferences.instance();
+    return prefs.getInt(_quickPlaySearchTimeoutKey) ?? 5;
+  }
+
+  static Future<void> setQuickPlaySearchTimeout(int seconds) async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.setInt(_quickPlaySearchTimeoutKey, seconds);
+  }
+
+  static Future<int> getStremioSourcesTimeout() async {
+    final prefs = await ProfilePreferences.instance();
+    return prefs.getInt(_stremioSourcesTimeoutKey) ?? 15;
+  }
+
+  static Future<void> setStremioSourcesTimeout(int seconds) async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.setInt(_stremioSourcesTimeoutKey, seconds);
   }
 }
