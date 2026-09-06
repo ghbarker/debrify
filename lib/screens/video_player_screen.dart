@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../services/player_visibility.dart';
 import '../utils/media_kit_init.dart';
 import 'dart:io';
 import 'dart:math' as math;
@@ -1404,6 +1405,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   @override
   void initState() {
     super.initState();
+    PlayerVisibility.opened(this);
     AnalyticsService.screenView('video_player');
     _startAnalyticsHeartbeat();
     _activePlaylist = widget.playlist;
@@ -10685,6 +10687,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
   @override
   void dispose() {
+    PlayerVisibility.closed(this);
     ProfileLockController.instance.setPlaybackActive(false);
     _iptvDiag.onSessionEnd();
     _iptvLiveRecovery.cancel();

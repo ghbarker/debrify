@@ -1,3 +1,4 @@
+import 'package:debrify/services/player_visibility.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:debrify/services/webdav_sync/webdav_sync_save_feedback.dart';
 import 'package:debrify/widgets/webdav_sync/webdav_save_status.dart';
@@ -5,6 +6,90 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('both player owners hide all feedback without losing receipts', (
+    tester,
+  ) async {
+    final feedback = WebDavSyncSaveFeedback()..setEnabled(true);
+    final flutterPlayer = Object();
+    final nativePlayer = Object();
+    addTearDown(() {
+      PlayerVisibility.closed(flutterPlayer);
+      PlayerVisibility.closed(nativePlayer);
+      feedback.dispose();
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WebDavSaveStatus(
+          feedback: feedback,
+          child: const Scaffold(body: Text('Player')),
+        ),
+      ),
+    );
+    feedback.saved(1);
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    PlayerVisibility.opened(flutterPlayer);
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    feedback.saved(2);
+    feedback.waiting();
+    await tester.pump(const Duration(seconds: 4));
+    expect(find.byIcon(Icons.cloud_upload_outlined), findsNothing);
+    expect(feedback.hasPending, isTrue);
+    PlayerVisibility.opened(nativePlayer);
+    PlayerVisibility.closed(flutterPlayer);
+    await tester.pump();
+    expect(find.byIcon(Icons.cloud_upload_outlined), findsNothing);
+    feedback.finished(2, published: true);
+    await tester.pump();
+    expect(find.text('Synced to WebDAV'), findsNothing);
+    feedback.saved(3);
+    feedback.waiting();
+    await tester.pump();
+    PlayerVisibility.closed(nativePlayer);
+    await tester.pump();
+    expect(find.text('Saved locally · Sync pending'), findsOneWidget);
+    expect(feedback.hasPending, isTrue);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('player opening dismisses save dialog and blocks new dialogs', (
+    tester,
+  ) async {
+    final feedback = WebDavSyncSaveFeedback()..setEnabled(true);
+    final owner = Object();
+    addTearDown(() {
+      PlayerVisibility.closed(owner);
+      feedback.dispose();
+    });
+    late BuildContext pageContext;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            pageContext = context;
+            return const Scaffold();
+          },
+        ),
+      ),
+    );
+    feedback.saved(1);
+    final dialog = showWebDavSaveProgress(pageContext, 0, feedback: feedback);
+    await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(AlertDialog), findsOneWidget);
+    PlayerVisibility.opened(owner);
+    await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    await dialog;
+    expect(find.byType(AlertDialog), findsNothing);
+    await showWebDavSaveProgress(pageContext, 0, feedback: feedback);
+    await tester.pump();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(feedback.hasPending, isTrue);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets(
     'phone status clears navigation and collapses with accessible Retry',
     (tester) async {

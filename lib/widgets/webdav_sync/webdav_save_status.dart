@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import '../../services/player_visibility.dart';
 import '../../services/webdav_sync/webdav_sync_save_feedback.dart';
 
 /// Global sender-only feedback; remote reads never create a local receipt.
@@ -34,7 +36,20 @@ class _WebDavSaveStatusState extends State<WebDavSaveStatus> {
   void initState() {
     super.initState();
     feedback.addListener(_changed);
+    PlayerVisibility.visible.addListener(_playerChanged);
     _changed();
+  }
+
+  void _playerChanged() {
+    // Flutter player routes acquire/release their owner during build/dispose.
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+    } else if (mounted) {
+      setState(() {});
+    }
   }
 
   void _changed() {
@@ -59,6 +74,7 @@ class _WebDavSaveStatusState extends State<WebDavSaveStatus> {
   @override
   void dispose() {
     feedback.removeListener(_changed);
+    PlayerVisibility.visible.removeListener(_playerChanged);
     _successTimer?.cancel();
     _compactTimer?.cancel();
     super.dispose();
@@ -68,7 +84,10 @@ class _WebDavSaveStatusState extends State<WebDavSaveStatus> {
   Widget build(BuildContext context) {
     final phase = feedback.phase;
     final visible =
-        feedback.enabled && phase != WebDavSavePhase.inactive && !_hideSuccess;
+        feedback.enabled &&
+        !PlayerVisibility.visible.value &&
+        phase != WebDavSavePhase.inactive &&
+        !_hideSuccess;
     final phone = MediaQuery.sizeOf(context).shortestSide < 600;
     return Stack(
       children: [
@@ -172,7 +191,8 @@ Future<void> showWebDavSaveProgress(
   WebDavSyncSaveFeedback? feedback,
 }) async {
   final source = feedback ?? WebDavSyncSaveFeedback.instance;
-  if (!context.mounted ||
+  if (PlayerVisibility.visible.value ||
+      !context.mounted ||
       !source.enabled ||
       source.revision <= beforeRevision ||
       !source.hasPending ||
@@ -205,6 +225,7 @@ class _SaveProgressState extends State<_SaveProgress> {
   void initState() {
     super.initState();
     widget.feedback.addListener(_changed);
+    PlayerVisibility.visible.addListener(_changed);
     _timer = Timer(const Duration(seconds: 15), () {
       widget.feedback.timedOut();
       _close();
@@ -213,7 +234,8 @@ class _SaveProgressState extends State<_SaveProgress> {
   }
 
   void _changed() {
-    if (!widget.feedback.enabled ||
+    if (PlayerVisibility.visible.value ||
+        !widget.feedback.enabled ||
         widget.feedback.confirmedRevision >= widget.target ||
         widget.feedback.phase == WebDavSavePhase.pending) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _close());
@@ -233,6 +255,7 @@ class _SaveProgressState extends State<_SaveProgress> {
   void dispose() {
     _timer?.cancel();
     widget.feedback.removeListener(_changed);
+    PlayerVisibility.visible.removeListener(_changed);
     super.dispose();
   }
 

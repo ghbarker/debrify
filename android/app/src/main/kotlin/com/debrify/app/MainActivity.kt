@@ -2859,6 +2859,7 @@ class MainActivity : FlutterActivity() {
                     "com.debrify.app.tv.AndroidTvTorrentPlayerActivity",
                 )
                 putExtra("payloadPath", tempFile.absolutePath)
+                putExtra("playbackSessionId", (payload["sourcePersistenceSessionId"] as? Number)?.toInt() ?: 0)
             }
             startActivity(intent)
             DiagnosticFileLog.record(

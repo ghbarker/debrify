@@ -25,6 +25,59 @@ void main() {
         .setMockMethodCallHandler(channel, null);
   });
 
+  testWidgets('native watch suppresses inactivity until its own session ends', (
+    tester,
+  ) async {
+    final controller = ProfileLockController.instance;
+    controller.activate(
+      _profile(lockOnResume: false, hasPin: false, inactivityTimeoutMinutes: 1),
+      unlocked: true,
+    );
+    final first = controller.beginNativePlayback();
+    final second = controller.beginNativePlayback();
+    controller.endNativePlayback(first);
+    // Disposing a Flutter player must not clear the native watch's lease.
+    controller.setPlaybackActive(false);
+    await tester.pump(const Duration(minutes: 2));
+    expect(controller.isUnlocked, isTrue);
+    controller.endNativePlayback(second);
+    await tester.pump(const Duration(seconds: 59));
+    expect(controller.isUnlocked, isTrue);
+    await tester.pump(const Duration(seconds: 1));
+    expect(controller.isUnlocked, isFalse);
+  });
+
+  testWidgets('a stale native finish cannot disturb a new profile session', (
+    tester,
+  ) async {
+    final controller = ProfileLockController.instance;
+    final profile = _profile(
+      lockOnResume: false,
+      hasPin: false,
+      inactivityTimeoutMinutes: 1,
+    );
+    controller.activate(profile, unlocked: true);
+    final old = controller.beginNativePlayback();
+    controller.dispose();
+    controller.activate(profile, unlocked: true);
+    await tester.pump(const Duration(seconds: 30));
+    controller.endNativePlayback(old);
+    await tester.pump(const Duration(seconds: 30));
+    expect(controller.isUnlocked, isFalse);
+  });
+
+  test('native watch does not bypass a PIN lock-on-resume policy', () {
+    final controller = ProfileLockController.instance;
+    controller.activate(
+      _profile(lockOnResume: true, hasPin: true),
+      unlocked: true,
+    );
+    final owner = controller.beginNativePlayback();
+    controller.onResume();
+    expect(controller.isUnlocked, isFalse);
+    controller.endNativePlayback(owner);
+  });
+
   test(
     'lock-on-resume policy is published before the app backgrounds',
     () async {
@@ -180,7 +233,11 @@ void main() {
   );
 }
 
-UserProfile _profile({required bool lockOnResume, required bool hasPin}) {
+UserProfile _profile({
+  required bool lockOnResume,
+  required bool hasPin,
+  int? inactivityTimeoutMinutes,
+}) {
   final now = DateTime.utc(2026, 1, 1);
   return UserProfile(
     id: 'profile-a',
@@ -194,6 +251,7 @@ UserProfile _profile({required bool lockOnResume, required bool hasPin}) {
     pinResetRequired: false,
     hasPin: hasPin,
     lockOnResume: lockOnResume,
+    inactivityTimeoutMinutes: inactivityTimeoutMinutes,
     createdAt: now,
     updatedAt: now,
   );

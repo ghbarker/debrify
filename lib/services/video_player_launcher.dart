@@ -3882,16 +3882,18 @@ class VideoPlayerLauncher {
         if (!payload.localMovieRewatchStarted &&
             positionMs > 0 &&
             movieProgress < payload.movieCompletionThreshold) {
-          payload.localMovieRewatchStarted = true;
           await StorageService.unmarkMovieAsFinished(payload.imdbId!);
+          payload.localMovieRewatchStarted = true;
         }
-        if (localCompleted || completed) {
-          payload.localMovieCompletionRecorded = true;
+        if (localCompleted ||
+            completed ||
+            progress['localCompletionEligible'] == true) {
           await Future.wait([
             StorageService.markMovieAsFinished(payload.imdbId!),
             if (resumeId != null && resumeId.isNotEmpty)
               StorageService.removeVideoResume(resumeId),
           ]);
+          payload.localMovieCompletionRecorded = true;
           return;
         }
       }
@@ -4351,6 +4353,7 @@ class VideoPlayerLauncher {
       }
     } catch (e) {
       debugPrint('VideoPlayerLauncher: failed to persist progress: $e');
+      rethrow;
     }
   }
 
