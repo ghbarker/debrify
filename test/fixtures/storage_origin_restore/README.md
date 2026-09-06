@@ -967,3 +967,19 @@ The controls insert one forbidden String key, rebuild the actual section hash,
 re-encrypt and decrypt successfully, then fail the declared semantic exclusion.
 They do not claim codec rejection or post-restore mutant failure. Positive
 restore uses the untouched original bytes. No production mutation is involved.
+
+
+### Q2 destination caller retirement: old-export harness adapter
+
+For reproduction after the seven public facade retirements, remove the copied
+loader's `package:debrify/services/storage/download_destination_prefs.dart`
+import and reverse exactly five `DownloadDestinationPrefs` receivers to the
+actual old `StorageService`: two setters in `writeDestinations`, three getters
+in `readDestinations`. Keep all arguments, awaits, assertions and existing
+filter/playback/provider adapters. This does not change or regenerate payloads.
+The standard old exporter does not import `download_destination_prefs_origin_test.dart`.
+If separately replaying that pin against old production, replace its owner
+import with `storage_service.dart` and reverse its nine receivers, preserving
+five tearoffs and four calls. Do not turn tearoffs into closures. These adapters
+restore old public entry points; no owner is copied/backported to pre-S2 and no
+identical-harness or SAF/native permission claim is made.

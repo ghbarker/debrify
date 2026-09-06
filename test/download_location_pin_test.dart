@@ -197,39 +197,39 @@ void main() {
 
   group('storage dispatch (SAF tree vs desktop path)', () {
     test('load reads display name on SAF and path on desktop', () {
-      expect(sources, contains('StorageService.getDownloadTreeDisplayName()'));
-      expect(sources, contains('StorageService.getDownloadDirPath()'));
+      expect(sources, contains('DownloadDestinationPrefs.getDownloadTreeDisplayName()'));
+      expect(sources, contains('DownloadDestinationPrefs.getDownloadDirPath()'));
       expect(
         sources,
         contains(
           RegExp(
             r'final String\? name = _?downloadLocationUsesSaf\n'
-            r'\s+\? await StorageService.getDownloadTreeDisplayName\(\)\n'
-            r'\s+: await StorageService.getDownloadDirPath\(\);',
+            r'\s+\? await DownloadDestinationPrefs.getDownloadTreeDisplayName\(\)\n'
+            r'\s+: await DownloadDestinationPrefs.getDownloadDirPath\(\);',
           ),
         ),
       );
     });
 
     test('sheet current value is tree URI on SAF, path on desktop', () {
-      expect(sources, contains('StorageService.getDownloadTreeUri()'));
+      expect(sources, contains('DownloadDestinationPrefs.getDownloadTreeUri()'));
       expect(
         sources,
         contains(
           RegExp(
             r'final String\? currentTree = _?downloadLocationUsesSaf\n'
-            r'\s+\? await StorageService.getDownloadTreeUri\(\)\n'
-            r'\s+: await StorageService.getDownloadDirPath\(\);',
+            r'\s+\? await DownloadDestinationPrefs.getDownloadTreeUri\(\)\n'
+            r'\s+: await DownloadDestinationPrefs.getDownloadDirPath\(\);',
           ),
         ),
       );
     });
 
     test('choose/reset persist through the matching StorageService API', () {
-      expect(sources, contains('StorageService.setDownloadTreeUri('));
-      expect(sources, contains('StorageService.setDownloadDirPath('));
-      expect(sources, contains('StorageService.clearDownloadTreeUri()'));
-      expect(sources, contains('StorageService.clearDownloadDirPath()'));
+      expect(sources, contains('DownloadDestinationPrefs.setDownloadTreeUri('));
+      expect(sources, contains('DownloadDestinationPrefs.setDownloadDirPath('));
+      expect(sources, contains('DownloadDestinationPrefs.clearDownloadTreeUri()'));
+      expect(sources, contains('DownloadDestinationPrefs.clearDownloadDirPath()'));
       expect(sources, contains('AndroidNativeDownloader.pickDownloadDirectory()'));
       expect(
         sources,
