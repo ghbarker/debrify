@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -129,7 +130,7 @@ void main() {
       install(jsonEncode([_row(_item('old'))]));
       backend.holdRead = true;
       var completed = false;
-      final pending = StorageService.getMyWatchlistItems().then((value) {
+      final pending = MyWatchlistStore.getMyWatchlistItems().then((value) {
         completed = true;
         return value;
       });
@@ -157,7 +158,7 @@ void main() {
         install(jsonEncode([_row(huge)]));
         backend.holdRead = true;
         StorageService.debugMyWatchlistTvOsCapOverride = !enabledAtRelease;
-        final pending = StorageService.setMyWatchlistItem(_item('new'), true);
+        final pending = MyWatchlistStore.setMyWatchlistItem(_item('new'), true);
         await backend.entered.future;
         try {
           expect(backend.writes, isEmpty);
@@ -187,7 +188,7 @@ void main() {
     backend.holdRead = true;
     backend.failRead = true;
     final observed = expectLater(
-      StorageService.setMyWatchlistItem(_item('new'), true),
+      MyWatchlistStore.setMyWatchlistItem(_item('new'), true),
       throwsStateError,
     );
     await backend.entered.future;
@@ -206,14 +207,14 @@ void main() {
         _row(item, addedAt: 99, key: 'obsolete-2'),
       ]);
       install(raw);
-      expect((await StorageService.getMyWatchlistItems()).map((e) => e.id), [
+      expect((await MyWatchlistStore.getMyWatchlistItems()).map((e) => e.id), [
         'local',
         'local',
       ]);
-      expect(await StorageService.isInMyWatchlist(item), isTrue);
+      expect(await MyWatchlistStore.isInMyWatchlist(item), isTrue);
       expect(await backend.durable(), raw);
       expect(backend.writes, isEmpty);
-      await StorageService.setMyWatchlistItem(item, true);
+      await MyWatchlistStore.setMyWatchlistItem(item, true);
       final rows = jsonDecode((await backend.durable())! as String) as List;
       expect(rows, [
         {'key': 'movie:addon:A%2FB:local', 'addedAt': 7, 'item': item.toJson()},
@@ -304,7 +305,7 @@ void main() {
         isTrue,
       );
       expect(await backend.durable(), jsonEncode([malformed]));
-      expect(await StorageService.getMyWatchlistItems(), isEmpty);
+      expect(await MyWatchlistStore.getMyWatchlistItems(), isEmpty);
     },
   );
 
@@ -333,11 +334,11 @@ void main() {
       ]) {
         install(raw);
         await expectLater(
-          StorageService.getMyWatchlistItems(),
+          MyWatchlistStore.getMyWatchlistItems(),
           throwsA(isA<TypeError>()),
         );
         await expectLater(
-          StorageService.setMyWatchlistItem(_item('x'), true),
+          MyWatchlistStore.setMyWatchlistItem(_item('x'), true),
           throwsA(isA<TypeError>()),
         );
         await expectLater(
@@ -351,7 +352,7 @@ void main() {
       }
       for (final raw in ['{', '{}', 'null']) {
         install(raw);
-        expect(await StorageService.getMyWatchlistItems(), isEmpty);
+        expect(await MyWatchlistStore.getMyWatchlistItems(), isEmpty);
         expect(
           await StorageService.removeMyWatchlistItemForPlayback(
             contentType: 'movie',
@@ -385,9 +386,9 @@ void main() {
         backend.failRemove = true;
         Future<void> act() async {
           if (action == 'save' || action == 'unsave last') {
-            await StorageService.setMyWatchlistItem(item, action == 'save');
+            await MyWatchlistStore.setMyWatchlistItem(item, action == 'save');
           } else if (action == 'clear') {
-            await StorageService.clearMyWatchlist();
+            await MyWatchlistStore.clearMyWatchlist();
           } else {
             await StorageService.removeMyWatchlistItemForPlayback(
               imdbId: 'tt-one',

@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -13,7 +14,6 @@ import '../../services/mdblist/mdblist_service.dart';
 import '../../services/simkl/simkl_continue_watching_service.dart';
 import '../../services/simkl/simkl_menu_helpers.dart';
 import '../../services/simkl/simkl_service.dart';
-import '../../services/storage_service.dart';
 import '../../services/trakt/trakt_continue_watching_service.dart';
 import '../../services/trakt/trakt_service.dart';
 import '../../theme/app_theme_scope.dart';
@@ -406,7 +406,7 @@ class TitleOpener {
             builder: (_) => CatalogItemDetailScreen(
               // Keep the originating addon with the locally-saved My
               // Watchlist row so reopening it can route to the same source.
-              item: StorageService.withMyWatchlistSource(item, addon),
+              item: MyWatchlistStore.withMyWatchlistSource(item, addon),
               isTelevision: isTelevision(),
               // Hide "Play" when PikPak is the only provider — no quick-play.
               showQuickPlay: !pikpakOnly(),

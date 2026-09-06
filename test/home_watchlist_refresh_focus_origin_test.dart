@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:convert';
 
@@ -34,7 +35,7 @@ void main() {
       name: 'Home arrival',
       poster: '',
     );
-    await StorageService.setMyWatchlistItem(movie, true);
+    await MyWatchlistStore.setMyWatchlistItem(movie, true);
     await mountFavourites(tester);
     ArtPoster poster(String title) => tester
         .widgetList<ArtPoster>(find.byType(ArtPoster))
@@ -48,7 +49,7 @@ void main() {
     await tester.pump();
     expect(origin.hasFocus, isTrue);
 
-    await StorageService.setMyWatchlistItem(series, true);
+    await MyWatchlistStore.setMyWatchlistItem(series, true);
     await StorageService.setHomeContinueWatchingEnabled(true);
     await PlaybackProgressStore.saveContinueWatchingItem(
       imdbId: 'tt1234567',
