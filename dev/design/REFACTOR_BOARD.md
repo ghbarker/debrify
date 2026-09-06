@@ -1,6 +1,6 @@
 # Refactor board
 
-## Current roadmap — September 6, main 6e70d0e7
+## Current roadmap — September 6, main f4f786fd
 
 Overall percentage remains withdrawn: no reliable remaining-work denominator. Size targets and architectural closure are distinct.
 
@@ -17,6 +17,11 @@ Overall percentage remains withdrawn: no reliable remaining-work denominator. Si
 - Wegener: Tonight #177 on refactor/g1-8-tonight-stage; frozen production2392376e, docs8ef3ef0b. Single91-test batch passed; narrow baseline path/line relocation granted after independent mapping. Next stage scope read-only afterward.
 - Parent: exact-head review/merge coordination. No user blocker. Workers report completion/blockers; next bounded work assigned on handoff.
 
+### Latest compatibility cleanup — supersedes earlier snapshots
+- #179 MERGEDf4f786fd exact46db8490 after independent73PASS + cleanactualmainunion + completeall3green CIrun34009018766. Duplicatepush/base-change run34009017923 golden stillpending atmerge; samehead, onecompletegreenpipeline confirmed, no newfailureknown.
+- Did we make a difference? Removedtwo cached-entry trampolines and RDwrapper library/holder,37wholeproduction lines deleted. Magic host+3→3321; fourremainingproviderleaves627. Sharedlivehost/UIcoupling stillOPEN, no furtheralgorithmclaim.
+- Counter2 sincebb843 fullgate (177/179). Nextproductionmerge triggersgate. Main Search6551/Player11928/Magic3321/Storage2582/Settings2901. Forwarderledger lastfullgate remains427/133/161/23/0, not recountedcurrent.
+- Locke historyowner frozenadc636f7, minimaldocs/publishing; Cicero independent87verificationnext. Wegener sharedBoardCell5fileimplementation after green113pin; Ampere finalreview preparation. No idle/newuserblocker, no overlappingowners. CODEMAP released.
 ### Latest gate and Tonight merge — supersedes earlier snapshots
 - Fullgate bb843424 PASS: generic5754/12known/2skip; goldens21known afterconfiguredretries, bothhelpers0/0unexpected/0unused. Analyzer4334490new, layer77+0/-0, Python55, nativefirstbc46/current1+1PASS. Windows216.4s/68files andARM64144.1sPASS. No manual/device claim.
 - Gate ZIP SHA256dd9b77ecef70cba034561dc81d7c718a350eb234ce175c66c98647a4a0357dd4; APK89c8e4d61ef0771015b912940577c10712f2c307d72b87dcce4ed6f577d7d7d2. Sameclassifier forwarders Storage427/Search133/Player161/Magic23/Settings0. Gate excludes177/179.
@@ -50,7 +55,7 @@ Overall percentage remains withdrawn: no reliable remaining-work denominator. Si
 6. Final integrated acceptance of completed architecture; prior device smoke is not a new-build smoke.
 
 ### Current measurements and gate
-- Search6551/19070; Player11928/16278; MagicTV3318/10716; Storage2582/9963; Settings2901/7905 (current/original physical lines).
+- Search6551/19070; Player11928/16278; MagicTV3321/10716; Storage2582/9963; Settings2901/7905 (current/original physical lines).
 - Gate730b18fa: generic5708 passes/12 exact known failures/2 skips; goldens21 known errors after configured retries, both helpers0 with0 unexpected/unused. Not pixel-green.
 - Gate analyzer436/452 with0new, layering77/77 +0/-0, Python55PASS. Strict originalbc46/current native first pair PASS, no retry. Prior2ecd transient exit79 remains recorded, unexplained.
 - Gate Windows68files/217s PASS, ARM64 APK118.4s PASS. ZIP SHA2566c507b2444b5ae5490cceb263a541e3b6f2d3a57b292197942c774d2d2035ee4; APK SHA256f6d3675af1d7e97429516ef4afd1042b78be46a206830bb299b2bf1b83b3c41c.
