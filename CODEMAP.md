@@ -37,8 +37,8 @@ Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.
 `search_screen_shells.dart` (tab/variant/landing/dropdown contracts),
 `keyword_search_controller.dart` + `keyword_search_screen.dart` (in-tab keyword
 torrent search; G1'-3).
-TV Home stages (one remaining part of `search_screen.dart`): `lib/screens/search/stages/`
-— `_AtriumBoardStage`. Canvas uses public `CanvasStage` in `canvas_board_stage.dart`.
+TV Home stages (seven public widgets): `lib/screens/search/stages/`.
+Atrium uses `AtriumStage`; Canvas uses `CanvasStage` in `canvas_board_stage.dart`.
 Promenade uses public `PromenadeStage` in `promenade_board_stage.dart`.
 Mosaic uses public `MosaicStage` in `mosaic_board_stage.dart`.
 Deck uses public `DeckStage` in `deck_board_stage.dart` and shared `search/stage_visuals.dart`. Tonight uses public `TonightStage`, `TonightStageContent` in
@@ -209,7 +209,7 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   action `use_build_context_synchronously` covers only the lazy context read after delegated actual
   State.mounted, with no intervening await (remove with reviewed paired guard/context ownership cleanup).
   No baseline allowance increase, pure-logic/performance savings or automatic gate closure claimed.
-  TV Home stage layouts are `lib/screens/search/stages/` (public stage widgets plus the remaining `_AtriumBoardStage` part);
+  TV Home stage layouts are `lib/screens/search/stages/` (all seven are public stage widgets);
   the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
   G1'-8 Spotlight (product f9059ae4): `SpotlightStage` is a real imported widget;
   `SpotlightStageContent` owns catalog/collection, CW and favourite shelf/card assembly.
@@ -276,6 +276,14 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   focused-column write is introduced. The shelf already initializes in `initState`;
   there is no earlier-allocation delta. Two native constructors and one shared-scrim
   boundary retain their owners; only the held Atrium part and host target remain.
+  Actual `AtriumStage` (product `ea62d4e5`) is the seventh public widget: layout,
+  positioning and same-Text measurement have no private Search State dependency.
+  Seven explicit composition callbacks (frame entry, four wall, two visual) retain
+  host row/focus/deferral and lazy native/dossier ownership for final composition /
+  phase-completion review. Host **+60**, whole production **+35**; zero 250-line
+  host credit. This closes the last stage part only; strict composition and the
+  aggregate host target remain OPEN. The separate #216 geometry fix is not
+  extraction credit; shared Deck/Tonight metric behavior remains unchanged.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
