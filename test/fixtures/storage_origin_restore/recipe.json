@@ -1319,6 +1319,66 @@
         }
       }
     },
+    "catalog-search": {
+      "values": {
+        "catalog_search_disabled_addons_v1": "[\" z \",\"b\",\" z \",\"\",\"B\",\"b\"]"
+      },
+      "expectedPublicRead": [
+        " z ",
+        "b",
+        "",
+        "B"
+      ],
+      "excludedKeys": [],
+      "mutations": {
+        "catalog-key": {
+          "operation": "rename",
+          "key": "catalog_search_disabled_addons_v1"
+        },
+        "catalog-type": {
+          "operation": "replace",
+          "key": "catalog_search_disabled_addons_v1",
+          "value": [
+            " z ",
+            "b",
+            "",
+            "B"
+          ]
+        },
+        "catalog-order": {
+          "operation": "replace",
+          "key": "catalog_search_disabled_addons_v1",
+          "value": "[\"b\",\" z \",\" z \",\"\",\"B\",\"b\"]"
+        }
+      }
+    },
+    "device-maintenance-exclusion": {
+      "excludedKeys": [
+        "support_remote_config_cache_v1",
+        "dismissed_donation_campaign_ids_v1",
+        "update_auto_check_enabled",
+        "update_ignored_version"
+      ],
+      "sourceGlobals": {
+        "support_remote_config_cache_v1": "{synthetic-source",
+        "dismissed_donation_campaign_ids_v1": [
+          "A",
+          " A ",
+          "A"
+        ],
+        "update_auto_check_enabled": false,
+        "update_ignored_version": " source-version "
+      },
+      "destinationGlobals": {
+        "support_remote_config_cache_v1": "{synthetic-destination",
+        "dismissed_donation_campaign_ids_v1": [
+          "dest",
+          "dest"
+        ],
+        "update_auto_check_enabled": true,
+        "update_ignored_version": " destination-version "
+      }
+    },
     "profile-scalars": {
       "values": {
         "series_browser_dense_view": true,

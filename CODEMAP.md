@@ -37,8 +37,9 @@ Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.
 `search_screen_shells.dart` (tab/variant/landing/dropdown contracts),
 `keyword_search_controller.dart` + `keyword_search_screen.dart` (in-tab keyword
 torrent search; G1'-3).
-TV Home stages (three remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
-— `_CanvasBoardStage`, `_AtriumBoardStage`, `_PromenadeBoardStage`.
+TV Home stages (one remaining part of `search_screen.dart`): `lib/screens/search/stages/`
+— `_AtriumBoardStage`. Canvas uses public `CanvasStage` in `canvas_board_stage.dart`.
+Promenade uses public `PromenadeStage` in `promenade_board_stage.dart`.
 Mosaic uses public `MosaicStage` in `mosaic_board_stage.dart`.
 Deck uses public `DeckStage` in `deck_board_stage.dart` and shared `search/stage_visuals.dart`. Tonight uses public `TonightStage`, `TonightStageContent` in
 `tonight_stage_content.dart`, and `TonightQueueRow`/State, `TonightCardInfo` and
@@ -197,7 +198,7 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   action `use_build_context_synchronously` covers only the lazy context read after delegated actual
   State.mounted, with no intervening await (remove with reviewed paired guard/context ownership cleanup).
   No baseline allowance increase, pure-logic/performance savings or automatic gate closure claimed.
-  TV Home stage layouts are `lib/screens/search/stages/` (`_CanvasBoardStage` and friends);
+  TV Home stage layouts are `lib/screens/search/stages/` (public stage widgets plus the remaining `_AtriumBoardStage` part);
   the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
   G1'-8 Spotlight (product f9059ae4): `SpotlightStage` is a real imported widget;
   `SpotlightStageContent` owns catalog/collection, CW and favourite shelf/card assembly.
@@ -240,7 +241,7 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   (existing callers retain null keys). This is not native/cache-algorithm coverage.
   `DeckStageBindings` retains 22 live/reference members, including two lazy native
   constructor closures on the host; these and the label boundaries above expire
-  for removal/review at final composition / phase completion. Three stage parts and
+  for removal/review at final composition / phase completion. One stage part and
   the aggregate stage target remain open; prior shared-shelf accounting is separate.
   Actual `MosaicStage` owns its complete layout and exclusive header geometry;
   its State extension/part is removed using the existing public visual core.
@@ -249,6 +250,21 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   retained for removal/review at final composition / phase completion. Existing
   host cell/deferred-focus/label policy is unchanged; the held Mosaic cell/content
   owner is not closed by this slice, nor is the aggregate host target.
+  Actual `PromenadeStage` now owns its full layout and three exclusive constants;
+  its State extension/part is removed. Host 6468 -> 6506 (**+38**); whole production
+  **+49**, not deletion credit. Twenty live/reference bindings retain two lazy
+  native constructors and one existing shared-scrim constructor, for removal/review
+  at final composition / phase completion. Cell/label policy and shared visual/native
+  implementations stay with their current owners; Atrium and the host target
+  remain open.
+  Actual `CanvasStage` owns its complete layout and inline cell policy, removing
+  its State extension/part. Host 6506 -> 6539 (**+33**); whole production **+52**,
+  not deletion credit. Nineteen top-level bindings plus nine reused shelf-policy
+  operations and the existing board/map remain explicit dependencies, for removal/
+  review at final composition / phase completion. No `shelf.cell()` call or extra
+  focused-column write is introduced. The shelf already initializes in `initState`;
+  there is no earlier-allocation delta. Two native constructors and one shared-scrim
+  boundary retain their owners; only the held Atrium part and host target remain.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
@@ -474,6 +490,14 @@ is an editor mirror, not the source of truth. How to add a provider:
   shared media generation, renderer recovery and native diagnostic sink stay in
   the host, with interleaved reset ordering preserved. Host -191 lines / whole
   production +61; partial ownership, not independent logic or full V1-6 closure.
+  Speed/aspect and temporary hold presentation state:
+  `lib/screens/video_player/player_presentation_controls.dart`
+  (`PlayerPresentationControls`), consumed by Controls/menu/HUDs and the existing
+  ResumeContext adapter. Five lazy live capabilities retain host coupling;
+  gesture admission, haptic placement, sleep and renderer recovery stay in host.
+  Preserve earlier inert speed-HUD allocation, its original disposal slot, and
+  original aspect-HUD nondisposal / overlapping 1500ms mounted callbacks.
+  Host -124 lines / whole production +57; no native or full V1-7 closure claim.
   IPTV recording (libmpv tee, Android engine, desktop capture):
   `lib/services/playback/iptv_recording_controller.dart`
   (`IptvRecordingController` + `IptvRecordingSession`; host keeps
@@ -754,7 +778,17 @@ update this file in the same PR. Line counts come from `wc -l`, not estimates._
 
 - `lib/services/remote_control/remote_device_prefs.dart` (`RemoteDevicePrefs`) owns the four installation-wide remote preference keys and remembered-device JSON; pairing, identity and network/session lifetimes remain with their existing owners. Nine unchanged bodies retain nine nonasync `StorageService` facades (18 lines), expiring only after separately scoped Q2 caller compatibility retirement. `DevicePreferences` globals, raw types, JSON/default/error behavior and held-write lifetime remain unchanged. Host 2609 -> 2582 (-27), new owner 69 and registry +2 yield whole production +44: modest scalar/JSON ownership, no line-target or portable-identity claim. Actual pre-S2 export excludes all four keys and profile shadows; current restore preserves destination globals.
 
+- `lib/services/storage/catalog_search_prefs.dart` (`CatalogSearchPrefs`) owns
+  `catalog_search_disabled_addons_v1` and its two JSON read/write policy bodies.
+  StorageService retains two nonasync facades (4 declaration lines), expiring
+  only in a meaningful same-caller Q2 batch. Raw-type/catch boundaries, ordered
+  dedup without rewrite, live Set after acquisition and false/throw behavior
+  remain unchanged. Host -25; whole production +21. Storage ownership closure
+  remains open; no native, runtime source-selection or profile-safety claim.
+
 - `lib/services/storage/torrent_search_history_store.dart` (`TorrentSearchHistoryStore`) owns the two profile history keys and the unchanged decode/dedup/order/five-item-cap persistence bodies. Q2 retires all five direct `StorageService` history APIs (12 declaration lines); callers now use `TorrentSearchHistoryStore` directly. Captured write preferences, reacquired history reads, raw types, timestamp/error ordering and false-versus-throw behavior are preserved. Host 2582 -> 2538 (-44), new owner76 and registry+2 yield whole production+34. The actual old-export/current-restore fixture covers both physical keys; the fixture union retains40 artifacts plus README/recipe. No live history capture feature or profile-safety claim; strict storage ownership closure remains open.
+
+- `lib/services/storage/device_maintenance_prefs.dart` (`DeviceMaintenancePrefs`) owns four installation-wide support/update preference keys and their unchanged eight persistence bodies. `DevicePreferences` global authority, raw JSON/list values, defaults and false-versus-throw ordering remain unchanged; HTTP, installation, native behavior and callers remain outside. Eight nonasync `StorageService` facades (16 declaration lines) remain until a meaningful Q2 caller-owner batch or phase-completion review. Host 2368 -> 2337 (-31), owner +68 and registry +1 yield whole production +38; strict storage ownership remains open. Actual pre-S2 export excludes the four globals and profile shadows; current restore preserves destination globals.
 
 ### Playback storage routing (S2-6)
 

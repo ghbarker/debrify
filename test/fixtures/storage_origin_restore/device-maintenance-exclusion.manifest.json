@@ -1,0 +1,43 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "scenario": "device-maintenance-exclusion",
+  "syntheticOnly": true,
+  "sha256": "be6902e56414c291e390d714668fc9ad5059b1d0940b74fb09ee1aa8ab12fa72",
+  "includeSecrets": false,
+  "representedSettings": {},
+  "excludedKeys": [
+    "support_remote_config_cache_v1",
+    "dismissed_donation_campaign_ids_v1",
+    "update_auto_check_enabled",
+    "update_ignored_version"
+  ],
+  "sourceGlobals": {
+    "support_remote_config_cache_v1": "{synthetic-source",
+    "dismissed_donation_campaign_ids_v1": [
+      "A",
+      " A ",
+      "A"
+    ],
+    "update_auto_check_enabled": false,
+    "update_ignored_version": " source-version "
+  },
+  "sourceProfileShadows": "synthetic source shadow",
+  "sourceTypes": {
+    "support_remote_config_cache_v1": "String",
+    "dismissed_donation_campaign_ids_v1": "List<String>",
+    "update_auto_check_enabled": "bool",
+    "update_ignored_version": "String"
+  },
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}

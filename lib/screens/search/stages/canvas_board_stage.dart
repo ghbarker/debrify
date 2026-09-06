@@ -1,28 +1,64 @@
-part of '../../search_screen.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import '../../../models/stremio_addon.dart';
+import '../../../widgets/skeleton_poster.dart';
+import '../board_cell.dart';
+import '../fav_row_ref.dart';
+import '../search_board_runtime.dart';
+import '../stage_visuals.dart';
+import 'stage_shelf_content.dart';
 
-/// CANVAS home: full-bleed stage with one bottom shelf and rail tabs.
-///
-/// Host owns `_homeStyleEffective`, rails, and focus. Layout only.
-class _CanvasBoardStage extends StatelessWidget {
-  const _CanvasBoardStage({required this.host});
+typedef CanvasStageBindings = ({
+  StageRailView? Function() resolveRail,
+  VoidCallback seedFocus,
+  int Function(FavRowRef) favouriteCount,
+  bool Function() readTheater,
+  bool Function() readTrailerActive,
+  int Function() cacheWidth,
+  int Function() cacheHeight,
+  ValueListenable<StremioMeta?> heroItem,
+  ValueListenable<StremioMeta?> enriched,
+  ValueListenable<CanvasFavFocus?> favourite,
+  ValueListenable<bool> trailerShowing,
+  Widget Function(double) buildTrailer,
+  Widget Function(double) buildLive,
+  Widget Function(bool) buildScrims,
+  double Function() readCaptionBand,
+  double Function(BuildContext) tabsHeight,
+  Widget Function(List<CanvasRail>, int) tabs,
+  Widget Function(FavRowRef, String, int) favouriteCell,
+  StageShelfContent shelf,
+});
 
-  final _SearchScreenState host;
+/// Gap between the tab row and the shelf below it.
+const double _kCanvasTabsGap = 12;
 
-  @override
-  Widget build(BuildContext context) => host._buildCanvasBoard();
-}
+/// Trailing spacer under the shelf, holding it off the screen edge.
+const double _kCanvasShelfTail = 22;
 
-extension on _SearchScreenState {
+/// Slack inside the shelf box, on top of the cell height — the cells centre
+/// in it, so a focused card's scale-up isn't clipped at the box edges.
+const double _kCanvasShelfSlack = 10;
+
+/// Breathing room between the identity block's bottom and the tab row's top.
+const double _kCanvasIdentityGap = 25;
+
+class CanvasStage extends StatelessWidget {
+  const CanvasStage({super.key, required this.bindings, required this.isTelevision});
+  final CanvasStageBindings bindings;
+  final bool isTelevision;
+
   /// The CANVAS home: full-bleed stage (idle art → ambient trailer via the
   /// same underlay engine, whose hole simply gets the whole canvas) with ONE
   /// shelf of large posters at the bottom and quiet rail tabs above it. No
   /// vertical scrolling, nothing clips at a fold, no row headers.
-  Widget _buildCanvasBoard() {
-    final view = _resolveStageRail();
+  @override
+  Widget build(BuildContext context) {
+    final view = bindings.resolveRail();
     if (view == null) {
       // First batch still streaming (or every loaded row is empty) — hold
       // the brand stage rather than an empty black canvas.
-      return BrandLoadingStage(isTelevision: widget.isTelevision);
+      return BrandLoadingStage(isTelevision: isTelevision);
     }
     final rails = view.rails;
     final railIndex = view.index;
@@ -32,7 +68,7 @@ extension on _SearchScreenState {
     final items = view.items;
     final nodes = view.nodes;
 
-    _seedStageFocusOnce();
+    bindings.seedFocus();
 
     return LayoutBuilder(
       builder: (context, cons) {
@@ -41,19 +77,19 @@ extension on _SearchScreenState {
         // Title cards follow the Home Cards orientation (full shelf height
         // either way — the same grammar as Promenade's strip); favourites
         // keep their portrait cell whatever the setting says.
-        final cardW = cardH * _titleCardAspect;
+        final cardW = cardH * bindings.shelf.bindings.titleAspect();
         final favCardW = cardH * 2 / 3;
         // ONE height for the whole bottom column, measured bottom-up, so the
         // identity block above can reserve exactly what the tabs and shelf
         // actually occupy — at any text scale, and whatever the shelf box
         // grows to next.
         final shelfBoxH =
-            cardH + _homeArtPosterCaptionBand + _kCanvasShelfSlack;
+            cardH + bindings.readCaptionBand() + _kCanvasShelfSlack;
         final shelfColumnH =
             _kCanvasShelfTail +
             shelfBoxH +
             _kCanvasTabsGap +
-            _canvasTabsHeight(context);
+            bindings.tabsHeight(context);
         return Stack(
           fit: StackFit.expand,
           children: [
@@ -62,43 +98,26 @@ extension on _SearchScreenState {
             // While a favourites cell has focus, the favourite's own art
             // overrides the hero pipeline's.
             CanvasArtLayer(
-              item: _heroItem,
-              enriched: _heroEnriched,
-              fav: _canvasFavFocus,
-              cacheWidth: _tvHeroArtworkCacheWidth,
-              cacheHeight: _tvHeroArtworkCacheHeight,
+              item: bindings.heroItem,
+              enriched: bindings.enriched,
+              fav: bindings.favourite,
+              cacheWidth: bindings.cacheWidth(),
+              cacheHeight: bindings.cacheHeight(),
             ),
             // Full-bleed ambient trailer: same engine, whole-canvas region.
-            if (_heroTrailerActive)
-              _HeroTrailerLayer(
-                trailer: _heroTrailer,
-                isTelevision: widget.isTelevision,
-                heroHeight: boardH,
-                fullBleed: true,
-                volume: _heroTrailerVolume,
-                loading: _heroTrailerLoading,
-                onPlayingChanged: _onHeroTrailerPlaying,
-                takeover: _heroTrailerTakeover,
-              ),
+            if (bindings.readTrailerActive())
+              bindings.buildTrailer(boardH),
             // A focused IPTV favourite's live feed, full-bleed in the SAME
             // region — above the catalog trailer layer so it simply wins
             // whenever a channel has focus (shrinks to nothing otherwise),
             // exactly like the classic board's boxed version.
-            if (_heroTrailerActive)
-              _HeroLiveLayer(
-                channel: _heroLiveChannel,
-                streamUrl: _heroLiveUrl,
-                heroHeight: boardH,
-                fullBleed: true,
-                volume: _heroTrailerVolume,
-                onPlayingChanged: _onHeroTrailerPlaying,
-                onPlaybackFailed: _onHeroLivePlaybackFailed,
-              ),
+            if (bindings.readTrailerActive())
+              bindings.buildLive(boardH),
             // ONE scrim set painted above art AND video — identical in both
             // states so trailer start never swaps the lighting. Plain
             // gradient draws over the hole: the proven feather pattern. In
             // theater the BOTTOM ramp fades with the shelf it exists for.
-            IgnorePointer(child: _CanvasScrims(theater: _canvasTheater)),
+            IgnorePointer(child: bindings.buildScrims(bindings.readTheater())),
             // Identity (logo art + meta line), settle-driven like the hero.
             // THEATER: the logo glides to the top-left and shrinks — Netflix
             // billboard style — so the clean full-bleed video still carries a
@@ -111,27 +130,27 @@ extension on _SearchScreenState {
                   padding: EdgeInsets.only(
                     left: 48,
                     right: 48,
-                    top: _canvasTheater ? 36 : 0,
-                    bottom: _canvasTheater
+                    top: bindings.readTheater() ? 36 : 0,
+                    bottom: bindings.readTheater()
                         ? 0
                         : shelfColumnH + _kCanvasIdentityGap,
                   ),
-                  duration: _canvasTheater
+                  duration: bindings.readTheater()
                       ? const Duration(milliseconds: 900)
                       : const Duration(milliseconds: 250),
                   curve: Curves.easeInOutCubic,
                   child: AnimatedAlign(
-                    alignment: _canvasTheater
+                    alignment: bindings.readTheater()
                         ? Alignment.topLeft
                         : Alignment.bottomLeft,
-                    duration: _canvasTheater
+                    duration: bindings.readTheater()
                         ? const Duration(milliseconds: 900)
                         : const Duration(milliseconds: 250),
                     curve: Curves.easeInOutCubic,
                     child: AnimatedScale(
-                      scale: _canvasTheater ? 0.7 : 1.0,
+                      scale: bindings.readTheater() ? 0.7 : 1.0,
                       alignment: Alignment.topLeft,
-                      duration: _canvasTheater
+                      duration: bindings.readTheater()
                           ? const Duration(milliseconds: 900)
                           : const Duration(milliseconds: 250),
                       curve: Curves.easeInOutCubic,
@@ -140,13 +159,13 @@ extension on _SearchScreenState {
                       // the logo/meta pipeline has nothing true to say).
                       // Notifier-driven, so a fav scrub repaints only this.
                       child: ValueListenableBuilder<CanvasFavFocus?>(
-                        valueListenable: _canvasFavFocus,
+                        valueListenable: bindings.favourite,
                         builder: (context, fav, _) => fav != null
                             ? StageFavIdentity(fav: fav)
                             : CanvasIdentity(
-                                item: _heroItem,
-                                enriched: _heroEnriched,
-                                trailerShowing: _heroTrailerShowing,
+                                item: bindings.heroItem,
+                                enriched: bindings.enriched,
+                                trailerShowing: bindings.trailerShowing,
                               ),
                       ),
                     ),
@@ -163,14 +182,14 @@ extension on _SearchScreenState {
               right: 0,
               bottom: 0,
               child: AnimatedSlide(
-                offset: _canvasTheater ? const Offset(0, 0.12) : Offset.zero,
-                duration: _canvasTheater
+                offset: bindings.readTheater() ? const Offset(0, 0.12) : Offset.zero,
+                duration: bindings.readTheater()
                     ? const Duration(milliseconds: 900)
                     : const Duration(milliseconds: 250),
                 curve: Curves.easeOut,
                 child: AnimatedOpacity(
-                  opacity: _canvasTheater ? 0.0 : 1.0,
-                  duration: _canvasTheater
+                  opacity: bindings.readTheater() ? 0.0 : 1.0,
+                  duration: bindings.readTheater()
                       ? const Duration(milliseconds: 900)
                       : const Duration(milliseconds: 250),
                   curve: Curves.easeOut,
@@ -184,7 +203,7 @@ extension on _SearchScreenState {
                           right: 48,
                           bottom: _kCanvasTabsGap,
                         ),
-                        child: _canvasTabs(rails, railIndex),
+                        child: bindings.tabs(rails, railIndex),
                       ),
                       SizedBox(
                         // ONE height for every rail (favourites cells carry a
@@ -209,7 +228,7 @@ extension on _SearchScreenState {
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 48,
                                   ),
-                                  itemCount: _canvasFavItemCount(rail.favKind!),
+                                  itemCount: bindings.favouriteCount(rail.favKind!),
                                   itemBuilder: (context, col) => Padding(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 7,
@@ -220,7 +239,7 @@ extension on _SearchScreenState {
                                     child: Center(
                                       child: SizedBox(
                                         width: favCardW,
-                                        child: _canvasFavCell(
+                                        child: bindings.favouriteCell(
                                           rail.favKind!,
                                           railKey,
                                           col,
@@ -256,51 +275,51 @@ extension on _SearchScreenState {
                                             focusNode: nodes[col],
                                             column: col,
                                             rowNodes: nodes,
-                                            hasBoundSource: _isBound(item),
+                                            hasBoundSource: bindings.shelf.bindings.isBound(item),
                                             // Canvas focus grammar: white ring (the
                                             // violet stays with classic chrome).
                                             ringColor: Colors.white,
-                                            aspectRatio: _titleCardAspect,
-                                            artUrl: _titleArtUrl(item),
+                                            aspectRatio: bindings.shelf.bindings.titleAspect(),
+                                            artUrl: bindings.shelf.bindings.titleArt(item),
                                             progress: rail.cw?.progressOf(item),
                                             episodeLabel: rail.cw?.episodeOf(
                                               item,
                                             ),
                                             onQuickPlay:
-                                                rail.cw != null || _pikpakOnly
+                                                rail.cw != null || bindings.shelf.bindings.pikpakOnly()
                                                 ? null
-                                                : () => _sectionQuickPlay(
-                                                    _sections[rail
+                                                : () => bindings.shelf.bindings.quickPlay(
+                                                    bindings.shelf.board.sections[rail
                                                         .sectionIndex!],
                                                     item,
                                                   ),
                                             onLongPress: rail.cw == null
                                                 ? null
-                                                : () => _openCwCardMenu(
+                                                : () => bindings.shelf.bindings.openCwMenu(
                                                     rail.cw!,
                                                     item,
                                                     rail.cwIndex,
                                                     col,
                                                   ),
                                             onFocused: () {
-                                              _setHero(item);
-                                              _canvasCols[railKey] = col;
+                                              bindings.shelf.bindings.setHero(item);
+                                              bindings.shelf.columns[railKey] = col;
                                             },
-                                            onUp: () => _stageSwitchRail(-1),
-                                            onDown: () => _stageSwitchRail(1),
+                                            onUp: () => bindings.shelf.bindings.switchRail(-1),
+                                            onDown: () => bindings.shelf.bindings.switchRail(1),
                                             onOpen: () {
                                               if (rail.cw != null) {
                                                 rail.cw!.onOpen(item);
                                               } else {
-                                                _sectionOpenItem(
-                                                  _sections[rail.sectionIndex!],
+                                                bindings.shelf.bindings.openItem(
+                                                  bindings.shelf.board.sections[rail.sectionIndex!],
                                                   item,
                                                 );
                                               }
                                             },
                                             onNearEnd: rail.sectionIndex == null
                                                 ? null
-                                                : () => _loadMoreRow(
+                                                : () => bindings.shelf.board.loadMoreRow(
                                                     rail.sectionIndex!,
                                                   ),
                                           ),
