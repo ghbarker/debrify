@@ -1,6 +1,6 @@
 # Refactor board
 
-## Current roadmap — September 6, main 6aad838a
+## Current roadmap — September 6, main 94c38b32
 
 ### God-file line counts — original → current merged main
 
@@ -10,7 +10,7 @@
 - **Storage:** 9,963 → **1,741** (8,222 fewer)
 - **Settings:** 7,905 → **2,908** (4,997 fewer)
 
-Counted from actual merged main 6aad838a. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
+Counted from actual merged main 94c38b32. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
 
 ### The same six outcomes — stable roadmap
 
@@ -66,6 +66,9 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - [ ] Run final integrated acceptance only after the remaining architectural outcomes are fulfilled.
 
 ### Latest completed milestones
+
+- #217 merged **94c38b32**, exactdb6f19fd, independent24PASS/exact20payloadunion/allthreeCIgreen. PlaylistEntry70lineclass now neutral/importfree; oldexport sameidentity and15consumerimports redirect. MeasuredQ1 imports77→62 with15removed0added; production+1compatibilityexport, ZEROgodlinecredit. Did we make a difference? Fifteen forbiddendependencies removed withoutbusinesslogicchanges; strictQ1 remainsOPEN. Counter2sincebc017. #218 nowintegratesmain; #219 independent28PASSawaitsCI/queue and willremainafterthirdmergegate.
+
 
 - #216 separateAtrium BUGFIX merged **6aad838a**, exact5dcb1fc8, independent6PASS/allthreeCIgreen/cleanunion. Actualtextmeasurement matcheswallbudget; sharedDeck/Tonight helper unchanged. Intentionalthreshold/earliertitleread deltas preserved, originalred andinitial5/1 fixturefailure retained. Host+50/prod+60 ZEROextractioncredit. Did we make a difference? The attributedoverflow blocker is corrected, but Atrium extraction is notcompleted. Counter1sincebc017. #217 independent24PASS/allCIgreen nowintegratesmain; #218 independent22PASSfrozenbehind217. Upstream stayslocalperuser.
 
