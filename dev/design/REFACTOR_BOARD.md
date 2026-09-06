@@ -1,6 +1,6 @@
 # Refactor board
 
-## Current roadmap — September 6, main 1aefaef6
+## Current roadmap — September 6, main bb843424
 
 Overall percentage remains withdrawn: no reliable remaining-work denominator. Size targets and architectural closure are distinct.
 
@@ -17,6 +17,13 @@ Overall percentage remains withdrawn: no reliable remaining-work denominator. Si
 - Wegener: Tonight #177 on refactor/g1-8-tonight-stage; frozen production2392376e, docs8ef3ef0b. Single91-test batch passed; narrow baseline path/line relocation granted after independent mapping. Next stage scope read-only afterward.
 - Parent: exact-head review/merge coordination. No user blocker. Workers report completion/blockers; next bounded work assigned on handoff.
 
+### Latest watch-flow milestone — supersedes snapshots below
+- #178 MERGED bb843424 exact11415 after independent239PASS and all3CIgreen. Five leaves1180→667; sharedlocked388 included,125net production lines deleted. M1 numeric goal achieved; strict WatchFlowBindings/UI dependency cleanup remains OPEN, distinct155walker lines intentional.
+- Did we make a difference? Two real consumers now share complete setup/launch/cleanup; no new algorithm/native proof claimed. More remains: explicit livehost coupling and temporary bindings, with reviewed179 removingtwo wrappers next.
+- Thirdproductionmerge175/176/178 since730: fullactualmain gatebb843424 RUNNING Cicero, baseline449. No177/179merge untilPASS.
+- #177 corrected final24ef independentlydeltaaccepted: one stale initializer sourceguard fixed, sixnegativecontrols prove removal/wrongidentity/latebinding fail. Frozenproduction unchanged; finalCIpending.
+- #179 independentlyaccepted73, dependent178nowmerged; retargetmain/integrate reviewedbytes next, heldgate.
+- Locke history29greenorigin, actualoldexport/currentrestore fixture stage active. Wegener Mosaic unappliedcandidate review; Ampere read-only reviews its value after V19 startup-before-lookup failure held. No userblocker.
 ### Latest merge and dispatch — supersedes earlier working snapshot
 - #176 MERGED1aefaef6 exactbf17ef29 after independent86PASS and all3finalCIgreen. Host-27, wholeproduction+44; nine18-line-total facades retained. Did we make a difference? Explicit global preference ownership with pinned legacy exclusion behavior; more business-logic ownership remains.
 - #178 final11415 independently239PASS; CI pending. Five leaves667 is candidate only; main1180. Strict livehost/UI coupling remains open even after numerical target.
@@ -41,7 +48,7 @@ Overall percentage remains withdrawn: no reliable remaining-work denominator. Si
 - Gate analyzer436/452 with0new, layering77/77 +0/-0, Python55PASS. Strict originalbc46/current native first pair PASS, no retry. Prior2ecd transient exit79 remains recorded, unexplained.
 - Gate Windows68files/217s PASS, ARM64 APK118.4s PASS. ZIP SHA2566c507b2444b5ae5490cceb263a541e3b6f2d3a57b292197942c774d2d2035ee4; APK SHA256f6d3675af1d7e97429516ef4afd1042b78be46a206830bb299b2bf1b83b3c41c.
 - Gate forwarders same expanded classifier: Storage418, Search133, Player161, Magic23, Settings0. Old fixed Search classifier60 separately retained. Report: debrify-c0-post-172-174175-gate/.dart_tool/main-gate/REPORT.md.
-- #175 changes analyzer allowance452→451 by consolidating two identical inherited finally diagnostics into one; not a safety fix. Gate above still uses452. Production merge counter2 since gate730.
+- #175 changes analyzer allowance452→451 by consolidating two identical inherited finally diagnostics into one; not a safety fix. Gate above still uses452. Production merge counter3 since gate730; full gate bb843424 running.
 - No defensible whole-project hours/quota estimate. Report bounded forecasts separately; unestimated remaining work is not zero.
 
 ### Decisions, dependencies and impact
