@@ -507,6 +507,15 @@ is an editor mirror, not the source of truth. How to add a provider:
   origin behavior, not safety fixes. Pins: `test/magic_tv_cached_windowed_programme_origin_test.dart`
   (4 real-host mounted/disposed error cases); early leaf guards/storage-read failures
   and native-positive behavior remain unproven.
+  `runCachedLockedWatch` in `lib/screens/debrify_tv/watch/cached_locked_watch_programme.dart`
+  shares RD/AD full cached setup, presentation and cleanup; their 90/65-line walkers
+  remain distinct (155 lines relocated, not algorithm deduplication). Whole production
+  net125: RD305->24, AD447->215, new owner388 fully charged. Five leaves667;
+  common1551/quick183/cached-windowed208 unchanged, combined3122->2997.
+  Two16-line direct entry bindings retain typed host coupling temporarily for
+  Q2/phase-completion review/removal. Below800 leaf size does not close dependencies.
+  Captured credentials, late builder eligibility, catch asymmetry and unmounted
+  finally-return suppression remain origin quirks; native/early-entry debt stays open.
   Its 24 binding/tear-off lines are retained for Q2 composition review/removal before
   Phase 2 completion. These shared phases do not complete the five-flow dedup target. `WatchFlowBindings` keeps live host
   state, navigation, existing preparation/prefetch/launcher callbacks and
@@ -652,6 +661,8 @@ is an editor mirror, not the source of truth. How to add a provider:
 ---
 _Maintenance: this is a routing hint, not a spec. If a lane moves a path named here,
 update this file in the same PR. Line counts come from `wc -l`, not estimates._
+
+- `lib/services/remote_control/remote_device_prefs.dart` (`RemoteDevicePrefs`) owns the four installation-wide remote preference keys and remembered-device JSON; pairing, identity and network/session lifetimes remain with their existing owners. Nine unchanged bodies retain nine nonasync `StorageService` facades (18 lines), expiring only after separately scoped Q2 caller compatibility retirement. `DevicePreferences` globals, raw types, JSON/default/error behavior and held-write lifetime remain unchanged. Host 2609 -> 2582 (-27), new owner 69 and registry +2 yield whole production +44: modest scalar/JSON ownership, no line-target or portable-identity claim. Actual pre-S2 export excludes all four keys and profile shadows; current restore preserves destination globals.
 
 ### Playback storage routing (S2-6)
 

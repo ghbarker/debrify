@@ -9,7 +9,7 @@
     "test"
   ],
   "identity": "path|code|message",
-  "count": 451,
+  "count": 449,
   "diagnostics": [
     {
       "severity": "WARNING",
@@ -1215,9 +1215,9 @@
       "severity": "INFO",
       "type": "LINT",
       "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
-      "path": "lib/screens/debrify_tv/watch/real_debrid_watch_flow.dart",
-      "line": 103,
-      "column": 12,
+      "path": "lib/screens/debrify_tv/watch/cached_locked_watch_programme.dart",
+      "line": 109,
+      "column": 10,
       "length": 18,
       "message": "The local variable '_inferTitleFromUrl' starts with an underscore."
     },
@@ -1225,29 +1225,9 @@
       "severity": "INFO",
       "type": "LINT",
       "code": "CONTROL_FLOW_IN_FINALLY",
-      "path": "lib/screens/debrify_tv/watch/real_debrid_watch_flow.dart",
-      "line": 297,
-      "column": 26,
-      "length": 7,
-      "message": "Use of 'return' in a 'finally' clause."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
-      "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
-      "path": "lib/screens/debrify_tv/watch/alldebrid_watch_flow.dart",
-      "line": 358,
-      "column": 12,
-      "length": 18,
-      "message": "The local variable '_inferTitleFromUrl' starts with an underscore."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
-      "code": "CONTROL_FLOW_IN_FINALLY",
-      "path": "lib/screens/debrify_tv/watch/alldebrid_watch_flow.dart",
-      "line": 526,
-      "column": 26,
+      "path": "lib/screens/debrify_tv/watch/cached_locked_watch_programme.dart",
+      "line": 377,
+      "column": 24,
       "length": 7,
       "message": "Use of 'return' in a 'finally' clause."
     },
@@ -1316,7 +1296,7 @@
       "type": "LINT",
       "code": "NO_LEADING_UNDERSCORES_FOR_LOCAL_IDENTIFIERS",
       "path": "lib/screens/debrify_tv/watch/alldebrid_watch_flow.dart",
-      "line": 128,
+      "line": 39,
       "column": 14,
       "length": 18,
       "message": "The local variable '_inferTitleFromUrl' starts with an underscore."

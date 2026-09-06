@@ -1089,6 +1089,51 @@
         }
       }
     },
+    "remote-device-exclusion": {
+      "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+      "admittedKeyCount": 0,
+      "excludedKeys": [
+        "remote_control_enabled",
+        "remote_intro_shown",
+        "remote_tv_device_name",
+        "remote_last_device"
+      ],
+      "values": {},
+      "sourceGlobals": {
+        "remote_control_enabled": false,
+        "remote_intro_shown": true,
+        "remote_tv_device_name": "Synthetic source TV",
+        "remote_last_device": "{\"id\":\"synthetic-source\",\"port\":17}"
+      },
+      "destinationGlobals": {
+        "remote_control_enabled": true,
+        "remote_intro_shown": false,
+        "remote_tv_device_name": "Synthetic destination TV",
+        "remote_last_device": "{\"id\":\"synthetic-destination\",\"port\":31}"
+      },
+      "mutations": {
+        "remote-forbidden-0": {
+          "key": "remote_control_enabled",
+          "operation": "insert",
+          "value": false
+        },
+        "remote-forbidden-1": {
+          "key": "remote_intro_shown",
+          "operation": "insert",
+          "value": false
+        },
+        "remote-forbidden-2": {
+          "key": "remote_tv_device_name",
+          "operation": "insert",
+          "value": "synthetic forbidden"
+        },
+        "remote-forbidden-3": {
+          "key": "remote_last_device",
+          "operation": "insert",
+          "value": "synthetic forbidden"
+        }
+      }
+    },
     "torrent-search-history": {
       "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
       "namedKeyCount": 2,

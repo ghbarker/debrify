@@ -1,0 +1,39 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "recipeVersion": 5,
+  "includeSecrets": false,
+  "scenario": "remote-device-exclusion",
+  "absentKeys": [],
+  "omittedKeys": [],
+  "syntheticOnly": true,
+  "sha256": "4285c1eb4c25af447b0bb43582a0260f729bd4d37e60d1e77bcc481f950d7ec6",
+  "representedSettings": {},
+  "keyTypes": {},
+  "excludedKeys": [
+    "remote_control_enabled",
+    "remote_intro_shown",
+    "remote_tv_device_name",
+    "remote_last_device"
+  ],
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  },
+  "sourceDeviceState": {
+    "globals": {
+      "remote_control_enabled": false,
+      "remote_intro_shown": true,
+      "remote_tv_device_name": "Synthetic source TV",
+      "remote_last_device": "{\"id\":\"synthetic-source\",\"port\":17}"
+    },
+    "profileShadow": "synthetic source profile shadow"
+  }
+}

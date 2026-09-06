@@ -437,6 +437,7 @@ void main() {
     'quick-play-policy': {'absentKeys': <String>[]},
     'quick-play-vr': {'absentKeys': <String>[]},
     'onboarding-state-exclusion': {'absentKeys': <String>[]},
+    'remote-device-exclusion': {'absentKeys': <String>[]},
     'torrent-search-history': {'absentKeys': <String>[]},
     'quick-play-policy-legacy': {'absentKeys': ['quick_play_movie_rules_v2', 'quick_play_series_rules_v2']},
     'repair': {'absentKeys': ['playback_completion_migration_generation', 'resume_ghost_purge_generation']},
@@ -451,12 +452,15 @@ void main() {
     final isMetadata = scenario == 'playlist-metadata';
     final isWatchlist = scenario == 'my-watchlist';
     final isQuickPolicy = scenario == 'quick-play-policy' || scenario == 'quick-play-policy-legacy';
+    final isRemoteDevice = scenario == 'remote-device-exclusion';
     final isOnboarding = scenario == 'onboarding-state-exclusion';
     final isVr = scenario == 'quick-play-vr';
     final isHistory = scenario == 'torrent-search-history';
-    final isResidual = isHistory || isOnboarding || isVr || isQuickPolicy || isFilter || isPlaylist || isRepair || isMetadata || isWatchlist;
+    final isResidual = isHistory || isRemoteDevice || isOnboarding || isVr || isQuickPolicy || isFilter || isPlaylist || isRepair || isMetadata || isWatchlist;
     final domain = isHistory
         ? _recipe['residualDomains']['torrent-search-history'] as Map
+        : isRemoteDevice
+        ? _recipe['residualDomains']['remote-device-exclusion'] as Map
         : isOnboarding
         ? _recipe['residualDomains']['onboarding-state-exclusion'] as Map
         : isVr
@@ -483,12 +487,19 @@ void main() {
     final credentialValues = isResidual
         ? <String, Object?>{}
         : _credentialEngineValues;
-    final excludedKeys = isOnboarding ? ['initial_setup_complete_v1']
+    final excludedKeys = isRemoteDevice ? (domain['excludedKeys'] as List).cast<String>()
+        : isOnboarding ? ['initial_setup_complete_v1']
         : isResidual ? <String>[] : _excludedInputs.keys.toList();
     void expectExclusions(
       Map<String, Object?> values, {
       bool includeSecrets = false,
     }) {
+      if (isRemoteDevice) {
+        for (final key in excludedKeys) {
+          expect(values.containsKey(key), isFalse,
+              reason: 'Declared device exclusion: $key must not be portable');
+        }
+      }
       if (isOnboarding) {
         expect(values.containsKey('initial_setup_complete_v1'), isFalse,
             reason: 'Declared onboarding exclusion: readiness belongs to profile record');
@@ -528,6 +539,23 @@ void main() {
         ? 'manifest.json'
         : '$scenario.manifest.json';
 
+    Future<void> writeRemoteDevice(Map values) async {
+      final prefs = await DevicePreferences.instance();
+      for (final entry in values.entries) {
+        if (entry.value is bool) { await prefs.setBool(entry.key as String, entry.value as bool); }
+        else { await prefs.setString(entry.key as String, entry.value as String); }
+      }
+    }
+    Future<void> expectRemoteDevice(Map values) async {
+      final raw = await SharedPreferences.getInstance();
+      _expectSettings({for (final key in values.keys) key as String: raw.get(key)},
+          Map<String, Object?>.from(values));
+      expect(await StorageService.getRemoteControlEnabled(), values['remote_control_enabled']);
+      expect(await StorageService.getRemoteIntroShown(), values['remote_intro_shown']);
+      expect(await StorageService.getRemoteTvDeviceName(), values['remote_tv_device_name']);
+      expect(await StorageService.getRemoteLastDevice(), jsonDecode(values['remote_last_device'] as String));
+    }
+
     Future<void> seedScenario() async {
       if (isHistory) {
         expect(domain['origin'], _origin);
@@ -538,6 +566,22 @@ void main() {
         ]));
         expect(scenarioSettings.keys.toSet().intersection(_settings.keys.toSet()), isEmpty);
         await _writeValues(inputExpected);
+        return;
+      }
+      if (isRemoteDevice) {
+        expect(domain['origin'], _origin);
+        expect(domain['admittedKeyCount'], 0);
+        expect(excludedKeys, unorderedEquals([
+          'remote_control_enabled', 'remote_intro_shown',
+          'remote_tv_device_name', 'remote_last_device',
+        ]));
+        expect(scenarioSettings, isEmpty);
+        await writeRemoteDevice(domain['sourceGlobals'] as Map);
+        final prefs = await SharedPreferences.getInstance();
+        for (final key in excludedKeys) {
+          await prefs.setString('p.$profileId.g.1.$key', 'synthetic source profile shadow');
+        }
+        await expectRemoteDevice(domain['sourceGlobals'] as Map);
         return;
       }
       if (isOnboarding) {
@@ -795,9 +839,11 @@ void main() {
           await expectProviderReaders();
           _expectSettings(await readScenario(inputExpected), inputExpected);
           final package = await export(includeSecrets: includeSecrets);
+        if (isRemoteDevice) await expectRemoteDevice(domain['sourceGlobals'] as Map);
           _expectSettings(_values(package), expected);
           expectExclusions(_values(package), includeSecrets: includeSecrets);
           expect(package.resources, isEmpty);
+          if (isRemoteDevice) await expectRemoteDevice(domain['sourceGlobals'] as Map);
           if (isOnboarding) {
           expect(package.profiles.single['setupComplete'], isTrue);
           expect((await registry.getProfile(profileId))!.setupComplete, isTrue);
@@ -827,6 +873,10 @@ void main() {
               ),
               'excludedKeys': excludedKeys,
               'omissions': package.omissions,
+              if (isRemoteDevice) 'sourceDeviceState': {
+                'globals': domain['sourceGlobals'],
+                'profileShadow': 'synthetic source profile shadow',
+              },
               if (isOnboarding) 'sourceAuthority': {
                 'canonicalSetupComplete': true, 'compatibilityValue': false,
                 'portableProfileSetupComplete': package.profiles.single['setupComplete'],
@@ -845,6 +895,7 @@ void main() {
         await expectProviderReaders();
         _expectSettings(await readScenario(inputExpected), inputExpected);
         final package = await export(includeSecrets: includeSecrets);
+        if (isRemoteDevice) await expectRemoteDevice(domain['sourceGlobals'] as Map);
         _expectSettings(_values(package), expected);
         if (isOnboarding) {
           expect(package.profiles.single['setupComplete'], isTrue);
@@ -866,6 +917,7 @@ void main() {
     for (final repairFailure in ['none', if (scenario == 'repair') ...['marker-type', 'episode-type']]) {
     for (final keepDestination in [false, if (missing.isNotEmpty && !isRepair && !isQuickPolicy) true]) {
       final destinationValues = <String, Object?>{
+        if (isRemoteDevice) 'fixture_remote_restore_sentinel': 'untouched',
         if (isHistory) 'history_restore_sentinel': 'untouched',
         if (isOnboarding) 'onboarding_restore_sentinel': 'untouched',
         if (isPlaylist) 'playlist_restore_sentinel': 'untouched',
@@ -917,7 +969,7 @@ void main() {
                     'value': ['fullHd', 'unknown quality', 'fullHd'],
                   },
                 }
-              : isHistory || isOnboarding || isPlaylist || isRepair || isMetadata || isWatchlist || isQuickPolicy || isVr
+              : isHistory || isRemoteDevice || isOnboarding || isPlaylist || isRepair || isMetadata || isWatchlist || isQuickPolicy || isVr
                   ? domain['mutations'] as Map
                   : _recipe['mutations'] as Map;
           expect(['', ...mutations.keys], contains(_mutation));
@@ -981,6 +1033,14 @@ void main() {
               await PortableProfilePackage.encrypt(mutated, _passphrase),
               _passphrase,
             );
+          }
+          if (isRemoteDevice) {
+            // A forbidden-key mutant reaches this after real rehash/encryption.
+            expectExclusions(_values(package));
+            expect(manifest['sourceDeviceState'], {
+              'globals': domain['sourceGlobals'],
+              'profileShadow': 'synthetic source profile shadow',
+            });
           }
           if (isOnboarding) {
             // Also checks a valid re-encrypted forbidden-key negative package.
@@ -1053,6 +1113,10 @@ void main() {
             await prefs.setBool('p.$profileId.g.1.initial_setup_complete_v1', false);
             await prefs.setBool('p.$other.g.1.initial_setup_complete_v1', false);
           }
+          if (isRemoteDevice) {
+            await writeRemoteDevice(domain['destinationGlobals'] as Map);
+            await expectRemoteDevice(domain['destinationGlobals'] as Map);
+          }
           final report =
               await ProfileRestoreCoordinator(
                 registry: registry,
@@ -1067,6 +1131,7 @@ void main() {
           expect(report.publishedGeneration, 2);
           expect(ProfileRuntime.capture().dataGeneration, 2);
           final prefix = ProfileRuntime.capture().preferencePrefix;
+          if (isRemoteDevice) await expectRemoteDevice(domain['destinationGlobals'] as Map);
           if (isOnboarding) {
             expect((await registry.getProfile(profileId))!.setupComplete, isTrue);
             // Merge retains the destination compatibility flag despite export
@@ -1129,6 +1194,7 @@ void main() {
           expect(prefs.getInt('p.$other.g.1.stremio_tv_rotation_minutes'), 92);
           expect(prefs.getString('p.$other.g.1.fixture_sentinel'), 'untouched');
           StorageService.resetProfileCaches();
+          if (isRemoteDevice) await expectRemoteDevice(domain['destinationGlobals'] as Map);
           _expectSettings(
             await readScenario(restoredExpected),
             restoredExpected,

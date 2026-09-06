@@ -2,6 +2,7 @@
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'debrid_service.dart';
+import 'remote_control/remote_device_prefs.dart';
 import 'iptv_media_store.dart';
 import 'profiles/profile_preferences.dart';
 import 'profiles/profile_collection_resource_facade.dart';
@@ -251,10 +252,6 @@ class StorageService {
   static const String _seriesAutoPinOnPlayKey = 'series_auto_pin_on_play';
 
   // Remote Control Settings
-  static const String _remoteControlEnabledKey = 'remote_control_enabled';
-  static const String _remoteIntroShownKey = 'remote_intro_shown';
-  static const String _remoteTvDeviceNameKey = 'remote_tv_device_name';
-  static const String _remoteLastDeviceKey = 'remote_last_device';
 
   static Future<String?> getApiKey({bool forRemoteTransfer = false}) =>
       CloudSecretPrefs.read(
@@ -2320,10 +2317,8 @@ class StorageService {
   // ============================================================================
 
   /// Get whether remote control feature is enabled
-  static Future<bool> getRemoteControlEnabled() async {
-    final prefs = await DevicePreferences.instance();
-    return prefs.getBool(_remoteControlEnabledKey) ?? true;
-  }
+  static Future<bool> getRemoteControlEnabled() =>
+      RemoteDevicePrefs.getRemoteControlEnabled();
 
   static Future<bool> getUpdateAutoCheckEnabled() async {
     final prefs = await DevicePreferences.instance();
@@ -2352,58 +2347,36 @@ class StorageService {
   }
 
   /// Set whether remote control feature is enabled
-  static Future<void> setRemoteControlEnabled(bool enabled) async {
-    final prefs = await DevicePreferences.instance();
-    await prefs.setBool(_remoteControlEnabledKey, enabled);
-  }
+  static Future<void> setRemoteControlEnabled(bool enabled) =>
+      RemoteDevicePrefs.setRemoteControlEnabled(enabled);
 
   /// Get whether remote intro dialog has been shown
-  static Future<bool> getRemoteIntroShown() async {
-    final prefs = await DevicePreferences.instance();
-    return prefs.getBool(_remoteIntroShownKey) ?? false;
-  }
+  static Future<bool> getRemoteIntroShown() =>
+      RemoteDevicePrefs.getRemoteIntroShown();
 
   /// Set whether remote intro dialog has been shown
-  static Future<void> setRemoteIntroShown(bool shown) async {
-    final prefs = await DevicePreferences.instance();
-    await prefs.setBool(_remoteIntroShownKey, shown);
-  }
+  static Future<void> setRemoteIntroShown(bool shown) =>
+      RemoteDevicePrefs.setRemoteIntroShown(shown);
 
   /// Get TV device name for remote control (TV only)
-  static Future<String?> getRemoteTvDeviceName() async {
-    final prefs = await DevicePreferences.instance();
-    return prefs.getString(_remoteTvDeviceNameKey);
-  }
+  static Future<String?> getRemoteTvDeviceName() =>
+      RemoteDevicePrefs.getRemoteTvDeviceName();
 
   /// Set TV device name for remote control (TV only)
-  static Future<void> setRemoteTvDeviceName(String name) async {
-    final prefs = await DevicePreferences.instance();
-    await prefs.setString(_remoteTvDeviceNameKey, name);
-  }
+  static Future<void> setRemoteTvDeviceName(String name) =>
+      RemoteDevicePrefs.setRemoteTvDeviceName(name);
 
   /// Get last connected device info (Mobile only)
-  static Future<Map<String, dynamic>?> getRemoteLastDevice() async {
-    final prefs = await DevicePreferences.instance();
-    final raw = prefs.getString(_remoteLastDeviceKey);
-    if (raw == null) return null;
-    try {
-      return jsonDecode(raw) as Map<String, dynamic>;
-    } catch (_) {
-      return null;
-    }
-  }
+  static Future<Map<String, dynamic>?> getRemoteLastDevice() =>
+      RemoteDevicePrefs.getRemoteLastDevice();
 
   /// Save last connected device info (Mobile only)
-  static Future<void> setRemoteLastDevice(Map<String, dynamic> device) async {
-    final prefs = await DevicePreferences.instance();
-    await prefs.setString(_remoteLastDeviceKey, jsonEncode(device));
-  }
+  static Future<void> setRemoteLastDevice(Map<String, dynamic> device) =>
+      RemoteDevicePrefs.setRemoteLastDevice(device);
 
   /// Clear last connected device info
-  static Future<void> clearRemoteLastDevice() async {
-    final prefs = await DevicePreferences.instance();
-    await prefs.remove(_remoteLastDeviceKey);
-  }
+  static Future<void> clearRemoteLastDevice() =>
+      RemoteDevicePrefs.clearRemoteLastDevice();
 
   // Stremio TV Settings — forwarding façade; bodies live on StremioTvPrefs.
   static Future<int> getStremioTvRotationMinutes() =>

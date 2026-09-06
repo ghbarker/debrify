@@ -1,3 +1,4 @@
+import 'package:debrify/services/remote_control/remote_device_prefs.dart';
 import 'package:debrify/services/profiles/profile_onboarding_state.dart';
 import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'dart:io';
@@ -119,6 +120,7 @@ Set<String> inlinePrefsKeysOnStorageService() {
 /// Every name the completed registry must own: declared consts, store-owned
 /// keys, undeclared inline literals, and documented interpolated names.
 Set<String> allDiscoveredPrefsKeys() => {
+  ...RemoteDevicePrefs.ownedKeys,
   ...ProfileOnboardingState.ownedKeys,
   ...declaredOnStorageService(),
   ...declaredOnCloudSecretPrefs(),
@@ -144,6 +146,21 @@ Set<String> unownedDiscoveredPrefsKeys() =>
     allDiscoveredPrefsKeys().difference(StorageKeyOwnership.byKey.keys.toSet());
 
 void main() {
+  test('remote device keys have exact ownership and missing rows are detected', () {
+    const expected = {
+      'remote_control_enabled', 'remote_intro_shown',
+      'remote_tv_device_name', 'remote_last_device',
+    };
+    expect(RemoteDevicePrefs.ownedKeys, expected);
+    expect(StorageKeyOwnership.keysFor(StorageKeyStore.remoteDevicePrefs), expected);
+    expect(declaredOnStorageService().intersection(expected), isEmpty);
+    expect(allDiscoveredPrefsKeys(), containsAll(expected));
+    for (final key in expected) {
+      expect(allDiscoveredPrefsKeys().difference(
+        StorageKeyOwnership.byKey.keys.toSet().difference({key})), {key});
+    }
+  });
+
   test('onboarding singleton is discovered and missing ownership fails', () {
     const expected = {'initial_setup_complete_v1'};
     expect(ProfileOnboardingState.ownedKeys, expected);
@@ -317,6 +334,8 @@ void main() {
       }
     }
 
+    expectStore(RemoteDevicePrefs.ownedKeys,
+        StorageKeyStore.remoteDevicePrefs, 'RemoteDevicePrefs');
     expectStore(ProfileOnboardingState.ownedKeys,
         StorageKeyStore.profileOnboardingState, 'ProfileOnboardingState');
     expectStore(fromStremio, StorageKeyStore.stremioTvPrefs, 'StremioTvPrefs');
@@ -337,6 +356,7 @@ void main() {
         StorageKeyStore.defaultTorrentFilterPrefs, 'DefaultTorrentFilterPrefs');
 
     final extracted = {
+      ...RemoteDevicePrefs.ownedKeys,
       ...ProfileOnboardingState.ownedKeys,
       ...fromCloud,
       ...fromHome,
