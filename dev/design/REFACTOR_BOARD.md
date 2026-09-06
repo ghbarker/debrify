@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main bc017b87
+## Current roadmap — September 6, main 6aad838a
 
 ### God-file line counts — original → current merged main
 
-- **Search:** 19,070 → **6,293** (12,777 fewer)
+- **Search:** 19,070 → **6,343** (12,727 fewer)
 - **Player:** 16,278 → **11,535** (4,743 fewer)
 - **Magic TV:** 10,716 → **3,322** (7,394 fewer)
 - **Storage:** 9,963 → **1,741** (8,222 fewer)
 - **Settings:** 7,905 → **2,908** (4,997 fewer)
 
-Counted from actual merged main bc017b87. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
+Counted from actual merged main 6aad838a. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
 
 ### The same six outcomes — stable roadmap
 
@@ -18,7 +18,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 1. **Finish Search stage layouts and final shared composition — IN PROGRESS.**
    Done: standalone Discover, Spotlight, Tonight and shared BoardCell merged.
-   Deck/shared visuals (#195), Mosaic (#196), Promenade (#198), Canvas (#200) and shared favourites (#203) are merged. Left: Atrium and final shared composition. Atrium remains held after two failing origin rendering attempts; stage extraction is 638 lines short of its existing target. The retained Mosaic policy is not another pending wrapper move.
+   Deck/shared visuals (#195), Mosaic (#196), Promenade (#198), Canvas (#200) and shared favourites (#203) are merged. Left: Atrium and final shared composition. Atrium overflow fix #216 is merged; extraction still requires a new bounded origin checkpoint on fixed main; stage extraction is 638 lines short of its existing target. The retained Mosaic policy is not another pending wrapper move.
    Next: a bounded composition change that removes dependencies rather than adding more forwarding callbacks. Close against the existing Search lane criteria, not merely a smaller host file.
 
 2. **Complete player decoder/state/UI separation — IN PROGRESS, CURRENT PIN BLOCKER.**
@@ -66,6 +66,9 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - [ ] Run final integrated acceptance only after the remaining architectural outcomes are fulfilled.
 
 ### Latest completed milestones
+
+- #216 separateAtrium BUGFIX merged **6aad838a**, exact5dcb1fc8, independent6PASS/allthreeCIgreen/cleanunion. Actualtextmeasurement matcheswallbudget; sharedDeck/Tonight helper unchanged. Intentionalthreshold/earliertitleread deltas preserved, originalred andinitial5/1 fixturefailure retained. Host+50/prod+60 ZEROextractioncredit. Did we make a difference? The attributedoverflow blocker is corrected, but Atrium extraction is notcompleted. Counter1sincebc017. #217 independent24PASS/allCIgreen nowintegratesmain; #218 independent22PASSfrozenbehind217. Upstream stayslocalperuser.
+
 
 - **Fullbc017 gate PASSED:**6095PASS/12exactknown/2skip;goldens21exactknown/configured2retries/actualhelpers0/unexpected0unused0;raw failures retained. Nativeoriginal/currentFIRSTPAIRPASS,analyzer431/449zeroNew/Python55/layer77+0-0. AST204/133/161/23/0:42Storage removed0added, others unchanged;legacySearch60 separate. Windows162.7s68files ZIPefb4ad80c919716a9fda0e362b2deeaed30a486b9c6ab1c13c46667720982f9e; ARM64APK05d2a54ad4e6527db77472032ff59ed5761783b84201078b5fcb7e3b6ad9e3c7. Generatedowncheckout line-ending noise verified/restored, finalclean. Counter0; Storage extracted/key-compatible and eligibleQ2 milestone ACCEPTED after independentcontractreview; strictoutcome3 remainsOPEN. No device or finalarchitecture claim.
 
