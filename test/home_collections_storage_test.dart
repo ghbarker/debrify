@@ -111,20 +111,80 @@ void main() {
     },
   );
   test(
-    'invalid persisted data cannot be silently overwritten or exported empty',
+    'invalid persisted data is preserved until reset while reads and backup remain usable',
     () async {
       SharedPreferences.setMockInitialValues({
         HomeCollectionsStore.prefsKey: 'broken',
       });
       final store = HomeCollectionsStore();
       await expectLater(store.importCollections([c]), throwsFormatException);
-      await expectLater(store.exportJson(), throwsFormatException);
+      expect(await store.exportJson(), isEmpty);
       expect(
         (await SharedPreferences.getInstance()).getString(
           HomeCollectionsStore.prefsKey,
         ),
         'broken',
       );
+    },
+  );
+  test('reset and explicit restore recover a corrupt inventory', () async {
+    SharedPreferences.setMockInitialValues({
+      HomeCollectionsStore.prefsKey: 'broken',
+    });
+    final store = HomeCollectionsStore();
+    expect((await store.getInventory()).hadCorruption, true);
+    await store.clear();
+    expect((await store.getInventory()).hadCorruption, false);
+    await store.importCollections([c]);
+    SharedPreferences.setMockInitialValues({
+      HomeCollectionsStore.prefsKey: 'broken again',
+    });
+    await store.applyBackup([c.toJson()]);
+    expect((await store.getCollections()).single.id, c.id);
+  });
+  test(
+    'reads salvage valid records alongside a malformed collection',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        HomeCollectionsStore.prefsKey: jsonEncode({
+          'version': 2,
+          'records': {'one': c.toJson(), 'bad': 123},
+          'order': ['bad', 'one'],
+        }),
+      });
+      final store = HomeCollectionsStore();
+      expect((await store.getInventory()).hadCorruption, true);
+      expect((await store.getEnabledCollections()).single.id, 'one');
+      expect((await store.exportJson()).single['id'], 'one');
+    },
+  );
+  test(
+    'pending deletion identities do not consume live import capacity',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        HomeCollectionsStore.prefsKey: jsonEncode({
+          'version': 2,
+          'records': {for (var i = 0; i < 1100; i++) 'deleted$i': null},
+          'order': [for (var i = 0; i < 1100; i++) 'deleted$i'],
+        }),
+      });
+      final store = HomeCollectionsStore();
+      await store.importCollections([c]);
+      expect((await store.getCollections()).single.id, 'one');
+    },
+  );
+  test(
+    'visibility changes remain possible on oversized synced definitions',
+    () async {
+      final large = HomeCollection(id: 'large', title: 'x' * (140 * 1024));
+      SharedPreferences.setMockInitialValues({
+        HomeCollectionsStore.prefsKey: jsonEncode([large.toJson()]),
+      });
+      final store = HomeCollectionsStore();
+      await store.setEnabled('large', false);
+      expect((await store.getCollections()).single.enabled, false);
+      await store.setEnabled('large', true);
+      expect((await store.getCollections()).single.enabled, true);
     },
   );
   test(

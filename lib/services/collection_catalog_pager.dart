@@ -28,6 +28,7 @@ class CollectionCatalogPager {
   int skip = 0;
   bool exhausted = false;
   String? error;
+  bool noProgress = false;
 
   static String itemKey(StremioMeta m) => '${m.type}\u0000${m.id}';
 
@@ -36,12 +37,14 @@ class CollectionCatalogPager {
     skip = 0;
     exhausted = false;
     error = null;
+    noProgress = false;
   }
 
-  Future<List<StremioMeta>> nextPage() async {
+  Future<List<StremioMeta>> nextPage({int maxWindows = maxEmptyWindows}) async {
     error = null;
+    noProgress = false;
     if (exhausted) return const [];
-    for (var attempt = 0; attempt < maxEmptyWindows; attempt++) {
+    for (var attempt = 0; attempt < maxWindows; attempt++) {
       int? rawCount;
       try {
         final items = await fetch(
@@ -74,6 +77,7 @@ class CollectionCatalogPager {
       }
     }
     // Bound faulty addons that ignore skip. The cursor remains resumable.
+    noProgress = true;
     error = 'This list returned no new titles. Retry to continue.';
     return const [];
   }

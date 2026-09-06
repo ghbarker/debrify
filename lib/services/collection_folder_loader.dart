@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../models/home_collection.dart';
 import '../models/stremio_addon.dart';
 import 'collection_catalog_pager.dart';
@@ -41,8 +43,12 @@ class CollectionFolderLoader {
         _unresolved.add(source.addonId);
         continue;
       }
-      final key =
-          '${addon.manifestUrl}|${catalog.type}|${catalog.id}|${source.genre}';
+      final key = jsonEncode([
+        addon.manifestUrl,
+        catalog.type,
+        catalog.id,
+        source.genre,
+      ]);
       if (!resolved.add(key)) continue;
       _sources.add(
         CollectionCatalogPager(
@@ -95,8 +101,10 @@ class CollectionFolderLoader {
         final pages = <List<StremioMeta>>[];
         for (var start = 0; start < live.length; start += maxConcurrent) {
           final batch = live.skip(start).take(maxConcurrent).toList();
-          pages.addAll(await Future.wait(batch.map((s) => s.nextPage())));
-          failed.addAll(batch.where((s) => s.error != null));
+          pages.addAll(
+            await Future.wait(batch.map((s) => s.nextPage(maxWindows: 1))),
+          );
+          failed.addAll(batch.where((s) => s.error != null && !s.noProgress));
         }
         final fresh = [
           for (final m in interleave(pages))

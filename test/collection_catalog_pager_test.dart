@@ -59,6 +59,37 @@ void main() {
     expect(p.exhausted, false);
     expect(p.error, isNotNull);
   });
+  test(
+    'All has one shared eight-request budget per repeating source',
+    () async {
+      var calls = 0;
+      final loader = CollectionFolderLoader(
+        folder: const HomeCollectionFolder(
+          id: 'f',
+          title: 'F',
+          sources: [
+            CollectionCatalogSource(
+              addonId: 'a',
+              type: 'movie',
+              catalogId: 'popular',
+            ),
+          ],
+        ),
+        installedAddons: [addon],
+        fetch: (a, c, {skip = 0, genre, onRawCount}) async {
+          calls++;
+          onRawCount?.call(1);
+          return [meta('same')];
+        },
+      );
+      await loader.nextPage();
+      calls = 0;
+      expect(await loader.nextPage(), isEmpty);
+      expect(calls, CollectionCatalogPager.maxEmptyWindows);
+      expect(loader.exhausted, false);
+      expect(loader.hasErrors, true);
+    },
+  );
   test('raw end of catalog stops future network calls', () async {
     var calls = 0;
     final p = pager((a, c, {skip = 0, genre, onRawCount}) async {

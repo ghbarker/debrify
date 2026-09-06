@@ -651,7 +651,7 @@ abstract final class WebDavSyncHotMerge {
     final collectionRaw =
         input.portablePreferences[HomeCollectionInventory.prefsKey];
     if (collectionRaw != null) {
-      final inventory = HomeCollectionInventory.decode(collectionRaw);
+      final inventory = HomeCollectionInventory.recover(collectionRaw);
       for (final entry in inventory.records.entries) {
         portableRecords[WebDavSyncRecordKey.homeCollection(entry.key)] = entry
             .value
@@ -768,6 +768,22 @@ abstract final class WebDavSyncHotMerge {
         }
       }
     }
+    // Local nulls are a pending-delete outbox. Move them into the normal
+    // tombstone tier so publication/retention and dormant-peer suppression
+    // apply, and deletion history no longer fills collection preferences.
+    for (final doc in docs) {
+      for (final entry in doc.watchState.records.entries) {
+        if (!entry.key.startsWith('homecollection/') || entry.value.value != null) continue;
+        if (suppressDormantLocal && identical(doc, local) &&
+            entry.value.stamp.normalizedTimeMs <= dormantSinceMs) {
+          continue;
+        }
+        final prior = tombstones[entry.key];
+        if (prior == null || _compareStamp(entry.value.stamp, prior.stamp) > 0) {
+          tombstones[entry.key] = WebDavSyncTombstone(key: entry.key, stamp: entry.value.stamp);
+        }
+      }
+    }
     if (tombstones.length > WebDavSyncLimits.maxTombstonesPerProfile) {
       throw const FormatException(
         'Merged WebDAV sync tombstones exceed their safe limit',
@@ -805,6 +821,7 @@ abstract final class WebDavSyncHotMerge {
     final records = <String, WebDavSyncStampedValue>{};
     for (final doc in docs) {
       for (final entry in doc.watchState.records.entries) {
+        if (entry.key.startsWith('homecollection/') && entry.value.value == null) continue;
         if (suppressDormantLocal &&
             identical(doc, local) &&
             entry.value.stamp.normalizedTimeMs <= dormantSinceMs) {
@@ -1010,10 +1027,15 @@ abstract final class WebDavSyncHotMerge {
     for (final entry in document.watchState.records.entries) {
       final parts = entry.key.split('/');
       if (parts.length == 2 && parts[0] == 'homecollection') {
-        collections[WebDavSyncRecordKey.decodePart(parts[1])] = chosen(
-          entry.key,
-          entry.value,
-        );
+        try {
+          collections[WebDavSyncRecordKey.decodePart(parts[1])] = chosen(
+            entry.key,
+            entry.value,
+          );
+        } on FormatException {
+          // An invalid collection identity must not block unrelated profiles.
+          continue;
+        }
       } else if (parts.length >= 3 && parts[0] == 'playback') {
         final alias = WebDavSyncRecordKey.decodePart(parts[2]);
         if (parts[1] == 'record' && parts.length == 3) {
@@ -1096,7 +1118,7 @@ abstract final class WebDavSyncHotMerge {
         for (final id in (collections.keys.toList()..sort()))
           if (!preferred.contains(id)) id,
       ];
-      final inventory = HomeCollectionInventory.decode({
+      final inventory = HomeCollectionInventory.recover({
         'version': 2,
         'records': collections,
         'order': order,

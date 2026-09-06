@@ -77,9 +77,47 @@ claim of universally bug-free playback, addon behavior, animated-art performance
 or every possible device size is made.
 
 Concurrent edits to the same collection retain the existing last-writer stamp
-semantics. Different collections merge independently. The 128 KiB/1,024-identity
-local growth bounds retain deletion records; the existing shared 1 MiB WebDAV
+semantics. Different collections merge independently. The 128 KiB/1,024-live-collection
+definition bounds exclude pending deletion records; the existing shared 1 MiB WebDAV
 hot-document ceiling still applies after aggregation with other profile data.
 Legacy array preferences upgrade on mutation, so devices editing this feature
 should run the repaired implementation. The import UI remains an importer and
 manager, not a collection authoring editor.
+
+
+## Follow-up review — 2026-09-07
+
+The review of `519454cf` identified additional P2 issues. They are addressed by:
+
+- Salvaging valid records for Home, Home Rows and backup; settings offers an
+  explicit reset, and restore can repair a damaged inventory. Ordinary imports
+  still protect damaged data from accidental overwrite.
+- Tolerant hot build/materialization, including malformed record values and
+  encoded identities. A multi-profile engine test verifies corrupt collection
+  data does not abort the cycle.
+- Moving null deletion markers into WebDAV's native tombstone tier. The engine
+  journals converted deletions before local apply, then removes local markers.
+  Retention starts at publication and uses the existing 90-day horizon and
+  dormant-peer suppression. Tests cover crash-after-apply recovery, expiry,
+  dormant peers, explicit reimport, and 1,100 pending deletion identities without
+  blocking a new live collection.
+- Claiming catalogs only when collection rows are visible in Home. Hidden rows,
+  Search and Discover do not suppress their catalogs.
+- Comparing folder configuration before rebuilding. Unrelated notifications
+  preserve the grid state and focused poster; actual configuration changes
+  restore a usable focus target.
+
+Additional checks cover a one-request retry cache bypass, HTTP 200 without
+`metas`, a shared eight-request paging budget, fallback source deduplication,
+visibility changes on oversized synced definitions, and the reset UI. Settings
+no longer labels action dialogs as imports, and its layout toggle is visibly
+inactive while an operation is pending. Same-collection edit/delete stamp
+semantics are documented in `collections.md`.
+
+
+Follow-up validation: **772 tests passed** in the combined command above plus
+`test/profiles/profile_stremio_isolation_test.dart`,
+`test/catalog_ingest_spike_test.dart`, `test/stremio_addon_import_test.dart` and
+`test/stremio_metadata_provider_test.dart`. Full PR analysis reports no errors
+or warnings and the same 25 informational notices. The application Dart bundle
+build succeeds. Physical-device playback/live-server limits remain as stated.

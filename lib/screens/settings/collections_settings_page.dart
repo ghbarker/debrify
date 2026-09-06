@@ -36,6 +36,7 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
   bool _loading = true;
   bool _busy = false;
   bool _refreshPending = false;
+  bool _damagedInventory = false;
   int _loadToken = 0;
   String? _loadError;
   List<HomeCollection> _collections = const [];
@@ -69,7 +70,8 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
     final token = ++_loadToken;
     final session = HomeCollectionsStore.captureSession();
     try {
-      final collections = await _store.getCollections();
+      final inventory = await _store.getInventory();
+      final collections = inventory.collections;
       final layout = await _store.getFolderLayout();
       List<StremioAddon> addons = const [];
       try {
@@ -81,6 +83,7 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
       HomeCollectionsStore.checkSession(session);
       setState(() {
         _collections = collections;
+        _damagedInventory = inventory.hadCorruption;
         _addons = addons;
         _layout = layout;
         _loading = false;
@@ -194,7 +197,7 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
     final result = await run();
     if (!mounted) return;
     MainPageBridge.notifyHomeSettingsChanged();
-    await _load();
+    await _load(requestFocus: false);
     if (mounted) await _showImportResult(result);
   }
 
@@ -287,6 +290,21 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
         }
     }
   }
+
+  Future<void> _resetDamagedInventory() => _guarded(() async {
+    final session = HomeCollectionsStore.captureSession();
+    final confirmed = await _confirm(
+      title: 'Reset damaged collections?',
+      body:
+          'This removes the saved collections from this profile. You can then import a collection file or restore a backup.',
+      action: 'Reset collections',
+    );
+    if (!confirmed || !mounted) return;
+    HomeCollectionsStore.checkSession(session);
+    await _store.clear();
+    MainPageBridge.notifyHomeSettingsChanged();
+    await _load(requestFocus: false);
+  });
 
   Future<void> _removeAll() async {
     final session = HomeCollectionsStore.captureSession();
@@ -466,6 +484,22 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
                       'folders that bundle addon catalogs into Home rows',
                 ),
                 const SizedBox(height: 24),
+                if (_damagedInventory)
+                  SettingsSection(
+                    title: 'Damaged collection data',
+                    blurb:
+                        'Valid collections are still available. Reset the saved data or restore a backup to recover.',
+                    children: [
+                      SettingsTile(
+                        icon: Icons.restore_rounded,
+                        title: 'Reset damaged collections',
+                        subtitle:
+                            'Clear the saved inventory so it can be imported again',
+                        enabled: !_busy,
+                        onTap: _resetDamagedInventory,
+                      ),
+                    ],
+                  ),
                 SettingsSection(
                   title: 'Import',
                   blurb:
@@ -476,9 +510,7 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
                     SettingsTile(
                       icon: Icons.upload_file_rounded,
                       title: 'Import from file',
-                      subtitle: _busy
-                          ? 'Importing…'
-                          : 'Pick a collections .json on this device',
+                      subtitle: 'Pick a collections .json on this device',
                       enabled: !_busy,
                       onTap: _importFromFile,
                       focusNode: _firstTileFocusNode,
@@ -507,14 +539,23 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
                       'stack every list; Tabs show one list at a time '
                       'behind a selector, like Nuvio.',
                   children: [
-                    SettingsToggleTile(
-                      icon: Icons.tab_rounded,
-                      title: 'Tabbed folders',
-                      subtitle: _layout == CollectionFolderLayout.tabs
-                          ? 'One list at a time, pick it from the List chip'
-                          : 'Lists stacked as rows (each with See all)',
-                      value: _layout == CollectionFolderLayout.tabs,
-                      onChanged: _setTabbed,
+                    IgnorePointer(
+                      ignoring: _busy,
+                      child: ExcludeFocus(
+                        excluding: _busy,
+                        child: Opacity(
+                          opacity: _busy ? 0.5 : 1,
+                          child: SettingsToggleTile(
+                            icon: Icons.tab_rounded,
+                            title: 'Tabbed folders',
+                            subtitle: _layout == CollectionFolderLayout.tabs
+                                ? 'One list at a time, pick it from the List chip'
+                                : 'Lists stacked as rows (each with See all)',
+                            value: _layout == CollectionFolderLayout.tabs,
+                            onChanged: _setTabbed,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),

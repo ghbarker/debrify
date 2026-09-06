@@ -42,8 +42,9 @@ class HomeCollectionImportResult {
 /// the folder browser and the settings pages share.
 ///
 /// Persists an atomic inventory under `home_collections_v1`. Deleted IDs
-/// remain as null records for sync; corrupt inventories surface an error
-/// instead of being silently replaced. Legacy JSON arrays remain readable.
+/// remain as null records until sync journals their deletion. Reads salvage
+/// valid records; ordinary writes reject corruption until explicit reset or
+/// restore. Legacy JSON arrays remain readable.
 class HomeCollectionsStore {
   HomeCollectionsStore({http.Client Function()? httpClientFactory})
     : _httpClientFactory = httpClientFactory ?? http.Client.new;
@@ -81,12 +82,13 @@ class HomeCollectionsStore {
     }
   }
 
-  Future<List<HomeCollection>> getCollections() async {
+  Future<HomeCollectionInventory> getInventory() async {
     final prefs = await ProfilePreferences.instance();
-    return HomeCollectionInventory.decode(
-      prefs.getString(prefsKey),
-    ).collections;
+    return HomeCollectionInventory.recover(prefs.getString(prefsKey));
   }
+
+  Future<List<HomeCollection>> getCollections() async =>
+      (await getInventory()).collections;
 
   Future<List<HomeCollection>> getEnabledCollections() async => [
     for (final c in await getCollections())
@@ -95,29 +97,33 @@ class HomeCollectionsStore {
 
   Future<T> _mutate<T>(
     ({ProfileScope? scope, ProfileScope? active, bool committed}) session,
-    T Function(HomeCollectionInventory current) update,
-  ) async {
+    T Function(HomeCollectionInventory current) update, {
+    bool recoverCorruption = false,
+  }) async {
     checkSession(session);
     final prefs = await ProfilePreferences.instance();
     checkSession(session);
     late T result;
     final saved = await prefs.mutateStringAtomically(prefsKey, (old) {
       checkSession(session);
-      final current = HomeCollectionInventory.decode(old);
-      final previousSize = utf8.encode(current.encode()).length;
-      final previousCount = current.records.length;
+      final current = recoverCorruption
+          ? HomeCollectionInventory.recover(old)
+          : HomeCollectionInventory.decode(old);
+      final previousSize = current.definitionBytes;
+      final previousCount = current.liveCount;
       result = update(current);
       current.validate();
       final encoded = current.encode();
-      final size = utf8.encode(encoded).length;
-      // Permit reduction of an older/merged oversized inventory, but never
-      // increase one. Deletions remain records to survive offline peers.
+      final size = current.definitionBytes;
+      // Bound live definitions, permitting reductions and visibility changes
+      // in an older/merged oversized inventory. Pending deletions are outbox
+      // records that sync moves into its separately retained tombstone tier.
       if ((size > HomeCollectionInventory.maxStoredBytes &&
               size > previousSize) ||
-          (current.records.length > HomeCollectionInventory.maxRecords &&
-              current.records.length > previousCount)) {
+          (current.liveCount > HomeCollectionInventory.maxRecords &&
+              current.liveCount > previousCount)) {
         throw const FormatException(
-          'Collections exceed the profile storage limit (128 KiB). Remove a collection or import a smaller file.',
+          'Collection definitions exceed 128 KiB or 1,024 live collections. Remove a collection or import a smaller file.',
         );
       }
       return encoded;
@@ -167,7 +173,7 @@ class HomeCollectionsStore {
     for (final id in current.records.keys.toList()) {
       current.remove(id);
     }
-  });
+  }, recoverCorruption: true);
 
   Future<CollectionFolderLayout> getFolderLayout() async {
     final prefs = await ProfilePreferences.instance();
@@ -194,6 +200,7 @@ class HomeCollectionsStore {
     List<HomeCollection> incoming, {
     bool replaceExisting = false,
     List<StremioAddon> installedAddons = const [],
+    bool recoverCorruption = false,
   }) async {
     final session = captureSession();
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -219,7 +226,7 @@ class HomeCollectionsStore {
         replaced: replaced,
         unresolvedAddonIds: unresolvedAddonIds(incoming, installedAddons),
       );
-    });
+    }, recoverCorruption: recoverCorruption);
   }
 
   /// Parse and import a JSON document (file contents, pasted text, or a
@@ -310,7 +317,7 @@ class HomeCollectionsStore {
       }
     }
     if (parsed.isEmpty) return (imported: 0, alreadyPresent: 0, failed: failed);
-    final result = await importCollections(parsed);
+    final result = await importCollections(parsed, recoverCorruption: true);
     return (
       imported: result.added.length,
       alreadyPresent: result.replaced.length,
@@ -358,11 +365,14 @@ class HomeCollectionsStore {
   /// out of the addon groups in the Home Rows manager.
   static Set<String> claimedCatalogKeys(
     List<HomeCollection> collections,
-    List<StremioAddon> installed,
-  ) {
+    List<StremioAddon> installed, {
+    Set<String> disabledRows = const {},
+    bool showsCollectionRows = true,
+  }) {
     final out = <String>{};
+    if (!showsCollectionRows) return out;
     for (final c in collections) {
-      if (!c.enabled) continue;
+      if (!c.enabled || disabledRows.contains(c.rowId)) continue;
       for (final f in c.folders) {
         for (final s in f.sources) {
           final addon = resolveAddon(s, installed);

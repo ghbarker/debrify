@@ -719,7 +719,7 @@ class _SearchScreenState extends State<SearchScreen>
   /// of folder tiles. [_homeCollectionsSig] is the store's change token the
   /// settings-changed listener diffs against.
   List<HomeCollection> _homeCollections = const [];
-  String _homeCollectionsSig = '';
+  String _homeCollectionsSig = HomeCollectionsStore.signatureOf(const []);
 
   /// Stable ids in the user's global Home-row order. Rows not present append
   /// canonically; ids whose backing row is temporarily unavailable stay saved.
@@ -2631,6 +2631,8 @@ class _SearchScreenState extends State<SearchScreen>
       final claimed = HomeCollectionsStore.claimedCatalogKeys(
         _homeCollections,
         addons,
+        disabledRows: _homeDisabled,
+        showsCollectionRows: !widget.searchMode && !widget.discoverMode,
       );
       final boardRefs = [
         for (final a in addons)

@@ -2414,10 +2414,16 @@ class StremioService {
         }
 
         final Map<String, dynamic> data = await decodeJsonAsync(response.body);
-        final metasRaw = data['metas'] as List<dynamic>?;
-        onRawCount?.call(metasRaw?.length ?? 0);
+        final rawMetas = data['metas'];
+        if (rawMetas is! List) {
+          // A successful HTTP status without a catalog payload is an addon
+          // failure, not proof that its catalog has ended.
+          return [];
+        }
+        final metasRaw = rawMetas;
+        onRawCount?.call(metasRaw.length);
 
-        if (metasRaw == null || metasRaw.isEmpty) {
+        if (metasRaw.isEmpty) {
           debugPrint('StremioService: Catalog returned no items');
           _cacheCatalogPage(url, const [], 0);
           return [];

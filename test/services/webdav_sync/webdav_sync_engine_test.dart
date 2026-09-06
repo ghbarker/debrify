@@ -107,6 +107,14 @@ void main() {
     return WebDavSyncManifest.fromJson(payload);
   }
 
+  test('corrupt collection inventory cannot stop a multi-profile cycle', () async {
+    local.preferences = {HomeCollectionInventory.prefsKey: '{broken', 'theme': 'dark'};
+    final report = await runFixture(context(profiles: {'profile-circle': 'local-profile', 'profile-two': 'other-profile'}));
+    expect(report.disposition, WebDavSyncCycleDisposition.completed);
+    expect(report.profilesApplied, 2);
+    expect(local.preferences['theme'], 'dark');
+  });
+
   test('collections converge across devices, deletion and restart', () async {
     Map<String, Object?> initial(String id) => {
       HomeCollectionInventory.prefsKey: jsonEncode([
@@ -162,15 +170,21 @@ void main() {
     // B stays offline while A deletes. Recreate A's engine to exercise its
     // persisted state rather than relying on a merge object's memory.
     save(a, inventory(a)..remove('a'));
-    await cycle(ae, 'device-a');
+    a.afterApply = () {
+      a.afterApply = null;
+      throw StateError('crash after collection apply, before publish');
+    };
+    await expectLater(cycle(ae, 'device-a'), throwsStateError);
+    expect(inventory(a).records.containsKey('a'), false);
+    expect(aStates.state.profiles['profile-circle']!.tombstones,
+      contains(WebDavSyncRecordKey.homeCollection('a')));
     ae = makeEngine(a, aStates);
     await cycle(ae, 'device-a');
     await cycle(be, 'device-b');
     await cycle(ae, 'device-a');
     for (final adapter in [a, b]) {
       expect(inventory(adapter).collections.map((c) => c.id), ['b']);
-      expect(inventory(adapter).records.containsKey('a'), true);
-      expect(inventory(adapter).records['a'], isNull);
+      expect(inventory(adapter).records.containsKey('a'), false);
     }
 
     // An explicit later reimport is an edit, so it may restore the record.

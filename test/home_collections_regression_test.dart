@@ -11,6 +11,7 @@ import 'package:debrify/models/home_collection_inventory.dart';
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/services/home_collections_store.dart';
 import 'package:debrify/services/collection_folder_loader.dart';
+import 'package:debrify/services/collection_catalog_pager.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
 import 'package:debrify/services/profiles/profile_preference_budget.dart';
@@ -230,6 +231,7 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'stremio_addons_v1': jsonEncode([a.toJson()]),
       HomeCollectionsStore.folderLayoutKey: 'tabs',
+      HomeCollectionsStore.prefsKey: jsonEncode([c.toJson()]),
     });
     await tester.runAsync(() async {
       await StremioService.instance.getCatalogAddons();
@@ -270,6 +272,20 @@ void main() {
       FocusManager.instance.primaryFocus?.debugLabel,
       startsWith('seeall_grid_'),
     );
+    final focused = FocusManager.instance.primaryFocus;
+    final grid = tester.state(find.byType(SeeAllPosterGrid));
+    MainPageBridge.notifyHomeSettingsChanged();
+    await tester.pumpAndSettle();
+    expect(identical(tester.state(find.byType(SeeAllPosterGrid)), grid), true);
+    expect(identical(FocusManager.instance.primaryFocus, focused), true);
+    // A real definition change rebuilds content but returns focus to a usable
+    // filter control instead of leaving it attached to a disposed poster.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(HomeCollectionsStore.folderLayoutKey, 'rows');
+    MainPageBridge.notifyHomeSettingsChanged();
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'collection_folder');
+    expect(tester.takeException(), isNull);
   });
   testWidgets(
     'Home Rows must preserve hidden addon flag while catalog lives in a folder',
@@ -408,6 +424,32 @@ void main() {
       FocusManager.instance.primaryFocus?.debugLabel,
       startsWith('seeall_grid_'),
     );
+    await tester.runAsync(() async {
+      await http.runWithClient(
+        () => StremioService.instance.fetchCatalog(a, a.catalogs[1], skip: 100),
+        () => MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'metas': [
+                for (var i = 0; i < 100; i++)
+                  {'id': 'cached$i', 'type': 'movie', 'name': 'Cached $i'},
+              ],
+            }),
+            200,
+          ),
+        ),
+      );
+    });
+    tester.widget<SeeAllPosterGrid>(find.byType(SeeAllPosterGrid)).onLoadMore();
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<SeeAllPosterGrid>(find.byType(SeeAllPosterGrid))
+          .items
+          .last
+          .id,
+      'cached99',
+    );
   });
 
   test(
@@ -433,11 +475,14 @@ void main() {
         peers: [old],
         tombstoneDocuments: [],
         nowMs: 3,
-      ).document;
-      final inventory = inventoryOf(merged);
+      );
+      final inventory = inventoryOf(merged.document);
       expect(inventory.collections, isEmpty);
-      expect(inventory.records.containsKey(collection.id), true);
-      expect(inventory.records[collection.id], isNull);
+      expect(inventory.records.containsKey(collection.id), false);
+      expect(
+        merged.tombstones,
+        contains(WebDavSyncRecordKey.homeCollection(collection.id)),
+      );
     },
   );
 
@@ -464,6 +509,128 @@ void main() {
       'streaming',
       'genres',
     });
+  });
+
+  test('HTTP 200 without metas remains retryable and is not cached', () async {
+    final a = addon(id: 'malformed-response');
+    final pager = CollectionCatalogPager(
+      addon: a,
+      catalog: a.catalogs.single,
+      fetch: (a, c, {skip = 0, genre, onRawCount}) => StremioService.instance
+          .fetchCatalog(a, c, skip: skip, genre: genre, onRawCount: onRawCount),
+    );
+    await http.runWithClient(
+      () => pager.nextPage(),
+      () => MockClient((_) async => http.Response('{}', 200)),
+    );
+    expect(pager.exhausted, false);
+    expect(pager.error, isNotNull);
+    await http.runWithClient(
+      () => pager.nextPage(),
+      () => MockClient((_) async => http.Response('{"metas":[]}', 200)),
+    );
+    expect(pager.exhausted, true);
+    expect(pager.error, isNull);
+  });
+
+  test('hidden collection rows and non-Home modes do not claim catalogs', () {
+    final installed = [addon()];
+    expect(
+      HomeCollectionsStore.claimedCatalogKeys([collection], installed),
+      isNotEmpty,
+    );
+    expect(
+      HomeCollectionsStore.claimedCatalogKeys(
+        [collection],
+        installed,
+        disabledRows: {collection.rowId},
+      ),
+      isEmpty,
+    );
+    expect(
+      HomeCollectionsStore.claimedCatalogKeys(
+        [collection],
+        installed,
+        showsCollectionRows: false,
+      ),
+      isEmpty,
+    );
+  });
+
+  test('corrupt local collections do not block other hot preferences', () {
+    final document = hot('local', {
+      HomeCollectionsStore.prefsKey: '{broken',
+      'theme': 'dark',
+    }, 1);
+    expect(document.scalars.values['theme'], 'dark');
+    expect(inventoryOf(document).collections, isEmpty);
+  });
+
+  test('bad peer collection records cannot block materialization', () {
+    final base = hot('peer', {'theme': 'light'}, 1);
+    final stamp = base.watchState.stamp;
+    final records = <String, WebDavSyncStampedValue>{
+      WebDavSyncRecordKey.homeCollection(collection.id): WebDavSyncStampedValue(
+        stamp: stamp,
+        value: collection.toJson(),
+      ),
+      WebDavSyncRecordKey.homeCollection('bad'): WebDavSyncStampedValue(
+        stamp: stamp,
+        value: 123,
+      ),
+      'homecollection/%': WebDavSyncStampedValue(stamp: stamp, value: 123),
+    };
+    final document = WebDavSyncHotDocument(
+      circleProfileId: base.circleProfileId,
+      scalars: base.scalars,
+      watchState: WebDavSyncWatchPart(
+        stamp: stamp,
+        semanticDigest: '',
+        records: records,
+        orders: const {},
+      ),
+    );
+    expect(inventoryOf(document).collections.single.id, collection.id);
+  });
+
+  test('collection tombstones expire with the shared retention policy', () {
+    final deleted = HomeCollectionInventory(
+      records: {'old': null},
+      order: ['old'],
+    );
+    final first = WebDavSyncHotMerge.merge(
+      local: hot('one', {HomeCollectionsStore.prefsKey: deleted.encode()}, 1),
+      peers: [],
+      tombstoneDocuments: [],
+      nowMs: 2,
+    );
+    final key = WebDavSyncRecordKey.homeCollection('old');
+    expect(first.tombstones, contains(key));
+    expect(inventoryOf(first.document).records, isEmpty);
+    final expired = WebDavSyncHotMerge.merge(
+      local: first.document,
+      peers: [],
+      nowMs: const Duration(days: 91).inMilliseconds,
+      tombstoneDocuments: [
+        WebDavSyncTombstoneDocument(
+          circleProfileId: first.document.circleProfileId,
+          items: {key: first.tombstones[key]!.copyWith(firstPublishedAtMs: 2)},
+        ),
+      ],
+    );
+    expect(expired.tombstones, isEmpty);
+    final dormant = WebDavSyncHotMerge.merge(
+      local: hot('offline', {
+        HomeCollectionsStore.prefsKey: jsonEncode([
+          const HomeCollection(id: 'old', title: 'Old').toJson(),
+        ]),
+      }, 1),
+      peers: [expired.document],
+      tombstoneDocuments: [],
+      nowMs: const Duration(days: 91).inMilliseconds,
+      dormantSinceMs: 1,
+    );
+    expect(inventoryOf(dormant.document).collections, isEmpty);
   });
 
   test('incoming collection sync must notify Home', () {

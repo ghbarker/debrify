@@ -360,6 +360,7 @@ class _HomeSectionsFilterPageState extends State<HomeSectionsFilterPage> {
     final claimed = HomeCollectionsStore.claimedCatalogKeys(
       widget.collections,
       [for (final e in widget.catalogTree) e.addon],
+      disabledRows: widget.disabled,
     );
     for (final entry in widget.catalogTree) {
       final addon = entry.addon;

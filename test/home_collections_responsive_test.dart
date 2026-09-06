@@ -156,6 +156,62 @@ void main() {
       });
     }
   }
+  testWidgets('damaged settings offer an in-app reset', (tester) async {
+    await seed(tester, 'rows');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(HomeCollectionsStore.prefsKey, '{broken');
+    await tester.pumpWidget(const MaterialApp(home: CollectionsSettingsPage()));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Reset damaged collections'));
+    await tester.tap(find.text('Reset damaged collections'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reset collections'));
+    await tester.pumpAndSettle();
+    expect(find.text('Damaged collection data'), findsNothing);
+    expect(
+      (await HomeCollectionsStore.instance.getInventory()).hadCorruption,
+      false,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('fallback sources sharing a catalog produce one rail', (
+    tester,
+  ) async {
+    await seed(tester, 'rows');
+    final original = collection.folders.first.sources.first;
+    final duplicate = HomeCollection(
+      id: collection.id,
+      title: collection.title,
+      folders: [
+        HomeCollectionFolder(
+          id: 'f',
+          title: 'F',
+          sources: [
+            original,
+            CollectionCatalogSource(
+              addonId: 'missing',
+              type: original.type,
+              catalogId: original.catalogId,
+            ),
+          ],
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CollectionFolderScreen(
+          collection: duplicate,
+          isTelevision: true,
+          onOpenItem: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(SeeAllPosterGrid), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('open settings refreshes after remote collection changes', (
     tester,
   ) async {

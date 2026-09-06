@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -88,14 +89,18 @@ class _Rail {
       addon: addon,
       catalog: catalog,
       genre: source.genre,
-      fetch: (a, c, {skip = 0, genre, onRawCount}) => stremio.fetchCatalog(
-        a,
-        c,
-        skip: skip,
-        genre: genre,
-        onRawCount: onRawCount,
-        forceRefresh: forceRefresh,
-      ),
+      fetch: (a, c, {skip = 0, genre, onRawCount}) {
+        final refresh = forceRefresh;
+        forceRefresh = false;
+        return stremio.fetchCatalog(
+          a,
+          c,
+          skip: skip,
+          genre: genre,
+          onRawCount: onRawCount,
+          forceRefresh: refresh,
+        );
+      },
     );
   }
   late final CollectionCatalogPager pager;
@@ -172,6 +177,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   late HomeCollection _collection;
   int _configurationToken = 0;
   String? _configurationError;
+  String? _configurationSignature;
   bool get _hasFolders => _collection.folders.isNotEmpty;
   HomeCollectionFolder get _folder => _collection.folders[_folderIndex];
   bool get _tabs => _layout == CollectionFolderLayout.tabs;
@@ -208,7 +214,6 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
 
   Future<void> _boot({bool refreshCollection = false}) async {
     final generation = ++_configurationToken;
-    ++_reqToken;
     final session = HomeCollectionsStore.captureSession();
     try {
       final addons = await _stremio.getCatalogAddons();
@@ -224,6 +229,34 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
       }
       if (!mounted || generation != _configurationToken) return;
       HomeCollectionsStore.checkSession(session);
+      final candidate = refreshCollection
+          ? updated ??
+                HomeCollection(id: _collection.id, title: _collection.title)
+          : _collection;
+      final relevantDisabled =
+          disabled
+              .where(
+                (id) => id.startsWith(
+                  '${HomeCollectionRowIds.folderListPrefix}${candidate.id}:',
+                ),
+              )
+              .toList()
+            ..sort();
+      final signature = jsonEncode({
+        'collection': candidate.toJson()..remove('importedAt'),
+        'addons': [for (final addon in addons) addon.toJson()],
+        'disabled': relevantDisabled,
+        'layout': layout.name,
+      });
+      if (_configurationError == null && signature == _configurationSignature) {
+        return;
+      }
+      _configurationSignature = signature;
+      final restoreFocus =
+          refreshCollection &&
+          widget.isTelevision &&
+          ModalRoute.of(context)?.isCurrent == true &&
+          FocusScope.of(context).hasFocus;
       final folderId = _hasFolders ? _folder.id : null;
       _addons = addons;
       _disabled = disabled;
@@ -238,7 +271,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
       _configurationError = null;
       _booted = true;
       _rebuildFolder(
-        autoFocus: !refreshCollection,
+        autoFocus: !refreshCollection || restoreFocus,
         preserveSelection: refreshCollection,
       );
     } catch (e) {
@@ -284,6 +317,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
     }
     final rails = <_Rail>[];
     final unresolved = <String>[];
+    final resolved = <String>{};
     if (_hasFolders) {
       for (final s in _enabledSources) {
         final addon = HomeCollectionsStore.resolveAddon(s, _addons);
@@ -298,6 +332,13 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
           );
           continue;
         }
+        final resolvedKey = jsonEncode([
+          addon.manifestUrl,
+          catalog.type,
+          catalog.id,
+          s.genre,
+        ]);
+        if (!resolved.add(resolvedKey)) continue;
         rails.add(
           _Rail(source: s, addon: addon, catalog: catalog, stremio: _stremio),
         );

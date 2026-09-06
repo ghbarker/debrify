@@ -1535,6 +1535,10 @@ final class WebDavSyncEngine
             localPortableRecords: built.document.watchState.records,
             protectedPreferenceKeys: built.protectedPreferenceKeys,
           );
+          final collectionDeletions = <String, WebDavSyncTombstone>{
+            for (final entry in merged.tombstones.entries)
+              if (entry.key.startsWith('homecollection/')) entry.key: entry.value,
+          };
           final pending = WebDavSyncPendingApply(
             localProfileId: localProfileId,
             values: values,
@@ -1554,6 +1558,12 @@ final class WebDavSyncEngine
                   const WebDavSyncProfileEngineState();
               profiles[circleProfileId] = currentProfile.copyWith(
                 pendingApply: pending,
+                // Durably journal converted collection deletions before their
+                // local null markers disappear, including a failed apply/push.
+                tombstones: {
+                  ...currentProfile.tombstones,
+                  ...collectionDeletions,
+                },
               );
               return current.copyWith(
                 profiles:
@@ -1717,7 +1727,10 @@ final class WebDavSyncEngine
             document: merged.document,
             library: mergedLibrary,
             tombstones: merged.tombstones,
-            originalLocalTombstones: profileState.tombstones,
+            originalLocalTombstones: {
+              ...profileState.tombstones,
+              ...collectionDeletions,
+            },
           );
         } finally {
           instrumentation.finishPhase(_CyclePhase.mergeApply, phaseStarted);

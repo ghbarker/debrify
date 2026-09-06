@@ -19,9 +19,10 @@ Imports **merge**: a collection whose `id` already exists is replaced in place
 (keeping its show/hide state); new ids are appended. Tapping a collection
 offers hide-from-Home and delete; "Remove all" is under Danger Zone. Documents
 over 8 MiB are refused. Persisted collection definitions have a 128 KiB
-aggregate limit per profile, including retained deletion records, and a maximum
-of 1,024 collection identities. An import that would grow beyond either limit
-fails before saving. This leaves space for the profile's other sync data.
+aggregate limit per profile and a maximum of 1,024 live collections. Pending
+deletion records do not consume these definition limits, and changing visibility
+does not grow the measured definition size. An import that would grow beyond
+either limit fails before saving. This leaves space for the profile's other sync data.
 Profile changes during a picker or download cancel the import; failed storage
 writes are reported as failures.
 
@@ -130,10 +131,12 @@ detail page and Quick Play of the addon that served them.
   never arranged, since they live inside the folder.
 - The collection's own Home row (its folder tiles) is a normal row in the
   Collections group there: it can be hidden or dragged anywhere.
-- A catalog claimed by an enabled collection folder is **folder-only**: it no
+- A catalog claimed by a visible, enabled collection folder is **folder-only**: it no
   longer appears as a plain Home row, and it is listed under its folder rather
   than under its addon in Home Rows. Hiding the collection (Settings → Home
-  Screen → Collections) returns those catalogs to the board.
+  Screen → Collections), or hiding its row in Home Rows, returns those catalogs
+  to the board unless they were independently hidden. Search and Discover keep
+  their normal catalog access because those modes do not show collection rows.
 
 ## Persistence and WebDAV sync
 
@@ -146,11 +149,24 @@ Mutations read and write within the profile preference mutation barrier. WebDAV
 sync stores one stamped record per collection ID, with a separate order record.
 Independent imports on different devices merge; simultaneous edits to the same
 collection use the existing sync stamp ordering. Deleting a collection retains
-a null record, so an offline peer cannot restore it accidentally. A deliberate
-later reimport may restore it. Deletion identities are retained rather than
-expired by time; they count toward the inventory limits.
+a local null marker until sync moves the deletion into its normal tombstone
+tier. The engine journals that tombstone before clearing the marker, including
+across an interrupted apply or publication. Published deletions follow the
+shared 90-day retention policy and dormant-device protection. A deliberate later
+reimport may restore a collection; a newer edit on another device, including a
+visibility change, may also win over an older deletion under the stamp rules.
+
+Reads salvage valid collection records if another record is damaged. Settings
+shows a recovery notice with **Reset damaged collections**; explicit backup
+restore can also repair the inventory. Ordinary imports refuse to overwrite
+damaged local data until it is reset or restored. Backup exports include the
+valid records. Malformed collection entries are skipped during sync, and a wholly
+undecodable local inventory is treated as empty for that sync build, so it cannot
+stop unrelated profiles from syncing.
 
 Incoming sync changes refresh Home, an open folder, and collection settings.
+Unrelated settings notifications preserve loaded folder pages and TV focus;
+actual folder configuration changes restore focus to the folder control.
 The limit on local growth also allows an older or merged oversized inventory
 to be reduced. The shared WebDAV hot-document limit still applies to the whole
 profile; this feature does not remove that existing aggregate limit. Use the
@@ -159,7 +175,10 @@ array-only store cannot read the upgraded inventory.
 
 Catalog paging advances by the raw response count, including filtered-out or
 overlapping results. Only an empty raw catalog response means the end. Failed
-requests and addons that make no progress show a retryable state. Initial rail
+requests, responses without a `metas` array, and addons that make no progress
+show a retryable state. All shares an eight-request-per-source budget for each
+page attempt, including filtered and duplicate-only windows. Retry bypasses the
+cache for the retried rail request, then normal cache use resumes. Initial rail
 loads and the merged view use bounded concurrency; retries retain the selected
 list and TV focus returns to content when it becomes available.
 

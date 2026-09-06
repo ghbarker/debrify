@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'home_collection.dart';
 
-/// Atomic local inventory. Null records are durable, per-collection deletions:
-/// an absent record on an offline peer must never resurrect a deleted folder.
+/// Atomic local inventory. Null records are pending per-collection deletions;
+/// sync journals them in its retained tombstone tier before removing them here.
 /// Legacy list preferences are accepted and upgraded on the next mutation.
 class HomeCollectionInventory {
   static const String prefsKey = 'home_collections_v1';
@@ -12,6 +12,7 @@ class HomeCollectionInventory {
 
   final Map<String, HomeCollection?> records;
   final List<String> order;
+  bool hadCorruption = false;
 
   HomeCollectionInventory({
     Map<String, HomeCollection?>? records,
@@ -63,6 +64,93 @@ class HomeCollectionInventory {
     }
     return out;
   }
+
+  /// Read usable records without allowing one damaged entry to disable Home,
+  /// backup or the rest of a sync circle. Strict decoding remains available
+  /// for writes until the user explicitly resets or restores damaged data.
+  factory HomeCollectionInventory.recover(Object? encoded) {
+    final out = HomeCollectionInventory();
+    if (encoded == null || encoded == '') return out;
+    Object? raw;
+    try {
+      raw = encoded is String ? jsonDecode(encoded) : encoded;
+    } catch (_) {
+      out.hadCorruption = true;
+      return out;
+    }
+    void read(Object? value, {String? id}) {
+      try {
+        if (value == null && id != null) {
+          final single = HomeCollectionInventory(
+            records: {id: null},
+            order: [id],
+          );
+          single.validate();
+          out.records[id] = null;
+          out.order.add(id);
+          return;
+        }
+        final c = HomeCollection.fromJson(value);
+        if (c == null || (id != null && c.id != id)) {
+          throw const FormatException('Invalid saved collection.');
+        }
+        HomeCollectionInventory(records: {c.id: c}, order: [c.id]).validate();
+        out.put(c);
+      } catch (_) {
+        out.hadCorruption = true;
+      }
+    }
+
+    if (raw is List) {
+      for (final value in raw) {
+        read(value);
+      }
+      return out;
+    }
+    if (raw is! Map || raw['version'] != 2 || raw['records'] is! Map) {
+      out.hadCorruption = true;
+      return out;
+    }
+    for (final e in (raw['records'] as Map).entries) {
+      if (e.key is! String) {
+        out.hadCorruption = true;
+        continue;
+      }
+      read(e.value, id: e.key as String);
+    }
+    final preferred = raw['order'];
+    if (preferred is List) {
+      final ordered = <String>[];
+      for (final id in preferred) {
+        if (id is! String) {
+          out.hadCorruption = true;
+          continue;
+        }
+        if (out.records.containsKey(id) && !ordered.contains(id)) {
+          ordered.add(id);
+        }
+      }
+      for (final id in out.order) {
+        if (!ordered.contains(id)) ordered.add(id);
+      }
+      out.order
+        ..clear()
+        ..addAll(ordered);
+    } else {
+      out.hadCorruption = true;
+    }
+    return out;
+  }
+
+  /// Import capacity concerns live definitions, not pending sync deletions.
+  int get liveCount => records.values.where((c) => c != null).length;
+  int get definitionBytes => utf8
+      .encode(
+        jsonEncode([
+          for (final c in collections) c.copyWith(enabled: true).toJson(),
+        ]),
+      )
+      .length;
 
   List<HomeCollection> get collections => [
     for (final id in order)
