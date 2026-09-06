@@ -481,13 +481,22 @@ is an editor mirror, not the source of truth. How to add a provider:
   1384 (-47), new owner 217 and model growth 13 fully charged; no host reduction.
   `runQuickWatchSearch` in `provider_watch_flow.dart` shares TB/PM/AD/PP quick
   admission and search; migrated settings receivers, captured keys, distinct result
-  cancellation and progressive publication remain. Four provider continuations own
-  their preparation/launch bodies and original cleanup; review this retained
+  cancellation and progressive publication remain. At that checkpoint, four provider
+  continuations owned preparation/launch bodies and original cleanup; review retained
   composition before Phase 2 completion. Admission removes 135 net production lines
   (302 leaf deletion - 167 common growth): five flows 1782, common 1551; Windowed
   owner remains 217. Under-800 and dependency closure remain open. New live PM/AD
   pins: `test/magic_tv_watch_admission_origin_test.dart`; error/read-failure,
   reentrancy and native-positive coverage remain incomplete.
+  `runQuickWindowedWatch` in `lib/screens/debrify_tv/watch/quick_windowed_watch_programme.dart`
+  now owns the full TB/PM quick cache-to-player continuations using the unchanged
+  `WindowedWatchRun`; cached paths and PP/AD/RD programmes remain distinct. Net101
+  production deletion: five flows1498, common1551 unchanged, new owner183 separately
+  charged (3333->3232); under-800/dependency closure remain open. Two seven-line direct
+  invocation sites retain typed host coupling for review before Phase 2 completion.
+  Pins: `test/magic_tv_quick_windowed_programme_origin_test.dart` (8 real-host cases).
+  Runtime/guard evidence union227 is not one green run; two Windows golden failures
+  remain explicit. No native-positive, physical-modal or actual channel-switch proof.
   Its 24 binding/tear-off lines are retained for Q2 composition review/removal before
   Phase 2 completion. These shared phases do not complete the five-flow dedup target. `WatchFlowBindings` keeps live host
   state, navigation, existing preparation/prefetch/launcher callbacks and
@@ -641,6 +650,7 @@ update this file in the same PR. Line counts come from `wc -l`, not estimates._
 - `PlaybackProgressStore` also owns local completion thresholds, imported-playback rearming, ghost purge and completion migration. Q2 retires the seven repair/threshold method facades; `StorageService` retains the public constant aliases. The three obsolete private repair bridges remain removed. Captured preferences, later reacquisition and failure/notification ordering are preserved, not a profile-safety fix. The remote `movieFinishedRevision`, defaults migration orchestration and `IptvMediaStore` SQLite resume backend retain their existing owners. Key strings remain frozen in `storage_key_ownership.dart`.
 - Origin compatibility: `test/playback_progress_store_origin_compatibility_test.dart`; store/facade identity: `test/playback_progress_store_test.dart`.
 - `lib/services/storage/quick_play_policy_prefs.dart` (`QuickPlayPolicyPrefs`) owns the seven movie/series Quick Play policy keys, legacy decoding/mirrors, sibling snapshot and ordered reset/clear. Thirteen unchanged bodies move; `StorageService` retains twelve nonasync facades (29 lines) until separately scoped Q2 caller retirement. VR, independent auto-pin and timeout settings remain outside. Host 2833 -> 2712 (-121), new owner 188 and registry +2 yield whole production +69; strict facade-only/remaining-owner closure stays open. Actual pre-S2 export/restore and public failure/ordering pins do not claim complete sync or profile safety.
+- `lib/services/storage/player_prefs.dart` (`PlayerPrefs`) also owns the five scalar Quick Play VR preferences and their ordered clear. Eleven unchanged bodies retain eleven nonasync `StorageService` facades (22 lines), expiring only after separately scoped Q2 caller compatibility retirement. Captured preferences, raw types/defaults and clear failure order remain unchanged. Host 2712 -> 2678 (-34), existing store +74, whole production +40: scalar ownership consolidation, not a new line-goal claim; strict facade closure remains open. Actual pre-S2 export/current restore and public failure/order pins do not prove native VR launch or profile safety.
 - **Q2 caller retirement:** 77 PlaybackProgressStore, 98 ProviderCredentialPrefs and 48 IptvPrefs method facades retire; their callers use the unchanged owners. Retain `getVideoPlaybackState` and every caller for strict identical native-origin/current test bytes. Retain eight Android bridge APIs and every caller: `setIptvChannelFavorited`, `setIptvChannelInList`, `getIptvListsForChannel`, `recordIptvWatch`, `getIptvResumePositions`, `getIptvDecoderMode`, `setIptvSeriesAudioLanguage`, `setIptvLastLiveChannel`. These nine expire only after separately accepted Android-positive/native-origin compatibility proof; bridge wire strings stay frozen. `localCompletionRevision`, startup cache accessors, constants and SQLite facades retain their existing identities. Host 3498 -> 2833 (-662 method lines, -3 unused imports); whole production -592. The 2800 target remains open by33 and strict facade-only ownership remains open; the 97 residual members are not waived.
 
 ### Defaults migration routing (S2-7)

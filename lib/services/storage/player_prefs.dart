@@ -84,7 +84,22 @@ class PlayerPrefs {
     skipSegmentProviderTheIntroDb,
   };
 
+  static const String _quickPlayVrModeKey = 'quick_play_vr_mode';
+  static const String _quickPlayVrDefaultScreenTypeKey =
+      'quick_play_vr_default_screen_type';
+  static const String _quickPlayVrDefaultStereoModeKey =
+      'quick_play_vr_default_stereo_mode';
+  static const String _quickPlayVrAutoDetectFormatKey =
+      'quick_play_vr_auto_detect_format';
+  static const String _quickPlayVrShowDialogKey = 'quick_play_vr_show_dialog';
+
   static const Set<String> ownedKeys = {
+    _quickPlayVrModeKey,
+    _quickPlayVrDefaultScreenTypeKey,
+    _quickPlayVrDefaultStereoModeKey,
+    _quickPlayVrAutoDetectFormatKey,
+    _quickPlayVrShowDialogKey,
+
     _networkConnectPatienceKey,
     _networkBufferSizeKey,
     _defaultPlayerModeKey,
@@ -646,5 +661,64 @@ class PlayerPrefs {
     } else {
       await prefs.setString(_playerDefaultAudioLanguageKey, languageCode);
     }
+  }
+
+  static Future<String> getQuickPlayVrMode() async {
+    final prefs = await ProfilePreferences.instance();
+    return prefs.getString(_quickPlayVrModeKey) ?? 'disabled';
+  }
+
+  static Future<void> setQuickPlayVrMode(String mode) async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.setString(_quickPlayVrModeKey, mode);
+  }
+
+  static Future<String> getQuickPlayVrDefaultScreenType() async {
+    final prefs = await ProfilePreferences.instance();
+    return prefs.getString(_quickPlayVrDefaultScreenTypeKey) ?? 'dome';
+  }
+
+  static Future<void> setQuickPlayVrDefaultScreenType(String screenType) async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.setString(_quickPlayVrDefaultScreenTypeKey, screenType);
+  }
+
+  static Future<String> getQuickPlayVrDefaultStereoMode() async {
+    final prefs = await ProfilePreferences.instance();
+    return prefs.getString(_quickPlayVrDefaultStereoModeKey) ?? 'sbs';
+  }
+
+  static Future<void> setQuickPlayVrDefaultStereoMode(String stereoMode) async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.setString(_quickPlayVrDefaultStereoModeKey, stereoMode);
+  }
+
+  static Future<bool> getQuickPlayVrAutoDetectFormat() async {
+    final prefs = await ProfilePreferences.instance();
+    return prefs.getBool(_quickPlayVrAutoDetectFormatKey) ?? true;
+  }
+
+  static Future<void> setQuickPlayVrAutoDetectFormat(bool autoDetect) async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.setBool(_quickPlayVrAutoDetectFormatKey, autoDetect);
+  }
+
+  static Future<bool> getQuickPlayVrShowDialog() async {
+    final prefs = await ProfilePreferences.instance();
+    return prefs.getBool(_quickPlayVrShowDialogKey) ?? true;
+  }
+
+  static Future<void> setQuickPlayVrShowDialog(bool showDialog) async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.setBool(_quickPlayVrShowDialogKey, showDialog);
+  }
+
+  static Future<void> clearQuickPlayVrSettings() async {
+    final prefs = await ProfilePreferences.instance();
+    await prefs.remove(_quickPlayVrModeKey);
+    await prefs.remove(_quickPlayVrDefaultScreenTypeKey);
+    await prefs.remove(_quickPlayVrDefaultStereoModeKey);
+    await prefs.remove(_quickPlayVrAutoDetectFormatKey);
+    await prefs.remove(_quickPlayVrShowDialogKey);
   }
 }
