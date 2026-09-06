@@ -58,6 +58,7 @@ const _watchFlowPaths = <String>[
   'lib/screens/debrify_tv/watch/real_debrid_watch_flow.dart',
   'lib/screens/debrify_tv/watch/torbox_watch_flow.dart',
   'lib/screens/debrify_tv/watch/windowed_watch_queue.dart',
+  'lib/screens/debrify_tv/watch/quick_windowed_watch_programme.dart',
 ];
 
 List<String?> _providerLiteralHits(String source) {

@@ -48,10 +48,11 @@ const List<String> kStillFrozenPaths = [
 const _watchFlowPlayerCounts = <String, int>{
   'lib/screens/debrify_tv/watch/alldebrid_watch_flow.dart': 2,
   'lib/screens/debrify_tv/watch/pikpak_watch_flow.dart': 1,
-  'lib/screens/debrify_tv/watch/premiumize_watch_flow.dart': 1,
+  'lib/screens/debrify_tv/watch/premiumize_watch_flow.dart': 0,
   'lib/screens/debrify_tv/watch/provider_watch_flow.dart': 3,
   'lib/screens/debrify_tv/watch/real_debrid_watch_flow.dart': 1,
-  'lib/screens/debrify_tv/watch/torbox_watch_flow.dart': 1,
+  'lib/screens/debrify_tv/watch/torbox_watch_flow.dart': 0,
+  'lib/screens/debrify_tv/watch/quick_windowed_watch_programme.dart': 1,
 };
 
 // Match each construction at its actual frozen builder site, not a file marker.
@@ -61,13 +62,21 @@ bool _onlyFrozenPlayerSites(String source) {
   final frozen = RegExp(
     r'\bFrozenLegacyPageRoute\s*\(\s*builder\s*:\s*\(_\)\s*=>\s*(VideoPlayerScreen\s*\()',
   ).allMatches(source).map((m) => m.end - m.group(1)!.length).toSet();
-  return players.isNotEmpty && players.length == frozen.length &&
+  return players.length == frozen.length &&
       players.containsAll(frozen) &&
       RegExp(r'\bFrozenLegacyPageRoute\s*\(').allMatches(source).length == frozen.length &&
       !source.contains('MaterialPageRoute');
 }
 
 void main() {
+  test('zero player sites still reject unmatched or unfrozen additions', () {
+    expect(_onlyFrozenPlayerSites(''), isTrue);
+    expect(_onlyFrozenPlayerSites('VideoPlayerScreen();'), isFalse);
+    expect(_onlyFrozenPlayerSites(
+        'FrozenLegacyPageRoute(builder: (_) => SizedBox());'), isFalse);
+    expect(_onlyFrozenPlayerSites('MaterialPageRoute();'), isFalse);
+  });
+
   test('VideoPlayerScreen is constructed only where the freeze exists', () {
     const allowed = {
       'lib/screens/video_player_screen.dart', // itself
@@ -107,9 +116,11 @@ void main() {
       expect(_onlyFrozenPlayerSites(source), isTrue, reason: entry.key);
       expect(_onlyFrozenPlayerSites('$source\nVideoPlayerScreen();'),
           isFalse, reason: '${entry.key}: unwrapped extra construction');
-      expect(_onlyFrozenPlayerSites(source.replaceFirst(
-          'FrozenLegacyPageRoute(', 'MaterialPageRoute(')),
-          isFalse, reason: '${entry.key}: existing construction loses freeze');
+      if (entry.value > 0) {
+        expect(_onlyFrozenPlayerSites(source.replaceFirst(
+            'FrozenLegacyPageRoute(', 'MaterialPageRoute(')),
+            isFalse, reason: '${entry.key}: existing construction loses freeze');
+      }
     }
   });
 
