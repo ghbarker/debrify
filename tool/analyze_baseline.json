@@ -9,7 +9,7 @@
     "test"
   ],
   "identity": "path|code|message",
-  "count": 452,
+  "count": 451,
   "diagnostics": [
     {
       "severity": "WARNING",
@@ -1255,9 +1255,9 @@
       "severity": "INFO",
       "type": "LINT",
       "code": "CONTROL_FLOW_IN_FINALLY",
-      "path": "lib/screens/debrify_tv/watch/torbox_watch_flow.dart",
-      "line": 684,
-      "column": 26,
+      "path": "lib/screens/debrify_tv/watch/cached_windowed_watch_programme.dart",
+      "line": 203,
+      "column": 24,
       "length": 7,
       "message": "Use of 'return' in a 'finally' clause."
     },
@@ -1310,16 +1310,6 @@
       "column": 13,
       "length": 215,
       "message": "The 'child' argument should be last in widget constructor invocations."
-    },
-    {
-      "severity": "INFO",
-      "type": "LINT",
-      "code": "CONTROL_FLOW_IN_FINALLY",
-      "path": "lib/screens/debrify_tv/watch/premiumize_watch_flow.dart",
-      "line": 547,
-      "column": 26,
-      "length": 7,
-      "message": "Use of 'return' in a 'finally' clause."
     },
     {
       "severity": "INFO",

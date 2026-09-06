@@ -510,6 +510,16 @@ is an editor mirror, not the source of truth. How to add a provider:
   Pins: `test/magic_tv_quick_windowed_programme_origin_test.dart` (8 real-host cases).
   Runtime/guard evidence union227 is not one green run; two Windows golden failures
   remain explicit. No native-positive, physical-modal or actual channel-switch proof.
+  `runCachedWindowedWatch` in `lib/screens/debrify_tv/watch/cached_windowed_watch_programme.dart`
+  now owns the full TB/PM cached async entries; PP/AD/RD programmes remain distinct.
+  Net110 whole-production deletion: five flows1180, common1551 unchanged, quick183
+  unchanged and cached208 separately charged (3232->3122). Under-800 and dependency
+  closure remain open. The two cached entry bindings retain their public signatures
+  and eight-line direct invocations for review/removal before Phase 2/Q2 composition
+  completion. Seven awaits and the finally-return disposal-error suppression remain
+  origin behavior, not safety fixes. Pins: `test/magic_tv_cached_windowed_programme_origin_test.dart`
+  (4 real-host mounted/disposed error cases); early leaf guards/storage-read failures
+  and native-positive behavior remain unproven.
   Its 24 binding/tear-off lines are retained for Q2 composition review/removal before
   Phase 2 completion. These shared phases do not complete the five-flow dedup target. `WatchFlowBindings` keeps live host
   state, navigation, existing preparation/prefetch/launcher callbacks and
@@ -644,6 +654,7 @@ is an editor mirror, not the source of truth. How to add a provider:
   `lib/widgets/remote/` + `lib/services/remote_control/` (device-to-device over LAN, no server).
   See the 11-site checklist above until **T1**.
 - Onboarding: `lib/widgets/initial_setup_flow.dart` (export) → `lib/widgets/onboarding/onboarding_flow.dart`.
+- `lib/services/profiles/profile_onboarding_state.dart` (`ProfileOnboardingState`) owns onboarding readiness reconciliation and retirement of `initial_setup_complete_v1`; the existing profile registry remains canonical. Two unchanged bodies retain two nonasync `StorageService` facades (4 lines), expiring only after separately scoped Q2 caller compatibility retirement. Preserve reader canonical-write-before-remove versus setter remove-before-write, captured authority and failure behavior. Actual merge restore imports canonical true but retains destination compatibility false; the next public read reconciles canonical false and retires that flag. Host 2678 -> 2609 (-69), new owner 85 and registry +2 yield whole production +18: ownership separation, no line-target or profile-safety claim.
   Migration: `lib/services/app_migration_service.dart`.
 
 ## Metadata

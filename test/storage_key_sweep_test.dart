@@ -1,3 +1,4 @@
+import 'package:debrify/services/profiles/profile_onboarding_state.dart';
 import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'dart:io';
 
@@ -118,6 +119,7 @@ Set<String> inlinePrefsKeysOnStorageService() {
 /// Every name the completed registry must own: declared consts, store-owned
 /// keys, undeclared inline literals, and documented interpolated names.
 Set<String> allDiscoveredPrefsKeys() => {
+  ...ProfileOnboardingState.ownedKeys,
   ...declaredOnStorageService(),
   ...declaredOnCloudSecretPrefs(),
   ...MyWatchlistStore.ownedKeys,
@@ -142,6 +144,16 @@ Set<String> unownedDiscoveredPrefsKeys() =>
     allDiscoveredPrefsKeys().difference(StorageKeyOwnership.byKey.keys.toSet());
 
 void main() {
+  test('onboarding singleton is discovered and missing ownership fails', () {
+    const expected = {'initial_setup_complete_v1'};
+    expect(ProfileOnboardingState.ownedKeys, expected);
+    expect(StorageKeyOwnership.keysFor(StorageKeyStore.profileOnboardingState), expected);
+    expect(declaredOnStorageService().intersection(expected), isEmpty);
+    expect(allDiscoveredPrefsKeys(), containsAll(expected));
+    expect(allDiscoveredPrefsKeys().difference(
+      StorageKeyOwnership.byKey.keys.toSet().difference(expected)), expected);
+  });
+
   test('watchlist singleton is discovered and missing registry ownership fails', () {
     const expected = {'my_watchlist_v1'};
     expect(MyWatchlistStore.ownedKeys, expected);
@@ -305,6 +317,8 @@ void main() {
       }
     }
 
+    expectStore(ProfileOnboardingState.ownedKeys,
+        StorageKeyStore.profileOnboardingState, 'ProfileOnboardingState');
     expectStore(fromStremio, StorageKeyStore.stremioTvPrefs, 'StremioTvPrefs');
     expectStore(fromSocial, StorageKeyStore.socialPrefs, 'SocialPrefs');
     expectStore(fromDebrify, StorageKeyStore.debrifyTvPrefs, 'DebrifyTvPrefs');
@@ -323,6 +337,7 @@ void main() {
         StorageKeyStore.defaultTorrentFilterPrefs, 'DefaultTorrentFilterPrefs');
 
     final extracted = {
+      ...ProfileOnboardingState.ownedKeys,
       ...fromCloud,
       ...fromHome,
       ...fromStremio,

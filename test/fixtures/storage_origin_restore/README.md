@@ -672,3 +672,73 @@ we could do? A bounded consolidation into existing PlayerPrefs still needs the
 explicit11-body lock/release, final combined CI and independent production
 review in the same PR. No line-goal credit (already closed), no new tiny store.
 Forwarder inventory unchanged; no new facade or expiry introduced by tests.
+
+### Onboarding compatibility exclusion and canonical restore authority
+
+Separate residual domain: **zero admitted preference keys, one excluded key**,
+`initial_setup_complete_v1` (physical bool). This does not change the historical
+141 admitted / 28 excluded inventory or any prior encrypted/manifest bytes.
+Actual exporter origin: `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`.
+Current unchanged production pin: `be4fd79f5bbf9f0af399c0ae968b3090abaf4fc9`
+(parent `25fbc2611792d93c28b5a5f608cd252606f3f0ff`).
+
+Source registry readiness is explicitly set **true**, then the compatibility
+preference is seeded **false** directly using ProfilePreferences. The public
+compatibility reader is deliberately not called before export: it would
+reconcile the flag first. The actual old exporter emits no preference keys and
+carries `setupComplete: true` in its authenticated profile record. Manifest
+`sourceAuthority` records these distinct values. No secrets/resources are seeded.
+
+The actual current merge restore starts with destination canonical **false**
+and compatibility **false**. It publishes generation 2 with canonical **true**
+from the imported profile record, while retaining the destination compatibility
+flag. The first public `isInitialSetupComplete()` then returns **false**, writes
+canonical false, and removes the new-generation compatibility key. Re-export
+records canonical false. Old-generation and other-profile flags, the other
+profile's canonical state and synthetic destination sentinel remain unchanged.
+This is a preserved reconciliation quirk, not a restore/profile-safety fix or a
+claim that canonical readiness stays unchanged during restore.
+
+Generation uses its own detached checkout
+`C:/Users/hunth/debrify/debrify-onboarding-fixture-origin`; candidate is
+`C:/Users/hunth/debrify/debrify-s2-profile-onboarding-state`. The copied loader
+removes only three unrelated extracted-store imports (IptvPrefs,
+PlaybackProgressStore, ProviderCredentialPrefs) and routes their same methods to
+actual old StorageService, with the same adaptation in the existing playlist
+helper. This is **not an identical-harness claim**. No old lib is changed.
+The generator verifies exact origin HEAD, clean lib and its own package root.
+Pinned Flutter3.44.8 and its Dart sibling are used in both checkouts.
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# In the own unchanged origin checkout, after the documented harness adaptation:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --plain-name 'onboarding-state-exclusion: generate' --reporter json
+# Copy only the new onboarding-state-exclusion encrypted/manifest pair to candidate.
+# Candidate positive run:
+& $flutter test --no-pub test/profile_onboarding_state_origin_test.dart test/storage_origin_restore_fixture_test.dart test/profiles/profile_onboarding_state_test.dart --reporter json
+& $flutter analyze --no-pub test/profile_onboarding_state_origin_test.dart test/storage_origin_restore_fixture_test.dart
+# Must fail the declared exclusion assertion after valid encryption/decryption:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'onboarding-state-exclusion: restore' --dart-define=STORAGE_FIXTURE_MUTATION=onboarding-forbidden-key --reporter json
+```
+
+The negative control inserts the forbidden bool into a real decoded package,
+rebuilds its section hash, encrypts/decrypts with the actual codec, then fails the
+explicit declared-exclusion assertion before restore. It is not a production
+mutation, codec-rejection test or claim of post-restore mutant detection.
+
+Ciphertext SHA256:
+`beb17d703ce5fc99711226a17bf67910b7a93a7ca3755598c9ad3cd9a32ef5d3`.
+
+Did we make a difference? The fixture distinguishes excluded preferences from
+canonical profile-record authority and exposes the next-reader reconciliation.
+Is there more we could do? A separately granted two-body owner move still needs
+independent production review in this same combined PR. No new facade or line
+credit from this fixture; the two public APIs remain unchanged. This one finite
+merge case does not cover sanitized/new-profile restore, all authorization
+interleavings, null/false/absent profile-record variants or native/tvOS recovery.
+
+Checkpoint verification: origin generation 1 PASS; final combined 68 PASS
+(17 public-origin + 43 fixture + 8 existing profile-onboarding), zero skips/errors;
+two-file scoped analysis clean. Forbidden-key negative 1 FAIL at the declared
+exclusion assertion. All 34 prior artifact Git blobs and old recipe sections
+remain unchanged; origin/current lib and committed public pin remain frozen.
