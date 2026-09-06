@@ -643,6 +643,8 @@ is an editor mirror, not the source of truth. How to add a provider:
 _Maintenance: this is a routing hint, not a spec. If a lane moves a path named here,
 update this file in the same PR. Line counts come from `wc -l`, not estimates._
 
+- `lib/services/remote_control/remote_device_prefs.dart` (`RemoteDevicePrefs`) owns the four installation-wide remote preference keys and remembered-device JSON; pairing, identity and network/session lifetimes remain with their existing owners. Nine unchanged bodies retain nine nonasync `StorageService` facades (18 lines), expiring only after separately scoped Q2 caller compatibility retirement. `DevicePreferences` globals, raw types, JSON/default/error behavior and held-write lifetime remain unchanged. Host 2609 -> 2582 (-27), new owner 69 and registry +2 yield whole production +44: modest scalar/JSON ownership, no line-target or portable-identity claim. Actual pre-S2 export excludes all four keys and profile shadows; current restore preserves destination globals.
+
 ### Playback storage routing (S2-6)
 
 - `lib/services/storage/my_watchlist_store.dart` (`MyWatchlistStore`) owns My Watchlist identity, legacy-row reads, ordering, cap eviction and playback removal for `my_watchlist_v1`. `StorageService` retains eight direct non-async method facades until Q2 caller migration, the cap constant alias and annotated debug-override getter/setter backed by one nullable store field. Captured preferences, later row-read reacquisition and failure behavior remain unchanged; this is owner separation, not a profile-safety or serialization fix.
