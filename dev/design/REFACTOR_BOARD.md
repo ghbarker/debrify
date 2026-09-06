@@ -48,25 +48,27 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 **Where we are:** implementation and verification are still in progress. Since this six-outcome list was introduced, we have landed additional milestones, especially M1 flow consolidation and Tonight. One outcome is complete; the rough 70% estimate is judgment, not a measured acceptance score. The most recent PR is not the whole trek.
 
-### Current work — refreshed after gate dcdc8385
+### Current work — latest verified checkpoint
 
-- **Ampere / Search:** #196 merged; #198 `5ea5bfb` under independent review. Canvas origin `84e8bf6`: 3 tests passed first run; exact unapplied extraction awaits decision. Atrium held.
-- **Wegener / Player:** #193 merged. Renderer experiment held after finite attempts; assigned read-only V1-7 speed/aspect ownership and public-testability design, no renderer retries.
-- **Locke / Storage:** #194 merged; #197 integrating the new main fixture/key-sweep additions before fresh CI. Draft #199 `1356c0f`: 13 green origin tests before move, 60 combined tests passed; independent review queued. Next read-only engine-reset assessment.
-- **Cicero / Review:** full dcdc8385 gate PASSED. Review #198 then #199; #194/#196/#197 integration deltas accepted without duplicate suite runs.
-- **Parent:** decide Canvas scope, review #192 documentation, merge exact reviewed CI-green heads and reconcile dependencies. CODEMAP lock released. No user/manual-smoke blocker.
+- **Locke / Storage:** QuickPlay caller cleanup in progress after 277-test green origin checkpoint; exact20-file scope,18 facades to retire, forecast host-42/whole-37. Owners/registry/native exceptions remain unchanged.
+- **Cicero / Review:** full896a168d gate PASSED; ready for independent QuickPlay production review. No open failed gate or unreviewed merge.
+- **Ampere / Search and upstream:** merged Search host6291, six stages complete; Atrium FINAL HOLD and stage target638-line shortfall remain. Local upstream catalog trial56ad passed independent24 tests; unpublished, no fork completion credit.
+- **Wegener / Player:** speed/aspect201 and transport205 merged. Seek/input lifetime retained after bounded design review; renderer/tracker/Atrium-related retries remain held. Provider guide192 reviewed and merged.
+- **Parent:** maintain exact merge/gate accounting and retained-boundary decisions. CODEMAP lock released. No user/manual-smoke blocker.
 
 ### Next steps — working checklist
 
-- [x] Full gate covering #193, #195 and #191.
-- [ ] Finish CI and merge eligible #194, #196 and #197 heads; reconcile dependent branches after each merge.
-- [ ] Complete independent production reviews of #198 and #199.
-- [ ] Decide Canvas extraction from its exact body-diff packet, preserving green origin commit.
-- [ ] Review player speed/aspect and storage engine-reset scope packets before implementation grants.
-- [ ] Finish provider-guide #192 review and upstream contribution preparation.
-- [ ] Run the next full integrated gate after three additional production merges.
+- [x] Merge #199/#204/#206 and pass their full integrated gate896a168d.
+- [x] Merge Search favourite cells203 and corrected provider guide192.
+- [ ] Finish QuickPlay18-facade caller cleanup, independent review and exact CI.
+- [ ] Reconcile remaining Q2 expiry and native ownership obligations without treating retained code as deleted.
+- [ ] Resolve Search Atrium/final composition and player remaining architectural outcomes under a separately justified scope; no blind retries or wrapper padding.
+- [ ] Decide whether to publish the independently reviewed local upstream catalog candidate; nothing submitted upstream.
+- [ ] Run final integrated acceptance only after the remaining architectural outcomes are fulfilled.
 
 ### Latest completed milestones
+
+- **Full896a168d gate PASSED:**6093PASS/12exactknown/2skip;goldens21known/configuredretries/helpers0/unexpected0unused0; nativefirstpairPASS;431/449zeroNew/Python55/layer77;Windows+ARM64PASS. SameAST442/133/161/23/0, Storage+17 exact14scalar+1adult+2Indexer; no rebaseline. ZIP700af490c819495b48c7425e966841f68817bf8edbbd1d04e06cae0ba70236ac; APK902c007fd207fc71812628ce93e456ac9d06f7b2202f1b79b2a6440df9f18b50. No freshmanual/device proof.
 
 - #199 merged **896a168d**, exact91640c5c, independent60PASS/finalunion+twoauthorizedunusedimports/freshallCIgreen. Indexer compatibility mapping belongs to one owner; canonicalresourceauthority unchanged. Latestmain host-66 includingtwoimportremovals; originalslicehost-64/whole+29 remainsseparate. Did we make a difference? Real ownership with rawlegacy/canonical quirks pinned; no exportresource/nativeclosure claim. Prior1f049 native600sUNKNOWN thensameheadretryPASS preserved; final916nativepassedfresh. Third204/206/199 merge triggersfull896gate. AllthreeformerlypendingstoragePRs merged; remainingretentions requirefinalexplicitaccounting.
 
@@ -138,7 +140,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Gate pinned analyzer431/449, zero errors/new issues; layering77→77; Python55 passed; originalbc46/current native pair passed first try. Initial wrong-PATH analyzer output retained separately and corrected using pinned SDK; no baseline edit.
 - Windows226.2s/68files and ARM64171.9s builds passed. ZIP SHA256b96b7a4bd0b98a4f9de799ef3242bebf18a150d3c49c0113ad0566d10f1d729f; APK80811b556495c20078920091643b91cbcde5bc236d89737bd3bed7d1479e8cb5. No fresh manual/device smoke claimed.
 - #181 BoardCell mergedc7a332bd exact932 after independent140 passes plus the exact known sidebar failure, final integration review and all3CI green. Shared renderer owns card state/shuttle; 669 declaration lines relocated, whole production+17, zero host-file reduction. Did we make a difference? Removed private host-library access at real consumers; remaining stage navigation/composition is still open.
-- Production merge counter: **3 since completed gate9a2cbb67** (#204, #206, #199). Full gate896a168d running; further production merges held. Docs192 does not increment the counter.
+- Production merge counter: **0 since completed gate896a168d**. Next full gate after three production merges. Docs192 does not increment the counter.
 
 ### Forwarders at the latest full gate9fd6c24f
 
