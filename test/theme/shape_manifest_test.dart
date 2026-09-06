@@ -54,6 +54,7 @@ const Map<String, int> kShapeResidue = {
   'lib/screens/premiumize/premiumize_files_screen.dart': 6,
   'lib/screens/search/keyword_search_screen.dart': 1,
   'lib/screens/search/search_card_widgets.dart': 0,
+  'lib/screens/search/board_cell.dart': 0,
   'lib/screens/search/search_hero_widgets.dart': 1,
   'lib/screens/search/trailer_status_chips.dart': 1,
   'lib/screens/search/search_sources.dart': 3,
