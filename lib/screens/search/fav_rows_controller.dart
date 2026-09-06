@@ -25,7 +25,7 @@ import '../../widgets/debrid_action_sheet.dart';
 import '../iptv/xtream_series_detail.dart';
 import '../playlist_content_view_screen.dart';
 import '../stremio_tv/stremio_tv_service.dart';
-import '../search_screen.dart' show FavKind, FavRowRef;
+import 'fav_row_ref.dart';
 
 /// Screen-owned favourites state and flows. UI/focus dependencies are explicit;
 /// the host supplies its live State boundary and cross-row navigation.
