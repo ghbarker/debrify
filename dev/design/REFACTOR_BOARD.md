@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main ac221c4b
+## Current roadmap — September 6, main dcdc8385
 
 ### God-file line counts — original → current merged main
 
 - **Search:** 19,070 → **6,457** (12,613 fewer)
 - **Player:** 16,278 → **11,738** (4,540 fewer)
 - **Magic TV:** 10,716 → **3,321** (7,395 fewer)
-- **Storage:** 9,963 → **2,383** (7,580 fewer)
+- **Storage:** 9,963 → **2,368** (7,595 fewer)
 - **Settings:** 7,905 → **2,903** (5,002 fewer)
 
-Counted from actual merged main ac221c4b. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion percentage remains withdrawn: remaining architectural work lacks a reliable denominator.
+Counted from actual merged main dcdc8385. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion percentage remains withdrawn: remaining architectural work lacks a reliable denominator.
 
 ### The same six outcomes — stable roadmap
 
@@ -57,6 +57,8 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Parent: merge exact reviewed/CI-green heads, keep six outcomes stable and BOARD/NOTES current. M1-7 outcome4 complete; no user blocker. CODEMAP lock currently released.
 ### Latest completed milestones
 
+- #191 mergeddcdc8385 exacte522 after independent113PASS/allCIgreen and final10blob/CODEMAPunion. FourAmbientfacades retired,52callerreceivers directowner, hostminus15/wholeminus10; enumexportcompat retained. Did we make a difference? Callers use actualowner with unchangedarguments/order; Storage stillhasidentifiedpolicygroups, notclosed.
+
 - #195 mergedac221c4b exactcb3 after independent122PASS/1knownsidebar, allCIgreen/10ownedblob+CODEMAPunion. ActualDeckStateextension removed, sharedpublicvisuals owner; hostminus23 wholeplus105.22bindings/twolazynativeconstructors retained,4stagepartsleft. Did we make a difference? Removed private stage/library dependency with actualconsumer evidence; remainingstages/composition stillopen.
 
 - #193 merged a749842f exact2e0a after independent34PASS, exactbody/mainunion and allCIgreen. Diagnostic timer/token/params/signature ownership extracted; host minus191, wholeproduction plus61 (priorseam+43 separate). Six live capabilities and host renderer/generation remain. Did we make a difference? Real diagnostic state leaves host with pinned async quirks; full renderer/recreation remains open.
@@ -90,7 +92,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Gate pinned analyzer431/449, zero errors/new issues; layering77→77; Python55 passed; originalbc46/current native pair passed first try. Initial wrong-PATH analyzer output retained separately and corrected using pinned SDK; no baseline edit.
 - Windows226.2s/68files and ARM64171.9s builds passed. ZIP SHA256b96b7a4bd0b98a4f9de799ef3242bebf18a150d3c49c0113ad0566d10f1d729f; APK80811b556495c20078920091643b91cbcde5bc236d89737bd3bed7d1479e8cb5. No fresh manual/device smoke claimed.
 - #181 BoardCell mergedc7a332bd exact932 after independent140 passes plus the exact known sidebar failure, final integration review and all3CI green. Shared renderer owns card state/shuttle; 669 declaration lines relocated, whole production+17, zero host-file reduction. Did we make a difference? Removed private host-library access at real consumers; remaining stage navigation/composition is still open.
-- Production merge counter: **2 since gate334145c6** (#193, #195), which includes181/182/183. Gate excludes181; source/build evidence remains attached to95c93.
+- Production merge counter: **3 since gate334145c6** (#193, #195, #191); fulldcdc8385 gate assigned, further production merges held, which includes181/182/183. Gate excludes181; source/build evidence remains attached to95c93.
 
 ### Forwarders at the last full gate95c93
 
