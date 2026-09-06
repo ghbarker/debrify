@@ -245,26 +245,6 @@ bool _sameCanvasTitle(StremioMeta item, StremioMeta enriched) {
 String? _firstNonEmpty(String? a, String? b) =>
     (a != null && a.isNotEmpty) ? a : ((b != null && b.isNotEmpty) ? b : null);
 
-/// One Canvas rail — a Continue Watching row ([cw] non-null, with its
-/// position among the CW rows in [cwIndex]), a favourites-family rail
-/// ([favKind] non-null: IPTV / Debrify TV / Stremio TV / Playlist / an IPTV
-/// custom-list row), or a catalog section ([sectionIndex] into
-/// `_sections`/`_rowNodes`).
-class _CanvasRail {
-  final CwRow? cw;
-  final int cwIndex;
-  final FavRowRef? favKind;
-  final int? sectionIndex;
-  final int traktSkeletonIndex;
-  const _CanvasRail({
-    this.cw,
-    this.cwIndex = -1,
-    this.favKind,
-    this.sectionIndex,
-    this.traktSkeletonIndex = -1,
-  });
-}
-
 /// What the Canvas stage should show while a FAVOURITES cell has focus —
 /// favourites aren't StremioMeta, so the hero pipeline can't describe them;
 /// this lightweight override carries the focused item's own art + name
@@ -300,9 +280,9 @@ class _CornerWedges extends CustomPainter {
 /// [_SearchScreenState._resolveStageRail]) — the rail list, which one is
 /// active, its identity key, its items and its focus nodes.
 class _StageRailView {
-  final List<_CanvasRail> rails;
+  final List<CanvasRail> rails;
   final int index;
-  final _CanvasRail rail;
+  final CanvasRail rail;
   final String key;
   final List<StremioMeta> items;
   final List<FocusNode> nodes;
@@ -911,7 +891,7 @@ class _TonightQueueRowState extends State<_TonightQueueRow>
 /// and which column within it (so the cell's FocusNode, progress, episode
 /// label and open/remove actions all come from the row's own contract).
 class _TonightQueueEntry {
-  final _CanvasRail rail;
+  final CanvasRail rail;
   final int col;
   const _TonightQueueEntry({required this.rail, required this.col});
 }

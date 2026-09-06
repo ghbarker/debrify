@@ -35,14 +35,11 @@ class FavRowsController {
     required this.isLive,
     required this.readIsTelevision,
     required this.commit,
-    required this.homeRowIds,
     required this.addonForContinue,
     required this.readCatalogQuery,
     required this.readCatalogSearching,
     required this.focusContent,
-    required this.focusHomeRailAt,
     required this.focusRelativeHomeRail,
-    required this.focusRow,
     required this.readHomeDisabled,
     required this.maybeAutoFocusBoard,
     required this.openItem,
@@ -54,14 +51,11 @@ class FavRowsController {
   final bool Function() isLive;
   final bool Function() readIsTelevision;
   final void Function(VoidCallback) commit;
-  final List<String> Function() homeRowIds;
   final StremioAddon Function(String?) addonForContinue;
   final String Function() readCatalogQuery;
   final bool Function() readCatalogSearching;
   final VoidCallback focusContent;
-  final bool Function(int, int) focusHomeRailAt;
   final void Function(String, int, int) focusRelativeHomeRail;
-  final bool Function(int, int) focusRow;
   final Set<String> Function() readHomeDisabled;
   final VoidCallback maybeAutoFocusBoard;
   final void Function(StremioMeta, StremioAddon) openItem;
@@ -228,75 +222,6 @@ class FavRowsController {
     if (nodes.isEmpty) return false;
     requestRowFocus(nodes, column.clamp(0, nodes.length - 1));
     return true;
-  }
-
-  // A DPAD-down pressed while everything below was still loading (Trakt row a
-  // focusless skeleton, favourites absent, first catalog batch in flight) used
-  // to be swallowed with focus frozen in place — the cell handler had already
-  // reported the key handled. Instead the press is remembered briefly and
-  // completed the moment a row below lands. Origin node is compared by
-  // IDENTITY only (never dereferenced — it may be disposed by then): if focus
-  // moved elsewhere meanwhile, the deferred move is dropped, so a late load
-  // can never yank focus away from the user.
-  FocusNode? pendingDownOrigin;
-  int pendingDownRowIndex = -1; // set when pressed on a catalog row
-  String? pendingDownHomeRowId; // stable id on the globally ordered Home
-  int pendingDownCol = 0;
-  DateTime? pendingDownAt;
-  static const Duration pendingDownMaxAge = Duration(seconds: 3);
-
-  void deferDownMove({
-    int rowIndex = -1,
-    String? homeRowId,
-    required int column,
-  }) {
-    pendingDownOrigin = FocusManager.instance.primaryFocus;
-    if (pendingDownOrigin == null) return;
-    pendingDownRowIndex = rowIndex;
-    pendingDownHomeRowId = homeRowId;
-    pendingDownCol = column;
-    pendingDownAt = DateTime.now();
-  }
-
-  void clearDeferredDown() {
-    pendingDownOrigin = null;
-    pendingDownAt = null;
-    pendingDownHomeRowId = null;
-  }
-
-  /// Complete a recent deferred DPAD-down, called whenever a row load settles.
-  /// Post-frame: the freshly-loaded row's cells only mount on the next build,
-  /// and [requestRowFocus] needs mounted cells.
-  void maybeCompleteDeferredDown() {
-    if (pendingDownAt == null) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final at = pendingDownAt;
-      final origin = pendingDownOrigin;
-      if (at == null || origin == null) return;
-      if (DateTime.now().difference(at) > pendingDownMaxAge) {
-        clearDeferredDown();
-        return;
-      }
-      if (!identical(FocusManager.instance.primaryFocus, origin)) {
-        clearDeferredDown();
-        return;
-      }
-      final col = pendingDownCol;
-      final bool moved;
-      final homeRowId = pendingDownHomeRowId;
-      if (homeRowId != null) {
-        final rowIds = homeRowIds();
-        final current = rowIds.indexWhere((id) => id == homeRowId);
-        moved = current >= 0 && focusHomeRailAt(current + 1, col);
-      } else if (pendingDownRowIndex >= 0) {
-        moved = focusRow(pendingDownRowIndex + 1, col);
-      } else {
-        // From the last favourites row.
-        moved = focusRow(0, col);
-      }
-      if (moved) clearDeferredDown();
-    });
   }
 
   VoidCallback favRowOnUp(String rowId, int column) =>
