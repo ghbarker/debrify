@@ -9,6 +9,8 @@
 /// [StorageKeyStore] ownership when a domain store is extracted; they must
 /// not change the string.
 enum StorageKeyStore {
+  /// Torrent search history and its recording preference.
+  torrentSearchHistoryStore,
   /// Installation-wide remote device preferences (RemoteDevicePrefs).
   remoteDevicePrefs,
   /// Onboarding readiness compatibility flag (ProfileOnboardingState).
@@ -246,8 +248,8 @@ class StorageKeyOwnership {
     'playlist_favorites_v1': StorageKeyStore.playbackProgressStore,
     'my_watchlist_v1': StorageKeyStore.myWatchlistStore,
     'initial_setup_complete_v1': StorageKeyStore.profileOnboardingState,
-    'torrent_search_history_v1': StorageKeyStore.storageService,
-    'torrent_search_history_enabled': StorageKeyStore.storageService,
+    'torrent_search_history_v1': StorageKeyStore.torrentSearchHistoryStore,
+    'torrent_search_history_enabled': StorageKeyStore.torrentSearchHistoryStore,
     'default_filter_qualities_v1': StorageKeyStore.defaultTorrentFilterPrefs,
     'default_filter_rip_sources_v1': StorageKeyStore.defaultTorrentFilterPrefs,
     'default_filter_languages_v1': StorageKeyStore.defaultTorrentFilterPrefs,

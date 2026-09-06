@@ -438,6 +438,7 @@ void main() {
     'quick-play-vr': {'absentKeys': <String>[]},
     'onboarding-state-exclusion': {'absentKeys': <String>[]},
     'remote-device-exclusion': {'absentKeys': <String>[]},
+    'torrent-search-history': {'absentKeys': <String>[]},
     'quick-play-policy-legacy': {'absentKeys': ['quick_play_movie_rules_v2', 'quick_play_series_rules_v2']},
     'repair': {'absentKeys': ['playback_completion_migration_generation', 'resume_ghost_purge_generation']},
     'repair-markers-zero': {'absentKeys': <String>[]},
@@ -454,8 +455,11 @@ void main() {
     final isRemoteDevice = scenario == 'remote-device-exclusion';
     final isOnboarding = scenario == 'onboarding-state-exclusion';
     final isVr = scenario == 'quick-play-vr';
-    final isResidual = isRemoteDevice || isOnboarding || isVr || isQuickPolicy || isFilter || isPlaylist || isRepair || isMetadata || isWatchlist;
-    final domain = isRemoteDevice
+    final isHistory = scenario == 'torrent-search-history';
+    final isResidual = isHistory || isRemoteDevice || isOnboarding || isVr || isQuickPolicy || isFilter || isPlaylist || isRepair || isMetadata || isWatchlist;
+    final domain = isHistory
+        ? _recipe['residualDomains']['torrent-search-history'] as Map
+        : isRemoteDevice
         ? _recipe['residualDomains']['remote-device-exclusion'] as Map
         : isOnboarding
         ? _recipe['residualDomains']['onboarding-state-exclusion'] as Map
@@ -553,6 +557,17 @@ void main() {
     }
 
     Future<void> seedScenario() async {
+      if (isHistory) {
+        expect(domain['origin'], _origin);
+        expect(domain['namedKeyCount'], 2);
+        expect(domain['excludedKeys'], isEmpty);
+        expect(scenarioSettings.keys, unorderedEquals([
+          'torrent_search_history_v1', 'torrent_search_history_enabled',
+        ]));
+        expect(scenarioSettings.keys.toSet().intersection(_settings.keys.toSet()), isEmpty);
+        await _writeValues(inputExpected);
+        return;
+      }
       if (isRemoteDevice) {
         expect(domain['origin'], _origin);
         expect(domain['admittedKeyCount'], 0);
@@ -666,6 +681,18 @@ void main() {
 
     Future<void> expectProviderReaders([Map<String, Object?>? restored]) async {
       final readerExpected = restored ?? expected;
+      if (isHistory) {
+        final prefs = await ProfilePreferences.instance();
+        final before = {for (final key in prefs.getKeys()) key: prefs.get(key)};
+        expect(await StorageService.getTorrentSearchHistory(), domain['expectedReads']);
+        expect(await StorageService.getTorrentSearchHistoryEnabled(), isFalse);
+        expect(prefs.get('torrent_search_history_v1'), isA<String>());
+        expect(prefs.get('torrent_search_history_v1'), expected['torrent_search_history_v1']);
+        expect(prefs.get('torrent_search_history_enabled'), isA<bool>());
+        expect({for (final key in prefs.getKeys()) key: prefs.get(key)}, before,
+            reason: 'History reads filter decoded rows without dedup, cap or persistence');
+        return;
+      }
       if (isVr) {
         final prefs = await ProfilePreferences.instance();
         final before = {for (final key in prefs.getKeys()) key: prefs.get(key)};
@@ -891,6 +918,7 @@ void main() {
     for (final keepDestination in [false, if (missing.isNotEmpty && !isRepair && !isQuickPolicy) true]) {
       final destinationValues = <String, Object?>{
         if (isRemoteDevice) 'fixture_remote_restore_sentinel': 'untouched',
+        if (isHistory) 'history_restore_sentinel': 'untouched',
         if (isOnboarding) 'onboarding_restore_sentinel': 'untouched',
         if (isPlaylist) 'playlist_restore_sentinel': 'untouched',
         if (isRepair) 'repair_restore_sentinel': 'untouched',
@@ -941,7 +969,7 @@ void main() {
                     'value': ['fullHd', 'unknown quality', 'fullHd'],
                   },
                 }
-              : isRemoteDevice || isOnboarding || isPlaylist || isRepair || isMetadata || isWatchlist || isQuickPolicy || isVr
+              : isHistory || isRemoteDevice || isOnboarding || isPlaylist || isRepair || isMetadata || isWatchlist || isQuickPolicy || isVr
                   ? domain['mutations'] as Map
                   : _recipe['mutations'] as Map;
           expect(['', ...mutations.keys], contains(_mutation));

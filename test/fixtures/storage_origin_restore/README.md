@@ -812,3 +812,75 @@ after removing a redundant test cast; no diagnostic allowance. All 36 prior
 artifact Git blobs, prior recipe sections, committed public pin and origin/current
 production remain unchanged. Initial sentinel named remote_restore_sentinel was
 itself excluded by remote_ policy; corrected only that synthetic test name.
+
+## Torrent search history: separate two-key domain
+
+This checkpoint adds `torrent-search-history.encrypted.json` and its manifest.
+Actual unchanged pre-S2 exporter `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`
+generated the encrypted package in the isolated checkout
+`C:/Users/hunth/debrify/debrify-history-fixture-origin`. Current restore runs in
+`C:/Users/hunth/debrify/debrify-s2-torrent-search-history` on origin pin
+`b85362272f7f73e3558970282932fd26dcaa38c8` (main `0b2fa842`).
+
+Exactly two admitted physical keys are represented, separately from 141 named
+settings and the finite family samples: `torrent_search_history_v1` is a String
+containing JSON; `torrent_search_history_enabled` is bool false. There are no
+excluded keys in this new domain. Six synthetic map rows include duplicate and
+case-distinct hashes, distinct services, ordered integer timestamps/sizes,
+nested false/null fields, plus two non-map list entries. The exporter and restore
+preserve the complete original JSON String, including order and spacing. Actual
+public reads filter the two non-map entries but preserve all six maps: reading
+does not deduplicate, impose the add-time five-item cap or persist a rewrite.
+No URLs, real account data or credentials are included.
+
+The real restore publishes generation2. Physical key/type/value assertions precede
+public reads; old-generation and other-profile values stay untouched. A separate
+`history_restore_sentinel` survives the merge and re-export. Re-export compares
+all represented raw values and the retained destination sentinel. This is one
+finite merge-restore case, not live history capture, profile safety, concurrent
+write serialization, resource transfer or native/tvOS recovery proof.
+
+### Exact exporter harness correspondence
+
+The exporter lib is unchanged. The copied fixture loader drops three imports for
+stores that did not exist at the old origin and routes their same-method calls
+to old `StorageService`: 3 `IptvPrefs`, 14 `PlaybackProgressStore`, and 19
+`ProviderCredentialPrefs` receivers. Its copied playlist helper drops its
+`PlaybackProgressStore` import and adapts four same-method receivers. The copied
+filter-default helper and complete recipe are unchanged. The history-specific
+seed, public readers, expected values, sentinel and mutation code are identical
+between the generation harness and candidate; no later cast/sentinel correction
+was made. These unrelated domain adaptations let the shared harness compile,
+not a claim that the entire harness is byte-identical. Own package configuration
+resolves the app to each checkout and Flutter/test packages to pinned 3.44.8.
+Only the new encrypted/manifest pair was copied back. All36 previous artifact
+Git blobs and every prior recipe entry remain unchanged.
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# Own old-origin checkout, with the exact harness adaptations above:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --plain-name 'torrent-search-history: generate' --reporter json
+# Candidate, one combined positive run:
+& $flutter test --no-pub test/torrent_search_history_origin_test.dart test/storage_origin_restore_fixture_test.dart --reporter json
+& 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/cache/dart-sdk/bin/dart.exe' analyze test/storage_origin_restore_fixture_test.dart
+# Each must fail after actual restore, at physical value/type/order comparison:
+foreach ($variant in @('history-key', 'history-type', 'history-order')) {
+  & $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'torrent-search-history: restore' "--dart-define=STORAGE_FIXTURE_MUTATION=$variant" --reporter json
+}
+```
+
+Generation1 PASS; combined74 PASS (29 public-origin +45 fixture), zero skips/errors.
+Scoped loader analysis clean. Each of the three negative packages causes one
+assertion failure/exit1 at the post-restore physical comparison: renamed history
+key, bool replaced by String, or reordered JSON rows. Every negative rebuilds
+section hashes and passes actual encryption/decryption before real restore. These
+are semantic detection results, not codec rejection or a claim that later public
+reader assertions were reached in the negative runs. No production mutations.
+
+Ciphertext SHA256:
+`8b0998c043d045a22b889b48b9143baee3a835c2e752bedef50df49425dd074b`.
+
+Did we make a difference? Actual old export/current restore now covers the two
+history values and distinguishes preserved raw data from filtered public reads.
+Is there more we could do? A separately authorized five-body owner move remains;
+this fixture contributes zero production line credit and no new history feature.

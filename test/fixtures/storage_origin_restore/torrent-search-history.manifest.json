@@ -1,0 +1,31 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "recipeVersion": 5,
+  "includeSecrets": false,
+  "scenario": "torrent-search-history",
+  "absentKeys": [],
+  "omittedKeys": [],
+  "syntheticOnly": true,
+  "sha256": "8b0998c043d045a22b889b48b9143baee3a835c2e752bedef50df49425dd074b",
+  "representedSettings": {
+    "torrent_search_history_v1": "[{\"torrent\": {\"infohash\": \"same\", \"name\": \"Synthetic 1\", \"size\": 1, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"first\", \"clickedAt\": 1}, null, {\"torrent\": {\"infohash\": \"SAME\", \"name\": \"Synthetic 2\", \"size\": 2, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"second\", \"clickedAt\": 2}, {\"torrent\": {\"infohash\": \"same\", \"name\": \"Synthetic 3\", \"size\": 3, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"third\", \"clickedAt\": 3}, \"ignored\", {\"torrent\": {\"infohash\": \"four\", \"name\": \"Synthetic 4\", \"size\": 4, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"fourth\", \"clickedAt\": 4}, {\"torrent\": {\"infohash\": \"five\", \"name\": \"Synthetic 5\", \"size\": 5, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"fifth\", \"clickedAt\": 5}, {\"torrent\": {\"infohash\": \"six\", \"name\": \"Synthetic 6\", \"size\": 6, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"sixth\", \"clickedAt\": 6}]",
+    "torrent_search_history_enabled": false
+  },
+  "keyTypes": {
+    "torrent_search_history_v1": "String",
+    "torrent_search_history_enabled": "bool"
+  },
+  "excludedKeys": [],
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}
