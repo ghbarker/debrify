@@ -17,7 +17,7 @@ import '../../services/analytics_service.dart';
 import '../../services/mdblist/mdblist_service.dart';
 import '../../services/stream_url_validator.dart';
 import '../../services/main_page_bridge.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 import '../../widgets/cloud_provider_chrome.dart';
 import '../../services/cloud/cloud_credentials.dart';
 import '../../services/cloud/cloud_provider_registry.dart';
@@ -203,27 +203,27 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
   }
 
   Future<void> _loadSettings() async {
-    _rotationMinutes = await StorageService.getStremioTvRotationMinutes();
+    _rotationMinutes = await StremioTvPrefs.getStremioTvRotationMinutes();
     _seriesRotationMinutes =
-        await StorageService.getStremioTvSeriesRotationMinutes();
-    _randomEpisodes = await StorageService.getStremioTvRandomEpisodes();
-    _autoRefresh = await StorageService.getStremioTvAutoRefresh();
-    _preferredQuality = await StorageService.getStremioTvPreferredQuality();
-    final debridProvider = await StorageService.getStremioTvDebridProvider();
+        await StremioTvPrefs.getStremioTvSeriesRotationMinutes();
+    _randomEpisodes = await StremioTvPrefs.getStremioTvRandomEpisodes();
+    _autoRefresh = await StremioTvPrefs.getStremioTvAutoRefresh();
+    _preferredQuality = await StremioTvPrefs.getStremioTvPreferredQuality();
+    final debridProvider = await StremioTvPrefs.getStremioTvDebridProvider();
     _availableProviders = await _loadAvailableProviders();
     if (debridProvider != 'auto' &&
         !_availableProviders.any(
           (provider) => provider.key == debridProvider,
         )) {
       _debridProvider = 'auto';
-      await StorageService.setStremioTvDebridProvider('auto');
+      await StremioTvPrefs.setStremioTvDebridProvider('auto');
     } else {
       _debridProvider = debridProvider;
     }
     _rdSkipBlockedTorrents = await ProviderCredentialPrefs.getRdSkipBlockedTorrents();
-    _torrentsFirst = await StorageService.getStremioTvTorrentsFirst();
-    _maxStartPercent = await StorageService.getStremioTvMaxStartPercent();
-    _hideNowPlaying = await StorageService.getStremioTvHideNowPlaying();
+    _torrentsFirst = await StremioTvPrefs.getStremioTvTorrentsFirst();
+    _maxStartPercent = await StremioTvPrefs.getStremioTvMaxStartPercent();
+    _hideNowPlaying = await StremioTvPrefs.getStremioTvHideNowPlaying();
   }
 
   Future<List<MapEntry<String, String>>> _loadAvailableProviders() =>
@@ -383,7 +383,7 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
 
   Future<void> _openChannelFilter() async {
     final filterTree = await _service.getFilterTree();
-    final disabledBefore = await StorageService.getStremioTvDisabledFilters();
+    final disabledBefore = await StremioTvPrefs.getStremioTvDisabledFilters();
     if (!mounted) return;
 
     // Full-screen DPAD-first filter page (instant push, matching the
@@ -457,7 +457,7 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
   }
 
   Future<void> _setDebridProvider(String value) async {
-    await StorageService.setStremioTvDebridProvider(value);
+    await StremioTvPrefs.setStremioTvDebridProvider(value);
     if (!mounted) return;
     setState(() => _debridProvider = value);
   }
@@ -1688,7 +1688,7 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
   Future<void> _toggleFavorite(StremioTvChannel channel) async {
     final focusedChannelId = _currentFocusedChannelId();
     final newState = !channel.isFavorite;
-    await StorageService.setStremioTvChannelFavorited(channel.id, newState);
+    await StremioTvPrefs.setStremioTvChannelFavorited(channel.id, newState);
     if (!mounted) return;
     final previousChannels = List<StremioTvChannel>.from(_channels);
     setState(() {

@@ -11,7 +11,7 @@
 // import '../models/stremio_tv/stremio_tv_channel.dart';
 // import '../screens/stremio_tv/stremio_tv_service.dart';
 // import '../services/main_page_bridge.dart';
-// import '../services/storage_service.dart';
+// import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 // import 'home/home_theme.dart';
 // import 'home/home_section_skeleton.dart';
 // import 'home/home_section_reveal.dart';
@@ -108,10 +108,10 @@
 //     setState(() => _isLoading = true);
 // 
 //     try {
-//       _rotationMinutes = await StorageService.getStremioTvRotationMinutes();
+//       _rotationMinutes = await StremioTvPrefs.getStremioTvRotationMinutes();
 //       _seriesRotationMinutes =
-//           await StorageService.getStremioTvSeriesRotationMinutes();
-//       final favoriteIds = await StorageService.getStremioTvFavoriteChannelIds();
+//           await StremioTvPrefs.getStremioTvSeriesRotationMinutes();
+//       final favoriteIds = await StremioTvPrefs.getStremioTvFavoriteChannelIds();
 // 
 //       if (favoriteIds.isEmpty) {
 //         if (mounted) {
@@ -188,7 +188,7 @@
 //     );
 // 
 //     if (confirmed == true && mounted) {
-//       await StorageService.setStremioTvChannelFavorited(channel.id, false);
+//       await StremioTvPrefs.setStremioTvChannelFavorited(channel.id, false);
 //       HapticFeedback.mediumImpact();
 //       _loadFavorites();
 //     }

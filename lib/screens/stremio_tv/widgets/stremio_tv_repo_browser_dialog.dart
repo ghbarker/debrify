@@ -8,7 +8,7 @@ import '../../../theme/app_theme_scope.dart';
 import '../../../utils/tv_keys.dart';
 import '../../../widgets/tv_text_field.dart';
 import '../../../services/catalog_repo_service.dart';
-import '../../../services/storage_service.dart';
+import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 
 /// Single-view accordion dialog for browsing catalog repositories.
 /// Repos expand inline to show files for selective import.
@@ -97,7 +97,7 @@ class _StremioTvRepoBrowserDialogState
   // ─── Data loading ───────────────────────────────────────────────────────
 
   Future<void> _loadRepos() async {
-    final urls = await StorageService.getStremioTvCatalogRepoUrls();
+    final urls = await StremioTvPrefs.getStremioTvCatalogRepoUrls();
     if (!mounted) return;
     _syncRepoFocusNodes(urls.length);
     setState(() {
@@ -289,7 +289,7 @@ class _StremioTvRepoBrowserDialogState
     }
 
     final added =
-        await StorageService.addStremioTvCatalogRepoUrl(canonicalUrl);
+        await StremioTvPrefs.addStremioTvCatalogRepoUrl(canonicalUrl);
     if (!mounted) return;
     if (!added) {
       setState(() => _error = 'Repository already added');
@@ -408,7 +408,7 @@ class _StremioTvRepoBrowserDialogState
         final type = parsed['type'] as String? ?? 'movie';
 
         // Check for duplicate name
-        final existing = await StorageService.getStremioTvLocalCatalogs();
+        final existing = await StremioTvPrefs.getStremioTvLocalCatalogs();
         if (existing.any((c) => c['name'] == name)) {
           errors.add('${file.name}: "$name" already exists');
           if (mounted) {
@@ -427,7 +427,7 @@ class _StremioTvRepoBrowserDialogState
           'items': rawItems,
         };
 
-        await StorageService.addStremioTvLocalCatalog(catalog);
+        await StremioTvPrefs.addStremioTvLocalCatalog(catalog);
         imported++;
         _changed = true;
         if (mounted) setState(() => _fileImportStates[file.path] = 'done');
@@ -485,7 +485,7 @@ class _StremioTvRepoBrowserDialogState
       _expandedIndex = _expandedIndex! - 1;
     }
 
-    await StorageService.removeStremioTvCatalogRepoUrl(url);
+    await StremioTvPrefs.removeStremioTvCatalogRepoUrl(url);
     if (!mounted) return;
     await _loadRepos();
     if (!mounted) return;

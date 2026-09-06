@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
@@ -117,7 +118,7 @@ void main() {
         await StorageService.setDebrifyTvChannelFavorited('second', true);
         await StorageService.setDebrifyTvChannelFavorited('first', true);
       });
-      await StorageService.setStremioTvLocalCatalogs([
+      await StremioTvPrefs.setStremioTvLocalCatalogs([
         {
           'id': 'local-first',
           'name': 'Local First',
@@ -135,11 +136,11 @@ void main() {
           ],
         },
       ]);
-      await StorageService.setStremioTvChannelFavorited(
+      await StremioTvPrefs.setStremioTvChannelFavorited(
         'local:local-second:movie',
         true,
       );
-      await StorageService.setStremioTvChannelFavorited(
+      await StremioTvPrefs.setStremioTvChannelFavorited(
         'local:local-first:movie',
         true,
       );

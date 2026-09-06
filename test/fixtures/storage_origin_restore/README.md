@@ -1389,3 +1389,18 @@ The roundtrip test already depended on the extracted owner and is not an
 unchanged pre-S2 generation helper; reversing those 15 alone does not make it
 runnable against old6d26. The actual export uses only the copied loader and its
 existing helper adapters. These tests are not imported by that loader.
+
+### Q2 StremioTvPrefs caller retirement: old-export harness adapter
+
+In the copied loader for unchanged old `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`,
+remove the StremioTvPrefs import and reverse exactly eight same-method receivers
+to StorageService. Preserve prior adapters, including Quick Play nine and Social
+six, and all recipe/encrypted/manifest bytes. No owner backport or identical
+whole-harness claim is made.
+
+Optional historical test correspondence reverses 13 migrated references in
+storage_s21_store_roundtrip_test.dart or 70 in
+storage_stremio_social_debrify_tv_prefs_snapshot_test.dart. The roundtrip test
+already has direct StremioTvPrefs reads: reversing 13 alone cannot make it run
+on old6d26. Existing owner adapters remain necessary for snapshot reproduction.
+Neither test is imported by the actual generation loader.
