@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main 93c966cc
+## Current roadmap — September 6, main 64a10b59
 
 ### God-file line counts — original → current merged main
 
 - **Search:** 19,070 → **6,551** (12,519 fewer)
 - **Player:** 16,278 → **11,928** (4,350 fewer)
 - **Magic TV:** 10,716 → **3,321** (7,395 fewer)
-- **Storage:** 9,963 → **2,491** (7,472 fewer)
+- **Storage:** 9,963 → **2,470** (7,493 fewer)
 - **Settings:** 7,905 → **2,903** (5,002 fewer)
 
-Counted from actual merged main 93c966cc. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion percentage remains withdrawn: remaining architectural work lacks a reliable denominator.
+Counted from actual merged main 64a10b59. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion percentage remains withdrawn: remaining architectural work lacks a reliable denominator.
 
 ### The same six outcomes — stable roadmap
 
@@ -54,9 +54,11 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Wegener owns outcome2 Player: one construction-only test feasibility attempt authorized after independent design acceptance; no Android override or decoder move. Also final read-only186 integration check first.
 - Locke owns outcome3 Storage: resolving184 integration conflict, then185 dependency; Ambient origin32 and fixture independently accepted, owner scope next.
 - Cicero owns independent review/gates: full a6bc gate PASSED; next Ambient owner proposal review. No repeated test-only verification.
-- #184 conflict resolution assigned; #185 depends on184; #186 merged93c966cc after independent union review and allCI green.
+- #184 merged64a10b59; #185 latest-main integration assigned; #186 merged93c966cc after independent union review and allCI green.
 - Parent owns decisions/merges/BOARD/NOTES. Every completion/blocker needs parent response and next step; unresolved dependencies must be reported explicitly. No user blocker.
 ### Latest completed milestones
+
+- #184 merged64a10b59 exact562869 after independent106 tests and final integration acceptance/allCI green. Download destination preference owner preserves three profile keys and actual pre-refactor exclusion fixture. Host minus21, whole production plus40, seven facades retained. Did we make a difference? Preference ownership is explicit with restore evidence; caller retirement185 is next, no native SAF/permission proof claimed.
 
 - #186 merged93c966cc exact301325: independent88 cases and final union review, allCI green. Three captured-key operations at ten consumers now use typed provider capabilities, preserving captured keys/live timing. Whole production plus26, host zero reduction, provider leaves627. Did we make a difference? Yes: actual provider calls follow the contract; integrated acceptance remains, not another autonomy framework.
 
@@ -73,7 +75,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Gate pinned analyzer431/449, zero errors/new issues; layering77→77; Python55 passed; originalbc46/current native pair passed first try. Initial wrong-PATH analyzer output retained separately and corrected using pinned SDK; no baseline edit.
 - Windows226.2s/68files and ARM64171.9s builds passed. ZIP SHA256b96b7a4bd0b98a4f9de799ef3242bebf18a150d3c49c0113ad0566d10f1d729f; APK80811b556495c20078920091643b91cbcde5bc236d89737bd3bed7d1479e8cb5. No fresh manual/device smoke claimed.
 - #181 BoardCell mergedc7a332bd exact932 after independent140 passes plus the exact known sidebar failure, final integration review and all3CI green. Shared renderer owns card state/shuttle; 669 declaration lines relocated, whole production+17, zero host-file reduction. Did we make a difference? Removed private host-library access at real consumers; remaining stage navigation/composition is still open.
-- Production merge counter: **1 since gate a6bc820b** (#186), which includes181/182/183. Gate excludes181; source/build evidence remains attached to95c93.
+- Production merge counter: **2 since gate a6bc820b** (#186, #184), which includes181/182/183. Gate excludes181; source/build evidence remains attached to95c93.
 
 ### Forwarders at the last full gate95c93
 
