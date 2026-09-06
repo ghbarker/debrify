@@ -1353,7 +1353,7 @@ class _RemoteTransferAllState extends State<RemoteTransferAll> {
           transferRequestId: transferRequestId,
         );
       case ConfigCommand.streamBadges:
-        final payload = await StreamBadgesService.instance.exportJson();
+        final payload = await StreamBadgesService.instance.exportTransferJson();
         if (payload.isEmpty) return false;
         return sendConfigPayloadToDevice(
           state,

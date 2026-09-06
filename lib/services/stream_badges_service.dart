@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:synchronized/synchronized.dart';
+import 'profiles/profile_runtime.dart';
+import 'profiles/profile_scope.dart';
 
 import '../models/stream_badge_rules.dart';
 import 'profiles/profile_preferences.dart';
@@ -109,187 +113,321 @@ class StreamBadgesService {
     StreamBadgeMatcher.empty,
   );
 
+  // Keep the complete encoded inventory well below both tvOS defaults and
+  // the sync/backup string limits. Incoming JSON may be larger, but cannot
+  // become persisted authority until this aggregate check succeeds.
+  static const int maxStoredBytes = 128 * 1024;
+  static final Lock _mutations = Lock(reentrant: true);
   bool _enabled = true;
   bool _warmed = false;
-
-  /// The master switch (Settings › Play Loader › Stream badges). On by
-  /// default: importing a file is the opt-in.
+  int _generation = 0;
   bool get enabled => _enabled;
+
+  _BadgeContext _capture() => (
+    scope: ProfileRuntime.isProfileCommitted ? ProfileRuntime.capture() : null,
+    active: ProfileRuntime.scope.value,
+    generation: _generation,
+  );
+
+  void _check(_BadgeContext context) {
+    if (context != _capture()) {
+      throw StateError('The profile changed. Import the badges again.');
+    }
+  }
+
+  Future<ProfilePreferences> _preferences(_BadgeContext context) async {
+    _check(context);
+    final prefs = await ProfilePreferences.instance();
+    _check(context);
+    return prefs;
+  }
+
+  void _publish(ProfilePreferences prefs, _BadgeContext context) {
+    _check(context);
+    // Restore can write an invisible generation or an inactive profile.
+    // Its data must never replace the active profile's process-wide matcher.
+    if (context.scope != context.active) return;
+    final enabled = prefs.getBool(enabledKey) ?? true;
+    final sources = _decode(prefs.getString(sourcesKey));
+    final next = enabled
+        ? StreamBadgeMatcher([
+            for (final s in sources)
+              if (s.enabled)
+                if (StreamBadgeRuleset.tryParse(s.json) case final rules?)
+                  rules,
+          ])
+        : StreamBadgeMatcher.empty;
+    _enabled = enabled;
+    _warmed = true;
+    matcher.value = next;
+  }
 
   Future<void> warmUp() async {
     if (_warmed) return;
-    _warmed = true;
+    await refreshFromPreferences();
+  }
+
+  /// Read-only: safe inside WebDAV's preference barrier. Never wait on a
+  /// badge writer here; that writer may itself be waiting on the barrier.
+  Future<void> refreshFromPreferences() async {
+    final context = _capture();
+    final prefs = await _preferences(context);
     try {
-      final prefs = await ProfilePreferences.instance();
-      _enabled = prefs.getBool(enabledKey) ?? true;
-    } catch (_) {
-      _enabled = true;
+      _publish(prefs, context);
+    } on FormatException {
+      // Corrupt optional decoration data must not prevent application startup.
+      // Keep it on disk so settings can offer an explicit reset.
+      _check(context);
+      if (context.scope == context.active) {
+        _enabled = prefs.getBool(enabledKey) ?? true;
+        _warmed = true;
+        matcher.value = StreamBadgeMatcher.empty;
+      }
     }
-    await _rebuild(await getSources());
   }
 
   void resetProfileScope() {
+    _generation++;
     _warmed = false;
     _enabled = true;
     matcher.value = StreamBadgeMatcher.empty;
   }
 
-  Future<void> setEnabled(bool value) async {
-    _enabled = value;
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(enabledKey, value);
-    await _rebuild(await getSources());
+  Future<void> setEnabled(bool value) {
+    final context = _capture();
+    return _mutations.synchronized(() async {
+      final prefs = await _preferences(context);
+      if (!await prefs.setBool(enabledKey, value)) {
+        throw StateError('Could not save the stream badge setting.');
+      }
+      _publish(prefs, context);
+    });
   }
 
-  // ── Sources ────────────────────────────────────────────────────────────
+  static List<StreamBadgeSource> _decode(String? source) {
+    if (source == null || source.isEmpty) return [];
+    final decoded = jsonDecode(source);
+    if (decoded is! List) {
+      throw const FormatException('Invalid badge inventory');
+    }
+    final out = <StreamBadgeSource>[];
+    final seen = <String>{};
+    for (final raw in decoded) {
+      final item = StreamBadgeSource.fromJson(raw);
+      if (item == null) throw const FormatException('Invalid badge source');
+      if (seen.add(item.id)) out.add(item);
+    }
+    return out;
+  }
 
   Future<List<StreamBadgeSource>> getSources() async {
-    final prefs = await ProfilePreferences.instance();
-    final json = prefs.getString(sourcesKey);
-    if (json == null || json.isEmpty) return const [];
-    try {
-      final decoded = jsonDecode(json);
-      if (decoded is! List) return const [];
-      final seen = <String>{};
-      return [
-        for (final raw in decoded)
-          if (StreamBadgeSource.fromJson(raw) case final s?)
-            if (seen.add(s.id)) s,
-      ];
-    } catch (e) {
-      debugPrint('StreamBadgesService: error reading sources: $e');
-      return const [];
-    }
+    final context = _capture();
+    final prefs = await _preferences(context);
+    return _decode(prefs.getString(sourcesKey));
   }
 
-  Future<void> _save(List<StreamBadgeSource> sources) async {
-    final prefs = await ProfilePreferences.instance();
-    if (sources.isEmpty) {
-      await prefs.remove(sourcesKey);
-    } else {
-      await prefs.setString(
-        sourcesKey,
-        jsonEncode([for (final s in sources) s.toJson()]),
+  Future<T> _mutate<T>(
+    _BadgeContext context,
+    (List<StreamBadgeSource>, T) Function(List<StreamBadgeSource>) update, {
+    bool replaceAll = false,
+  }) => _mutations.synchronized(() async {
+    final prefs = await _preferences(context);
+    late T result;
+    final success = await prefs.mutateStringAtomically(sourcesKey, (old) {
+      _check(context);
+      final (sources, value) = update(replaceAll ? [] : _decode(old));
+      final encoded = jsonEncode([for (final s in sources) s.toJson()]);
+      if (utf8.encode(encoded).length > maxStoredBytes) {
+        throw const FormatException(
+          'Badge presets can use up to 128 KiB per profile. '
+          'Remove a preset or import a smaller file.',
+        );
+      }
+      result = value;
+      return encoded;
+    });
+    if (!success) {
+      throw StateError(
+        'Could not save badge presets: device storage limit reached.',
       );
     }
-    await _rebuild(sources);
-  }
+    _publish(prefs, context);
+    return result;
+  });
 
-  Future<void> _rebuild(List<StreamBadgeSource> sources) async {
-    if (!_enabled) {
-      matcher.value = StreamBadgeMatcher.empty;
-      return;
-    }
-    // A source that no longer parses contributes nothing.
-    matcher.value = StreamBadgeMatcher([
-      for (final s in sources)
-        if (s.enabled)
-          if (StreamBadgeRuleset.tryParse(s.json) case final set?) set,
-    ]);
-  }
-
-  /// Parse and store pasted/file text. Same [id] (derived from the URL, or
-  /// the given name) replaces in place.
   Future<StreamBadgeImportResult> importJson(
     String jsonText, {
     required String name,
     String? url,
-  }) async {
-    if (jsonText.length > maxImportBytes) {
+  }) => _import(_capture(), jsonText, name: name, url: url);
+
+  Future<StreamBadgeImportResult> _import(
+    _BadgeContext context,
+    String jsonText, {
+    required String name,
+    String? url,
+    StreamBadgeSource? expectedSource,
+  }) {
+    _check(context);
+    if (utf8.encode(jsonText).length > maxImportBytes) {
       throw const FormatException(
         'That file is too large to be a badges file.',
       );
     }
     final ruleset = StreamBadgeRuleset.parse(jsonText);
     final id = url != null ? _idFor(url) : _idFor(name);
-    final current = List<StreamBadgeSource>.of(await getSources());
-    final index = current.indexWhere((s) => s.id == id);
-    final source = StreamBadgeSource(
-      id: id,
-      name: name,
-      url: url,
-      json: jsonText,
-      enabled: index >= 0 ? current[index].enabled : true,
-      fetchedAtMs: DateTime.now().millisecondsSinceEpoch,
-    );
-    if (index >= 0) {
-      current[index] = source;
-    } else {
-      current.add(source);
-    }
-    await _save(current);
-    return StreamBadgeImportResult(
-      source: source,
-      ruleset: ruleset,
-      replaced: index >= 0,
-    );
+    return _mutate(context, (current) {
+      final index = current.indexWhere((s) => s.id == id);
+      if (expectedSource != null &&
+          (index < 0 ||
+              jsonEncode(current[index].toJson()) !=
+                  jsonEncode(expectedSource.toJson()))) {
+        throw StateError('This preset changed while refreshing. Try again.');
+      }
+      final source = StreamBadgeSource(
+        id: id,
+        name: name,
+        url: url,
+        json: jsonText,
+        enabled: index >= 0 ? current[index].enabled : true,
+        fetchedAtMs: DateTime.now().millisecondsSinceEpoch,
+      );
+      if (index >= 0) {
+        current[index] = source;
+      } else {
+        current.add(source);
+      }
+      return (
+        current,
+        StreamBadgeImportResult(
+          source: source,
+          ruleset: ruleset,
+          replaced: index >= 0,
+        ),
+      );
+    });
   }
 
-  /// Download and store a badges file. Throws [FormatException] for a bad
-  /// link, response or document.
   Future<StreamBadgeImportResult> importFromUrl(String url) async {
+    final context = _capture();
     final text = await _fetch(url);
-    final name = _nameFor(url);
-    return importJson(text, name: name, url: url.trim());
+    return _import(context, text, name: _nameFor(url), url: url.trim());
   }
 
-  /// Re-download a URL source. Pasted sources are left as they are.
   Future<StreamBadgeImportResult?> refresh(String id) async {
-    final sources = await getSources();
-    final source = sources.cast<StreamBadgeSource?>().firstWhere(
-      (s) => s!.id == id,
-      orElse: () => null,
-    );
+    final context = _capture();
+    final prefs = await _preferences(context);
+    final sources = _decode(prefs.getString(sourcesKey));
+    final source = sources.where((s) => s.id == id).firstOrNull;
     if (source == null || source.url == null) return null;
     final text = await _fetch(source.url!);
-    return importJson(text, name: source.name, url: source.url);
+    return _import(
+      context,
+      text,
+      name: source.name,
+      url: source.url,
+      expectedSource: source,
+    );
   }
 
-  Future<void> remove(String id) async {
-    await _save([
-      for (final s in await getSources())
-        if (s.id != id) s,
-    ]);
-  }
-
-  Future<void> setSourceEnabled(String id, bool enabled) async {
-    await _save([
-      for (final s in await getSources())
-        if (s.id == id) s.copyWith(enabled: enabled) else s,
-    ]);
-  }
-
-  Future<void> clear() => _save(const []);
-
-  // ── Backup ─────────────────────────────────────────────────────────────
+  Future<void> remove(String id) => _mutate<void>(
+    _capture(),
+    (sources) => (sources.where((s) => s.id != id).toList(), null),
+  );
+  Future<void> setSourceEnabled(String id, bool enabled) => _mutate<void>(
+    _capture(),
+    (sources) => (
+      [for (final s in sources) s.id == id ? s.copyWith(enabled: enabled) : s],
+      null,
+    ),
+  );
+  Future<void> clear() => _mutate<void>(
+    _capture(),
+    (_) => (<StreamBadgeSource>[], null),
+    replaceAll: true,
+  );
 
   Future<List<Map<String, dynamic>>> exportJson() async => [
     for (final s in await getSources()) s.toJson(),
   ];
 
-  /// Restore from a backup list, merging by id.
+  /// Keep the wire category an array for existing configuration framing.
+  /// Legacy source arrays remain accepted by applyBackup.
+  Future<List<Map<String, dynamic>>> exportTransferJson() {
+    final context = _capture();
+    return _mutations.synchronized(() async {
+      final prefs = await _preferences(context);
+      return [
+        {
+          'badgeTransferVersion': 1,
+          'enabled': prefs.getBool(enabledKey) ?? true,
+          'sources': [
+            for (final s in _decode(prefs.getString(sourcesKey))) s.toJson(),
+          ],
+        },
+      ];
+    });
+  }
+
   Future<({int imported, int alreadyPresent, int failed})> applyBackup(
     List<dynamic> list,
+  ) {
+    final context = _capture();
+    return _mutations.synchronized(() => _applyBackup(context, list));
+  }
+
+  Future<({int imported, int alreadyPresent, int failed})> _applyBackup(
+    _BadgeContext context,
+    List<dynamic> list,
   ) async {
-    final current = List<StreamBadgeSource>.of(await getSources());
-    var imported = 0, present = 0, failed = 0;
+    _check(context);
+    bool? enabled;
+    if (list.length == 1 &&
+        list.first is Map &&
+        (list.first as Map).containsKey('badgeTransferVersion')) {
+      final envelope = list.first as Map;
+      if (envelope['badgeTransferVersion'] != 1 ||
+          envelope['enabled'] is! bool ||
+          envelope['sources'] is! List) {
+        throw const FormatException('Unsupported badge transfer');
+      }
+      enabled = envelope['enabled'] as bool;
+      list = envelope['sources'] as List;
+    }
+    final incoming = <StreamBadgeSource>[];
+    var failed = 0;
     for (final raw in list) {
       final s = StreamBadgeSource.fromJson(raw);
-      if (s == null) {
+      if (s == null ||
+          utf8.encode(s.json).length > maxImportBytes ||
+          StreamBadgeRuleset.tryParse(s.json) == null) {
         failed++;
         continue;
       }
-      final i = current.indexWhere((e) => e.id == s.id);
-      if (i >= 0) {
-        current[i] = s;
-        present++;
-      } else {
-        current.add(s);
-        imported++;
-      }
+      incoming.add(s);
     }
-    if (imported > 0 || present > 0) await _save(current);
-    return (imported: imported, alreadyPresent: present, failed: failed);
+    final counts = await _mutate(context, (current) {
+      var imported = 0, present = 0;
+      for (final s in incoming) {
+        final i = current.indexWhere((e) => e.id == s.id);
+        if (i >= 0) {
+          current[i] = s;
+          present++;
+        } else {
+          current.add(s);
+          imported++;
+        }
+      }
+      return (
+        current,
+        (imported: imported, alreadyPresent: present, failed: failed),
+      );
+    });
+    if (enabled != null) {
+      _check(context);
+      await setEnabled(enabled);
+    }
+    return counts;
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────
@@ -301,18 +439,27 @@ class StreamBadgesService {
     }
     final client = _httpClientFactory();
     try {
-      final response = await client.get(uri).timeout(_fetchTimeout);
+      final response = await client
+          .send(http.Request('GET', uri))
+          .timeout(_fetchTimeout);
       if (response.statusCode != 200) {
         throw FormatException(
           'The server answered ${response.statusCode} for that link.',
         );
       }
-      if (response.bodyBytes.length > maxImportBytes) {
-        throw const FormatException(
-          'That file is too large to be a badges file.',
-        );
-      }
-      return utf8.decode(response.bodyBytes, allowMalformed: true);
+      final bytes = await (() async {
+        final bytes = <int>[];
+        await for (final chunk in response.stream) {
+          if (bytes.length + chunk.length > maxImportBytes) {
+            throw const FormatException(
+              'That file is too large to be a badges file.',
+            );
+          }
+          bytes.addAll(chunk);
+        }
+        return bytes;
+      })().timeout(_fetchTimeout);
+      return utf8.decode(bytes);
     } on FormatException {
       rethrow;
     } catch (e) {
@@ -336,3 +483,9 @@ class StreamBadgesService {
     return uri.host;
   }
 }
+
+typedef _BadgeContext = ({
+  ProfileScope? scope,
+  ProfileScope? active,
+  int generation,
+});

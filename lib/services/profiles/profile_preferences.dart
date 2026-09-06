@@ -394,6 +394,25 @@ class ProfilePreferences implements SharedPreferences {
     budgetValue: value,
   );
 
+  /// Atomically recompute a JSON/string value after entering the ordinary
+  /// mutation barrier, so a WebDAV apply cannot invalidate the read before
+  /// its write. The callback is synchronous and must not mutate preferences.
+  Future<bool> mutateStringAtomically(
+    String key,
+    String Function(String? current) update,
+  ) {
+    _assertMutationOutsideExclusive();
+    return _atomicStringListMutationLock.synchronized(() {
+      late String next;
+      return _write(
+        () => _delegate.setString(_physical(key), next),
+        logicalKey: key,
+        budgetKey: _physical(key),
+        prepareValue: () => next = update(_delegate.getString(_physical(key))),
+      );
+    });
+  }
+
   /// Serializes a string-list read/modify/write against every scoped instance.
   /// The lock covers the physical profile key, so callers can safely update an
   /// inactive captured profile without racing an active-session mutation.
@@ -677,18 +696,20 @@ class ProfilePreferences implements SharedPreferences {
     String? logicalKey,
     String? budgetKey,
     Object? budgetValue,
+    Object? Function()? prepareValue,
   }) async {
     _assertWritable();
     var unchanged = false;
     final success = await _runOrdinaryMutation((markMutated) async {
       _assertWritable();
+      final proposedValue = prepareValue != null ? prepareValue() : budgetValue;
       if (_capturedAccess == null && budgetKey != null) {
         final previous = _delegate.get(budgetKey);
         unchanged =
-            previous == budgetValue ||
+            previous == proposedValue ||
             (previous is List<String> &&
-                budgetValue is List<String> &&
-                listEquals(previous, budgetValue));
+                proposedValue is List<String> &&
+                listEquals(previous, proposedValue));
       }
       // Only ordinary runtime writes are gated. Every captured-scope caller
       // (migration, restore, profile creation) treats a `false` result as fatal
@@ -700,7 +721,7 @@ class ProfilePreferences implements SharedPreferences {
       // result is never inspected, so refusing them can only skip a save.
       if (budgetKey != null &&
           _capturedAccess == null &&
-          !ProfilePreferenceBudget.admits(_delegate, budgetKey, budgetValue)) {
+          !ProfilePreferenceBudget.admits(_delegate, budgetKey, proposedValue)) {
         return false;
       }
       final success = await operation();

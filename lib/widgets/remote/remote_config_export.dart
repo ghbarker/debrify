@@ -815,7 +815,7 @@ class RemoteConfigExportState extends State<RemoteConfigExport> {
         'Stream Badges',
         ConfigCommand.streamBadges,
         () async {
-          final payload = await StreamBadgesService.instance.exportJson();
+          final payload = await StreamBadgesService.instance.exportTransferJson();
           return payload.isNotEmpty &&
               await sendConfigPayloadToDevice(
                 state,

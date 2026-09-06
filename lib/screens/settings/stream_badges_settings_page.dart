@@ -29,6 +29,7 @@ class _StreamBadgesSettingsPageState extends State<StreamBadgesSettingsPage> {
   );
 
   bool _loading = true;
+  String? _loadError;
   bool _busy = false;
   bool _enabled = true;
   List<StreamBadgeSource> _sources = const [];
@@ -51,23 +52,34 @@ class _StreamBadgesSettingsPageState extends State<StreamBadgesSettingsPage> {
   }
 
   Future<void> _load() async {
-    await _service.warmUp();
-    final sources = await _service.getSources();
-    final rulesets = {
-      for (final s in sources) s.id: StreamBadgeRuleset.tryParse(s.json),
-    };
-    if (!mounted) return;
-    setState(() {
-      _sources = sources;
-      _rulesets = rulesets;
-      _enabled = _service.enabled;
-      _loading = false;
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _firstTileFocusNode.context != null) {
-        _firstTileFocusNode.requestFocus();
+    try {
+      await _service.warmUp();
+      final sources = await _service.getSources();
+      final rulesets = {
+        for (final s in sources) s.id: StreamBadgeRuleset.tryParse(s.json),
+      };
+      if (!mounted) return;
+      setState(() {
+        _sources = sources;
+        _rulesets = rulesets;
+        _enabled = _service.enabled;
+        _loading = false;
+        _loadError = null;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _firstTileFocusNode.context != null) {
+          _firstTileFocusNode.requestFocus();
+        }
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _loadError =
+              'Could not load badge presets. Retry, or reset the presets in this profile.';
+        });
       }
-    });
+    }
   }
 
   // ── Import flows ───────────────────────────────────────────────────────
@@ -78,9 +90,11 @@ class _StreamBadgesSettingsPageState extends State<StreamBadgesSettingsPage> {
     try {
       await flow();
     } on FormatException catch (e) {
-      _showError(messenger, e.message);
+      if (mounted) _showError(messenger, e.message);
     } catch (e) {
-      _showError(messenger, e.toString().replaceFirst('Exception: ', ''));
+      if (mounted) {
+        _showError(messenger, e.toString().replaceFirst('Exception: ', ''));
+      }
     }
   }
 
@@ -161,8 +175,10 @@ class _StreamBadgesSettingsPageState extends State<StreamBadgesSettingsPage> {
   // ── Per-source actions ─────────────────────────────────────────────────
 
   Future<void> _setEnabled(bool value) async {
-    setState(() => _enabled = value);
-    await _service.setEnabled(value);
+    await _guarded(() async {
+      await _service.setEnabled(value);
+      if (mounted) setState(() => _enabled = _service.enabled);
+    });
   }
 
   Future<void> _openSourceActions(StreamBadgeSource s) async {
@@ -228,8 +244,10 @@ class _StreamBadgesSettingsPageState extends State<StreamBadgesSettingsPage> {
     if (!mounted || action == null) return;
     switch (action) {
       case 'toggle':
-        await _service.setSourceEnabled(s.id, !s.enabled);
-        await _load();
+        await _guarded(() async {
+          await _service.setSourceEnabled(s.id, !s.enabled);
+          await _load();
+        });
       case 'refresh':
         await _guarded(() async {
           await _runImport(() async {
@@ -251,8 +269,10 @@ class _StreamBadgesSettingsPageState extends State<StreamBadgesSettingsPage> {
           action: 'Delete',
         );
         if (confirmed && mounted) {
-          await _service.remove(s.id);
-          await _load();
+          await _guarded(() async {
+            await _service.remove(s.id);
+            await _load();
+          });
         }
     }
   }
@@ -265,8 +285,10 @@ class _StreamBadgesSettingsPageState extends State<StreamBadgesSettingsPage> {
       action: 'Remove all',
     );
     if (!confirmed || !mounted) return;
-    await _service.clear();
-    await _load();
+    await _guarded(() async {
+      await _service.clear();
+      await _load();
+    });
   }
 
   // ── Dialog helpers ─────────────────────────────────────────────────────
@@ -404,6 +426,38 @@ class _StreamBadgesSettingsPageState extends State<StreamBadgesSettingsPage> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
+    if (_loadError != null) {
+      return SettingsPageScaffold(
+        title: 'Stream badges',
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(_loadError!),
+                TextButton(onPressed: _load, child: const Text('Retry')),
+                TextButton(
+                  onPressed: () => _guarded(() async {
+                    if (!await _confirm(
+                      title: 'Reset badge presets?',
+                      body: 'Remove the saved badge presets from this profile?',
+                      action: 'Reset',
+                    )) {
+                      return;
+                    }
+                    if (!mounted) return;
+                    await _service.clear();
+                    await _load();
+                  }),
+                  child: const Text('Reset presets'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return SettingsPageScaffold(
       title: 'Stream badges',
       body: SingleChildScrollView(
@@ -442,7 +496,7 @@ class _StreamBadgesSettingsPageState extends State<StreamBadgesSettingsPage> {
                   blurb:
                       'A badges file is a list of regular-expression rules; a '
                       'rule that matches a source\'s name or description adds '
-                      'its chip. Files made for Nuvio work as they are.',
+                      'its chip. Presets can use up to 128 KiB per profile.',
                   children: [
                     SettingsTile(
                       icon: Icons.link_rounded,

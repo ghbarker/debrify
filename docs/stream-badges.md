@@ -75,3 +75,19 @@ alone.
 | Row model (`streamLabel`, `streamDescription`, `badgeDescription`) | `lib/models/torrent.dart`, `lib/services/stremio_service.dart` |
 | Rendering sites (`badgeName`/`badgeDescription` on `SourceRow`) | `lib/widgets/source_row.dart`, `lib/screens/video_player/widgets/source_sheet.dart` |
 | Tests | `test/stream_badges_test.dart` |
+
+## Storage and transfer reliability
+
+The combined encoded preset inventory is limited to **128 KiB per profile**.
+Imports that exceed this limit, or the device's remaining preference-storage
+budget, fail without reporting a successful save. Downloads stop at 4 MiB;
+this is an input safety limit, not a promise that a 4 MiB preset can be stored.
+
+Imports remain bound to their initiating profile. Concurrent edits are
+serialized, and a refresh cannot resurrect a preset deleted while downloading.
+WebDAV changes refresh the active matcher without restarting the profile.
+Selective remote transfers include the master switch in a versioned badge
+payload; receivers still accept legacy source arrays without changing the
+receiving profile's master switch. Whole-profile backups retain both keys.
+Corrupt optional badge data does not prevent startup; the settings page offers
+retry and an explicit reset.
