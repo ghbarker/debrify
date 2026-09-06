@@ -1238,6 +1238,35 @@
           "value": "[{\"torrent\": {\"infohash\": \"SAME\", \"name\": \"Synthetic 2\", \"size\": 2, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"second\", \"clickedAt\": 2}, null, {\"torrent\": {\"infohash\": \"same\", \"name\": \"Synthetic 1\", \"size\": 1, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"first\", \"clickedAt\": 1}, {\"torrent\": {\"infohash\": \"same\", \"name\": \"Synthetic 3\", \"size\": 3, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"third\", \"clickedAt\": 3}, \"ignored\", {\"torrent\": {\"infohash\": \"four\", \"name\": \"Synthetic 4\", \"size\": 4, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"fourth\", \"clickedAt\": 4}, {\"torrent\": {\"infohash\": \"five\", \"name\": \"Synthetic 5\", \"size\": 5, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"fifth\", \"clickedAt\": 5}, {\"torrent\": {\"infohash\": \"six\", \"name\": \"Synthetic 6\", \"size\": 6, \"metadata\": {\"flag\": false, \"optional\": null}}, \"service\": \"sixth\", \"clickedAt\": 6}]"
         }
       }
+    },
+    "ambient-trailer": {
+      "values": {
+        "home_hero_trailer_audio_enabled": false,
+        "home_hero_trailer_volume": -9,
+        "detail_trailer_audio_enabled": true,
+        "detail_trailer_volume": 137
+      },
+      "publicReads": {
+        "home_hero_trailer_audio_enabled": false,
+        "home_hero_trailer_volume": 10,
+        "detail_trailer_audio_enabled": true,
+        "detail_trailer_volume": 100
+      },
+      "excludedKeys": [],
+      "mutations": {
+        "ambient-key": {
+          "operation": "rename",
+          "key": "detail_trailer_audio_enabled"
+        },
+        "ambient-type": {
+          "operation": "replace",
+          "key": "detail_trailer_volume",
+          "value": "137"
+        },
+        "ambient-surfaces": {
+          "operation": "swap-surfaces"
+        }
+      }
     }
   }
 }
