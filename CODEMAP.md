@@ -470,6 +470,14 @@ is an editor mirror, not the source of truth. How to add a provider:
   shared media generation, renderer recovery and native diagnostic sink stay in
   the host, with interleaved reset ordering preserved. Host -191 lines / whole
   production +61; partial ownership, not independent logic or full V1-6 closure.
+  Speed/aspect and temporary hold presentation state:
+  `lib/screens/video_player/player_presentation_controls.dart`
+  (`PlayerPresentationControls`), consumed by Controls/menu/HUDs and the existing
+  ResumeContext adapter. Five lazy live capabilities retain host coupling;
+  gesture admission, haptic placement, sleep and renderer recovery stay in host.
+  Preserve earlier inert speed-HUD allocation, its original disposal slot, and
+  original aspect-HUD nondisposal / overlapping 1500ms mounted callbacks.
+  Host -124 lines / whole production +57; no native or full V1-7 closure claim.
   IPTV recording (libmpv tee, Android engine, desktop capture):
   `lib/services/playback/iptv_recording_controller.dart`
   (`IptvRecordingController` + `IptvRecordingSession`; host keeps
