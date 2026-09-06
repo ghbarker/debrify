@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'dart:io';
 
 import 'package:debrify/services/storage/my_watchlist_store.dart';
@@ -131,6 +132,7 @@ Set<String> allDiscoveredPrefsKeys() => {
   ...TrackingPrefs.ownedKeys,
   ...PlaybackProgressStore.ownedKeys,
   ...DefaultTorrentFilterPrefs.ownedKeys,
+  ...QuickPlayPolicyPrefs.ownedKeys,
   ...inlinePrefsKeysOnStorageService(),
   ...interpolatedPrefsKeys,
 };
@@ -184,6 +186,26 @@ void main() {
       StorageKeyOwnership.byKey.keys.toSet().difference({'episode_trakt_progress_v2'}),
     );
     expect(missingPlayback, {'episode_trakt_progress_v2'});
+  });
+
+  test('Quick Play policy keys participate in exact discovery and ownership', () {
+    const expected = {
+      'quick_play_honors_filters_v1',
+      'quick_play_try_multiple_torrents',
+      'quick_play_max_retries',
+      'quick_play_movie_rules_v2',
+      'quick_play_series_rules_v2',
+      'play_button_mode',
+      'auto_bind_series_packs_on_play',
+    };
+    expect(QuickPlayPolicyPrefs.ownedKeys, expected);
+    expect(StorageKeyOwnership.keysFor(StorageKeyStore.quickPlayPolicyPrefs), expected);
+    expect(declaredOnStorageService().intersection(expected), isEmpty);
+    expect(allDiscoveredPrefsKeys(), containsAll(expected));
+    for (final missing in expected) {
+      final incompleteRegistry = StorageKeyOwnership.byKey.keys.toSet()..remove(missing);
+      expect(allDiscoveredPrefsKeys().difference(incompleteRegistry), {missing});
+    }
   });
 
   test('every declared persisted key is owned by exactly one store', () {
@@ -277,6 +299,8 @@ void main() {
     expectStore(fromIptv, StorageKeyStore.iptvPrefs, 'IptvPrefs');
     expectStore(fromAppStyle, StorageKeyStore.appStylePrefs, 'AppStylePrefs');
     expectStore(fromTracking, StorageKeyStore.trackingPrefs, 'TrackingPrefs');
+    expectStore(QuickPlayPolicyPrefs.ownedKeys,
+        StorageKeyStore.quickPlayPolicyPrefs, 'QuickPlayPolicyPrefs');
     expectStore(DefaultTorrentFilterPrefs.ownedKeys,
         StorageKeyStore.defaultTorrentFilterPrefs, 'DefaultTorrentFilterPrefs');
 
@@ -294,6 +318,7 @@ void main() {
       ...MyWatchlistStore.ownedKeys,
       ...PlaybackProgressStore.ownedKeys,
       ...DefaultTorrentFilterPrefs.ownedKeys,
+      ...QuickPlayPolicyPrefs.ownedKeys,
     };
     final residual = declared.difference(extracted);
     for (final key in residual) {
