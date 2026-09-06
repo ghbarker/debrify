@@ -246,6 +246,13 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   MDBList credentials live in `lib/services/storage/tracking_prefs.dart`
   (`TrackingPrefs`, owns `trackingSourceRevision`). `home_tick_sources` stays
   on HomePrefs; TrackingPrefs bumps the revision after that write.
+  **TV keyboard policy:** AppStylePrefs owns the profile bool/generation pair,
+  two migration/access bodies and one synchronous keyboard cache. StorageService
+  retains two nonasync APIs and sync cache accessors; its original first reset
+  assignment and AppStylePrefs.resetCaches are unchanged. Only the owner tvOs
+  parameter loses its testing annotation for forwarding; the host retains it.
+  Host -37 includes docs; whole production +13. Q2 compatibility and strict
+  Storage ownership closure remain open; no native keyboard proof is claimed.
   **Download destinations:** `lib/services/storage/download_destination_prefs.dart`
   owns three profile-scoped String keys and seven persistence bodies; OS grants
   remain with callers. StorageService retains seven direct facades (17 lines),
