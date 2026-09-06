@@ -3259,14 +3259,75 @@ class _SearchScreenState extends State<SearchScreenHost>
 
   /// One row of Atrium's wall: a quiet rail label over a horizontal strip of
   /// the SAME cells every other board uses.
+  Text _atriumRailLabel(List<CanvasRail> rails, int index) {
+    final app = AppThemeScope.of(context);
+    return Text(
+      _canvasTabTitle(rails, index).toUpperCase(),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: _kAtriumLabelFontSize,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 1.6,
+        color: app.fade(app.core.tx, 0.86),
+        shadows: const [Shadow(color: Color(0x99000000), blurRadius: 6)],
+      ),
+    );
+  }
+
+  // Atrium plain labels only: measure the same inherited Text configuration,
+  // without changing the legacy metric used by Deck and Tonight.
+  double _measureAtriumRailLabel(BuildContext context, Text label, double width) {
+    final defaults = DefaultTextStyle.of(context);
+    var style = defaults.style.merge(label.style);
+    if (MediaQuery.boldTextOf(context)) {
+      style = style.merge(const TextStyle(fontWeight: FontWeight.bold));
+    }
+    final lineHeight = MediaQuery.maybeLineHeightScaleFactorOverrideOf(context);
+    final letterSpacing = MediaQuery.maybeLetterSpacingOverrideOf(context);
+    final wordSpacing = MediaQuery.maybeWordSpacingOverrideOf(context);
+    if (lineHeight != null || letterSpacing != null || wordSpacing != null) {
+      style = style.merge(TextStyle(
+        height: lineHeight,
+        letterSpacing: letterSpacing,
+        wordSpacing: wordSpacing,
+      ));
+    }
+    final overflow = label.overflow ?? style.overflow ?? defaults.overflow;
+    final painter = TextPainter(
+      text: TextSpan(text: label.data, style: style, locale: label.locale),
+      textAlign: label.textAlign ?? defaults.textAlign ?? TextAlign.start,
+      textDirection: label.textDirection ?? Directionality.of(context),
+      textScaler: label.textScaler ?? MediaQuery.textScalerOf(context),
+      maxLines: label.maxLines ?? defaults.maxLines,
+      ellipsis: overflow == TextOverflow.ellipsis ? '…' : null,
+      locale: label.locale ?? Localizations.maybeLocaleOf(context),
+      strutStyle: label.strutStyle?.merge(StrutStyle(height: lineHeight)),
+      textWidthBasis: label.textWidthBasis ?? defaults.textWidthBasis,
+      textHeightBehavior: label.textHeightBehavior ??
+          defaults.textHeightBehavior ?? DefaultTextHeightBehavior.maybeOf(context),
+    );
+    try {
+      painter.layout(
+        minWidth: 0,
+        maxWidth: (label.softWrap ?? defaults.softWrap) || overflow == TextOverflow.ellipsis
+            ? width
+            : double.infinity,
+      );
+      return painter.height;
+    } finally {
+      painter.dispose();
+    }
+  }
+
   Widget _atriumRow(
     List<CanvasRail> rails,
     int index,
     double rowBoxH, {
     required bool isTopRow,
     required bool hasRowBelow,
+    required Text label,
   }) {
-    final app = AppThemeScope.of(context);
     final rail = rails[index];
     final railKey = _canvasRailKeyOf(rail);
     final favRail = rail.favKind != null;
@@ -3303,18 +3364,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _canvasTabTitle(rails, index).toUpperCase(),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: _kAtriumLabelFontSize,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.6,
-            color: app.fade(app.core.tx, 0.86),
-            shadows: const [Shadow(color: Color(0x99000000), blurRadius: 6)],
-          ),
-        ),
+        label,
         const SizedBox(height: _kAtriumLabelGap),
         SizedBox(
           height: rowBoxH,
