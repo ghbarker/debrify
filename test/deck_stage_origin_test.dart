@@ -133,7 +133,9 @@ void main() {
         return page(4, 0);
       }
       if (request.url.host == 'board-origin.invalid' &&
-          request.url.path.endsWith('/rail.json')) return _artPage();
+          request.url.path.endsWith('/rail.json')) {
+        return _artPage();
+      }
       unexpected.add(request.url.toString());
       return http.Response('{}', 404);
     }));
