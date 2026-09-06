@@ -1156,3 +1156,140 @@ markerabsence versus committedgeneration. Is there more we could do? Exact
 owner scope/independent fixture review precede any production move. This adds
 zero production credit/facades and does not close Storage ownership or verify
 native/render/underlay behavior.
+
+
+## Catalog search: one raw JSON preference
+
+Actual unchanged pre-S2 exporter `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`
+generated `catalog-search.encrypted.json` and its manifest in fresh isolated
+`C:/Users/hunth/debrify/debrify-catalog-search-fixture-origin`. Current restore
+runs in `C:/Users/hunth/debrify/debrify-s2-catalog-search-prefs`, based on main
+`7d459ad709fd56d9414552d0bb357454d933c90c`, after green public-origin commit
+`816ed6d59dceef305c906c644a040da75d251efb` (24 actual public tests).
+
+One admitted key, zero exclusions, separately counted from the historical141:
+`catalog_search_disabled_addons_v1` is a physical String containing
+`[" z ","b"," z ","","B","b"]`. Seed via raw ProfilePreferences.setString;
+the public Set setter cannot represent duplicate entries. Actual encrypted
+export/decode retains that exact String. No sanitized-shareable admission or
+addon/resource transfer claim is made.
+
+Current actual merge restore publishes generation2. Compare physical key/type/
+value FIRST, then call the public reader and expect first-seen order
+`[' z ', 'b', '', 'B']`, with whitespace/case preserved and raw JSON unchanged.
+Old generation1, generation7, other profile and legacy values remain unchanged;
+a destination sentinel survives. Actual re-export with secrets false and true
+retains raw duplicates/order plus that sentinel. This is finite preference
+transport, not UI search, serialization, all interleavings or profile safety.
+
+### Exact old harness adaptations
+
+Old production stays unchanged and the generator verifies Git HEAD/lib plus
+local package resolution. The copied loader removes six absent-owner imports
+and reverses same-method receivers to old StorageService: IptvPrefs3,
+PlaybackProgressStore14, ProviderCredentialPrefs19, TorrentSearchHistoryStore2,
+MyWatchlistStore2, DownloadDestinationPrefs5. The copied filter helper removes
+DefaultTorrentFilterPrefs import and reverses10tearoffs. The copied playlist
+helper removes PlaybackProgressStore import and reverses4receivers. Recipe and
+new catalog seed/assertions are identical; its current APIs still use
+StorageService, so no catalog adapter is needed. This is not a byte-identical
+whole-harness claim. Each own package config resolves the local app and pinned
+Flutter/test3.44.8. No SDK or old production backport is used.
+
+All44 prior artifact Git blobs remain unchanged (Git-normalized comparison,
+not a CRLF/LF raw-hash identity claim). New pair gives46 artifacts plus recipe/
+README=48 directory files at this base; pending keyboard fixtures are not part
+of this base. Existing recipe entries remain equal; only catalog-search is added.
+The new pair is copied byte-for-byte from actual old exporter output.
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# In the fresh unchanged old checkout with the adapters above:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --plain-name 'catalog-search: generate' --reporter json
+# In current candidate:
+& $flutter test --no-pub test/catalog_search_prefs_origin_test.dart test/storage_origin_restore_fixture_test.dart --reporter json
+& 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/cache/dart-sdk/bin/dart.exe' analyze test/storage_origin_restore_fixture_test.dart
+foreach ($variant in @('catalog-key', 'catalog-type', 'catalog-order')) {
+  & $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'catalog-search: restore' "--dart-define=STORAGE_FIXTURE_MUTATION=$variant" --reporter json
+}
+```
+
+Generation1PASS; current combined74PASS =24origin+50fixture, zero errors/skips;
+loader analysis0. Three valid packages rebuild section hashes, encrypt/decrypt,
+and complete actual restore, then each exits1 at physical comparison loader494
+(helper155): renamed key retains destination JSON; String becomes List<String>;
+first distinct entries reorder. No codec rejection or production mutation.
+
+Ciphertext SHA256:
+`a489aeba14c5e98bf25849a647c29e31543078a7c8cdb34b48d5d49f17576fa5`.
+
+Did we make a difference? Actual old export/current restore now proves the raw
+JSON remains distinct from the public deduplicated Set. Is there more we could
+do? A separately granted owner move can relocate the25 method lines without
+changing their catch boundaries/live-Set timing. This fixture earns no production
+line credit and does not close remaining Storage ownership.
+
+## Device maintenance: four device-global exclusions
+
+Fresh unchanged actual pre-S2 exporter `6d26d7a1a98c7ddd37b4a25815f74123c1e29126`
+in `C:/Users/hunth/debrify/debrify-device-maintenance-fixture-origin` generated
+`device-maintenance-exclusion.encrypted.json` and its manifest. Current restore
+runs in `C:/Users/hunth/debrify/debrify-s2-device-maintenance-prefs` at main base
+`bbc6113f285fb278006d92676df1b9bff10e9427`, after green public origin
+`a2fcd5812230f8d53987ff11609a070e3b7154dd` (34 finite actual API cases).
+
+Zero admitted domain keys, four exclusions: support_remote_config_cache_v1
+String, dismissed_donation_campaign_ids_v1 StringList, update_auto_check_enabled
+bool, update_ignored_version String. Synthetic source globals include opaque
+malformed JSON, duplicate/case/whitespace IDs, false and a padded version.
+Every same-named source profile key has a String shadow. Actual encrypted
+export/decode yields an empty settings section and no resources. This is not
+sanitized-sharing, installation, native permission or portable identity proof.
+
+Current actual merge restore publishes generation2, retains the different four
+destination globals with exact physical types/values, and public getters return
+them without rewriting. Old profile generation1, another profile, generation7
+and destination sentinel are checked. Re-export with secrets false/true still
+excludes all four names and preserves the sentinel. Profile shadow assertions
+cover those explicit old/other scopes, not every possible restore interleaving.
+
+Old lib is unchanged; generator verifies HEAD/lib plus local app package path.
+Copied loader removes seven absent-owner imports and reverses same-method
+receivers: IptvPrefs3, PlaybackProgressStore14, ProviderCredentialPrefs19,
+TorrentSearchHistoryStore2, MyWatchlistStore2, DownloadDestinationPrefs5,
+AmbientTrailerPrefs6. Filter helper removes its DefaultTorrentFilterPrefs import
+and reverses10tearoffs; playlist helper removes its PlaybackProgressStore import
+and reverses4receivers. Recipe/new domain code identical; maintenance public
+APIs still reside on old StorageService. This is not identical-whole-harness
+proof and does not backport owners. Both package configs resolve own app and
+pinned Flutter/test3.44.8. Later keyboard/catalog fixture unions need explicit
+preservation; they are not in this generation base.
+
+All44 prior artifact Git blobs unchanged (normalized Git comparison, not a
+raw CRLF/LF identity claim). New pair gives46 artifacts plus recipe/README48files.
+Previous recipe entries are equal. New pair copied byte-for-byte from old output.
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# In fresh unchanged old checkout with the adapters above:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --plain-name 'device-maintenance-exclusion: generate' --reporter json
+# In current candidate:
+& $flutter test --no-pub test/device_maintenance_prefs_origin_test.dart test/storage_origin_restore_fixture_test.dart --reporter json
+& 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/cache/dart-sdk/bin/dart.exe' analyze test/storage_origin_restore_fixture_test.dart
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'device-maintenance-exclusion: actual restore' --dart-define=STORAGE_FIXTURE_MUTATION=maintenance-forbidden-key --reporter json
+```
+
+Generation1PASS; combined84PASS=34origin+50fixture, zero errors; scopedloader0.
+Negative control rebuilds the preferences-section hash, encrypts/decrypts a
+valid package containing one forbidden support-cache key, confirms that key
+survived the codec, then exits1 at declared exclusion429/call488. This proves
+the package exclusion assertion; it intentionally fails BEFORE restore and
+makes no claim that destination globals were mutated. No production mutation.
+
+Ciphertext SHA256:
+`be6902e56414c291e390d714668fc9ad5059b1d0940b74fb09ee1aa8ab12fa72`.
+
+Did we make a difference? Actual old export/current restore now distinguishes
+four installation-global maintenance preferences from portable profile state.
+Is there more we could do? A separately granted eight-body owner move remains
+pending; no production or strict Storage closure credit is earned here.

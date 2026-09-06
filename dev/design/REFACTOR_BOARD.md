@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main 7f3e55bb
+## Current roadmap — September 6, main d621d936 (production 9a2cbb67)
 
 ### God-file line counts — original → current merged main
 
-- **Search:** 19,070 → **6,468** (12,602 fewer)
-- **Player:** 16,278 → **11,738** (4,540 fewer)
+- **Search:** 19,070 → **6,291** (12,779 fewer)
+- **Player:** 16,278 → **11,534** (4,744 fewer)
 - **Magic TV:** 10,716 → **3,321** (7,395 fewer)
-- **Storage:** 9,963 → **2,368** (7,595 fewer)
+- **Storage:** 9,963 → **2,275** (7,688 fewer)
 - **Settings:** 7,905 → **2,903** (5,002 fewer)
 
-Counted from actual merged main 7f3e55bb. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
+Counted from actual merged main d621d936. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
 
 ### The same six outcomes — stable roadmap
 
@@ -18,7 +18,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 1. **Finish Search stage layouts and final shared composition — IN PROGRESS.**
    Done: standalone Discover, Spotlight, Tonight and shared BoardCell merged.
-   Deck/shared visuals (#195) and Mosaic (#196) are now merged. Left: Canvas, Promenade (#198), Atrium and final shared composition. Atrium remains held on its origin rendering failure. The older Mosaic cell-owner proposal remains held; #196 is a different actual stage-boundary extraction.
+   Deck/shared visuals (#195), Mosaic (#196) and Promenade (#198) are now merged. Left: Canvas, Atrium and final shared composition. Atrium remains held on its origin rendering failure. The older Mosaic cell-owner proposal remains held; #196 is a different actual stage-boundary extraction.
    Next: a bounded composition change that removes dependencies rather than adding more forwarding callbacks. Close against the existing Search lane criteria, not merely a smaller host file.
 
 2. **Complete player decoder/state/UI separation — IN PROGRESS, CURRENT PIN BLOCKER.**
@@ -29,7 +29,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 3. **Finish storage business-logic ownership and eligible temporary facade removal — IN PROGRESS.**
    Done: storage size target reached, multiple domain owners and pre-refactor restore fixtures merged, earlier223 facades retired.
    Left: remaining domain logic and eligible forwarding APIs; native-sensitive exceptions remain explicit.
-   History/watchlist, filter, download and Ambient caller retirements are merged. Next: keyboard (#194), catalog-search (#197), indexer (#199), then engine reset, device maintenance, adult access and remaining scalar policy. Cross-owner coordinators and native APIs retain explicit evidence requirements.
+   History/watchlist, filter, download and Ambient caller retirements are merged. Keyboard (#194) merged. Next: catalog-search (#197), indexer (#199), then engine reset, device maintenance, adult access and remaining scalar policy. Cross-owner coordinators and native APIs retain explicit evidence requirements.
 
 4. **Finish M1-7 genuine common-flow dedup and dependency cleanup — COMPLETE against the agreed finite scope.**
    Done: shared flow programmes merged, provider-leaf target met (627 current lines versus under800), two cached-entry wrappers removed.
@@ -52,7 +52,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 - **Ampere / Search:** #196 merged; #198 `5ea5bfb` under independent review. Canvas origin `84e8bf6`: 3 tests passed first run; exact unapplied extraction awaits decision. Atrium held.
 - **Wegener / Player:** #193 merged. Renderer experiment held after finite attempts; assigned read-only V1-7 speed/aspect ownership and public-testability design, no renderer retries.
-- **Locke / Storage:** #194 `bede8cf` and #197 `ca9c2ea` integrations accepted, CI pending. Draft #199 `1356c0f`: 13 green origin tests before move, 60 combined tests passed; independent review queued. Next read-only engine-reset assessment.
+- **Locke / Storage:** #194 merged; #197 integrating the new main fixture/key-sweep additions before fresh CI. Draft #199 `1356c0f`: 13 green origin tests before move, 60 combined tests passed; independent review queued. Next read-only engine-reset assessment.
 - **Cicero / Review:** full dcdc8385 gate PASSED. Review #198 then #199; #194/#196/#197 integration deltas accepted without duplicate suite runs.
 - **Parent:** decide Canvas scope, review #192 documentation, merge exact reviewed CI-green heads and reconcile dependencies. CODEMAP lock released. No user/manual-smoke blocker.
 
@@ -67,6 +67,28 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - [ ] Run the next full integrated gate after three additional production merges.
 
 ### Latest completed milestones
+
+- #203 merged **9a2cbb67**, exactbfb4, independent135PASS/1known plus6path-correctiontests, finalCIallgreen. Shared favourite builder/public primitives remove realFavRow host dependency; host-248/whole+45/fourlazycapabilities. Did we make a difference? Yes: six consumers share one owner; Atrium remains held, Search stage target still638short. CI stale-source-reader failure preserved and narrowlycorrected. Thirdproductionmerge triggersfull9a2gate.
+
+- #192 provider guide merged **d621d936**, exact94932, independentfulltext+two-prose-correctionreview/allCIgreen. Fourcredential surfaces/defaultprovider exceptions documented accurately. Documentation only, no god-line orproductioncounter credit. #204/#206 exactCI nowgreen but heldnextgate; #199 native timeout stillunresolved.
+
+- #205 merged **91325ed4**, exactbff3, independent46PASS/finalunion/allCIgreen. Transport visibility timer/latch/menu state has an owner; host-80/whole+53/fourlazycapabilities and fourborrowedresources. Did we make a difference? Real timer/rearm ownership with publiccontrol pins; full input/scrub/renderer scope staysopen. #203 path-only sourceguard correction awaitsCI; #204 one staleadversarialowner expectation correction authorized; #206 independent44PASS/unionaccepted awaitingCI. Nextproductionmerge triggersfullgate.
+
+- **Full gate42d71343 PASSED:**5938PASS/12exactknown/2skip;goldens21known/configuredretries/helpers0/unexpected0/unused0; nativefirstpairPASS,431/449zero new,Python55,layer77;Windows/ARM64PASS. Forwarders417/133/161/23/0, catalog+2/receiver changes explicit. ZIP33775d136b885649c18ecd2d6db20d6bc1612061b0ca2d300f11b949cb6eb469; APKa7055535e0c863e8d0963d4e34353b02142a54784a804a7def0f5b27796fcd16. No newmanualsmoke.
+
+- #202 merged **6085242c**, exactb26b, independent98PASS/finalfixtureunion/allCIgreen. Device-maintenance owner preserves four global keys and exclusionfixture behavior; host-31/whole+38/eightfacades. Did we make a difference? Yes: support/update preference policy has one owner; remainingadult/scalar/native obligations stayopen. #203 CI tests failed bothruns, Ampere diagnosing; no blindretry. #204/#205 review queued, #199 native timeout unresolved.
+
+- #201 merged **42d71343**, exact74c179, independent44PASS/allCIgreen/cleanexactunion. Speed/aspect/prior-hold and HUD ownership transferred with actual UI/resume consumers; host-124/whole+57/fiveeffectcapabilities. Did we make a difference? Yes: temporary versus persisted speed and aspect state have one owner; renderer, tracker and wider UI obligations remain. Third merge197/200/201 triggers fullactual42d713 gate; workers continue isolated work, no fresh device smoke claimed.
+
+- #200 merged **ab0e7b02**, exact11223, independent121PASS/1knownsidebar and allCIgreen. Canvas actual stage boundary removed; host+33/whole+52,19 direct plus9 existing nested operations retained. Did we make a difference? Yes: six stages now have real widgets; Atrium remains held and final composition open. #203 favourite independent135PASS/1known accepted; integrating newmain beforefreshCI. #201 independently44PASS; transportjointorigin2PASS before authorized limited coordinator move. #202 finalunion/reviewCI pending; scalar batch implementation underway. No fullSearch closure claimed.
+
+- **Full gate9fd6c24f PASSED:** 5906 passes/12 exact known failures/2 skips; goldens21 known with configured retries, helpers0/unexpected0/unused0. Native firstpairPASS; analyzer431/449 zero new; Python55; layer77 unchanged; Windows/ARM64 buildsPASS. Forwarders Storage415/Search133/Player161/Magic23/Settings0; Storage+4 keyboard accessors explicitly counted. No fresh manual smoke. ZIP SHA5ae464f5f54c5c531a7b1a5ab2f93ece983b3672d7533cd808fff23d5cfba6eb; APK987468971513aac4133e2cab451938b850781218d6142d6052ec67f852a56222.
+
+- #197 merged **618659a5**, exact83b6, independent88PASS/finalunion/allCIgreen. Catalog preference owner preserves raw-key/order/restore behavior; host-25/whole+21/twofacades retained. Did we make a difference? Real ownership with old-export proof; scalar/device/indexer and remaining authority still open. #199 native600s timeout remains held with unknown cause. #200/#201/#202 independently accepted pending CI/integration; #203 favourite review queued.
+
+- #198 merged **9fd6c24f**, exact reviewed3641057, both CI runs fully passed. Actual Promenade stage boundary extracted, independent117PASS/1knownsidebar; host+38/whole+49,20bindings retained. Did we make a difference? Yes: another stage is independent of the host library; Canvas/Atrium/final composition remain. Third production merge triggers full integrated gate. #197 CI green held for gate; #199 native CI failed and is under log diagnosis, no blind retry. #201 player independent44PASS; #202 device review queued/running; #200 integration follows merged198.
+
+- #194 merged **c60f3f1f**, exact reviewed bede8cf, all three CI checks passed. Keyboard preferences use AppStylePrefs with one cache and unchanged reset/migration behavior. Independent 101 tests passed; host -37, whole production +13; compatibility cache accessors retained. Did we make a difference? Yes: ownership is explicit with old-export fixtures; broader storage and native warmup remain. #197 needs an additive fixture/registry union; #199 import conflict must be resolved to start CI. Next production merge triggers a full gate.
 
 - #196 merged **7f3e55bb**, exact reviewed head d11a39f, after all CI passed. Actual Mosaic stage boundary removed; host +11, whole production +45, 17 bindings retained. Independent 114 passed /1 exact known sidebar failure. Did we make a difference? Yes: a real stage no longer depends on the host library; cell ownership and final Search composition remain. #198 must reconcile its merged dependency before landing.
 
@@ -108,12 +130,11 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Gate pinned analyzer431/449, zero errors/new issues; layering77→77; Python55 passed; originalbc46/current native pair passed first try. Initial wrong-PATH analyzer output retained separately and corrected using pinned SDK; no baseline edit.
 - Windows226.2s/68files and ARM64171.9s builds passed. ZIP SHA256b96b7a4bd0b98a4f9de799ef3242bebf18a150d3c49c0113ad0566d10f1d729f; APK80811b556495c20078920091643b91cbcde5bc236d89737bd3bed7d1479e8cb5. No fresh manual/device smoke claimed.
 - #181 BoardCell mergedc7a332bd exact932 after independent140 passes plus the exact known sidebar failure, final integration review and all3CI green. Shared renderer owns card state/shuttle; 669 declaration lines relocated, whole production+17, zero host-file reduction. Did we make a difference? Removed private host-library access at real consumers; remaining stage navigation/composition is still open.
-- Production merge counter: **1 since completed gate dcdc8385** (#196). Includes #193/#195/#191; excludes subsequent #196 and pending #194/#197/#198/#199. Next full gate after three additional production merges.
+- Production merge counter: **3 since completed gate42d71343** (#202, #205, #203). Full gate9a2cbb67 assigned; further production merges held. Docs192 does not increment the counter.
 
-### Forwarders at the latest full gate dcdc8385
+### Forwarders at the latest full gate9fd6c24f
 
-- Storage **411 total /143 single-line**; Search **133/117**; Player **161/112**; Magic TV **23/12**; Settings **0/0**.
-- Same expanded AST classifier; legacy Search **60** separately retained. Storage415 to411 is four Ambient facades retired by #191, not a rebaseline.
+- Storage415/143 single-line; Search133/117; Player161/112; Magic23/12; Settings0/0. Legacy Search60 separate. Storage+4 is keyboard accessors added in194, no classifier change.
 
 ### Decisions, limits and recovery
 

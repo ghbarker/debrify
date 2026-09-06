@@ -1,4 +1,6 @@
 import 'storage/indexer_manager_config_store.dart';
+import 'storage/device_maintenance_prefs.dart';
+import 'storage/catalog_search_prefs.dart';
 export 'storage/ambient_trailer_prefs.dart' show AmbientTrailerSurface;
 
 import 'package:flutter/foundation.dart';
@@ -167,10 +169,6 @@ class StorageService {
   static const String localSeriesCalendarAttemptedAtKey =
       PlaybackProgressStore.localSeriesCalendarAttemptedAtKey;
 
-  static const String _supportRemoteConfigCacheKey =
-      'support_remote_config_cache_v1';
-  static const String _dismissedDonationCampaignIdsKey =
-      'dismissed_donation_campaign_ids_v1';
 
   // Startup settings
   static const String _startupAutoLaunchEnabledKey =
@@ -188,8 +186,6 @@ class StorageService {
   static const String _startupTraktContinueWatchingShowIdKey =
       'startup_trakt_continue_watching_show_id';
 
-  static const String _updateAutoCheckEnabledKey = 'update_auto_check_enabled';
-  static const String _updateIgnoredVersionKey = 'update_ignored_version';
 
 
   /// Completion thresholds selectable in Settings → Playback. A lower bound
@@ -1577,29 +1573,17 @@ class StorageService {
     List<IndexerManagerConfig> configs,
   ) => IndexerManagerConfigStore.setIndexerManagerConfigs(configs);
 
-  static Future<String?> getSupportRemoteConfigCache() async {
-    final prefs = await DevicePreferences.instance();
-    return prefs.getString(_supportRemoteConfigCacheKey);
-  }
+  static Future<String?> getSupportRemoteConfigCache() =>
+      DeviceMaintenancePrefs.getSupportRemoteConfigCache();
 
-  static Future<void> setSupportRemoteConfigCache(String json) async {
-    final prefs = await DevicePreferences.instance();
-    await prefs.setString(_supportRemoteConfigCacheKey, json);
-  }
+  static Future<void> setSupportRemoteConfigCache(String json) =>
+      DeviceMaintenancePrefs.setSupportRemoteConfigCache(json);
 
-  static Future<List<String>> getDismissedDonationCampaignIds() async {
-    final prefs = await DevicePreferences.instance();
-    return prefs.getStringList(_dismissedDonationCampaignIdsKey) ?? <String>[];
-  }
+  static Future<List<String>> getDismissedDonationCampaignIds() =>
+      DeviceMaintenancePrefs.getDismissedDonationCampaignIds();
 
-  static Future<void> dismissDonationCampaign(String campaignId) async {
-    final prefs = await DevicePreferences.instance();
-    final ids =
-        prefs.getStringList(_dismissedDonationCampaignIdsKey) ?? <String>[];
-    if (ids.contains(campaignId)) return;
-    ids.add(campaignId);
-    await prefs.setStringList(_dismissedDonationCampaignIdsKey, ids);
-  }
+  static Future<void> dismissDonationCampaign(String campaignId) =>
+      DeviceMaintenancePrefs.dismissDonationCampaign(campaignId);
 
   // Quick Play VR Settings methods
 
@@ -2005,31 +1989,17 @@ class StorageService {
   static Future<bool> getRemoteControlEnabled() =>
       RemoteDevicePrefs.getRemoteControlEnabled();
 
-  static Future<bool> getUpdateAutoCheckEnabled() async {
-    final prefs = await DevicePreferences.instance();
-    return prefs.getBool(_updateAutoCheckEnabledKey) ?? true;
-  }
+  static Future<bool> getUpdateAutoCheckEnabled() =>
+      DeviceMaintenancePrefs.getUpdateAutoCheckEnabled();
 
-  static Future<void> setUpdateAutoCheckEnabled(bool enabled) async {
-    final prefs = await DevicePreferences.instance();
-    await prefs.setBool(_updateAutoCheckEnabledKey, enabled);
-  }
+  static Future<void> setUpdateAutoCheckEnabled(bool enabled) =>
+      DeviceMaintenancePrefs.setUpdateAutoCheckEnabled(enabled);
 
-  static Future<String?> getIgnoredUpdateVersion() async {
-    final prefs = await DevicePreferences.instance();
-    final value = prefs.getString(_updateIgnoredVersionKey);
-    if (value == null || value.trim().isEmpty) return null;
-    return value;
-  }
+  static Future<String?> getIgnoredUpdateVersion() =>
+      DeviceMaintenancePrefs.getIgnoredUpdateVersion();
 
-  static Future<void> setIgnoredUpdateVersion(String? version) async {
-    final prefs = await DevicePreferences.instance();
-    if (version == null || version.trim().isEmpty) {
-      await prefs.remove(_updateIgnoredVersionKey);
-    } else {
-      await prefs.setString(_updateIgnoredVersionKey, version);
-    }
-  }
+  static Future<void> setIgnoredUpdateVersion(String? version) =>
+      DeviceMaintenancePrefs.setIgnoredUpdateVersion(version);
 
   /// Set whether remote control feature is enabled
   static Future<void> setRemoteControlEnabled(bool enabled) =>
@@ -2166,38 +2136,12 @@ class StorageService {
       StremioTvPrefs.setStremioTvDisabledFilters(disabled);
 
 
-  static const String _catalogSearchDisabledAddonsKey =
-      'catalog_search_disabled_addons_v1';
+  /// Search addon selection policy lives in CatalogSearchPrefs.
+  static Future<Set<String>> getCatalogSearchDisabledAddons() =>
+      CatalogSearchPrefs.getCatalogSearchDisabledAddons();
 
-  /// Get the set of addon IDs the user has DISABLED for catalog search on the
-  /// Search tab (empty = every searchable addon is queried).
-  static Future<Set<String>> getCatalogSearchDisabledAddons() async {
-    final prefs = await ProfilePreferences.instance();
-    final json = prefs.getString(_catalogSearchDisabledAddonsKey);
-    if (json == null) return {};
-    try {
-      final list = jsonDecode(json) as List<dynamic>;
-      return list.cast<String>().toSet();
-    } catch (e) {
-      debugPrint('Error reading catalog search disabled addons: $e');
-      return {};
-    }
-  }
-
-  /// Save the set of addon IDs disabled for catalog search.
-  static Future<void> setCatalogSearchDisabledAddons(
-    Set<String> disabled,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    if (disabled.isEmpty) {
-      await prefs.remove(_catalogSearchDisabledAddonsKey);
-    } else {
-      await prefs.setString(
-        _catalogSearchDisabledAddonsKey,
-        jsonEncode(disabled.toList()),
-      );
-    }
-  }
+  static Future<void> setCatalogSearchDisabledAddons(Set<String> disabled) =>
+      CatalogSearchPrefs.setCatalogSearchDisabledAddons(disabled);
 
   static Future<Set<String>> getHomeDisabledSections() =>
       HomePrefs.getHomeDisabledSections();

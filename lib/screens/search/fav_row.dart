@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/iptv_playlist.dart';
-import '../search_screen.dart' show FavKind, FavRowRef, ArtPoster, FavArtCell;
+import 'fav_row_ref.dart';
+import 'favourite_art_cell.dart';
 import 'fav_rows_controller.dart';
 
 /// Classic favourites row; cross-row navigation and hero updates stay host-owned.

@@ -1,7 +1,11 @@
+import 'search/favourite_art_cell.dart';
+import 'search/stages/stage_favourite_cells.dart';
 import 'search/board_cell.dart';
 import 'search/stage_visuals.dart';
 import 'search/stages/deck_board_stage.dart';
 import 'search/stages/mosaic_board_stage.dart';
+import 'search/stages/promenade_board_stage.dart';
+import 'search/stages/canvas_board_stage.dart';
 import 'search/stages/tonight_board_stage.dart';
 import 'search/stages/tonight_stage_content.dart';
 import 'search/stages/stage_shelf_content.dart';
@@ -112,13 +116,14 @@ import 'settings/tv_home_style_page.dart'
     show effectiveOffTvHomeStyle, shouldUseOffTvSpotlightShell;
 
 export 'search/fav_row_ref.dart' show FavKind, FavRowRef;
+export 'search/favourite_art_cell.dart' show ArtPoster, FavArtCell;
 
 part 'search/search_sources.dart';
 part 'search/search_card_widgets.dart';
 part 'search/search_hero_widgets.dart';
 part 'search/search_stage_widgets.dart';
-part 'search/stages/canvas_board_stage.dart';
-part 'search/stages/promenade_board_stage.dart';
+
+
 part 'search/stages/atrium_board_stage.dart';
 
 
@@ -258,23 +263,6 @@ bool discoverLandingLoadIsCurrent({
   required bool hasPendingHandoff,
 }) => !hasPendingHandoff && capturedRevision == currentRevision;
 
-// Metrics for the inline caption under an [ArtPoster] (the favourites rails).
-// Kept as the single source of truth so anything reserving vertical space for
-// the caption (the cell height, the hero's row-reserve budget) can't drift from
-// the widget's own layout.
-const double _kArtTitleGap = 10;
-const double _kArtTitleFontSize = 14;
-const double _kArtTitleHeight = 1.25;
-const int _kArtTitleMaxLines = 2;
-
-/// Height of the caption band under an [ArtPoster]: the gap plus its up-to-two
-/// lines at the current text scale.
-double _artPosterCaptionBand(BuildContext context) =>
-    _kArtTitleGap +
-    MediaQuery.textScalerOf(context).scale(_kArtTitleFontSize) *
-        _kArtTitleHeight *
-        _kArtTitleMaxLines;
-
 // Metrics for the Canvas bottom column (rail tabs + shelf). Same contract as
 // the caption band above: the widgets and the identity block that has to stay
 // CLEAR of them read the same numbers, so neither can drift into the other.
@@ -289,18 +277,9 @@ const double _kCanvasTabUnderline = 2.5;
 /// plus 1px of bottom padding.
 const double _kCanvasTabChevronColumn = 27;
 
-/// Gap between the tab row and the shelf below it.
-const double _kCanvasTabsGap = 12;
 
-/// Trailing spacer under the shelf, holding it off the screen edge.
-const double _kCanvasShelfTail = 22;
 
-/// Slack inside the shelf box, on top of the cell height — the cells centre
-/// in it, so a focused card's scale-up isn't clipped at the box edges.
-const double _kCanvasShelfSlack = 10;
 
-/// Breathing room between the identity block's bottom and the tab row's top.
-const double _kCanvasIdentityGap = 25;
 
 /// Smallest poster art a stage rail will draw before it is simply too small
 /// to recognise — the floor every derived rail box respects.
@@ -341,14 +320,8 @@ double _atriumLabelHeight(BuildContext context) =>
 // the identity block that must stay clear of them read the same numbers.
 const double _kPromLabelFontSize = 12.0;
 
-/// Gap between the centred rail label and the strip below it.
-const double _kPromLabelGap = 14;
 
-/// Trailing spacer under the strip.
-const double _kPromStripTail = 24;
 
-/// Air between the identity block and the label row under it.
-const double _kPromIdentityGap = 26;
 
 /// Dim painted over every strip cell that isn't focused, so the centre-locked
 /// cell reads as the lit one. A flat fill inside the card's own clip (see
@@ -772,7 +745,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       railBoxHeight: _stageRailBoxH,
       posterWidth: _stagePosterW,
       favouriteWidth: _stageFavW,
-      buildFavCell: _canvasFavCell,
+      buildFavCell: _stageFavouriteCells.build,
       buildRailLabel: _deckRailLabel,
       buildCardLayers: _tonightCardLayers,
       labelGap: _kAtriumLabelGap,
@@ -2085,7 +2058,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       _homeCardOrientation == HomeCardOrientation.landscape;
 
   double get _homeArtPosterCaptionBand =>
-      _hideHomeCardTitlesAndRatings ? 0 : _artPosterCaptionBand(context);
+      _hideHomeCardTitlesAndRatings ? 0 : artPosterCaptionBand(context);
 
   bool get _homeBoardMode =>
       widget.isTelevision && !widget.searchMode;
@@ -2409,246 +2382,12 @@ class _SearchScreenState extends State<SearchScreenHost>
     _canvasFavFocus.value = focus;
   }
 
-  /// One favourites cell on the Canvas shelf — the SAME [FavArtCell] +
-  /// [ArtPoster] stack the classic rows use (identical art, badges, hold
-  /// behaviour and open actions), with UP/DOWN rewired to rail switching and
-  /// focus driving the Canvas stage override (and the full-bleed live
-  /// preview, for IPTV).
-  Widget _canvasFavCell(
-    FavRowRef ref,
-    String railKey,
-    int col, {
-    VoidCallback? onUp,
-    VoidCallback? onDown,
-    VoidCallback? onLeft,
-    VoidCallback? onRight,
-    VoidCallback? onUpHold,
-    VoidCallback? onDownHold,
-  }) {
-    final nodes = _favourites.favNodesFor(ref);
-    // Rail switching is the default vertical grammar; Mosaic (grid) and
-    // Tonight (zones) pass their own.
-    final up = onUp ?? () => _stageSwitchRail(-1);
-    final down = onDown ?? () => _stageSwitchRail(1);
-    // An IPTV custom-list row: same cell stack as the favourites row below,
-    // but channels come from the list, play routes by CONTENT TYPE (a list
-    // can hold VOD), and only a live entry retunes the stage's live preview.
-    if (ref.isIptvList) {
-      final row = _favourites.iptvListRows[ref.list];
-      final channel = row.channels[col];
-      final live = channel.isLive;
-      return FavArtCell(
-        isTelevision: true,
-        column: col,
-        rowNodes: nodes,
-        onUp: up,
-        onDown: down,
-        onLeft: onLeft,
-        onRight: onRight,
-        onUpHold: onUpHold,
-        onDownHold: onDownHold,
-        child: ArtPoster(
-          imageUrl: channel.logoUrl,
-          title: channel.name,
-          showTitle: !_hideHomeCardTitlesAndRatings,
-          imageFit: BoxFit.contain,
-          isTelevision: true,
-          ringColor: Colors.white,
-          focusNode: nodes[col],
-          onOpen: () => _favourites.playIptvListChannel(channel),
-          onFocused: () => _canvasFavFocused(
-            railKey,
-            col,
-            CanvasFavFocus(
-              art: channel.logoUrl,
-              fit: BoxFit.contain,
-              title: channel.name,
-              subtitle: 'IPTV · ${row.title.toUpperCase()}',
-            ),
-            liveChannel: live ? channel : null,
-          ),
-        ),
-      );
-    }
-    switch (ref.kind) {
-      case FavKind.watchlistMovies:
-      case FavKind.watchlistSeries:
-        final items = ref.kind == FavKind.watchlistMovies
-            ? _favourites.watchlistMovieItems
-            : _favourites.watchlistSeriesItems;
-        final item = items[col];
-        return FavArtCell(
-          isTelevision: true,
-          column: col,
-          rowNodes: nodes,
-          onUp: up,
-          onDown: down,
-          onLeft: onLeft,
-          onRight: onRight,
-          onUpHold: onUpHold,
-          onDownHold: onDownHold,
-          child: ArtPoster(
-            imageUrl: item.poster,
-            title: item.name,
-            showTitle: !_hideHomeCardTitlesAndRatings,
-            isTelevision: true,
-            ringColor: Colors.white,
-            focusNode: nodes[col],
-            onOpen: () => _favourites.openMyWatchlistItem(item),
-            onFocused: () => _canvasFavFocused(
-              railKey,
-              col,
-              CanvasFavFocus(
-                art: _favourites.firstNonEmpty(item.background, item.poster),
-                title: item.name,
-                subtitle: 'MY WATCHLIST · ${item.type.toUpperCase()}',
-              ),
-            ),
-          ),
-        );
-      case FavKind.iptv:
-        final channel = _favourites.iptvFavChannels[col];
-        return FavArtCell(
-          isTelevision: true,
-          column: col,
-          rowNodes: nodes,
-          onUp: up,
-          onDown: down,
-          onLeft: onLeft,
-          onRight: onRight,
-          onUpHold: onUpHold,
-          onDownHold: onDownHold,
-          child: ArtPoster(
-            imageUrl: channel.logoUrl,
-            title: channel.name,
-            showTitle: !_hideHomeCardTitlesAndRatings,
-            imageFit: BoxFit.contain,
-            isTelevision: true,
-            ringColor: Colors.white,
-            focusNode: nodes[col],
-            onOpen: () => _favourites.playIptvChannel(channel),
-            // Focus lights the whole stage with this channel's live feed —
-            // the classic boxed preview, promoted to full-bleed.
-            onFocused: () => _canvasFavFocused(
-              railKey,
-              col,
-              CanvasFavFocus(
-                art: channel.logoUrl,
-                fit: BoxFit.contain,
-                title: channel.name,
-                subtitle: 'IPTV · FAVORITES',
-              ),
-              liveChannel: channel,
-            ),
-          ),
-        );
-      case FavKind.debrify:
-        final channel = _favourites.tvFavChannels[col];
-        final number = channel.channelNumber > 0
-            ? channel.channelNumber
-            : col + 1;
-        return FavArtCell(
-          isTelevision: true,
-          column: col,
-          rowNodes: nodes,
-          onUp: up,
-          onDown: down,
-          onLeft: onLeft,
-          onRight: onRight,
-          onUpHold: onUpHold,
-          onDownHold: onDownHold,
-          child: ArtPoster(
-            imageUrl: null,
-            title: channel.name,
-            showTitle: !_hideHomeCardTitlesAndRatings,
-            badge: '$number',
-            isTelevision: true,
-            ringColor: Colors.white,
-            focusNode: nodes[col],
-            onOpen: () => _favourites.playChannel(channel),
-            onFocused: () => _canvasFavFocused(
-              railKey,
-              col,
-              CanvasFavFocus(
-                art: null,
-                title: channel.name,
-                subtitle: 'DEBRIFY TV · CHANNEL $number',
-              ),
-            ),
-          ),
-        );
-      case FavKind.stremio:
-        final channel = _favourites.stvFavChannels[col];
-        final item = _favourites.stvNowPlaying(channel)?.item;
-        return FavArtCell(
-          isTelevision: true,
-          column: col,
-          rowNodes: nodes,
-          onUp: up,
-          onDown: down,
-          onLeft: onLeft,
-          onRight: onRight,
-          onUpHold: onUpHold,
-          onDownHold: onDownHold,
-          child: ArtPoster(
-            imageUrl: _favourites.firstNonEmpty(item?.poster, item?.background),
-            title: channel.displayName,
-            showTitle: !_hideHomeCardTitlesAndRatings,
-            live: true,
-            isTelevision: true,
-            ringColor: Colors.white,
-            focusNode: nodes[col],
-            onOpen: () => _favourites.playStremioTvChannel(channel),
-            onFocused: () => _canvasFavFocused(
-              railKey,
-              col,
-              CanvasFavFocus(
-                // The stage prefers the WIDE art; the card keeps the poster.
-                art: _favourites.firstNonEmpty(item?.background, item?.poster),
-                title: channel.displayName,
-                subtitle: item != null
-                    ? 'STREMIO TV · NOW: ${item.name}'
-                    : 'STREMIO TV · CHANNEL',
-              ),
-            ),
-          ),
-        );
-      case FavKind.playlist:
-        final item = _favourites.playlistItems[col];
-        final posterUrl = item['posterUrl'] as String?;
-        final title = (item['title'] as String?) ?? 'Unknown';
-        return FavArtCell(
-          isTelevision: true,
-          column: col,
-          rowNodes: nodes,
-          onUp: up,
-          onDown: down,
-          onLeft: onLeft,
-          onRight: onRight,
-          onUpHold: onUpHold,
-          onDownHold: onDownHold,
-          child: ArtPoster(
-            imageUrl: posterUrl,
-            title: title,
-            showTitle: !_hideHomeCardTitlesAndRatings,
-            progress: _favourites.playlistProgressFor(item),
-            isTelevision: true,
-            ringColor: Colors.white,
-            focusNode: nodes[col],
-            onOpen: () => _favourites.onPlaylistItemTap(item),
-            onFocused: () => _canvasFavFocused(
-              railKey,
-              col,
-              CanvasFavFocus(
-                art: posterUrl,
-                title: title,
-                subtitle: 'PLAYLIST · SAVED',
-              ),
-            ),
-          ),
-        );
-    }
-  }
+  late final StageFavouriteCells _stageFavouriteCells = StageFavouriteCells(
+    readFavourites: () => _favourites,
+    readHideTitles: () => _hideHomeCardTitlesAndRatings,
+    switchRail: _stageSwitchRail,
+    focused: _canvasFavFocused,
+  );
 
   /// Theater mode: after the ambient trailer has been SHOWING frames for a
   /// dwell, the shelf/tabs (and their bottom scrim) recede so the video owns
@@ -2943,6 +2682,90 @@ class _SearchScreenState extends State<SearchScreenHost>
     return false;
   }
 
+  late final CanvasStageBindings _canvasBindings = (
+    resolveRail: _resolveStageRail,
+    seedFocus: _seedStageFocusOnce,
+    favouriteCount: _canvasFavItemCount,
+    readTheater: () => _canvasTheater,
+    readTrailerActive: () => _heroTrailerActive,
+    cacheWidth: () => _tvHeroArtworkCacheWidth,
+    cacheHeight: () => _tvHeroArtworkCacheHeight,
+    heroItem: _heroItem,
+    enriched: _heroEnriched,
+    favourite: _canvasFavFocus,
+    trailerShowing: _heroTrailerShowing,
+    buildTrailer: (boardH) => _HeroTrailerLayer(
+      trailer: _heroTrailer,
+      isTelevision: widget.isTelevision,
+      heroHeight: boardH,
+      fullBleed: true,
+      volume: _heroTrailerVolume,
+      loading: _heroTrailerLoading,
+      onPlayingChanged: _onHeroTrailerPlaying,
+      takeover: _heroTrailerTakeover,
+    ),
+    buildLive: (boardH) => _HeroLiveLayer(
+      channel: _heroLiveChannel,
+      streamUrl: _heroLiveUrl,
+      heroHeight: boardH,
+      fullBleed: true,
+      volume: _heroTrailerVolume,
+      onPlayingChanged: _onHeroTrailerPlaying,
+      onPlaybackFailed: _onHeroLivePlaybackFailed,
+    ),
+    buildScrims: (theater) => _CanvasScrims(
+      theater: theater,
+    ),
+    readCaptionBand: () => _homeArtPosterCaptionBand,
+    tabsHeight: _canvasTabsHeight,
+    tabs: _canvasTabs,
+    favouriteCell: _stageFavouriteCells.build,
+    shelf: _stageShelf,
+  );
+
+  late final PromenadeStageBindings _promenadeBindings = (
+    resolveRail: _resolveStageRail,
+    seedFocus: _seedStageFocusOnce,
+    favouriteCount: _canvasFavItemCount,
+    readTheater: () => _canvasTheater,
+    readTrailerActive: () => _heroTrailerActive,
+    cacheWidth: () => _tvHeroArtworkCacheWidth,
+    cacheHeight: () => _tvHeroArtworkCacheHeight,
+    heroItem: _heroItem,
+    enriched: _heroEnriched,
+    favourite: _canvasFavFocus,
+    trailerShowing: _heroTrailerShowing,
+    buildTrailer: (boardH) => _HeroTrailerLayer(
+      trailer: _heroTrailer,
+      isTelevision: widget.isTelevision,
+      heroHeight: boardH,
+      fullBleed: true,
+      volume: _heroTrailerVolume,
+      loading: _heroTrailerLoading,
+      onPlayingChanged: _onHeroTrailerPlaying,
+      takeover: _heroTrailerTakeover,
+    ),
+    buildLive: (boardH) => _HeroLiveLayer(
+      channel: _heroLiveChannel,
+      streamUrl: _heroLiveUrl,
+      heroHeight: boardH,
+      fullBleed: true,
+      volume: _heroTrailerVolume,
+      onPlayingChanged: _onHeroTrailerPlaying,
+      onPlaybackFailed: _onHeroLivePlaybackFailed,
+    ),
+    buildScrims: (theater) => _CanvasScrims(
+      theater: theater,
+      variant: _StageScrimVariant.centered,
+    ),
+    railBoxHeight: _stageRailBoxH,
+    favouriteWidth: _stageFavW,
+    labelHeight: _promenadeLabelHeight,
+    railLabel: _promenadeLabel,
+    favouriteCell: _stageFavouriteCells.build,
+    cell: _promenadeCell,
+  );
+
   late final MosaicStageBindings _mosaicBindings = (
     readTheme: () => AppThemeScope.of(context),
     resolveRail: _resolveStageRail,
@@ -2989,7 +2812,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     labelHeight: _atriumLabelHeight,
     favouriteWidth: _stageFavW,
     posterWidth: _stagePosterW,
-    favouriteCell: _canvasFavCell,
+    favouriteCell: _stageFavouriteCells.build,
     railLabel: _deckRailLabel,
     buildTrailer: (cardH) => _HeroTrailerLayer(
       trailer: _heroTrailer,
@@ -3506,7 +3329,7 @@ class _SearchScreenState extends State<SearchScreenHost>
                 child: SizedBox(
                   width: cardW,
                   child: favRail
-                      ? _canvasFavCell(
+                      ? _stageFavouriteCells.build(
                           rail.favKind!,
                           railKey,
                           col,
@@ -3660,7 +3483,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     });
 
     if (rail.favKind != null) {
-      return _canvasFavCell(
+      return _stageFavouriteCells.build(
         rail.favKind!,
         railKey,
         col,
@@ -5236,13 +5059,13 @@ class _SearchScreenState extends State<SearchScreenHost>
     // (the loading / error / empty guards above are shared with classic).
     switch (_homeStyleEffective) {
       case 'canvas':
-        return _CanvasBoardStage(host: this);
+        return CanvasStage(bindings: _canvasBindings, isTelevision: widget.isTelevision);
       case 'atrium':
         return _AtriumBoardStage(host: this);
       case 'mosaic':
         return MosaicStage(bindings: _mosaicBindings, isTelevision: widget.isTelevision);
       case 'promenade':
-        return _PromenadeBoardStage(host: this);
+        return PromenadeStage(bindings: _promenadeBindings, isTelevision: widget.isTelevision);
       case 'deck':
         return DeckStage(bindings: _deckBindings, isTelevision: widget.isTelevision);
       case 'tonight':
