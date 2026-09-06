@@ -549,15 +549,24 @@ is an editor mirror, not the source of truth. How to add a provider:
   Captured credentials, late builder eligibility, catch asymmetry and unmounted
   finally-return suppression remain origin quirks; native/early-entry debt stays open.
   Its 24 binding/tear-off lines are retained for Q2 composition review/removal before
-  Phase 2 completion. These shared phases do not complete the five-flow dedup target. `WatchFlowBindings` keeps live host
-  state, navigation, existing preparation/prefetch/launcher callbacks and
-  captured-key service calls. Six entry wrappers and five dead cached binding slots
+  Phase 2 completion. The provider-leaf target is achieved: four remaining leaves
+  total627, below800; shared owners and the distinct155-line walkers count separately.
+  `WatchFlowBindings` keeps live host state, navigation and existing preparation/
+  prefetch/launcher callbacks. Its three concrete captured-key function bindings are
+  replaced by two typed fixed-adapter dependencies, `CloudMagicTvCapturedRdUnlock`
+  and `CloudMagicTvCapturedAdUnlock` in `lib/services/cloud/cloud_magic_tv_unlock.dart`.
+  RD `unrestrictLinkWithKey` / `addTorrentPreferVideosWithKey` and AD `unlockLinkWithKey`
+  are consumed at ten watch call sites. Three nonasync adapter arrows return the same
+  service Futures with the same captured keys; fixed const adapter selection preserves
+  independence from the prepare registry. Whole production+26 is charged, not Leaves.
+  Existing key-rereading APIs and the direct host Android PreferVideos call remain
+  outside this boundary; no autonomous-provider or native-coverage claim. Six entry wrappers and five dead cached binding slots
   are removed. Four provider-specific quick-dispatch dependencies now belong to
   `ProviderWatchFlow`; their host forwarders and shared binding slots are removed,
   not the dependencies. The lazy owner evaluates bindings before cached leaf tearoffs.
   First owner access may allocate all four side-effect-free leaf objects earlier;
   construction invokes no playback, I/O or credential reads. No identical allocation
-  timing or pure-port claim; captured-key and UI composition debt remains.
+  timing or UI-autonomy claim; UI composition debt remains.
   Live origin/runtime orchestration pins: `test/magic_tv_provider_watch_origin_test.dart`
   (21 cases; actual route requests/next callbacks, not native video playback).
   `test/cloud_magic_tv_unlock_pin_test.dart` is supplemental inventory only.
@@ -696,11 +705,11 @@ update this file in the same PR. Line counts come from `wc -l`, not estimates._
 
 - `lib/services/remote_control/remote_device_prefs.dart` (`RemoteDevicePrefs`) owns the four installation-wide remote preference keys and remembered-device JSON; pairing, identity and network/session lifetimes remain with their existing owners. Nine unchanged bodies retain nine nonasync `StorageService` facades (18 lines), expiring only after separately scoped Q2 caller compatibility retirement. `DevicePreferences` globals, raw types, JSON/default/error behavior and held-write lifetime remain unchanged. Host 2609 -> 2582 (-27), new owner 69 and registry +2 yield whole production +44: modest scalar/JSON ownership, no line-target or portable-identity claim. Actual pre-S2 export excludes all four keys and profile shadows; current restore preserves destination globals.
 
-- `lib/services/storage/torrent_search_history_store.dart` (`TorrentSearchHistoryStore`) owns the two profile history keys and the unchanged decode/dedup/order/five-item-cap persistence bodies. Five nonasync `StorageService` facades (12 lines) remain until separately scoped Q2 caller compatibility retirement; existing callers are unchanged. Captured write preferences, reacquired history reads, raw types, timestamp/error ordering and false-versus-throw behavior are preserved. Host 2582 -> 2538 (-44), new owner76 and registry+2 yield whole production+34. The actual old-export/current-restore fixture covers both physical keys; the fixture union retains40 artifacts plus README/recipe. No live history capture feature or profile-safety claim; strict storage ownership closure remains open.
+- `lib/services/storage/torrent_search_history_store.dart` (`TorrentSearchHistoryStore`) owns the two profile history keys and the unchanged decode/dedup/order/five-item-cap persistence bodies. Q2 retires all five direct `StorageService` history APIs (12 declaration lines); callers now use `TorrentSearchHistoryStore` directly. Captured write preferences, reacquired history reads, raw types, timestamp/error ordering and false-versus-throw behavior are preserved. Host 2582 -> 2538 (-44), new owner76 and registry+2 yield whole production+34. The actual old-export/current-restore fixture covers both physical keys; the fixture union retains40 artifacts plus README/recipe. No live history capture feature or profile-safety claim; strict storage ownership closure remains open.
 
 ### Playback storage routing (S2-6)
 
-- `lib/services/storage/my_watchlist_store.dart` (`MyWatchlistStore`) owns My Watchlist identity, legacy-row reads, ordering, cap eviction and playback removal for `my_watchlist_v1`. `StorageService` retains eight direct non-async method facades until Q2 caller migration, the cap constant alias and annotated debug-override getter/setter backed by one nullable store field. Captured preferences, later row-read reacquisition and failure behavior remain unchanged; this is owner separation, not a profile-safety or serialization fix.
+- `lib/services/storage/my_watchlist_store.dart` (`MyWatchlistStore`) owns My Watchlist identity, legacy-row reads, ordering, cap eviction and playback removal for `my_watchlist_v1`. Q2 retires six direct `StorageService` APIs (14 declaration lines); callers now use `MyWatchlistStore` directly. The identity-key and playback-removal facades, cap constant alias and annotated debug-override getter/setter backed by one nullable store field remain unchanged. Together with the five history APIs, this retires eleven facades and routes 12 production calls directly: 26 declaration lines plus one unused history import removed, five net caller import lines added, whole production -22. Strict outcomes 3 and 5 remain open; native compatibility and remaining ownership closure are not claimed. Captured preferences, later row-read reacquisition and failure behavior remain unchanged; this is owner separation, not a profile-safety or serialization fix.
 
 - `lib/services/storage/playback_progress_store.dart` owns continue-watching, local completion and playback JSON, tracker snapshot writes, track preferences, playlist metadata (TVMaze mappings, poster overrides and their shared item identity) and `buildPlaylistProgressMap` (title matching and derived progress); Q2 callers now use PlaybackProgressStore directly for progress assembly and all ten metadata APIs. The two obsolete metadata key aliases remain removed. `localCompletionRevision` is one shared notifier; `readPlaybackStateMap` always reads fresh preferences.
 - `PlaybackProgressStore` also owns local completion thresholds, imported-playback rearming, ghost purge and completion migration. Q2 retires the seven repair/threshold method facades; `StorageService` retains the public constant aliases. The three obsolete private repair bridges remain removed. Captured preferences, later reacquisition and failure/notification ordering are preserved, not a profile-safety fix. The remote `movieFinishedRevision`, defaults migration orchestration and `IptvMediaStore` SQLite resume backend retain their existing owners. Key strings remain frozen in `storage_key_ownership.dart`.

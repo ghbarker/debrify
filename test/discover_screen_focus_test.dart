@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:debrify/services/main_page_bridge.dart';
 import 'package:debrify/models/stremio_addon.dart';
@@ -124,8 +125,8 @@ void main() {
         type: 'series',
         name: 'Saved series',
       );
-      await StorageService.setMyWatchlistItem(savedMovie, true);
-      await StorageService.setMyWatchlistItem(savedSeries, true);
+      await MyWatchlistStore.setMyWatchlistItem(savedMovie, true);
+      await MyWatchlistStore.setMyWatchlistItem(savedSeries, true);
       await SeriesSourceService.addSource(
         'tt1234567',
         const SeriesSource(
@@ -142,8 +143,8 @@ void main() {
       expect(retainedIsBound(item), isTrue);
       expect(identical(discoverSource(tester).focusNode, sourceFocus), isTrue);
       expect(sourceFocus.hasFocus, isTrue);
-      await StorageService.setMyWatchlistItem(savedMovie, false);
-      await StorageService.setMyWatchlistItem(savedSeries, false);
+      await MyWatchlistStore.setMyWatchlistItem(savedMovie, false);
+      await MyWatchlistStore.setMyWatchlistItem(savedSeries, false);
       await SeriesSourceService.removeSourceByHash('tt1234567', 'origin');
       MainPageBridge.notifyPlaybackReturned();
       await pumpFavourites(tester);

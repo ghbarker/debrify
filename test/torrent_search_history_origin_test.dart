@@ -1,9 +1,9 @@
+import 'package:debrify/services/storage/torrent_search_history_store.dart';
 import 'dart:async';
 import 'dart:convert';
 
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
-import 'package:debrify/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
@@ -107,15 +107,15 @@ void main() {
   });
 
   test('absent defaults: empty history and enabled, no writes', () async {
-    expect(await StorageService.getTorrentSearchHistory(), isEmpty);
-    expect(await StorageService.getTorrentSearchHistoryEnabled(), isTrue);
+    expect(await TorrentSearchHistoryStore.getTorrentSearchHistory(), isEmpty);
+    expect(await TorrentSearchHistoryStore.getTorrentSearchHistoryEnabled(), isTrue);
     expect(backend.writes, isEmpty);
   });
 
   for (final raw in ['', '[', '{}', 'null', '7', '"text"']) {
     test('malformed or non-list JSON $raw is not repaired', () async {
       install({_history: raw});
-      expect(await StorageService.getTorrentSearchHistory(), isEmpty);
+      expect(await TorrentSearchHistoryStore.getTorrentSearchHistory(), isEmpty);
       expect((await SharedPreferences.getInstance()).get(_history), raw);
       expect(backend.writes, isEmpty);
     });
@@ -126,8 +126,8 @@ void main() {
       install({key: 7});
       await expectLater(
         key == _history
-            ? StorageService.getTorrentSearchHistory()
-            : StorageService.getTorrentSearchHistoryEnabled(),
+            ? TorrentSearchHistoryStore.getTorrentSearchHistory()
+            : TorrentSearchHistoryStore.getTorrentSearchHistoryEnabled(),
         throwsA(isA<TypeError>()),
       );
       expect(backend.writes, isEmpty);
@@ -147,14 +147,14 @@ void main() {
       ];
       final raw = jsonEncode(rows);
       install({_history: raw});
-      final read = await StorageService.getTorrentSearchHistory();
+      final read = await TorrentSearchHistoryStore.getTorrentSearchHistory();
       expect(read, [
         _row('b'),
         {'arbitrary': true},
         _row('a'),
       ]);
       (read.first['torrent'] as Map)['name'] = 'changed in caller';
-      expect(await StorageService.getTorrentSearchHistory(), [
+      expect(await TorrentSearchHistoryStore.getTorrentSearchHistory(), [
         _row('b'),
         {'arbitrary': true},
         _row('a'),
@@ -180,12 +180,12 @@ void main() {
         _enabled: false,
       });
       final before = DateTime.now().millisecondsSinceEpoch;
-      await StorageService.addTorrentToHistory({
+      await TorrentSearchHistoryStore.addTorrentToHistory({
         'infohash': 'same',
         'name': 'replacement',
       }, 'new');
       final after = DateTime.now().millisecondsSinceEpoch;
-      final rows = await StorageService.getTorrentSearchHistory();
+      final rows = await TorrentSearchHistoryStore.getTorrentSearchHistory();
       expect(rows.map((e) => (e['torrent'] as Map)['infohash']), [
         'same',
         'SAME',
@@ -203,7 +203,7 @@ void main() {
         allOf(isA<int>(), inInclusiveRange(before, after)),
       );
       expect(rows.skip(1), [_row('SAME'), _row('b'), _row('c'), _row('d')]);
-      expect(await StorageService.getTorrentSearchHistoryEnabled(), isFalse);
+      expect(await TorrentSearchHistoryStore.getTorrentSearchHistoryEnabled(), isFalse);
       expect(backend.writes, ['set:flutter.$_history']);
     },
   );
@@ -212,14 +212,14 @@ void main() {
     test('missing hash $hash still reads history before returning', () async {
       install({_history: 7});
       await expectLater(
-        StorageService.addTorrentToHistory({'infohash': hash}, 'x'),
+        TorrentSearchHistoryStore.addTorrentToHistory({'infohash': hash}, 'x'),
         throwsA(isA<TypeError>()),
       );
       expect(backend.writes, isEmpty);
     });
     test('missing hash $hash does not persist a decoded repair', () async {
       install({_history: '['});
-      await StorageService.addTorrentToHistory({'infohash': hash}, 'x');
+      await TorrentSearchHistoryStore.addTorrentToHistory({'infohash': hash}, 'x');
       expect((await SharedPreferences.getInstance()).getString(_history), '[');
       expect(backend.writes, isEmpty);
     });
@@ -229,12 +229,12 @@ void main() {
     'wrong incoming hash and malformed nested torrent escape without writes',
     () async {
       await expectLater(
-        StorageService.addTorrentToHistory({'infohash': 7}, 'x'),
+        TorrentSearchHistoryStore.addTorrentToHistory({'infohash': 7}, 'x'),
         throwsA(isA<TypeError>()),
       );
       install({_history: '[{"torrent":7}]'});
       await expectLater(
-        StorageService.addTorrentToHistory({'infohash': 'valid'}, 'x'),
+        TorrentSearchHistoryStore.addTorrentToHistory({'infohash': 'valid'}, 'x'),
         throwsA(isA<TypeError>()),
       );
       expect(backend.writes, isEmpty);
@@ -243,7 +243,7 @@ void main() {
 
   test('unencodable torrent fails before preference write', () async {
     await expectLater(
-      StorageService.addTorrentToHistory({
+      TorrentSearchHistoryStore.addTorrentToHistory({
         'infohash': 'x',
         'bad': Object(),
       }, 'x'),
@@ -263,11 +263,11 @@ void main() {
           backend.holdWrite = true;
           backend.outcome = outcome;
           final pending = switch (operation) {
-            'add' => StorageService.addTorrentToHistory({
+            'add' => TorrentSearchHistoryStore.addTorrentToHistory({
               'infohash': 'new',
             }, 'x'),
-            'enabled' => StorageService.setTorrentSearchHistoryEnabled(false),
-            _ => StorageService.clearTorrentSearchHistory(),
+            'enabled' => TorrentSearchHistoryStore.setTorrentSearchHistoryEnabled(false),
+            _ => TorrentSearchHistoryStore.clearTorrentSearchHistory(),
           };
           final observed = expectLater(
             pending,
@@ -316,7 +316,7 @@ void main() {
       backend.holdRead = true;
       backend.failRead = true;
       final observed = expectLater(
-        StorageService.addTorrentToHistory({'infohash': 'x'}, 'x'),
+        TorrentSearchHistoryStore.addTorrentToHistory({'infohash': 'x'}, 'x'),
         throwsA(same(backend.failure)),
       );
       await backend.entered.future;
@@ -333,7 +333,7 @@ void main() {
         _history: jsonEncode([_row('first-cache')]),
       });
       final first = await SharedPreferences.getInstance();
-      final pending = StorageService.addTorrentToHistory({
+      final pending = TorrentSearchHistoryStore.addTorrentToHistory({
         'infohash': 'new',
       }, 'x');
       // Existing SDK test hook: first instance is already awaited by the public
@@ -379,7 +379,7 @@ void main() {
       });
       ProfileRuntime.initializeCommitted(a);
       backend.holdWrite = true;
-      final pending = StorageService.addTorrentToHistory({
+      final pending = TorrentSearchHistoryStore.addTorrentToHistory({
         'infohash': 'new',
       }, 'x');
       await backend.entered.future;
@@ -394,7 +394,7 @@ void main() {
         ['new', 'old'],
       );
       expect(durable['flutter.${b.preferenceKey(_history)}'], original);
-      expect(await StorageService.getTorrentSearchHistory(), [_row('old')]);
+      expect(await TorrentSearchHistoryStore.getTorrentSearchHistory(), [_row('old')]);
     },
   );
 }

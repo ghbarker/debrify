@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 
@@ -168,7 +169,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
   /// otherwise whatever the host handed us.
   StremioMeta get _item => _enriched ?? widget.item;
   bool get _supportsMyWatchlist =>
-      StorageService.supportsMyWatchlistItem(_item);
+      MyWatchlistStore.supportsMyWatchlistItem(_item);
 
   /// Drives the staggered entrance reveal of the content sections.
   late final AnimationController _revealCtrl;
@@ -244,7 +245,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
 
   Future<void> _loadMyWatchlistState() async {
     if (!_supportsMyWatchlist) return;
-    final saved = await StorageService.isInMyWatchlist(_item);
+    final saved = await MyWatchlistStore.isInMyWatchlist(_item);
     if (!mounted || saved == _inMyWatchlist) return;
     setState(() => _inMyWatchlist = saved);
   }
@@ -258,7 +259,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
       final savedItem = sourceAddon == null
           ? _item
           : _item.withSourceAddon(sourceAddon);
-      await StorageService.setMyWatchlistItem(savedItem, next);
+      await MyWatchlistStore.setMyWatchlistItem(savedItem, next);
       if (!mounted) return;
       HapticFeedback.mediumImpact();
       ScaffoldMessenger.of(context)

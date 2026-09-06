@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -495,8 +496,8 @@ void main() {
     final panel = playbackPanel(tester);
     final item = panel.items.single;
     await PlaybackProgressStore.removeContinueWatchingItem(item.imdbId!);
-    await StorageService.setMyWatchlistItem(item, true);
-    expect(await StorageService.isInMyWatchlist(item), isTrue);
+    await MyWatchlistStore.setMyWatchlistItem(item, true);
+    expect(await MyWatchlistStore.isInMyWatchlist(item), isTrue);
     panel.onQuickPlay!(panel.items.single);
     await pumpFavourites(tester);
     expect(find.byKey(PlaybackTransport.playerKey), findsOneWidget);
@@ -505,7 +506,7 @@ void main() {
     expect(fixture.requests, contains('HEAD https://video.invalid/movie.mp4'));
     // The real launcher graduates watchlist content before the substituted
     // decoder route returns; the terminal widget does not perform these writes.
-    expect(await StorageService.isInMyWatchlist(item), isFalse);
+    expect(await MyWatchlistStore.isInMyWatchlist(item), isFalse);
     await saveReturnMarker();
     await pumpFavourites(tester);
     expect(

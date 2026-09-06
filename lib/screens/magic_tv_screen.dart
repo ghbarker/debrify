@@ -1,3 +1,5 @@
+import '../services/cloud/rd_cloud_provider.dart';
+import '../services/cloud/alldebrid_cloud_provider.dart';
 import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import '../services/debrify_tv/queue_prefetcher.dart';
 import 'debrify_tv/watch/provider_watch_flow.dart';
@@ -36,7 +38,6 @@ import '../services/storage_service.dart';
 import '../services/video_player_launcher.dart';
 import '../services/debrify_tv_cache_service.dart';
 import '../services/debrify_tv_repository.dart';
-import '../services/alldebrid_service.dart';
 import '../services/engine/engine_registry.dart';
 import '../services/engine/settings_manager.dart';
 import 'debrify_tv/channel_import_export_flow.dart';
@@ -312,9 +313,8 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
     messenger: () => ScaffoldMessenger.of(context),
     showProgressDialog: ({required builder, required barrierDismissible}) => showDialog<void>(context: context, builder: builder, barrierDismissible: barrierDismissible),
     setState: setState,
-    unrestrictLink: DebridService.unrestrictLink,
-    addTorrentPreferVideos: DebridService.addTorrentToDebridPreferVideos,
-    unlockLink: AllDebridService.unlockLink,
+    rdUnlock: const RealDebridCloudProvider(),
+    adUnlock: const AllDebridCloudProvider(),
   );
   late final _channelSwitch = ChannelSwitchFlow(_watchBindings);
   late final _providerWatch = ProviderWatchFlow(

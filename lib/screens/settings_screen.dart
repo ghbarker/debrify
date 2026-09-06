@@ -1,3 +1,5 @@
+import 'package:debrify/services/storage/torrent_search_history_store.dart';
+import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
@@ -1933,8 +1935,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await PlaybackProgressStore.clearContinueWatching();
     await PlaybackProgressStore.clearPlaylist();
     await PlaybackProgressStore.clearAllPlaylistMetadata();
-    await StorageService.clearMyWatchlist();
-    await StorageService.clearTorrentSearchHistory();
+    await MyWatchlistStore.clearMyWatchlist();
+    await TorrentSearchHistoryStore.clearTorrentSearchHistory();
     await StorageService.clearAllStartupSettings();
     await StorageService.clearAllHomePageSettings();
     await ProviderCredentialPrefs.clearAllIntegrationStates();

@@ -6,8 +6,8 @@ import 'package:debrify/services/debrid_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Supplemental source/type inventory only, not behavioral origin proof.
-/// The live host pin is magic_tv_provider_watch_origin_test.dart. M1-3 retains
-/// captured-key service bindings; these are not key-rereading cloud ports.
+/// Live host pins include magic_tv_captured_unlock_origin_test.dart. Captured
+/// capability calls preserve the key; these are not key-rereading cloud ports.
 ///
 /// Quirks:
 /// - [DebridService.unrestrictLink] returns a Map; Magic TV reads
@@ -16,8 +16,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// - [DebridService.addTorrentToDebridPreferVideos] returns a Map;
 ///   Magic TV reads `downloadLink`, `torrentId`, `links`.
 /// - [AllDebridService.unlockLink] returns a String URL.
-/// - Magic TV passes `apiKey` as the first argument. The later port hides
-///   that behind CloudCredentials; M1-3 deliberately retains capture timing.
+/// - Magic TV passes `apiKey` as the first argument to captured capabilities.
+///   The separate key-rereading APIs retain their CloudCredentials behavior.
 /// - Existing [CloudUnlock.unlockPlaybackEntry] / [CloudMagnetAdd.addMagnet]
 ///   / [CloudMagicTvLockedLinks] are different dialects — do not unify.
 String _read(String path) =>
@@ -28,17 +28,36 @@ String _read(String path) =>
 String _magicTvSources() {
   var host = _read('lib/screens/magic_tv_screen.dart');
   const aliases = {
-    'unrestrictLink': 'DebridService.unrestrictLink',
-    'addTorrentPreferVideos': 'DebridService.addTorrentToDebridPreferVideos',
-    'unlockLink': 'AllDebridService.unlockLink',
+    'rdUnlock.unrestrictLinkWithKey': 'DebridService.unrestrictLink',
+    'rdUnlock.addTorrentPreferVideosWithKey': 'DebridService.addTorrentToDebridPreferVideos',
+    'adUnlock.unlockLinkWithKey': 'AllDebridService.unlockLink',
   };
-  // Check each exact captured-key tear-off before excluding its registration
-  // from the invocation inventory. No file or call-site exemption.
-  for (final alias in aliases.entries) {
-    final registration = '${alias.key}: ${alias.value},';
+  // Check exact fixed adapter registration and nonasync service forwarding.
+  // No file, method-body or invocation-count exemption.
+  for (final registration in const [
+    'rdUnlock: const RealDebridCloudProvider(),',
+    'adUnlock: const AllDebridCloudProvider(),',
+  ]) {
     expect(registration.allMatches(host).length, 1);
     host = host.replaceFirst(registration, '');
   }
+  final rd = _read('lib/services/cloud/rd_cloud_provider.dart');
+  final ad = _read('lib/services/cloud/alldebrid_cloud_provider.dart');
+  for (final forward in const [
+    'Future<Map<String, dynamic>> unrestrictLinkWithKey(String apiKey, String link) =>\n'
+        '      DebridService.unrestrictLink(apiKey, link);',
+    'Future<Map<String, dynamic>> addTorrentPreferVideosWithKey(\n'
+        '    String apiKey,\n'
+        '    String magnet,\n'
+        '  ) => DebridService.addTorrentToDebridPreferVideos(apiKey, magnet);',
+  ]) {
+    expect(forward.allMatches(rd).length, 1);
+  }
+  expect(
+    ('Future<String> unlockLinkWithKey(String apiKey, String link) =>\n'
+        '      AllDebridService.unlockLink(apiKey, link);').allMatches(ad).length,
+    1,
+  );
   final buf = StringBuffer(host);
   buf.writeln(_read('lib/screens/debrify_tv/channel_switch_flow.dart'));
   buf.writeln(_read('lib/services/debrify_tv/channel_cache_warmer.dart'));
