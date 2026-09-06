@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../models/profiles/profile_policy.dart';
 import '../../models/profiles/user_profile.dart';
 import '../../services/main_page_bridge.dart';
+import '../../services/diagnostic_log.dart';
 import '../../services/deep_link_service.dart';
 import '../../services/profiles/profile_app_lifecycle_participant.dart';
 import '../../services/profiles/profile_authorization.dart';
@@ -36,6 +37,44 @@ bool shouldAutoEnterSoleProfile(
   return !profile.hasPin && !profile.pinResetRequired;
 }
 
+@visibleForTesting
+Future<bool> switchThenApplySyncedProfileOutcome({
+  required ProfileLifecycleCoordinator lifecycle,
+  required String replacementProfileId,
+  required SyncedProfileOutcomeApply applyOutcome,
+}) async {
+  final switched = await lifecycle.switchTo(
+    replacementProfileId,
+    unlock: (_) async => true,
+  );
+  if (!switched) return false;
+  try {
+    await applyOutcome();
+  } catch (error, stackTrace) {
+    debugPrint(
+      'Deferred synced profile outcome after switching '
+      '(${error.runtimeType})',
+    );
+    DiagnosticLog.instance.recordError(
+      source: 'profiles',
+      event: 'synced_profile_outcome_deferred',
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+  return true;
+}
+
+final class _PendingSyncedProfileRetirement {
+  const _PendingSyncedProfileRetirement({
+    required this.profileId,
+    required this.applyOutcome,
+  });
+
+  final String profileId;
+  final SyncedProfileOutcomeApply applyOutcome;
+}
+
 class ProfileGate extends StatefulWidget {
   final Widget child;
 
@@ -50,6 +89,7 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
   UserProfile? _pinTarget;
   bool _pinForManagement = false;
   bool _entered = false;
+  _PendingSyncedProfileRetirement? _pendingSyncedRetirement;
 
   /// Guards the one retry [_load] gets when it fails before the gate has any
   /// profiles to paint. Cleared on every success.
@@ -63,6 +103,11 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    DiagnosticLog.instance.recordEvent(
+      source: 'profile_gate',
+      durable: true,
+      event: 'gate_created',
+    );
     if (_committed) {
       final registry = ProfileBootstrap.registry;
       _pins = ProfilePinService(registry: registry);
@@ -76,6 +121,7 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
       ProfileLockController.instance.lockedProfileId.addListener(_lockChanged);
       MainPageBridge.showProfilePicker = _showPicker;
       MainPageBridge.switchProfile = _showPickerFor;
+      MainPageBridge.retireProfileFromSync = _retireProfileFromSync;
       unawaited(_load(allowSingleProfileAutoEnter: true));
     } else {
       _pins = null;
@@ -86,6 +132,11 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    DiagnosticLog.instance.recordEvent(
+      source: 'profile_gate',
+      durable: true,
+      event: 'gate_disposed',
+    );
     WidgetsBinding.instance.removeObserver(this);
     if (_committed) ProfileRuntime.scope.removeListener(_scopeChanged);
     if (_committed) {
@@ -101,6 +152,9 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
     }
     if (MainPageBridge.switchProfile == _showPickerFor) {
       MainPageBridge.switchProfile = null;
+    }
+    if (MainPageBridge.retireProfileFromSync == _retireProfileFromSync) {
+      MainPageBridge.retireProfileFromSync = null;
     }
     _lifecycle?.dispose();
     super.dispose();
@@ -131,7 +185,10 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
     try {
       await ProfileGateStyle.warm();
       await ProfileGateAlwaysAsk.warm();
-      profiles = await ProfileBootstrap.registry.listProfiles();
+      final retiredId = _pendingSyncedRetirement?.profileId;
+      profiles = (await ProfileBootstrap.registry.listProfiles())
+          .where((profile) => profile.id != retiredId)
+          .toList(growable: false);
     } catch (e) {
       debugPrint('ProfileGate: profile load failed — $e');
       // On the FIRST load there is no cached list to fall back on, so giving
@@ -166,6 +223,16 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
             allowSingleProfileAutoEnter && !ProfileGateAlwaysAsk.cached,
       );
     });
+    DiagnosticLog.instance.recordEvent(
+      source: 'profile_gate',
+      durable: true,
+      event: 'profiles_loaded',
+      fields: <String, Object?>{
+        'profileCount': profiles.length,
+        'pickerVisible': !_entered,
+        'startupLoad': allowSingleProfileAutoEnter,
+      },
+    );
     if (!_entered) {
       // Startup conveniences were resolved against the last active profile
       // before this gate mounted. Once a picker/PIN is required they are not
@@ -199,6 +266,42 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
     unawaited(_openPicker());
   }
 
+  Future<bool> _retireProfileFromSync(
+    String profileId, {
+    required bool delete,
+    required SyncedProfileOutcomeApply applyOutcome,
+  }) async {
+    if (!mounted || !_committed) return false;
+    final existing = await ProfileBootstrap.registry.getProfile(profileId);
+    if (existing == null) return true;
+    if (!delete &&
+        (!existing.isEnabled ||
+            existing.lifecycle != UserProfileLifecycle.active ||
+            existing.pinResetRequired)) {
+      return true;
+    }
+    if (ProfileRuntime.capture().profileId != profileId) {
+      await applyOutcome();
+      final applied = await ProfileBootstrap.registry.getProfile(profileId);
+      return delete
+          ? applied == null
+          : applied == null ||
+                !applied.isEnabled ||
+                applied.lifecycle != UserProfileLifecycle.active ||
+                applied.pinResetRequired;
+    }
+    _pendingSyncedRetirement = _PendingSyncedProfileRetirement(
+      profileId: profileId,
+      applyOutcome: applyOutcome,
+    );
+    await _openPicker();
+    if (!mounted) return false;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Profile no longer available')),
+    );
+    return false;
+  }
+
   Future<void> _showPickerFor(String profileId) async {
     await _openPicker();
     if (!mounted) return;
@@ -209,6 +312,11 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
 
   Future<void> _openPicker() async {
     if (!mounted || !_committed) return;
+    DiagnosticLog.instance.recordEvent(
+      source: 'profile_gate',
+      durable: true,
+      event: 'picker_requested',
+    );
     // Nothing may sit above the gate while it asks who is watching. A remote
     // profile-graph import hands authority over, which remounts AppInitializer
     // through the gate's epoch key — and the doomed instance's in-flight
@@ -249,6 +357,11 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_committed || state != AppLifecycleState.resumed || !_entered) return;
+    DiagnosticLog.instance.recordEvent(
+      source: 'profile_gate',
+      durable: true,
+      event: 'gate_resumed',
+    );
     ProfileLockController.instance.onResume();
   }
 
@@ -287,12 +400,18 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
 
   Future<void> _activate(UserProfile profile) async {
     final currentId = ProfileRuntime.capture().profileId;
+    final retirement = _pendingSyncedRetirement;
+    final retiredId = retirement?.profileId;
     if (profile.id != currentId) {
-      final switched = await _lifecycle!.switchTo(
-        profile.id,
-        unlock: (_) async => true,
-      );
+      final switched = retiredId != null && retiredId != profile.id
+          ? await switchThenApplySyncedProfileOutcome(
+              lifecycle: _lifecycle!,
+              replacementProfileId: profile.id,
+              applyOutcome: retirement!.applyOutcome,
+            )
+          : await _lifecycle!.switchTo(profile.id, unlock: (_) async => true);
       if (!switched || !mounted) return;
+      if (retiredId != null) _pendingSyncedRetirement = null;
     }
     // Mirror BEFORE the frame that reveals the child tree: build-path gates
     // (nav, rows) must never render one frame under the previous profile's
@@ -314,8 +433,11 @@ class _ProfileGateState extends State<ProfileGate> with WidgetsBindingObserver {
 
   Future<ProfilePinVerification> _verifyPin(String pin) async {
     final target = _pinTarget!;
+    final locks = ProfileLockController.instance;
+    final pendingLock = locks.pendingPinLock(target.id);
     final verification = await _pins!.verify(target.id, pin);
     if (verification.result == ProfilePinResult.verified && mounted) {
+      locks.acknowledgeVerifiedPin(target.id, pendingLock);
       if (_pinForManagement) {
         setState(() {
           _pinTarget = null;

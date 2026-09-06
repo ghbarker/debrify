@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:collection/collection.dart';
+
 import '../../models/profiles/connection_resource.dart';
 import '../../models/profiles/profile_policy.dart';
 import '../../models/profiles/user_profile.dart';
@@ -59,7 +61,7 @@ class ConnectionResourceService {
       );
     }
     final id = _newId();
-    final aad = _associatedData(
+    final aad = associatedDataForSecret(
       resourceId: id,
       type: type,
       ownerProfileId: owner.id,
@@ -162,7 +164,7 @@ class ConnectionResourceService {
       final publicConfig = _normalizePublicConfig(item.type, item.publicConfig);
       final sealed = await cipher.seal(
         utf8.encode(jsonEncode(item.secretConfig)),
-        associatedData: _associatedData(
+        associatedData: associatedDataForSecret(
           resourceId: replacementId,
           type: item.type,
           ownerProfileId: owner.id,
@@ -319,6 +321,11 @@ class ConnectionResourceService {
       permission: permission,
       feature: feature,
     );
+    if (authorized.secretPending) {
+      throw const ResourceAuthorizationException(
+        'Resource credentials are pending owner sign-in',
+      );
+    }
     final secret = await _openSecret(resourceId);
     await _revalidateResource(
       context: context,
@@ -333,6 +340,7 @@ class ConnectionResourceService {
     required ProfileAuthorizationContext context,
     required String resourceId,
     required Map<String, dynamic> secretConfig,
+    bool allowEmpty = false,
   }) async {
     final authorized = await authorize(
       context: context,
@@ -340,7 +348,7 @@ class ConnectionResourceService {
       permission: ResourcePermission.manage,
       feature: ProfileFeature.manageConnections,
     );
-    if (secretConfig.isEmpty) {
+    if (secretConfig.isEmpty && !allowEmpty) {
       throw ArgumentError.value(
         secretConfig,
         'secretConfig',
@@ -352,9 +360,33 @@ class ConnectionResourceService {
         resource.authorizationRevision != authorized.authorizationRevision) {
       throw StateError('Resource is unavailable');
     }
+    // Compare JSON values, not randomized ciphertext. Account refreshes often
+    // save the existing credential; that must not invalidate jobs or wake sync.
+    final encoded = jsonEncode(secretConfig);
+    if (!resource.secretPending) {
+      Map<String, dynamic>? current;
+      try {
+        current = await _openSecret(resourceId);
+      } on StateError {
+        // A missing prior secret must not prevent an authorized replacement.
+      } on Exception {
+        // A replacement credential must still be able to repair an unreadable
+        // old envelope. The write below revalidates authority before committing.
+      }
+      if (current != null &&
+          const DeepCollectionEquality().equals(current, jsonDecode(encoded))) {
+        await _revalidateResource(
+          context: context,
+          expected: authorized,
+          permission: ResourcePermission.manage,
+          feature: ProfileFeature.manageConnections,
+        );
+        return;
+      }
+    }
     final sealed = await cipher.seal(
-      utf8.encode(jsonEncode(secretConfig)),
-      associatedData: _associatedData(
+      utf8.encode(encoded),
+      associatedData: associatedDataForSecret(
         resourceId: resource.id,
         type: resource.type,
         ownerProfileId: resource.ownerProfileId,
@@ -389,7 +421,7 @@ class ConnectionResourceService {
     if (sealed == null) throw StateError('Resource secret is unavailable');
     final opened = await cipher.open(
       sealed.envelope,
-      associatedData: _associatedData(
+      associatedData: associatedDataForSecret(
         resourceId: sealed.resourceId,
         type: sealed.type,
         ownerProfileId: sealed.ownerProfileId,
@@ -701,7 +733,7 @@ class ConnectionResourceService {
     final secret = await _openSecret(resourceId);
     final sealed = await cipher.seal(
       utf8.encode(jsonEncode(secret)),
-      associatedData: _associatedData(
+      associatedData: associatedDataForSecret(
         resourceId: resource.id,
         type: resource.type,
         ownerProfileId: newOwnerProfileId,
@@ -879,7 +911,10 @@ class ConnectionResourceService {
     );
   }
 
-  static List<int> _associatedData({
+  /// Canonical local-vault attachment data. Circle sync reseals an imported
+  /// canonical secret through this same binding so it cannot be attached to a
+  /// different local resource, owner, type, or schema.
+  static List<int> associatedDataForSecret({
     required String resourceId,
     required ConnectionResourceType type,
     required String ownerProfileId,

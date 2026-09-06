@@ -1401,7 +1401,10 @@ class VideoPlayerLauncher {
         ? await _launchWithDeoVR(context, args)
         : await _launchWithExternalPlayer(context, args);
 
-    if (!launched) return false;
+    if (!launched) {
+      MainPageBridge.notifyContentPlaybackStopped();
+      return false;
+    }
 
     // Control returns to Flutter without a route ever being pushed, so
     // RouteAware can't tell screens when playback ended — same signal the
@@ -2069,7 +2072,10 @@ class VideoPlayerLauncher {
     _armedReturnObserver = observer;
     binding.addObserver(observer);
     Timer(_externalReturnArmTimeout, () {
-      if (!observer.wasCovered) finish(notify: false);
+      if (!observer.wasCovered) {
+        finish(notify: false);
+        MainPageBridge.notifyContentPlaybackStopped();
+      }
     });
   }
 
@@ -3311,7 +3317,7 @@ class VideoPlayerLauncher {
         'speed': (progress['speed'] as num?)?.toDouble() ?? 1.0,
         'aspect': (progress['aspect'] as String?) ?? 'contain',
         'updatedAt': DateTime.now().millisecondsSinceEpoch,
-      });
+      }, sourceId: progress['sourceId'] as String?);
     } catch (e) {
       debugPrint('VideoPlayerLauncher: IPTV progress save failed: $e');
     }
@@ -3876,16 +3882,18 @@ class VideoPlayerLauncher {
         if (!payload.localMovieRewatchStarted &&
             positionMs > 0 &&
             movieProgress < payload.movieCompletionThreshold) {
-          payload.localMovieRewatchStarted = true;
           await StorageService.unmarkMovieAsFinished(payload.imdbId!);
+          payload.localMovieRewatchStarted = true;
         }
-        if (localCompleted || completed) {
-          payload.localMovieCompletionRecorded = true;
+        if (localCompleted ||
+            completed ||
+            progress['localCompletionEligible'] == true) {
           await Future.wait([
             StorageService.markMovieAsFinished(payload.imdbId!),
             if (resumeId != null && resumeId.isNotEmpty)
               StorageService.removeVideoResume(resumeId),
           ]);
+          payload.localMovieCompletionRecorded = true;
           return;
         }
       }
@@ -4345,6 +4353,7 @@ class VideoPlayerLauncher {
       }
     } catch (e) {
       debugPrint('VideoPlayerLauncher: failed to persist progress: $e');
+      rethrow;
     }
   }
 
