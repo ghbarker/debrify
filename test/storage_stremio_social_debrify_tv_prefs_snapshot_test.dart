@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/social_prefs.dart';
 import 'dart:convert';
 
 import 'package:debrify/services/profiles/profile_runtime.dart';
@@ -254,39 +255,39 @@ void main() {
 
   group('Social prefs (reddit / lemmy / youtube)', () {
     test('defaults when no keys are stored', () async {
-      expect(await StorageService.getRedditAccessToken(), isNull);
-      expect(await StorageService.getRedditRefreshToken(), isNull);
-      expect(await StorageService.getRedditUsername(), isNull);
-      expect(await StorageService.getRedditEnabled(), isTrue);
-      expect(await StorageService.getRedditHiddenFromNav(), isFalse);
-      expect(await StorageService.getRedditLastSubreddit(), isNull);
-      expect(await StorageService.getRedditRecentSubreddits(), isEmpty);
-      expect(await StorageService.getRedditAllowNsfw(), isFalse);
-      expect(await StorageService.getRedditFavoriteSubreddits(), isEmpty);
-      expect(await StorageService.getRedditDefaultSubreddit(), isNull);
-      expect(await StorageService.getLemmyInstance(), 'https://lemmy.world');
-      expect(await StorageService.getLemmyAllowNsfw(), isFalse);
-      expect(await StorageService.getLemmyFavoriteCommunities(), isEmpty);
-      expect(await StorageService.getLemmyDefaultCommunity(), isNull);
-      expect(await StorageService.getYoutubeMaxHeight(), 1080);
+      expect(await SocialPrefs.getRedditAccessToken(), isNull);
+      expect(await SocialPrefs.getRedditRefreshToken(), isNull);
+      expect(await SocialPrefs.getRedditUsername(), isNull);
+      expect(await SocialPrefs.getRedditEnabled(), isTrue);
+      expect(await SocialPrefs.getRedditHiddenFromNav(), isFalse);
+      expect(await SocialPrefs.getRedditLastSubreddit(), isNull);
+      expect(await SocialPrefs.getRedditRecentSubreddits(), isEmpty);
+      expect(await SocialPrefs.getRedditAllowNsfw(), isFalse);
+      expect(await SocialPrefs.getRedditFavoriteSubreddits(), isEmpty);
+      expect(await SocialPrefs.getRedditDefaultSubreddit(), isNull);
+      expect(await SocialPrefs.getLemmyInstance(), 'https://lemmy.world');
+      expect(await SocialPrefs.getLemmyAllowNsfw(), isFalse);
+      expect(await SocialPrefs.getLemmyFavoriteCommunities(), isEmpty);
+      expect(await SocialPrefs.getLemmyDefaultCommunity(), isNull);
+      expect(await SocialPrefs.getYoutubeMaxHeight(), 1080);
     });
 
     test('StorageService writes the historical social key bytes', () async {
-      await StorageService.setRedditAccessToken('access-token');
-      await StorageService.setRedditRefreshToken('refresh-token');
-      await StorageService.setRedditUsername('alice');
-      await StorageService.setRedditEnabled(false);
-      await StorageService.setRedditHiddenFromNav(true);
-      await StorageService.setRedditLastSubreddit('movies');
-      await StorageService.setRedditRecentSubreddits(const ['a', 'b']);
-      await StorageService.setRedditAllowNsfw(true);
-      await StorageService.setRedditFavoriteSubreddits(const ['fav']);
-      await StorageService.setRedditDefaultSubreddit('all');
-      await StorageService.setLemmyInstance('https://lemmy.example');
-      await StorageService.setLemmyAllowNsfw(true);
-      await StorageService.setLemmyFavoriteCommunities(const ['c/one']);
-      await StorageService.setLemmyDefaultCommunity('c/two');
-      await StorageService.setYoutubeMaxHeight(720);
+      await SocialPrefs.setRedditAccessToken('access-token');
+      await SocialPrefs.setRedditRefreshToken('refresh-token');
+      await SocialPrefs.setRedditUsername('alice');
+      await SocialPrefs.setRedditEnabled(false);
+      await SocialPrefs.setRedditHiddenFromNav(true);
+      await SocialPrefs.setRedditLastSubreddit('movies');
+      await SocialPrefs.setRedditRecentSubreddits(const ['a', 'b']);
+      await SocialPrefs.setRedditAllowNsfw(true);
+      await SocialPrefs.setRedditFavoriteSubreddits(const ['fav']);
+      await SocialPrefs.setRedditDefaultSubreddit('all');
+      await SocialPrefs.setLemmyInstance('https://lemmy.example');
+      await SocialPrefs.setLemmyAllowNsfw(true);
+      await SocialPrefs.setLemmyFavoriteCommunities(const ['c/one']);
+      await SocialPrefs.setLemmyDefaultCommunity('c/two');
+      await SocialPrefs.setYoutubeMaxHeight(720);
 
       final prefs = await SharedPreferences.getInstance();
       expect(
@@ -311,17 +312,17 @@ void main() {
       expect(prefs.getString('lemmy_default_community'), 'c/two');
       expect(prefs.getInt('youtube_max_height'), 720);
 
-      expect(await StorageService.getRedditAccessToken(), 'access-token');
-      expect(await StorageService.getRedditRefreshToken(), 'refresh-token');
+      expect(await SocialPrefs.getRedditAccessToken(), 'access-token');
+      expect(await SocialPrefs.getRedditRefreshToken(), 'refresh-token');
     });
 
     test('null/empty default community and subreddit remove the key', () async {
-      await StorageService.setRedditDefaultSubreddit('all');
-      await StorageService.setLemmyDefaultCommunity('c/one');
-      await StorageService.setRedditDefaultSubreddit(null);
-      await StorageService.setRedditDefaultSubreddit('');
-      await StorageService.setLemmyDefaultCommunity(null);
-      await StorageService.setLemmyDefaultCommunity('');
+      await SocialPrefs.setRedditDefaultSubreddit('all');
+      await SocialPrefs.setLemmyDefaultCommunity('c/one');
+      await SocialPrefs.setRedditDefaultSubreddit(null);
+      await SocialPrefs.setRedditDefaultSubreddit('');
+      await SocialPrefs.setLemmyDefaultCommunity(null);
+      await SocialPrefs.setLemmyDefaultCommunity('');
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey('reddit_default_subreddit'), isFalse);
@@ -335,15 +336,15 @@ void main() {
           'lemmy_instance': '',
           'youtube_max_height': 0,
         });
-        expect(await StorageService.getLemmyInstance(), 'https://lemmy.world');
-        expect(await StorageService.getYoutubeMaxHeight(), 1080);
+        expect(await SocialPrefs.getLemmyInstance(), 'https://lemmy.world');
+        expect(await SocialPrefs.getYoutubeMaxHeight(), 1080);
 
         SharedPreferences.setMockInitialValues(<String, Object>{
           'youtube_max_height': -4,
         });
-        expect(await StorageService.getYoutubeMaxHeight(), 1080);
+        expect(await SocialPrefs.getYoutubeMaxHeight(), 1080);
 
-        await StorageService.setYoutubeMaxHeight(0);
+        await SocialPrefs.setYoutubeMaxHeight(0);
         final prefs = await SharedPreferences.getInstance();
         // Quirk: setter writes any int; only the getter coerces.
         expect(prefs.getInt('youtube_max_height'), 0);
@@ -351,26 +352,26 @@ void main() {
     );
 
     test('clearRedditAuth drops username and vault tokens', () async {
-      await StorageService.setRedditAccessToken('access-token');
-      await StorageService.setRedditRefreshToken('refresh-token');
-      await StorageService.setRedditUsername('alice');
-      await StorageService.clearRedditAuth();
+      await SocialPrefs.setRedditAccessToken('access-token');
+      await SocialPrefs.setRedditRefreshToken('refresh-token');
+      await SocialPrefs.setRedditUsername('alice');
+      await SocialPrefs.clearRedditAuth();
 
-      expect(await StorageService.getRedditAccessToken(), isNull);
-      expect(await StorageService.getRedditRefreshToken(), isNull);
-      expect(await StorageService.getRedditUsername(), isNull);
+      expect(await SocialPrefs.getRedditAccessToken(), isNull);
+      expect(await SocialPrefs.getRedditRefreshToken(), isNull);
+      expect(await SocialPrefs.getRedditUsername(), isNull);
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey('reddit_username'), isFalse);
     });
 
     test('NSFW setters write the requested bool in legacy mode', () async {
-      await StorageService.setRedditAllowNsfw(true);
-      await StorageService.setLemmyAllowNsfw(true);
+      await SocialPrefs.setRedditAllowNsfw(true);
+      await SocialPrefs.setLemmyAllowNsfw(true);
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getBool('reddit_allow_nsfw'), isTrue);
       expect(prefs.getBool('lemmy_allow_nsfw'), isTrue);
-      expect(await StorageService.getRedditAllowNsfw(), isTrue);
-      expect(await StorageService.getLemmyAllowNsfw(), isTrue);
+      expect(await SocialPrefs.getRedditAllowNsfw(), isTrue);
+      expect(await SocialPrefs.getLemmyAllowNsfw(), isTrue);
     });
   });
 

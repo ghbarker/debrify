@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/lemmy_service.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/social_prefs.dart';
 import '../../utils/tv_keys.dart';
 import '../tv_text_field.dart';
 
@@ -472,7 +472,7 @@ class _CommunityPickerSheetState extends State<_CommunityPickerSheet> {
   }
 
   Future<void> _loadFavorites() async {
-    final favorites = await StorageService.getLemmyFavoriteCommunities();
+    final favorites = await SocialPrefs.getLemmyFavoriteCommunities();
     if (!mounted) return;
     setState(() {
       _favoriteCommunities = favorites;

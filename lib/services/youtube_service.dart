@@ -5,7 +5,7 @@ import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt_explode;
-import 'storage_service.dart';
+import 'package:debrify/services/storage/social_prefs.dart';
 
 /// A YouTube video surfaced from a search.
 class YoutubeVideo {
@@ -389,7 +389,7 @@ class YoutubeService {
   /// Resolve a YouTube [videoId] into playable/downloadable stream URLs.
   ///
   /// For playback this prefers a high-res *video-only* H.264 stream at or below
-  /// the user's preferred resolution (see [StorageService.getYoutubeMaxHeight])
+  /// the user's preferred resolution (see [SocialPrefs.getYoutubeMaxHeight])
   /// paired with a separate AAC audio stream (the player muxes them). For
   /// downloads it returns the best muxed single-file stream (has audio, ~360p).
   ///
@@ -460,7 +460,7 @@ class YoutubeService {
     // a platform channel and isn't available in the background isolate below.
     // An explicit override (ambient trailers) skips the pref entirely.
     final maxHeight =
-        maxHeightOverride ?? await StorageService.getYoutubeMaxHeight();
+        maxHeightOverride ?? await SocialPrefs.getYoutubeMaxHeight();
     try {
       // youtube_explode fetches the watch page, deciphers the signature cipher
       // and parses a large player-response JSON — all synchronous CPU that would

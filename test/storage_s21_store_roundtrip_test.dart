@@ -71,23 +71,23 @@ void main() {
   );
 
   test(
-    'social StorageService writes are readable through SocialPrefs',
+    'social owner writes preserve the characterized values',
     () async {
-      await StorageService.setRedditAccessToken('access-token');
-      await StorageService.setRedditRefreshToken('refresh-token');
-      await StorageService.setRedditUsername('alice');
-      await StorageService.setRedditEnabled(false);
-      await StorageService.setRedditHiddenFromNav(true);
-      await StorageService.setRedditLastSubreddit('movies');
-      await StorageService.setRedditRecentSubreddits(const ['a']);
-      await StorageService.setRedditAllowNsfw(true);
-      await StorageService.setRedditFavoriteSubreddits(const ['fav']);
-      await StorageService.setRedditDefaultSubreddit('all');
-      await StorageService.setLemmyInstance('https://lemmy.example');
-      await StorageService.setLemmyAllowNsfw(true);
-      await StorageService.setLemmyFavoriteCommunities(const ['c/one']);
-      await StorageService.setLemmyDefaultCommunity('c/two');
-      await StorageService.setYoutubeMaxHeight(720);
+      await SocialPrefs.setRedditAccessToken('access-token');
+      await SocialPrefs.setRedditRefreshToken('refresh-token');
+      await SocialPrefs.setRedditUsername('alice');
+      await SocialPrefs.setRedditEnabled(false);
+      await SocialPrefs.setRedditHiddenFromNav(true);
+      await SocialPrefs.setRedditLastSubreddit('movies');
+      await SocialPrefs.setRedditRecentSubreddits(const ['a']);
+      await SocialPrefs.setRedditAllowNsfw(true);
+      await SocialPrefs.setRedditFavoriteSubreddits(const ['fav']);
+      await SocialPrefs.setRedditDefaultSubreddit('all');
+      await SocialPrefs.setLemmyInstance('https://lemmy.example');
+      await SocialPrefs.setLemmyAllowNsfw(true);
+      await SocialPrefs.setLemmyFavoriteCommunities(const ['c/one']);
+      await SocialPrefs.setLemmyDefaultCommunity('c/two');
+      await SocialPrefs.setYoutubeMaxHeight(720);
 
       expect(await SocialPrefs.getRedditAccessToken(), 'access-token');
       expect(await SocialPrefs.getRedditRefreshToken(), 'refresh-token');

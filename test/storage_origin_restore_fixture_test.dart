@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/social_prefs.dart';
 import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'package:debrify/services/storage/ambient_trailer_prefs.dart' show AmbientTrailerPrefs;
 import 'package:debrify/services/storage/torrent_search_history_store.dart';
@@ -171,13 +172,13 @@ Future<void> _seedThroughStorageService() async {
   await StorageService.setStremioTvCatalogRepoUrls(
     _setterSettings['stremio_tv_catalog_repo_urls_v1']! as List<String>,
   );
-  await StorageService.setRedditRecentSubreddits(
+  await SocialPrefs.setRedditRecentSubreddits(
     _setterSettings['reddit_recent_subreddits']! as List<String>,
   );
-  await StorageService.setLemmyFavoriteCommunities(
+  await SocialPrefs.setLemmyFavoriteCommunities(
     _setterSettings['lemmy_favorite_communities']! as List<String>,
   );
-  await StorageService.setYoutubeMaxHeight(720);
+  await SocialPrefs.setYoutubeMaxHeight(720);
   await StorageService.saveDebrifyTvRandomStartPercent(13);
   await StorageService.saveDebrifyTvProvider('real_debrid');
   await ProviderCredentialPrefs.saveFileSelection('all');
@@ -239,10 +240,10 @@ Future<Map<String, Object?>> _readThroughStorageService(
       await StorageService.getStremioTvDebridProvider(),
   'stremio_tv_catalog_repo_urls_v1':
       await StorageService.getStremioTvCatalogRepoUrls(),
-  'reddit_recent_subreddits': await StorageService.getRedditRecentSubreddits(),
+  'reddit_recent_subreddits': await SocialPrefs.getRedditRecentSubreddits(),
   'lemmy_favorite_communities':
-      await StorageService.getLemmyFavoriteCommunities(),
-  'youtube_max_height': await StorageService.getYoutubeMaxHeight(),
+      await SocialPrefs.getLemmyFavoriteCommunities(),
+  'youtube_max_height': await SocialPrefs.getYoutubeMaxHeight(),
   'debrify_tv_random_start_percent':
       await StorageService.getDebrifyTvRandomStartPercent(),
   'debrify_tv_provider': await StorageService.getDebrifyTvProvider(),
