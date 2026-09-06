@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -304,7 +305,7 @@ void main() {
     await EngineRegistry.instance
         .initialize(); // Empty fixture engine directory.
     await StorageService.saveTorboxApiKey('fixture-key');
-    await StorageService.saveDebrifyTvProvider('torbox');
+    await DebrifyTvPrefs.saveDebrifyTvProvider('torbox');
     torbox = _HeldTorbox();
     CloudProviderRegistry.instance = CloudProviderRegistry([torbox]);
     routes = _Routes();
@@ -609,7 +610,7 @@ void main() {
     'retrospective origin: empty quality match falls back at cache read',
     (tester) async {
       await tester.runAsync(_seed);
-      await StorageService.setDebrifyTvFilterQualities(['ultraHd']);
+      await DebrifyTvPrefs.setDebrifyTvFilterQualities(['ultraHd']);
       await _mount(tester, routes);
       await _focus(tester);
       expect(_view(tester).stats!.atYourQuality, 0);

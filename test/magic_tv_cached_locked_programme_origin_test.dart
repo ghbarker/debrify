@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
@@ -185,7 +186,7 @@ void main() {
     await StorageService.saveApiKey('fixture-key');
     await StorageService.saveAllDebridApiKey('fixture-key');
     await StorageService.setDefaultPlayerMode('internal');
-    await StorageService.setDebrifyTvFilterQualities(['fullHd']);
+    await DebrifyTvPrefs.setDebrifyTvFilterQualities(['fullHd']);
     routes = _Routes();
   });
   tearDown(() async {
@@ -208,7 +209,7 @@ void main() {
       ) async {
         provider = _Provider(id);
         CloudProviderRegistry.instance = CloudProviderRegistry([provider]);
-        await StorageService.saveDebrifyTvProvider(id.magicTvId);
+        await DebrifyTvPrefs.saveDebrifyTvProvider(id.magicTvId);
         await tester.runAsync(_seed);
         tester.view.physicalSize = const Size(1280, 1000);
         tester.view.devicePixelRatio = 1;
@@ -296,14 +297,14 @@ void main() {
         (tester) async {
           provider = _Provider(id);
           CloudProviderRegistry.instance = CloudProviderRegistry([provider]);
-          await StorageService.saveDebrifyTvProvider(id.magicTvId);
+          await DebrifyTvPrefs.saveDebrifyTvProvider(id.magicTvId);
           if (options) {
-            await StorageService.saveDebrifyTvStartRandom(false);
-            await StorageService.saveDebrifyTvRandomStartPercent(37);
-            await StorageService.saveDebrifyTvShowChannelName(false);
-            await StorageService.saveDebrifyTvShowVideoTitle(false);
-            await StorageService.saveDebrifyTvHideSeekbar(true);
-            await StorageService.saveDebrifyTvHideOptions(true);
+            await DebrifyTvPrefs.saveDebrifyTvStartRandom(false);
+            await DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(37);
+            await DebrifyTvPrefs.saveDebrifyTvShowChannelName(false);
+            await DebrifyTvPrefs.saveDebrifyTvShowVideoTitle(false);
+            await DebrifyTvPrefs.saveDebrifyTvHideSeekbar(true);
+            await DebrifyTvPrefs.saveDebrifyTvHideOptions(true);
           }
           await tester.runAsync(() async {
             await _seed();
@@ -399,7 +400,7 @@ void main() {
                 await tester.tap(find.text('AllDebrid').last);
                 await tester.pumpAndSettle();
                 expect(
-                  await StorageService.getDebrifyTvProvider(),
+                  await DebrifyTvPrefs.getDebrifyTvProvider(),
                   'alldebrid',
                 );
                 await tester.tap(find.text('Done'));

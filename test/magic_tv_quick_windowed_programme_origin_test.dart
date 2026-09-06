@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -178,7 +179,7 @@ void main() {
     await StorageService.savePremiumizeApiKey('fixture-key');
     await StorageService.saveTorboxApiKey('fixture-key');
     await StorageService.setDefaultPlayerMode('internal');
-    await StorageService.setDebrifyTvFilterQualities(['fullHd']);
+    await DebrifyTvPrefs.setDebrifyTvFilterQualities(['fullHd']);
     routes = _Routes();
   });
   tearDown(() async {
@@ -199,13 +200,13 @@ void main() {
       testWidgets('origin ${id.name} quick programme $outcome', (tester) async {
         provider = _Provider(id);
         CloudProviderRegistry.instance = CloudProviderRegistry([provider]);
-        await StorageService.saveDebrifyTvProvider(id.magicTvId);
-        await StorageService.saveDebrifyTvStartRandom(true);
-        await StorageService.saveDebrifyTvRandomStartPercent(65);
-        await StorageService.saveDebrifyTvShowChannelName(false);
-        await StorageService.saveDebrifyTvShowVideoTitle(false);
-        await StorageService.saveDebrifyTvHideSeekbar(true);
-        await StorageService.saveDebrifyTvHideOptions(true);
+        await DebrifyTvPrefs.saveDebrifyTvProvider(id.magicTvId);
+        await DebrifyTvPrefs.saveDebrifyTvStartRandom(true);
+        await DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(65);
+        await DebrifyTvPrefs.saveDebrifyTvShowChannelName(false);
+        await DebrifyTvPrefs.saveDebrifyTvShowVideoTitle(false);
+        await DebrifyTvPrefs.saveDebrifyTvHideSeekbar(true);
+        await DebrifyTvPrefs.saveDebrifyTvHideOptions(true);
         final presentation =
             outcome.endsWith('channel') || outcome == 'two-channels';
         final channelCount = outcome == 'two-channels' ? 2 : 1;

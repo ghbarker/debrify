@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/debrify_tv_prefs.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -256,7 +257,7 @@ void main() {
       (tester) async {
         port = _LockedProvider(provider);
         CloudProviderRegistry.instance = CloudProviderRegistry([port]);
-        await StorageService.saveDebrifyTvProvider(provider.magicTvId);
+        await DebrifyTvPrefs.saveDebrifyTvProvider(provider.magicTvId);
         await tester.runAsync(() => _seed('first', 'First channel', 1));
         final routes = _Routes();
         final unlocks = <http.Request>[];
@@ -358,7 +359,7 @@ void main() {
       (tester) async {
         port = _LockedProvider(provider);
         CloudProviderRegistry.instance = CloudProviderRegistry([port]);
-        await StorageService.saveDebrifyTvProvider(provider.magicTvId);
+        await DebrifyTvPrefs.saveDebrifyTvProvider(provider.magicTvId);
         await tester.runAsync(
           () => _seed('first', 'First channel', 1, torrentCount: 3),
         );
@@ -432,7 +433,7 @@ void main() {
       (tester) async {
         port = _LockedProvider(provider);
         CloudProviderRegistry.instance = CloudProviderRegistry([port]);
-        await StorageService.saveDebrifyTvProvider(provider.magicTvId);
+        await DebrifyTvPrefs.saveDebrifyTvProvider(provider.magicTvId);
         await tester.runAsync(() async {
           await _seed('first', 'First channel', 1);
           await _seed('second', 'Second channel', 7);

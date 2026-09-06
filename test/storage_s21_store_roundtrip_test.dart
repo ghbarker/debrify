@@ -117,24 +117,24 @@ void main() {
   );
 
   test(
-    'Debrify TV StorageService writes are readable through DebrifyTvPrefs',
+    'Debrify TV owner writes preserve the characterized values',
     () async {
-      await StorageService.saveDebrifyTvProvider('torbox');
-      await StorageService.saveDebrifyTvStartRandom(false);
-      await StorageService.saveDebrifyTvRandomStartPercent(40);
-      await StorageService.saveDebrifyTvHideSeekbar(false);
-      await StorageService.saveDebrifyTvShowChannelName(false);
-      await StorageService.saveDebrifyTvShowVideoTitle(false);
-      await StorageService.saveDebrifyTvHideOptions(false);
-      await StorageService.saveDebrifyTvHideBackButton(false);
-      await StorageService.saveDebrifyTvAvoidNsfw(false);
-      await StorageService.saveDebrifyTvChannels(const [
+      await DebrifyTvPrefs.saveDebrifyTvProvider('torbox');
+      await DebrifyTvPrefs.saveDebrifyTvStartRandom(false);
+      await DebrifyTvPrefs.saveDebrifyTvRandomStartPercent(40);
+      await DebrifyTvPrefs.saveDebrifyTvHideSeekbar(false);
+      await DebrifyTvPrefs.saveDebrifyTvShowChannelName(false);
+      await DebrifyTvPrefs.saveDebrifyTvShowVideoTitle(false);
+      await DebrifyTvPrefs.saveDebrifyTvHideOptions(false);
+      await DebrifyTvPrefs.saveDebrifyTvHideBackButton(false);
+      await DebrifyTvPrefs.saveDebrifyTvAvoidNsfw(false);
+      await DebrifyTvPrefs.saveDebrifyTvChannels(const [
         {'id': 'ch1', 'name': 'One'},
       ]);
-      await StorageService.setDebrifyTvFilterQualities(const ['1080p']);
-      await StorageService.setDebrifyTvFilterSizes(const ['2GB-5GB']);
-      await StorageService.setDebrifyTvExternalNoticeDismissed(true);
-      await StorageService.setDebrifyTvChannelFavorited('fav', true);
+      await DebrifyTvPrefs.setDebrifyTvFilterQualities(const ['1080p']);
+      await DebrifyTvPrefs.setDebrifyTvFilterSizes(const ['2GB-5GB']);
+      await DebrifyTvPrefs.setDebrifyTvExternalNoticeDismissed(true);
+      await DebrifyTvPrefs.setDebrifyTvChannelFavorited('fav', true);
 
       expect(await DebrifyTvPrefs.getDebrifyTvProvider(), 'torbox');
       expect(await DebrifyTvPrefs.hasDebrifyTvProvider(), isTrue);
