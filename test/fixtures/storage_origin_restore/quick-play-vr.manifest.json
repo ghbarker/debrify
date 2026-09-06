@@ -1,0 +1,37 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "recipeVersion": 5,
+  "includeSecrets": false,
+  "scenario": "quick-play-vr",
+  "absentKeys": [],
+  "omittedKeys": [],
+  "syntheticOnly": true,
+  "sha256": "60c076ede9f3de520d71a52af1c2d78d9454dd4ee658cfa5a412e906f80759d4",
+  "representedSettings": {
+    "quick_play_vr_mode": "auto",
+    "quick_play_vr_default_screen_type": "fisheye",
+    "quick_play_vr_default_stereo_mode": "tb",
+    "quick_play_vr_auto_detect_format": false,
+    "quick_play_vr_show_dialog": false
+  },
+  "keyTypes": {
+    "quick_play_vr_mode": "String",
+    "quick_play_vr_default_screen_type": "String",
+    "quick_play_vr_default_stereo_mode": "String",
+    "quick_play_vr_auto_detect_format": "bool",
+    "quick_play_vr_show_dialog": "bool"
+  },
+  "excludedKeys": [],
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}

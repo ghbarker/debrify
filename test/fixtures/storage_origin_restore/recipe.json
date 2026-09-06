@@ -1048,6 +1048,29 @@
           "value": "3"
         }
       }
+    },
+    "quick-play-vr": {
+      "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+      "namedKeyCount": 5,
+      "excludedKeys": [],
+      "values": {
+        "quick_play_vr_mode": "auto",
+        "quick_play_vr_default_screen_type": "fisheye",
+        "quick_play_vr_default_stereo_mode": "tb",
+        "quick_play_vr_auto_detect_format": false,
+        "quick_play_vr_show_dialog": false
+      },
+      "mutations": {
+        "vr-key": {
+          "key": "quick_play_vr_default_screen_type",
+          "operation": "rename"
+        },
+        "vr-type": {
+          "key": "quick_play_vr_auto_detect_format",
+          "operation": "replace",
+          "value": "false"
+        }
+      }
     }
   }
 }
