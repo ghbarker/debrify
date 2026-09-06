@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main 6e7d97b2
+## Current roadmap — September 6, main e9e182bd
 
 ### God-file line counts — original → current merged main
 
 - **Search:** 19,070 → **6,551** (12,519 fewer)
-- **Player:** 16,278 → **11,928** (4,350 fewer)
+- **Player:** 16,278 → **11,929** (4,349 fewer)
 - **Magic TV:** 10,716 → **3,321** (7,395 fewer)
 - **Storage:** 9,963 → **2,383** (7,580 fewer)
 - **Settings:** 7,905 → **2,903** (5,002 fewer)
 
-Counted from actual merged main 6e7d97b2. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion percentage remains withdrawn: remaining architectural work lacks a reliable denominator.
+Counted from actual merged main e9e182bd. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion percentage remains withdrawn: remaining architectural work lacks a reliable denominator.
 
 ### The same six outcomes — stable roadmap
 
@@ -58,6 +58,8 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Parent owns decisions/merges/BOARD/NOTES. Every completion/blocker needs parent response and next step; unresolved dependencies must be reported explicitly. No user blocker.
 ### Latest completed milestones
 
+- #190 merged e9e182bd exactc73 after independent production1case plus read-only six-case test delta (author7PASS), final3blob union and allCIgreen. Three synchronous terminal operations preserve original defaults/order; wholeproduction plus43/host plus1, no decoder extraction. Did we make a difference? Actual host timing/error/generation behavior is testable before193 movement; no native/Android proof claimed.
+
 - Full gate e78d100e PASS:5824success/12known/2skip, goldens21known with configuredretries, helpers0/unexpected0/unused0, rawfailures retained. Analyzer431/4490new,Python55,layer77/77,nativefirstpairPASS. WindowsZIP SHA03faf3871a40cceaa74dd96cb8447f131ab18e4716aca435d8767dd5aad223fc; ARM64 SHA1a54aca15061b55807386c3a5897809c85afda16fc36f19397033e88ed5119d4. SameAST total/single: Storage411/143,Search133/117,Player161/112,Magic23/12,Settings0/0. Gate includes186184185188; no fresh device smoke claimed.
 - #187 merged6e7d97b2 exact9a46 after independent113 and finalunion/allCIgreen: Ambient owner preserves four-key restore behavior and enum compatibility. Host minus69 including docs; wholeproduction plus32; fourfacades retained pending191. Did we make a difference? Explicit domain ownership with old-export evidence; Storage outcome remains open.
 
@@ -81,7 +83,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Gate pinned analyzer431/449, zero errors/new issues; layering77→77; Python55 passed; originalbc46/current native pair passed first try. Initial wrong-PATH analyzer output retained separately and corrected using pinned SDK; no baseline edit.
 - Windows226.2s/68files and ARM64171.9s builds passed. ZIP SHA256b96b7a4bd0b98a4f9de799ef3242bebf18a150d3c49c0113ad0566d10f1d729f; APK80811b556495c20078920091643b91cbcde5bc236d89737bd3bed7d1479e8cb5. No fresh manual/device smoke claimed.
 - #181 BoardCell mergedc7a332bd exact932 after independent140 passes plus the exact known sidebar failure, final integration review and all3CI green. Shared renderer owns card state/shuttle; 669 declaration lines relocated, whole production+17, zero host-file reduction. Did we make a difference? Removed private host-library access at real consumers; remaining stage navigation/composition is still open.
-- Production merge counter: **1 since gate e78d100e** (#187), which includes181/182/183. Gate excludes181; source/build evidence remains attached to95c93.
+- Production merge counter: **2 since gate e78d100e** (#187, #190), which includes181/182/183. Gate excludes181; source/build evidence remains attached to95c93.
 
 ### Forwarders at the last full gate95c93
 
