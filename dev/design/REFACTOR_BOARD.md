@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main 55f44442
+## Current roadmap — September 6, main 98cae882
 
 ### God-file line counts — original → current merged main
 
 - **Search:** 19,070 → **6,293** (12,777 fewer)
 - **Player:** 16,278 → **11,535** (4,743 fewer)
 - **Magic TV:** 10,716 → **3,322** (7,394 fewer)
-- **Storage:** 9,963 → **1,853** (8,110 fewer)
-- **Settings:** 7,905 → **2,905** (5,000 fewer)
+- **Storage:** 9,963 → **1,802** (8,161 fewer)
+- **Settings:** 7,905 → **2,906** (4,999 fewer)
 
-Counted from actual merged main 55f44442. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
+Counted from actual merged main 98cae882. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
 
 ### The same six outcomes — stable roadmap
 
@@ -50,11 +50,11 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 ### Current work — latest verified checkpoint
 
-- **Locke / Storage:** #211 merged; integrate independently accepted Tracking #212 onto main. Tracking author and independent 180 tests passed; fresh integration and CI remain.
-- **Cicero / Review:** full 9ae5395a gate passed with native retry note; #211 and #212 production reviews accepted. Review integration deltas without repeating unchanged suites.
+- **Locke / Storage:** #212 merged; read-only remaining eligible facade and ownership inventory assigned while full gate runs.
+- **Cicero / Review:** full actual-main 98cae882 gate assigned after #210/#211/#212; previous 9ae gate passed with native retry note.
 - **Ampere / Search and upstream:** local upstream catalog trial independently accepted, unpublished. Search final composition and Atrium remain open; no new implementation assignment claimed.
 - **Wegener / Player:** presentation #201 and transport #205 merged; remaining decoder/state/UI work open, bounded unsuccessful experiments retained as debt.
-- **Parent:** #211 merged at 55f44442. Two production merges since completed 9ae gate; #212 will trigger the next integrated gate. No user/manual-smoke blocker.
+- **Parent:** #212 merged at 98cae882. Three production merges since completed 9ae gate; integrated gate now assigned, no further production merge until its result. No user/manual-smoke blocker.
 ### Next steps — working checklist
 
 - [x] Merge #199/#204/#206 and pass their full integrated gate896a168d.
@@ -66,6 +66,9 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - [ ] Run final integrated acceptance only after the remaining architectural outcomes are fulfilled.
 
 ### Latest completed milestones
+
+- #212 merged **98cae882**, exact1779088, independent180PASS, exact42-file integration union and allthree CI checks green. Tracking46facades removed; host-51/whole-production-41,14livehostdependencies removed. Actualold-export tick fixture accepted; initial432 analyzer unusedimport failure recorded and corrected to431 without behavior rerun. Did we make a difference? Tracking callers reach their existing domain owner directly; native/auth/coordinator exceptions remain. Third210/211/212 merge triggers fullactual-main gate98cae with AST ledger; Cicero assigned, Locke read-only closeout inventory assigned.
+
 
 - #211 merged **55f44442**, exact2e894429, independent221PASS, exact50-file integration union and allthree CI checks green. Home37facades removed; host-74/whole-production-64, fourlivehostdependencies removed. Actualpre-refactor Home21-entry fixture retained; no native-sensitive closure claim. Did we make a difference? Callers use the Home owner directly; Tracking #212 remains to integrate. Second production merge since9ae gate.
 
