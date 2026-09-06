@@ -185,3 +185,23 @@ profile, Home and Spotlight suites used in Part 2. Full debug Dart bundle
 build succeeded. Analysis of all PR-touched Dart files found no errors or
 warnings and the same 27 existing informational diagnostics. Hardware TV
 validation remains outstanding.
+
+## Final whole-branch review (2026-09-07)
+
+Reviewed the full feature at `697ab9bf` against `webdav-sync` (`93b92caf`),
+including imports, inventory persistence, Home and TV layouts, Rows/Tabs/All,
+source resolution, backup, sync replay and shared widget changes. No new P1/P2
+blocker was confirmed; the earlier blocking fixes retained their behavior.
+
+All **841 regression tests passed**. Analysis of every PR-touched Dart file
+reported no errors or warnings and 27 existing informational diagnostics. An
+additional widget probe traversed 12 folder rails with DPAD Down at 1280×720.
+
+A direct legacy collection-helper probe found an export/restore size-limit
+mismatch for an oversized synced union. Call-site review established that synced
+profiles use the native profile archive path instead, so this is not evidence
+of a normal Backup & Restore failure and was not treated as a merge blocker.
+
+The partial addon-signature and live See All settings behavior and documented
+P3s remain follow-up work. Physical Android TV checks of rapid folder focus,
+focus GIFs and transitions from active trailers are still outstanding.
