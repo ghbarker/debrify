@@ -407,6 +407,138 @@ void main() {
       );
 
 
+  // Separate Home preference domain: actual exporter admission.
+  const homeScenario = 'home-prefs';
+  final homeDomain = _recipe['residualDomains'][homeScenario] as Map;
+  final homeValues = Map<String, Object?>.from(homeDomain['values'] as Map);
+  Future<void> expectHomeReaders() async {
+    final hero = await StorageService.getHomeHeroSource();
+    final extras = await StorageService.getHomeExtraRows();
+    final actual = <String, Object?>{
+      'home_default_source_type': await StorageService.getHomeDefaultSourceType(),
+      'home_default_addon_url': await StorageService.getHomeDefaultAddonUrl(),
+      'home_default_catalog_id': await StorageService.getHomeDefaultCatalogId(),
+      'home_default_trakt_list_type': await StorageService.getHomeDefaultTraktListType(),
+      'home_default_trakt_content_type': await StorageService.getHomeDefaultTraktContentType(),
+      'home_hide_provider_cards': await StorageService.getHomeHideProviderCards(),
+      'home_continue_watching_enabled': await StorageService.getHomeContinueWatchingEnabled(),
+      'home_cw_hold_to_quick_play': await StorageService.getHomeCwHoldToQuickPlay(),
+      'home_favorites_open_folder': await StorageService.getHomeFavoritesTapAction(),
+      'home_hide_card_titles_and_ratings': await StorageService.getHomeHideCardTitlesAndRatings(),
+      'home_hide_catalog_addon_names': await StorageService.getHomeHideCatalogAddonNames(),
+      'home_hero_trailer_enabled': await StorageService.getHomeHeroTrailerEnabled(),
+      'home_card_orientation': (await StorageService.getHomeCardOrientation()).name,
+      'home_disabled_sections_v1': (await StorageService.getHomeDisabledSections()).toList(),
+      'home_extra_rows_v1': [for (final row in extras) {'id': row.id, 'title': row.title}],
+      'home_row_order_v1': await StorageService.getHomeRowOrder(),
+      'home_hero_source_v1': {'mode': hero.mode.name, 'ids': hero.ids},
+      for (final suffix in (homeDomain['finiteMergeSuffixes'] as List).cast<String>())
+        'home_cw_merge_$suffix': await StorageService.getHomeCwMergedRows(suffix),
+    };
+    expect(actual, homeDomain['expectedPublicRead']);
+  }
+  if (_generate) {
+    test('$homeScenario: generate actual pre-S2 21-key export', () async {
+      final head = await Process.run('git', ['rev-parse', 'HEAD']);
+      expect(head.exitCode, 0);
+      expect(head.stdout.toString().trim(), _origin);
+      final diff = await Process.run('git', ['diff', '--exit-code', _origin, '--', 'lib']);
+      expect(diff.exitCode, 0, reason: 'Old production must remain unchanged');
+      final config = File('.dart_tool/package_config.json');
+      final metadata = jsonDecode(await config.readAsString()) as Map;
+      final app = (metadata['packages'] as List).cast<Map>().singleWhere((e) => e['name'] == 'debrify');
+      final library = config.absolute.uri.resolve(app['rootUri'] as String).resolve(app['packageUri'] as String).resolve('services/storage_service.dart');
+      expect(p.equals(library.toFilePath(), p.join(Directory.current.path, 'lib', 'services', 'storage_service.dart')), isTrue);
+      expect(homeValues.length, 21);
+      await _writeValues(homeValues);
+      final prefs = await ProfilePreferences.instance();
+      _expectSettings({for (final key in homeValues.keys) key: prefs.get(key)}, homeValues);
+      final package = await export();
+      _expectSettings(_values(package), homeValues);
+      expect(package.resources, isEmpty);
+      final bytes = await PortableProfilePackage.encodeEncryptedBytes(package, _passphrase);
+      final decoded = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+      _expectSettings(_values(decoded), homeValues);
+      await File('$_directory/$homeScenario.encrypted.json').writeAsBytes(bytes);
+      await File('$_directory/$homeScenario.manifest.json').writeAsString(const JsonEncoder.withIndent('  ').convert({
+        'origin': _origin, 'scenario': homeScenario, 'syntheticOnly': true,
+        'sha256': await _digest(bytes), 'includeSecrets': false,
+        'representedSettings': homeValues,
+        'keyTypes': homeValues.map((key, value) => MapEntry(key, _type(value))),
+        'excludedKeys': <String>[], 'omissions': package.omissions,
+      }));
+    });
+  } else {
+    test('$homeScenario: restore physical values before public reads', () async {
+      final manifest = jsonDecode(await File('$_directory/$homeScenario.manifest.json').readAsString()) as Map;
+      final bytes = await File('$_directory/$homeScenario.encrypted.json').readAsBytes();
+      expect(manifest['origin'], _origin);
+      expect(manifest['syntheticOnly'], isTrue);
+      expect(manifest['sha256'], await _digest(bytes));
+      expect(manifest['representedSettings'], homeValues);
+      expect(manifest['excludedKeys'], isEmpty);
+      expect(manifest['keyTypes'], homeValues.map((key, value) => MapEntry(key, _type(value))));
+      var package = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+      _expectSettings(_values(package), homeValues);
+      expect(package.resources, isEmpty);
+      if (_mutation.isNotEmpty) {
+        final mutation = (homeDomain['mutations'] as Map)[_mutation] as Map?;
+        expect(mutation, isNotNull);
+        final values = {..._values(package)};
+        final key = mutation!['key'] as String;
+        if (mutation['operation'] == 'rename') {
+          values['synthetic_wrong_home_key'] = values.remove(key);
+        } else {
+          values[key] = mutation['value'];
+        }
+        final mutant = PortableProfilePackage(
+          mode: package.mode, createdAt: package.createdAt, profiles: package.profiles,
+          resources: package.resources, omissions: package.omissions,
+          sections: {...package.sections,
+            package.profiles.single['preferencesSection'] as String: await PortableProfilePackage.buildSection(values)},
+        );
+        package = await PortableProfilePackage.decrypt(await PortableProfilePackage.encrypt(mutant, _passphrase), _passphrase);
+        _expectSettings(_values(package), values);
+      }
+      final prefs = await SharedPreferences.getInstance();
+      for (final key in homeValues.keys) {
+        await prefs.setString('p.$profileId.g.1.$key', 'synthetic old generation');
+        await prefs.setString('p.$otherProfileId.g.1.$key', 'synthetic other profile');
+        await prefs.setString('p.$profileId.g.7.$key', 'synthetic other generation');
+      }
+      await prefs.setString('p.$profileId.g.1.home_fixture_sentinel', 'untouched');
+      final report = await ProfileRestoreCoordinator(registry: registry, cipher: cipher).restore(
+        package: package, destinationProfileId: profileId,
+        authorization: await ProfileAuthorizationContext.capture(registry),
+      );
+      expect(report.publishedGeneration, 2);
+      final prefix = ProfileRuntime.capture().preferencePrefix;
+      // Valid semantic mutants fail here, AFTER successful decode and restore.
+      _expectSettings({for (final key in homeValues.keys) key: prefs.get('$prefix$key')}, homeValues);
+      await expectHomeReaders();
+      _expectSettings({for (final key in homeValues.keys) key: prefs.get('$prefix$key')}, homeValues);
+      for (final key in homeValues.keys) {
+        expect(prefs.get('p.$profileId.g.1.$key'), 'synthetic old generation');
+        expect(prefs.get('p.$otherProfileId.g.1.$key'), 'synthetic other profile');
+        expect(prefs.get('p.$profileId.g.7.$key'), 'synthetic other generation');
+      }
+      expect(prefs.get('${prefix}home_fixture_sentinel'), 'untouched');
+      expect(prefs.get('p.$profileId.g.1.home_fixture_sentinel'), 'untouched');
+      for (final secrets in [false, true]) {
+        _expectSettings(_values(await export(includeSecrets: secrets)), {...homeValues, 'home_fixture_sentinel': 'untouched'});
+      }
+      await StorageService.clearAllHomePageSettings();
+      for (final key in (homeDomain['clearOrder'] as List).cast<String>()) {
+        expect(prefs.containsKey('$prefix$key'), isFalse, reason: key);
+      }
+      final retained = (homeDomain['retainedAfterClear'] as List).cast<String>();
+      expect(retained.length, 7);
+      _expectSettings({for (final key in retained) key: prefs.get('$prefix$key')},
+          {for (final key in retained) key: homeValues[key]});
+    });
+  }
+
+
   // Separate seven-key profile scalar domain: actual exporter admission.
   const scalarScenario = 'profile-scalars';
   final scalarDomain = _recipe['residualDomains'][scalarScenario] as Map;
