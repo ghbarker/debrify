@@ -40,6 +40,9 @@ class MdblistSeeAllScreen extends StatefulWidget {
   final FocusNode? leadingNode;
   final MdblistListChoice? initialList;
 
+  /// Preserve the source directory when opening a Home list directly.
+  final bool? initialListIsPublic;
+
   /// Injection seams used by contract/widget tests. Production callers leave
   /// both null and use the account-bound singletons.
   final MdblistDiscoverSource? source;
@@ -56,6 +59,7 @@ class MdblistSeeAllScreen extends StatefulWidget {
     this.leading,
     this.leadingNode,
     this.initialList,
+    this.initialListIsPublic,
     this.source,
     this.isAuthenticated,
   });
@@ -78,6 +82,7 @@ class _MdblistSeeAllScreenState extends State<MdblistSeeAllScreen> {
   List<MdblistDiscoverChoice> _choices = const [];
   MdblistDiscoverChoice? _selected;
   MdblistDiscoverChoice? _searchResult;
+  bool _searchResultIsPublic = false;
   bool _selectedLiked = false;
 
   MdblistDiscoverPage _page = const MdblistDiscoverPage();
@@ -211,6 +216,9 @@ class _MdblistSeeAllScreenState extends State<MdblistSeeAllScreen> {
         _group = MdblistDiscoverGroup.lists;
         _directory = MdblistListDirectory.searchResult;
         _searchResult = choice;
+        _searchResultIsPublic =
+            widget.initialListIsPublic ??
+            (initial.ownerName != null && !initial.liked);
         _choices = [choice];
         _selected = choice;
         _selectedLiked = choice.liked;
@@ -465,10 +473,19 @@ class _MdblistSeeAllScreenState extends State<MdblistSeeAllScreen> {
     if (widget.isTelevision && _visible.isEmpty) _gridExitNode.requestFocus();
   }
 
+  bool get _hidesWatched {
+    if (_isCatalog || _group == MdblistDiscoverGroup.forYou) return true;
+    if (_group == MdblistDiscoverGroup.library || _selectedLiked) return false;
+    return switch (_directory) {
+      MdblistListDirectory.mine || MdblistListDirectory.liked => false,
+      MdblistListDirectory.searchResult => _searchResultIsPublic,
+      _ => true,
+    };
+  }
+
   void _recompute() {
     Iterable<StremioMeta> items = _page.items;
-    // Public catalog browse only; the user's own and liked lists stay complete.
-    if (_isCatalog) items = items.where((m) => !WatchedFilter.hides(m));
+    if (_hidesWatched) items = items.where((m) => !WatchedFilter.hides(m));
     if (!_isCatalog) {
       if (_show == 'movie') {
         items = items.where((item) => item.type != 'series');

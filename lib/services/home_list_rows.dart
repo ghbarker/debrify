@@ -362,7 +362,8 @@ class HomeListRowsService {
             // Public "top" lists hide watched titles; the user's own and
             // liked lists never do.
             final items =
-                entry.key.startsWith(HomeExtraRowIds.mdblistTopPrefix)
+                entry.key.startsWith(HomeExtraRowIds.mdblistTopPrefix) &&
+                    !entry.value.liked
                 ? WatchedFilter.apply(List.of(result.items))
                 : List.of(result.items);
             if (items.isEmpty) return;

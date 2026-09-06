@@ -5,6 +5,7 @@ import '../models/stremio_addon.dart';
 import 'collection_catalog_pager.dart';
 import 'home_collections_store.dart';
 import 'stremio_service.dart';
+import 'watched_filter.dart';
 export 'collection_catalog_pager.dart' show CatalogFetch;
 
 /// Pages every catalog with bounded concurrency and retains per-source raw
@@ -16,6 +17,7 @@ class CollectionFolderLoader {
     StremioService? stremio,
     CatalogFetch? fetch,
     bool forceRefresh = false,
+    bool Function(StremioMeta)? hides,
   }) {
     final load =
         fetch ??
@@ -56,6 +58,7 @@ class CollectionFolderLoader {
           catalog: catalog,
           genre: source.genre,
           fetch: load,
+          hides: hides ?? WatchedFilter.predicate,
         ),
       );
     }

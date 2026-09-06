@@ -1,6 +1,5 @@
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/services/home_catalog_refresh.dart';
-import 'package:debrify/services/filtered_catalog_pager.dart';
 import 'package:debrify/widgets/home/home_row_focus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,24 +35,35 @@ void main() {
       catalog: catalog,
       previous: previous(addon('https://old.invalid')),
       isCurrent: () => true,
-      fetch: (skip, onRawCount) async {
-        final page = await fetchFilteredPage(
-          (cursor, raw) async {
-            skips.add(cursor);
-            raw(25);
-            return List.generate(25, (i) => item(cursor + i));
-          },
-          skip: skip,
-          hides: (meta) => int.parse(meta.id) % 5 != 0,
-        );
-        onRawCount(page.nextSkip - skip);
-        return page.items;
+      hides: (meta) => int.parse(meta.id) % 5 != 0,
+      fetch: (cursor, raw) async {
+        skips.add(cursor);
+        raw(25);
+        return List.generate(25, (i) => item(cursor + i));
       },
     );
     expect(skips, [0, 25, 50, 75, 100, 125]);
     expect(refreshed!.nextSkip, 150);
     expect(refreshed.items, hasLength(30));
     expect(refreshed.items.every((m) => int.parse(m.id) % 5 == 0), isTrue);
+  });
+
+  test('an all-watched first batch preserves a resumable Home row', () async {
+    final row = await loadHomeCatalogSection(
+      addon: addon('https://filtered.invalid'),
+      catalog: catalog,
+      isCurrent: () => true,
+      hides: (_) => true,
+      fetch: (skip, raw) async {
+        raw(10);
+        return List.generate(10, (i) => item(skip + i));
+      },
+    );
+    expect(row, isNotNull);
+    expect(row!.items, isEmpty);
+    expect(row.nextSkip, 40);
+    expect(row.exhausted, isFalse);
+    expect(row.pagingPaused, isTrue);
   });
 
   testWidgets('addon refresh preserves focus beyond the first page', (
@@ -143,7 +153,7 @@ void main() {
     expect(calls, 1);
   });
 
-  test('duplicate pages stop a catalog which ignores skip', () async {
+  test('duplicate pages pause a catalog which ignores skip', () async {
     var calls = 0;
     final result = await loadHomeCatalogSection(
       addon: addon('https://new.invalid'),
@@ -157,7 +167,8 @@ void main() {
       },
     );
     expect(calls, 2);
-    expect(result!.exhausted, isTrue);
+    expect(result!.exhausted, isFalse);
+    expect(result.pagingPaused, isTrue);
     expect(result.items, hasLength(1));
   });
 }

@@ -12,7 +12,7 @@ class HideWatchedPrefs {
   HideWatchedPrefs._();
 
   // Profile-scoped. Persisted, so never rename without a migration.
-  static const String _key = 'hide_watched_titles';
+  static const String key = 'hide_watched_titles';
 
   static bool _enabled = false;
   static bool _warmed = false;
@@ -28,7 +28,7 @@ class HideWatchedPrefs {
     _warmed = true;
     try {
       final prefs = await ProfilePreferences.instance();
-      _enabled = prefs.getBool(_key) ?? false;
+      _enabled = prefs.getBool(key) ?? false;
     } catch (_) {
       // Storage unavailable — stay off for this session.
     }
@@ -38,11 +38,22 @@ class HideWatchedPrefs {
   static Future<bool> read() async {
     try {
       final prefs = await ProfilePreferences.instance();
-      _enabled = prefs.getBool(_key) ?? false;
+      _enabled = prefs.getBool(key) ?? false;
     } catch (_) {
       // Keep the cached value.
     }
     return _enabled;
+  }
+
+  static Future<void> refreshFromPreferences({
+    required void Function() authorizationBarrier,
+  }) async {
+    authorizationBarrier();
+    final prefs = await ProfilePreferences.instance();
+    final enabled = prefs.getBool(key) ?? false;
+    authorizationBarrier();
+    _enabled = enabled;
+    _warmed = true;
   }
 
   /// Cache-first: [enabled] reflects [value] before the write lands.
@@ -51,7 +62,7 @@ class HideWatchedPrefs {
     _warmed = true;
     try {
       final prefs = await ProfilePreferences.instance();
-      await prefs.setBool(_key, value);
+      await prefs.setBool(key, value);
     } catch (_) {
       // Best-effort: the choice still holds for this session.
     }

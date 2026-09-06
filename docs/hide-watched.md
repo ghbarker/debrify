@@ -2,7 +2,8 @@
 
 Settings → **Tracking** → **Hide watched** → "Hide watched titles". Off by
 default, saved per profile, and included in Backup & Restore as `hide_watched`
-inside the tracking-preferences payload.
+inside the tracking-preferences payload. WebDAV sync applies the setting to the
+active profile immediately, including refreshing the Home board.
 
 When ON, movies you have finished and shows you have completed disappear from
 the catalog surfaces:
@@ -13,7 +14,8 @@ the catalog surfaces:
 - See All grids and Discover's catalog source
 - Trakt's discovery lists (Trending, Popular, Anticipated, Recommendations) on
   Home and in Discover / See All
-- MDBList public "top" lists on Home and the MDBList catalog browse
+- MDBList public lists on Home and in See All / Discover, recommendations, and catalog browse
+- Collection folder rails, tabs, and the merged All view
 
 Never hidden, because they are your own lists rather than catalogs:
 
@@ -40,8 +42,15 @@ Filtering a page can leave it short or empty, so paged surfaces fetch through
 `fetchFilteredPage`, which keeps pulling windows until enough titles survive
 (default 12, at most 4 windows) and treats only a raw-empty window from the
 addon as the end of the catalog. Skip offsets advance by the addon's raw counts
-so paging stays aligned. With the switch off it is exactly one fetch, so
-nothing changes for anyone who leaves it off.
+so paging stays aligned. Repeated items are deduplicated across the windows.
+If a batch has no visible titles but the addon has more, Home and See All show
+**Continue loading**. This resumes at the saved offset instead of restarting or
+marking the catalog exhausted. A failed request without a raw count also keeps
+its cursor for retry. With the switch off each pager call makes one fetch.
+
+Collection folders use their existing raw cursor pager with the same watched
+predicate. Their bounded empty-window budget and Retry action remain in place;
+watched-only windows never mark a folder source exhausted.
 
 ## Timing
 
@@ -64,7 +73,9 @@ and apply from the next load.
 | See All / Discover grids | `lib/screens/see_all/catalog_see_all_screen.dart` |
 | Trakt / MDBList rows and See All | `lib/services/home_list_rows.dart`, `lib/screens/see_all/{trakt,mdblist}_see_all_screen.dart` |
 | Settings toggle, search leaf, backup payload | `lib/screens/settings/tracking_settings_page.dart`, `lib/screens/settings_screen.dart`, `lib/services/storage_service.dart` |
-| Tests | `test/hide_watched_test.dart` |
+| Tests | `test/hide_watched_test.dart`, `test/hide_watched_surfaces_test.dart`, `test/filtered_catalog_pager_regression_test.dart` |
+| Collection filtering | `lib/services/collection_catalog_pager.dart`, `lib/services/collection_folder_loader.dart` |
+| WebDAV cache and Home refresh | `lib/services/webdav_sync/webdav_sync_active_profile_refresh.dart`, `lib/services/webdav_sync/webdav_sync_ui_refresh.dart` |
 
 ## Design decisions
 
@@ -80,9 +91,3 @@ and apply from the next load.
 - **No live removal.** `WatchedStatusService` is a `ChangeNotifier`, so
   re-running `WatchedFilter.apply` over the loaded sections on change would be
   a small follow-up if immediacy is ever wanted.
-
-## Not yet covered
-
-Collection folders (the collections feature on its own branch) are not wired
-yet; the intended change is to run the folder loader through
-`fetchFilteredPage` in the same way.

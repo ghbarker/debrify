@@ -56,19 +56,21 @@ Future<FilteredPage> fetchFilteredPage(
   var fetches = 0;
   var exhausted = false;
   final out = <StremioMeta>[];
+  final seen = seenIds ?? <String>{};
   while (true) {
-    var rawCount = 0;
+    int? rawCount;
     final page = await fetch(cursor, (c) => rawCount = c);
     fetches++;
-    if (page.isEmpty) {
-      exhausted = true;
+    final count = rawCount ?? page.length;
+    if (count == 0) {
+      exhausted = rawCount == 0;
       break;
     }
     // Raw window, not the post-filter count: keeps skip aligned with what
     // the addon actually served.
-    cursor += rawCount > 0 ? rawCount : page.length;
+    cursor += count;
     for (final m in page) {
-      if (seenIds != null && !seenIds.add(m.id)) continue;
+      if (!seen.add(m.id)) continue;
       if (hides != null && hides(m)) continue;
       out.add(m);
     }

@@ -686,6 +686,9 @@ class _SearchScreenState extends State<SearchScreen>
   // Board state. [_homeSections] is the homepage cache; [_sections] is whatever
   // is currently shown (homepage OR per-addon catalog search results). Both the
   // board and catalog search render through the same horizontal-row layout.
+  final _catalogContinueNode = FocusNode(debugLabel: 'catalog_continue');
+  bool _catalogContinuing = false;
+  int _catalogContinueCursor = 0;
   bool _loading = true;
   String? _error;
   List<CatalogSection> _homeSections = [];
@@ -2142,6 +2145,7 @@ class _SearchScreenState extends State<SearchScreen>
 
   @override
   void dispose() {
+    _catalogContinueNode.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _mdblistRevisionRefreshToken++;
     _spotlightHeroNode.dispose();
@@ -2841,24 +2845,10 @@ class _SearchScreenState extends State<SearchScreen>
             catalog: catalog,
             previous: previousRows[_catalogRefRowId(ref)],
             isCurrent: () => mounted && gen == _boardLoadGen,
-            fetch: (skip, onRawCount) async {
-              // Preserve the refresh loader's raw extent across every window
-              // consumed while topping up the filtered row.
-              final page = await fetchFilteredPage(
-                (cursor, onRaw) {
-                  if (!mounted || gen != _boardLoadGen) {
-                    return Future.value(const <StremioMeta>[]);
-                  }
-                  return _stremio.fetchCatalog(
-                    addon, catalog, skip: cursor, onRawCount: onRaw,
-                  );
-                },
-                skip: skip,
-                hides: WatchedFilter.predicate,
-              );
-              onRawCount(page.nextSkip - skip);
-              return page.items;
-            },
+            hides: WatchedFilter.predicate,
+            fetch: (skip, onRawCount) => _stremio.fetchCatalog(
+              addon, catalog, skip: skip, onRawCount: onRawCount,
+            ),
           );
         } catch (_) {
           return null;
@@ -2954,12 +2944,13 @@ class _SearchScreenState extends State<SearchScreen>
   /// board rows paginate; search-result rows are single-shot. Safe to call
   /// repeatedly — [CatalogSection.loadingMore]/[CatalogSection.exhausted] guard
   /// re-entrancy and the end of the catalog.
-  Future<void> _loadMoreRow(int rowIndex) async {
+  Future<void> _loadMoreRow(int rowIndex, {bool resume = false}) async {
     // While a catalog search is active, `_sections` holds search results, which
     // don't paginate — leave them alone.
     if (_catalogQuery.isNotEmpty || _catalogSearching) return;
     if (rowIndex < 0 || rowIndex >= _sections.length) return;
     final section = _sections[rowIndex];
+    if (section.pagingPaused && !resume) return;
     if (section.loadingMore || section.exhausted) return;
     // Android TV: flip the guard silently. The setState exists to show the
     // classic row's tail spinner, but it fires on the exact keypress that
@@ -2967,7 +2958,7 @@ class _SearchScreenState extends State<SearchScreen>
     // input frame, which an Amlogic box renders as the cursor hitching every
     // time a row pages. The spinner is a nicety; the page landing repaints
     // either way.
-    if (PlatformUtil.isAndroidTvCached) {
+    if (PlatformUtil.isAndroidTvCached && !resume) {
       section.loadingMore = true;
     } else {
       setState(() => section.loadingMore = true);
@@ -2999,11 +2990,8 @@ class _SearchScreenState extends State<SearchScreen>
       section.nextSkip = page.nextSkip;
       if (page.exhausted) section.exhausted = true;
       final fresh = page.items;
-      if (fresh.isEmpty) {
-        // Only duplicates, or the addon ignores skip — end of the row.
-        section.exhausted = true;
-        return;
-      }
+      section.pagingPaused = fresh.isEmpty && !page.exhausted;
+      if (fresh.isEmpty) return;
       // Grow this row's focus nodes in lockstep with the new items.
       final nodes = _rowNodes[rowIndex];
       final base = nodes.length;
@@ -3550,6 +3538,7 @@ class _SearchScreenState extends State<SearchScreen>
     String? homeRowId,
     required int column,
   }) {
+    if (_focusCatalogContinuation()) return;
     _pendingDownOrigin = FocusManager.instance.primaryFocus;
     if (_pendingDownOrigin == null) return;
     _pendingDownRowIndex = rowIndex;
@@ -7793,6 +7782,7 @@ class _SearchScreenState extends State<SearchScreen>
     final current = _resolveCanvasRailIndex(rails);
     final next = (current + delta).clamp(0, rails.length - 1);
     if (next == current) {
+      if (delta > 0 && _focusCatalogContinuation()) return;
       if (delta > 0 && _boardHasMore) {
         // Remember the move so it COMPLETES when the batch lands — otherwise
         // the keypress is silently eaten and the user has to press again.
@@ -17637,7 +17627,105 @@ class _SearchScreenState extends State<SearchScreen>
     );
   }
 
+  bool _focusCatalogContinuation() {
+    if (!(_catalogContinueNode.context?.mounted ?? false)) return false;
+    _catalogContinueNode.requestFocus();
+    return true;
+  }
+
   Widget _buildBoard() {
+    final pending = [
+      for (var i = 0; i < _sections.length; i++)
+        if (_sections[i].pagingPaused && !_sections[i].exhausted) i,
+    ];
+    final busy =
+        _catalogContinuing || pending.any((i) => _sections[i].loadingMore);
+    return Column(
+      children: [
+        Expanded(
+          child:
+              !_loading &&
+                  _error == null &&
+                  _sections.isNotEmpty &&
+                  _sections.every((s) => s.items.isEmpty) &&
+                  !_cwVisible &&
+                  !_anyFavVisible
+              ? _message(
+                  Icons.movie_filter_rounded,
+                  pending.isEmpty
+                      ? 'No unwatched titles found'
+                      : 'No new titles loaded yet',
+                  pending.isEmpty
+                      ? 'Try another catalog or turn off Hide watched titles in Tracking settings.'
+                      : 'Continue browsing to check more titles in these catalogs.',
+                )
+              : _buildBoardContent(),
+        ),
+        if (!_loading && pending.isNotEmpty)
+          SafeArea(
+            top: false,
+            child: Focus(
+              onKeyEvent: (_, event) {
+                if (event is KeyDownEvent &&
+                    event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                  if (!_focusHomeRailAt(0, 0)) {
+                    MainPageBridge.focusTvSidebar?.call();
+                  }
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
+              },
+              child: TextButton.icon(
+                focusNode: _catalogContinueNode,
+                autofocus: _sections.every((s) => s.items.isEmpty),
+                onPressed: busy
+                    ? null
+                    : () async {
+                        final gen = _boardLoadGen;
+                        final offset = _catalogContinueCursor % pending.length;
+                        final batch = [
+                          ...pending.skip(offset),
+                          ...pending.take(offset),
+                        ].take(4).map((i) => _sections[i]).toList();
+                        _catalogContinueCursor =
+                            (offset + batch.length) % pending.length;
+                        setState(() => _catalogContinuing = true);
+                        try {
+                          // Rotate bounded batches so a faulty addon cannot
+                          // strand the catalogs behind it.
+                          for (final section in batch) {
+                            if (!mounted || gen != _boardLoadGen) return;
+                            final i = _sections.indexOf(section);
+                            if (i >= 0) await _loadMoreRow(i, resume: true);
+                          }
+                        } finally {
+                          if (mounted) {
+                            setState(() => _catalogContinuing = false);
+                          }
+                        }
+                        if (mounted && gen == _boardLoadGen) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (!mounted || gen != _boardLoadGen) return;
+                            if (!_sections.any(
+                              (s) => s.pagingPaused && !s.exhausted,
+                            )) {
+                              if (!_focusHomeRailAt(0, 0)) {
+                                MainPageBridge.focusTvSidebar?.call();
+                              }
+                            }
+                          });
+                        }
+                      },
+                icon: const Icon(Icons.arrow_forward_rounded),
+                label: Text(busy ? 'Loading…' : 'Continue loading catalogs'),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildBoardContent() {
     if (_loading) {
       // The brand moment: DEBRIFY centred on the ink while catalogs load —
       // replaces the old skeleton-rail wall, which read as a broken app.
@@ -18439,6 +18527,9 @@ class _SearchScreenState extends State<SearchScreen>
     } else if (section.isMdblist) {
       screen = MdblistSeeAllScreen(
         initialList: section.mdblistList,
+        initialListIsPublic: section.rowId.startsWith(
+          HomeExtraRowIds.mdblistTopPrefix,
+        ),
         onOpen: (item) => _openItem(
           item,
           _addonForContinue(item.sourceAddon?.id),
