@@ -1,5 +1,6 @@
 import 'package:debrify/services/backup_restore_service.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/services/tracking_source_policy.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,7 +18,7 @@ void main() {
   tearDown(ProfileRuntime.debugReset);
 
   test('absent legacy scrobble switches seed all tracker masters on', () async {
-    final targets = await StorageService.getTrackingScrobbleTargets();
+    final targets = await TrackingPrefs.getTrackingScrobbleTargets();
 
     expect(targets, Set<TrackingSource>.of(TrackingSource.values));
     final prefs = await SharedPreferences.getInstance();
@@ -33,15 +34,15 @@ void main() {
       'mdblist_sync_catalog_items': false,
     });
 
-    expect(await StorageService.getTrackingScrobbleTargets(), <TrackingSource>{
+    expect(await TrackingPrefs.getTrackingScrobbleTargets(), <TrackingSource>{
       TrackingSource.local,
       TrackingSource.simkl,
     });
 
-    await StorageService.setTraktSyncCatalogItems(true);
-    await StorageService.setSimklSyncCatalogItems(false);
-    await StorageService.setMdblistSyncCatalogItems(true);
-    expect(await StorageService.getTrackingScrobbleTargets(), <TrackingSource>{
+    await TrackingPrefs.setTraktSyncCatalogItems(true);
+    await TrackingPrefs.setSimklSyncCatalogItems(false);
+    await TrackingPrefs.setMdblistSyncCatalogItems(true);
+    expect(await TrackingPrefs.getTrackingScrobbleTargets(), <TrackingSource>{
       TrackingSource.local,
       TrackingSource.simkl,
     });
@@ -53,44 +54,44 @@ void main() {
       TrackingSource.simkl,
       TrackingSource.mdblist,
     ]) {
-      await StorageService.setTrackingScrobbleTargets(<TrackingSource>{
+      await TrackingPrefs.setTrackingScrobbleTargets(<TrackingSource>{
         TrackingSource.local,
       });
 
-      await StorageService.enableTrackingScrobbleTarget(source);
+      await TrackingPrefs.enableTrackingScrobbleTarget(source);
 
       expect(
-        await StorageService.getTrackingScrobbleTargets(),
+        await TrackingPrefs.getTrackingScrobbleTargets(),
         <TrackingSource>{TrackingSource.local, source},
       );
     }
   });
 
   test('re-enabling an active scrobble target is idempotent', () async {
-    await StorageService.setTrackingScrobbleTargets(<TrackingSource>{
+    await TrackingPrefs.setTrackingScrobbleTargets(<TrackingSource>{
       TrackingSource.local,
       TrackingSource.simkl,
     });
     final revision = StorageService.trackingSourceRevision.value;
 
-    await StorageService.enableTrackingScrobbleTarget(TrackingSource.simkl);
+    await TrackingPrefs.enableTrackingScrobbleTarget(TrackingSource.simkl);
 
     expect(StorageService.trackingSourceRevision.value, revision);
-    expect(await StorageService.getTrackingScrobbleTargets(), <TrackingSource>{
+    expect(await TrackingPrefs.getTrackingScrobbleTargets(), <TrackingSource>{
       TrackingSource.local,
       TrackingSource.simkl,
     });
   });
 
   test('re-enabling a tracker preserves other scrobble choices', () async {
-    await StorageService.setTrackingScrobbleTargets(<TrackingSource>{
+    await TrackingPrefs.setTrackingScrobbleTargets(<TrackingSource>{
       TrackingSource.local,
       TrackingSource.trakt,
     });
 
-    await StorageService.enableTrackingScrobbleTarget(TrackingSource.simkl);
+    await TrackingPrefs.enableTrackingScrobbleTarget(TrackingSource.simkl);
 
-    expect(await StorageService.getTrackingScrobbleTargets(), <TrackingSource>{
+    expect(await TrackingPrefs.getTrackingScrobbleTargets(), <TrackingSource>{
       TrackingSource.local,
       TrackingSource.trakt,
       TrackingSource.simkl,
@@ -98,18 +99,18 @@ void main() {
   });
 
   test('simultaneous tracker connections merge every target', () async {
-    await StorageService.setTrackingScrobbleTargets(<TrackingSource>{
+    await TrackingPrefs.setTrackingScrobbleTargets(<TrackingSource>{
       TrackingSource.local,
     });
 
     await Future.wait(<Future<void>>[
-      StorageService.enableTrackingScrobbleTarget(TrackingSource.trakt),
-      StorageService.enableTrackingScrobbleTarget(TrackingSource.simkl),
-      StorageService.enableTrackingScrobbleTarget(TrackingSource.mdblist),
+      TrackingPrefs.enableTrackingScrobbleTarget(TrackingSource.trakt),
+      TrackingPrefs.enableTrackingScrobbleTarget(TrackingSource.simkl),
+      TrackingPrefs.enableTrackingScrobbleTarget(TrackingSource.mdblist),
     ]);
 
     expect(
-      await StorageService.getTrackingScrobbleTargets(),
+      await TrackingPrefs.getTrackingScrobbleTargets(),
       Set<TrackingSource>.of(TrackingSource.values),
     );
   });
@@ -119,20 +120,20 @@ void main() {
     () async {
       // App start seeds the masters (all ON) before any restore happens.
       expect(
-        await StorageService.getTrackingScrobbleTargets(),
+        await TrackingPrefs.getTrackingScrobbleTargets(),
         Set<TrackingSource>.of(TrackingSource.values),
       );
 
       // An old backup's tracker sections then restore the legacy switches —
       // Trakt/Simkl hardcode ON, MDBList carries its saved value (OFF here).
-      await StorageService.setTraktSyncCatalogItems(true);
-      await StorageService.setSimklSyncCatalogItems(true);
-      await StorageService.setMdblistSyncCatalogItems(false);
+      await TrackingPrefs.setTraktSyncCatalogItems(true);
+      await TrackingPrefs.setSimklSyncCatalogItems(true);
+      await TrackingPrefs.setMdblistSyncCatalogItems(false);
 
       // Without the reseed the already-seeded masters would ignore that OFF.
-      await StorageService.reseedTrackingScrobbleTargetsFromLegacy();
+      await TrackingPrefs.reseedTrackingScrobbleTargetsFromLegacy();
       expect(
-        await StorageService.getTrackingScrobbleTargets(),
+        await TrackingPrefs.getTrackingScrobbleTargets(),
         <TrackingSource>{
           TrackingSource.local,
           TrackingSource.trakt,
@@ -143,13 +144,13 @@ void main() {
   );
 
   test('tracking transfer payload round-trips all three preferences', () async {
-    await StorageService.applyTrackingPreferencesPayload(<String, dynamic>{
+    await TrackingPrefs.applyTrackingPreferencesPayload(<String, dynamic>{
       'scrobble_targets': <String>['trakt'],
       'progress_source': 'trakt',
       'home_tick_sources': <String>['local', 'simkl'],
     });
 
-    final payload = await StorageService.buildTrackingPreferencesPayload();
+    final payload = await TrackingPrefs.buildTrackingPreferencesPayload();
     expect(
       payload['scrobble_targets'],
       containsAll(<String>['local', 'trakt']),
@@ -162,27 +163,27 @@ void main() {
   });
 
   test('a disconnected dedicated progress source falls back visibly', () async {
-    await StorageService.setWatchProgressSource(WatchProgressSource.trakt);
+    await TrackingPrefs.setWatchProgressSource(WatchProgressSource.trakt);
 
     final policy = await TrackingSourcePolicy.load();
 
     expect(policy.progressSource, WatchProgressSource.smart);
     expect(
-      await StorageService.getWatchProgressSource(),
+      await TrackingPrefs.getWatchProgressSource(),
       WatchProgressSource.smart,
     );
-    expect(await StorageService.takeTrackingProgressFallbackNotice(), isTrue);
-    expect(await StorageService.takeTrackingProgressFallbackNotice(), isFalse);
+    expect(await TrackingPrefs.takeTrackingProgressFallbackNotice(), isTrue);
+    expect(await TrackingPrefs.takeTrackingProgressFallbackNotice(), isFalse);
   });
 
   test(
     'partial backup restore leaves tracking preferences untouched',
     () async {
-      await StorageService.setTrackingScrobbleTargets(<TrackingSource>{
+      await TrackingPrefs.setTrackingScrobbleTargets(<TrackingSource>{
         TrackingSource.local,
       });
-      await StorageService.setWatchProgressSource(WatchProgressSource.local);
-      await StorageService.setHomeTickSources(<TrackingSource>{
+      await TrackingPrefs.setWatchProgressSource(WatchProgressSource.local);
+      await TrackingPrefs.setHomeTickSources(<TrackingSource>{
         TrackingSource.local,
       });
 
@@ -214,14 +215,14 @@ void main() {
       );
 
       expect(
-        await StorageService.getTrackingScrobbleTargets(),
+        await TrackingPrefs.getTrackingScrobbleTargets(),
         <TrackingSource>{TrackingSource.local},
       );
       expect(
-        await StorageService.getWatchProgressSource(),
+        await TrackingPrefs.getWatchProgressSource(),
         WatchProgressSource.local,
       );
-      expect(await StorageService.getHomeTickSources(), <TrackingSource>{
+      expect(await TrackingPrefs.getHomeTickSources(), <TrackingSource>{
         TrackingSource.local,
       });
     },
@@ -236,15 +237,15 @@ void main() {
       },
     });
 
-    expect(await StorageService.getTrackingScrobbleTargets(), <TrackingSource>{
+    expect(await TrackingPrefs.getTrackingScrobbleTargets(), <TrackingSource>{
       TrackingSource.local,
       TrackingSource.simkl,
     });
     expect(
-      await StorageService.getWatchProgressSource(),
+      await TrackingPrefs.getWatchProgressSource(),
       WatchProgressSource.local,
     );
-    expect(await StorageService.getHomeTickSources(), <TrackingSource>{
+    expect(await TrackingPrefs.getHomeTickSources(), <TrackingSource>{
       TrackingSource.mdblist,
     });
   });

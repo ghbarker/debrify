@@ -1,5 +1,6 @@
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:debrify/services/local_series_completion_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/services/tracking_source_policy.dart';
 import 'package:debrify/services/trakt/trakt_episode_model.dart';
@@ -135,7 +136,7 @@ void main() {
 
   test('series-level unwatch clears derived local completion', () async {
     final now = DateTime.now();
-    await StorageService.setTrackingScrobbleTargets(<TrackingSource>{
+    await TrackingPrefs.setTrackingScrobbleTargets(<TrackingSource>{
       TrackingSource.local,
     });
     await PlaybackProgressStore.markEpisodeAsFinished(

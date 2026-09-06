@@ -1,6 +1,6 @@
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/services/simkl/simkl_list_source.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'package:debrify/services/tracking/tracker_registry.dart';
 import 'package:debrify/services/tracking_source_policy.dart';
 import 'package:debrify/services/trakt/trakt_item_transformer.dart';
@@ -49,15 +49,15 @@ void main() {
   test('remote hasCredential tear-offs are the StorageService methods', () {
     expect(
       TrackerRegistry.instance.of(TrackingSource.trakt)!.hasCredential,
-      StorageService.hasTraktCredential,
+      TrackingPrefs.hasTraktCredential,
     );
     expect(
       TrackerRegistry.instance.of(TrackingSource.simkl)!.hasCredential,
-      StorageService.hasSimklCredential,
+      TrackingPrefs.hasSimklCredential,
     );
     expect(
       TrackerRegistry.instance.of(TrackingSource.mdblist)!.hasCredential,
-      StorageService.hasMdblistCredential,
+      TrackingPrefs.hasMdblistCredential,
     );
   });
 

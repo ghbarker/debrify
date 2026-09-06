@@ -9,6 +9,7 @@ import '../../models/tracking_source.dart';
 import '../episode_tracker_snapshot_revision.dart';
 import '../profiles/profile_async_authorization.dart';
 import '../profiles/profile_runtime.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../storage_service.dart';
 import 'simkl_calendar_service.dart';
 import 'simkl_constants.dart';
@@ -159,7 +160,7 @@ class SimklService {
   /// completion.
   Future<({Set<String> movies, Set<String> series})?>
   fetchCompletedTitleIds() async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     // Disconnected is a successful empty snapshot, not a transient failure.
     // This lets consumers clear badges belonging to the previous account while
     // still preserving their last snapshot when an authenticated request fails.
@@ -321,14 +322,14 @@ class SimklService {
   /// Check if the user is authenticated (has a stored access token).
   /// Simkl tokens don't expire, so unlike Trakt there's no refresh check.
   Future<bool> isAuthenticated() async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     return token != null && token.isNotEmpty;
   }
 
   /// Revoke local auth state. Simkl has no documented revoke endpoint for
   /// PIN-issued tokens, so this only clears local storage.
   Future<void> logout() async {
-    await StorageService.clearSimklAuth();
+    await TrackingPrefs.clearSimklAuth();
     // Drop cached library state so a later sign-in (possibly a different
     // account) never reads the previous user's watchlist/ratings — including
     // the derived calendar (mirrors TraktService clearing TraktCalendarService).
@@ -339,7 +340,7 @@ class SimklService {
 
   /// Get the stored username, if known.
   Future<String?> getUsername() async {
-    return StorageService.getSimklUsername();
+    return TrackingPrefs.getSimklUsername();
   }
 
   // ============================================================================
@@ -407,8 +408,8 @@ class SimklService {
           if (accessToken == null || accessToken.isEmpty) return 'error';
           _pinAuthorizations.remove(userCode);
           Future<void> commit() async {
-            await StorageService.setSimklAccessToken(accessToken);
-            await StorageService.enableTrackingScrobbleTarget(
+            await TrackingPrefs.setSimklAccessToken(accessToken);
+            await TrackingPrefs.enableTrackingScrobbleTarget(
               TrackingSource.simkl,
             );
             await _fetchAndStoreUsername(accessToken);
@@ -467,7 +468,7 @@ class SimklService {
       final account = data['account'] as Map<String, dynamic>?;
       final name = (user?['name'] as String?) ?? (account?['name'] as String?);
       if (name != null && name.isNotEmpty) {
-        await StorageService.setSimklUsername(name);
+        await TrackingPrefs.setSimklUsername(name);
       }
     } catch (error) {
       debugPrint('Simkl: username lookup failed (${error.runtimeType})');
@@ -524,7 +525,7 @@ class SimklService {
     String type,
     String status,
   ) async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return null;
     final uri = _apiUri('/sync/all-items/$type/$status', {'extended': 'full'});
     final data = await _getOrNull(
@@ -543,7 +544,7 @@ class SimklService {
   /// with the whole watched-episode list. Returns the raw `shows` list (empty
   /// when the list is genuinely empty), or null on failure / when disconnected.
   Future<List<dynamic>?> fetchUpNextShowsOrNull() async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return null;
     final uri = _apiUri('/sync/all-items/shows/watching', {
       'next_watch_info': 'yes',
@@ -562,7 +563,7 @@ class SimklService {
   /// `GET /sync/ratings/{type}/{rating}`. Sends the explicit 1–10 comma list
   /// (documented to work) rather than an unconfirmed range shorthand.
   Future<Map<String, dynamic>?> fetchRatingsOrNull(String type) async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return null;
     final uri = _apiUri('/sync/ratings/$type/1,2,3,4,5,6,7,8,9,10', {
       'extended': 'full',
@@ -636,7 +637,7 @@ class SimklService {
   /// altogether uses the whole-title form of `POST /sync/history/remove`; see
   /// [removeFromList].
   Future<bool> addToList(String imdbId, String type, String status) async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return false;
     final typeKey = _typeKey(type);
     final result = await _postOrNull(
@@ -666,7 +667,7 @@ class SimklService {
 
   /// Rate a title 1–10 via `POST /sync/ratings`.
   Future<bool> rateItem(String imdbId, String type, int rating) async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return false;
     final typeKey = _typeKey(type);
     final result = await _postOrNull(
@@ -689,7 +690,7 @@ class SimklService {
 
   /// Clear a title's rating via `POST /sync/ratings/remove`.
   Future<bool> removeRating(String imdbId, String type) async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return false;
     final typeKey = _typeKey(type);
     final result = await _postOrNull(
@@ -712,7 +713,7 @@ class SimklService {
   /// Mark a whole title (movie, or every aired episode of a show) watched via
   /// `POST /sync/history`.
   Future<bool> markWatched(String imdbId, String type) async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return false;
     final typeKey = _typeKey(type);
     final result = await _postOrNull(
@@ -741,7 +742,7 @@ class SimklService {
   /// current API defines that shape as the canonical "Remove from list"
   /// operation: it clears the watchlist status and any title-level history.
   Future<bool> removeFromList(String imdbId, String type) async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return false;
     final typeKey = _typeKey(type);
     final result = await _postOrNull(
@@ -778,7 +779,7 @@ class SimklService {
     int season,
     int episode,
   ) async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return false;
     final result = await _postOrNull(
       '/sync/history',
@@ -802,7 +803,7 @@ class SimklService {
     int season,
     int episode,
   ) async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return false;
     final result = await _postOrNull(
       '/sync/history/remove',
@@ -828,7 +829,7 @@ class SimklService {
     int episode,
     int rating,
   ) async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return false;
     final result = await _postOrNull(
       '/sync/ratings',
@@ -936,7 +937,7 @@ class SimklService {
     int? season,
     int? episode,
   }) async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return false;
     final s = (season != null && season <= 0) ? null : season;
     final e = (episode != null && episode <= 0) ? null : episode;
@@ -1031,7 +1032,7 @@ class SimklService {
       // These writes belong to the account that 409'd — if the profile or
       // Simkl account changed during the wait, never replay them against a
       // different one.
-      final token = await StorageService.getSimklAccessToken();
+      final token = await TrackingPrefs.getSimklAccessToken();
       if (token == null || token.isEmpty || token != originalToken) return;
       // Same account, NEWER intent: any Simkl write for this title since the
       // 409 (mark unwatched, a replay's scrobble, another device syncing in)
@@ -1108,7 +1109,7 @@ class SimklService {
   }
 
   Future<List<dynamic>?> _loadEpisodePlaybackSessions() async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return null;
     final generation = _playbackCacheGeneration;
     final data = await _getOrNull(
@@ -1282,7 +1283,7 @@ class SimklService {
   }
 
   Future<List<dynamic>?> _loadMoviePlaybackSessions() async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return null;
     final generation = _playbackCacheGeneration;
     final data = await _getOrNull(
@@ -1342,7 +1343,7 @@ class SimklService {
   /// removed sessions. Returns true when every matching session was deleted (or
   /// there was nothing to delete). Never throws.
   Future<bool> deletePlaybackForImdb(String imdbId) async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return false;
     // Independent GETs — fetch concurrently. A null list means the fetch failed.
     final lists = await Future.wait([
@@ -1396,7 +1397,7 @@ class SimklService {
     // RIGHT NOW — or this session's own fresh checkpoint — survives.
     Duration? olderThan,
   }) async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return false;
     final episodes = await _fetchEpisodePlaybackSessions();
     final ids = <int>{};
@@ -1466,7 +1467,7 @@ class SimklService {
   /// `POST /sync/watched?extended=episodes`. Empty set on failure — mirrors
   /// TraktService.fetchWatchedShowEpisodes's contract.
   Future<Set<String>> fetchWatchedShowEpisodes(String showImdbId) async {
-    final token = await StorageService.getSimklAccessToken();
+    final token = await TrackingPrefs.getSimklAccessToken();
     if (token == null || token.isEmpty) return {};
     final result = await _postOrNull(
       '/sync/watched',

@@ -1574,3 +1574,18 @@ rawlist preservation, independent public normalization and getter side effects.
 Is there more we could do? Tracking receiver retirement remains separately gated;
 this finite input does not prove credential authority or every interleaving.
 Zero production or Leaves credit; pending PRs remain pending.
+
+
+### Q2 TrackingPrefs caller retirement: actual old-loader adapter
+
+The copied loader for unchanged old6d26 now reverses exactly15same-method
+TrackingPrefs receivers to StorageService and removes its TrackingPrefs import:
+14existing reader/writer sites plus the Home tick fixture getter. Preserve
+Home19 and all prior owner/helper adapters and all payload/recipe/assertion
+bytes. No owner backport or identical-whole-harness claim.
+
+Optional current12origin-file reversal covers243named receiver sites, including
+five static test tearoffs. That is not a complete old-suite harness: preexisting
+TrackingPrefs usages and other extracted owners remain. Only the adapted loader
+and its existing two helpers generate the old fixture. Credential exclusions
+remain exclusions, not portable credential import/authority proof.

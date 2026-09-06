@@ -9,7 +9,7 @@ import '../simkl/simkl_calendar_service.dart';
 import '../simkl/simkl_continue_watching_service.dart';
 import '../simkl/simkl_item_transformer.dart';
 import '../simkl/simkl_list_source.dart';
-import '../storage_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../trakt/trakt_calendar_service.dart';
 import '../trakt/trakt_continue_watching_service.dart';
 import '../trakt/trakt_item_transformer.dart';
@@ -92,7 +92,7 @@ List<TrackerSpec> productionTrackerSpecs() => [
     source: TrackingSource.trakt,
     progressSource: WatchProgressSource.trakt,
     label: 'Trakt',
-    hasCredential: StorageService.hasTraktCredential,
+    hasCredential: TrackingPrefs.hasTraktCredential,
     listSource: TraktListSource.instance,
     calendar: TraktCalendarService.instance,
     continueWatching: TraktContinueWatchingService.instance,
@@ -102,7 +102,7 @@ List<TrackerSpec> productionTrackerSpecs() => [
     source: TrackingSource.simkl,
     progressSource: WatchProgressSource.simkl,
     label: 'Simkl',
-    hasCredential: StorageService.hasSimklCredential,
+    hasCredential: TrackingPrefs.hasSimklCredential,
     listSource: SimklListSource.instance,
     calendar: SimklCalendarService.instance,
     continueWatching: SimklContinueWatchingService.instance,
@@ -112,7 +112,7 @@ List<TrackerSpec> productionTrackerSpecs() => [
     source: TrackingSource.mdblist,
     progressSource: WatchProgressSource.mdblist,
     label: 'MDBList',
-    hasCredential: StorageService.hasMdblistCredential,
+    hasCredential: TrackingPrefs.hasMdblistCredential,
     listSource: MdblistListSource.instance,
     calendar: MdblistCalendarService.instance,
     continueWatching: MdblistContinueWatchingService.instance,

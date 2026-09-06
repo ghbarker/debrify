@@ -1,5 +1,5 @@
 import '../models/tracking_source.dart';
-import 'storage_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'tracking/tracker_registry.dart';
 
 export '../models/tracking_source.dart';
@@ -20,14 +20,14 @@ class TrackingSourcePolicy {
   final Set<TrackingSource> homeTickSources;
 
   static Future<TrackingSourcePolicy> load() async {
-    final scrobbleTargets = await StorageService.getTrackingScrobbleTargets();
-    var progressSource = await StorageService.getWatchProgressSource();
+    final scrobbleTargets = await TrackingPrefs.getTrackingScrobbleTargets();
+    var progressSource = await TrackingPrefs.getWatchProgressSource();
     final dedicated = TrackerRegistry.instance.dedicatedProgress(
       progressSource,
     );
     if (dedicated != null) {
       if (!await dedicated.hasCredential()) {
-        await StorageService.fallbackDisconnectedProgressSource(
+        await TrackingPrefs.fallbackDisconnectedProgressSource(
           dedicated.source,
         );
         progressSource = WatchProgressSource.smart;
@@ -36,7 +36,7 @@ class TrackingSourcePolicy {
     return TrackingSourcePolicy(
       scrobbleTargets: scrobbleTargets,
       progressSource: progressSource,
-      homeTickSources: await StorageService.getHomeTickSources(),
+      homeTickSources: await TrackingPrefs.getHomeTickSources(),
     );
   }
 

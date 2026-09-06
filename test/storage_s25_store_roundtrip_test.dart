@@ -29,28 +29,28 @@ void main() {
   test(
     'StorageService tracking writes are readable through TrackingPrefs',
     () async {
-      await StorageService.setTrackingScrobbleTargets(<TrackingSource>{
+      await TrackingPrefs.setTrackingScrobbleTargets(<TrackingSource>{
         TrackingSource.local,
         TrackingSource.trakt,
       });
-      await StorageService.setWatchProgressSource(WatchProgressSource.simkl);
-      await StorageService.setHomeTickSources(<TrackingSource>{
+      await TrackingPrefs.setWatchProgressSource(WatchProgressSource.simkl);
+      await TrackingPrefs.setHomeTickSources(<TrackingSource>{
         TrackingSource.local,
         TrackingSource.mdblist,
       });
-      await StorageService.setTraktSyncCatalogItems(true);
-      await StorageService.setSimklSyncCatalogItems(true);
-      await StorageService.setMdblistSyncCatalogItems(true);
-      await StorageService.setTraktAccessToken('trakt-access');
-      await StorageService.setTraktRefreshToken('trakt-refresh');
-      await StorageService.setTraktUsername('trakt-user');
-      await StorageService.setTraktTokenExpiry(42);
-      await StorageService.setSimklAccessToken('simkl-access');
-      await StorageService.setSimklUsername('simkl-user');
-      await StorageService.saveMdblistApiKey('mdb-key');
-      await StorageService.setMdblistUsername('mdb-user');
-      await StorageService.setMdblistSavedClone(3, 4);
-      await StorageService.setMdblistSyncCheckpoint(<String, dynamic>{
+      await TrackingPrefs.setTraktSyncCatalogItems(true);
+      await TrackingPrefs.setSimklSyncCatalogItems(true);
+      await TrackingPrefs.setMdblistSyncCatalogItems(true);
+      await TrackingPrefs.setTraktAccessToken('trakt-access');
+      await TrackingPrefs.setTraktRefreshToken('trakt-refresh');
+      await TrackingPrefs.setTraktUsername('trakt-user');
+      await TrackingPrefs.setTraktTokenExpiry(42);
+      await TrackingPrefs.setSimklAccessToken('simkl-access');
+      await TrackingPrefs.setSimklUsername('simkl-user');
+      await TrackingPrefs.saveMdblistApiKey('mdb-key');
+      await TrackingPrefs.setMdblistUsername('mdb-user');
+      await TrackingPrefs.setMdblistSavedClone(3, 4);
+      await TrackingPrefs.setMdblistSyncCheckpoint(<String, dynamic>{
         'cursor': 'z',
       });
 
@@ -92,7 +92,7 @@ void main() {
       'watch_progress_source': 'plex',
     });
     expect(
-      await StorageService.getWatchProgressSource(),
+      await TrackingPrefs.getWatchProgressSource(),
       WatchProgressSource.smart,
     );
     expect(
@@ -103,7 +103,7 @@ void main() {
 
   test('façade revision notifier is the store instance', () async {
     final before = TrackingPrefs.trackingSourceRevision.value;
-    await StorageService.setWatchProgressSource(WatchProgressSource.local);
+    await TrackingPrefs.setWatchProgressSource(WatchProgressSource.local);
     expect(TrackingPrefs.trackingSourceRevision.value, before + 1);
     expect(
       StorageService.trackingSourceRevision.value,

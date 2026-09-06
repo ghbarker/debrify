@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../services/analytics_service.dart';
 import '../../services/main_page_bridge.dart';
 import '../../services/mdblist/mdblist_service.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../../utils/platform_util.dart';
 import '../../widgets/tv_text_field.dart';
 import 'widgets/settings_widgets.dart';
@@ -56,7 +56,7 @@ class _MdblistSettingsPageState extends State<MdblistSettingsPage> {
   }
 
   Future<void> _load() async {
-    final configured = await StorageService.hasMdblistCredential();
+    final configured = await TrackingPrefs.hasMdblistCredential();
     if (!mounted) return;
     setState(() {
       _savedApiKey = configured ? '' : null;
@@ -152,7 +152,7 @@ class _MdblistSettingsPageState extends State<MdblistSettingsPage> {
       _isEditing = false;
       _apiKeyController.clear();
     });
-    final fellBack = await StorageService.takeTrackingProgressFallbackNotice();
+    final fellBack = await TrackingPrefs.takeTrackingProgressFallbackNotice();
     if (!mounted) return;
     _snack(
       fellBack

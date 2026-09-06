@@ -589,19 +589,6 @@ class StorageService {
       CloudSecretPrefs.delete(_allDebridApiKey);
 
   // MDBList — forwarding façade; bodies live on TrackingPrefs.
-  static Future<String?> getMdblistApiKey({bool forRemoteTransfer = false}) =>
-      TrackingPrefs.getMdblistApiKey(forRemoteTransfer: forRemoteTransfer);
-  static Future<bool> hasMdblistCredential() => TrackingPrefs.hasMdblistCredential();
-  static Future<void> saveMdblistApiKey(String apiKey) => TrackingPrefs.saveMdblistApiKey(apiKey);
-  static Future<String?> getMdblistUsername() => TrackingPrefs.getMdblistUsername();
-  static Future<void> setMdblistUsername(String? username) => TrackingPrefs.setMdblistUsername(username);
-  static Future<void> clearMdblistAuth() => TrackingPrefs.clearMdblistAuth();
-  static Future<Map<int, int>> getMdblistSavedClones() => TrackingPrefs.getMdblistSavedClones();
-  static Future<void> setMdblistSavedClone(int sourceId, int clonedId) => TrackingPrefs.setMdblistSavedClone(sourceId, clonedId);
-  static Future<void> removeMdblistSavedClone(int sourceId) => TrackingPrefs.removeMdblistSavedClone(sourceId);
-  static Future<void> retireMdblistSavedCloneMarkers() => TrackingPrefs.retireMdblistSavedCloneMarkers();
-  static Future<Map<String, dynamic>?> getMdblistSyncCheckpoint() => TrackingPrefs.getMdblistSyncCheckpoint();
-  static Future<void> setMdblistSyncCheckpoint(Map<String, dynamic>? value) => TrackingPrefs.setMdblistSyncCheckpoint(value);
 
 
 
@@ -1049,49 +1036,12 @@ class StorageService {
 
 
   // Tracking source policy — forwarding façade; bodies live on TrackingPrefs.
-  static Future<Set<TrackingSource>> getTrackingScrobbleTargets() => TrackingPrefs.getTrackingScrobbleTargets();
-  static Future<void> setTrackingScrobbleTargets(Set<TrackingSource> value) => TrackingPrefs.setTrackingScrobbleTargets(value);
-  static Future<void> enableTrackingScrobbleTarget(TrackingSource source) => TrackingPrefs.enableTrackingScrobbleTarget(source);
-  static Future<WatchProgressSource> getWatchProgressSource() => TrackingPrefs.getWatchProgressSource();
-  static Future<void> setWatchProgressSource(WatchProgressSource value) => TrackingPrefs.setWatchProgressSource(value);
-  static Future<bool> fallbackDisconnectedProgressSource(TrackingSource disconnected) => TrackingPrefs.fallbackDisconnectedProgressSource(disconnected);
-  static Future<bool> takeTrackingProgressFallbackNotice() => TrackingPrefs.takeTrackingProgressFallbackNotice();
-  static Future<Set<TrackingSource>> getHomeTickSources() => TrackingPrefs.getHomeTickSources();
-  static Future<void> setHomeTickSources(Set<TrackingSource> value) => TrackingPrefs.setHomeTickSources(value);
-  static Future<Map<String, dynamic>> buildTrackingPreferencesPayload() => TrackingPrefs.buildTrackingPreferencesPayload();
-  static Future<void> reseedTrackingScrobbleTargetsFromLegacy() => TrackingPrefs.reseedTrackingScrobbleTargetsFromLegacy();
-  static Future<void> applyTrackingPreferencesPayload(Map<dynamic, dynamic> payload) => TrackingPrefs.applyTrackingPreferencesPayload(payload);
 
 
 
 
 
   // Trakt / Simkl / MDBList catalog + credentials — TrackingPrefs façade.
-  static Future<bool> getTraktSyncCatalogItems() => TrackingPrefs.getTraktSyncCatalogItems();
-  static Future<void> setTraktSyncCatalogItems(bool value) => TrackingPrefs.setTraktSyncCatalogItems(value);
-  static Future<String?> getTraktAccessToken({bool forRemoteTransfer = false}) =>
-      TrackingPrefs.getTraktAccessToken(forRemoteTransfer: forRemoteTransfer);
-  static Future<bool> hasTraktCredential() => TrackingPrefs.hasTraktCredential();
-  static Future<void> setTraktAccessToken(String token) => TrackingPrefs.setTraktAccessToken(token);
-  static Future<String?> getTraktRefreshToken({bool forRemoteTransfer = false}) =>
-      TrackingPrefs.getTraktRefreshToken(forRemoteTransfer: forRemoteTransfer);
-  static Future<void> setTraktRefreshToken(String token) => TrackingPrefs.setTraktRefreshToken(token);
-  static Future<String?> getTraktUsername() => TrackingPrefs.getTraktUsername();
-  static Future<void> setTraktUsername(String username) => TrackingPrefs.setTraktUsername(username);
-  static Future<int?> getTraktTokenExpiry() => TrackingPrefs.getTraktTokenExpiry();
-  static Future<void> setTraktTokenExpiry(int expiryMs) => TrackingPrefs.setTraktTokenExpiry(expiryMs);
-  static Future<bool> clearTraktAuth() => TrackingPrefs.clearTraktAuth();
-  static Future<void> setSimklSyncCatalogItems(bool value) => TrackingPrefs.setSimklSyncCatalogItems(value);
-  static Future<bool> getSimklSyncCatalogItems() => TrackingPrefs.getSimklSyncCatalogItems();
-  static Future<void> setMdblistSyncCatalogItems(bool value) => TrackingPrefs.setMdblistSyncCatalogItems(value);
-  static Future<bool> getMdblistSyncCatalogItems() => TrackingPrefs.getMdblistSyncCatalogItems();
-  static Future<String?> getSimklAccessToken({bool forRemoteTransfer = false}) =>
-      TrackingPrefs.getSimklAccessToken(forRemoteTransfer: forRemoteTransfer);
-  static Future<bool> hasSimklCredential() => TrackingPrefs.hasSimklCredential();
-  static Future<void> setSimklAccessToken(String token) => TrackingPrefs.setSimklAccessToken(token);
-  static Future<String?> getSimklUsername() => TrackingPrefs.getSimklUsername();
-  static Future<void> setSimklUsername(String username) => TrackingPrefs.setSimklUsername(username);
-  static Future<void> clearSimklAuth() => TrackingPrefs.clearSimklAuth();
 
 
 

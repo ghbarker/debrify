@@ -9,7 +9,7 @@ import 'episode_tracker_snapshot_revision.dart';
 import 'mdblist/mdblist_service.dart';
 import 'profiles/profile_async_authorization.dart';
 import 'simkl/simkl_service.dart';
-import 'storage_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'trakt/trakt_service.dart';
 import 'tracking_source_policy.dart';
 
@@ -285,7 +285,7 @@ class EpisodeTrackerSnapshotService {
       final storeWriteKey = _storeWriteKey('trakt', authorization);
       final accessToken = await _runBound(
         authorization,
-        StorageService.getTraktAccessToken,
+        TrackingPrefs.getTraktAccessToken,
       );
       if (accessToken == null || accessToken.isEmpty) {
         // No credential is an authoritative disconnect, not a transient API

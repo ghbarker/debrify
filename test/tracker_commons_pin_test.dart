@@ -9,7 +9,7 @@ import 'package:debrify/services/simkl/simkl_calendar_service.dart';
 import 'package:debrify/services/simkl/simkl_continue_watching_service.dart';
 import 'package:debrify/services/simkl/simkl_item_transformer.dart';
 import 'package:debrify/services/simkl/simkl_list_source.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'package:debrify/services/tracking_source_policy.dart';
 import 'package:debrify/services/trakt/trakt_calendar_service.dart';
 import 'package:debrify/services/trakt/trakt_continue_watching_service.dart';
@@ -402,10 +402,10 @@ void main() {
     });
 
     test('load: local progress is not dedicated and does not fall back', () async {
-      await StorageService.setWatchProgressSource(WatchProgressSource.local);
+      await TrackingPrefs.setWatchProgressSource(WatchProgressSource.local);
       final policy = await TrackingSourcePolicy.load();
       expect(policy.progressSource, WatchProgressSource.local);
-      expect(await StorageService.takeTrackingProgressFallbackNotice(), isFalse);
+      expect(await TrackingPrefs.takeTrackingProgressFallbackNotice(), isFalse);
     });
 
     test('load: each disconnected remote dedicated source falls back to smart',
@@ -418,14 +418,14 @@ void main() {
         SharedPreferences.setMockInitialValues(<String, Object>{});
         ProfileRuntime.debugReset();
         ProfileRuntime.initializeLegacy();
-        await StorageService.setWatchProgressSource(source);
+        await TrackingPrefs.setWatchProgressSource(source);
         final policy = await TrackingSourcePolicy.load();
         expect(
           policy.progressSource,
           WatchProgressSource.smart,
           reason: '$source with no credential must fall back',
         );
-        expect(await StorageService.takeTrackingProgressFallbackNotice(), isTrue);
+        expect(await TrackingPrefs.takeTrackingProgressFallbackNotice(), isTrue);
       }
     });
   });

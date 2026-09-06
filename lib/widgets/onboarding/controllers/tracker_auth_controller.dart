@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../../services/analytics_service.dart';
 import '../../../services/main_page_bridge.dart';
 import '../../../services/simkl/simkl_service.dart';
-import '../../../services/storage_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../../../services/trakt/trakt_service.dart';
 
 enum TrackerKind { trakt, simkl }
@@ -258,9 +258,9 @@ class TrackerAuthController extends ChangeNotifier {
       return;
     }
     if (kind == TrackerKind.trakt) {
-      await StorageService.setTraktSyncCatalogItems(true);
+      await TrackingPrefs.setTraktSyncCatalogItems(true);
     } else {
-      await StorageService.setSimklSyncCatalogItems(true);
+      await TrackingPrefs.setSimklSyncCatalogItems(true);
     }
     AnalyticsService.integrationConnected(kind.name, {
       'surface': 'onboarding',

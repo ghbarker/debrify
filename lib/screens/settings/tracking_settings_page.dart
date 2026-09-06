@@ -6,7 +6,7 @@ import '../../services/hide_watched_prefs.dart';
 import '../../services/main_page_bridge.dart';
 import '../../services/mdblist/mdblist_service.dart';
 import '../../services/simkl/simkl_service.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../../services/trakt/trakt_service.dart';
 import '../../utils/platform_util.dart';
 import 'widgets/settings_widgets.dart';
@@ -36,13 +36,13 @@ class _TrackingSettingsPageState extends State<TrackingSettingsPage> {
 
   Future<void> _load() async {
     final values = await Future.wait<Object>([
-      StorageService.getTrackingScrobbleTargets(),
-      StorageService.getWatchProgressSource(),
-      StorageService.getHomeTickSources(),
+      TrackingPrefs.getTrackingScrobbleTargets(),
+      TrackingPrefs.getWatchProgressSource(),
+      TrackingPrefs.getHomeTickSources(),
       TraktService.instance.isAuthenticated(),
       SimklService.instance.isAuthenticated(),
       MdblistService.instance.isAuthenticated(),
-      StorageService.takeTrackingProgressFallbackNotice(),
+      TrackingPrefs.takeTrackingProgressFallbackNotice(),
       HideWatchedPrefs.read(),
     ]);
     if (!mounted) return;
@@ -58,7 +58,7 @@ class _TrackingSettingsPageState extends State<TrackingSettingsPage> {
         dedicated != TrackingSource.local &&
         !connected.contains(dedicated)) {
       progress = WatchProgressSource.smart;
-      await StorageService.setWatchProgressSource(progress);
+      await TrackingPrefs.setWatchProgressSource(progress);
       fellBack = true;
     }
     if (!mounted) return;
@@ -113,14 +113,14 @@ class _TrackingSettingsPageState extends State<TrackingSettingsPage> {
     enabled ? next.add(source) : next.remove(source);
     next.add(TrackingSource.local);
     setState(() => _scrobble = next);
-    await StorageService.setTrackingScrobbleTargets(next);
+    await TrackingPrefs.setTrackingScrobbleTargets(next);
     MainPageBridge.notifyIntegrationChanged();
   }
 
   Future<void> _setProgress(WatchProgressSource? source) async {
     if (source == null) return;
     setState(() => _progress = source);
-    await StorageService.setWatchProgressSource(source);
+    await TrackingPrefs.setWatchProgressSource(source);
     MainPageBridge.notifyHomeSettingsChanged();
     MainPageBridge.notifyIntegrationChanged();
   }
@@ -129,7 +129,7 @@ class _TrackingSettingsPageState extends State<TrackingSettingsPage> {
     final next = Set<TrackingSource>.of(_ticks);
     enabled ? next.add(source) : next.remove(source);
     setState(() => _ticks = next);
-    await StorageService.setHomeTickSources(next);
+    await TrackingPrefs.setHomeTickSources(next);
     MainPageBridge.notifyHomeSettingsChanged();
   }
 

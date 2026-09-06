@@ -16,6 +16,7 @@ import '../../services/remote_control/remote_control_state.dart';
 import '../../services/remote_control/remote_session.dart';
 import '../../services/remote_control/remote_transfer_diagnostics.dart';
 import 'remote_pairing_dialog.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../services/mdblist/mdblist_service.dart';
 import '../../services/stremio_service.dart';
@@ -163,27 +164,27 @@ class _RemoteTransferAllState extends State<RemoteTransferAll> {
       final ppEnabled = await ProviderCredentialPrefs.getPikPakEnabled();
       final hasPp = (pikpakEmail?.isNotEmpty ?? false) && ppEnabled;
 
-      final traktAccessToken = await StorageService.getTraktAccessToken(
+      final traktAccessToken = await TrackingPrefs.getTraktAccessToken(
         forRemoteTransfer: true,
       );
-      final traktRefreshToken = await StorageService.getTraktRefreshToken(
+      final traktRefreshToken = await TrackingPrefs.getTraktRefreshToken(
         forRemoteTransfer: true,
       );
-      _traktUsername = await StorageService.getTraktUsername();
+      _traktUsername = await TrackingPrefs.getTraktUsername();
       final hasTrakt =
           (traktAccessToken?.isNotEmpty ?? false) &&
           (traktRefreshToken?.isNotEmpty ?? false);
 
-      final simklAccessToken = await StorageService.getSimklAccessToken(
+      final simklAccessToken = await TrackingPrefs.getSimklAccessToken(
         forRemoteTransfer: true,
       );
-      _simklUsername = await StorageService.getSimklUsername();
+      _simklUsername = await TrackingPrefs.getSimklUsername();
       final hasSimkl = simklAccessToken?.isNotEmpty ?? false;
 
       final mdblistApiKey = kMdblistEnabled
-          ? await StorageService.getMdblistApiKey(forRemoteTransfer: true)
+          ? await TrackingPrefs.getMdblistApiKey(forRemoteTransfer: true)
           : null;
-      _mdblistUsername = await StorageService.getMdblistUsername();
+      _mdblistUsername = await TrackingPrefs.getMdblistUsername();
       final hasMdblist = mdblistApiKey?.isNotEmpty ?? false;
 
       await LocalEngineStorage.instance.initialize();

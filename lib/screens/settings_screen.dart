@@ -42,6 +42,7 @@ import '../services/download_service.dart';
 import '../services/mdblist/mdblist_service.dart';
 import '../services/simkl/simkl_service.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../services/storage_service.dart';
 import '../services/support_remote_config_service.dart';
 import '../services/torbox_account_service.dart';
@@ -359,19 +360,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       PikPakApiService.instance.isAuthenticated(),
       ProviderCredentialPrefs.getWebDavEnabled(),
       ProviderCredentialPrefs.getWebDavServers(forSettings: true),
-      StorageService.hasTraktCredential(),
-      StorageService.getTraktTokenExpiry(),
-      StorageService.getTraktUsername(),
+      TrackingPrefs.hasTraktCredential(),
+      TrackingPrefs.getTraktTokenExpiry(),
+      TrackingPrefs.getTraktUsername(),
       AppVersionInfo.get(),
       AndroidNativeDownloader.isTelevision(),
       StorageService.getUpdateAutoCheckEnabled(),
       StorageService.getIndexerManagerConfigs(forSettings: true),
       StorageService.hasPremiumizeCredential(),
       StorageService.hasAllDebridCredential(),
-      StorageService.hasSimklCredential(),
-      StorageService.getSimklUsername(),
-      StorageService.hasMdblistCredential(),
-      StorageService.getMdblistUsername(),
+      TrackingPrefs.hasSimklCredential(),
+      TrackingPrefs.getSimklUsername(),
+      TrackingPrefs.hasMdblistCredential(),
+      TrackingPrefs.getMdblistUsername(),
       StorageService.getTvKeyboardEnabled(),
       StorageService.getTvUiScalePercent(),
       StorageService.getTvHomeStyle(),
@@ -1927,7 +1928,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     AllDebridAccountService.clearUserInfo();
     await ProviderCredentialPrefs.clearPikPakAuth();
     await ProviderCredentialPrefs.clearWebDav();
-    await StorageService.clearTraktAuth();
+    await TrackingPrefs.clearTraktAuth();
     // Clears the token + username AND the in-memory library cache.
     await SimklService.instance.logout();
     // Clears the key + username AND the in-memory list/items cache.

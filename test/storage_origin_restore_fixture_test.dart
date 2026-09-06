@@ -29,6 +29,7 @@ import 'package:debrify/services/profiles/profile_scope.dart';
 import 'package:debrify/services/secret_vault.dart';
 import 'package:debrify/services/storage/download_destination_prefs.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -199,14 +200,14 @@ Future<void> _seedThroughStorageService() async {
   await StorageService.setThemeOverrides('{"synthetic":"fixture"}');
   await StorageService.setPhoneNavStyle('floating');
   await StorageService.setTvUiScalePercent(80);
-  await StorageService.setTrackingScrobbleTargets({
+  await TrackingPrefs.setTrackingScrobbleTargets({
     TrackingSource.local,
     TrackingSource.mdblist,
   });
-  await StorageService.setWatchProgressSource(WatchProgressSource.simkl);
-  await StorageService.setTraktSyncCatalogItems(true);
-  await StorageService.setSimklSyncCatalogItems(false);
-  await StorageService.setMdblistSyncCatalogItems(true);
+  await TrackingPrefs.setWatchProgressSource(WatchProgressSource.simkl);
+  await TrackingPrefs.setTraktSyncCatalogItems(true);
+  await TrackingPrefs.setSimklSyncCatalogItems(false);
+  await TrackingPrefs.setMdblistSyncCatalogItems(true);
   // Additional domains share typed data and the actual profile preference API.
   // The independent recipe specifies physical encodings, not exporter output.
   await _writeValues({
@@ -272,14 +273,14 @@ Future<Map<String, Object?>> _readThroughStorageService(
   'phone_nav_style': await StorageService.getPhoneNavStyle(),
   'tv_ui_scale_percent': await StorageService.getTvUiScalePercent(),
   'tracking_scrobble_targets':
-      (await StorageService.getTrackingScrobbleTargets())
+      (await TrackingPrefs.getTrackingScrobbleTargets())
           .map((s) => s.name)
           .toList(),
-  'watch_progress_source': (await StorageService.getWatchProgressSource()).name,
-  'trakt_sync_catalog_items': await StorageService.getTraktSyncCatalogItems(),
-  'simkl_sync_catalog_items': await StorageService.getSimklSyncCatalogItems(),
+  'watch_progress_source': (await TrackingPrefs.getWatchProgressSource()).name,
+  'trakt_sync_catalog_items': await TrackingPrefs.getTraktSyncCatalogItems(),
+  'simkl_sync_catalog_items': await TrackingPrefs.getSimklSyncCatalogItems(),
   'mdblist_sync_catalog_items':
-      await StorageService.getMdblistSyncCatalogItems(),
+      await TrackingPrefs.getMdblistSyncCatalogItems(),
 };
 
 Map<String, Object?> _values(PortableProfilePackage package) =>
@@ -546,7 +547,7 @@ void main() {
   final tickValues = Map<String, Object?>.from(tickDomain['values'] as Map);
   Future<void> expectTickReaders() async {
     final revision = StorageService.trackingSourceRevision.value;
-    final sources = await StorageService.getHomeTickSources();
+    final sources = await TrackingPrefs.getHomeTickSources();
     expect(sources.map((source) => source.storageName).toList(),
         tickDomain['expectedPublicRead']);
     expect(StorageService.trackingSourceRevision.value, revision,
@@ -2246,20 +2247,20 @@ void main() {
             }, unchangedOther);
           }
           if (!isResidual) {
-            expect(await StorageService.getMdblistSavedClones(), {
+            expect(await TrackingPrefs.getMdblistSavedClones(), {
               101: 201,
               102: 202,
             });
             expect(
-              await StorageService.getMdblistSyncCheckpoint(),
+              await TrackingPrefs.getMdblistSyncCheckpoint(),
               jsonDecode(_settings['mdblist_sync_checkpoint_v1']! as String),
             );
             expect(
-              await StorageService.takeTrackingProgressFallbackNotice(),
+              await TrackingPrefs.takeTrackingProgressFallbackNotice(),
               true,
             );
             expect(
-              await StorageService.takeTrackingProgressFallbackNotice(),
+              await TrackingPrefs.takeTrackingProgressFallbackNotice(),
               false,
             );
           }

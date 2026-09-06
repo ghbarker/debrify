@@ -8,6 +8,7 @@ import '../../models/tracking_source.dart';
 import '../episode_tracker_snapshot_revision.dart';
 import '../profiles/profile_async_authorization.dart';
 import '../profiles/profile_runtime.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../storage_service.dart';
 import 'trakt_calendar_service.dart';
 import 'trakt_constants.dart';
@@ -400,11 +401,11 @@ class TraktService {
 
   /// Check if the user is authenticated (has a non-expired access token).
   Future<bool> isAuthenticated() async {
-    final token = await StorageService.getTraktAccessToken();
+    final token = await TrackingPrefs.getTraktAccessToken();
     if (token == null || token.isEmpty) return false;
 
     // Check if token is expired
-    final expiryMs = await StorageService.getTraktTokenExpiry();
+    final expiryMs = await TrackingPrefs.getTraktTokenExpiry();
     if (expiryMs != null && DateTime.now().millisecondsSinceEpoch >= expiryMs) {
       // Try to refresh
       final refreshed = await refreshAccessToken();
@@ -429,7 +430,7 @@ class TraktService {
 
   Future<bool> _refreshAccessTokenScoped() async {
     try {
-      final refreshToken = await StorageService.getTraktRefreshToken();
+      final refreshToken = await TrackingPrefs.getTraktRefreshToken();
       if (refreshToken == null || refreshToken.isEmpty) return false;
 
       final response = await http
@@ -461,11 +462,11 @@ class TraktService {
 
   /// Revoke the current token and clear stored auth data.
   Future<void> logout() async {
-    final accessToken = await StorageService.getTraktAccessToken();
+    final accessToken = await TrackingPrefs.getTraktAccessToken();
     // Local disposition happens before the upstream side effect. A shared
     // owner fails closed here, while a borrower detaches without revoking the
     // account used by its owner and other grantees.
-    final shouldRevokeRemote = await StorageService.clearTraktAuth();
+    final shouldRevokeRemote = await TrackingPrefs.clearTraktAuth();
     try {
       if (shouldRevokeRemote && accessToken != null) {
         await http.post(
@@ -490,7 +491,7 @@ class TraktService {
 
   /// Get the stored username.
   Future<String?> getUsername() async {
-    return StorageService.getTraktUsername();
+    return TrackingPrefs.getTraktUsername();
   }
 
   /// Store tokens and expiry from a token response.
@@ -500,15 +501,15 @@ class TraktService {
     // previous user's watchlist/collection/ratings can't be served. Harmless on
     // a same-account refresh — it just forces one re-fetch.
     _invalidateLibraryCache();
-    await StorageService.setTraktAccessToken(data['access_token'] as String);
-    await StorageService.setTraktRefreshToken(data['refresh_token'] as String);
+    await TrackingPrefs.setTraktAccessToken(data['access_token'] as String);
+    await TrackingPrefs.setTraktRefreshToken(data['refresh_token'] as String);
 
     final expiresIn = data['expires_in'] as int?;
     if (expiresIn != null) {
       final expiryMs = DateTime.now()
           .add(Duration(seconds: expiresIn))
           .millisecondsSinceEpoch;
-      await StorageService.setTraktTokenExpiry(expiryMs);
+      await TrackingPrefs.setTraktTokenExpiry(expiryMs);
     }
     StorageService.movieFinishedRevision.value++;
   }
@@ -584,7 +585,7 @@ class TraktService {
         _deviceAuthorizations.remove(deviceCode);
         Future<void> commit() async {
           await _storeTokens(data);
-          await StorageService.enableTrackingScrobbleTarget(
+          await TrackingPrefs.enableTrackingScrobbleTarget(
             TrackingSource.trakt,
           );
           final accessToken = data['access_token'] as String;
@@ -645,7 +646,7 @@ class TraktService {
     String path,
     Map<String, dynamic> body,
   ) async {
-    var accessToken = await StorageService.getTraktAccessToken();
+    var accessToken = await TrackingPrefs.getTraktAccessToken();
     if (accessToken == null) return null;
 
     try {
@@ -662,7 +663,7 @@ class TraktService {
         final refreshed = await refreshAccessToken();
         if (!refreshed) return null;
 
-        accessToken = await StorageService.getTraktAccessToken();
+        accessToken = await TrackingPrefs.getTraktAccessToken();
         if (accessToken == null) return null;
 
         response = await http
@@ -939,7 +940,7 @@ class TraktService {
   }
 
   Future<http.Response?> _authenticatedGet(String path) async {
-    var accessToken = await StorageService.getTraktAccessToken();
+    var accessToken = await TrackingPrefs.getTraktAccessToken();
     if (accessToken == null) return null;
 
     try {
@@ -955,7 +956,7 @@ class TraktService {
         final refreshed = await refreshAccessToken();
         if (!refreshed) return null;
 
-        accessToken = await StorageService.getTraktAccessToken();
+        accessToken = await TrackingPrefs.getTraktAccessToken();
         if (accessToken == null) return null;
 
         response = await http
@@ -974,7 +975,7 @@ class TraktService {
   }
 
   Future<http.Response?> _authenticatedDelete(String path) async {
-    var accessToken = await StorageService.getTraktAccessToken();
+    var accessToken = await TrackingPrefs.getTraktAccessToken();
     if (accessToken == null) return null;
 
     try {
@@ -989,7 +990,7 @@ class TraktService {
         final refreshed = await refreshAccessToken();
         if (!refreshed) return null;
 
-        accessToken = await StorageService.getTraktAccessToken();
+        accessToken = await TrackingPrefs.getTraktAccessToken();
         if (accessToken == null) return null;
 
         response = await http
@@ -1293,7 +1294,7 @@ class TraktService {
         final user = data['user'] as Map<String, dynamic>?;
         final username = user?['username'] as String?;
         if (username != null) {
-          await StorageService.setTraktUsername(username);
+          await TrackingPrefs.setTraktUsername(username);
         }
         return true;
       }
