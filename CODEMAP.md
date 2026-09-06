@@ -37,9 +37,9 @@ Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.
 `search_screen_shells.dart` (tab/variant/landing/dropdown contracts),
 `keyword_search_controller.dart` + `keyword_search_screen.dart` (in-tab keyword
 torrent search; G1'-3).
-TV Home stages (five remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
-— `_CanvasBoardStage`, `_AtriumBoardStage`, `_MosaicBoardStage`, `_PromenadeBoardStage`,
-`_DeckBoardStage`. Tonight uses public `TonightStage`, `TonightStageContent` in
+TV Home stages (four remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
+— `_CanvasBoardStage`, `_AtriumBoardStage`, `_MosaicBoardStage`, `_PromenadeBoardStage`.
+Deck uses public `DeckStage` in `deck_board_stage.dart` and shared `search/stage_visuals.dart`. Tonight uses public `TonightStage`, `TonightStageContent` in
 `tonight_stage_content.dart`, and `TonightQueueRow`/State, `TonightCardInfo` and
 `TonightQueueEntry` in `tonight_stage_widgets.dart`. Neutral `StageRailView` lives
 beside `CanvasRail` in `search_board_runtime.dart`. Spotlight uses public `SpotlightStage` plus
@@ -231,6 +231,16 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   `buildRailLabel` callback retain host-context lookup until final composition /
   phase-completion review. This is partial shared-cell ownership, not whole Deck
   or closure of the 1400 stage target.
+  Public `stage_visuals.dart` now owns the 15 shared visual declarations and the
+  original private processwide failed-backdrop memo; actual `DeckStage` owns its
+  full layout/peeks, removing its State extension and part dependency.
+  Host 6480 -> 6457 (**23 net Leaves**); whole production **+105**, including moved
+  attached documentation and optional `super.key` on three public constructors
+  (existing callers retain null keys). This is not native/cache-algorithm coverage.
+  `DeckStageBindings` retains 22 live/reference members, including two lazy native
+  constructor closures on the host; these and the label boundaries above expire
+  for removal/review at final composition / phase completion. Four stage parts and
+  the aggregate stage target remain open; prior shared-shelf accounting is separate.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
