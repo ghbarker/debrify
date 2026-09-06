@@ -729,3 +729,6 @@ Actual pre-S2 6d26 export excludes initial_setup_complete_v1 while authenticated
 
 ## Atrium origin hold — September 6
 Two finite origin runs at 1920x1080 and 1920x1440 reached navigation assertions but each ended red on a 2.1px RenderFlex overflow. No green pin or extraction credit. A two-label typography/height mismatch is a source-based numerical hypothesis, not verified RenderObject attribution. Raw logs and uncommitted origin test remain in debrify-g1-8-atrium-stage; no suppression, product fix or further runtime attempt authorized. M1 cached consolidation may meet its leaf-size target while live WatchFlowBindings/UI coupling remains open; distinct provider algorithms are intentional, not a demand for another abstraction.
+
+## PR182 native reliability note
+Exactdf41 CI attempt1 passed originbc46 but current process hung600s with no assertion/error terminal. One authorized failed-job retry passed both sides using identical test/runtime hashes. Cause unknown; original and retry artifacts retained in C0 history-watchlist review .dart_tool/q2-review. No timeout/code/baseline change; accepted with note, not first-pass-green or proven infrastructure failure.

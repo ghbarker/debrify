@@ -1,83 +1,86 @@
 # Refactor board
 
-## Current roadmap — September 6, main 95c93caa
+## Current roadmap — September 6, main 56788ddb
 
-Overall percentage remains withdrawn: no reliable remaining-work denominator. Size targets and architectural closure are distinct.
+### God-file line counts — original → current merged main
 
-### Done and merged
-- [x] Standalone Discover #170 and Spotlight #173; remaining stage layouts/composition stay open.
-- [x] Storage facade retirement #165, Quick Play #168, VR #171 and onboarding #174. Storage size target met; remaining ownership/facade work stays open.
-- [x] Watch-flow shared admission #166, quick Windowed #172 and cached Windowed #175. #175 independently accepted at 0f9a84d6, all three CI checks green, merged 5e1240b4 after gate730 passed. Green pin and move commits retained.
-- [x] Full integrated gate on 730b18fa accepted; #175 is AFTER that gate, not included in its counts/builds.
+- **Search:** 19,070 → **6,551** (12,519 fewer)
+- **Player:** 16,278 → **11,928** (4,350 fewer)
+- **Magic TV:** 10,716 → **3,321** (7,395 fewer)
+- **Storage:** 9,963 → **2,518** (7,445 fewer)
+- **Settings:** 7,905 → **2,901** (5,004 fewer)
 
-### Working now
-- Cicero: independent production review #176 remote-device owner after completing gate730.
-- Ampere: cached locked RD/AllDebrid programme implementation on refactor/m1-7-cached-locked-programme. Eight green real-origin pins; independent scope review accepted. Three production files plus three exact source inventories granted. Under800 forecast is not full M1 closure.
-- Locke: narrow Tonight diagnostic correspondence accepted; read-only remaining storage ownership/forwarder closure scope next. Remote #176 published at 7b6bf612, awaiting independent review/CI.
-- Wegener: Tonight #177 on refactor/g1-8-tonight-stage; frozen production2392376e, docs8ef3ef0b. Single91-test batch passed; narrow baseline path/line relocation granted after independent mapping. Next stage scope read-only afterward.
-- Parent: exact-head review/merge coordination. No user blocker. Workers report completion/blockers; next bounded work assigned on handoff.
+Counted from actual merged main 56788ddb. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion percentage remains withdrawn: remaining architectural work lacks a reliable denominator.
 
-### Latest history merge and recovery — supersedes earlier snapshots
-- #180 MERGED95c93caa exact266fd515 after independent87PASS/scoped0 and all3CIgreen. Storage2582→2538; wholeproduction+34, five12-line-total facades retained. Did we make a difference? History persistence has one tested owner; more domain ownership and facade retirement remain, no livecapture feature.
-- Thirdproductionmerge177179180 sincebb843: fullgate95c93 assignedCicero, NOT yetpassed. #181 final932 integrationreview/CI pending; mergeheldgate.
-- Localincident: sharedconfig21446bytes andFETCH_HEAD95bytes allNUL; newQ2worktreeindex322204bytes andsampledREADME/main/pubspec allNUL. Userauthorizedrecovery. Originals preserved .git/recovery-20260906-001041. Minimalcore/remotes reconstructed, not originalbranchsettings restored. Q2index reconstructed fromHEAD without overwritingworkfiles; affectedworktree retained/quarantined, newrecoveredworktree required.
-- gitfsck connectivity PASS afterrecovery; parentcleanfetch/ff95c93; HEAD/refs/worktreeHEADs verified. Causeunknown, no claimalluntrackedfiles checked. Missingtracking settings useexplicitremote/branch.
-- C0 resumesgate afterowncheckout/runtimechecks; Locke restartsboundedQ2origin innewworktree; Ampere/Wegener resume181review/scope afterhealthchecks. No userblocker. No diskpartition/powerchanges.
-### Latest compatibility cleanup — supersedes earlier snapshots
-- #179 MERGEDf4f786fd exact46db8490 after independent73PASS + cleanactualmainunion + completeall3green CIrun34009018766. Duplicatepush/base-change run34009017923 golden stillpending atmerge; samehead, onecompletegreenpipeline confirmed, no newfailureknown.
-- Did we make a difference? Removedtwo cached-entry trampolines and RDwrapper library/holder,37wholeproduction lines deleted. Magic host+3→3321; fourremainingproviderleaves627. Sharedlivehost/UIcoupling stillOPEN, no furtheralgorithmclaim.
-- Counter2 sincebb843 fullgate (177/179). Nextproductionmerge triggersgate. Main Search6551/Player11928/Magic3321/Storage2582/Settings2901. Forwarderledger lastfullgate remains427/133/161/23/0, not recountedcurrent.
-- Locke historyowner frozenadc636f7, minimaldocs/publishing; Cicero independent87verificationnext. Wegener sharedBoardCell5fileimplementation after green113pin; Ampere finalreview preparation. No idle/newuserblocker, no overlappingowners. CODEMAP released.
-### Latest gate and Tonight merge — supersedes earlier snapshots
-- Fullgate bb843424 PASS: generic5754/12known/2skip; goldens21known afterconfiguredretries, bothhelpers0/0unexpected/0unused. Analyzer4334490new, layer77+0/-0, Python55, nativefirstbc46/current1+1PASS. Windows216.4s/68files andARM64144.1sPASS. No manual/device claim.
-- Gate ZIP SHA256dd9b77ecef70cba034561dc81d7c718a350eb234ce175c66c98647a4a0357dd4; APK89c8e4d61ef0771015b912940577c10712f2c307d72b87dcce4ed6f577d7d7d2. Sameclassifier forwarders Storage427/Search133/Player161/Magic23/Settings0. Gate excludes177/179.
-- #177 MERGED6e70d0e7 exact24ef after independent91PASS, correctedguarddelta/sixnegativecontrols accepted and all3finalCIgreen. Search6830→6551; wholeproduction+106/21retainedops. Did we make a difference? Tonight owns queue/stage behavior with preserved focus/lifetime. More remains: remaining stages/sharedrender dependencies; relocation not finalcomposition closure.
-- Productioncounter1 since bb843 gate. #179 final46db independentlyaccepted/integrationaccepted; tests/nativegreen,goldenspending atlatestcheck. No userblocker.
-- SharedBoardCell origin113155 fourgreen actualclassicHome cases; readonlyscope review beforeproduction. MosaicstandaloneDEFERRED host-5/whole+112/15ops; greenpin preserved. Atriumredrender and V19startupbeforelookup debt retained, no furtherunboundedretry.
-- Locke historyfixture18fa provenanceaccepted; exact5body/twokey owner production granted aftermainunion. Ampere BoardCellreview; Wegener exactsharedrender scope; Cicero nextreview/gatecoordination available. No overlapping lane files; CODEMAP released.
-### Latest watch-flow milestone — supersedes snapshots below
-- #178 MERGED bb843424 exact11415 after independent239PASS and all3CIgreen. Five leaves1180→667; sharedlocked388 included,125net production lines deleted. M1 numeric goal achieved; strict WatchFlowBindings/UI dependency cleanup remains OPEN, distinct155walker lines intentional.
-- Did we make a difference? Two real consumers now share complete setup/launch/cleanup; no new algorithm/native proof claimed. More remains: explicit livehost coupling and temporary bindings, with reviewed179 removingtwo wrappers next.
-- Thirdproductionmerge175/176/178 since730: fullactualmain gatebb843424 RUNNING Cicero, baseline449. No177/179merge untilPASS.
-- #177 corrected final24ef independentlydeltaaccepted: one stale initializer sourceguard fixed, sixnegativecontrols prove removal/wrongidentity/latebinding fail. Frozenproduction unchanged; finalCIpending.
-- #179 independentlyaccepted73, dependent178nowmerged; retargetmain/integrate reviewedbytes next, heldgate.
-- Locke history29greenorigin, actualoldexport/currentrestore fixture stage active. Wegener Mosaic unappliedcandidate review; Ampere read-only reviews its value after V19 startup-before-lookup failure held. No userblocker.
-### Latest merge and dispatch — supersedes earlier working snapshot
-- #176 MERGED1aefaef6 exactbf17ef29 after independent86PASS and all3finalCIgreen. Host-27, wholeproduction+44; nine18-line-total facades retained. Did we make a difference? Explicit global preference ownership with pinned legacy exclusion behavior; more business-logic ownership remains.
-- #178 final11415 independently239PASS; CI pending. Five leaves667 is candidate only; main1180. Strict livehost/UI coupling remains open even after numerical target.
-- #179 child178 final2dad independently73PASS; CI pending, MUST178merge then retargetmain. Removes37wholeproduction lines/two forwarding methods, host+3; strict coupling remains.
-- #177 finalbb5c independently91PASS; finalCI testFAILED run34008101403. Cicero diagnosing exactlog; no failure masked or merge permitted.
-- Wegener: Mosaic green3realpublicorigin tests eca8; exact unapplied completion-flow candidate scope next. Atrium held after2red render-overflow runs; no suppression/production changes.
-- Ampere: one explicitly authorized new V1-9 public episode-selection feasibility attempt; old2failedattempts retained, no further retry authority.
-- Locke: storagehistory origin-only NEWtest on isolatedbranch; product/fixtures ungranted. #179 frozen.
-- Cicero: Tonight failure diagnosis; nextfullgate prepared after nextproductionmerge (thirdsince730). No userblocker.
-- All neighbouring branches preserve176storage/docs union on nextintegration; frozen laneprod ownership remains separate. CODEMAP released.
-### Remaining outcomes
-1. Finish Search stage layouts and final shared composition. Tonight is next; several stages remain.
-2. Complete player decoder/state/UI separation. Overlay/guide pins retained, partial moves held for weak benefit; tracker pin debt remains.
-3. Finish storage business-logic ownership and eligible temporary facade removal. Native-sensitive APIs intentionally retained until evidence exists.
-4. Finish M1-7 genuine common-flow dedup and dependency cleanup. Five leaves1180 versus under800 target; common1551, quick programme183, cached programme208 and Windowed queue217 separately counted.
-5. Q-phase dependency/rule cleanup, compatibility expiry and upstream contribution work.
-6. Final integrated acceptance of completed architecture; prior device smoke is not a new-build smoke.
+### The same six outcomes — stable roadmap
 
-### Current measurements and gate
-- Search6551/19070; Player11928/16278; MagicTV3321/10716; Storage2538/9963; Settings2901/7905 (current/original physical lines).
-- Gate730b18fa: generic5708 passes/12 exact known failures/2 skips; goldens21 known errors after configured retries, both helpers0 with0 unexpected/unused. Not pixel-green.
-- Gate analyzer436/452 with0new, layering77/77 +0/-0, Python55PASS. Strict originalbc46/current native first pair PASS, no retry. Prior2ecd transient exit79 remains recorded, unexplained.
-- Gate Windows68files/217s PASS, ARM64 APK118.4s PASS. ZIP SHA2566c507b2444b5ae5490cceb263a541e3b6f2d3a57b292197942c774d2d2035ee4; APK SHA256f6d3675af1d7e97429516ef4afd1042b78be46a206830bb299b2bf1b83b3c41c.
-- Gate forwarders same expanded classifier: Storage418, Search133, Player161, Magic23, Settings0. Old fixed Search classifier60 separately retained. Report: debrify-c0-post-172-174175-gate/.dart_tool/main-gate/REPORT.md.
-- #175 changes analyzer allowance452→451 by consolidating two identical inherited finally diagnostics into one; not a safety fix. Gate above still uses452. Production merge counter3 since gate730; full gate bb843424 running.
-- No defensible whole-project hours/quota estimate. Report bounded forecasts separately; unestimated remaining work is not zero.
+These are the six outcomes previously agreed with the user. Keep their numbers and titles stable. PRs are steps within them, not replacement outcomes. No scope expansion or new acceptance requirement is introduced here. Changes to scope must be identified explicitly rather than folded into a status rewrite.
 
-### Decisions, dependencies and impact
-- #175 removes110 production lines by sharing complete cached setup/launch/cleanup across TorBox/Premiumize; provider leaves1498→1180. More remains: locked flows, retained host dependencies and distinct algorithms.
-- Cached locked proposal125 net deletion is forecast only;155 distinct walker lines remain relocated. Two16-line entry forwarders approved temporarily with Q2/phase-completion review expiry.
-- Tonight forecast actual frozen host-279/wholeproduction+106 with21 retained typed operations; one diagnostic identity relocation only, ceiling unchanged on its base.
-- #176 frozen host-27/wholeproduction+44, nine18-line-total facades; modest scalar/JSON ownership, no feature or portable identity claim.
-- #175 neighbours: Ampere must integrate its merged ancestry; Tonight/remote branches must preserve CODEMAP union on main integration. No overlapping production ownership.
-- One combined pin-before-move PR; one final production review cycle. No duplicate independent test-only reruns. Board commits at most one per merge.
-- CODEMAP currently released. Parent only BOARD/NOTES; no whole-god-file formatting, persistence changes or baseline inflation.
-- Parked112/109/56 remain parked. Future unresponsive playback fallback remains future-only. No disk/power or startup-performance work. Existing phone/TV acceptance applies to installedf75fa016, not direct SHIELD testing or these builds.
+1. **Finish Search stage layouts and final shared composition — IN PROGRESS.**
+   Done: standalone Discover, Spotlight, Tonight and shared BoardCell merged.
+   Left: Atrium, Deck, Canvas, Mosaic and Promenade stage work plus final shared composition. Atrium's origin test is held on rendering failure; the standalone Mosaic proposal was held for insufficient benefit, not completed.
+   Next: a bounded composition change that removes dependencies rather than adding more forwarding callbacks. Close against the existing Search lane criteria, not merely a smaller host file.
+
+2. **Complete player decoder/state/UI separation — IN PROGRESS, CURRENT PIN BLOCKER.**
+   Done: earlier player slices and retained overlay/guide behavior pins.
+   Left: remaining decoder/state/UI separation and tracker pin debt. Recent tracker attempts did not reach the behavior being tested; no completion credit.
+   Next: resolve a deterministic origin-test path before moving the affected behavior. This remains the least advanced of these outcomes.
+
+3. **Finish storage business-logic ownership and eligible temporary facade removal — IN PROGRESS.**
+   Done: storage size target reached, multiple domain owners and pre-refactor restore fixtures merged, earlier223 facades retired.
+   Left: remaining domain logic and eligible forwarding APIs; native-sensitive exceptions remain explicit.
+   Next: history/watchlist caller retirement and download-destination ownership; filter facade retirement (#182) is now merged. These are steps within outcome3, not new top-level goals.
+
+4. **Finish M1-7 genuine common-flow dedup and dependency cleanup — PARTIAL MILESTONE COMPLETE.**
+   Done: shared flow programmes merged, provider-leaf target met (627 current lines versus under800), two cached-entry wrappers removed.
+   Left: three captured-key provider operations still bypass the provider interface at ten call sites, plus the existing finite Q2 retention decisions. Distinct provider algorithms are intentional and do not all need unification.
+   Next: route those three operations through the existing provider contract while preserving captured credentials and timing, then verify the actual consumers. No new autonomous-provider-framework or zero-UI-callback requirement. This is closest to closure, but the whole outcome is not marked complete.
+
+5. **Q-phase dependency/rule cleanup, compatibility expiry and upstream contribution work — PARTLY STARTED.**
+   Done: some compatibility retirement is underway with outcome3 and4; upstream contribution intent established.
+   Left: remaining Q1/Q2/Q3 work and upstream-ready contribution work.
+   Next: continue eligible cleanup alongside lanes. Shared PRs may advance multiple outcomes, but count their benefit once.
+
+6. **Final integrated acceptance of completed architecture — PENDING COMPLETION OF THE ABOVE.**
+   Done: repeated intermediate full gates; latest95c93 passed with documented known failures.
+   Left: final gate on the completed architecture. Earlier builds and device smoke are not the final acceptance build.
+   Next: keep intermediate gates running; no new manual-smoke blocker is added against the user's standing instruction.
+
+**Where we are:** implementation and verification are still in progress. Since this six-outcome list was introduced, we have landed additional milestones, especially M1 flow consolidation and Tonight. We have not completed all six or established a defensible overall percentage. The most recent PR is not the whole trek.
+
+### Current work
+
+- Cicero: full gate95c93 completed; next review/gate coordination. No new gate until three production merges.
+- Locke: download-destination origin28 passed; actual pre-refactor exclusion fixture work, no production grant yet.
+- Ampere: Q2 history/watchlist caller retirement, exact19-file scope after46 green origin cases; owner bodies/fixture payloads frozen.
+- Wegener: Q2 filter PR182 independently accepted199 tests; download-origin review accepted. Shared-visuals proposal held; no additional layout-only extraction authorized.
+- PR182 merged56788ddb; ten filter facades retired. PR183 depends on its merged ancestry and awaits final CI/main-union verification. Quarantined corrupt worktree remains untouched.
+- Parent: handle reports/decisions, merge exact accepted green heads, update this board once per merge. No user blocker. CODEMAP lock released.
+
+### Latest completed milestones
+
+- #182 merged56788ddb exactdf41 after independent199PASS and allCIaccepted. Native attempt1 hung600s without assertion; one authorized same-head/runtime/test retry passed both origin/current. Cause remains UNKNOWN, original evidence retained; not first-pass green. Host−20/wholeproduction−19, ten facades retired. Did we make a difference? Actual callers now use the existing owner directly; remaining storage/Q-phase work stays open.
+
+
+- #180 history owner merged95c93: host−44, whole production+34, five facades retained. Actual old-export restore evidence and independent87 cases passed.
+- Full gate95c93 PASSED: generic5,789 passes/12 known failures/2 skips; goldens21 known errors after configured retries. Both helpers0, no unexpected or unused failure allowances. Not pixel-green.
+- Gate pinned analyzer431/449, zero errors/new issues; layering77→77; Python55 passed; originalbc46/current native pair passed first try. Initial wrong-PATH analyzer output retained separately and corrected using pinned SDK; no baseline edit.
+- Windows226.2s/68files and ARM64171.9s builds passed. ZIP SHA256b96b7a4bd0b98a4f9de799ef3242bebf18a150d3c49c0113ad0566d10f1d729f; APK80811b556495c20078920091643b91cbcde5bc236d89737bd3bed7d1479e8cb5. No fresh manual/device smoke claimed.
+- #181 BoardCell mergedc7a332bd exact932 after independent140 passes plus the exact known sidebar failure, final integration review and all3CI green. Shared renderer owns card state/shuttle; 669 declaration lines relocated, whole production+17, zero host-file reduction. Did we make a difference? Removed private host-library access at real consumers; remaining stage navigation/composition is still open.
+- Production merge counter: **2 since gate95c93** (#181, #182). Gate excludes181; source/build evidence remains attached to95c93.
+
+### Forwarders at the last full gate95c93
+
+- Storage432 total /143 single-line; Search133/117; Player161/112; Magic TV23/12; Settings0/0.
+- Same expanded AST classifier as prior gates. Legacy Search classifier60 separately retained; do not silently substitute classifiers. Not recounted for181.
+
+### Decisions, limits and recovery
+
+- Green actual-origin evidence before move, one combined PR/final review cycle. No duplicate independent test-only reruns, whole-god-file formatting, persistence changes or baseline inflation.
+- Parent alone edits BOARD/NOTES. CODEMAP serialized. Only exact scoped worker files may change.
+- Git incident: sharedconfig/FETCH_HEAD and newQ2worktree index/sample files contained NULs. User authorized recovery. Damaged files preserved under .git/recovery-20260906-001041; affected worktree quarantined. Minimal config reconstructed, not original branch settings restored; use explicit remote/branch. Git connectivity and gate tracked-file scans passed; cause unknown.
+- PR112/109/56 remain parked. Future unresponsive playback fallback remains future-only. No disk/power/startup-performance changes.
+- No defensible whole-project hours/quota estimate. Bounded lane estimates are provisional; unestimated work is not zero.
 
 ## Prior checkpoints and retained evidence
 
