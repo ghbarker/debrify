@@ -43,6 +43,7 @@ import '../services/mdblist/mdblist_service.dart';
 import '../services/simkl/simkl_service.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage/tracking_prefs.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import '../services/storage_service.dart';
 import '../services/support_remote_config_service.dart';
 import '../services/torbox_account_service.dart';
@@ -380,18 +381,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       StorageService.getDiscoverLayout(),
       StorageService.getIptvStyle(),
       StorageService.getIptvPlayerGuideStyle(),
-      StorageService.getPhoneNavStyle(),
-      StorageService.getTextBrightness(),
-      StorageService.getLaunchAnimation(),
-      StorageService.getDetailPageStyle(),
+      AppStylePrefs.getPhoneNavStyle(),
+      AppStylePrefs.getTextBrightness(),
+      AppStylePrefs.getLaunchAnimation(),
+      AppStylePrefs.getDetailPageStyle(),
       StorageService.getTvRenderQuality(),
-      StorageService.getDetailTheme(),
-      StorageService.getParentsGuideStyle(),
+      AppStylePrefs.getDetailTheme(),
+      AppStylePrefs.getParentsGuideStyle(),
       StorageService.getTvHeroArtworkQuality(),
       StorageService.getPlayerDockStyle(),
       StorageService.getPlayerDockPalette(),
       StorageService.getPlayerDockSize(),
-      StorageService.getDesktopSidebarStyle(),
+      AppStylePrefs.getDesktopSidebarStyle(),
       StorageService.getDebrifyTvStyle(),
       StorageService.getTvPlayerControlsStyle(),
       StorageService.getDebrifyTvPlayerStyle(),
@@ -1406,7 +1407,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// Phone/small-window chrome choice: classic bottom bar (default) vs the
   /// floating glass button. Applies live — MainPageBridge tells the shell.
   Future<void> _openNavigationSettings() async {
-    final current = await StorageService.getPhoneNavStyle();
+    final current = await AppStylePrefs.getPhoneNavStyle();
     if (!mounted) return;
 
     // The dialog RETURNS the choice; the write is awaited here before the
@@ -1467,7 +1468,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       },
     );
     if (chosen == null || chosen == current || !mounted) return;
-    await StorageService.setPhoneNavStyle(chosen);
+    await AppStylePrefs.setPhoneNavStyle(chosen);
     if (!mounted) return;
     setState(() => _phoneNavStyle = chosen);
     MainPageBridge.navPrefsChanged?.call();
@@ -2252,7 +2253,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _openDesktopSidebarStyle() async {
     await pushSettingsPage(context, const DesktopSidebarStylePage());
     if (!mounted) return;
-    final style = await StorageService.getDesktopSidebarStyle();
+    final style = await AppStylePrefs.getDesktopSidebarStyle();
     if (!mounted) return;
     setState(() {
       _desktopSidebarStyle = style;
@@ -2358,7 +2359,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _openDetailPageStylePage() async {
     await pushSettingsPage(context, const DetailPageStylePage());
     if (!mounted) return;
-    final style = await StorageService.getDetailPageStyle();
+    final style = await AppStylePrefs.getDetailPageStyle();
     if (!mounted) return;
     setState(() {
       _detailPageStyle = style;
@@ -2369,7 +2370,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _openDetailThemePage() async {
     await pushSettingsPage(context, const DetailThemePage());
     if (!mounted) return;
-    final theme = await StorageService.getDetailTheme();
+    final theme = await AppStylePrefs.getDetailTheme();
     if (!mounted) return;
     setState(() {
       _detailTheme = theme;
@@ -2414,7 +2415,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _openAppThemePage() async {
     await pushSettingsPage(context, const AppThemePage());
     if (!mounted) return;
-    final theme = await StorageService.getDetailTheme();
+    final theme = await AppStylePrefs.getDetailTheme();
     if (!mounted) return;
     setState(() {
       _detailTheme = theme;
@@ -2424,7 +2425,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _openParentsGuideStylePage() async {
     await pushSettingsPage(context, const ParentsGuideStylePage());
     if (!mounted) return;
-    final style = await StorageService.getParentsGuideStyle();
+    final style = await AppStylePrefs.getParentsGuideStyle();
     if (!mounted) return;
     setState(() {
       _parentsGuideStyle = style;
@@ -2435,7 +2436,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _openTextBrightnessPage() async {
     await pushSettingsPage(context, const TextBrightnessPage());
     if (!mounted) return;
-    final value = await StorageService.getTextBrightness();
+    final value = await AppStylePrefs.getTextBrightness();
     if (!mounted) return;
     setState(() {
       _textBrightness = value;
@@ -2446,7 +2447,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _openLaunchAnimationPage() async {
     await pushSettingsPage(context, const LaunchAnimationPage());
     if (!mounted) return;
-    final value = await StorageService.getLaunchAnimation();
+    final value = await AppStylePrefs.getLaunchAnimation();
     if (!mounted) return;
     setState(() {
       _launchAnimation = value;

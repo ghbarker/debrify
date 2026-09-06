@@ -298,7 +298,12 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   `lib/services/storage/iptv_prefs.dart` (`IptvPrefs`).
   **S2-4:** sync style caches (looks, docks, chrome, launch ident, Discover
   layout, TV UI scale / hero artwork) live in
-  `lib/services/storage/app_style_prefs.dart` (`AppStylePrefs`).
+  `lib/services/storage/app_style_prefs.dart` (`AppStylePrefs`). Q2 routes 25
+  application appearance/navigation APIs directly to AppStylePrefs, removing five
+  live host dependency edges (host -25 / production -18; full payload +4 lines).
+  The other 40 AppStyle methods and all shared cache/reset identities remain
+  unchanged; strict Storage ownership stays OPEN, with retained compatibility
+  deferred to separately scoped owner/caller work.
   It also owns the three profile scalar pairs for series density, merged-detail
   routing preference and Addons hub; their six public host facades remain.
   **S2-5:** tracking source policy, catalog-sync switches, and Trakt / Simkl /

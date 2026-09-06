@@ -30,6 +30,7 @@ import 'package:debrify/services/secret_vault.dart';
 import 'package:debrify/services/storage/download_destination_prefs.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage/tracking_prefs.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -196,9 +197,9 @@ Future<void> _seedThroughStorageService() async {
   await StorageService.setNetworkBufferSize('huge');
   await IptvPrefs.setIptvDecoderMode('hardware');
   await IptvPrefs.setIptvTrackContinueWatching(false);
-  await StorageService.setAppTheme('spotlight');
-  await StorageService.setThemeOverrides('{"synthetic":"fixture"}');
-  await StorageService.setPhoneNavStyle('floating');
+  await AppStylePrefs.setAppTheme('spotlight');
+  await AppStylePrefs.setThemeOverrides('{"synthetic":"fixture"}');
+  await AppStylePrefs.setPhoneNavStyle('floating');
   await StorageService.setTvUiScalePercent(80);
   await TrackingPrefs.setTrackingScrobbleTargets({
     TrackingSource.local,
@@ -268,9 +269,9 @@ Future<Map<String, Object?>> _readThroughStorageService(
   'iptv_decoder_mode': await StorageService.getIptvDecoderMode(),
   'iptv_track_continue_watching':
       await IptvPrefs.getIptvTrackContinueWatching(),
-  'app_theme': await StorageService.getAppTheme(),
-  'theme_overrides': await StorageService.getThemeOverrides(),
-  'phone_nav_style': await StorageService.getPhoneNavStyle(),
+  'app_theme': await AppStylePrefs.getAppTheme(),
+  'theme_overrides': await AppStylePrefs.getThemeOverrides(),
+  'phone_nav_style': await AppStylePrefs.getPhoneNavStyle(),
   'tv_ui_scale_percent': await StorageService.getTvUiScalePercent(),
   'tracking_scrobble_targets':
       (await TrackingPrefs.getTrackingScrobbleTargets())

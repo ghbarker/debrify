@@ -6,7 +6,7 @@ import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/merged_series_detail_screen.dart';
 import 'package:debrify/services/simkl/simkl_menu_helpers.dart';
 import 'package:debrify/services/simkl/simkl_service.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/theme/app_theme.dart';
 import 'package:debrify/theme/app_theme_scope.dart';
 
@@ -19,7 +19,7 @@ void main() {
     required void Function(SimklItemMenuAction action) onAction,
   }) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
-    await StorageService.setDetailPageStyle('classic');
+    await AppStylePrefs.setDetailPageStyle('classic');
     var status = initialStatus;
     await tester.pumpWidget(
       MaterialApp(

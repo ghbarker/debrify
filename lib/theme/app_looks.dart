@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../services/main_page_bridge.dart';
 import 'shipped_themes.dart' show kDetailThemesShipped;
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import '../services/storage_service.dart';
 import '../services/text_brightness.dart';
 import 'app_theme.dart';
@@ -63,28 +64,28 @@ abstract final class LookKeys {
     id: 'detail_page_style',
     label: 'Details Page',
     read: () => StorageService.detailPageStyleCached,
-    write: StorageService.setDetailPageStyle,
+    write: AppStylePrefs.setDetailPageStyle,
   );
 
   static final parentsGuideStyle = LookKey(
     id: 'parents_guide_style',
     label: 'Parents Guide',
     read: () => StorageService.parentsGuideStyleCached,
-    write: StorageService.setParentsGuideStyle,
+    write: AppStylePrefs.setParentsGuideStyle,
   );
 
   static final launchAnimation = LookKey(
     id: 'launch_animation',
     label: 'Launch Animation',
     read: () => StorageService.launchAnimationCached,
-    write: StorageService.setLaunchAnimation,
+    write: AppStylePrefs.setLaunchAnimation,
   );
 
   static final launchIdentPalette = LookKey(
     id: 'launch_ident_palette',
     label: 'Ident Colour',
     read: () => StorageService.launchIdentPaletteCached,
-    write: StorageService.setLaunchIdentPalette,
+    write: AppStylePrefs.setLaunchIdentPalette,
   );
 
   static final phoneNavStyle = LookKey(
@@ -96,7 +97,7 @@ abstract final class LookKeys {
       // shell reads it synchronously — so it is published before the await
       // for the same reason every other mirror here is.
       MainPageBridge.phoneNavStyleCached = v;
-      await StorageService.setPhoneNavStyle(v);
+      await AppStylePrefs.setPhoneNavStyle(v);
     },
   );
 
@@ -120,7 +121,7 @@ abstract final class LookKeys {
     id: 'desktop_sidebar_style',
     label: 'Desktop Sidebar',
     read: () => StorageService.desktopSidebarStyleCached,
-    write: StorageService.setDesktopSidebarStyle,
+    write: AppStylePrefs.setDesktopSidebarStyle,
   );
 
   static final discoverLayout = LookKey(

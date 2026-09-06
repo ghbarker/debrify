@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:debrify/services/storage/home_prefs.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 
 void main() {
@@ -28,10 +29,10 @@ void main() {
       expect(prefs.getInt('defaults_generation'), 3);
 
       // The getters resolve the migrated values (they validate the sets).
-      expect(await StorageService.getAppTheme(), 'spotlight');
+      expect(await AppStylePrefs.getAppTheme(), 'spotlight');
       expect(await StorageService.getTvHomeStyle(), 'spotlight');
       expect(await StorageService.getTvSidebarStyle(), 'pill');
-      expect(await StorageService.getDesktopSidebarStyle(), 'pill');
+      expect(await AppStylePrefs.getDesktopSidebarStyle(), 'pill');
       expect(await StorageService.getDebrifyTvStyle(), 'spotlight');
     });
 

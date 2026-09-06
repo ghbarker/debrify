@@ -4,6 +4,7 @@ import 'package:debrify/models/sidebar_configuration.dart';
 import 'package:debrify/models/tv_hero_artwork_quality.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/secret_vault.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,24 +27,24 @@ void main() {
 
   group('style cache defaults', () {
     test('phone nav, debrify TV, detail page/theme, app theme', () async {
-      expect(await StorageService.getPhoneNavStyle(), 'classic');
-      expect(await StorageService.getPhoneNavBarIndices(), isNull);
+      expect(await AppStylePrefs.getPhoneNavStyle(), 'classic');
+      expect(await AppStylePrefs.getPhoneNavBarIndices(), isNull);
       expect(await StorageService.getDebrifyTvStyle(), 'grid');
       expect(StorageService.debrifyTvStyleCached, 'grid');
       expect(StorageService.kDebrifyTvStyles, {'grid', 'spotlight'});
-      expect(await StorageService.getDetailPageStyle(), 'console');
+      expect(await AppStylePrefs.getDetailPageStyle(), 'console');
       expect(StorageService.detailPageStyleCached, 'console');
       expect(StorageService.kDetailPageStyleDefault, 'console');
-      expect(await StorageService.getDetailTheme(), 'signal');
+      expect(await AppStylePrefs.getDetailTheme(), 'signal');
       expect(StorageService.detailThemeCached, 'signal');
-      expect(await StorageService.getAppTheme(), 'legacy');
+      expect(await AppStylePrefs.getAppTheme(), 'legacy');
       expect(StorageService.appThemeCached, 'legacy');
-      expect(await StorageService.getThemeOverrides(), '');
+      expect(await AppStylePrefs.getThemeOverrides(), '');
       expect(StorageService.themeOverridesCached, '');
     });
 
     test('parents guide, IPTV look, dock, loaders, TV player skins', () async {
-      expect(await StorageService.getParentsGuideStyle(), 'compass');
+      expect(await AppStylePrefs.getParentsGuideStyle(), 'compass');
       expect(StorageService.parentsGuideStyleCached, 'compass');
       expect(StorageService.kParentsGuideStyles, {'classic', 'compass'});
       expect(await StorageService.getIptvStyle(), 'command');
@@ -67,17 +68,17 @@ void main() {
       expect(await StorageService.getDiscoverLastSource(), 'cw');
       expect(await StorageService.getDiscoverLayout(), 'stage');
       expect(StorageService.discoverLayoutCached, 'stage');
-      expect(await StorageService.getLaunchAnimation(), 'trace');
+      expect(await AppStylePrefs.getLaunchAnimation(), 'trace');
       expect(StorageService.launchAnimationCached, 'trace');
-      expect(await StorageService.getLaunchIdentPalette(), 'ident');
+      expect(await AppStylePrefs.getLaunchIdentPalette(), 'ident');
       expect(StorageService.launchIdentPaletteCached, 'ident');
-      expect(await StorageService.getTextBrightness(), 'bright');
+      expect(await AppStylePrefs.getTextBrightness(), 'bright');
       expect(await StorageService.getTvSidebarStyle(), 'ghost');
       expect(StorageService.tvSidebarStyleCached, 'ghost');
-      expect(await StorageService.getDesktopSidebarStyle(), 'rail');
+      expect(await AppStylePrefs.getDesktopSidebarStyle(), 'rail');
       expect(StorageService.desktopSidebarStyleCached, 'rail');
       expect(
-        (await StorageService.getSidebarConfiguration()).isDefault,
+        (await AppStylePrefs.getSidebarConfiguration()).isDefault,
         isTrue,
       );
       expect(await StorageService.getTvUiScalePercent(), 90);
@@ -91,14 +92,14 @@ void main() {
   });
 
   test('StorageService writes the historical style key bytes', () async {
-    await StorageService.setPhoneNavStyle('floating');
-    await StorageService.setPhoneNavBarIndices([2, 4, 6]);
+    await AppStylePrefs.setPhoneNavStyle('floating');
+    await AppStylePrefs.setPhoneNavBarIndices([2, 4, 6]);
     await StorageService.setDebrifyTvStyle('spotlight');
-    await StorageService.setDetailPageStyle('showcase');
-    await StorageService.setDetailTheme('prestige');
-    await StorageService.setAppTheme('spotlight');
-    await StorageService.setThemeOverrides('{"accent":"#ff00aa"}');
-    await StorageService.setParentsGuideStyle('classic');
+    await AppStylePrefs.setDetailPageStyle('showcase');
+    await AppStylePrefs.setDetailTheme('prestige');
+    await AppStylePrefs.setAppTheme('spotlight');
+    await AppStylePrefs.setThemeOverrides('{"accent":"#ff00aa"}');
+    await AppStylePrefs.setParentsGuideStyle('classic');
     await StorageService.setIptvStyle('edition');
     await StorageService.setIptvChannelPreviewEnabled(false);
     await StorageService.setPlayerDockStyle('cinema');
@@ -111,11 +112,11 @@ void main() {
     await StorageService.setDiscoverDefaultSource('trakt');
     await StorageService.setDiscoverLastSource('simkl');
     await StorageService.setDiscoverLayout('grid');
-    await StorageService.setLaunchAnimation('horizon');
-    await StorageService.setLaunchIdentPalette('theme');
-    await StorageService.setTextBrightness('dim');
+    await AppStylePrefs.setLaunchAnimation('horizon');
+    await AppStylePrefs.setLaunchIdentPalette('theme');
+    await AppStylePrefs.setTextBrightness('dim');
     await StorageService.setTvSidebarStyle('pill');
-    await StorageService.setDesktopSidebarStyle('pill');
+    await AppStylePrefs.setDesktopSidebarStyle('pill');
     await StorageService.setTvUiScalePercent(80);
     await StorageService.setTvHeroArtworkQuality(TvHeroArtworkQuality.fullHd);
 
@@ -180,15 +181,15 @@ void main() {
       'tv_hero_artwork_quality': 'performance',
     });
 
-    expect(await StorageService.getPhoneNavStyle(), 'floating');
-    expect(await StorageService.getPhoneNavBarIndices(), [1, 3]);
+    expect(await AppStylePrefs.getPhoneNavStyle(), 'floating');
+    expect(await AppStylePrefs.getPhoneNavBarIndices(), [1, 3]);
     expect(await StorageService.getDebrifyTvStyle(), 'spotlight');
     expect(StorageService.debrifyTvStyleCached, 'spotlight');
-    expect(await StorageService.getDetailPageStyle(), 'marquee');
-    expect(await StorageService.getDetailTheme(), 'noir');
-    expect(await StorageService.getAppTheme(), 'velvet');
-    expect(await StorageService.getThemeOverrides(), '{"ok":true}');
-    expect(await StorageService.getParentsGuideStyle(), 'classic');
+    expect(await AppStylePrefs.getDetailPageStyle(), 'marquee');
+    expect(await AppStylePrefs.getDetailTheme(), 'noir');
+    expect(await AppStylePrefs.getAppTheme(), 'velvet');
+    expect(await AppStylePrefs.getThemeOverrides(), '{"ok":true}');
+    expect(await AppStylePrefs.getParentsGuideStyle(), 'classic');
     expect(await StorageService.getIptvStyle(), 'console');
     expect(await StorageService.getIptvChannelPreviewEnabled(), isFalse);
     // Quirk: pre-selectable dock value 'two_tier' is still accepted on read.
@@ -202,11 +203,11 @@ void main() {
     expect(await StorageService.getDiscoverDefaultSource(), 'a:addon-1');
     expect(await StorageService.getDiscoverLastSource(), 'mdblist');
     expect(await StorageService.getDiscoverLayout(), 'grid');
-    expect(await StorageService.getLaunchAnimation(), 'neon');
-    expect(await StorageService.getLaunchIdentPalette(), 'theme');
-    expect(await StorageService.getTextBrightness(), 'soft');
+    expect(await AppStylePrefs.getLaunchAnimation(), 'neon');
+    expect(await AppStylePrefs.getLaunchIdentPalette(), 'theme');
+    expect(await AppStylePrefs.getTextBrightness(), 'soft');
     expect(await StorageService.getTvSidebarStyle(), 'island');
-    expect(await StorageService.getDesktopSidebarStyle(), 'pill');
+    expect(await AppStylePrefs.getDesktopSidebarStyle(), 'pill');
     expect(await StorageService.getTvUiScalePercent(), 100);
     expect(
       await StorageService.getTvHeroArtworkQuality(),
@@ -244,12 +245,12 @@ void main() {
         'tv_hero_artwork_quality': '4k',
       });
 
-      expect(await StorageService.getPhoneNavStyle(), 'classic');
+      expect(await AppStylePrefs.getPhoneNavStyle(), 'classic');
       expect(await StorageService.getDebrifyTvStyle(), 'grid');
-      expect(await StorageService.getDetailPageStyle(), 'console');
-      expect(await StorageService.getDetailTheme(), 'signal');
-      expect(await StorageService.getAppTheme(), 'legacy');
-      expect(await StorageService.getParentsGuideStyle(), 'compass');
+      expect(await AppStylePrefs.getDetailPageStyle(), 'console');
+      expect(await AppStylePrefs.getDetailTheme(), 'signal');
+      expect(await AppStylePrefs.getAppTheme(), 'legacy');
+      expect(await AppStylePrefs.getParentsGuideStyle(), 'compass');
       expect(await StorageService.getIptvStyle(), 'command');
       expect(await StorageService.getPlayerDockStyle(), 'classic');
       expect(await StorageService.getPlayerDockPalette(), 'ultraviolet');
@@ -265,23 +266,23 @@ void main() {
         StorageService.discoverDefaultRememberLast,
       );
       expect(await StorageService.getDiscoverLastSource(), 'cw');
-      expect(await StorageService.getLaunchAnimation(), 'trace');
-      expect(await StorageService.getLaunchIdentPalette(), 'ident');
-      expect(await StorageService.getTextBrightness(), 'bright');
+      expect(await AppStylePrefs.getLaunchAnimation(), 'trace');
+      expect(await AppStylePrefs.getLaunchIdentPalette(), 'ident');
+      expect(await AppStylePrefs.getTextBrightness(), 'bright');
       expect(await StorageService.getTvSidebarStyle(), 'ghost');
-      expect(await StorageService.getDesktopSidebarStyle(), 'rail');
+      expect(await AppStylePrefs.getDesktopSidebarStyle(), 'rail');
       expect(await StorageService.getTvUiScalePercent(), 90);
       expect(
         await StorageService.getTvHeroArtworkQuality(),
         TvHeroArtworkQuality.automatic,
       );
 
-      await StorageService.setPhoneNavStyle('drawer');
+      await AppStylePrefs.setPhoneNavStyle('drawer');
       await StorageService.setDebrifyTvStyle('holodeck');
-      await StorageService.setDetailPageStyle('future-look');
-      await StorageService.setDetailTheme('removed');
-      await StorageService.setAppTheme('removed');
-      await StorageService.setParentsGuideStyle('cards');
+      await AppStylePrefs.setDetailPageStyle('future-look');
+      await AppStylePrefs.setDetailTheme('removed');
+      await AppStylePrefs.setAppTheme('removed');
+      await AppStylePrefs.setParentsGuideStyle('cards');
       await StorageService.setIptvStyle('neon');
       await StorageService.setPlayerDockStyle('ribbon');
       await StorageService.setPlayerDockPalette('jade');
@@ -292,11 +293,11 @@ void main() {
       await StorageService.setDebrifyTvPlayerStyle('holodeck');
       await StorageService.setDiscoverLayout('mosaic');
       await StorageService.setDiscoverDefaultSource('nope');
-      await StorageService.setLaunchAnimation('not-an-ident');
-      await StorageService.setLaunchIdentPalette('custom');
-      await StorageService.setTextBrightness('blinding');
+      await AppStylePrefs.setLaunchAnimation('not-an-ident');
+      await AppStylePrefs.setLaunchIdentPalette('custom');
+      await AppStylePrefs.setTextBrightness('blinding');
       await StorageService.setTvSidebarStyle('holodeck');
-      await StorageService.setDesktopSidebarStyle('overlay');
+      await AppStylePrefs.setDesktopSidebarStyle('overlay');
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString('phone_nav_style'), 'classic');
@@ -337,18 +338,18 @@ void main() {
       // Origin awaits ProfilePreferences.instance() first, then publishes the
       // mirror, then writes. Unlike debrifyTvStyleCached, the cache does not
       // move before the first await.
-      await StorageService.setThemeOverrides('{"x":1}');
+      await AppStylePrefs.setThemeOverrides('{"x":1}');
       expect(StorageService.themeOverridesCached, '{"x":1}');
-      expect(await StorageService.getThemeOverrides(), '{"x":1}');
+      expect(await AppStylePrefs.getThemeOverrides(), '{"x":1}');
     },
   );
 
   test('empty theme overrides remove the key', () async {
-    await StorageService.setThemeOverrides('{"x":1}');
-    await StorageService.setThemeOverrides('');
+    await AppStylePrefs.setThemeOverrides('{"x":1}');
+    await AppStylePrefs.setThemeOverrides('');
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.containsKey('theme_overrides'), isFalse);
-    expect(await StorageService.getThemeOverrides(), '');
+    expect(await AppStylePrefs.getThemeOverrides(), '');
   });
 
   test('iptv / sidebar / discover caches publish before instance()', () async {
@@ -360,7 +361,7 @@ void main() {
     expect(StorageService.tvSidebarStyleCached, 'pill');
     await tv;
 
-    final desk = StorageService.setDesktopSidebarStyle('pill');
+    final desk = AppStylePrefs.setDesktopSidebarStyle('pill');
     expect(StorageService.desktopSidebarStyleCached, 'pill');
     await desk;
 
@@ -371,20 +372,20 @@ void main() {
 
   test('launchIdentPaletteCached updates after instance()', () async {
     // Origin awaits ProfilePreferences.instance() first, then mirrors.
-    await StorageService.setLaunchIdentPalette('theme');
+    await AppStylePrefs.setLaunchIdentPalette('theme');
     expect(StorageService.launchIdentPaletteCached, 'theme');
   });
 
   test(
     'detail page / theme / app theme / launch caches update after write',
     () async {
-      await StorageService.setDetailPageStyle('vista');
+      await AppStylePrefs.setDetailPageStyle('vista');
       expect(StorageService.detailPageStyleCached, 'vista');
-      await StorageService.setDetailTheme('halo');
+      await AppStylePrefs.setDetailTheme('halo');
       expect(StorageService.detailThemeCached, 'halo');
-      await StorageService.setAppTheme('console');
+      await AppStylePrefs.setAppTheme('console');
       expect(StorageService.appThemeCached, 'console');
-      await StorageService.setLaunchAnimation('ember');
+      await AppStylePrefs.setLaunchAnimation('ember');
       expect(StorageService.launchAnimationCached, 'ember');
     },
   );
@@ -392,10 +393,10 @@ void main() {
   test('app theme accepts legacy or any kDetailThemes id', () async {
     expect(StorageService.kDetailThemes.contains('spotlight'), isTrue);
     expect(StorageService.kDetailThemes.contains('legacy'), isFalse);
-    await StorageService.setAppTheme('legacy');
-    expect(await StorageService.getAppTheme(), 'legacy');
-    await StorageService.setAppTheme('spotlight');
-    expect(await StorageService.getAppTheme(), 'spotlight');
+    await AppStylePrefs.setAppTheme('legacy');
+    expect(await AppStylePrefs.getAppTheme(), 'legacy');
+    await AppStylePrefs.setAppTheme('spotlight');
+    expect(await AppStylePrefs.getAppTheme(), 'spotlight');
   });
 
   test('kDetailPageStyles contains every shipped and reserved look', () {
@@ -423,9 +424,9 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'phone_nav_bar_indices': <String>['2', 'x', '5'],
     });
-    expect(await StorageService.getPhoneNavBarIndices(), [2, 5]);
+    expect(await AppStylePrefs.getPhoneNavBarIndices(), [2, 5]);
 
-    await StorageService.setPhoneNavBarIndices([]);
+    await AppStylePrefs.setPhoneNavBarIndices([]);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getStringList('phone_nav_bar_indices'), isEmpty);
   });
@@ -450,31 +451,31 @@ void main() {
       order: const ['home', 'search'],
       labels: const {'home': 'Start'},
     );
-    expect(await StorageService.setSidebarConfiguration(custom), isTrue);
+    expect(await AppStylePrefs.setSidebarConfiguration(custom), isTrue);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.containsKey('sidebar_configuration_v1'), isTrue);
     jsonDecode(prefs.getString('sidebar_configuration_v1')!);
-    final stored = await StorageService.getSidebarConfiguration();
+    final stored = await AppStylePrefs.getSidebarConfiguration();
     expect(stored.labelForId('home'), 'Start');
 
-    expect(await StorageService.resetSidebarConfiguration(), isTrue);
+    expect(await AppStylePrefs.resetSidebarConfiguration(), isTrue);
     expect(prefs.containsKey('sidebar_configuration_v1'), isFalse);
-    expect((await StorageService.getSidebarConfiguration()).isDefault, isTrue);
+    expect((await AppStylePrefs.getSidebarConfiguration()).isDefault, isTrue);
   });
 
   test('resetProfileCaches restores style mirrors to defaults', () async {
     await StorageService.setDebrifyTvStyle('spotlight');
-    await StorageService.setDetailPageStyle('showcase');
-    await StorageService.setDetailTheme('prestige');
-    await StorageService.setAppTheme('spotlight');
-    await StorageService.setThemeOverrides('{"x":1}');
-    await StorageService.setParentsGuideStyle('classic');
+    await AppStylePrefs.setDetailPageStyle('showcase');
+    await AppStylePrefs.setDetailTheme('prestige');
+    await AppStylePrefs.setAppTheme('spotlight');
+    await AppStylePrefs.setThemeOverrides('{"x":1}');
+    await AppStylePrefs.setParentsGuideStyle('classic');
     await StorageService.setIptvStyle('console');
     await StorageService.setDiscoverLayout('grid');
-    await StorageService.setLaunchAnimation('neon');
-    await StorageService.setLaunchIdentPalette('theme');
+    await AppStylePrefs.setLaunchAnimation('neon');
+    await AppStylePrefs.setLaunchIdentPalette('theme');
     await StorageService.setTvSidebarStyle('pill');
-    await StorageService.setDesktopSidebarStyle('pill');
+    await AppStylePrefs.setDesktopSidebarStyle('pill');
 
     StorageService.resetProfileCaches();
 

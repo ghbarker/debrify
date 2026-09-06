@@ -3,6 +3,7 @@ import 'package:debrify/theme/app_looks.dart';
 import 'package:debrify/theme/app_motion.dart';
 import 'package:debrify/theme/app_theme_controller.dart';
 import 'package:debrify/theme/premium_looks.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -66,7 +67,7 @@ void main() {
     await LookApplier.apply(look);
     expect(StorageService.detailThemeCached, 'spotlight');
 
-    await StorageService.setDetailTheme('noir');
+    await AppStylePrefs.setDetailTheme('noir');
     expect(look.isActive, isFalse,
         reason: 'a hand-changed mirror must read as Custom, not as active');
 

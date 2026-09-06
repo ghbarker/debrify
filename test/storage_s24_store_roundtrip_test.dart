@@ -24,14 +24,14 @@ void main() {
   test(
     'StorageService style writes are readable through AppStylePrefs',
     () async {
-      await StorageService.setPhoneNavStyle('floating');
-      await StorageService.setPhoneNavBarIndices([2, 4]);
+      await AppStylePrefs.setPhoneNavStyle('floating');
+      await AppStylePrefs.setPhoneNavBarIndices([2, 4]);
       await StorageService.setDebrifyTvStyle('spotlight');
-      await StorageService.setDetailPageStyle('showcase');
-      await StorageService.setDetailTheme('prestige');
-      await StorageService.setAppTheme('spotlight');
-      await StorageService.setThemeOverrides('{"accent":"#ff00aa"}');
-      await StorageService.setParentsGuideStyle('classic');
+      await AppStylePrefs.setDetailPageStyle('showcase');
+      await AppStylePrefs.setDetailTheme('prestige');
+      await AppStylePrefs.setAppTheme('spotlight');
+      await AppStylePrefs.setThemeOverrides('{"accent":"#ff00aa"}');
+      await AppStylePrefs.setParentsGuideStyle('classic');
       await StorageService.setIptvStyle('edition');
       await StorageService.setIptvChannelPreviewEnabled(false);
       await StorageService.setPlayerDockStyle('cinema');
@@ -44,14 +44,14 @@ void main() {
       await StorageService.setDiscoverDefaultSource('trakt');
       await StorageService.setDiscoverLastSource('simkl');
       await StorageService.setDiscoverLayout('grid');
-      await StorageService.setLaunchAnimation('horizon');
-      await StorageService.setLaunchIdentPalette('theme');
-      await StorageService.setTextBrightness('dim');
+      await AppStylePrefs.setLaunchAnimation('horizon');
+      await AppStylePrefs.setLaunchIdentPalette('theme');
+      await AppStylePrefs.setTextBrightness('dim');
       await StorageService.setTvSidebarStyle('pill');
-      await StorageService.setDesktopSidebarStyle('pill');
+      await AppStylePrefs.setDesktopSidebarStyle('pill');
       await StorageService.setTvUiScalePercent(80);
       await StorageService.setTvHeroArtworkQuality(TvHeroArtworkQuality.fullHd);
-      await StorageService.setSidebarConfiguration(
+      await AppStylePrefs.setSidebarConfiguration(
         SidebarConfiguration(
           order: const ['home', 'search'],
           labels: const {'home': 'Start'},
@@ -101,9 +101,9 @@ void main() {
     await StorageService.setPlayLoaderStyle('orbit');
     await StorageService.setTvPlayerControlsStyle('holodeck');
     await StorageService.setDebrifyTvPlayerStyle('holodeck');
-    await StorageService.setAppTheme('removed');
-    await StorageService.setDetailTheme('removed');
-    await StorageService.setDetailPageStyle('future-look');
+    await AppStylePrefs.setAppTheme('removed');
+    await AppStylePrefs.setDetailTheme('removed');
+    await AppStylePrefs.setDetailPageStyle('future-look');
 
     expect(await AppStylePrefs.getPlayerDockStyle(), 'classic');
     expect(await AppStylePrefs.getPlayLoaderStyle(), 'marquee');

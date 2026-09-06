@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:debrify/screens/settings/detail_page_style_page.dart';
+import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/widgets/detail/detail_style.dart';
 
@@ -77,7 +78,7 @@ void main() {
       // Classic is that Classic is the one layout that ignores the app theme,
       // which made picking an App Theme look like it did nothing.
       expect(
-        await StorageService.getDetailPageStyle(),
+        await AppStylePrefs.getDetailPageStyle(),
         StorageService.kDetailPageStyleDefault,
       );
       expect(
@@ -88,15 +89,15 @@ void main() {
     });
 
     test('a known value round-trips and updates the sync cache', () async {
-      await StorageService.setDetailPageStyle('marquee');
+      await AppStylePrefs.setDetailPageStyle('marquee');
       expect(StorageService.detailPageStyleCached, 'marquee');
-      expect(await StorageService.getDetailPageStyle(), 'marquee');
+      expect(await AppStylePrefs.getDetailPageStyle(), 'marquee');
     });
 
     test('an unknown value is coerced on WRITE', () async {
-      await StorageService.setDetailPageStyle('nonsense');
+      await AppStylePrefs.setDetailPageStyle('nonsense');
       expect(
-        await StorageService.getDetailPageStyle(),
+        await AppStylePrefs.getDetailPageStyle(),
         StorageService.kDetailPageStyleDefault,
       );
     });
@@ -106,7 +107,7 @@ void main() {
         'detail_page_style': 'nonsense',
       });
       expect(
-        await StorageService.getDetailPageStyle(),
+        await AppStylePrefs.getDetailPageStyle(),
         StorageService.kDetailPageStyleDefault,
       );
     });
