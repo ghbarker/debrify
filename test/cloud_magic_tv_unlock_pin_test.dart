@@ -48,7 +48,7 @@ String _magicTvSources() {
     'pikpak_watch_flow', 'premiumize_watch_flow', 'alldebrid_watch_flow',
     'cached_locked_watch_programme',
   ]) {
-    var flow = _read('lib/screens/debrify_tv/watch/${provider}.dart');
+    var flow = _read('lib/screens/debrify_tv/watch/$provider.dart');
     for (final alias in aliases.entries) {
       flow = flow.replaceAll('host.${alias.key}(', '${alias.value}(');
     }
