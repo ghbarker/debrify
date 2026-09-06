@@ -742,3 +742,73 @@ Checkpoint verification: origin generation 1 PASS; final combined 68 PASS
 two-file scoped analysis clean. Forbidden-key negative 1 FAIL at the declared
 exclusion assertion. All 34 prior artifact Git blobs and old recipe sections
 remain unchanged; origin/current lib and committed public pin remain frozen.
+
+### Remote device exclusion (four keys, no portable identity)
+
+Separate residual domain: **zero admitted keys / four excluded**:
+`remote_control_enabled` (bool), `remote_intro_shown` (bool),
+`remote_tv_device_name` (String), `remote_last_device` (String JSON map).
+Historical 141/28 accounting and all prior fixture artifacts are unchanged.
+
+Actual pre-S2 exporter `6d26d7a1a98c7ddd37b4a25815f74123c1e29126` receives
+source DevicePreferences globals false/true/`Synthetic source TV` and
+`{"id":"synthetic-source","port":17}`. All four source-profile shadows are
+separately seeded as `synthetic source profile shadow`. Actual export emits an
+empty preference section; neither device globals nor profile-shadow copies
+become portable. The manifest records the exact source globals and shadow value.
+No pairing identity, key material, sockets or real devices participate.
+
+Current restore starts with distinct destination globals true/false/
+`Synthetic destination TV` and `{"id":"synthetic-destination","port":31}`.
+After actual restore publishes generation 2, raw global types/values and all
+four public readers still return those destination values. The new profile
+namespace has none of the four keys; a synthetic profile sentinel survives
+merge and re-export. Sender remembered-device metadata is not imported.
+This finite observation is not a claim about pairing or all device-state policy.
+
+Current origin pin `a181cbc315785276d0741d597dcb0be27a307973` is based on
+frozen #174 `f31ab5d4ea762f91802c387da77507c99724e34d`. Own generation checkout:
+`C:/Users/hunth/debrify/debrify-remote-device-fixture-origin`; candidate:
+`C:/Users/hunth/debrify/debrify-s2-remote-device-prefs`.
+Copied generation harness removes only unrelated extracted-store imports
+(IptvPrefs, PlaybackProgressStore, ProviderCredentialPrefs) and routes their
+same methods to actual old StorageService, including the existing playlist
+helper's receiver adaptation. This is not an identical-harness claim. Actual
+old lib is unchanged; exact HEAD, clean lib and own package root are asserted.
+
+```powershell
+$flutter = 'C:/Users/hunth/sdks/flutter-3.44.8/flutter/bin/flutter.bat'
+# Own unchanged pre-S2 checkout with the documented harness adaptation:
+& $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --dart-define=STORAGE_ORIGIN_GENERATE=true --plain-name 'remote-device-exclusion: generate' --reporter json
+# Copy only the new remote-device-exclusion encrypted/manifest pair to candidate.
+& $flutter test --no-pub test/remote_device_prefs_origin_test.dart test/storage_origin_restore_fixture_test.dart --reporter json
+& $flutter analyze --no-pub test/remote_device_prefs_origin_test.dart test/storage_origin_restore_fixture_test.dart
+# Each of four valid forbidden-key packages must fail its declared exclusion:
+foreach ($keyIndex in 0..3) {
+  & $flutter test --no-pub test/storage_origin_restore_fixture_test.dart --plain-name 'remote-device-exclusion: restore' --dart-define="STORAGE_FIXTURE_MUTATION=remote-forbidden-$keyIndex" --reporter json
+}
+```
+
+Each negative inserts one forbidden key into the decoded real origin package,
+rebuilds section hashes, encrypts/decrypts with the actual codec, and fails the
+explicit exclusion assertion **before restore**. No production mutations or
+codec-rejection/post-restore-negative claims. Pinned 3.44.8 is used in both own
+package configurations without modifying a shared SDK.
+
+Ciphertext SHA256:
+`4285c1eb4c25af447b0bb43582a0260f729bd4d37e60d1e77bcc481f950d7ec6`.
+
+Did we make a difference? Device globals and profile shadows now have explicit
+actual-origin exclusion and destination-device observation, supplementing the
+nine public-API lifetime/JSON pins. Is there more we could do? Product remains
+held for dependency/gate and a separate exact nine-body grant. No line credit,
+portable identity, native/socket/pairing/tvOS or all-interleavings proof. Public
+APIs remain unchanged; any later facade retirement needs separate Q2 scope.
+
+Checkpoint evidence: actual origin generation 1 PASS; combined 76 PASS
+(31 public-origin + 45 fixture), zero skips/errors; four separate forbidden-key
+controls each fail their declared exclusion assertion. Two-file analysis clean
+after removing a redundant test cast; no diagnostic allowance. All 36 prior
+artifact Git blobs, prior recipe sections, committed public pin and origin/current
+production remain unchanged. Initial sentinel named remote_restore_sentinel was
+itself excluded by remote_ policy; corrected only that synthetic test name.
