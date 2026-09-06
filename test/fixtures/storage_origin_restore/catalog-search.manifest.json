@@ -1,0 +1,33 @@
+{
+  "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+  "scenario": "catalog-search",
+  "syntheticOnly": true,
+  "sha256": "a489aeba14c5e98bf25849a647c29e31543078a7c8cdb34b48d5d49f17576fa5",
+  "includeSecrets": false,
+  "representedSettings": {
+    "catalog_search_disabled_addons_v1": "[\" z \",\"b\",\" z \",\"\",\"B\",\"b\"]"
+  },
+  "keyTypes": {
+    "catalog_search_disabled_addons_v1": "String"
+  },
+  "excludedKeys": [],
+  "expectedPublicRead": [
+    " z ",
+    "b",
+    "",
+    "B"
+  ],
+  "rawSeed": "ProfilePreferences.setString; duplicate/whitespace/order preserved, not public Set setter",
+  "omissions": {
+    "downloadAndRecordingBinaries": true,
+    "activeJobsAndSchedules": true,
+    "deviceWidePreferencesAndRuntimeState": true,
+    "devicePathsOsGrantsAndImportedFonts": true,
+    "remoteIdentityAndPeers": true,
+    "destinationNameAvatarRolePolicyPinAndEnabledState": true,
+    "pinAttemptCountersAndLockout": true,
+    "deviceKeysExecutablesCommandsAndCustomSchemes": true,
+    "localFilesystemBindingsAndResolvedPlaybackSources": true,
+    "transientPreferenceAndFileCaches": true
+  }
+}
