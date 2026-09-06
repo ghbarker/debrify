@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:debrify/models/quick_play_rules.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
@@ -121,7 +121,7 @@ void main() {
       'invalid v2 $raw falls back without normalizing stored bytes',
       () async {
         await install({...legacy, movieKey: raw});
-        final result = await StorageService.getQuickPlayRules(isMovie: true);
+        final result = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true);
         expect(result.preset, QuickPlayPreset.custom);
         expect(result.useFilters, false);
         expect(result.maxAttempts, 3);
@@ -135,7 +135,7 @@ void main() {
   test('wrong physical v2 type escapes before parser catch', () async {
     await install({...legacy, movieKey: 7});
     await expectLater(
-      StorageService.getQuickPlayRules(isMovie: true),
+      QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true),
       throwsA(isA<TypeError>()),
     );
     expect(backend.attempts, isEmpty);
@@ -144,7 +144,7 @@ void main() {
     test('wrong legacy physical type $key escapes fallback', () async {
       await install({...legacy, key: 'bad'});
       await expectLater(
-        StorageService.getQuickPlayRules(isMovie: true),
+        QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true),
         throwsA(isA<TypeError>()),
       );
       expect(backend.attempts, isEmpty);
@@ -153,11 +153,11 @@ void main() {
   test('movie skips malformed packs legacy read; series throws', () async {
     await install({...legacy, packsKey: 'bad'});
     expect(
-      (await StorageService.getQuickPlayRules(isMovie: true)).preferSeriesPacks,
+      (await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true)).preferSeriesPacks,
       false,
     );
     await expectLater(
-      StorageService.getQuickPlayRules(isMovie: false),
+      QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false),
       throwsA(isA<TypeError>()),
     );
   });
@@ -165,7 +165,7 @@ void main() {
     'existing malformed sibling is preserved by containsKey without parsing',
     () async {
       await install({...legacy, movieKey: 7});
-      await StorageService.setQuickPlayRules(selected, isMovie: false);
+      await QuickPlayPolicyPrefs.setQuickPlayRules(selected, isMovie: false);
       expect(
         backend.attempts,
         [seriesKey, retryKey, maxKey, packsKey].map((k) => 'flutter.$k'),
@@ -177,7 +177,7 @@ void main() {
     'missing sibling snapshots legacy BEFORE selected write and mirrors',
     () async {
       backend.holdAt = 0;
-      final work = StorageService.setQuickPlayRules(selected, isMovie: false);
+      final work = QuickPlayPolicyPrefs.setQuickPlayRules(selected, isMovie: false);
       await backend.entered.future;
       final prefs = await SharedPreferences.getInstance();
       expect(backend.attempts, ['flutter.$seriesKey']);
@@ -209,7 +209,7 @@ void main() {
   test('malformed missing-sibling legacy prevents every write', () async {
     await install({...legacy, maxKey: 'bad'});
     await expectLater(
-      StorageService.setQuickPlayRules(selected, isMovie: false),
+      QuickPlayPolicyPrefs.setQuickPlayRules(selected, isMovie: false),
       throwsA(isA<TypeError>()),
     );
     expect(backend.attempts, isEmpty);
@@ -222,7 +222,7 @@ void main() {
         backend.failAt = failure;
         final before = await backend.getAll();
         await expectLater(
-          StorageService.setQuickPlayRules(selected, isMovie: false),
+          QuickPlayPolicyPrefs.setQuickPlayRules(selected, isMovie: false),
           throwsStateError,
         );
         expect(
@@ -247,7 +247,7 @@ void main() {
   }
   test('false write is ignored and later writes continue', () async {
     backend.falseAt = 0;
-    await StorageService.setQuickPlayRules(selected, isMovie: false);
+    await QuickPlayPolicyPrefs.setQuickPlayRules(selected, isMovie: false);
     expect(backend.attempts, ordered.map((k) => 'flutter.$k'));
     expect((await backend.getAll()).containsKey('flutter.$seriesKey'), false);
     expect(
@@ -260,7 +260,7 @@ void main() {
     () async {
       await install({...legacy, ...sentinels}, committed: true);
       backend.holdAt = 0;
-      final work = StorageService.setQuickPlayRules(selected, isMovie: false);
+      final work = QuickPlayPolicyPrefs.setQuickPlayRules(selected, isMovie: false);
       final failure = expectLater(work, throwsStateError);
       await backend.entered.future;
       ProfileRuntime.initializeCommitted(b);
@@ -276,7 +276,7 @@ void main() {
       await install({...legacy, ...sentinels}, committed: true);
       backend.holdAt =
           3; // movie, missing series, try, max: first phase ends here
-      final work = StorageService.restoreQuickPlayDefaults();
+      final work = QuickPlayPolicyPrefs.restoreQuickPlayDefaults();
       await backend.entered.future;
       ProfileRuntime.initializeCommitted(b);
       backend.release.complete();
@@ -307,7 +307,7 @@ void main() {
     () async {
       await install({...legacy, ...sentinels}, committed: true);
       backend.holdAt = 7;
-      final work = StorageService.restoreQuickPlayDefaults();
+      final work = QuickPlayPolicyPrefs.restoreQuickPlayDefaults();
       await backend.entered.future;
       ProfileRuntime.initializeCommitted(b);
       backend.release.complete();
@@ -342,7 +342,7 @@ void main() {
         seriesKey: '{}',
       }, committed: true);
       backend.holdAt = 0;
-      final work = StorageService.clearQuickPlayCacheFallbackSettings();
+      final work = QuickPlayPolicyPrefs.clearQuickPlayCacheFallbackSettings();
       final failure = expectLater(work, throwsStateError);
       await backend.entered.future;
       ProfileRuntime.initializeCommitted(b);
@@ -369,11 +369,11 @@ void main() {
         backend.failAt = failure < 4 ? failure : null;
         if (failure < 4) {
           await expectLater(
-            StorageService.clearQuickPlayCacheFallbackSettings(),
+            QuickPlayPolicyPrefs.clearQuickPlayCacheFallbackSettings(),
             throwsStateError,
           );
         } else {
-          await StorageService.clearQuickPlayCacheFallbackSettings();
+          await QuickPlayPolicyPrefs.clearQuickPlayCacheFallbackSettings();
         }
         expect(
           backend.attempts,
@@ -400,17 +400,17 @@ void main() {
     'legacy scalar clamps differ from rules and mode read does not normalize',
     () async {
       await install({maxKey: 99, modeKey: 'future-mode'});
-      expect(await StorageService.getQuickPlayMaxRetries(), 99);
+      expect(await QuickPlayPolicyPrefs.getQuickPlayMaxRetries(), 99);
       expect(
-        (await StorageService.getQuickPlayRules(isMovie: true)).maxAttempts,
+        (await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true)).maxAttempts,
         10,
       );
-      await StorageService.setQuickPlayMaxRetries(1);
-      expect(await StorageService.getQuickPlayMaxRetries(), 2);
-      await StorageService.setQuickPlayMaxRetries(99);
-      expect(await StorageService.getQuickPlayMaxRetries(), 10);
-      await StorageService.setPlayButtonMode('future-mode');
-      expect(await StorageService.getPlayButtonMode(), 'quick');
+      await QuickPlayPolicyPrefs.setQuickPlayMaxRetries(1);
+      expect(await QuickPlayPolicyPrefs.getQuickPlayMaxRetries(), 2);
+      await QuickPlayPolicyPrefs.setQuickPlayMaxRetries(99);
+      expect(await QuickPlayPolicyPrefs.getQuickPlayMaxRetries(), 10);
+      await QuickPlayPolicyPrefs.setPlayButtonMode('future-mode');
+      expect(await QuickPlayPolicyPrefs.getPlayButtonMode(), 'quick');
       expect(
         (await SharedPreferences.getInstance()).getString(modeKey),
         'future-mode',

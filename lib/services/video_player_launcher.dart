@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
@@ -4939,7 +4940,7 @@ class _AndroidTvPlaybackPayloadBuilder {
     final contentType = _determineContentType(seriesPlaylist, playlistEntries);
     final startupRules =
         args.startupFailoverEnabled && args.stremioSources?.isNotEmpty == true
-        ? await StorageService.getQuickPlayRules(
+        ? await QuickPlayPolicyPrefs.getQuickPlayRules(
             isMovie: contentType != _PlaybackContentType.series,
           )
         : null;

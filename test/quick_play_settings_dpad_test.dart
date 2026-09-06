@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/settings/quick_play_settings_page.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'package:debrify/theme/app_theme.dart';
 import 'package:debrify/theme/app_theme_scope.dart';
 import 'package:debrify/utils/platform_util.dart';
@@ -127,7 +127,7 @@ void main() {
     await ok(tester); // drop
     expect(find.text('Moving…'), findsNothing);
 
-    final rules = await StorageService.getQuickPlayRules(isMovie: true);
+    final rules = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true);
     expect(rules.sourcePriority, [
       'stremio:beta',
       'stremio:alpha',

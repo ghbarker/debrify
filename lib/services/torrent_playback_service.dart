@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
@@ -1086,9 +1087,9 @@ class TorrentPlaybackService {
     bool cancelled() => isCancelled?.call() ?? false;
     final tryMultiple =
         rules?.tryNextOnFailure ??
-        await StorageService.getQuickPlayTryMultipleTorrents();
+        await QuickPlayPolicyPrefs.getQuickPlayTryMultipleTorrents();
     final maxRetries =
-        rules?.maxAttempts ?? await StorageService.getQuickPlayMaxRetries();
+        rules?.maxAttempts ?? await QuickPlayPolicyPrefs.getQuickPlayMaxRetries();
     final maxAttempts = probeAttemptCount(
       prov,
       tryMultiple: tryMultiple,
@@ -1167,7 +1168,7 @@ class TorrentPlaybackService {
     bool skipBoundSources = false,
     // Hands the user the manual source list for THIS selection instead of
     // auto-picking. Supplying it is what opts a call site into the user's
-    // "Play button opens" preference (see [StorageService.getPlayButtonMode]):
+    // "Play button opens" preference (see [QuickPlayPolicyPrefs.getPlayButtonMode]):
     // only a real Play press passes an opener, so binge auto-advance and
     // post-failure recovery keep their existing no-prompt contract for free.
     VoidCallback? openSourcePicker,
@@ -1190,9 +1191,9 @@ class TorrentPlaybackService {
     // is unchanged.
     var playMode = 'quick';
     try {
-      rules = await StorageService.getQuickPlayRules(isMovie: isMovie);
+      rules = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: isMovie);
       if (openSourcePicker != null) {
-        playMode = await StorageService.getPlayButtonMode();
+        playMode = await QuickPlayPolicyPrefs.getPlayButtonMode();
       }
       if (rules.sourcePriority.isNotEmpty) await warmSourceAliases();
     } catch (_) {
@@ -1608,7 +1609,7 @@ class TorrentPlaybackService {
     QuickPlayRules? rules,
   }) async {
     final useFilters =
-        rules?.useFilters ?? await StorageService.getQuickPlayHonorsFilters();
+        rules?.useFilters ?? await QuickPlayPolicyPrefs.getQuickPlayHonorsFilters();
     if (!useFilters) {
       return FilterLadder(const TorrentFilterState.empty());
     }
@@ -2246,7 +2247,7 @@ class TorrentPlaybackService {
         if (url == null || url.isEmpty) return false;
         final cached = directValidationCache[url];
         if (cached != null) return cached;
-        final rules = await StorageService.getQuickPlayRules(isMovie: false);
+        final rules = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false);
         if (!rules.validateDirectLinks) return true;
         if (!shouldPreflightDirectStream(source)) return true;
         // Match initial series Quick Play: lenient HEAD validation rejects
@@ -2265,7 +2266,7 @@ class TorrentPlaybackService {
       searchPacks: (s, e) async {
         final prov = await effectiveProvider();
         if (prov == null) return null;
-        final rules = await StorageService.getQuickPlayRules(isMovie: false);
+        final rules = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false);
         if (rules.sourcePriority.isNotEmpty) await warmSourceAliases();
         final ladder = await loadLadder(includeSize: false, rules: rules);
         // This feeds the manual Sources drawer, not automatic selection. Keep
@@ -2282,7 +2283,7 @@ class TorrentPlaybackService {
         );
       },
       searchEpisodes: (s, e) async {
-        final rules = await StorageService.getQuickPlayRules(isMovie: false);
+        final rules = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false);
         if (rules.sourcePriority.isNotEmpty) await warmSourceAliases();
         final ladder = await loadLadder(includeSize: false, rules: rules);
         try {
@@ -2421,7 +2422,7 @@ class TorrentPlaybackService {
         final prov = await _effectiveFetchProvider(provider);
         if (prov == null) return null;
         // Size buckets are movie-meaningful — keep them (unlike series).
-        final rules = await StorageService.getQuickPlayRules(isMovie: true);
+        final rules = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true);
         if (rules.sourcePriority.isNotEmpty) await warmSourceAliases();
         final ladder = await loadLadder(rules: rules);
         try {
@@ -3174,7 +3175,7 @@ class TorrentPlaybackService {
           if (cancel.cancelled) return true;
           final freshUrl = fresh?.directUrl;
           if (fresh != null && freshUrl != null && freshUrl.isNotEmpty) {
-            final rules = await StorageService.getQuickPlayRules(
+            final rules = await QuickPlayPolicyPrefs.getQuickPlayRules(
               isMovie: meta.contentType == 'movie',
             );
             if (cancel.cancelled) return true;
@@ -3769,7 +3770,7 @@ class TorrentPlaybackService {
       if (played) return;
       if (!context.mounted) return;
     }
-    final rules = await StorageService.getQuickPlayRules(isMovie: false);
+    final rules = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false);
     if (!context.mounted) return;
     await _playAddonStream(
       context,
@@ -3933,7 +3934,7 @@ class TorrentPlaybackService {
   /// manual/auto flag to tell them apart, and an unbounded list is the worse
   /// failure. Local sources stay opt-in.
   ///
-  /// Gated on [StorageService.getSeriesAutoPinOnPlay] — which is NOT the
+  /// Gated on [QuickPlayPolicyPrefs.getSeriesAutoPinOnPlay] — which is NOT the
   /// "Prefer season packs" toggle. The two shared a preference key until it was
   /// split; turning packs off used to disable pinning here, which left Smart
   /// mode permanently unable to find a pin.
@@ -3965,7 +3966,7 @@ class TorrentPlaybackService {
     final source = _durableBindingForSource(winner, provider);
     if (source == null) return;
     try {
-      if (!await StorageService.getSeriesAutoPinOnPlay()) return;
+      if (!await QuickPlayPolicyPrefs.getSeriesAutoPinOnPlay()) return;
       final imdbId = meta.imdbId!;
       final list = List<SeriesSource>.from(
         await SeriesSourceService.getSources(imdbId),
@@ -4541,7 +4542,7 @@ class TorrentPlaybackService {
       // A switch after an unpersistable initial row can be the first bind. The
       // existing series auto-pin preference still owns that opt-in boundary;
       // once a list exists, a successful switch keeps it in sync regardless.
-      if (existing.isEmpty && !await StorageService.getSeriesAutoPinOnPlay()) {
+      if (existing.isEmpty && !await QuickPlayPolicyPrefs.getSeriesAutoPinOnPlay()) {
         return;
       }
       // Series: promote the winner but retain the previous primary and every

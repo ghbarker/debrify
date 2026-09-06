@@ -13,7 +13,6 @@ import 'profiles/profile_preferences.dart';
 import 'profiles/profile_onboarding_state.dart';
 import 'storage/my_watchlist_store.dart';
 import '../models/indexer_manager_config.dart';
-import '../models/quick_play_rules.dart';
 import '../models/sidebar_configuration.dart';
 import '../models/stremio_addon.dart';
 import '../models/android_video_renderer_mode.dart';
@@ -212,7 +211,7 @@ class StorageService {
   // Series auto-pin: on a series play with no pinned source, search packs
   // first (complete series → season pack), and pin whatever source plays so
   // subsequent episode plays go straight through the bound path.
-  /// The moved legacy mirror is written by [setQuickPlayRules] to carry
+  /// The moved legacy mirror is written by [QuickPlayPolicyPrefs.setQuickPlayRules] to carry
   /// `preferSeriesPacks` for downgrade builds, and read once by
   /// `QuickPlayPolicyPrefs` legacy decoder to migrate pre-v2 profiles. Nothing on the live
   /// playback path may read it — see [QuickPlayPolicyPrefs.getSeriesAutoPinOnPlay].
@@ -1484,14 +1483,10 @@ class StorageService {
 
   /// Whether quick-play ranks candidates by the default filters (the
   /// FilterLadder). ON by default — the ladder only reorders, never drops.
-  static Future<bool> getQuickPlayHonorsFilters() =>
-      QuickPlayPolicyPrefs.getQuickPlayHonorsFilters();
 
   /// Legacy global preference retained for migration and profile-less callers.
   /// The Quick Play page owns the independent Movie and Series `useFilters`
   /// values; a global write must never silently rewrite either profile.
-  static Future<void> setQuickPlayHonorsFilters(bool value) =>
-      QuickPlayPolicyPrefs.setQuickPlayHonorsFilters(value);
 
   // Default Torrent Filter Settings
 
@@ -1612,39 +1607,20 @@ class StorageService {
   /// applies it solely when a picker opener is supplied) — binge auto-advance and
   /// post-failure recovery keep auto-selecting, since re-prompting mid-chain is
   /// exactly what those paths exist to avoid.
-  static Future<String> getPlayButtonMode() =>
-      QuickPlayPolicyPrefs.getPlayButtonMode();
 
-  static Future<void> setPlayButtonMode(String value) =>
-      QuickPlayPolicyPrefs.setPlayButtonMode(value);
 
   /// Loads the per-content Quick Play profile. When no v2 profile exists,
   /// legacy filter/retry/series-pack preferences are folded into one without
   /// changing what the next play will do. Non-default legacy values are
   /// labelled Custom; an untouched install is Debrify default.
-  static Future<QuickPlayRules> getQuickPlayRules({
-    required bool isMovie,
-  }) =>
-      QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: isMovie);
 
 
 
-  static Future<void> setQuickPlayRules(
-    QuickPlayRules rules, {
-    required bool isMovie,
-  }) =>
-      QuickPlayPolicyPrefs.setQuickPlayRules(rules, isMovie: isMovie);
 
-  static Future<void> restoreQuickPlayDefaults() =>
-      QuickPlayPolicyPrefs.restoreQuickPlayDefaults();
 
   /// Get whether to try multiple torrents if first is not cached
   /// Default: true (try next torrent on failure)
-  static Future<bool> getQuickPlayTryMultipleTorrents() =>
-      QuickPlayPolicyPrefs.getQuickPlayTryMultipleTorrents();
 
-  static Future<void> setQuickPlayTryMultipleTorrents(bool tryMultiple) =>
-      QuickPlayPolicyPrefs.setQuickPlayTryMultipleTorrents(tryMultiple);
 
   /// Whether a series play pins the source that played, so later episodes go
   /// straight through the bound path. Defaults ON.
@@ -1652,37 +1628,19 @@ class StorageService {
   /// Independent of "Prefer season packs" — the two shared a key until this
   /// split, which meant turning packs off silently killed pinning. See
   /// [QuickPlayPolicyPrefs.getSeriesAutoPinOnPlay].
-  static Future<bool> getSeriesAutoPinOnPlay() =>
-      QuickPlayPolicyPrefs.getSeriesAutoPinOnPlay();
 
-  static Future<void> setSeriesAutoPinOnPlay(bool enabled) =>
-      QuickPlayPolicyPrefs.setSeriesAutoPinOnPlay(enabled);
 
   /// Get max number of torrents to try before giving up
   /// Default: 5, Range: 2-10
-  static Future<int> getQuickPlayMaxRetries() =>
-      QuickPlayPolicyPrefs.getQuickPlayMaxRetries();
-
-  static Future<void> setQuickPlayMaxRetries(int maxRetries) =>
-      QuickPlayPolicyPrefs.setQuickPlayMaxRetries(maxRetries);
 
 
-  static Future<int> getQuickPlaySearchTimeout() =>
-      QuickPlayPolicyPrefs.getQuickPlaySearchTimeout();
-
-  static Future<void> setQuickPlaySearchTimeout(int seconds) =>
-      QuickPlayPolicyPrefs.setQuickPlaySearchTimeout(seconds);
 
 
-  static Future<int> getStremioSourcesTimeout() =>
-      QuickPlayPolicyPrefs.getStremioSourcesTimeout();
 
-  static Future<void> setStremioSourcesTimeout(int seconds) =>
-      QuickPlayPolicyPrefs.setStremioSourcesTimeout(seconds);
+
+
 
   /// Clear all Quick Play Cache Fallback settings
-  static Future<void> clearQuickPlayCacheFallbackSettings() =>
-      QuickPlayPolicyPrefs.clearQuickPlayCacheFallbackSettings();
 
   // External Player Settings — forwarding façade; bodies live on PlayerPrefs.
   static const String skipSegmentProviderAuto = PlayerPrefs.skipSegmentProviderAuto;

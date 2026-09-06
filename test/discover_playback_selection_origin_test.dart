@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
 import 'dart:async';
@@ -134,17 +135,17 @@ Future<PlaybackTransport> preparePlayback(
   await StorageService.setDiscoverDefaultSource('cw');
   if (legacyDetail) await StorageService.setMergedSeriesPageEnabled(false);
   await StorageService.setHomeContinueWatchingEnabled(true);
-  await StorageService.setPlayButtonMode('quick');
+  await QuickPlayPolicyPrefs.setPlayButtonMode('quick');
   await StorageService.setDefaultPlayerMode(external ? 'external' : 'internal');
   await StorageService.setPreferredWindowsExternalPlayer('system_default');
-  final rules = await StorageService.getQuickPlayRules(isMovie: true);
-  await StorageService.setQuickPlayRules(
+  final rules = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true);
+  await QuickPlayPolicyPrefs.setQuickPlayRules(
     rules.copyWith(sourceMode: QuickPlaySourceMode.addonsOnly),
     isMovie: true,
   );
   if (series) {
-    final seriesRules = await StorageService.getQuickPlayRules(isMovie: false);
-    await StorageService.setQuickPlayRules(
+    final seriesRules = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false);
+    await QuickPlayPolicyPrefs.setQuickPlayRules(
       seriesRules.copyWith(
         sourceMode: QuickPlaySourceMode.addonsOnly,
         packPreference: QuickPlayPackPreference.exactEpisodeOnly,
@@ -531,7 +532,7 @@ void main() {
       await prepareFavourites(tester);
       await StorageService.setDiscoverDefaultSource('cw');
       await StorageService.setHomeContinueWatchingEnabled(true);
-      await StorageService.setPlayButtonMode('always');
+      await QuickPlayPolicyPrefs.setPlayButtonMode('always');
       await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'tt1234567',
         title: 'Cancel origin',
@@ -595,7 +596,7 @@ void main() {
       await prepareFavourites(tester);
       await StorageService.setDiscoverDefaultSource('cw');
       await StorageService.setHomeContinueWatchingEnabled(true);
-      await StorageService.setPlayButtonMode('always');
+      await QuickPlayPolicyPrefs.setPlayButtonMode('always');
       await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'tt1234567',
         title: 'Playback origin',

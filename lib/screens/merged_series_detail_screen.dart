@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'package:debrify/services/storage/ambient_trailer_prefs.dart' show AmbientTrailerPrefs;
 import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
@@ -590,7 +591,7 @@ class _MergedDetailScreenState extends State<MergedDetailScreen>
     final openEpisode = widget.onBrowsePrimaryEpisodeSources;
     if (openEpisode == null) return;
 
-    final rules = await StorageService.getQuickPlayRules(isMovie: false);
+    final rules = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false);
     if (!mounted) return;
 
     final canBrowsePacks =

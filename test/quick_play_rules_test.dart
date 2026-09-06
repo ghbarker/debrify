@@ -11,7 +11,7 @@ import 'package:debrify/models/torrent.dart';
 import 'package:debrify/models/torrent_filter_state.dart';
 import 'package:debrify/services/series_source_fetcher.dart';
 import 'package:debrify/services/stremio_service.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'package:debrify/services/stream_url_validator.dart';
 import 'package:debrify/services/torrent_playback_service.dart';
 import 'package:debrify/services/startup_stream_policy.dart';
@@ -93,7 +93,7 @@ void main() {
           'stremio_addons_v1': jsonEncode([addon.toJson()]),
         });
         service.invalidateCache();
-        await StorageService.setQuickPlayRules(
+        await QuickPlayPolicyPrefs.setQuickPlayRules(
           QuickPlayRules.debrifyDefault(isMovie: false).copyWith(
             preset: QuickPlayPreset.custom,
             sourceMode: QuickPlaySourceMode.addonsThenTorrents,
@@ -149,7 +149,7 @@ void main() {
           'stremio_addons_v1': jsonEncode([addon.toJson()]),
         });
         service.invalidateCache();
-        await StorageService.setQuickPlayRules(
+        await QuickPlayPolicyPrefs.setQuickPlayRules(
           QuickPlayRules.debrifyDefault(isMovie: false).copyWith(
             preset: QuickPlayPreset.custom,
             sourceMode: QuickPlaySourceMode.addonsThenTorrents,
@@ -279,11 +279,11 @@ void main() {
       () async {
         SharedPreferences.setMockInitialValues({});
         expect(
-          await StorageService.getQuickPlayRules(isMovie: true),
+          await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true),
           QuickPlayRules.debrifyDefault(isMovie: true),
         );
         expect(
-          await StorageService.getQuickPlayRules(isMovie: false),
+          await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false),
           QuickPlayRules.debrifyDefault(isMovie: false),
         );
       },
@@ -298,8 +298,8 @@ void main() {
           'quick_play_max_retries': 3,
           'auto_bind_series_packs_on_play': false,
         });
-        final movie = await StorageService.getQuickPlayRules(isMovie: true);
-        final series = await StorageService.getQuickPlayRules(isMovie: false);
+        final movie = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true);
+        final series = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false);
         expect(movie.preset, QuickPlayPreset.custom);
         expect(movie.useFilters, isFalse);
         expect(movie.tryNextOnFailure, isFalse);
@@ -311,60 +311,60 @@ void main() {
 
     test('restore writes the exact compatibility profiles', () async {
       SharedPreferences.setMockInitialValues({});
-      await StorageService.setQuickPlayRules(
+      await QuickPlayPolicyPrefs.setQuickPlayRules(
         QuickPlayRules.forPreset(QuickPlayPreset.fastest, isMovie: true),
         isMovie: true,
       );
-      await StorageService.restoreQuickPlayDefaults();
+      await QuickPlayPolicyPrefs.restoreQuickPlayDefaults();
       expect(
-        await StorageService.getQuickPlayRules(isMovie: true),
+        await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true),
         QuickPlayRules.debrifyDefault(isMovie: true),
       );
       expect(
-        await StorageService.getQuickPlayRules(isMovie: false),
+        await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false),
         QuickPlayRules.debrifyDefault(isMovie: false),
       );
     });
 
     test('turning off season packs leaves series auto-pin alone', () async {
       SharedPreferences.setMockInitialValues({});
-      expect(await StorageService.getSeriesAutoPinOnPlay(), isTrue);
+      expect(await QuickPlayPolicyPrefs.getSeriesAutoPinOnPlay(), isTrue);
       // These two shared one preference key, so this toggle silently disabled
       // ALL series pinning — Smart mode then never found a pin and Quick Play
       // lost its fast path. They must stay independent.
-      await StorageService.setQuickPlayRules(
+      await QuickPlayPolicyPrefs.setQuickPlayRules(
         QuickPlayRules.debrifyDefault(
           isMovie: false,
         ).copyWith(preset: QuickPlayPreset.custom, preferSeriesPacks: false),
         isMovie: false,
       );
-      expect(await StorageService.getSeriesAutoPinOnPlay(), isTrue);
+      expect(await QuickPlayPolicyPrefs.getSeriesAutoPinOnPlay(), isTrue);
       // …and the reverse: auto-pin off must not rewrite the packs rule.
-      await StorageService.setSeriesAutoPinOnPlay(false);
-      expect(await StorageService.getSeriesAutoPinOnPlay(), isFalse);
-      final rules = await StorageService.getQuickPlayRules(isMovie: false);
+      await QuickPlayPolicyPrefs.setSeriesAutoPinOnPlay(false);
+      expect(await QuickPlayPolicyPrefs.getSeriesAutoPinOnPlay(), isFalse);
+      final rules = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false);
       expect(rules.preferSeriesPacks, isFalse);
     });
 
     test('play button mode defaults to quick and rejects junk', () async {
       SharedPreferences.setMockInitialValues({});
-      expect(await StorageService.getPlayButtonMode(), 'quick');
+      expect(await QuickPlayPolicyPrefs.getPlayButtonMode(), 'quick');
       // A value from a newer build (or a corrupted profile) must not leave the
       // Play button in a mode this build cannot honor.
       SharedPreferences.setMockInitialValues({'play_button_mode': 'nonsense'});
-      expect(await StorageService.getPlayButtonMode(), 'quick');
+      expect(await QuickPlayPolicyPrefs.getPlayButtonMode(), 'quick');
     });
 
     test('play button mode round-trips and restore clears it', () async {
       SharedPreferences.setMockInitialValues({});
-      await StorageService.setPlayButtonMode('always');
-      expect(await StorageService.getPlayButtonMode(), 'always');
-      await StorageService.setPlayButtonMode('smart');
-      expect(await StorageService.getPlayButtonMode(), 'smart');
+      await QuickPlayPolicyPrefs.setPlayButtonMode('always');
+      expect(await QuickPlayPolicyPrefs.getPlayButtonMode(), 'always');
+      await QuickPlayPolicyPrefs.setPlayButtonMode('smart');
+      expect(await QuickPlayPolicyPrefs.getPlayButtonMode(), 'smart');
       // "Restore defaults" claims it restored default Quick Play behavior, so
       // the Play button must actually go back to quick-playing.
-      await StorageService.restoreQuickPlayDefaults();
-      expect(await StorageService.getPlayButtonMode(), 'quick');
+      await QuickPlayPolicyPrefs.restoreQuickPlayDefaults();
+      expect(await QuickPlayPolicyPrefs.getPlayButtonMode(), 'quick');
     });
 
     test('saving movies cannot leak retry settings into series', () async {
@@ -374,10 +374,10 @@ void main() {
         tryNextOnFailure: true,
         maxAttempts: 10,
       );
-      await StorageService.setQuickPlayRules(movies, isMovie: true);
+      await QuickPlayPolicyPrefs.setQuickPlayRules(movies, isMovie: true);
 
       expect(
-        await StorageService.getQuickPlayRules(isMovie: false),
+        await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false),
         QuickPlayRules.debrifyDefault(isMovie: false),
       );
     });
@@ -389,10 +389,10 @@ void main() {
         tryNextOnFailure: false,
         maxAttempts: 1,
       );
-      await StorageService.setQuickPlayRules(series, isMovie: false);
+      await QuickPlayPolicyPrefs.setQuickPlayRules(series, isMovie: false);
 
       expect(
-        await StorageService.getQuickPlayRules(isMovie: true),
+        await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true),
         QuickPlayRules.debrifyDefault(isMovie: true),
       );
     });
@@ -407,13 +407,13 @@ void main() {
         QuickPlayPreset.fastest,
         isMovie: false,
       );
-      await StorageService.setQuickPlayRules(movies, isMovie: true);
-      await StorageService.setQuickPlayRules(series, isMovie: false);
+      await QuickPlayPolicyPrefs.setQuickPlayRules(movies, isMovie: true);
+      await QuickPlayPolicyPrefs.setQuickPlayRules(series, isMovie: false);
 
-      await StorageService.setQuickPlayHonorsFilters(true);
+      await QuickPlayPolicyPrefs.setQuickPlayHonorsFilters(true);
 
-      expect(await StorageService.getQuickPlayRules(isMovie: true), movies);
-      expect(await StorageService.getQuickPlayRules(isMovie: false), series);
+      expect(await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true), movies);
+      expect(await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: false), series);
     });
 
     test('JSON round-trip preserves every option', () {
