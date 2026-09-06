@@ -12,6 +12,12 @@ Overall completion percentage is withdrawn: there is no reliable remaining-work 
 - [x] PR167: board runtime owns navigation, paging and deferred focus; three Fav-to-host dependencies removed. Search266 lines smaller; whole production106 lines larger. Standalone Discover not complete.
 - [x] All three PRs independently reviewed and all three CI checks passed; merged into58864c1d.
 
+### Active worker dispatch — latest
+- Wegener: Tonight exact extraction boundary after green origin pins; implementation grant next.
+- Ampere: remaining RD/AD/PikPak watch-flow programme scope on frozen175; no overlapping production edits.
+- Locke: next remaining application/device storage-policy scope on frozen174; no overlapping production edits.
+- Cicero: verify174/175 merge unions/order and prepare next required integrated gate; run only after third production merge.
+- PR174 and175 independently accepted; tests/goldens still running, native checks passed. Existing PR heads stay frozen.
 ### Working now
 - [ ] Cicero: full integrated gate on58864c1d after three production merges. Full tests/goldens, analyzer, layering, strict native pair, Windows/ARM64 builds and all-five forwarder ledger. No further merge until this gate passes.
 - [ ] Wegener: planned Discover cutover and shared Home/Search content/actions composition on refactor/g1-discover-cutover. Actual board runtime reused, no legacy State instance on Discover path. Scoped dependency/lifetime consolidation underway.
@@ -28,7 +34,7 @@ Overall completion percentage is withdrawn: there is no reliable remaining-work 
 6. Final integrated acceptance on the completed architecture. Earlier user-accepted phone/TV behavior applies to installedf75fa016 only, not later builds or direct SHIELD execution.
 
 ### Current measurements and budget
-- Search7053/19070; Player11928/16278; MagicTV3318/10716; Storage2678/9963; Settings2901/7905 (current/original lines).
+- Search6830/19070; Player11928/16278; MagicTV3318/10716; Storage2609/9963; Settings2901/7905 (current/original lines).
 - Last complete gatec1ca:5575 successes/12 known failures/2 skips; goldens21 known errors; analyzer436/452, layering77. Gate58864 was blocked by a Simkl UTC/local fixture bug reproduced on earlier main. Corrective169 mergedb19cd9e9 withallCIpassed; merged-main generic rerun pending. Separate168Home paging CI failure under diagnostic review.
 - Forwarders at58864: Storage393/143, Search82/69, Player161/112, MagicTV23/12, Settings0/0 (total/single-line).
 - No reliable whole-project time/quota estimate yet. Quick Play checkpoint estimate above is bounded; unestimated architectural work is not treated as zero remaining work.
@@ -45,6 +51,12 @@ Updated 2026-09-05 after main `d5f8dc4b` (CW merge `e478635e`). Orchestrator own
 
 ## Historical roadmap (superseded by current roadmap above)
 
+### Active worker dispatch — latest
+- Wegener: Tonight exact extraction boundary after green origin pins; implementation grant next.
+- Ampere: remaining RD/AD/PikPak watch-flow programme scope on frozen175; no overlapping production edits.
+- Locke: next remaining application/device storage-policy scope on frozen174; no overlapping production edits.
+- Cicero: verify174/175 merge unions/order and prepare next required integrated gate; run only after third production merge.
+- PR174 and175 independently accepted; tests/goldens still running, native checks passed. Existing PR heads stay frozen.
 ### Working now
 - User authorized continued extraction without manual smoke. Temporary automatic-sleep prevention verified: helper PID3412, expires 2026-09-05 16:43 UTC; permanent power settings unchanged.
 - [ ] **Cicero — native CI plan:** CW automated mini-gate complete; final114 independent19case verification complete. Planning mandatory native runtime CI for draft116, no workflow edits yet.
@@ -386,7 +398,7 @@ User correctly challenged unchanged65% repeatedover6hours. Estimatewithdrawn, no
 Exact reviewed97db merged as79547771. All3CIchecks passed; independent495focusedpass; generic5593pass/12known/2skip, goldens21known, analyzer436/452 and layering77 unchanged.223facades retired, host665lines fewer, wholeproduction592lines fewer.33targetshortfall and97residual members remain open. Pin-before-move preserved in merge history. One batched board commit for this merge; no new manual smoke claim. Active follow-ons: M1 shared admission and board runtime, independent reviewers assigned. No user blockers; parked112/109/56 unchanged.
 
 ## Merges166 and167 — September6
-Both exact reviewed heads41bf90c8 and6c0fc23 passed test/goldens/native CI and merged sequentially into58864c1d.166 removes135 production lines through four-provider shared admission/search (five leaves1782/common1551; targetopen).167 removes266 host lines but adds106 wholeproduction lines; actualnavigation/paging/deferred-focus ownership removes threeFavhostdependencies, not standaloneDiscover completion. Combined net29 production lines removed; architectural and relocation accounting remain separate. Godcounts Search7053/19070,Player11928/16278,Magic3318/10716,Storage2678/9963,Settings2901/7905. Threeproduction merges sincec1ca trigger full integrated gate at58864c1d (Cicero), now running withallfiveforwarderledger. Active Discover composition(Wegener) and QuickPlay policy origin/restorefixtures(Locke); no newmergebeforegate. No userblocker/performance scope added. One batched board commit for these merges.
+Both exact reviewed heads41bf90c8 and6c0fc23 passed test/goldens/native CI and merged sequentially into58864c1d.166 removes135 production lines through four-provider shared admission/search (five leaves1782/common1551; targetopen).167 removes266 host lines but adds106 wholeproduction lines; actualnavigation/paging/deferred-focus ownership removes threeFavhostdependencies, not standaloneDiscover completion. Combined net29 production lines removed; architectural and relocation accounting remain separate. Godcounts Search6830/19070,Player11928/16278,Magic3318/10716,Storage2609/9963,Settings2901/7905. Threeproduction merges sincec1ca trigger full integrated gate at58864c1d (Cicero), now running withallfiveforwarderledger. Active Discover composition(Wegener) and QuickPlay policy origin/restorefixtures(Locke); no newmergebeforegate. No userblocker/performance scope added. One batched board commit for these merges.
 
 ## Corrective merge169
 Test-only fixture correction4ea3520a mergedb19cd9e9 after8author tests/cleananalysis andall3CIchecks. No independenttest-onlyrerun, production/allowances unchanged. Actualmain genericrerun assignedC0; prior58864 build/native evidence retains exactsource labels. PR168 HomeDown duplicate-request assertion failedCI and is underboundeddiagnostic review; notwaived. Godfiles unchanged8349/11928/3318/2833/2901 versus originals19070/16278/10716/9963/7905. Did we make a difference: fixed provenUTC/local testfixture error, noappbehaviorchange. More remains: Discovercutover,168CIresolution and architectureoutcomes above.
@@ -402,3 +414,9 @@ VR171 exact1923 all3CIgreen/independent180tests accepted merged2ecd173d. Host271
 
 ## Gate2ecd accepted with note; merge172
 Fullgate2ecd:5677success/12known/2skip zero new/unused;goldens21known effectivepass;analyzer436/452,layer77+0/-0,Python55,Windows161.4s/ARM6496.7s pass. Originalnativebc46pass/currentexit79 incomplete withoutassertion; oneauthorizedcontrolledcurrentrerunpassed6.56s samebytes/runtime afterbuilds, firstfailure retained ROOTCAUSEUNPROVEN. Gateacceptedwithreliabilitynote, notfirstpassclean. Ledgercurrent-knownowners storage416/143,search133/117,player161/112,Magic23/12,settings0; searchsameclassifierbackrun58864=105 vsoldclassifier82, no silentbaselinechange. PR172 exactfa1 all3CIpassed/independent227nongoldenpass merged21477e89,101netprodremoved,fivewatchleaves1498/common1551/new183,targetopen. Counter1sincegate.173heldtwo sourcepublictype tests likelymovedneutraldeclarations,ownertriage; no waivedassertions. Godfiles7053/11928/3318/2678/2901 vs19070/16278/10716/9963/7905 unchangedthismerge. No userblocker. Difference: completeTB/PMquickcontinuation shared;moreproviderflows remain.
+
+## Merge173 and immediate follow-on assignments
+173exact2cef all3CIpassed/independent66tests+correctiondeltaaccepted merged3347ef1d. Spotlightrealwidget+assembly/neutralFavtypes,host7053->6830(-223),wholeproduction+92,oneof7stagescomplete—not1400target. Sourcepinsactualneutraldefinitions/export tested, no weakenedassertions. Counter2since2ecd (172173). Wegener nextcoherentstage scope+originpins;AmperecachedflowawaitsC0exactbaselinecommit andpreparesindependentonboardingreview;C0finishesbaseline451mapping;Lockeonboarding2bodymoveactive. No workerneedsuserinput. Godcurrent6830/11928/3318/2678/2901 vs19070/16278/10716/9963/7905. Differenceactualwidget/dependencycut;remaining6stages/couplingstayopen.
+
+## Merge174 and immediate gate
+Exactf31ab5d4 independent86PASS/all3CIgreen merged730b18fa. Onboarding2bodies preserved,host2678->2609(-69),whole+18/twofacades4; exclusion/restorequirk retained. Thirdproduction172173174 since2ecd triggersfullgate730b18C0 nowrunning;baseline452 (175notmerged).175exact0f9a allCIgreen+reviewacceptedheldonlygate. ActiveTonightproductionWegener,cachedlockedpinsAmpere,remoteexclusionLocke,fullgateC0. God6830/11928/3318/2609/2901 vs19070/16278/10716/9963/7905. No userblocker. Difference setupauthority separatedwithrealtests;morestorageandarchitecture remain.

@@ -28,16 +28,20 @@ Search `part` files: `lib/screens/search/search_sources.dart` (3 163),
 `lib/screens/search/search_hero_widgets.dart` (2 261),
 `lib/screens/search/search_stage_widgets.dart` (1 699),
 `lib/screens/search/search_card_widgets.dart` (1 198).
-TV Home stage parts (7 files, 1 661): `lib/screens/search/stages/*_board_stage.dart`.
+TV Home stage parts (6 files, 1 581): `lib/screens/search/stages/*_board_stage.dart`
+except `spotlight_board_stage.dart`, now the imported `SpotlightStage` widget (62 lines).
 Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.dart`,
 `title_opener.dart` (`TitleOpener.open` — catalog detail from the board),
 `catalog_search_screen.dart` (Search tab), `discover_screen.dart` (Discover tab),
 `search_screen_shells.dart` (tab/variant/landing/dropdown contracts),
 `keyword_search_controller.dart` + `keyword_search_screen.dart` (in-tab keyword
 torrent search; G1'-3).
-TV Home stages (parts of `search_screen.dart`, G1 step 5): `lib/screens/search/stages/`
+TV Home stages (six remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
 — `_CanvasBoardStage`, `_AtriumBoardStage`, `_MosaicBoardStage`, `_PromenadeBoardStage`,
-`_DeckBoardStage`, `_TonightBoardStage`, `_SpotlightBoardStage`. Dispatch helper:
+`_DeckBoardStage`, `_TonightBoardStage`. Spotlight uses public `SpotlightStage` plus
+`spotlight_stage_content.dart` (`SpotlightStageContent`) for actual shelf/card assembly.
+Neutral `FavKind` / `FavRowRef` live in `search/fav_row_ref.dart`; the host re-exports them.
+Dispatch helper:
 `tv_home_stage_dispatch.dart` (`resolveTvHomeStageLayout`). Empty Spotlight shelves
 fall through to classic. Discover grid/stage chrome is `search/discover_view.dart`
 (`DiscoverView`); its source panel comes from the private composition in `discover_screen.dart`,
@@ -190,6 +194,14 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   No baseline allowance increase, pure-logic/performance savings or automatic gate closure claimed.
   TV Home stage layouts are `lib/screens/search/stages/` (`_CanvasBoardStage` and friends);
   the host keeps `_homeStyleEffective`, rails, focus, and the classic `LayoutBuilder`.
+  G1'-8 Spotlight (product f9059ae4): `SpotlightStage` is a real imported widget;
+  `SpotlightStageContent` owns catalog/collection, CW and favourite shelf/card assembly.
+  Host key/node lifetime, lazy render-frame/trailer construction and shared route/art bindings remain.
+  `FavKind` / `FavRowRef` moved unchanged to `fav_row_ref.dart`; two controller/runtime
+  type imports no longer point at the host, whose public re-export preserves caller compatibility.
+  Host 7053 -> 6830 (**223 net Leaves**); whole production **+92**, including neutral types.
+  Ten typed content operations and four frame actions remain explicit coupling; no pure-logic credit.
+  Six stage parts and their shared focus/deferral/Hero aliases remain; the 1400 target is not closed.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
