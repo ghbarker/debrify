@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import '../../screens/video_player/models/playlist_entry.dart';
+import '../../models/playlist_entry.dart';
 
 /// Resolved add result carrying what each post-action branch needs.
 class CloudPlaybackResult {

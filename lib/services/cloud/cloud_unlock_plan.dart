@@ -1,4 +1,4 @@
-import '../../screens/video_player/models/playlist_entry.dart';
+import '../../models/playlist_entry.dart';
 import 'cloud_provider_id.dart';
 
 /// Which adapter the playlist-unlock ladders should call.

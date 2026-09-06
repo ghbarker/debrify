@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/premiumize_file.dart';
 import '../../models/torrent.dart';
-import '../../screens/video_player/models/playlist_entry.dart';
+import '../../models/playlist_entry.dart';
 import '../../utils/file_utils.dart';
 import '../../utils/stremio_episode_selector.dart';
 import '../main_page_bridge.dart';

@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/rd_torrent.dart';
 import '../../models/torrent.dart';
-import '../../screens/video_player/models/playlist_entry.dart';
+import '../../models/playlist_entry.dart';
 import '../../utils/file_utils.dart';
 import '../../utils/rd_folder_tree_builder.dart';
 import '../../utils/series_parser.dart';
