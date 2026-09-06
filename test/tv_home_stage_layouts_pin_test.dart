@@ -164,6 +164,49 @@ void _expectCanvasSource(String host, String stage) {
   expect(_methodBody(stage, 'build'), contains('bindings.seedFocus();'));
 }
 
+
+const _atriumDispatch =
+    'return AtriumStage(readFrame: _readAtriumFrame, isTelevision: widget.isTelevision);';
+
+String _atriumSource() =>
+    File('lib/screens/search/stages/atrium_board_stage.dart').readAsStringSync();
+
+String _atriumFrameBody(String host) {
+  final start = host.indexOf('  AtriumStageFrame? _readAtriumFrame() {');
+  expect(start, isNonNegative);
+  final end = host.indexOf('  Widget _atriumRow(', start);
+  expect(end, greaterThan(start));
+  return host.substring(start, end);
+}
+
+void _expectAtriumSource(String host, String stage) {
+  expect(_homeSwitchChunk(host), contains(_atriumDispatch));
+  expect(host, contains("import 'search/stages/atrium_board_stage.dart';"));
+  expect(host, isNot(contains("part 'search/stages/atrium_board_stage.dart';")));
+  expect(stage, contains('class AtriumStage extends StatelessWidget'));
+  expect(stage, isNot(contains('_SearchScreenState')));
+  expect(stage, isNot(contains('search_screen.dart')));
+  final frame = _atriumFrameBody(host);
+  const resolve = 'final view = _resolveStageRail();';
+  const nullGuard = 'if (view == null) return null;';
+  const seed = '_seedStageFocusOnce();';
+  expect(frame, contains(resolve));
+  expect(frame, contains(nullGuard));
+  expect(frame, contains(seed));
+  expect(seed.allMatches(frame), hasLength(1));
+  expect(frame.indexOf(resolve), lessThan(frame.indexOf(nullGuard)));
+  expect(frame.indexOf(nullGuard), lessThan(frame.indexOf(seed)));
+  expect(frame.indexOf(seed), lessThan(frame.indexOf('final rails = view.rails;')));
+  final body = _methodBody(stage, 'build');
+  const read = 'final frame = readFrame();';
+  const loading = 'if (frame == null) return BrandLoadingStage(isTelevision: isTelevision);';
+  expect(body, contains(read));
+  expect(body, contains(loading));
+  expect(body, contains('return LayoutBuilder('));
+  expect(body.indexOf(read), lessThan(body.indexOf(loading)));
+  expect(body.indexOf(loading), lessThan(body.indexOf('return LayoutBuilder(')));
+}
+
 void main() {
   late String host;
   late String layouts;
@@ -268,7 +311,7 @@ void main() {
       expect(chunk, isNot(contains('_buildDiscoverStage')));
       expect(chunk, isNot(contains("case 'classic':")));
       expect(chunk, contains(_canvasDispatch));
-      expect(chunk, contains('return _AtriumBoardStage(host: this);'));
+      expect(chunk, contains(_atriumDispatch));
       expect(chunk, contains(_mosaicDispatch));
       expect(chunk, contains(_promenadeDispatch));
       expect(chunk, contains(_deckDispatch));
@@ -373,8 +416,38 @@ void main() {
         throwsA(isA<TestFailure>()),
       );
     });
+
+    test('Atrium guards reject dispatch/null/seed/order/private State mutants', () {
+      final stage = _atriumSource();
+      _expectAtriumSource(host, stage);
+      final frame = _atriumFrameBody(host);
+      const nullGuard = 'if (view == null) return null;';
+      const seed = '_seedStageFocusOnce();';
+      final variants = <(String, String)>[
+        (host.replaceFirst(_atriumDispatch, 'return const SizedBox.shrink();'), stage),
+        (host.replaceFirst(frame, frame.replaceFirst(nullGuard, '')), stage),
+        (host, stage.replaceFirst(
+          'if (frame == null) return BrandLoadingStage(isTelevision: isTelevision);', '')),
+        (host.replaceFirst(frame, frame.replaceFirst(seed, '')), stage),
+        (host.replaceFirst(frame, frame.replaceFirst(seed, '').replaceFirst(
+          nullGuard, '$seed $nullGuard')), stage),
+        (host, '$stage\n// _SearchScreenState host proxy'),
+        (host, "import '../../search_screen.dart';\n$stage"),
+      ];
+      for (var i = 0; i < variants.length; i++) {
+        final (mutantHost, mutantStage) = variants[i];
+        expect(mutantHost != host || mutantStage != stage, isTrue, reason: 'mutant $i applied');
+        expect(() => _expectAtriumSource(mutantHost, mutantStage),
+            throwsA(isA<TestFailure>()), reason: 'mutant $i must fail');
+      }
+    });
+
     test('all seven Home stage builders exist', () {
       for (final name in kTvHomeStageBuilderNames) {
+        if (name == '_buildAtriumBoard') {
+          _expectAtriumSource(host, _atriumSource());
+          continue;
+        }
         if (name == '_buildCanvasBoard') {
           expect(_methodBody(_canvasSource(), 'build'), contains('return LayoutBuilder('));
           continue;
@@ -415,7 +488,7 @@ void main() {
     test('each board is its own widget under search/stages/', () {
       const widgets = [
         'CanvasStage',
-        '_AtriumBoardStage',
+        'AtriumStage',
         'MosaicStage',
         'PromenadeStage',
         'DeckStage',
@@ -441,6 +514,10 @@ void main() {
           '_buildPromenadeBoard',
           '_buildDeckBoard',
         ]) {
+          if (name == '_buildAtriumBoard') {
+            _expectAtriumSource(host, _atriumSource());
+            continue;
+          }
           if (name == '_buildCanvasBoard') {
             _expectCanvasEmpty(_canvasSource());
             continue;
@@ -558,6 +635,10 @@ void main() {
           '_buildMosaicBoard',
           '_buildDeckBoard',
         ]) {
+          if (name == '_buildAtriumBoard') {
+            _expectAtriumSource(host, _atriumSource());
+            continue;
+          }
           if (name == '_buildCanvasBoard') {
             expect(_methodBody(_canvasSource(), 'build'), contains('bindings.seedFocus();'));
             continue;
