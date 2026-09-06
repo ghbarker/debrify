@@ -7,7 +7,7 @@ import '../../services/youtube_service.dart';
 import 'package:debrify/services/storage/social_prefs.dart';
 import '../../services/video_player_launcher.dart';
 import '../../services/download_service.dart';
-import '../../screens/debrify_tv/widgets/tv_focus_scroll_wrapper.dart';
+import '../tv_focus_scroll_wrapper.dart';
 import '../../theme/app_theme_scope.dart';
 import 'youtube_filters.dart';
 import 'youtube_video_card.dart';

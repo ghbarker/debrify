@@ -8,7 +8,7 @@ import '../../models/profiles/profile_policy.dart';
 import '../../services/profiles/profile_policy_guard.dart';
 import '../../services/video_player_launcher.dart';
 import '../../services/download_service.dart';
-import '../../screens/debrify_tv/widgets/tv_focus_scroll_wrapper.dart';
+import '../tv_focus_scroll_wrapper.dart';
 import 'lemmy_filters.dart';
 import 'lemmy_video_card.dart';
 import 'lemmy_empty_state.dart';

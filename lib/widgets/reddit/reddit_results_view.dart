@@ -5,7 +5,7 @@ import '../../services/reddit_embed_resolver_service.dart';
 import 'package:debrify/services/storage/social_prefs.dart';
 import '../../services/video_player_launcher.dart';
 import '../../services/download_service.dart';
-import '../../screens/debrify_tv/widgets/tv_focus_scroll_wrapper.dart';
+import '../tv_focus_scroll_wrapper.dart';
 import 'reddit_filters.dart';
 import 'reddit_video_card.dart';
 import 'reddit_empty_state.dart';

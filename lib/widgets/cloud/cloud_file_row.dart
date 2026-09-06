@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../screens/debrify_tv/widgets/tv_focus_scroll_wrapper.dart';
+import '../tv_focus_scroll_wrapper.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_motion.dart';
 import '../../theme/app_theme_scope.dart';
