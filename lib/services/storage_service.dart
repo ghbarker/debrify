@@ -1,3 +1,4 @@
+import 'storage/catalog_search_prefs.dart';
 import 'storage/ambient_trailer_prefs.dart';
 export 'storage/ambient_trailer_prefs.dart' show AmbientTrailerSurface;
 
@@ -2282,38 +2283,12 @@ class StorageService {
       StremioTvPrefs.setStremioTvDisabledFilters(disabled);
 
 
-  static const String _catalogSearchDisabledAddonsKey =
-      'catalog_search_disabled_addons_v1';
+  /// Search addon selection policy lives in CatalogSearchPrefs.
+  static Future<Set<String>> getCatalogSearchDisabledAddons() =>
+      CatalogSearchPrefs.getCatalogSearchDisabledAddons();
 
-  /// Get the set of addon IDs the user has DISABLED for catalog search on the
-  /// Search tab (empty = every searchable addon is queried).
-  static Future<Set<String>> getCatalogSearchDisabledAddons() async {
-    final prefs = await ProfilePreferences.instance();
-    final json = prefs.getString(_catalogSearchDisabledAddonsKey);
-    if (json == null) return {};
-    try {
-      final list = jsonDecode(json) as List<dynamic>;
-      return list.cast<String>().toSet();
-    } catch (e) {
-      debugPrint('Error reading catalog search disabled addons: $e');
-      return {};
-    }
-  }
-
-  /// Save the set of addon IDs disabled for catalog search.
-  static Future<void> setCatalogSearchDisabledAddons(
-    Set<String> disabled,
-  ) async {
-    final prefs = await ProfilePreferences.instance();
-    if (disabled.isEmpty) {
-      await prefs.remove(_catalogSearchDisabledAddonsKey);
-    } else {
-      await prefs.setString(
-        _catalogSearchDisabledAddonsKey,
-        jsonEncode(disabled.toList()),
-      );
-    }
-  }
+  static Future<void> setCatalogSearchDisabledAddons(Set<String> disabled) =>
+      CatalogSearchPrefs.setCatalogSearchDisabledAddons(disabled);
 
   static Future<Set<String>> getHomeDisabledSections() =>
       HomePrefs.getHomeDisabledSections();
