@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main ab0e7b02
+## Current roadmap — September 6, main 42d71343
 
 ### God-file line counts — original → current merged main
 
 - **Search:** 19,070 → **6,539** (12,531 fewer)
-- **Player:** 16,278 → **11,738** (4,540 fewer)
+- **Player:** 16,278 → **11,614** (4,664 fewer)
 - **Magic TV:** 10,716 → **3,321** (7,395 fewer)
 - **Storage:** 9,963 → **2,306** (7,657 fewer)
 - **Settings:** 7,905 → **2,903** (5,002 fewer)
 
-Counted from actual merged main ab0e7b02. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
+Counted from actual merged main 42d71343. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
 
 ### The same six outcomes — stable roadmap
 
@@ -68,6 +68,8 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 
 ### Latest completed milestones
 
+- #201 merged **42d71343**, exact74c179, independent44PASS/allCIgreen/cleanexactunion. Speed/aspect/prior-hold and HUD ownership transferred with actual UI/resume consumers; host-124/whole+57/fiveeffectcapabilities. Did we make a difference? Yes: temporary versus persisted speed and aspect state have one owner; renderer, tracker and wider UI obligations remain. Third merge197/200/201 triggers fullactual42d713 gate; workers continue isolated work, no fresh device smoke claimed.
+
 - #200 merged **ab0e7b02**, exact11223, independent121PASS/1knownsidebar and allCIgreen. Canvas actual stage boundary removed; host+33/whole+52,19 direct plus9 existing nested operations retained. Did we make a difference? Yes: six stages now have real widgets; Atrium remains held and final composition open. #203 favourite independent135PASS/1known accepted; integrating newmain beforefreshCI. #201 independently44PASS; transportjointorigin2PASS before authorized limited coordinator move. #202 finalunion/reviewCI pending; scalar batch implementation underway. No fullSearch closure claimed.
 
 - **Full gate9fd6c24f PASSED:** 5906 passes/12 exact known failures/2 skips; goldens21 known with configured retries, helpers0/unexpected0/unused0. Native firstpairPASS; analyzer431/449 zero new; Python55; layer77 unchanged; Windows/ARM64 buildsPASS. Forwarders Storage415/Search133/Player161/Magic23/Settings0; Storage+4 keyboard accessors explicitly counted. No fresh manual smoke. ZIP SHA5ae464f5f54c5c531a7b1a5ab2f93ece983b3672d7533cd808fff23d5cfba6eb; APK987468971513aac4133e2cab451938b850781218d6142d6052ec67f852a56222.
@@ -118,7 +120,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Gate pinned analyzer431/449, zero errors/new issues; layering77→77; Python55 passed; originalbc46/current native pair passed first try. Initial wrong-PATH analyzer output retained separately and corrected using pinned SDK; no baseline edit.
 - Windows226.2s/68files and ARM64171.9s builds passed. ZIP SHA256b96b7a4bd0b98a4f9de799ef3242bebf18a150d3c49c0113ad0566d10f1d729f; APK80811b556495c20078920091643b91cbcde5bc236d89737bd3bed7d1479e8cb5. No fresh manual/device smoke claimed.
 - #181 BoardCell mergedc7a332bd exact932 after independent140 passes plus the exact known sidebar failure, final integration review and all3CI green. Shared renderer owns card state/shuttle; 669 declaration lines relocated, whole production+17, zero host-file reduction. Did we make a difference? Removed private host-library access at real consumers; remaining stage navigation/composition is still open.
-- Production merge counter: **2 since completed gate9fd6c24f** (#197, #200). Next production merge triggers a full gate.
+- Production merge counter: **3 since completed gate9fd6c24f** (#197, #200, #201). Full gate42d71343 assigned; further production merges held.
 
 ### Forwarders at the latest full gate9fd6c24f
 
