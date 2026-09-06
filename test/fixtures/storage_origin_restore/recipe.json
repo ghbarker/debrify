@@ -1071,6 +1071,23 @@
           "value": "false"
         }
       }
+    },
+    "onboarding-state-exclusion": {
+      "origin": "6d26d7a1a98c7ddd37b4a25815f74123c1e29126",
+      "admittedKeyCount": 0,
+      "excludedKeys": [
+        "initial_setup_complete_v1"
+      ],
+      "sourceCanonicalSetupComplete": true,
+      "sourceCompatibilityValue": false,
+      "values": {},
+      "mutations": {
+        "onboarding-forbidden-key": {
+          "key": "initial_setup_complete_v1",
+          "operation": "insert",
+          "value": false
+        }
+      }
     }
   }
 }
