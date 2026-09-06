@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/stremio_addon.dart';
 import '../../services/analytics_service.dart';
 import '../../services/main_page_bridge.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import '../../utils/platform_util.dart';
 import '../../theme/app_theme_scope.dart';
 import 'widgets/settings_widgets.dart';
@@ -68,7 +68,7 @@ class _SpotlightHeroSourcePageState extends State<SpotlightHeroSourcePage> {
   HomeHeroSourceMode _mode = HomeHeroSourceMode.random;
 
   /// Picked catalog leaves (`addonId:type:catalogId`), in pick order. Kept
-  /// across mode flips — see [StorageService.getHomeHeroSource] — so trying
+  /// across mode flips — see [HomePrefs.getHomeHeroSource] — so trying
   /// "Surprise me" doesn't wipe a curated selection.
   final List<String> _ids = [];
 
@@ -94,7 +94,7 @@ class _SpotlightHeroSourcePageState extends State<SpotlightHeroSourcePage> {
   }
 
   Future<void> _load() async {
-    final source = await StorageService.getHomeHeroSource();
+    final source = await HomePrefs.getHomeHeroSource();
     if (!mounted) return;
     setState(() {
       _mode = source.mode;
@@ -117,7 +117,7 @@ class _SpotlightHeroSourcePageState extends State<SpotlightHeroSourcePage> {
 
   /// Persist the current selection and live-apply it to the board.
   Future<void> _save() async {
-    await StorageService.setHomeHeroSource((
+    await HomePrefs.setHomeHeroSource((
       mode: _mode,
       ids: List.of(_ids),
     ));

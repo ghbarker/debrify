@@ -10,7 +10,7 @@ import '../../services/home_row_order.dart';
 import '../../services/iptv_media_store.dart' show IptvListMeta;
 import '../../services/mdblist/mdblist_service.dart';
 import '../../services/mdblist/mdblist_list_source.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import '../../services/trakt/trakt_list_source.dart';
 import '../../services/analytics_service.dart';
 import '../../utils/tv_keys.dart';
@@ -23,13 +23,13 @@ import '../../widgets/home/home_theme.dart';
 /// group's rows as on/off toggles. Header actions: All on / All off / Invert.
 ///
 /// Three stores back the leaves. Default-ON rows persist the same disabled-id
-/// set the Home board reads ([StorageService.setHomeDisabledSections]): fixed
+/// set the Home board reads ([HomePrefs.setHomeDisabledSections]): fixed
 /// leaves like `cw:movies`, `trakt:shows`, `fav:iptv`, and catalog leaves
 /// `addonId:type:catalogId` — only OFF rows are stored. OPT-IN rows (Trakt/
 /// Simkl list rows, IPTV custom-list rows — default off) persist the enabled
-/// entries instead ([StorageService.setHomeExtraRows], id + display title).
+/// entries instead ([HomePrefs.setHomeExtraRows], id + display title).
 /// Their global position is saved separately with
-/// [StorageService.setHomeRowOrder].
+/// [HomePrefs.setHomeRowOrder].
 ///
 /// An enabled opt-in row whose backing data didn't load (Trakt outage, a
 /// vanished list) is still materialized as an "unavailable" leaf from its
@@ -344,9 +344,9 @@ class _HomeSectionsFilterPageState extends State<HomeSectionsFilterPage> {
     for (final r in widget.extraRows) {
       if (!modelIds.contains(r.id)) extras.add(r);
     }
-    await StorageService.setHomeDisabledSections(out);
-    await StorageService.setHomeExtraRows(extras);
-    await StorageService.setHomeRowOrder(_orderIds);
+    await HomePrefs.setHomeDisabledSections(out);
+    await HomePrefs.setHomeExtraRows(extras);
+    await HomePrefs.setHomeRowOrder(_orderIds);
   }
 
   // ── Mutations ──────────────────────────────────────────────────────────────

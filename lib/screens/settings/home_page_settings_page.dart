@@ -8,6 +8,7 @@ import '../../services/main_page_bridge.dart';
 import '../../services/mdblist/mdblist_list_source.dart';
 import '../../services/mdblist/mdblist_service.dart';
 import '../../services/simkl/simkl_service.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../services/stremio_service.dart';
 import '../../services/trakt/trakt_list_source.dart';
@@ -76,7 +77,7 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
       ),
     );
     if (!mounted) return;
-    final heroSource = await StorageService.getHomeHeroSource();
+    final heroSource = await HomePrefs.getHomeHeroSource();
     if (!mounted) return;
     setState(() => _heroSource = heroSource);
   }
@@ -157,7 +158,7 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
       value: value,
       onChanged: (v) async {
         try {
-          await StorageService.setHomeCwMergedRows(provider, v);
+          await HomePrefs.setHomeCwMergedRows(provider, v);
           if (!mounted) return;
           setState(() => apply(v));
           MainPageBridge.notifyHomeSettingsChanged();
@@ -190,15 +191,15 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
 
     try {
       final addons = await StremioService.instance.getCatalogAddons();
-      final sourceType = await StorageService.getHomeDefaultSourceType();
-      final hideProviderCards = await StorageService.getHomeHideProviderCards();
+      final sourceType = await HomePrefs.getHomeDefaultSourceType();
+      final hideProviderCards = await HomePrefs.getHomeHideProviderCards();
       final continueWatchingEnabled =
-          await StorageService.getHomeContinueWatchingEnabled();
-      final holdToQuickPlay = await StorageService.getHomeCwHoldToQuickPlay();
-      final cwMergeLocal = await StorageService.getHomeCwMergedRows('local');
-      final cwMergeTrakt = await StorageService.getHomeCwMergedRows('trakt');
-      final cwMergeSimkl = await StorageService.getHomeCwMergedRows('simkl');
-      final cwMergeMdblist = await StorageService.getHomeCwMergedRows(
+          await HomePrefs.getHomeContinueWatchingEnabled();
+      final holdToQuickPlay = await HomePrefs.getHomeCwHoldToQuickPlay();
+      final cwMergeLocal = await HomePrefs.getHomeCwMergedRows('local');
+      final cwMergeTrakt = await HomePrefs.getHomeCwMergedRows('trakt');
+      final cwMergeSimkl = await HomePrefs.getHomeCwMergedRows('simkl');
+      final cwMergeMdblist = await HomePrefs.getHomeCwMergedRows(
         'mdblist',
       );
       // Connectivity gates the tracker merge toggles. A tracker probe failing
@@ -225,7 +226,7 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
       final trailerAutoplayEnabled =
           await StorageService.getDetailTrailerAutoplayEnabled();
       final heroTrailerEnabled =
-          await StorageService.getHomeHeroTrailerEnabled();
+          await HomePrefs.getHomeHeroTrailerEnabled();
       // One pair of controls governs every ambient surface this platform has,
       // so the two stored values must not be allowed to diverge — a TV that had
       // sound off for its hero would otherwise show "off" while the newly
@@ -244,12 +245,12 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
           await StorageService.getTvTrailerUnderlayEnabled();
       final tvHomeStyle = await StorageService.getTvHomeStyle();
       final spotlightCardOrientation =
-          await StorageService.getHomeCardOrientation();
+          await HomePrefs.getHomeCardOrientation();
       final hideCardTitlesAndRatings =
-          await StorageService.getHomeHideCardTitlesAndRatings();
+          await HomePrefs.getHomeHideCardTitlesAndRatings();
       final hideCatalogAddonNames =
-          await StorageService.getHomeHideCatalogAddonNames();
-      final heroSource = await StorageService.getHomeHeroSource();
+          await HomePrefs.getHomeHideCatalogAddonNames();
+      final heroSource = await HomePrefs.getHomeHeroSource();
 
       // Only the two views that the current Home screen can render are valid.
       // Migrate the former All, Addon, Trakt, and other retired choices to
@@ -262,7 +263,7 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
       // Only when there was an actual stale value — not for a fresh install
       // (null), which already defaults to Catalog without needing a write.
       if (sourceType != null && normalizedSourceType != sourceType) {
-        await StorageService.setHomeDefaultSourceType(normalizedSourceType);
+        await HomePrefs.setHomeDefaultSourceType(normalizedSourceType);
       }
 
       if (!mounted) return;
@@ -317,7 +318,7 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
 
   Future<void> _selectSourceType(String type) async {
     try {
-      await StorageService.setHomeDefaultSourceType(type);
+      await HomePrefs.setHomeDefaultSourceType(type);
       setState(() {
         _selectedSourceType = type;
       });
@@ -333,7 +334,7 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
 
   Future<void> _toggleHideProviderCards(bool value) async {
     try {
-      await StorageService.setHomeHideProviderCards(value);
+      await HomePrefs.setHomeHideProviderCards(value);
       if (!mounted) return;
       setState(() {
         _hideProviderCards = value;
@@ -353,7 +354,7 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
         ? HomeCardOrientation.landscape
         : HomeCardOrientation.portrait;
     try {
-      await StorageService.setHomeCardOrientation(orientation);
+      await HomePrefs.setHomeCardOrientation(orientation);
       if (!mounted) return;
       setState(() => _homeCardOrientation = orientation);
       MainPageBridge.notifyHomeSettingsChanged();
@@ -367,7 +368,7 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
 
   Future<void> _setHideCardTitlesAndRatings(bool value) async {
     try {
-      await StorageService.setHomeHideCardTitlesAndRatings(value);
+      await HomePrefs.setHomeHideCardTitlesAndRatings(value);
       if (!mounted) return;
       setState(() => _hideCardTitlesAndRatings = value);
       MainPageBridge.notifyHomeSettingsChanged();
@@ -381,7 +382,7 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
 
   Future<void> _setHideCatalogAddonNames(bool value) async {
     try {
-      await StorageService.setHomeHideCatalogAddonNames(value);
+      await HomePrefs.setHomeHideCatalogAddonNames(value);
       if (!mounted) return;
       setState(() => _hideCatalogAddonNames = value);
       MainPageBridge.notifyHomeSettingsChanged();
@@ -416,9 +417,9 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
         for (final a in _addons)
           (addon: a, catalogs: a.catalogs.where((c) => c.isBrowsable).toList()),
       ].where((e) => e.catalogs.isNotEmpty).toList();
-      final disabled = await StorageService.getHomeDisabledSections();
-      final extras = await StorageService.getHomeExtraRows();
-      final rowOrder = await StorageService.getHomeRowOrder();
+      final disabled = await HomePrefs.getHomeDisabledSections();
+      final extras = await HomePrefs.getHomeExtraRows();
+      final rowOrder = await HomePrefs.getHomeRowOrder();
       final collections = await HomeCollectionsStore.instance
           .getEnabledCollections();
       var iptvLists = const <IptvListMeta>[];
@@ -664,7 +665,7 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
                       value: _continueWatchingEnabled,
                       onChanged: (value) async {
                         try {
-                          await StorageService.setHomeContinueWatchingEnabled(
+                          await HomePrefs.setHomeContinueWatchingEnabled(
                             value,
                           );
                           if (!mounted) return;
@@ -691,7 +692,7 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
                       value: _holdToQuickPlay,
                       onChanged: (value) async {
                         try {
-                          await StorageService.setHomeCwHoldToQuickPlay(value);
+                          await HomePrefs.setHomeCwHoldToQuickPlay(value);
                           if (!mounted) return;
                           setState(() => _holdToQuickPlay = value);
                         } catch (e) {
@@ -780,7 +781,7 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
                       value: _heroTrailerEnabled,
                       onChanged: (value) async {
                         try {
-                          await StorageService.setHomeHeroTrailerEnabled(value);
+                          await HomePrefs.setHomeHeroTrailerEnabled(value);
                           if (!mounted) return;
                           setState(() => _heroTrailerEnabled = value);
                           // Off-TV Home survives under this pushed route —

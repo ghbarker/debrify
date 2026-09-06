@@ -20,6 +20,7 @@ import 'package:debrify/services/profiles/profile_bootstrap.dart';
 import 'package:debrify/services/profiles/profile_registry.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/services/stremio_service.dart';
 import 'package:debrify/widgets/see_all/stremio_dropdown.dart';
@@ -139,7 +140,7 @@ Future<DiscoverManifestHold> prepareDiscoverHydration(
       await root.delete(recursive: true);
     });
   });
-  await StorageService.setHomeHeroTrailerEnabled(false);
+  await HomePrefs.setHomeHeroTrailerEnabled(false);
   return hold;
 }
 
@@ -172,7 +173,7 @@ void main() {
       StremioService.instance.invalidateCache();
       addTearDown(StremioService.instance.invalidateCache);
       await StorageService.setDiscoverDefaultSource('cw');
-      await StorageService.setHomeContinueWatchingEnabled(true);
+      await HomePrefs.setHomeContinueWatchingEnabled(true);
       await ProviderCredentialPrefs.setPikPakEnabled(false);
       await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'origin-before-integration',
@@ -420,7 +421,7 @@ void main() {
         StremioService.instance.invalidateCache();
         addTearDown(StremioService.instance.invalidateCache);
         await StorageService.setDiscoverDefaultSource('cw');
-        await StorageService.setHomeContinueWatchingEnabled(true);
+        await HomePrefs.setHomeContinueWatchingEnabled(true);
         await PlaybackProgressStore.saveContinueWatchingItem(
           imdbId: 'tt1234567',
           title: 'Bound origin',
@@ -602,7 +603,7 @@ void main() {
       StremioService.instance.invalidateCache();
       addTearDown(StremioService.instance.invalidateCache);
       await StorageService.setDiscoverDefaultSource('cw');
-      await StorageService.setHomeContinueWatchingEnabled(true);
+      await HomePrefs.setHomeContinueWatchingEnabled(true);
       await mountDiscover(tester);
       expect(find.byType(CatalogItemTile), findsNothing);
       final prefs = await SharedPreferences.getInstance();

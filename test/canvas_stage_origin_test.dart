@@ -20,8 +20,8 @@ Future<void> _prepare(WidgetTester tester, {bool cw = false}) async {
   await StorageService.setTvHomeStyle('canvas');
   await HomePrefs.setHomeHeroSource((mode: HomeHeroSourceMode.auto, ids: const []));
   if (cw) {
-    await StorageService.setHomeContinueWatchingEnabled(true);
-    await StorageService.setHomeCwHoldToQuickPlay(false);
+    await HomePrefs.setHomeContinueWatchingEnabled(true);
+    await HomePrefs.setHomeCwHoldToQuickPlay(false);
     for (var i = 0; i < 2; i++) {
       await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'canvas-cw-$i', title: 'Canvas continue $i', contentType: 'movie');
@@ -168,8 +168,8 @@ void main() {
   testWidgets('Home Canvas CW hold opens one menu and restores borrowed focus',
       (tester) async {
     await _prepare(tester);
-    await StorageService.setHomeContinueWatchingEnabled(true);
-    await StorageService.setHomeCwHoldToQuickPlay(false);
+    await HomePrefs.setHomeContinueWatchingEnabled(true);
+    await HomePrefs.setHomeCwHoldToQuickPlay(false);
     for (var i = 0; i < 2; i++) {
       await PlaybackProgressStore.saveContinueWatchingItem(
         imdbId: 'canvas-cw-$i', title: 'Canvas continue $i', contentType: 'movie');

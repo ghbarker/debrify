@@ -28,6 +28,7 @@ import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
 import 'package:debrify/services/secret_vault.dart';
 import 'package:debrify/services/storage/download_destination_prefs.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -412,28 +413,28 @@ void main() {
   final homeDomain = _recipe['residualDomains'][homeScenario] as Map;
   final homeValues = Map<String, Object?>.from(homeDomain['values'] as Map);
   Future<void> expectHomeReaders() async {
-    final hero = await StorageService.getHomeHeroSource();
-    final extras = await StorageService.getHomeExtraRows();
+    final hero = await HomePrefs.getHomeHeroSource();
+    final extras = await HomePrefs.getHomeExtraRows();
     final actual = <String, Object?>{
-      'home_default_source_type': await StorageService.getHomeDefaultSourceType(),
-      'home_default_addon_url': await StorageService.getHomeDefaultAddonUrl(),
-      'home_default_catalog_id': await StorageService.getHomeDefaultCatalogId(),
-      'home_default_trakt_list_type': await StorageService.getHomeDefaultTraktListType(),
-      'home_default_trakt_content_type': await StorageService.getHomeDefaultTraktContentType(),
-      'home_hide_provider_cards': await StorageService.getHomeHideProviderCards(),
-      'home_continue_watching_enabled': await StorageService.getHomeContinueWatchingEnabled(),
-      'home_cw_hold_to_quick_play': await StorageService.getHomeCwHoldToQuickPlay(),
-      'home_favorites_open_folder': await StorageService.getHomeFavoritesTapAction(),
-      'home_hide_card_titles_and_ratings': await StorageService.getHomeHideCardTitlesAndRatings(),
-      'home_hide_catalog_addon_names': await StorageService.getHomeHideCatalogAddonNames(),
-      'home_hero_trailer_enabled': await StorageService.getHomeHeroTrailerEnabled(),
-      'home_card_orientation': (await StorageService.getHomeCardOrientation()).name,
-      'home_disabled_sections_v1': (await StorageService.getHomeDisabledSections()).toList(),
+      'home_default_source_type': await HomePrefs.getHomeDefaultSourceType(),
+      'home_default_addon_url': await HomePrefs.getHomeDefaultAddonUrl(),
+      'home_default_catalog_id': await HomePrefs.getHomeDefaultCatalogId(),
+      'home_default_trakt_list_type': await HomePrefs.getHomeDefaultTraktListType(),
+      'home_default_trakt_content_type': await HomePrefs.getHomeDefaultTraktContentType(),
+      'home_hide_provider_cards': await HomePrefs.getHomeHideProviderCards(),
+      'home_continue_watching_enabled': await HomePrefs.getHomeContinueWatchingEnabled(),
+      'home_cw_hold_to_quick_play': await HomePrefs.getHomeCwHoldToQuickPlay(),
+      'home_favorites_open_folder': await HomePrefs.getHomeFavoritesTapAction(),
+      'home_hide_card_titles_and_ratings': await HomePrefs.getHomeHideCardTitlesAndRatings(),
+      'home_hide_catalog_addon_names': await HomePrefs.getHomeHideCatalogAddonNames(),
+      'home_hero_trailer_enabled': await HomePrefs.getHomeHeroTrailerEnabled(),
+      'home_card_orientation': (await HomePrefs.getHomeCardOrientation()).name,
+      'home_disabled_sections_v1': (await HomePrefs.getHomeDisabledSections()).toList(),
       'home_extra_rows_v1': [for (final row in extras) {'id': row.id, 'title': row.title}],
-      'home_row_order_v1': await StorageService.getHomeRowOrder(),
+      'home_row_order_v1': await HomePrefs.getHomeRowOrder(),
       'home_hero_source_v1': {'mode': hero.mode.name, 'ids': hero.ids},
       for (final suffix in (homeDomain['finiteMergeSuffixes'] as List).cast<String>())
-        'home_cw_merge_$suffix': await StorageService.getHomeCwMergedRows(suffix),
+        'home_cw_merge_$suffix': await HomePrefs.getHomeCwMergedRows(suffix),
     };
     expect(actual, homeDomain['expectedPublicRead']);
   }
@@ -527,7 +528,7 @@ void main() {
       for (final secrets in [false, true]) {
         _expectSettings(_values(await export(includeSecrets: secrets)), {...homeValues, 'home_fixture_sentinel': 'untouched'});
       }
-      await StorageService.clearAllHomePageSettings();
+      await HomePrefs.clearAllHomePageSettings();
       for (final key in (homeDomain['clearOrder'] as List).cast<String>()) {
         expect(prefs.containsKey('$prefix$key'), isFalse, reason: key);
       }

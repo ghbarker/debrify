@@ -11,6 +11,7 @@ import '../search/discover_lifecycle.dart';
 import '../search/discover_view.dart';
 import '../../services/main_page_bridge.dart';
 import '../../services/profiles/profile_session_memory.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../services/app_route_observer.dart';
 import '../see_all/catalog_see_all_screen.dart';
@@ -32,7 +33,7 @@ class DiscoverScreen extends StatelessWidget {
     super.key,
     this.isTelevision = false,
     this.host,
-    this.readCwMergedRows = StorageService.getHomeCwMergedRows,
+    this.readCwMergedRows = HomePrefs.getHomeCwMergedRows,
   });
   final bool isTelevision;
   final Widget? host;

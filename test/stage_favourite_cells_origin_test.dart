@@ -143,7 +143,7 @@ void main() {
       await StorageService.setIptvChannelInList(id, 'https://stage-live.invalid/feed', true,
         channelName: 'Stage Live', logoUrl: '$_art/live-logo',
         contentType: 'live', duration: -1);
-      await StorageService.setHomeExtraRows([(id: 'iptvlist:$id', title: 'Stage Mixed List')]);
+      await HomePrefs.setHomeExtraRows([(id: 'iptvlist:$id', title: 'Stage Mixed List')]);
     });
     final unexpected = <String>[];
     await http.runWithClient(() async {

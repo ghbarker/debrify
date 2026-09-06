@@ -49,7 +49,7 @@ class HomeRowIds {
 }
 
 /// ID grammar for the opt-in extra Home rows (see
-/// [StorageService.getHomeExtraRows]). Kept together so the board, the
+/// `HomePrefs.getHomeExtraRows`). Kept together so the board, the
 /// resolver and the Home Rows manager can never drift on what an id means.
 class HomeExtraRowIds {
   HomeExtraRowIds._();

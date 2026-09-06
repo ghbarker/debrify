@@ -369,11 +369,7 @@ class StorageService {
   static Future<void> setDetailTrailerAutoplayEnabled(bool enabled) =>
       AmbientTrailerPrefs.setDetailTrailerAutoplayEnabled(enabled);
 
-  static Future<bool> getHomeHeroTrailerEnabled() =>
-      HomePrefs.getHomeHeroTrailerEnabled();
 
-  static Future<void> setHomeHeroTrailerEnabled(bool enabled) =>
-      HomePrefs.setHomeHeroTrailerEnabled(enabled);
 
 
 
@@ -1013,87 +1009,32 @@ class StorageService {
   // (used by Reset) to wipe the old persisted keys.
 
   // Home Page Default Settings — forwarding façade; bodies live on HomePrefs.
-  static Future<String?> getHomeDefaultSourceType() =>
-      HomePrefs.getHomeDefaultSourceType();
 
-  static Future<void> setHomeDefaultSourceType(String? value) =>
-      HomePrefs.setHomeDefaultSourceType(value);
 
-  static Future<String?> getHomeDefaultAddonUrl() =>
-      HomePrefs.getHomeDefaultAddonUrl();
 
-  static Future<void> setHomeDefaultAddonUrl(String? value) =>
-      HomePrefs.setHomeDefaultAddonUrl(value);
 
-  static Future<String?> getHomeDefaultCatalogId() =>
-      HomePrefs.getHomeDefaultCatalogId();
 
-  static Future<void> setHomeDefaultCatalogId(String? value) =>
-      HomePrefs.setHomeDefaultCatalogId(value);
 
-  static Future<String?> getHomeDefaultTraktListType() =>
-      HomePrefs.getHomeDefaultTraktListType();
 
-  static Future<void> setHomeDefaultTraktListType(String? value) =>
-      HomePrefs.setHomeDefaultTraktListType(value);
 
-  static Future<String?> getHomeDefaultTraktContentType() =>
-      HomePrefs.getHomeDefaultTraktContentType();
 
-  static Future<void> setHomeDefaultTraktContentType(String? value) =>
-      HomePrefs.setHomeDefaultTraktContentType(value);
 
-  static Future<bool> getHomeHideProviderCards() =>
-      HomePrefs.getHomeHideProviderCards();
 
-  static Future<void> setHomeHideProviderCards(bool value) =>
-      HomePrefs.setHomeHideProviderCards(value);
 
-  static Future<bool> getHomeContinueWatchingEnabled() =>
-      HomePrefs.getHomeContinueWatchingEnabled();
 
-  static Future<void> setHomeContinueWatchingEnabled(bool value) =>
-      HomePrefs.setHomeContinueWatchingEnabled(value);
 
-  static Future<bool> getHomeCwHoldToQuickPlay() =>
-      HomePrefs.getHomeCwHoldToQuickPlay();
 
-  static Future<void> setHomeCwHoldToQuickPlay(bool value) =>
-      HomePrefs.setHomeCwHoldToQuickPlay(value);
 
-  static Future<bool> getHomeCwMergedRows(String provider) =>
-      HomePrefs.getHomeCwMergedRows(provider);
 
-  static Future<void> setHomeCwMergedRows(String provider, bool value) =>
-      HomePrefs.setHomeCwMergedRows(provider, value);
 
-  static Future<String> getHomeFavoritesTapAction() =>
-      HomePrefs.getHomeFavoritesTapAction();
 
-  static Future<void> setHomeFavoritesTapAction(String value) =>
-      HomePrefs.setHomeFavoritesTapAction(value);
 
-  static Future<HomeCardOrientation> getHomeCardOrientation() =>
-      HomePrefs.getHomeCardOrientation();
 
-  static Future<void> setHomeCardOrientation(
-    HomeCardOrientation orientation,
-  ) => HomePrefs.setHomeCardOrientation(orientation);
 
-  static Future<bool> getHomeHideCardTitlesAndRatings() =>
-      HomePrefs.getHomeHideCardTitlesAndRatings();
 
-  static Future<void> setHomeHideCardTitlesAndRatings(bool value) =>
-      HomePrefs.setHomeHideCardTitlesAndRatings(value);
 
-  static Future<bool> getHomeHideCatalogAddonNames() =>
-      HomePrefs.getHomeHideCatalogAddonNames();
 
-  static Future<void> setHomeHideCatalogAddonNames(bool value) =>
-      HomePrefs.setHomeHideCatalogAddonNames(value);
 
-  static Future<void> clearAllHomePageSettings() =>
-      HomePrefs.clearAllHomePageSettings();
 
   // Reddit Settings — forwarding façade; bodies live on SocialPrefs.
 
@@ -1859,28 +1800,13 @@ class StorageService {
   static Future<void> setCatalogSearchDisabledAddons(Set<String> disabled) =>
       CatalogSearchPrefs.setCatalogSearchDisabledAddons(disabled);
 
-  static Future<Set<String>> getHomeDisabledSections() =>
-      HomePrefs.getHomeDisabledSections();
 
-  static Future<void> setHomeDisabledSections(Set<String> disabled) =>
-      HomePrefs.setHomeDisabledSections(disabled);
 
-  static Future<List<HomeExtraRow>> getHomeExtraRows() =>
-      HomePrefs.getHomeExtraRows();
 
-  static Future<void> setHomeExtraRows(List<HomeExtraRow> rows) =>
-      HomePrefs.setHomeExtraRows(rows);
 
-  static Future<List<String>> getHomeRowOrder() => HomePrefs.getHomeRowOrder();
 
-  static Future<void> setHomeRowOrder(List<String> order) =>
-      HomePrefs.setHomeRowOrder(order);
 
-  static Future<HomeHeroSource> getHomeHeroSource() =>
-      HomePrefs.getHomeHeroSource();
 
-  static Future<void> setHomeHeroSource(HomeHeroSource source) =>
-      HomePrefs.setHomeHeroSource(source);
 
   /// Clears synchronous mirrors before a profile activation is published.
   /// The target bootstrap immediately warms them from its captured scope.

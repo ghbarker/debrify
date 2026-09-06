@@ -76,6 +76,7 @@ import '../services/stremio_iptv_service.dart';
 import '../services/stremio_service.dart';
 import '../services/local_series_completion_service.dart';
 import '../services/source_priority.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import '../services/storage_service.dart';
 import '../services/tv_hero_artwork_quality_controller.dart';
 import '../services/tvos_top_shelf_service.dart';
@@ -230,7 +231,7 @@ class SearchScreenHost extends StatefulWidget {
     this.isTelevision = false,
     this.searchMode = false,
     this.discoverMode = false,
-    this.readCwMergedRows = StorageService.getHomeCwMergedRows,
+    this.readCwMergedRows = HomePrefs.getHomeCwMergedRows,
   });
 
   @override
@@ -1171,9 +1172,9 @@ class _SearchScreenState extends State<SearchScreenHost>
   Future<void> _reloadForHomeSettings() async {
     if (!mounted) return;
     final cardSettings = await Future.wait<Object>([
-      StorageService.getHomeCardOrientation(),
-      StorageService.getHomeHideCardTitlesAndRatings(),
-      StorageService.getHomeHideCatalogAddonNames(),
+      HomePrefs.getHomeCardOrientation(),
+      HomePrefs.getHomeHideCardTitlesAndRatings(),
+      HomePrefs.getHomeHideCatalogAddonNames(),
     ]);
     if (!mounted) return;
     final orientation = cardSettings[0] as HomeCardOrientation;
@@ -1200,10 +1201,10 @@ class _SearchScreenState extends State<SearchScreenHost>
     }
     await _loadHomeDefaultView();
     if (!mounted) return;
-    final disabled = await StorageService.getHomeDisabledSections();
-    final extras = await StorageService.getHomeExtraRows();
-    final rowOrder = await StorageService.getHomeRowOrder();
-    final heroSource = await StorageService.getHomeHeroSource();
+    final disabled = await HomePrefs.getHomeDisabledSections();
+    final extras = await HomePrefs.getHomeExtraRows();
+    final rowOrder = await HomePrefs.getHomeRowOrder();
+    final heroSource = await HomePrefs.getHomeHeroSource();
     final collections = await HomeCollectionsStore.instance.getCollections();
     if (!mounted) return;
     final action = _board.diffAndApplySettings(
@@ -1252,7 +1253,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       if (_mode != SearchBoardMode.catalog) _switchMode(SearchBoardMode.catalog);
       return;
     }
-    final saved = await StorageService.getHomeDefaultSourceType();
+    final saved = await HomePrefs.getHomeDefaultSourceType();
     if (!mounted || widget.searchMode) return;
     final mode =
         saved == 'keyword' &&
@@ -1270,10 +1271,10 @@ class _SearchScreenState extends State<SearchScreenHost>
     });
     unawaited(_refreshPikpakOnly());
     try {
-      final disabled = await StorageService.getHomeDisabledSections();
-      final extras = await StorageService.getHomeExtraRows();
-      final rowOrder = await StorageService.getHomeRowOrder();
-      final heroSource = await StorageService.getHomeHeroSource();
+      final disabled = await HomePrefs.getHomeDisabledSections();
+      final extras = await HomePrefs.getHomeExtraRows();
+      final rowOrder = await HomePrefs.getHomeRowOrder();
+      final heroSource = await HomePrefs.getHomeHeroSource();
       final collections = await HomeCollectionsStore.instance.getCollections();
       // Commit the prefs and (crucially) start the tracker fan-out only if
       // this load still owns the board — a superseded run kicking off its own
@@ -2296,9 +2297,9 @@ class _SearchScreenState extends State<SearchScreenHost>
 
   Future<void> _loadHomeCardOrientation() async {
     final values = await Future.wait<Object>([
-      StorageService.getHomeCardOrientation(),
-      StorageService.getHomeHideCardTitlesAndRatings(),
-      StorageService.getHomeHideCatalogAddonNames(),
+      HomePrefs.getHomeCardOrientation(),
+      HomePrefs.getHomeHideCardTitlesAndRatings(),
+      HomePrefs.getHomeHideCatalogAddonNames(),
     ]);
     if (!mounted) return;
     final orientation = values[0] as HomeCardOrientation;

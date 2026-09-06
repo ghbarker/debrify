@@ -18,46 +18,46 @@ void main() {
   });
 
   test('Home page defaults when no keys are stored', () async {
-    expect(await StorageService.getHomeDefaultSourceType(), isNull);
-    expect(await StorageService.getHomeDefaultAddonUrl(), isNull);
-    expect(await StorageService.getHomeDefaultCatalogId(), isNull);
-    expect(await StorageService.getHomeDefaultTraktListType(), isNull);
-    expect(await StorageService.getHomeDefaultTraktContentType(), isNull);
-    expect(await StorageService.getHomeHideProviderCards(), isTrue);
-    expect(await StorageService.getHomeContinueWatchingEnabled(), isTrue);
-    expect(await StorageService.getHomeCwHoldToQuickPlay(), isFalse);
-    expect(await StorageService.getHomeCwMergedRows('local'), isFalse);
-    expect(await StorageService.getHomeCwMergedRows('trakt'), isFalse);
-    expect(await StorageService.getHomeCwMergedRows('simkl'), isFalse);
-    expect(await StorageService.getHomeCwMergedRows('mdblist'), isFalse);
-    expect(await StorageService.getHomeFavoritesTapAction(), 'choose');
+    expect(await HomePrefs.getHomeDefaultSourceType(), isNull);
+    expect(await HomePrefs.getHomeDefaultAddonUrl(), isNull);
+    expect(await HomePrefs.getHomeDefaultCatalogId(), isNull);
+    expect(await HomePrefs.getHomeDefaultTraktListType(), isNull);
+    expect(await HomePrefs.getHomeDefaultTraktContentType(), isNull);
+    expect(await HomePrefs.getHomeHideProviderCards(), isTrue);
+    expect(await HomePrefs.getHomeContinueWatchingEnabled(), isTrue);
+    expect(await HomePrefs.getHomeCwHoldToQuickPlay(), isFalse);
+    expect(await HomePrefs.getHomeCwMergedRows('local'), isFalse);
+    expect(await HomePrefs.getHomeCwMergedRows('trakt'), isFalse);
+    expect(await HomePrefs.getHomeCwMergedRows('simkl'), isFalse);
+    expect(await HomePrefs.getHomeCwMergedRows('mdblist'), isFalse);
+    expect(await HomePrefs.getHomeFavoritesTapAction(), 'choose');
     expect(
-      await StorageService.getHomeCardOrientation(),
+      await HomePrefs.getHomeCardOrientation(),
       HomeCardOrientation.landscape,
     );
-    expect(await StorageService.getHomeHideCardTitlesAndRatings(), isFalse);
-    expect(await StorageService.getHomeHideCatalogAddonNames(), isFalse);
+    expect(await HomePrefs.getHomeHideCardTitlesAndRatings(), isFalse);
+    expect(await HomePrefs.getHomeHideCatalogAddonNames(), isFalse);
   });
 
   test('StorageService writes the historical Home page key bytes', () async {
-    await StorageService.setHomeDefaultSourceType('addon');
-    await StorageService.setHomeDefaultAddonUrl(
+    await HomePrefs.setHomeDefaultSourceType('addon');
+    await HomePrefs.setHomeDefaultAddonUrl(
       'https://addon.example/manifest.json',
     );
-    await StorageService.setHomeDefaultCatalogId('top');
-    await StorageService.setHomeDefaultTraktListType('watchlist');
-    await StorageService.setHomeDefaultTraktContentType('movies');
-    await StorageService.setHomeHideProviderCards(false);
-    await StorageService.setHomeContinueWatchingEnabled(false);
-    await StorageService.setHomeCwHoldToQuickPlay(true);
-    await StorageService.setHomeCwMergedRows('local', true);
-    await StorageService.setHomeCwMergedRows('trakt', true);
-    await StorageService.setHomeCwMergedRows('simkl', true);
-    await StorageService.setHomeCwMergedRows('mdblist', true);
-    await StorageService.setHomeFavoritesTapAction('open');
-    await StorageService.setHomeCardOrientation(HomeCardOrientation.portrait);
-    await StorageService.setHomeHideCardTitlesAndRatings(true);
-    await StorageService.setHomeHideCatalogAddonNames(true);
+    await HomePrefs.setHomeDefaultCatalogId('top');
+    await HomePrefs.setHomeDefaultTraktListType('watchlist');
+    await HomePrefs.setHomeDefaultTraktContentType('movies');
+    await HomePrefs.setHomeHideProviderCards(false);
+    await HomePrefs.setHomeContinueWatchingEnabled(false);
+    await HomePrefs.setHomeCwHoldToQuickPlay(true);
+    await HomePrefs.setHomeCwMergedRows('local', true);
+    await HomePrefs.setHomeCwMergedRows('trakt', true);
+    await HomePrefs.setHomeCwMergedRows('simkl', true);
+    await HomePrefs.setHomeCwMergedRows('mdblist', true);
+    await HomePrefs.setHomeFavoritesTapAction('open');
+    await HomePrefs.setHomeCardOrientation(HomeCardOrientation.portrait);
+    await HomePrefs.setHomeHideCardTitlesAndRatings(true);
+    await HomePrefs.setHomeHideCatalogAddonNames(true);
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('home_default_source_type'), 'addon');
@@ -100,40 +100,40 @@ void main() {
         'home_hide_catalog_addon_names': true,
       });
 
-      expect(await StorageService.getHomeDefaultSourceType(), 'trakt');
+      expect(await HomePrefs.getHomeDefaultSourceType(), 'trakt');
       expect(
-        await StorageService.getHomeDefaultAddonUrl(),
+        await HomePrefs.getHomeDefaultAddonUrl(),
         'https://x/manifest.json',
       );
-      expect(await StorageService.getHomeDefaultCatalogId(), 'catalog');
-      expect(await StorageService.getHomeDefaultTraktListType(), 'collection');
-      expect(await StorageService.getHomeDefaultTraktContentType(), 'shows');
-      expect(await StorageService.getHomeHideProviderCards(), isFalse);
-      expect(await StorageService.getHomeContinueWatchingEnabled(), isFalse);
-      expect(await StorageService.getHomeCwHoldToQuickPlay(), isTrue);
-      expect(await StorageService.getHomeCwMergedRows('local'), isTrue);
-      expect(await StorageService.getHomeFavoritesTapAction(), 'play');
+      expect(await HomePrefs.getHomeDefaultCatalogId(), 'catalog');
+      expect(await HomePrefs.getHomeDefaultTraktListType(), 'collection');
+      expect(await HomePrefs.getHomeDefaultTraktContentType(), 'shows');
+      expect(await HomePrefs.getHomeHideProviderCards(), isFalse);
+      expect(await HomePrefs.getHomeContinueWatchingEnabled(), isFalse);
+      expect(await HomePrefs.getHomeCwHoldToQuickPlay(), isTrue);
+      expect(await HomePrefs.getHomeCwMergedRows('local'), isTrue);
+      expect(await HomePrefs.getHomeFavoritesTapAction(), 'play');
       expect(
-        await StorageService.getHomeCardOrientation(),
+        await HomePrefs.getHomeCardOrientation(),
         HomeCardOrientation.portrait,
       );
-      expect(await StorageService.getHomeHideCardTitlesAndRatings(), isTrue);
-      expect(await StorageService.getHomeHideCatalogAddonNames(), isTrue);
+      expect(await HomePrefs.getHomeHideCardTitlesAndRatings(), isTrue);
+      expect(await HomePrefs.getHomeHideCatalogAddonNames(), isTrue);
     },
   );
 
   test('null Home default setters remove the key', () async {
-    await StorageService.setHomeDefaultSourceType('addon');
-    await StorageService.setHomeDefaultAddonUrl('https://a/manifest.json');
-    await StorageService.setHomeDefaultCatalogId('top');
-    await StorageService.setHomeDefaultTraktListType('watchlist');
-    await StorageService.setHomeDefaultTraktContentType('movies');
+    await HomePrefs.setHomeDefaultSourceType('addon');
+    await HomePrefs.setHomeDefaultAddonUrl('https://a/manifest.json');
+    await HomePrefs.setHomeDefaultCatalogId('top');
+    await HomePrefs.setHomeDefaultTraktListType('watchlist');
+    await HomePrefs.setHomeDefaultTraktContentType('movies');
 
-    await StorageService.setHomeDefaultSourceType(null);
-    await StorageService.setHomeDefaultAddonUrl(null);
-    await StorageService.setHomeDefaultCatalogId(null);
-    await StorageService.setHomeDefaultTraktListType(null);
-    await StorageService.setHomeDefaultTraktContentType(null);
+    await HomePrefs.setHomeDefaultSourceType(null);
+    await HomePrefs.setHomeDefaultAddonUrl(null);
+    await HomePrefs.setHomeDefaultCatalogId(null);
+    await HomePrefs.setHomeDefaultTraktListType(null);
+    await HomePrefs.setHomeDefaultTraktContentType(null);
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.containsKey('home_default_source_type'), isFalse);
@@ -150,7 +150,7 @@ void main() {
         'home_card_orientation': 'landscape',
       });
       expect(
-        await StorageService.getHomeCardOrientation(),
+        await HomePrefs.getHomeCardOrientation(),
         HomeCardOrientation.landscape,
       );
 
@@ -158,11 +158,11 @@ void main() {
         'home_card_orientation': 'garbage',
       });
       expect(
-        await StorageService.getHomeCardOrientation(),
+        await HomePrefs.getHomeCardOrientation(),
         HomeCardOrientation.landscape,
       );
 
-      await StorageService.setHomeCardOrientation(
+      await HomePrefs.setHomeCardOrientation(
         HomeCardOrientation.landscape,
       );
       final prefs = await SharedPreferences.getInstance();
@@ -171,33 +171,33 @@ void main() {
   );
 
   test('clearAllHomePageSettings leaves Trakt default keys', () async {
-    await StorageService.setHomeDefaultSourceType('addon');
-    await StorageService.setHomeDefaultAddonUrl('https://a/manifest.json');
-    await StorageService.setHomeDefaultCatalogId('top');
-    await StorageService.setHomeDefaultTraktListType('watchlist');
-    await StorageService.setHomeDefaultTraktContentType('movies');
-    await StorageService.setHomeHideProviderCards(false);
-    await StorageService.setHomeContinueWatchingEnabled(false);
-    await StorageService.setHomeCwHoldToQuickPlay(true);
-    await StorageService.setHomeCwMergedRows('local', true);
-    await StorageService.setHomeCwMergedRows('trakt', true);
-    await StorageService.setHomeCwMergedRows('simkl', true);
-    await StorageService.setHomeCwMergedRows('mdblist', true);
-    await StorageService.setHomeFavoritesTapAction('open');
-    await StorageService.setHomeCardOrientation(HomeCardOrientation.portrait);
-    await StorageService.setHomeHideCardTitlesAndRatings(true);
-    await StorageService.setHomeHideCatalogAddonNames(true);
-    await StorageService.setHomeDisabledSections({'cw:movies'});
-    await StorageService.setHomeExtraRows(const [
+    await HomePrefs.setHomeDefaultSourceType('addon');
+    await HomePrefs.setHomeDefaultAddonUrl('https://a/manifest.json');
+    await HomePrefs.setHomeDefaultCatalogId('top');
+    await HomePrefs.setHomeDefaultTraktListType('watchlist');
+    await HomePrefs.setHomeDefaultTraktContentType('movies');
+    await HomePrefs.setHomeHideProviderCards(false);
+    await HomePrefs.setHomeContinueWatchingEnabled(false);
+    await HomePrefs.setHomeCwHoldToQuickPlay(true);
+    await HomePrefs.setHomeCwMergedRows('local', true);
+    await HomePrefs.setHomeCwMergedRows('trakt', true);
+    await HomePrefs.setHomeCwMergedRows('simkl', true);
+    await HomePrefs.setHomeCwMergedRows('mdblist', true);
+    await HomePrefs.setHomeFavoritesTapAction('open');
+    await HomePrefs.setHomeCardOrientation(HomeCardOrientation.portrait);
+    await HomePrefs.setHomeHideCardTitlesAndRatings(true);
+    await HomePrefs.setHomeHideCatalogAddonNames(true);
+    await HomePrefs.setHomeDisabledSections({'cw:movies'});
+    await HomePrefs.setHomeExtraRows(const [
       (id: 'traktlist:watchlist', title: 'Watchlist'),
     ]);
-    await StorageService.setHomeRowOrder(['cw:movies', 'fav:iptv']);
-    await StorageService.setHomeHeroSource((
+    await HomePrefs.setHomeRowOrder(['cw:movies', 'fav:iptv']);
+    await HomePrefs.setHomeHeroSource((
       mode: HomeHeroSourceMode.auto,
       ids: const [],
     ));
     await StorageService.setHomeTickSources({TrackingSource.trakt});
-    await StorageService.setHomeHeroTrailerEnabled(false);
+    await HomePrefs.setHomeHeroTrailerEnabled(false);
     await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(
       AmbientTrailerSurface.homeHero,
       false,
@@ -208,7 +208,7 @@ void main() {
     );
     await StorageService.setTvHomeStyle('spotlight');
 
-    await StorageService.clearAllHomePageSettings();
+    await HomePrefs.clearAllHomePageSettings();
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.containsKey('home_default_source_type'), isFalse);
@@ -255,12 +255,12 @@ void main() {
   });
 
   test('StorageService writes are readable through HomePrefs', () async {
-    await StorageService.setHomeDefaultSourceType('addon');
-    await StorageService.setHomeHideProviderCards(false);
-    await StorageService.setHomeCwHoldToQuickPlay(true);
-    await StorageService.setHomeCwMergedRows('simkl', true);
-    await StorageService.setHomeCardOrientation(HomeCardOrientation.portrait);
-    await StorageService.setHomeHideCardTitlesAndRatings(true);
+    await HomePrefs.setHomeDefaultSourceType('addon');
+    await HomePrefs.setHomeHideProviderCards(false);
+    await HomePrefs.setHomeCwHoldToQuickPlay(true);
+    await HomePrefs.setHomeCwMergedRows('simkl', true);
+    await HomePrefs.setHomeCardOrientation(HomeCardOrientation.portrait);
+    await HomePrefs.setHomeHideCardTitlesAndRatings(true);
 
     expect(await HomePrefs.getHomeDefaultSourceType(), 'addon');
     expect(await HomePrefs.getHomeHideProviderCards(), isFalse);
@@ -289,13 +289,13 @@ void main() {
     await HomePrefs.setHomeDefaultTraktListType('watchlist');
     await HomePrefs.setHomeCardOrientation(HomeCardOrientation.landscape);
 
-    expect(await StorageService.getHomeDefaultCatalogId(), 'top');
-    expect(await StorageService.getHomeContinueWatchingEnabled(), isFalse);
-    expect(await StorageService.getHomeFavoritesTapAction(), 'open');
-    expect(await StorageService.getHomeHideCatalogAddonNames(), isTrue);
-    expect(await StorageService.getHomeDefaultTraktListType(), 'watchlist');
+    expect(await HomePrefs.getHomeDefaultCatalogId(), 'top');
+    expect(await HomePrefs.getHomeContinueWatchingEnabled(), isFalse);
+    expect(await HomePrefs.getHomeFavoritesTapAction(), 'open');
+    expect(await HomePrefs.getHomeHideCatalogAddonNames(), isTrue);
+    expect(await HomePrefs.getHomeDefaultTraktListType(), 'watchlist');
     expect(
-      await StorageService.getHomeCardOrientation(),
+      await HomePrefs.getHomeCardOrientation(),
       HomeCardOrientation.landscape,
     );
 
@@ -309,17 +309,17 @@ void main() {
   });
 
   test('remaining Home keys default when no keys are stored', () async {
-    expect(await StorageService.getHomeDisabledSections(), isEmpty);
-    expect(await StorageService.getHomeExtraRows(), isEmpty);
-    expect(await StorageService.getHomeRowOrder(), isEmpty);
-    final hero = await StorageService.getHomeHeroSource();
+    expect(await HomePrefs.getHomeDisabledSections(), isEmpty);
+    expect(await HomePrefs.getHomeExtraRows(), isEmpty);
+    expect(await HomePrefs.getHomeRowOrder(), isEmpty);
+    final hero = await HomePrefs.getHomeHeroSource();
     expect(hero.mode, HomeHeroSourceMode.random);
     expect(hero.ids, isEmpty);
     expect(
       await StorageService.getHomeTickSources(),
       Set<TrackingSource>.of(TrackingSource.values),
     );
-    expect(await StorageService.getHomeHeroTrailerEnabled(), isTrue);
+    expect(await HomePrefs.getHomeHeroTrailerEnabled(), isTrue);
     expect(
       await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(
         AmbientTrailerSurface.homeHero,
@@ -339,13 +339,13 @@ void main() {
   test(
     'StorageService writes the historical remaining Home key bytes',
     () async {
-      await StorageService.setHomeDisabledSections({'cw:movies', 'fav:iptv'});
-      await StorageService.setHomeExtraRows(const [
+      await HomePrefs.setHomeDisabledSections({'cw:movies', 'fav:iptv'});
+      await HomePrefs.setHomeExtraRows(const [
         (id: 'traktlist:watchlist', title: ''),
         (id: 'iptvlist:list_1', title: 'Sports'),
       ]);
-      await StorageService.setHomeRowOrder(['fav:playlist', 'cw:movies']);
-      await StorageService.setHomeHeroSource((
+      await HomePrefs.setHomeRowOrder(['fav:playlist', 'cw:movies']);
+      await HomePrefs.setHomeHeroSource((
         mode: HomeHeroSourceMode.custom,
         ids: ['cinemeta:movie:top', 'cinemeta:series:top'],
       ));
@@ -353,7 +353,7 @@ void main() {
         TrackingSource.local,
         TrackingSource.simkl,
       });
-      await StorageService.setHomeHeroTrailerEnabled(false);
+      await HomePrefs.setHomeHeroTrailerEnabled(false);
       await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(
         AmbientTrailerSurface.homeHero,
         false,
@@ -416,18 +416,18 @@ void main() {
         'tv_home_style': 'atrium',
       });
 
-      expect(await StorageService.getHomeDisabledSections(), {'cw:series'});
-      final extras = await StorageService.getHomeExtraRows();
+      expect(await HomePrefs.getHomeDisabledSections(), {'cw:series'});
+      final extras = await HomePrefs.getHomeExtraRows();
       expect(extras, hasLength(1));
       expect(extras.single, (id: 'simkllist:trending', title: 'Trending'));
-      expect(await StorageService.getHomeRowOrder(), ['cw:series', 'fav:iptv']);
-      final hero = await StorageService.getHomeHeroSource();
+      expect(await HomePrefs.getHomeRowOrder(), ['cw:series', 'fav:iptv']);
+      final hero = await HomePrefs.getHomeHeroSource();
       expect(hero.mode, HomeHeroSourceMode.auto);
       expect(hero.ids, ['kept']);
       expect(await StorageService.getHomeTickSources(), {
         TrackingSource.mdblist,
       });
-      expect(await StorageService.getHomeHeroTrailerEnabled(), isFalse);
+      expect(await HomePrefs.getHomeHeroTrailerEnabled(), isFalse);
       expect(
         await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(
           AmbientTrailerSurface.homeHero,
@@ -446,20 +446,20 @@ void main() {
   );
 
   test('empty remaining Home collections remove their keys', () async {
-    await StorageService.setHomeDisabledSections({'cw:movies'});
-    await StorageService.setHomeExtraRows(const [
+    await HomePrefs.setHomeDisabledSections({'cw:movies'});
+    await HomePrefs.setHomeExtraRows(const [
       (id: 'traktlist:watchlist', title: ''),
     ]);
-    await StorageService.setHomeRowOrder(['cw:movies']);
-    await StorageService.setHomeHeroSource((
+    await HomePrefs.setHomeRowOrder(['cw:movies']);
+    await HomePrefs.setHomeHeroSource((
       mode: HomeHeroSourceMode.custom,
       ids: ['cinemeta:movie:top'],
     ));
 
-    await StorageService.setHomeDisabledSections({});
-    await StorageService.setHomeExtraRows(const []);
-    await StorageService.setHomeRowOrder(const []);
-    await StorageService.setHomeHeroSource((
+    await HomePrefs.setHomeDisabledSections({});
+    await HomePrefs.setHomeExtraRows(const []);
+    await HomePrefs.setHomeRowOrder(const []);
+    await HomePrefs.setHomeHeroSource((
       mode: HomeHeroSourceMode.random,
       ids: const [],
     ));
@@ -484,7 +484,7 @@ void main() {
           {'id': 'traktlist:popular', 'title': 42},
         ]),
       });
-      final rows = await StorageService.getHomeExtraRows();
+      final rows = await HomePrefs.getHomeExtraRows();
       expect(rows, hasLength(2));
       expect(rows[0], (id: 'simkllist:trending', title: 'Trending'));
       expect(rows[1], (id: 'traktlist:popular', title: ''));
@@ -494,13 +494,13 @@ void main() {
   test(
     'home row order deduplicates and ignores empty or non-string ids',
     () async {
-      await StorageService.setHomeRowOrder([
+      await HomePrefs.setHomeRowOrder([
         'fav:playlist',
         'cw:movies',
         'fav:playlist',
         '',
       ]);
-      expect(await StorageService.getHomeRowOrder(), [
+      expect(await HomePrefs.getHomeRowOrder(), [
         'fav:playlist',
         'cw:movies',
       ]);
@@ -514,30 +514,30 @@ void main() {
           'fav:iptv',
         ]),
       });
-      expect(await StorageService.getHomeRowOrder(), ['cw:series', 'fav:iptv']);
+      expect(await HomePrefs.getHomeRowOrder(), ['cw:series', 'fav:iptv']);
     },
   );
 
   test(
     'home hero source quirks: auto is stored; custom with no ids reads random',
     () async {
-      await StorageService.setHomeHeroSource((
+      await HomePrefs.setHomeHeroSource((
         mode: HomeHeroSourceMode.auto,
         ids: const [],
       ));
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString('home_hero_source_v1'), isNotNull);
       expect(
-        (await StorageService.getHomeHeroSource()).mode,
+        (await HomePrefs.getHomeHeroSource()).mode,
         HomeHeroSourceMode.auto,
       );
 
-      await StorageService.setHomeHeroSource((
+      await HomePrefs.setHomeHeroSource((
         mode: HomeHeroSourceMode.random,
         ids: ['cinemeta:movie:top'],
       ));
       expect(prefs.getString('home_hero_source_v1'), isNotNull);
-      final withIds = await StorageService.getHomeHeroSource();
+      final withIds = await HomePrefs.getHomeHeroSource();
       expect(withIds.mode, HomeHeroSourceMode.random);
       expect(withIds.ids, ['cinemeta:movie:top']);
 
@@ -548,14 +548,14 @@ void main() {
         }),
       });
       expect(
-        (await StorageService.getHomeHeroSource()).mode,
+        (await HomePrefs.getHomeHeroSource()).mode,
         HomeHeroSourceMode.random,
       );
 
       SharedPreferences.setMockInitialValues(<String, Object>{
         'home_hero_source_v1': 'not-json{',
       });
-      final corrupt = await StorageService.getHomeHeroSource();
+      final corrupt = await HomePrefs.getHomeHeroSource();
       expect(corrupt.mode, HomeHeroSourceMode.random);
       expect(corrupt.ids, isEmpty);
     },
@@ -658,26 +658,26 @@ void main() {
         'home_extra_rows_v1': 'not-json{',
         'home_row_order_v1': 'not-json{',
       });
-      expect(await StorageService.getHomeDisabledSections(), isEmpty);
-      expect(await StorageService.getHomeExtraRows(), isEmpty);
-      expect(await StorageService.getHomeRowOrder(), isEmpty);
+      expect(await HomePrefs.getHomeDisabledSections(), isEmpty);
+      expect(await HomePrefs.getHomeExtraRows(), isEmpty);
+      expect(await HomePrefs.getHomeRowOrder(), isEmpty);
     },
   );
 
   test(
     'StorageService remaining Home writes are readable through HomePrefs',
     () async {
-      await StorageService.setHomeDisabledSections({'cw:movies'});
-      await StorageService.setHomeExtraRows(const [
+      await HomePrefs.setHomeDisabledSections({'cw:movies'});
+      await HomePrefs.setHomeExtraRows(const [
         (id: 'iptvlist:list_1', title: 'Sports'),
       ]);
-      await StorageService.setHomeRowOrder(['cw:movies', 'fav:iptv']);
-      await StorageService.setHomeHeroSource((
+      await HomePrefs.setHomeRowOrder(['cw:movies', 'fav:iptv']);
+      await HomePrefs.setHomeHeroSource((
         mode: HomeHeroSourceMode.custom,
         ids: ['cinemeta:movie:top'],
       ));
       await StorageService.setHomeTickSources({TrackingSource.simkl});
-      await StorageService.setHomeHeroTrailerEnabled(false);
+      await HomePrefs.setHomeHeroTrailerEnabled(false);
       await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(
         AmbientTrailerSurface.homeHero,
         false,
@@ -732,17 +732,17 @@ void main() {
       await HomePrefs.setHomeHeroTrailerVolume(70);
       await HomePrefs.setTvHomeStyle('atrium');
 
-      expect(await StorageService.getHomeDisabledSections(), {'fav:iptv'});
-      expect(await StorageService.getHomeExtraRows(), [
+      expect(await HomePrefs.getHomeDisabledSections(), {'fav:iptv'});
+      expect(await HomePrefs.getHomeExtraRows(), [
         (id: 'traktlist:watchlist', title: ''),
       ]);
-      expect(await StorageService.getHomeRowOrder(), ['fav:iptv']);
-      final hero = await StorageService.getHomeHeroSource();
+      expect(await HomePrefs.getHomeRowOrder(), ['fav:iptv']);
+      final hero = await HomePrefs.getHomeHeroSource();
       expect(hero.mode, HomeHeroSourceMode.auto);
       expect(await StorageService.getHomeTickSources(), {
         TrackingSource.mdblist,
       });
-      expect(await StorageService.getHomeHeroTrailerEnabled(), isTrue);
+      expect(await HomePrefs.getHomeHeroTrailerEnabled(), isTrue);
       expect(
         await AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(
           AmbientTrailerSurface.homeHero,

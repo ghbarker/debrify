@@ -7,6 +7,7 @@ import 'package:debrify/services/main_page_bridge.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_session_memory.dart';
 import 'package:debrify/services/secret_vault.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter/material.dart';
@@ -56,7 +57,7 @@ void main() {
     });
     rootBundle.evict('AssetManifest.bin');
     await StorageService.setTvHomeStyle('classic');
-    await StorageService.setHomeHeroTrailerEnabled(false);
+    await HomePrefs.setHomeHeroTrailerEnabled(false);
   });
 
   tearDown(() async {
@@ -89,7 +90,7 @@ void main() {
         var observeContinuation = false;
         var hostConfigurationReads = 0;
         Future<bool> readMergedRows(String provider) async {
-          final value = await StorageService.getHomeCwMergedRows(provider);
+          final value = await HomePrefs.getHomeCwMergedRows(provider);
           if (hold) {
             reached.add(provider);
             await release.future;
@@ -118,7 +119,7 @@ void main() {
 
           // All initialization reads have finished. Hold only the settings
           // reload, after the earlier card-preference mounted check has passed.
-          await StorageService.setHomeCwMergedRows('local', true);
+          await HomePrefs.setHomeCwMergedRows('local', true);
           hold = true;
           MainPageBridge.notifyHomeSettingsChanged();
           await tester.pumpAndSettle();

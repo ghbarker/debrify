@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../../models/stremio_addon.dart';
 import '../../services/app_route_observer.dart';
 import '../../services/main_page_bridge.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../services/stremio_service.dart';
 import '../../services/imdb_trailer_service.dart';
@@ -198,7 +199,7 @@ class _DiscoverDetailRailState extends State<DiscoverDetailRail>
     // Reuse the Home hero's ambient-trailer preference so one toggle governs
     // both living surfaces; volume is 0 when the sound sub-toggle is off.
     Future.wait([
-      StorageService.getHomeHeroTrailerEnabled(),
+      HomePrefs.getHomeHeroTrailerEnabled(),
       AmbientTrailerPrefs.getAmbientTrailerAudioEnabled(
         AmbientTrailerSurface.homeHero,
       ),

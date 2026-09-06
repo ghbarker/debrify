@@ -41,6 +41,7 @@ import '../services/account_service.dart';
 import '../services/download_service.dart';
 import '../services/mdblist/mdblist_service.dart';
 import '../services/simkl/simkl_service.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import '../services/storage_service.dart';
 import '../services/support_remote_config_service.dart';
 import '../services/torbox_account_service.dart';
@@ -1939,7 +1940,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await MyWatchlistStore.clearMyWatchlist();
     await TorrentSearchHistoryStore.clearTorrentSearchHistory();
     await StorageService.clearAllStartupSettings();
-    await StorageService.clearAllHomePageSettings();
+    await HomePrefs.clearAllHomePageSettings();
     await ProviderCredentialPrefs.clearAllIntegrationStates();
     await DebrifyTvPrefs.clearDebrifyTvProviderAndLegacy();
     await StorageService.clearAllFilterSettings();

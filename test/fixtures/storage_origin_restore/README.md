@@ -1493,3 +1493,19 @@ Did we make a difference? This adds actual portable physical/public proof for
 this finite Home domain. Is there more we could do? Caller retirement remains
 separately gated; family/platform/timing completeness and strict Storage
 ownership are not claimed. Zero production or Leaves credit for this fixture.
+
+
+### Q2 Home preferences: old-export harness adapter
+
+For unchanged old6d26 generation, remove the new HomePrefs import in the copied
+loader and reverse exactly19same-method receivers (18reader sites plus the
+clear call) to StorageService. Preserve every prior helper/owner adapter and
+all recipe/fixture bytes. The current fixture has independently declared raw
+and normalized values; namespace routing changes neither assertions nor clear
+order. Its final-state clear check does not observe transport ordering.
+
+The27existing origin-test files contain237migrated receiver sites. Reversing
+those alone is not a complete old-suite harness: eight already import HomePrefs
+and contain preexisting owner dependencies. The actual old export uses only
+the copied fixture loader and its two existing adapted helpers. No universal
+27-test old6d26 compatibility or identical whole-harness claim is made.

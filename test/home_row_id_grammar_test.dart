@@ -7,7 +7,7 @@ import 'package:debrify/screens/settings/home_sections_filter_page.dart';
 import 'package:debrify/services/home_list_rows.dart';
 import 'package:debrify/services/mdblist/mdblist_list_source.dart';
 import 'package:debrify/services/simkl/simkl_list_source.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/trakt/trakt_list_source.dart';
 
 /// Frozen Home row-id grammar. Prefixes are a compatibility surface — renaming
@@ -175,7 +175,7 @@ void main() {
 
         // Quirk: canonical order reserves slots for default-OFF tracker
         // list leaves so enabling one later does not append at the end.
-        expect(await StorageService.getHomeRowOrder(), const [
+        expect(await HomePrefs.getHomeRowOrder(), const [
           'cw:movies',
           'cw:series',
           'trakt:movies',

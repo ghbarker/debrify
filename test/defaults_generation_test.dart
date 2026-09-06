@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 
 void main() {
@@ -83,7 +84,7 @@ void main() {
       // passed it and has since changed its mind.
       expect(prefs.getString('app_theme'), isNull);
 
-      expect(await StorageService.getHomeHeroTrailerEnabled(), isTrue);
+      expect(await HomePrefs.getHomeHeroTrailerEnabled(), isTrue);
       expect(await StorageService.getDetailTrailerAutoplayEnabled(), isTrue);
     });
 
@@ -97,14 +98,14 @@ void main() {
 
       // Said no, stays no...
       expect(prefs.getBool('home_hero_trailer_enabled'), isFalse);
-      expect(await StorageService.getHomeHeroTrailerEnabled(), isFalse);
+      expect(await HomePrefs.getHomeHeroTrailerEnabled(), isFalse);
       // ...while the surface they never ruled on adopts.
       expect(prefs.getBool('detail_trailer_autoplay_enabled'), isTrue);
     });
 
     test('a fresh install gets both trailer surfaces on', () async {
       SharedPreferences.setMockInitialValues({});
-      expect(await StorageService.getHomeHeroTrailerEnabled(), isTrue);
+      expect(await HomePrefs.getHomeHeroTrailerEnabled(), isTrue);
       expect(await StorageService.getDetailTrailerAutoplayEnabled(), isTrue);
     });
 

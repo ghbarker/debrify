@@ -1,7 +1,7 @@
 import 'package:debrify/screens/search/continue_watching_row.dart';
 import 'package:debrify/screens/search_screen.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
-import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/storage/home_prefs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,8 +22,8 @@ class _Routes extends NavigatorObserver {
 
 Future<(_Routes, List<FocusNode>)> _mount(WidgetTester tester) async {
   await prepareFavourites(tester);
-  await StorageService.setHomeContinueWatchingEnabled(true);
-  await StorageService.setHomeCwHoldToQuickPlay(false);
+  await HomePrefs.setHomeContinueWatchingEnabled(true);
+  await HomePrefs.setHomeCwHoldToQuickPlay(false);
   for (var i = 1; i <= 2; i++) {
     await PlaybackProgressStore.saveContinueWatchingItem(
       imdbId: 'tt000000$i',
