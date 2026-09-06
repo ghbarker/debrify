@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../models/torrent.dart';
-import '../../screens/video_player/models/playlist_entry.dart';
+import '../../models/playlist_entry.dart';
 import '../series_source_service.dart';
 import 'alldebrid_cloud_provider.dart';
 import 'cloud_exceptions.dart';

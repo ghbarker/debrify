@@ -6,7 +6,7 @@ import '../../models/torbox_file.dart';
 import '../../models/torbox_torrent.dart';
 import '../../models/torbox_web_download.dart';
 import '../../models/torrent.dart';
-import '../../screens/video_player/models/playlist_entry.dart';
+import '../../models/playlist_entry.dart';
 import '../../utils/file_utils.dart';
 import '../../utils/stremio_episode_selector.dart';
 import '../main_page_bridge.dart';

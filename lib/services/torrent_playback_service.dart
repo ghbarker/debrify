@@ -17,7 +17,7 @@ import '../models/profiles/profile_policy.dart';
 import '../models/quick_play_rules.dart';
 import '../models/torrent.dart';
 import '../models/indexer_manager_config.dart';
-import '../screens/video_player/models/playlist_entry.dart';
+import '../models/playlist_entry.dart';
 import '../models/torrent_filter_state.dart';
 import '../theme/app_theme_scope.dart';
 import '../utils/deovr_utils.dart' as deovr;
