@@ -37,8 +37,9 @@ Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.
 `search_screen_shells.dart` (tab/variant/landing/dropdown contracts),
 `keyword_search_controller.dart` + `keyword_search_screen.dart` (in-tab keyword
 torrent search; G1'-3).
-TV Home stages (three remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
-— `_CanvasBoardStage`, `_AtriumBoardStage`, `_PromenadeBoardStage`.
+TV Home stages (two remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
+— `_CanvasBoardStage`, `_AtriumBoardStage`.
+Promenade uses public `PromenadeStage` in `promenade_board_stage.dart`.
 Mosaic uses public `MosaicStage` in `mosaic_board_stage.dart`.
 Deck uses public `DeckStage` in `deck_board_stage.dart` and shared `search/stage_visuals.dart`. Tonight uses public `TonightStage`, `TonightStageContent` in
 `tonight_stage_content.dart`, and `TonightQueueRow`/State, `TonightCardInfo` and
@@ -240,7 +241,7 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   (existing callers retain null keys). This is not native/cache-algorithm coverage.
   `DeckStageBindings` retains 22 live/reference members, including two lazy native
   constructor closures on the host; these and the label boundaries above expire
-  for removal/review at final composition / phase completion. Three stage parts and
+  for removal/review at final composition / phase completion. Two stage parts and
   the aggregate stage target remain open; prior shared-shelf accounting is separate.
   Actual `MosaicStage` owns its complete layout and exclusive header geometry;
   its State extension/part is removed using the existing public visual core.
@@ -249,6 +250,13 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   retained for removal/review at final composition / phase completion. Existing
   host cell/deferred-focus/label policy is unchanged; the held Mosaic cell/content
   owner is not closed by this slice, nor is the aggregate host target.
+  Actual `PromenadeStage` now owns its full layout and three exclusive constants;
+  its State extension/part is removed. Host 6468 -> 6506 (**+38**); whole production
+  **+49**, not deletion credit. Twenty live/reference bindings retain two lazy
+  native constructors and one existing shared-scrim constructor, for removal/review
+  at final composition / phase completion. Cell/label policy and shared visual/native
+  implementations stay with their current owners; Canvas/Atrium and the host target
+  remain open.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
