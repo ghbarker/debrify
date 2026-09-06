@@ -208,6 +208,24 @@ void main() {
     }
   });
 
+  test('VR keys belong to PlayerPrefs and every missing row is detected', () {
+    const expected = {
+      'quick_play_vr_mode',
+      'quick_play_vr_default_screen_type',
+      'quick_play_vr_default_stereo_mode',
+      'quick_play_vr_auto_detect_format',
+      'quick_play_vr_show_dialog',
+    };
+    expect(PlayerPrefs.ownedKeys.intersection(expected), expected);
+    expect(StorageKeyOwnership.keysFor(StorageKeyStore.playerPrefs).intersection(expected), expected);
+    expect(declaredOnStorageService().intersection(expected), isEmpty);
+    expect(allDiscoveredPrefsKeys(), containsAll(expected));
+    for (final missing in expected) {
+      final incompleteRegistry = StorageKeyOwnership.byKey.keys.toSet()..remove(missing);
+      expect(allDiscoveredPrefsKeys().difference(incompleteRegistry), {missing});
+    }
+  });
+
   test('every declared persisted key is owned by exactly one store', () {
     final fromGodFile = declaredOnStorageService();
     final fromCloud = declaredOnCloudSecretPrefs();

@@ -230,14 +230,6 @@ class StorageService {
 
   // Quick Play VR Settings
   // VR Player Mode: 'disabled' (always regular player), 'auto' (detect VR content), 'always' (always use DeoVR)
-  static const String _quickPlayVrModeKey = 'quick_play_vr_mode';
-  static const String _quickPlayVrDefaultScreenTypeKey =
-      'quick_play_vr_default_screen_type';
-  static const String _quickPlayVrDefaultStereoModeKey =
-      'quick_play_vr_default_stereo_mode';
-  static const String _quickPlayVrAutoDetectFormatKey =
-      'quick_play_vr_auto_detect_format';
-  static const String _quickPlayVrShowDialogKey = 'quick_play_vr_show_dialog';
 
   // Quick Play Cache Fallback Settings
   // When enabled, if first torrent is not cached, try next torrents until one works
@@ -1999,69 +1991,43 @@ class StorageService {
   // Quick Play VR Settings methods
 
   /// Get VR player mode: 'disabled', 'auto', or 'always'
-  static Future<String> getQuickPlayVrMode() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_quickPlayVrModeKey) ?? 'disabled';
-  }
+  static Future<String> getQuickPlayVrMode() =>
+      PlayerPrefs.getQuickPlayVrMode();
 
-  static Future<void> setQuickPlayVrMode(String mode) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_quickPlayVrModeKey, mode);
-  }
+  static Future<void> setQuickPlayVrMode(String mode) =>
+      PlayerPrefs.setQuickPlayVrMode(mode);
 
   /// Get default VR screen type (dome, sphere, flat, fisheye, mkx200, rf52)
-  static Future<String> getQuickPlayVrDefaultScreenType() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_quickPlayVrDefaultScreenTypeKey) ?? 'dome';
-  }
+  static Future<String> getQuickPlayVrDefaultScreenType() =>
+      PlayerPrefs.getQuickPlayVrDefaultScreenType();
 
-  static Future<void> setQuickPlayVrDefaultScreenType(String screenType) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_quickPlayVrDefaultScreenTypeKey, screenType);
-  }
+  static Future<void> setQuickPlayVrDefaultScreenType(String screenType) =>
+      PlayerPrefs.setQuickPlayVrDefaultScreenType(screenType);
 
   /// Get default VR stereo mode (sbs, tb, off)
-  static Future<String> getQuickPlayVrDefaultStereoMode() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getString(_quickPlayVrDefaultStereoModeKey) ?? 'sbs';
-  }
+  static Future<String> getQuickPlayVrDefaultStereoMode() =>
+      PlayerPrefs.getQuickPlayVrDefaultStereoMode();
 
-  static Future<void> setQuickPlayVrDefaultStereoMode(String stereoMode) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setString(_quickPlayVrDefaultStereoModeKey, stereoMode);
-  }
+  static Future<void> setQuickPlayVrDefaultStereoMode(String stereoMode) =>
+      PlayerPrefs.setQuickPlayVrDefaultStereoMode(stereoMode);
 
   /// Get whether to auto-detect VR format from filename
-  static Future<bool> getQuickPlayVrAutoDetectFormat() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_quickPlayVrAutoDetectFormatKey) ?? true;
-  }
+  static Future<bool> getQuickPlayVrAutoDetectFormat() =>
+      PlayerPrefs.getQuickPlayVrAutoDetectFormat();
 
-  static Future<void> setQuickPlayVrAutoDetectFormat(bool autoDetect) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_quickPlayVrAutoDetectFormatKey, autoDetect);
-  }
+  static Future<void> setQuickPlayVrAutoDetectFormat(bool autoDetect) =>
+      PlayerPrefs.setQuickPlayVrAutoDetectFormat(autoDetect);
 
   /// Get whether to show VR format selection dialog before launching DeoVR
-  static Future<bool> getQuickPlayVrShowDialog() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_quickPlayVrShowDialogKey) ?? true;
-  }
+  static Future<bool> getQuickPlayVrShowDialog() =>
+      PlayerPrefs.getQuickPlayVrShowDialog();
 
-  static Future<void> setQuickPlayVrShowDialog(bool showDialog) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_quickPlayVrShowDialogKey, showDialog);
-  }
+  static Future<void> setQuickPlayVrShowDialog(bool showDialog) =>
+      PlayerPrefs.setQuickPlayVrShowDialog(showDialog);
 
   /// Clear all Quick Play VR settings
-  static Future<void> clearQuickPlayVrSettings() async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.remove(_quickPlayVrModeKey);
-    await prefs.remove(_quickPlayVrDefaultScreenTypeKey);
-    await prefs.remove(_quickPlayVrDefaultStereoModeKey);
-    await prefs.remove(_quickPlayVrAutoDetectFormatKey);
-    await prefs.remove(_quickPlayVrShowDialogKey);
-  }
+  static Future<void> clearQuickPlayVrSettings() =>
+      PlayerPrefs.clearQuickPlayVrSettings();
 
   // Quick Play Cache Fallback Settings methods
 
