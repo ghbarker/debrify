@@ -17,7 +17,6 @@ import '../models/sidebar_configuration.dart';
 import '../models/stremio_addon.dart';
 import '../models/android_video_renderer_mode.dart';
 import '../models/tv_hero_artwork_quality.dart';
-import '../models/tracking_source.dart';
 import '../utils/platform_util.dart';
 import 'storage/cloud_secret_prefs.dart';
 import 'storage/tracking_prefs.dart';
