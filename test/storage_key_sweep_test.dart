@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/indexer_manager_config_store.dart';
 import 'package:debrify/services/storage/device_maintenance_prefs.dart';
 import 'package:debrify/services/storage/catalog_search_prefs.dart';
 import 'package:debrify/services/storage/ambient_trailer_prefs.dart';
@@ -118,6 +119,7 @@ Set<String> inlinePrefsKeysOnStorageService() {
 /// Every name the completed registry must own: declared consts, store-owned
 /// keys, undeclared inline literals, and documented interpolated names.
 Set<String> allDiscoveredPrefsKeys() => {
+  ...IndexerManagerConfigStore.ownedKeys,
   ...DeviceMaintenancePrefs.ownedKeys,
   ...CatalogSearchPrefs.ownedKeys,
   ...DownloadDestinationPrefs.ownedKeys,
@@ -148,6 +150,17 @@ Set<String> unownedDiscoveredPrefsKeys() =>
     allDiscoveredPrefsKeys().difference(StorageKeyOwnership.byKey.keys.toSet());
 
 void main() {
+  test('indexer legacy key has exact ownership and missing row fails', () {
+    const expected = {'indexer_manager_configs_v1'};
+    expect(IndexerManagerConfigStore.ownedKeys, expected);
+    expect(StorageKeyOwnership.keysFor(StorageKeyStore.indexerManagerConfigStore), expected);
+    expect(declaredOnStorageService().intersection(expected), isEmpty);
+    expect(inlinePrefsKeysOnStorageService().intersection(expected), isEmpty);
+    expect(allDiscoveredPrefsKeys(), containsAll(expected));
+    expect(allDiscoveredPrefsKeys().difference(
+      StorageKeyOwnership.byKey.keys.toSet().difference(expected)), expected);
+  });
+
   test('profile scalar keys have exact owner membership and each missing row fails', () {
     const all = {
       'series_browser_dense_view',
@@ -448,6 +461,8 @@ void main() {
       }
     }
 
+    expectStore(IndexerManagerConfigStore.ownedKeys,
+        StorageKeyStore.indexerManagerConfigStore, 'IndexerManagerConfigStore');
     expectStore(DeviceMaintenancePrefs.ownedKeys,
         StorageKeyStore.deviceMaintenancePrefs, 'DeviceMaintenancePrefs');
     expectStore(CatalogSearchPrefs.ownedKeys,
@@ -480,6 +495,7 @@ void main() {
         StorageKeyStore.defaultTorrentFilterPrefs, 'DefaultTorrentFilterPrefs');
 
     final extracted = {
+      ...IndexerManagerConfigStore.ownedKeys,
       ...DeviceMaintenancePrefs.ownedKeys,
       ...CatalogSearchPrefs.ownedKeys,
       ...AmbientTrailerPrefs.ownedKeys,
