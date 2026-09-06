@@ -295,6 +295,13 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
 - Indexer managers (Prowlarr/Jackett): `lib/services/indexer_manager_service.dart`
   (`_searchProwlarr*`, Torznab), `lib/models/indexer_manager_config.dart`,
   `lib/screens/settings/indexer_managers_settings_page.dart`.
+  `lib/services/storage/indexer_manager_config_store.dart` owns
+  `getIndexerManagerConfigs` / `setIndexerManagerConfigs` model adaptation and
+  the legacy preference key. ProfileCollectionResourceFacade retains canonical
+  grants/secrets/revisions/readback authority; IndexerManagerService retains
+  network/search/cache behavior. Two nonasync StorageService facades (10
+  declaration lines) expire only in a meaningful Q2 caller batch. Host -64,
+  whole production +29; export gap and strict ownership closure remain open.
 - Scraper "engine" system (YAML-config, **not** a code-plugin runtime): `lib/services/engine/`.
 - **Filters**: `lib/models/torrent_filter_state.dart` (QualityTier/RipSource/AudioLanguage/SizeBucket dims),
   format/HDR tag detection already exists in `lib/utils/format_tag_detector.dart` +
