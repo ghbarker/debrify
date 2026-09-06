@@ -28,17 +28,21 @@ Search `part` files: `lib/screens/search/search_sources.dart` (3 163),
 `lib/screens/search/search_hero_widgets.dart` (2 261),
 `lib/screens/search/search_stage_widgets.dart` (1 699),
 `lib/screens/search/search_card_widgets.dart` (1 198).
-TV Home stage parts (6 files, 1 581): `lib/screens/search/stages/*_board_stage.dart`
-except `spotlight_board_stage.dart`, now the imported `SpotlightStage` widget (62 lines).
+TV Home stage parts (5 files, 1 311): `lib/screens/search/stages/*_board_stage.dart`
+except imported `spotlight_board_stage.dart` (`SpotlightStage`, 62 lines) and
+`tonight_board_stage.dart` (`TonightStage`, 195 lines).
 Extracted (not parts): `home_board_controller.dart`, `catalog_search_controller.dart`,
 `title_opener.dart` (`TitleOpener.open` — catalog detail from the board),
 `catalog_search_screen.dart` (Search tab), `discover_screen.dart` (Discover tab),
 `search_screen_shells.dart` (tab/variant/landing/dropdown contracts),
 `keyword_search_controller.dart` + `keyword_search_screen.dart` (in-tab keyword
 torrent search; G1'-3).
-TV Home stages (six remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
+TV Home stages (five remaining parts of `search_screen.dart`): `lib/screens/search/stages/`
 — `_CanvasBoardStage`, `_AtriumBoardStage`, `_MosaicBoardStage`, `_PromenadeBoardStage`,
-`_DeckBoardStage`, `_TonightBoardStage`. Spotlight uses public `SpotlightStage` plus
+`_DeckBoardStage`. Tonight uses public `TonightStage`, `TonightStageContent` in
+`tonight_stage_content.dart`, and `TonightQueueRow`/State, `TonightCardInfo` and
+`TonightQueueEntry` in `tonight_stage_widgets.dart`. Neutral `StageRailView` lives
+beside `CanvasRail` in `search_board_runtime.dart`. Spotlight uses public `SpotlightStage` plus
 `spotlight_stage_content.dart` (`SpotlightStageContent`) for actual shelf/card assembly.
 Neutral `FavKind` / `FavRowRef` live in `search/fav_row_ref.dart`; the host re-exports them.
 Dispatch helper:
@@ -210,6 +214,15 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   The CW red constant has one owner and one retained private host alias for other
   card/Hero consumers. No host import from the renderer; both legacy widget parts
   remain. This removes shared renderer coupling, not the remaining stage bindings.
+  G1'-8 Tonight (product 2392376e): `TonightStageContent` owns the eager queue-zone,
+  remembered index/key and card notifier plus actual header/queue/rail assembly.
+  `TonightQueueRow` and its private State own the unchanged 500ms hold controller;
+  board/CW nodes remain borrowed. Host retains ordered split reset/disposal adapters
+  and lazy art/trailer/live/caption children. `StageRailView` moved unchanged to runtime.
+  Host 6830 -> 6551 (**279 net Leaves**); whole production **+106**.
+  Twenty-one typed shared operations remain explicit coupling, expiring with remaining
+  G1'-8 shared-cell/navigation adoption. No State proxy, pure-logic claim or automatic
+  target closure; five stage parts remain. Appended Tonight pages do not replay Right.
 - **`lib/services/storage_service.dart`** 🔴 — public static façade for SharedPreferences/persisted
   state (settings, continue watching (cap 50), playback state, favourites, provider toggles,
   home disabled-sections). **G3 slice 2:** remaining Home keys (`home_disabled_sections_v1`,
@@ -464,7 +477,7 @@ is an editor mirror, not the source of truth. How to add a provider:
   `test/magic_tv_dialog_settings_origin_test.dart` (desktop; no TV-focus or dead
   quick-card coverage claim). M1-3 watch flows: `ProviderWatchFlow` owns Quick
   Play orchestration; `TorboxWatchFlow`, `PikpakWatchFlow`, `PremiumizeWatchFlow`,
-  `AlldebridWatchFlow`, and `RealDebridWatchFlow` own per-provider/cached paths
+  and `AlldebridWatchFlow` own per-provider/cached paths
   under `lib/screens/debrify_tv/watch/`. `QuickWatchSearchAccumulator` in
   `provider_watch_flow.dart` synchronously shares TorBox/PikPak result accumulation;
   each invocation keeps its own dedup map, while leaves retain awaits, cancellation
@@ -518,10 +531,14 @@ is an editor mirror, not the source of truth. How to add a provider:
   `runCachedLockedWatch` in `lib/screens/debrify_tv/watch/cached_locked_watch_programme.dart`
   shares RD/AD full cached setup, presentation and cleanup; their 90/65-line walkers
   remain distinct (155 lines relocated, not algorithm deduplication). Whole production
-  net125: RD305->24, AD447->215, new owner388 fully charged. Five leaves667;
-  common1551/quick183/cached-windowed208 unchanged, combined3122->2997.
-  Two16-line direct entry bindings retain typed host coupling temporarily for
-  Q2/phase-completion review/removal. Below800 leaf size does not close dependencies.
+  net125 at the programme move, with new owner388 fully charged. The subsequent
+  Q2 cached-entry cutover routes both host branches directly to this programme,
+  retires the two cached forwarding APIs and removes the RD wrapper/holder;
+  AllDebrid Quick Play and its callback remain unchanged. Cutover whole production
+  -37: host +3, AD -16, RD -24; provider leaves667->627. Shared owner388,
+  common1551/quick183/cached-windowed208/Windowed217 remain unchanged.
+  The two temporary entry bindings have reached their Q2 expiry; strict dependency
+  closure remains OPEN because live host/UI coupling is retained for Q2 composition.
   Captured credentials, late builder eligibility, catch asymmetry and unmounted
   finally-return suppression remain origin quirks; native/early-entry debt stays open.
   Its 24 binding/tear-off lines are retained for Q2 composition review/removal before

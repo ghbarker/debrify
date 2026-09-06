@@ -531,3 +531,20 @@ class SearchBoardRuntime {
   }
 
 }
+
+class StageRailView {
+  final List<CanvasRail> rails;
+  final int index;
+  final CanvasRail rail;
+  final String key;
+  final List<StremioMeta> items;
+  final List<FocusNode> nodes;
+  const StageRailView({
+    required this.rails,
+    required this.index,
+    required this.rail,
+    required this.key,
+    required this.items,
+    required this.nodes,
+  });
+}

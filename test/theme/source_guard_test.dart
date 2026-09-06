@@ -50,7 +50,6 @@ const _watchFlowPlayerCounts = <String, int>{
   'lib/screens/debrify_tv/watch/pikpak_watch_flow.dart': 1,
   'lib/screens/debrify_tv/watch/premiumize_watch_flow.dart': 0,
   'lib/screens/debrify_tv/watch/provider_watch_flow.dart': 3,
-  'lib/screens/debrify_tv/watch/real_debrid_watch_flow.dart': 0,
   'lib/screens/debrify_tv/watch/cached_locked_watch_programme.dart': 1,
   'lib/screens/debrify_tv/watch/torbox_watch_flow.dart': 0,
   'lib/screens/debrify_tv/watch/quick_windowed_watch_programme.dart': 1,

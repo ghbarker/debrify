@@ -176,7 +176,7 @@ void main() {
       expect(chunk, contains('return _MosaicBoardStage(host: this);'));
       expect(chunk, contains('return _PromenadeBoardStage(host: this);'));
       expect(chunk, contains('return _DeckBoardStage(host: this);'));
-      expect(chunk, contains('return _TonightBoardStage(host: this);'));
+      expect(chunk, contains('return TonightStage(content: _tonight, isTelevision: widget.isTelevision);'));
       expect(chunk, contains('return SpotlightStage(readFrame: () {'));
     });
 
@@ -195,6 +195,13 @@ void main() {
   group('stage builders (source pin)', () {
     test('all seven Home stage builders exist', () {
       for (final name in kTvHomeStageBuilderNames) {
+        if (name == '_buildTonightBoard') {
+          final stage = File(
+            'lib/screens/search/stages/tonight_board_stage.dart',
+          ).readAsStringSync();
+          expect(_methodBody(stage, 'build'), contains('return LayoutBuilder('));
+          continue;
+        }
         if (name == '_buildSpotlightBoard') {
           final stage = File(
             'lib/screens/search/stages/spotlight_board_stage.dart',
@@ -216,7 +223,7 @@ void main() {
         '_MosaicBoardStage',
         '_PromenadeBoardStage',
         '_DeckBoardStage',
-        '_TonightBoardStage',
+        'TonightStage',
         'SpotlightStage',
       ];
       for (final name in widgets) {
@@ -254,29 +261,38 @@ void main() {
     test(
       'Tonight empty queue+rails → BrandLoadingStage; dead zone cannot hold focus',
       () {
-        final body = _methodBody(layouts, '_buildTonightBoard');
-        expect(body, contains('final queue = _tonightQueue;'));
-        expect(body, contains('final rails = _stageRails;'));
+        final stage = File(
+          'lib/screens/search/stages/tonight_board_stage.dart',
+        ).readAsStringSync();
+        final body = _methodBody(stage, 'build');
+        expect(body, contains('final queue = content.queue;'));
+        expect(body, contains('final rails = content.bindings.readStageRails();'));
         expect(body, contains('if (queue.isEmpty && rails.isEmpty) {'));
         expect(
           body,
           contains(
-            'return BrandLoadingStage(isTelevision: widget.isTelevision);',
+            'return BrandLoadingStage(isTelevision: isTelevision);',
           ),
         );
         expect(
           body,
           contains(
-            'if (_tonightZoneIsQueue && queue.isEmpty) _tonightZoneIsQueue = false;',
+            'if (content.zoneIsQueue && queue.isEmpty) content.zoneIsQueue = false;',
           ),
         );
         expect(
           body,
           contains(
-            'if (!_tonightZoneIsQueue && rails.isEmpty) _tonightZoneIsQueue = true;',
+            'if (!content.zoneIsQueue && rails.isEmpty) content.zoneIsQueue = true;',
           ),
         );
-        expect(body, contains('_seedStageFocusOnce();'));
+        expect(body, contains('content.bindings.seedFocusOnce();'));
+        expect(body.indexOf('final queue = content.queue;'),
+            lessThan(body.indexOf('final rails = content.bindings.readStageRails();')));
+        expect(body.indexOf('if (queue.isEmpty && rails.isEmpty)'),
+            lessThan(body.indexOf('if (content.zoneIsQueue && queue.isEmpty)')));
+        expect(body.indexOf('if (!content.zoneIsQueue && rails.isEmpty)'),
+            lessThan(body.indexOf('content.bindings.seedFocusOnce();')));
       },
     );
 

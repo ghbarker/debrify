@@ -1,4 +1,7 @@
 import 'search/board_cell.dart';
+import 'search/stages/tonight_board_stage.dart';
+import 'search/stages/tonight_stage_content.dart';
+import 'search/stages/tonight_stage_widgets.dart';
 import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
 import 'dart:math';
@@ -115,7 +118,6 @@ part 'search/stages/promenade_board_stage.dart';
 part 'search/stages/atrium_board_stage.dart';
 part 'search/stages/mosaic_board_stage.dart';
 part 'search/stages/deck_board_stage.dart';
-part 'search/stages/tonight_board_stage.dart';
 
 /// TV focus ring for board cards — violet-300, deliberately LIGHTER than the
 /// board's chrome accent: a light ring over dark art pops at 10ft, while the
@@ -299,23 +301,6 @@ const double _kCanvasIdentityGap = 25;
 /// Smallest poster art a stage rail will draw before it is simply too small
 /// to recognise — the floor every derived rail box respects.
 const double _kStageMinPosterH = 56;
-
-// TONIGHT metrics. The rail zone is reserved first and the main zone takes
-// what is left, so a short board shrinks the card and drops queue rows rather
-// than overlapping them.
-const double _kTonightPadX = 48;
-const double _kTonightZoneGap = 22;
-const double _kTonightRailTail = 24;
-const double _kTonightTitleSize = 26;
-const double _kTonightHeaderPad = 34;
-const double _kTonightRowGap = 12;
-const double _kTonightRowMaxH = 118;
-const double _kTonightQueueMinW = 260;
-const double _kTonightCardRadius = 14;
-
-/// The most of a queue row's width the still may take. The rest is the title
-/// and episode, which is what the row exists to tell you.
-const double _kTonightThumbShare = 0.40;
 
 // DECK metrics.
 const double _kDeckPanelPad = 48;
@@ -784,6 +769,32 @@ class _SearchScreenState extends State<SearchScreenHost>
   @override
   void initState() {
     super.initState();
+    _tonight.board = _boardRuntime;
+    _tonight.columns = _canvasCols;
+    _tonight.bindings = (
+      readStageRails: () => _stageRails,
+      resolveRailIndex: _resolveCanvasRailIndex,
+      nearestMountedNode: _nearestMountedNode,
+      railKeyOf: _canvasRailKeyOf,
+      resolveStageRail: _resolveStageRail,
+      seedFocusOnce: _seedStageFocusOnce,
+      switchRail: _stageSwitchRail,
+      holdSwallow: _stageHoldSwallow,
+      holdJump: _stageHoldJump,
+      setHero: _setHero,
+      isBound: _isBound,
+      openCwMenu: _openCwCardMenu,
+      wideArtUrl: _wideArtUrl,
+      atriumLabelHeight: _atriumLabelHeight,
+      railBoxHeight: _stageRailBoxH,
+      posterWidth: _stagePosterW,
+      favouriteWidth: _stageFavW,
+      buildFavCell: _canvasFavCell,
+      buildShelfCell: _stageShelfCell,
+      buildRailLabel: _deckRailLabel,
+      buildCardLayers: _tonightCardLayers,
+      labelGap: _kAtriumLabelGap,
+    );
     _content.surface = this;
     _content.presentation = this;
     _content.readOptions = () => (isTelevision: widget.isTelevision,
@@ -1157,7 +1168,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     _canvasTheaterTimer?.cancel();
     _canvasFavFocus.dispose();
     _atriumFocusedRailKey.dispose();
-    _tonightCard.dispose();
+    _tonight.dispose();
     _stageCol.dispose();
     _hero.detachShell(unsubscribeRoute: () => appRouteObserver.unsubscribe(this));
     _catalogDebounce?.cancel();
@@ -2274,11 +2285,11 @@ class _SearchScreenState extends State<SearchScreenHost>
     _canvasFavFocus.value = null;
     _canvasRailKey = null;
     _canvasCols.clear();
-    _tonightZoneIsQueue = true;
-    _tonightQueueCol = 0;
-    _tonightQueueKey = null;
+    _tonight.zoneIsQueue = true;
+    _tonight.queueCol = 0;
+    _tonight.queueKey = null;
     _atriumFocusedRailKey.value = null;
-    _tonightCard.value = null;
+    _tonight.card.value = null;
     _stageCol.value = 0;
     _boardRuntime.pendingStageAdvanceKey = null;
     _boardRuntime.pendingStageAdvanceAt = null;
@@ -2405,7 +2416,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // cells don't go through a _BoardCell onFocused), and favourites only
     // ever live in Tonight's RAIL zone, never its Continue queue.
     _atriumFocusedRailKey.value = railKey;
-    _tonightZoneIsQueue = false;
+    _tonight.zoneIsQueue = false;
     _hero.cancelPendingSwap();
     _hero.clearTrailer();
     if (liveChannel != null && _stageWantsLivePreview) {
@@ -2855,10 +2866,10 @@ class _SearchScreenState extends State<SearchScreenHost>
     // Tonight parks focus in its vertical queue until the user walks down
     // into the rail zone; the rail resolution below is only right for the
     // rail zone.
-    if (_homeStyleEffective == 'tonight' && _tonightZoneIsQueue) {
-      final queue = _tonightQueue;
+    if (_homeStyleEffective == 'tonight' && _tonight.zoneIsQueue) {
+      final queue = _tonight.queue;
       if (queue.isNotEmpty) {
-        final e = queue[_resolveTonightQueueIndex(queue)];
+        final e = queue[_tonight.resolveQueueIndex(queue)];
         return _nearestMountedNode(e.rail.cw!.nodes, e.col);
       }
     }
@@ -2916,14 +2927,6 @@ class _SearchScreenState extends State<SearchScreenHost>
   void _focusRelativeHomeRail(String rowId, int delta, int column) =>
       _boardRuntime.focusRelativeHomeRail(rowId, delta, column);
 
-  // ── TONIGHT zone state ───────────────────────────────────────────────────
-
-  /// Tonight splits focus into two zones stacked vertically: the Continue
-  /// Watching QUEUE (a vertical list) above, and the usual horizontal rail
-  /// below. UP/DOWN walks the two as one column, so this is simply "which
-  /// zone currently owns focus".
-  bool _tonightZoneIsQueue = true;
-
   /// A hold-jump fired: swallow the REST OF THAT HOLD. Without it a single
   /// long press would jump zones and then keep acting on the cell it landed
   /// on — repeats keep arriving, and the new cell never saw the key-down that
@@ -2958,38 +2961,8 @@ class _SearchScreenState extends State<SearchScreenHost>
     return false;
   }
 
-  /// Remembered row within the queue — the INDEX is only a fallback. CW rows
-  /// stream in and prepend (Trakt/Simkl land seconds after a cold start), so
-  /// the identity below is what actually restores the user's place.
-  int _tonightQueueCol = 0;
-
-  /// What the big card should say about whatever currently has focus — the
-  /// OK hint in particular, which is 'Resume' only for a part-watched title
-  /// and 'Play'/'Open' otherwise. A notifier, so a focus move repaints the
-  /// caption alone rather than the board.
-  final ValueNotifier<_TonightCardInfo?> _tonightCard =
-      ValueNotifier<_TonightCardInfo?>(null);
-
-  /// Identity of the remembered queue row: '<rail key>#<column>'. Resolved
-  /// against the rebuilt queue every time, exactly like [_canvasRailKey].
-  String? _tonightQueueKey;
-
-  /// The queue: every Continue Watching row flattened to (row, column) pairs
-  /// in board order. Nodes come from the CW rows themselves — which is why
-  /// [_stageRails] drops CW rails on Tonight (a node may be mounted once).
-  List<_TonightQueueEntry> get _tonightQueue {
-    final out = <_TonightQueueEntry>[];
-    if (!_cwVisible) return out;
-    for (final rail in _canvasRails) {
-      final cw = rail.cw;
-      if (cw == null) continue;
-      final n = min(cw.items.length, cw.nodes.length);
-      for (var col = 0; col < n; col++) {
-        out.add(_TonightQueueEntry(rail: rail, col: col));
-      }
-    }
-    return out;
-  }
+  // Eager Tonight lifetime at the former card-notifier construction slot.
+  final TonightStageContent _tonight = TonightStageContent();
 
   /// The rails the ACTIVE layout puts on its rail zone. Identical to
   /// [_canvasRails] everywhere except Tonight, which lifts the Continue
@@ -3187,7 +3160,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// streaming in above it can't swap the content under the user) and its
   /// nodes. Null means "nothing to show yet" — the caller holds the brand
   /// stage.
-  _StageRailView? _resolveStageRail() {
+  StageRailView? _resolveStageRail() {
     final rails = _stageRails;
     if (rails.isEmpty) return null;
     final index = _resolveCanvasRailIndex(rails);
@@ -3198,7 +3171,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // index 0 — in both cases an unpersisted identity would let a CW rail
     // prepending seconds later silently swap the shelf under the user.
     _canvasRailKey = key;
-    return _StageRailView(
+    return StageRailView(
       rails: rails,
       index: index,
       rail: rail,
@@ -3264,7 +3237,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// affordance Canvas's tabs carry, and for the same reason: UP/DOWN is what
   /// changes rails, and nothing else on this screen says so.
   Widget _promenadeLabel(
-    _StageRailView view, {
+    StageRailView view, {
     MainAxisAlignment align = MainAxisAlignment.center,
   }) {
     final app = AppThemeScope.of(context);
@@ -3674,7 +3647,7 @@ class _SearchScreenState extends State<SearchScreenHost>
 
   /// Deck's rail label — the same quiet caps as Atrium's rows, with the
   /// stacked chevron pair that says UP/DOWN changes rails.
-  Widget _deckRailLabel(_StageRailView view) {
+  Widget _deckRailLabel(StageRailView view) {
     final app = AppThemeScope.of(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -3836,328 +3809,76 @@ class _SearchScreenState extends State<SearchScreenHost>
     );
   }
 
-  // ── TONIGHT view ─────────────────────────────────────────────────────────
-
-  String _tonightQueueKeyOf(_TonightQueueEntry e) =>
-      '${_canvasRailKeyOf(e.rail)}#${e.col}';
-
-  /// Where the remembered queue row sits NOW. Identity first (CW rows stream
-  /// in and prepend, so a raw index would silently point at another title),
-  /// the remembered index only as a fallback.
-  int _resolveTonightQueueIndex(List<_TonightQueueEntry> queue) {
-    if (queue.isEmpty) return 0;
-    final key = _tonightQueueKey;
-    if (key != null) {
-      final i = queue.indexWhere((e) => _tonightQueueKeyOf(e) == key);
-      if (i >= 0) return i;
-    }
-    return _tonightQueueCol.clamp(0, queue.length - 1);
-  }
-
-  bool _tonightFocusQueue() {
-    final queue = _tonightQueue;
-    if (queue.isEmpty) return false;
-    final e = queue[_resolveTonightQueueIndex(queue)];
-    var node = _nearestMountedNode(e.rail.cw!.nodes, e.col);
-    // The remembered row may have scrolled out of the lazy list's mounted
-    // range (CW rows stream in and prepend). Fall back to the FIRST queue
-    // entry, which is always built, rather than failing the jump.
-    if (node == null && queue.isNotEmpty) {
-      final first = queue.first;
-      node = _nearestMountedNode(first.rail.cw!.nodes, first.col);
-      if (node != null) {
-        _tonightQueueCol = 0;
-        _tonightQueueKey = _tonightQueueKeyOf(first);
-      }
-    }
-    if (node == null) return false;
-    _tonightZoneIsQueue = true;
-    node.requestFocus();
-    return true;
-  }
-
-  bool _tonightFocusRail() {
-    final node = () {
-      final rails = _stageRails;
-      if (rails.isEmpty) return null;
-      final rail = rails[_resolveCanvasRailIndex(rails)];
-      return _nearestMountedNode(
-        _canvasRailNodes(rail),
-        _canvasCols[_canvasRailKeyOf(rail)] ?? 0,
-      );
-    }();
-    if (node == null) return false;
-    _tonightZoneIsQueue = false;
-    node.requestFocus();
-    return true;
-  }
-
-
-  /// A queue row's true minimum at the current text scale: title + episode +
-  /// their gaps + the progress bar + the row's vertical padding.
-  double _tonightRowMinHeight(BuildContext context) {
-    final t = MediaQuery.textScalerOf(context);
-    return t.scale(13.5) * 1.25 + 5 + t.scale(11.5) * 1.25 + 9 + 4 + 20 + 4;
-  }
-
-  double _tonightHeaderHeight(BuildContext context) =>
-      MediaQuery.textScalerOf(context).scale(_kTonightTitleSize) * 1.35 +
-      _kTonightHeaderPad;
-
-  Widget _tonightHeader(int inProgress) {
-    final app = AppThemeScope.of(context);
-    final now = DateTime.now();
-    const days = [
-      'MONDAY',
-      'TUESDAY',
-      'WEDNESDAY',
-      'THURSDAY',
-      'FRIDAY',
-      'SATURDAY',
-      'SUNDAY',
-    ];
-    // A weekday word, not a clock: a minute-accurate label would need a timer
-    // ticking on the home board for the whole session.
-    final day = days[(now.weekday - 1).clamp(0, 6)];
-    return Align(
-      alignment: Alignment.bottomLeft,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              'Tonight',
-              style: TextStyle(
-                color: app.core.tx,
-                fontSize: _kTonightTitleSize,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.4,
-              ),
+  Widget _tonightCardLayers(double cardH) => Stack(
+    fit: StackFit.expand,
+    children: [
+      _CanvasArtLayer(
+        item: _heroItem,
+        enriched: _heroEnriched,
+        fav: _canvasFavFocus,
+        cacheWidth: _tvHeroArtworkCacheWidth,
+        cacheHeight: _tvHeroArtworkCacheHeight,
+      ),
+      if (_heroTrailerActive)
+        _HeroTrailerLayer(
+          trailer: _heroTrailer,
+          isTelevision: widget.isTelevision,
+          heroHeight: cardH,
+          fullBleed: true,
+          volume: _heroTrailerVolume,
+          loading: _heroTrailerLoading,
+          onPlayingChanged: _onHeroTrailerPlaying,
+          takeover: _heroTrailerTakeover,
+        ),
+      if (_heroTrailerActive)
+        _HeroLiveLayer(
+          channel: _heroLiveChannel,
+          streamUrl: _heroLiveUrl,
+          heroHeight: cardH,
+          fullBleed: true,
+          volume: _heroTrailerVolume,
+          onPlayingChanged: _onHeroTrailerPlaying,
+          onPlaybackFailed: _onHeroLivePlaybackFailed,
+        ),
+      // Legibility ramp + the caption block, painted ABOVE the
+      // hole (plain draws only).
+      const IgnorePointer(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [Color(0xF00A0810), Color(0xA00A0810), Color(0x000A0810)],
+              stops: [0.0, 0.30, 0.68],
             ),
-            const SizedBox(width: 14),
-            Text(
-              day,
-              style: TextStyle(
-                color: app.fade(app.core.tx, 0.40),
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 2.2,
-              ),
-            ),
-            const Spacer(),
-            if (inProgress > 0)
-              Text(
-                '$inProgress IN PROGRESS',
-                style: TextStyle(
-                  color: app.fade(app.core.tx, 0.40),
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2.2,
-                ),
-              ),
-          ],
+          ),
+          child: SizedBox.expand(),
         ),
       ),
-    );
-  }
-
-  Widget _tonightQueueList(
-    List<_TonightQueueEntry> queue,
-    double rowH,
-    double queueW,
-    bool hasRail,
-  ) {
-    // The thumb is capped by the row's WIDTH, not just its height. Sized
-    // purely as `rowH * 16/9` it ate two thirds of a narrow queue and left
-    // the title about ten characters — "Orange Is t…". Whatever is left of
-    // 16:9 after this cap, BoxFit.cover crops.
-    final thumbW = min(rowH * 16 / 9, queueW * _kTonightThumbShare);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Expanded(
-          child: ListView.builder(
-            key: const ValueKey('tonight-queue'),
-            padding: EdgeInsets.zero,
-            clipBehavior: Clip.hardEdge,
-            itemCount: queue.length,
-            itemExtent: rowH + _kTonightRowGap,
-            itemBuilder: (context, i) {
-              final e = queue[i];
-              final cw = e.rail.cw!;
-              final item = cw.items[e.col];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: _kTonightRowGap),
-                child: _TonightQueueRow(
-                  item: item,
-                  height: rowH,
-                  thumbWidth: thumbW,
-                  focusNode: cw.nodes[e.col],
-                  episode: cw.episodeOf(item),
-                  progress: cw.progressOf(item),
-                  hasBoundSource: _isBound(item),
-                  onFocused: () {
-                    _tonightZoneIsQueue = true;
-                    _tonightQueueCol = i;
-                    _tonightQueueKey = _tonightQueueKeyOf(e);
-                    _tonightCard.value = _TonightCardInfo(
-                      // OK opens the detail page for a Continue Watching card
-                      // everywhere in the app; the HOLD menu is what resumes.
-                      action: 'Open',
-                      // HOLD opens the card menu (Play / Remove) — not a
-                      // direct resume, so it is named for what it is.
-                      holdAction: 'Options',
-                      episode: cw.episodeOf(item),
-                      progress: cw.progressOf(item),
-                    );
-                    _setHero(item);
-                  },
-                  onOpen: () => cw.onOpen(item),
-                  onLongPress: () =>
-                      _openCwCardMenu(cw, item, e.rail.cwIndex, e.col),
-                  onUp: () {
-                    if (_stageHoldSwallow(LogicalKeyboardKey.arrowUp)) return;
-                    if (i > 0) {
-                      _nearestMountedNode(
-                        queue[i - 1].rail.cw!.nodes,
-                        queue[i - 1].col,
-                      )?.requestFocus();
-                    }
-                  },
-                  onDown: () {
-                    if (_stageHoldSwallow(LogicalKeyboardKey.arrowDown)) return;
-                    if (i + 1 < queue.length) {
-                      _nearestMountedNode(
-                        queue[i + 1].rail.cw!.nodes,
-                        queue[i + 1].col,
-                      )?.requestFocus();
-                    } else if (hasRail) {
-                      _tonightFocusRail();
-                    }
-                  },
-                  // HELD down: leave the queue for the rail in one gesture.
-                  // The queue is every Continue Watching item from every
-                  // source flattened into one column, so stepping past it a
-                  // row at a time can be a long walk.
-                  onDownHold: hasRail
-                      ? () => _stageHoldJump(
-                          LogicalKeyboardKey.arrowDown,
-                          _tonightFocusRail,
-                        )
-                      : null,
-                  onLeft: () => MainPageBridge.focusTvSidebar?.call(),
-                ),
-              );
-            },
+      IgnorePointer(
+        child: CustomPaint(
+          painter: const _CornerWedges(
+            radius: kTonightCardRadius,
+            color: Color(0xFF100D1F),
+          ),
+          child: const SizedBox.expand(),
+        ),
+      ),
+      Positioned(
+        left: 24,
+        right: 24,
+        bottom: 20,
+        child: IgnorePointer(
+          child: _TonightCardCaption(
+            item: _heroItem,
+            enriched: _heroEnriched,
+            fav: _canvasFavFocus,
+            info: _tonight.card,
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _tonightRail(
-    _StageRailView view,
-    double boxH, {
-    required bool queueAbove,
-  }) {
-    final rail = view.rail;
-    final railKey = view.key;
-    final favRail = rail.favKind != null;
-    final items = view.items;
-    final nodes = view.nodes;
-    final count = favRail ? _canvasFavItemCount(rail.favKind!) : items.length;
-    // UP walks back through the rails and then into the queue — the two zones
-    // are one vertical column.
-    void up() {
-      if (_stageHoldSwallow(LogicalKeyboardKey.arrowUp)) return;
-      if (view.index > 0) {
-        _stageSwitchRail(-1);
-      } else if (queueAbove) {
-        _tonightFocusQueue();
-      }
-    }
-
-    void down() {
-      if (_stageHoldSwallow(LogicalKeyboardKey.arrowDown)) return;
-      _stageSwitchRail(1);
-    }
-
-    // HELD up: back to the Continue queue from any rail, the mirror of the
-    // queue's held DOWN.
-    final upHold = queueAbove
-        ? () => _stageHoldJump(LogicalKeyboardKey.arrowUp, _tonightFocusQueue)
-        : null;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(right: _kTonightPadX),
-          child: _deckRailLabel(view),
-        ),
-        const SizedBox(height: _kAtriumLabelGap),
-        SizedBox(
-          height: boxH,
-          child: ListView.builder(
-            key: ValueKey('tonight-rail-$railKey'),
-            scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.hardEdge,
-            cacheExtent: 400,
-            itemCount: count,
-            itemBuilder: (context, col) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 7),
-              child: Center(
-                child: SizedBox(
-                  width: favRail
-                      ? _stageFavW(context, boxH)
-                      : _stagePosterW(boxH),
-                  child: favRail
-                      ? _canvasFavCell(
-                          rail.favKind!,
-                          railKey,
-                          col,
-                          onUp: up,
-                          onDown: down,
-                          onUpHold: upHold,
-                        )
-                      : SizedBox(
-                          height: boxH,
-                          child: _stageShelfCell(
-                            rail,
-                            railKey,
-                            items,
-                            nodes,
-                            col,
-                            onUp: up,
-                            onDown: down,
-                            onUpHold: upHold,
-                            onFocusedExtra: () {
-                              _tonightZoneIsQueue = false;
-                              _tonightCard.value = _TonightCardInfo(
-                                action: 'Open',
-                                // Only Continue Watching cards arm hold-OK on
-                                // TV (they are the ones with a menu); catalog
-                                // cards have no hold action, so no hint.
-                                holdAction: rail.cw != null ? 'Options' : null,
-                                episode: rail.cw?.episodeOf(items[col]),
-                                progress: rail.cw?.progressOf(items[col]),
-                              );
-                            },
-                          ),
-                        ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: _kTonightRailTail),
-      ],
-    );
-  }
+      ),
+    ],
+  );
 
   /// Tab label for a rail, with colliding titles disambiguated by the
   /// section's provenance tag. Titles carry their content type themselves
@@ -5608,7 +5329,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       case 'deck':
         return _DeckBoardStage(host: this);
       case 'tonight':
-        return _TonightBoardStage(host: this);
+        return TonightStage(content: _tonight, isTelevision: widget.isTelevision);
       case 'spotlight':
         // The shared guard above lets dispatch through whenever ANY rail has
         // content — including favourites, which Spotlight still does not draw

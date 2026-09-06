@@ -46,13 +46,32 @@ void main() {
       r'builder: \(_\) => wrap\(',
     ).allMatches(cwRow);
     expect(hostUses.length + cwUses.length, 5);
-    expect(
-      source,
-      matches(
-        r'void initState\(\) \{\s*super\.initState\(\);\s*'
-        r'_content\.surface = this;\s*_content\.presentation = this;',
-      ),
-    );
+    final initStart = source.indexOf('void initState() {');
+    expect(initStart, isNonNegative);
+    final open = source.indexOf('{', initStart);
+    var depth = 1;
+    var end = open + 1;
+    while (end < source.length && depth > 0) {
+      if (source[end] == '{') depth++;
+      if (source[end] == '}') depth--;
+      end++;
+    }
+    expect(depth, 0);
+    final init = source.substring(initStart, end);
+    final surface = RegExp(r'_content\.surface\s*=\s*this;').allMatches(init);
+    final presentation =
+        RegExp(r'_content\.presentation\s*=\s*this;').allMatches(init);
+    expect(surface, hasLength(1));
+    expect(presentation, hasLength(1));
+    final superInit = init.indexOf('super.initState();');
+    final initialize = init.indexOf('_content.initialize(');
+    expect(superInit, isNonNegative);
+    expect(initialize, isNonNegative);
+    // Tonight may bind first; both actual host identities must still be
+    // installed in order before the shared session initializes.
+    expect(superInit, lessThan(surface.single.start));
+    expect(surface.single.start, lessThan(presentation.single.start));
+    expect(presentation.single.start, lessThan(initialize));
     expect(
       source,
       matches(
