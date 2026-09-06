@@ -170,7 +170,13 @@ class _HomeSectionsFilterPageState extends State<HomeSectionsFilterPage> {
       additions: const ['mdblist:movies', 'mdblist:shows'],
       anchors: const ['simkl:movies', 'simkl:shows'],
     );
-    _orderIds = HomeRowOrder.reconcile(seededOrder, _canonicalOrderIds());
+    _orderIds = HomeRowOrder.reconcile(
+      HomeRowOrder.seedPinned(seededOrder, [
+        for (final c in widget.collections)
+          if (c.pinToTop) HomeCollectionRowIds.collection(c.id),
+      ]),
+      _canonicalOrderIds(),
+    );
     _railNodes = List.generate(
       _groups.length,
       (i) => FocusNode(debugLabel: 'homeRail$i'),
@@ -410,6 +416,9 @@ class _HomeSectionsFilterPageState extends State<HomeSectionsFilterPage> {
       if (items.containsKey(id) && seen.add(id)) out.add(id);
     }
 
+    for (final c in widget.collections) {
+      if (c.pinToTop) add(HomeCollectionRowIds.collection(c.id));
+    }
     for (final id in const [
       'cw:movies',
       'cw:series',

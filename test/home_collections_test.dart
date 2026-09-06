@@ -212,7 +212,7 @@ void main() {
       ],
     );
 
-    test('matches by manifest id first, then by catalog type+id', () {
+    test('requires manifest identity even when another addon has the catalog', () {
       const byId = CollectionCatalogSource(
         addonId: 'com.linvo.cinemeta',
         type: 'movie',
@@ -230,7 +230,7 @@ void main() {
       );
       expect(
         HomeCollectionsStore.resolveAddon(byCatalog, [cinemeta, fork]),
-        fork,
+        isNull,
       );
 
       const missing = CollectionCatalogSource(
@@ -250,7 +250,7 @@ void main() {
         [c],
         [cinemeta, fork],
       );
-      // Netflix movies matched the fork by catalog id; Netflix series did not.
+      // Both Netflix sources remain unresolved without their provider.
       expect(unresolved, {'app.xperience.abc'});
       expect(HomeCollectionsStore.unresolvedAddonIds([c], [cinemeta]), {
         'app.xperience.abc',
@@ -259,10 +259,8 @@ void main() {
 
     test('claimedCatalogKeys names the board rows a folder takes over', () {
       final c = HomeCollectionParser.parse(_xperienceSample).single;
-      // Netflix movies resolve to the fork by catalog id; Action resolves to
-      // Cinemeta by manifest id; Netflix series resolve to nothing.
+      // Only Action resolves to Cinemeta by manifest id.
       expect(HomeCollectionsStore.claimedCatalogKeys([c], [cinemeta, fork]), {
-        'someone.elses.fork:movie:streaming_netflix_movies',
         'com.linvo.cinemeta:movie:top',
       });
       // A disabled collection claims nothing — its catalogs return to Home.

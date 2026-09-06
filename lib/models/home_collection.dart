@@ -351,7 +351,9 @@ class HomeCollectionParser {
   static List<HomeCollection> parse(String jsonText) {
     final Object? decoded;
     try {
-      decoded = jsonDecode(jsonText);
+      decoded = jsonDecode(
+        jsonText.trimLeft().replaceFirst(RegExp(r'^\uFEFF'), ''),
+      );
     } catch (_) {
       throw const FormatException('The file is not valid JSON.');
     }

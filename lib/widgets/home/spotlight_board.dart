@@ -52,6 +52,7 @@ class SpotlightCard {
   final VoidCallback onOpen;
   final VoidCallback? onOptions;
   final SpotlightCardShape shape;
+  final bool showCaption;
 
   /// Title identity for the effective watched marker. Null for channels,
   /// playlists, and other non-title cards.
@@ -74,6 +75,7 @@ class SpotlightCard {
     this.progress,
     this.onOptions,
     this.shape = SpotlightCardShape.poster,
+    this.showCaption = true,
     this.previewBuilder,
     this.watchedImdbId,
     this.watchedContentType,
@@ -84,6 +86,9 @@ class SpotlightCard {
 enum SpotlightCardShape {
   /// 2:3, art cropped to fill. Titles.
   poster(2 / 3, BoxFit.cover),
+
+  /// Square collection cover, cropped to fill.
+  square(1, BoxFit.cover),
 
   /// 1:1, art CONTAINED on a plate. A channel logo is a mark, not a still:
   /// cropping it to fill cuts the wordmark in half.
@@ -2085,7 +2090,7 @@ class SpotlightBoardState extends State<SpotlightBoard> {
                 radius: m.radius,
                 captionBelow: m.compact && captions,
                 captionBlock: captions ? m.captionBlock : 0,
-                showCaption: captions,
+                showCaption: captions && section.items[c].showCaption,
                 showTitleAndRating: widget.showCardTitlesAndRatings,
                 hoverable: !widget.dpad,
                 dpad: widget.dpad,

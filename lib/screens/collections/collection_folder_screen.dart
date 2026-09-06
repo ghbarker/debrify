@@ -19,6 +19,7 @@ import '../../widgets/collections/folder_hero_band.dart';
 import '../../widgets/collections/rail_see_all_pill.dart';
 import '../../widgets/home/row_tag_pill.dart';
 import '../../widgets/see_all/discover_shelf_scope.dart';
+import '../../widgets/see_all/discover_card_settings_scope.dart';
 import '../../widgets/see_all/see_all_filter_bar.dart';
 import '../../widgets/see_all/see_all_filter_focus.dart';
 import '../../widgets/see_all/see_all_header.dart';
@@ -596,20 +597,31 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   /// rail already loaded (paging continues rather than restarts) and opened
   /// on the source's genre.
   void _openRailSeeAll(_Rail r) {
+    final settings = DiscoverCardSettingsScope.maybeOf(context);
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => CatalogSeeAllScreen(
-          addon: r.addon,
-          initialCatalog: r.catalog,
-          initialGenre: r.source.genre,
-          seedItems: List<StremioMeta>.of(r.items),
-          seedNextSkip: r.nextSkip,
-          isTelevision: widget.isTelevision,
-          onOpenItem: widget.onOpenItem,
-          onQuickPlay: widget.onQuickPlay,
-          onItemFocused: widget.onItemFocused,
-          isBound: widget.isBound,
-        ),
+        builder: (_) {
+          final screen = CatalogSeeAllScreen(
+            addon: r.addon,
+            initialCatalog: r.catalog,
+            initialGenre: r.catalog.supportsGenre ? r.source.genre : null,
+            seedItems: List<StremioMeta>.of(r.items),
+            seedNextSkip: r.nextSkip,
+            isTelevision: widget.isTelevision,
+            onOpenItem: widget.onOpenItem,
+            onQuickPlay: widget.onQuickPlay,
+            onItemFocused: widget.onItemFocused,
+            isBound: widget.isBound,
+          );
+          return settings == null
+              ? screen
+              : DiscoverCardSettingsScope(
+                  showTitles: settings.showTitles,
+                  showRatings: settings.showRatings,
+                  showTypeTags: settings.showTypeTags,
+                  child: screen,
+                );
+        },
       ),
     );
   }
@@ -929,7 +941,6 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
                     onOpen: widget.onOpenItem,
                     onQuickPlay: widget.onQuickPlay,
                     onItemFocused: (item) {
-                      _ensureRailVisible(r);
                       widget.onItemFocused?.call(item);
                     },
                     isBound: widget.isBound,

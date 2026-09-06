@@ -80,7 +80,8 @@ Field notes:
 - `heroBackdropUrl`, `titleLogoUrl`: the backdrop and logo shown above the
   folder's lists when it is opened; the cover stands in for a missing
   backdrop, the title for a missing logo.
-- `pinToTop`: the row leads the Home board; otherwise collection rows sit
+- `pinToTop`: a newly imported row leads the Home board, including when a
+  saved Home Rows order already exists; otherwise collection rows sit
   after the tracker list rows and before addon catalog rows. Rows can be
   re-arranged or hidden under **Home Screen → Home Rows** like any other row
   (row id `collection:<id>`).
@@ -96,11 +97,11 @@ Each source names an addon by its Stremio manifest id (`addonId`) plus a
 catalog `type` and `catalogId`. On the device the source is resolved against
 the installed catalog addons:
 
-1. an addon whose manifest id equals `addonId` and serves the requested
-   browsable catalog, else
-2. any installed addon that serves a catalog with the same `type` and
-   `catalogId` (a file made against a different deployment of the same addon
-   still works).
+Only an addon whose manifest id equals `addonId` and serves the requested
+browsable catalog is used. Catalog ids are provider-local: another addon's
+`top` or `popular` is not a compatible substitute. A file from a deployment
+with a different manifest id needs its source ids updated to the installed
+provider before those sources can resolve.
 
 Sources that resolve to nothing are skipped. The settings page and the import
 result dialog list the missing addon ids, and a folder whose sources all fail

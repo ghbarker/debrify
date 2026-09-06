@@ -121,3 +121,39 @@ Follow-up validation: **772 tests passed** in the combined command above plus
 `test/stremio_metadata_provider_test.dart`. Full PR analysis reports no errors
 or warnings and the same 25 informational notices. The application Dart bundle
 build succeeds. Physical-device playback/live-server limits remain as stated.
+
+## Whole-feature follow-up (Part 2, 2026-09-07)
+
+This pass starts at `38a60e6f` and supersedes the earlier permissive catalog
+fallback behavior described above. The Part 1 inventory/sync repairs remain.
+
+- Canvas, Atrium, Mosaic, Deck, Tonight and Promenade now size collection
+  cells using collection geometry and pass cover art, focus GIF and hidden-title
+  preferences to the shared card. Folder focus replaces the stage identity/art,
+  retires pending title enrichment and trailers, and clears live IPTV. Route
+  returns cannot schedule a folder trailer.
+- Sources require their declared addon identity and requested browsable catalog.
+  A matching catalog id on another provider cannot silently supply or claim a
+  row. Different manifest identities need an explicit source-id correction.
+- The common import parser accepts a leading BOM for file, URL and pasted JSON.
+- Newly discovered pinned rows lead existing saved orders. Canvas/Classic and
+  Home Rows use the same pin seeding; already saved manual positions survive.
+- Spotlight supports square covers and per-card hidden captions. Focus GIFs
+  have bounded decode width; failed Spotlight previews reveal the cover.
+- Rail See All carries the current Discover card preferences across the route
+  boundary and only passes genres supported by the catalog. Folder detail/play
+  uses the actual serving addon object, preserving its configuration.
+- TV poster focus uses the grid's scroll behavior; only rail-pill focus also
+  invokes rail alignment, removing the competing outer scroll request.
+
+Validation: **834 tests passed**, including collections recovery/storage/paging,
+WebDAV engine/runtime, backup/profile isolation, Home ordering/filtering, shared
+Spotlight rendering, BOM/identity regressions and See All scope propagation.
+The full debug Dart bundle builds. Analysis across PR Dart files and the shared
+Spotlight widget reports **no errors or warnings**, with 27 existing infos
+(the wider file set adds the Spotlight widget's two pre-existing infos).
+Stage-private wiring and hero retirement have source guards; shared Spotlight
+shape/caption rendering, Home Rows persistence and See All propagation have
+widget tests. This does not substitute for an Android TV hardware pass through
+all six layouts, focus GIFs and active trailer transitions. Remaining Part 2
+P3s are deferred, apart from the adjacent fixes explicitly listed above.

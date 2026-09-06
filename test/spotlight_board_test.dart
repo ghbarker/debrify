@@ -1319,6 +1319,24 @@ void main() {
     );
   });
 
+  testWidgets('square collection covers retain their ratio and per-card hidden titles', (tester) async {
+    await tester.pumpWidget(host([_meta('tt1', 'Hero')], [
+      SpotlightShelf(title: 'Folders', nodes: rows[0], items: [
+        SpotlightCard(title: 'Hidden folder', shape: SpotlightCardShape.square,
+          showCaption: false, onOpen: _noop),
+        SpotlightCard(title: 'Visible folder', shape: SpotlightCardShape.square,
+          onOpen: _noop),
+      ]),
+    ]));
+    await tester.pumpAndSettle();
+    final cardHost = tester.widgetList<ParallaxFocus>(find.byType(ParallaxFocus))
+        .firstWhere((p) => p.fixedScaleForeground != null);
+    final box = tester.getSize(find.byWidget(cardHost));
+    expect(box.width / box.height, closeTo(1, 0.005));
+    expect(find.text('Hidden folder'), findsNothing);
+    expect(find.text('Visible folder'), findsOneWidget);
+  });
+
   testWidgets('a wide shelf uses the readable landscape rail width', (
     tester,
   ) async {

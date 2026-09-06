@@ -124,13 +124,13 @@ void main() {
   });
 
   test(
-    'catalog fallback must work when exact addon lacks requested catalog',
+    'missing catalog must not silently switch providers',
     () {
       final wrong = addon(catalog: 'other');
       final right = addon(id: 'fork');
       expect(
         HomeCollectionsStore.resolveAddon(source, [wrong, right]),
-        same(right),
+        isNull,
       );
     },
   );

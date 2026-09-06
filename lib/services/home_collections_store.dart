@@ -327,21 +327,14 @@ class HomeCollectionsStore {
 
   // ── Addon resolution ───────────────────────────────────────────────────
 
-  /// The installed addon a source refers to: an exact manifest-id match, else
-  /// any installed addon serving a catalog with the same `type` + `catalogId`.
-  /// The fallback matters because the file was made against someone else's
-  /// install, and the same addon deployed elsewhere can carry another id.
+  /// Resolve within the source's addon identity. Catalog ids are local to an
+  /// addon; matching another provider's generic id can silently claim its rows.
   static StremioAddon? resolveAddon(
     CollectionCatalogSource source,
     List<StremioAddon> installed,
   ) {
     for (final a in installed) {
       if (a.id == source.addonId && resolveCatalog(source, a) != null) return a;
-    }
-    for (final a in installed) {
-      if (resolveCatalog(source, a) != null) {
-        return a;
-      }
     }
     return null;
   }

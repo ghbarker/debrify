@@ -10,6 +10,9 @@ import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/stremio_service.dart';
 import 'package:debrify/widgets/see_all/see_all_poster_grid.dart';
 import 'package:debrify/widgets/see_all/stremio_dropdown.dart';
+import 'package:debrify/widgets/see_all/discover_card_settings_scope.dart';
+import 'package:debrify/widgets/collections/rail_see_all_pill.dart';
+import 'package:debrify/screens/see_all/catalog_see_all_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -175,7 +178,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('fallback sources sharing a catalog produce one rail', (
+  testWidgets('duplicate sources sharing a catalog produce one rail', (
     tester,
   ) async {
     await seed(tester, 'rows');
@@ -190,7 +193,7 @@ void main() {
           sources: [
             original,
             CollectionCatalogSource(
-              addonId: 'missing',
+              addonId: original.addonId,
               type: original.type,
               catalogId: original.catalogId,
             ),
@@ -209,6 +212,28 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(SeeAllPosterGrid), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('rail See All preserves hidden Discover card details', (tester) async {
+    await seed(tester, 'rows');
+    await tester.pumpWidget(MaterialApp(
+      home: DiscoverCardSettingsScope(
+        showTitles: false, showRatings: false, showTypeTags: false,
+        child: CollectionFolderScreen(
+          collection: collection, onOpenItem: (_) {},
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    tester.widget<RailSeeAllPill>(find.byType(RailSeeAllPill).first).onPressed();
+    await tester.pumpAndSettle();
+    expect(find.byType(CatalogSeeAllScreen), findsOneWidget);
+    final scope = DiscoverCardSettingsScope.maybeOf(tester.element(find.byType(CatalogSeeAllScreen)));
+    expect(scope, isNotNull);
+    expect(scope!.showTitles, isFalse);
+    expect(scope.showRatings, isFalse);
+    expect(scope.showTypeTags, isFalse);
     expect(tester.takeException(), isNull);
   });
 

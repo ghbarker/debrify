@@ -174,6 +174,7 @@ class _StremioCardState extends State<_StremioCard>
         Positioned.fill(
           child: CachedNetworkImage(
             imageUrl: widget.focusArtUrl!,
+            memCacheWidth: 640,
             fit: BoxFit.cover,
             fadeInDuration: HomeTheme.imageFadeIn(widget.isTelevision),
             fadeOutDuration: Duration.zero,
