@@ -56,7 +56,7 @@ class AlldebridWatchFlow {
             final String link = item['allDebridLink'] as String? ?? '';
             if (link.isEmpty) continue;
             try {
-              final videoUrl = await host.unlockLink(apiKey, link);
+              final videoUrl = await host.adUnlock.unlockLinkWithKey(apiKey, link);
               if (host.watchCancelled) return null;
               if (videoUrl.isNotEmpty) {
                 final inferred = _inferTitleFromUrl(videoUrl).trim();
@@ -90,7 +90,7 @@ class AlldebridWatchFlow {
               });
             }
             try {
-              final videoUrl = await host.unlockLink(apiKey, headLink);
+              final videoUrl = await host.adUnlock.unlockLinkWithKey(apiKey, headLink);
               if (host.watchCancelled) return null;
               if (videoUrl.isNotEmpty) {
                 final inferred = _inferTitleFromUrl(videoUrl).trim();

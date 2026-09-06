@@ -1,3 +1,4 @@
+import '../../../services/cloud/cloud_magic_tv_unlock.dart';
 import '../../../services/storage/provider_credential_prefs.dart';
 import '../../../services/pikpak_tv_service.dart';
 import '../../../services/debrify_tv/queue_prefetcher.dart' show WatchAllDebridPrepared;
@@ -23,8 +24,8 @@ import '../../../services/debrify_tv/channel_cache_warmer.dart';
 import '../../magic_tv_screen.dart'
     show MagicTvDispatch, MagicTvNextChannelQuirk;
 
-/// Live bindings keep original host reads and captured-key service calls intact.
-/// This is a retained dependency, not completed CloudProviderPort abstraction.
+/// Live bindings keep original host reads and captured-key port calls intact.
+/// Captured-key capabilities keep service Futures; host/UI coupling remains.
 class WatchValue<T> {
   const WatchValue(this.read, [this.write]);
   final T Function() read;
@@ -114,9 +115,8 @@ class WatchFlowBindings {
     required this.messenger,
     required this.showProgressDialog,
     required this.setState,
-    required this.unrestrictLink,
-    required this.addTorrentPreferVideos,
-    required this.unlockLink,
+    required this.rdUnlock,
+    required this.adUnlock,
   }) : _allDebridAvailable = allDebridAvailable,
        _hideOptions = hideOptions,
        _hideSeekbar = hideSeekbar,
@@ -375,11 +375,8 @@ class WatchFlowBindings {
   })
   showProgressDialog;
   final void Function(VoidCallback fn) setState;
-  final Future<Map<String, dynamic>> Function(String apiKey, String link)
-  unrestrictLink;
-  final Future<Map<String, dynamic>> Function(String apiKey, String magnet)
-  addTorrentPreferVideos;
-  final Future<String> Function(String apiKey, String link) unlockLink;
+  final CloudMagicTvCapturedRdUnlock rdUnlock;
+  final CloudMagicTvCapturedAdUnlock adUnlock;
 }
 
 /// Cached TB/PM/PP Flutter presentation; provider handoff remains in leaves.
@@ -868,7 +865,7 @@ class ProviderWatchFlow {
             if (link.isEmpty) continue;
             try {
               final started = DateTime.now();
-              final unrestrict = await host.unrestrictLink(apiKeyEarly, link);
+              final unrestrict = await host.rdUnlock.unrestrictLinkWithKey(apiKeyEarly, link);
               if (host.watchCancelled) {
                 return null;
               }
@@ -925,7 +922,7 @@ class ProviderWatchFlow {
                 host.seenRestrictedLinks.add(selectedLink);
                 host.seenLinkWithTorrentId.add('$torrentId|$selectedLink');
 
-                final unrestrict = await host.unrestrictLink(
+                final unrestrict = await host.rdUnlock.unrestrictLinkWithKey(
                   apiKeyEarly,
                   selectedLink,
                 );
@@ -1319,7 +1316,7 @@ class ProviderWatchFlow {
           if (link.isEmpty) continue;
           try {
             final started = DateTime.now();
-            final unrestrict = await host.unrestrictLink(apiKey, link);
+            final unrestrict = await host.rdUnlock.unrestrictLinkWithKey(apiKey, link);
             if (!host.cacheWarmer.rdLinkPassesSizeRules(unrestrict)) continue;
             final elapsed = DateTime.now().difference(started).inSeconds;
             final videoUrl = unrestrict['download'] as String?;
@@ -1350,7 +1347,7 @@ class ProviderWatchFlow {
           final magnetLink = 'magnet:?xt=urn:btih:${item.infohash}';
           try {
             final started = DateTime.now();
-            final result = await host.addTorrentPreferVideos(
+            final result = await host.rdUnlock.addTorrentPreferVideosWithKey(
               apiKey,
               magnetLink,
             );

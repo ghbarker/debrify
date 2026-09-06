@@ -23,7 +23,8 @@ class AllDebridCloudProvider extends CloudProviderAdapter
         CloudMagnetAdd,
         CloudPlaylist,
         CloudMagicTvLockedLinks,
-        CloudMagicTvAdUnlock {
+        CloudMagicTvAdUnlock,
+        CloudMagicTvCapturedAdUnlock {
   const AllDebridCloudProvider();
 
   @override
@@ -255,4 +256,8 @@ class AllDebridCloudProvider extends CloudProviderAdapter
     }
     return AllDebridService.unlockLink(apiKey, lockedLink);
   }
+
+  @override
+  Future<String> unlockLinkWithKey(String apiKey, String link) =>
+      AllDebridService.unlockLink(apiKey, link);
 }

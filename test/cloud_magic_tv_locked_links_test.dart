@@ -145,13 +145,36 @@ void main() {
     expect(_req().magnet.contains('dn='), isFalse);
   });
 
-  test('two downloadLink PreferVideos callers remain on Magic TV', () {
-    final src = File('lib/screens/magic_tv_screen.dart').readAsStringSync();
+  test('native host and common watch retain two actual PreferVideos calls', () {
+    final host = File('lib/screens/magic_tv_screen.dart').readAsStringSync();
+    final common = File('lib/screens/debrify_tv/watch/provider_watch_flow.dart')
+        .readAsStringSync();
+    String sources(String hostSource, String commonSource) => hostSource +
+        commonSource.replaceAll(
+          'host.rdUnlock.addTorrentPreferVideosWithKey(',
+          'addTorrentToDebridPreferVideos(',
+        );
+    void check(String src) {
+      expect(
+        'addTorrentToDebridPreferVideos'.allMatches(src).length,
+        2,
+        reason: 'Native host and common watch use downloadLink from PreferVideos '
+            '— not locked-link walk-unrestrict or adapter registration',
+      );
+    }
+    check(sources(host, common));
+    const nativeCall = 'DebridService.addTorrentToDebridPreferVideos(';
+    const watchCall = 'host.rdUnlock.addTorrentPreferVideosWithKey(';
+    expect(nativeCall.allMatches(host).length, 1);
+    expect(watchCall.allMatches(common).length, 1);
+    // Mutate source copies only: either actual call disappearing must fail.
     expect(
-      'addTorrentToDebridPreferVideos'.allMatches(src).length,
-      2,
-      reason: 'MagicTV requestMagicNext and _playNextFromQueue use downloadLink '
-          'from add — not locked-link walk-unrestrict',
+      () => check(sources(host.replaceFirst(nativeCall, ''), common)),
+      throwsA(isA<TestFailure>()),
+    );
+    expect(
+      () => check(sources(host, common.replaceFirst(watchCall, ''))),
+      throwsA(isA<TestFailure>()),
     );
   });
 
