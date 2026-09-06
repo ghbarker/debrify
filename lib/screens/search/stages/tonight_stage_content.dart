@@ -8,6 +8,7 @@ import '../continue_watching_controller.dart';
 import '../fav_row_ref.dart';
 import '../search_board_runtime.dart';
 import 'tonight_stage_widgets.dart';
+import 'stage_shelf_content.dart';
 
 /// Common-stage operations retained until the remaining G1'-8 callers migrate.
 /// Neither State nor context is stored; closures preserve live host reads.
@@ -38,18 +39,6 @@ typedef TonightContentBindings = ({
     VoidCallback? onUpHold,
   })
   buildFavCell,
-  Widget Function(
-    CanvasRail,
-    String,
-    List<StremioMeta>,
-    List<FocusNode>,
-    int, {
-    VoidCallback? onUp,
-    VoidCallback? onDown,
-    VoidCallback? onUpHold,
-    VoidCallback? onFocusedExtra,
-  })
-  buildShelfCell,
   Widget Function(StageRailView) buildRailLabel,
   Widget Function(double) buildCardLayers,
   double labelGap,
@@ -78,6 +67,7 @@ class TonightStageContent {
   late SearchBoardRuntime board;
   late Map<String, int> columns;
   late TonightContentBindings bindings;
+  late StageShelfContent shelf;
 
   void dispose() => card.dispose();
 
@@ -392,7 +382,7 @@ class TonightStageContent {
                         )
                       : SizedBox(
                           height: boxH,
-                          child: bindings.buildShelfCell(
+                          child: shelf.cell(
                             rail,
                             railKey,
                             items,

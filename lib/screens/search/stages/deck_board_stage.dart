@@ -248,7 +248,7 @@ extension on _SearchScreenState {
                                       )
                                     : SizedBox(
                                         height: railBoxH,
-                                        child: _stageShelfCell(
+                                        child: _stageShelf.cell(
                                           rail,
                                           railKey,
                                           items,

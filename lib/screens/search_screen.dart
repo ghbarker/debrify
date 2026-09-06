@@ -1,6 +1,7 @@
 import 'search/board_cell.dart';
 import 'search/stages/tonight_board_stage.dart';
 import 'search/stages/tonight_stage_content.dart';
+import 'search/stages/stage_shelf_content.dart';
 import 'search/stages/tonight_stage_widgets.dart';
 import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'dart:async';
@@ -771,6 +772,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     super.initState();
     _tonight.board = _boardRuntime;
     _tonight.columns = _canvasCols;
+    _tonight.shelf = _stageShelf;
     _tonight.bindings = (
       readStageRails: () => _stageRails,
       resolveRailIndex: _resolveCanvasRailIndex,
@@ -790,7 +792,6 @@ class _SearchScreenState extends State<SearchScreenHost>
       posterWidth: _stagePosterW,
       favouriteWidth: _stageFavW,
       buildFavCell: _canvasFavCell,
-      buildShelfCell: _stageShelfCell,
       buildRailLabel: _deckRailLabel,
       buildCardLayers: _tonightCardLayers,
       labelGap: _kAtriumLabelGap,
@@ -2962,6 +2963,24 @@ class _SearchScreenState extends State<SearchScreenHost>
   }
 
   // Eager Tonight lifetime at the former card-notifier construction slot.
+  late final StageShelfContent _stageShelf = StageShelfContent(
+    board: _boardRuntime,
+    columns: _canvasCols,
+    focusedColumn: _stageCol,
+    bindings: (
+      isBound: _isBound,
+      pikpakOnly: () => _pikpakOnly,
+      titleAspect: () => _titleCardAspect,
+      titleArt: _titleArtUrl,
+      setHero: _setHero,
+      switchRail: _stageSwitchRail,
+      quickPlay: _sectionQuickPlay,
+      openItem: _sectionOpenItem,
+      openCwMenu: _openCwCardMenu,
+      railTitle: (view) => _canvasTabTitle(view.rails, view.index),
+    ),
+  );
+
   final TonightStageContent _tonight = TonightStageContent();
 
   /// The rails the ACTIVE layout puts on its rail zone. Identical to
@@ -3647,46 +3666,8 @@ class _SearchScreenState extends State<SearchScreenHost>
 
   /// Deck's rail label — the same quiet caps as Atrium's rows, with the
   /// stacked chevron pair that says UP/DOWN changes rails.
-  Widget _deckRailLabel(StageRailView view) {
-    final app = AppThemeScope.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.keyboard_arrow_up_rounded,
-              size: 13,
-              color: app.fade(app.core.tx, 0.45),
-            ),
-            Transform.translate(
-              offset: const Offset(0, -5),
-              child: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 13,
-                color: app.fade(app.core.tx, 0.45),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(width: 12),
-        Flexible(
-          child: Text(
-            _canvasTabTitle(view.rails, view.index).toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: _kAtriumLabelFontSize,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.8,
-              color: app.fade(app.core.tx, 0.86),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _deckRailLabel(StageRailView view) =>
+      _stageShelf.label(context, view);
 
   /// The two cards stacked behind the hero — the NEXT two titles on this
   /// rail, drawn from the focused column so moving along the rail deals them
@@ -3755,59 +3736,7 @@ class _SearchScreenState extends State<SearchScreenHost>
 
   /// The shared poster shelf cell (Canvas grammar: L/R along the rail, U/D
   /// switches rails) — used by Deck and Tonight's bottom strip.
-  Widget _stageShelfCell(
-    CanvasRail rail,
-    String railKey,
-    List<StremioMeta> items,
-    List<FocusNode> nodes,
-    int col, {
-    VoidCallback? onUp,
-    VoidCallback? onDown,
-    VoidCallback? onUpHold,
-    VoidCallback? onDownHold,
-    VoidCallback? onFocusedExtra,
-  }) {
-    final item = items[col];
-    return BoardCell(
-      item: item,
-      isTelevision: true,
-      focusNode: nodes[col],
-      column: col,
-      rowNodes: nodes,
-      hasBoundSource: _isBound(item),
-      ringColor: Colors.white,
-      aspectRatio: _titleCardAspect,
-      artUrl: _titleArtUrl(item),
-      progress: rail.cw?.progressOf(item),
-      episodeLabel: rail.cw?.episodeOf(item),
-      onQuickPlay: rail.cw != null || _pikpakOnly
-          ? null
-          : () => _sectionQuickPlay(_sections[rail.sectionIndex!], item),
-      onLongPress: rail.cw == null
-          ? null
-          : () => _openCwCardMenu(rail.cw!, item, rail.cwIndex, col),
-      onFocused: () {
-        _setHero(item);
-        _canvasCols[railKey] = col;
-        _stageCol.value = col;
-        onFocusedExtra?.call();
-      },
-      onUp: onUp ?? () => _stageSwitchRail(-1),
-      onDown: onDown ?? () => _stageSwitchRail(1),
-      onUpHold: onUpHold,
-      onDownHold: onDownHold,
-      onOpen: () {
-        if (rail.cw != null) {
-          rail.cw!.onOpen(item);
-        } else {
-          _sectionOpenItem(_sections[rail.sectionIndex!], item);
-        }
-      },
-      onNearEnd: rail.sectionIndex == null
-          ? null
-          : () => _loadMoreRow(rail.sectionIndex!),
-    );
-  }
+
 
   Widget _tonightCardLayers(double cardH) => Stack(
     fit: StackFit.expand,
