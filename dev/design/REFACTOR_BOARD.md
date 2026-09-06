@@ -1,16 +1,16 @@
 # Refactor board
 
-## Current roadmap — September 6, main 896a168d
+## Current roadmap — September 6, main 3a7ecfdb
 
 ### God-file line counts — original → current merged main
 
 - **Search:** 19,070 → **6,291** (12,779 fewer)
 - **Player:** 16,278 → **11,534** (4,744 fewer)
 - **Magic TV:** 10,716 → **3,321** (7,395 fewer)
-- **Storage:** 9,963 → **2,166** (7,797 fewer)
+- **Storage:** 9,963 → **2,124** (7,839 fewer)
 - **Settings:** 7,905 → **2,903** (5,002 fewer)
 
-Counted from actual merged main 896a168d. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
+Counted from actual merged main 3a7ecfdb. These are physical file lines, not whole-project deletions or architectural completion. Keep this section at the top and refresh after merges. Overall completion is roughly **70% by architectural judgment**, as requested; not a measured score or a percentage derived from line counts.
 
 ### The same six outcomes — stable roadmap
 
@@ -67,6 +67,8 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - [ ] Run final integrated acceptance only after the remaining architectural outcomes are fulfilled.
 
 ### Latest completed milestones
+
+- #207 merged **3a7ecfdb**, exactf8d1ed8, independent277PASS/allCIgreen/exactmainunion. EighteenQuickPlayfacades retired;host-42/whole-37/two consumerhostdependencies removed. Did we make a difference? Actualcallers now useexistingdomainowner, reducingforwarding instead ofmovinglogicagain; remainingfacades/nativeexceptions stayopen. #208 independent123PASSawaitsmainintegration, #209independent108PASSdepends208; DebrifyTV32facadeproposalorigin208PASSunderreview.
 
 - **Full896a168d gate PASSED:**6093PASS/12exactknown/2skip;goldens21known/configuredretries/helpers0/unexpected0unused0; nativefirstpairPASS;431/449zeroNew/Python55/layer77;Windows+ARM64PASS. SameAST442/133/161/23/0, Storage+17 exact14scalar+1adult+2Indexer; no rebaseline. ZIP700af490c819495b48c7425e966841f68817bf8edbbd1d04e06cae0ba70236ac; APK902c007fd207fc71812628ce93e456ac9d06f7b2202f1b79b2a6440df9f18b50. No freshmanual/device proof.
 
@@ -140,7 +142,7 @@ These are the six outcomes previously agreed with the user. Keep their numbers a
 - Gate pinned analyzer431/449, zero errors/new issues; layering77→77; Python55 passed; originalbc46/current native pair passed first try. Initial wrong-PATH analyzer output retained separately and corrected using pinned SDK; no baseline edit.
 - Windows226.2s/68files and ARM64171.9s builds passed. ZIP SHA256b96b7a4bd0b98a4f9de799ef3242bebf18a150d3c49c0113ad0566d10f1d729f; APK80811b556495c20078920091643b91cbcde5bc236d89737bd3bed7d1479e8cb5. No fresh manual/device smoke claimed.
 - #181 BoardCell mergedc7a332bd exact932 after independent140 passes plus the exact known sidebar failure, final integration review and all3CI green. Shared renderer owns card state/shuttle; 669 declaration lines relocated, whole production+17, zero host-file reduction. Did we make a difference? Removed private host-library access at real consumers; remaining stage navigation/composition is still open.
-- Production merge counter: **0 since completed gate896a168d**. Next full gate after three production merges. Docs192 does not increment the counter.
+- Production merge counter: **1 since completed gate896a168d** (#207). Next full gate after two additional production merges. Docs192 does not increment the counter.
 
 ### Forwarders at the latest full gate9fd6c24f
 
