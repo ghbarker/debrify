@@ -30,6 +30,7 @@ import '../services/home/home_row_family.dart';
 import '../services/home/home_row_registry.dart';
 import 'search/home_board_controller.dart';
 import 'search/search_board_runtime.dart';
+import 'search/search_content_session.dart';
 import 'search/catalog_search_controller.dart';
 import 'search/title_opener.dart';
 import 'search/search_screen_shells.dart';
@@ -42,14 +43,10 @@ import 'search/continue_watching_row.dart';
 import 'search/fav_rows_controller.dart';
 import 'search/fav_row.dart';
 import 'search/hero_presenter.dart';
-import 'search/search_content_data.dart';
 import 'search/discover_lifecycle.dart';
-import 'search/discover_view.dart';
 import 'search/trailer_status_chips.dart';
-import 'search/selection_playback_owner.dart';
 import '../services/filtered_catalog_pager.dart';
 import '../services/hide_watched_prefs.dart';
-import '../services/watched_filter.dart';
 import '../services/watched_status_service.dart';
 import '../services/iptv_cw_router.dart';
 import '../services/iptv_media_store.dart';
@@ -69,10 +66,6 @@ import '../services/tvos_top_shelf_service.dart';
 import '../services/torrent_bulk_add_service.dart';
 import '../services/torrent_playback_service.dart';
 import '../services/torrent_service.dart';
-import '../services/simkl/simkl_continue_watching_service.dart';
-import '../services/trakt/trakt_continue_watching_service.dart';
-import '../services/trakt/trakt_service.dart';
-import '../services/simkl/simkl_service.dart';
 import '../services/playback/catalog_play_resolver.dart';
 import '../utils/continue_watching_presentation.dart';
 import '../utils/dialog_tap_guard.dart';
@@ -83,7 +76,6 @@ import '../utils/tv_search_focus_handoff.dart';
 import '../services/app_route_observer.dart';
 import '../services/youtube_service.dart';
 import '../widgets/sources/source_binding_dialogs.dart';
-import 'search/source_binding_routes.dart';
 import '../widgets/hero_trailer_backdrop.dart';
 import '../widgets/home/card_focus_rise.dart';
 import '../widgets/home/home_theme.dart';
@@ -96,7 +88,6 @@ import '../widgets/torrent_filters_sheet.dart';
 import '../widgets/tv_text_field.dart';
 import 'collections/collection_folder_screen.dart';
 import 'see_all/catalog_see_all_screen.dart';
-import 'see_all/continue_watching_see_all_screen.dart';
 import 'see_all/trakt_see_all_screen.dart';
 import 'see_all/simkl_see_all_screen.dart';
 import 'see_all/mdblist_see_all_screen.dart';
@@ -104,17 +95,12 @@ import 'see_all/mdblist_lists_see_all_screen.dart';
 import '../widgets/see_all/mdblist_list_card.dart';
 import '../services/mdblist/mdblist_list_source.dart';
 import '../services/mdblist/mdblist_service.dart';
-import '../services/mdblist/mdblist_continue_watching_service.dart';
 import '../services/mdblist/mdblist_models.dart';
-import '../services/mdblist/mdblist_menu_helpers.dart';
 import '../widgets/see_all/stremio_dropdown.dart';
 import '../widgets/see_all/discover_card_settings_scope.dart';
 import '../widgets/trakt/trakt_menu_helpers.dart';
-import '../services/simkl/simkl_menu_helpers.dart';
 import 'settings/tv_home_style_page.dart'
     show effectiveOffTvHomeStyle, shouldUseOffTvSpotlightShell;
-import 'episodes_screen.dart';
-import 'stremio_tv/widgets/stremio_tv_catalog_picker_dialog.dart';
 
 part 'search/search_sources.dart';
 part 'search/search_card_widgets.dart';
@@ -200,7 +186,6 @@ class SearchScreen extends StatelessWidget {
     if (discoverMode) {
       return DiscoverScreen(
         isTelevision: isTelevision,
-        host: SearchScreenHost(isTelevision: isTelevision, discoverMode: true),
       );
     }
     return SearchScreenHost(isTelevision: isTelevision);
@@ -234,18 +219,26 @@ class SearchScreenHost extends StatefulWidget {
   });
 
   @override
-  State<SearchScreenHost> createState() => _SearchScreenState();
+  // Preserve Home State identity while dispatching Discover before initialization.
+  // ignore: no_logic_in_create_state
+  State<SearchScreenHost> createState() => discoverMode && !searchMode
+      ? _DiscoverCompatibilityState() : _SearchScreenState();
+}
+
+/// Direct legacy constructors dispatch before the old content State exists.
+/// Home/Search retains its StatefulWidget compatibility surface.
+class _DiscoverCompatibilityState extends State<SearchScreenHost> {
+  @override
+  Widget build(BuildContext context) => DiscoverScreen(
+    isTelevision: widget.isTelevision,
+    readCwMergedRows: widget.readCwMergedRows,
+  );
 }
 
 enum SearchBoardMode { catalog, keyword, lists }
 
 /// Fixed Discover sources; installed addons are appended dynamically (key
 /// 'a:{addonId}'). Aliases of [kDiscoverSourceCw] etc. so call sites stay put.
-const String _discCw = kDiscoverSourceCw;
-const String _discTrakt = kDiscoverSourceTrakt;
-const String _discSimkl = kDiscoverSourceSimkl;
-const String _discMdblist = kDiscoverSourceMdblist;
-const String _discAddonPrefix = kDiscoverSourceAddonPrefix;
 
 /// Whether an asynchronously loaded Discover landing source may still update
 /// the screen. Public only so the lifecycle contract has a focused regression
@@ -435,19 +428,39 @@ class _EmptyFieldLeftAction extends Action<_SearchLeftIntent> {
 }
 
 class _SearchScreenState extends State<SearchScreenHost>
-    with RouteAware, WidgetsBindingObserver {
+    with RouteAware, WidgetsBindingObserver
+    implements SearchContentSurface, SearchContentPresentation {
   // Which nav tab this instance backs, for the TV content-focus handler: the
   // dedicated Search tab (17) or the Home-New board (15).
   int get _tabIndex => searchScreenTabIndex(
         searchMode: widget.searchMode,
-        discoverMode: widget.discoverMode,
+        discoverMode: false,
       );
 
-  final StremioService _stremio = StremioService.instance;
+  final SearchContentSession _content = SearchContentSession();
+  @override
+  void commit(VoidCallback change) => setState(change);
+  @override
+  void beforeApplySections() {
+    _boardGen++;
+    _boardAppliedAt = DateTime.now();
+  }
+  @override
+  void resetStageGeneration() => _stageGeneration++;
+  @override
+  void publishTopShelfSpotlight() => _publishTopShelfSpotlight();
+  @override
+  void maybeAutoFocusBoard() => _maybeAutoFocusBoard();
+  @override
+  void focusContent() => _focusContent();
+  @override
+  Widget wrapSeeAll(Widget child) => _withHomeExpandedCardSettings(child);
 
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode(debugLabel: 'search_field');
-  final TvSearchFocusHandoff _searchSubmitFocus = TvSearchFocusHandoff();
+  StremioService get _stremio => _content.stremio;
+
+  TextEditingController get _searchController => _content.searchController;
+  FocusNode get _searchFocusNode => _content.searchFocusNode;
+  TvSearchFocusHandoff get _searchSubmitFocus => _content.searchSubmitFocus;
   // DPAD focus targets for the Catalog / Keyword / Lists selector, so the
   // toggle is reachable with a remote (arrow-up from the search field).
   final FocusNode _modeCatalogNode = FocusNode(debugLabel: 'mode_catalog');
@@ -458,17 +471,23 @@ class _SearchScreenState extends State<SearchScreenHost>
   // Dedicated MDBList list-search state. Lists is its own Search mode; it
   // never runs as part of Catalog search. Each result card hands off via
   // MainPageBridge.pendingMdblistListOpen. One focus node per card.
-  String _listsQuery = '';
-  List<MdblistListChoice> _listsResults = const [];
-  bool _listsSearching = false;
-  String? _listsError;
-  int _listsToken = 0;
-  final List<FocusNode> _listsNodes = [];
+  String get _listsQuery => _content.listsQuery;
+  set _listsQuery(String value) => _content.listsQuery = value;
+  List<MdblistListChoice> get _listsResults => _content.listsResults;
+  set _listsResults(List<MdblistListChoice> value) => _content.listsResults = value;
+  bool get _listsSearching => _content.listsSearching;
+  set _listsSearching(bool value) => _content.listsSearching = value;
+  String? get _listsError => _content.listsError;
+  set _listsError(String? value) => _content.listsError = value;
+  int get _listsToken => _content.listsToken;
+  set _listsToken(int value) => _content.listsToken = value;
+  List<FocusNode> get _listsNodes => _content.listsNodes;
   // Debounce for opening a list from the rail — one fast double-press must not
   // stack two pushed item screens (TV) / double-fire the handoff.
   DateTime? _lastListOpenAt;
 
-  SearchBoardMode _mode = SearchBoardMode.catalog;
+  SearchBoardMode get _mode => _content.mode;
+  set _mode(SearchBoardMode value) => _content.mode = value;
 
   /// Committed catalog query (drives per-addon catalog search). Empty = board.
   String get _catalogQuery => _catalogSearch.query;
@@ -477,12 +496,6 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// The addon that produced the item currently being played/browsed, threaded
   /// into playback so Continue Watching can route resume / next-episode back to
   /// it (matching Home's `addonId`). Set whenever we open a catalog item.
-  final _selectionPlayback = SelectionPlaybackOwner();
-  late final _selectionRoutes = SelectionPlaybackRoutes(
-    readIsTelevision: () => widget.isTelevision,
-    refreshBoundSources: _refreshBoundSources,
-    refreshAfterPlayback: () => _refreshAfterPlayback(),
-  );
 
   /// DPAD focus for the catalog-mode "Sources" button (empty-prompt state) —
   /// its keyword-mode twin, for picking which searchable addons are queried.
@@ -504,32 +517,29 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// search only restores into the same kind of tab it came from.
   String get _variantKey => searchScreenVariantKey(
         searchMode: widget.searchMode,
-        discoverMode: widget.discoverMode,
+        discoverMode: false,
       );
 
   /// True when PikPak is the ONLY configured provider. PikPak can't quick-play
   /// (it queues a cloud download), so catalog "Play" is hidden — matching Home.
-  bool _pikpakOnly = false;
+  bool get _pikpakOnly => _content.pikpakOnly;
 
   /// Experimental flag: route series taps to the merged detail+episodes page.
   /// Loaded once on init; movies and the flag-off path keep the existing flow.
-  bool _mergedSeriesPage = false;
 
   /// imdbId → number of pinned (bound) sources — drives the board tile badge,
   /// detail Sources tint, and the Episodes "Source(s)" button count.
-  final SearchContentData _contentData = SearchContentData();
   // Compatibility aliases expire with G17 real-owner migration / Q2.
-  Map<String, int> get _boundCounts => _contentData.boundCounts;
 
   // Board state. [_homeSections] is the homepage cache; [_sections] is whatever
   // is currently shown (homepage OR per-addon catalog search results). Both the
   // board and catalog search render through the same horizontal-row layout.
-  bool _loading = true;
+  bool get _loading => _content.loading;
+  set _loading(bool value) => _content.loading = value;
   String? _error;
   List<CatalogSection> get _homeSections => _board.homeSections;
   set _homeSections(List<CatalogSection> value) => _board.homeSections = value;
   List<CatalogSection> get _sections => _boardRuntime.sections;
-  set _sections(List<CatalogSection> value) => _boardRuntime.sections = value;
   List<List<FocusNode>> get _rowNodes => _boardRuntime.rowNodes;
   // Per-row remembered focus column (leanback-style). DPAD up/down into a row
   // returns to where you left THAT row — the cell it points at is guaranteed
@@ -547,19 +557,18 @@ class _SearchScreenState extends State<SearchScreenHost>
   int get _catalogSearchFailures => _catalogSearch.failures;
 
   /// Home board data layer (batches, row paging, hero source, reload diffing).
-  late final HomeBoardController _board;
+  HomeBoardController get _board => _content.board;
 
   /// Catalog search data layer (query, generation token, per-catalog fetch).
-  late final CatalogSearchController _catalogSearch;
+  CatalogSearchController get _catalogSearch => _content.catalogSearch;
 
   /// Keyword torrent-search data layer (query, streamed batches, freeze/adopt).
-  late final KeywordSearchController _keyword;
+  KeywordSearchController get _keyword => _content.keyword;
 
   /// Tracker + local Continue Watching loaders (G1'-4). Node lists live on
   /// [_cwNodes] (row-widget owned).
-  final CwFocusOwner _cwNodes = CwFocusOwner();
-  late final ContinueWatchingController _cw;
-  late final ContinueWatchingFlows _cwFlows;
+  CwFocusOwner get _cwNodes => _content.cwNodes;
+  ContinueWatchingController get _cw => _content.cw;
 
   // Rows the user hid via Settings → Home Page → Home Rows (fixed-section
   // leaves like `cw:movies`/`trakt:shows`/`fav:iptv` and catalog leaves
@@ -625,7 +634,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   // as the user nears the bottom. [_boardCursor] is the next ref to load; it
   // persists across a search detour so returning to the board keeps its place.
   bool get _boardLoadingMore => _boardRuntime.boardLoadingMore;
-  final SearchBoardRuntime _boardRuntime = SearchBoardRuntime();
+  SearchBoardRuntime get _boardRuntime => _content.boardRuntime;
   ScrollController get _boardScroll => _boardRuntime.boardScroll;
 
   /// Whether more board rows remain to lazily load (board mode only — never
@@ -635,14 +644,9 @@ class _SearchScreenState extends State<SearchScreenHost>
   // Continue Watching data lives on [ContinueWatchingController] (G1'-4).
   // Thin accessors keep TitleOpener / CatalogPlayResolver / board chrome on
   // the same map instances the loaders mutate.
-  List<StremioMeta> get _cwMovies => _cw.cwMovies;
-  List<StremioMeta> get _cwSeries => _cw.cwSeries;
-  List<StremioMeta> get _cwAll => _cw.cwAll;
-  Set<String> get _cwIds => _cw.cwIds;
   List<FocusNode> get _cwMovieNodes => _cwNodes.movieNodes;
   List<FocusNode> get _cwSeriesNodes => _cwNodes.seriesNodes;
   bool get _cwMergeTrakt => _cw.cwMergeTrakt;
-  Map<String, IptvCwEntry> get _iptvCwByKey => _cw.iptvCwByKey;
 
   /// Set when a real content player launches (any path — in-app route, native
   /// TV activity, external app; never trailers), consumed by
@@ -655,35 +659,18 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// a session that actually played something can have moved a tracker's
   /// position. Tracker rows changed by menu actions (mark watched, remove from
   /// Continue Watching) are refreshed by those handlers directly.
-  bool _playedSinceRefresh = false;
-  List<StremioMeta> get _traktMovies => _cw.traktMovies;
-  List<StremioMeta> get _traktSeries => _cw.traktSeries;
+  bool get _playedSinceRefresh => _content.playedSinceRefresh;
   List<StremioMeta> get _traktAll => _cw.traktAll;
-  Map<String, TraktContinueWatchingItem> get _traktByImdb => _cw.traktByImdb;
-  late final CatalogPlayResolver _catalogPlayResolver = CatalogPlayResolver(
-    isTraktAuthenticated: () => _isTraktAuthenticated,
-    isSimklAuthenticated: () => _isSimklAuthenticated,
-    isMdblistAuthenticated: () => _isMdblistAuthenticated,
-    traktByImdb: _traktByImdb,
-    imdbOf: _imdbOf,
-  );
   List<FocusNode> get _traktMovieNodes => _cwNodes.traktMovieNodes;
   List<FocusNode> get _traktSeriesNodes => _cwNodes.traktSeriesNodes;
-  List<StremioMeta> get _simklMovies => _cw.simklMovies;
-  List<StremioMeta> get _simklSeries => _cw.simklSeries;
   List<StremioMeta> get _simklAll => _cw.simklAll;
   Map<String, double> get _simklProgress => _cw.simklProgress;
-  Map<String, SimklContinueWatchingItem> get _simklByImdb => _cw.simklByImdb;
   List<FocusNode> get _simklMovieNodes => _cwNodes.simklMovieNodes;
   List<FocusNode> get _simklSeriesNodes => _cwNodes.simklSeriesNodes;
-  List<StremioMeta> get _mdblistMovies => _cw.mdblistMovies;
-  List<StremioMeta> get _mdblistSeries => _cw.mdblistSeries;
-  Map<String, MdblistContinueWatchingItem> get _mdblistByImdb =>
-      _cw.mdblistByImdb;
   List<FocusNode> get _mdblistMovieNodes => _cwNodes.mdblistMovieNodes;
   List<FocusNode> get _mdblistSeriesNodes => _cwNodes.mdblistSeriesNodes;
 
-  late final FavRowsController _favourites;
+  FavRowsController get _favourites => _content.favourites;
 
 
   /// TV auto-focus "settle to the top" state. On arrival the board focuses the
@@ -705,20 +692,19 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// Whether Trakt is connected — gates the Trakt-syncing detail quick actions
   /// (watchlist / collection / watched / rate / list). App actions (Select
   /// Source, Add to Stremio TV, Search Packs) show regardless.
-  bool _isTraktAuthenticated = false;
+  bool get _isTraktAuthenticated => _content.isTraktAuthenticated;
 
   /// Whether Simkl is connected — gates the Simkl detail quick actions,
   /// rendered as their own strip alongside Trakt's (see [_isTraktAuthenticated]).
-  bool _isSimklAuthenticated = false;
 
   /// Whether MDBList is connected — gates the MDBList entry in the Discover
   /// source dropdown (hidden when disconnected, so an unauthed user isn't shown
   /// a dead source; kept visible if it's somehow the active source).
-  bool _isMdblistAuthenticated = false;
+  bool get _isMdblistAuthenticated => _content.isMdblistAuthenticated;
 
   // Addons that produced homepage rows, indexed by id, so a Continue Watching
   // tap can route back through the right addon (for Episodes / next-episode).
-  final Map<String, StremioAddon> _addonsById = {};
+  Map<String, StremioAddon> get _addonsById => _content.addonsById;
 
   List<CwRow> get _cwRows => _cw.buildRows(homeDisabled: _homeDisabled);
 
@@ -730,7 +716,7 @@ class _SearchScreenState extends State<SearchScreenHost>
 
   bool get _traktReserving => _cw.traktReserving(
         searchMode: widget.searchMode,
-        discoverMode: widget.discoverMode,
+        discoverMode: false,
         isTraktAuthenticated: _isTraktAuthenticated,
         catalogQuery: _catalogQuery,
         catalogSearching: _catalogSearching,
@@ -740,7 +726,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     environment: () => HeroEnvironment(
       isTelevision: widget.isTelevision,
       searchMode: widget.searchMode,
-      discoverMode: widget.discoverMode,
+      discoverMode: false,
       catalogQuery: _catalogQuery,
       stageActive: _stageActive,
       stagePublishesShellArt: _stagePublishesShellArt,
@@ -776,12 +762,9 @@ class _SearchScreenState extends State<SearchScreenHost>
   // DPAD focus node (the "Source" dropdown is the leading filter of whichever
   // embedded See-All panel is shown). [_discAddons] is the browsable addon list
   // appended to the Source dropdown.
-  String _discSource = _discCw;
   // Incremented only for an explicit dropdown choice. Async preference/add-on
   // hydration may apply its captured landing source only while this is still
   // unchanged, so a late manifest response can never undo user input.
-  int _discSourceRevision = 0;
-  List<StremioAddon> _discAddons = const [];
   final DiscoverLifecycle _discover = DiscoverLifecycle();
   // Transitional render adapters expire with real G17 ownership / Q2.
   FocusNode get _discSourceNode => _discover.sourceNode;
@@ -789,11 +772,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// An MDBList list handed off from the Search tab's Lists mode (consumed
   /// from MainPageBridge.pendingMdblistListOpen on mount). Passed into the
   /// MDBList panel, which opens focused on it with the ♥ like toggle.
-  MdblistListChoice? _discMdblistList;
 
-  ValueNotifier<StremioMeta?> get _discFocused => _discover.focused;
-  ValueNotifier<StremioMeta?> get _discShown => _discover.shown;
-  void _onDiscFocused(StremioMeta item) => _discover.onFocused(item);
 
   void _onDiscoverPreferencesChanged() {
     if (mounted) setState(() {});
@@ -802,186 +781,27 @@ class _SearchScreenState extends State<SearchScreenHost>
   @override
   void initState() {
     super.initState();
-    _boardRuntime.isLive = () => mounted;
-    _boardRuntime.commit = (apply) => setState(apply);
-    _boardRuntime.environment = () => (
-      searchMode: widget.searchMode,
-      discoverMode: widget.discoverMode,
-      isTraktAuthenticated: _isTraktAuthenticated,
-    );
-    _boardRuntime.refreshBoundSources = _refreshBoundSources;
-    _boardRuntime.completeStageAdvance = _maybeCompleteStageAdvance;
-    _boardRuntime.completeStageRight = _maybeCompleteStageRight;
+    _content.surface = this;
+    _content.presentation = this;
+    _content.readOptions = () => (isTelevision: widget.isTelevision,
+      searchMode: widget.searchMode, discoverMode: false);
+    _boardRuntime.continueStageAdvance = _continueStageAdvance;
+    _boardRuntime.continueStageRight = _continueStageRight;
     _boardRuntime.leaveBoardTop = _leaveBoardTop;
-    _board = HomeBoardController(
-      fetchCatalog: _fetchBoardCatalog,
-      isLive: () => mounted,
-    );
-    _boardRuntime.board = _board;
-    _board.hideWatched = HideWatchedPrefs.enabled;
-    _board.addListener(_onBoardChanged);
-    _catalogSearch = CatalogSearchController(
-      getDisabledAddons: StorageService.getCatalogSearchDisabledAddons,
-      getSearchableAddons: _stremio.getSearchableAddons,
-      searchCatalog:
-          (addon, catalog, query, {required throwOnError, onRawCount}) =>
-              _stremio.searchSingleCatalog(
-                addon,
-                catalog,
-                query,
-                throwOnError: throwOnError,
-                onRawCount: onRawCount,
-              ),
-      isLive: () => mounted,
-      isTelevision: () => widget.isTelevision,
-      onStarted: () {
-        if (widget.isTelevision && !_searchFocusNode.hasFocus) {
-          _searchFocusNode.requestFocus();
-        }
-      },
-      onClear: () => _applySections(const []),
-      onApplyFirst: (section) => _applySections([section]),
-      onAppend: (section) => _appendSections([section]),
-      onTelevisionApply: _applySections,
-      onTelevisionSettled: () {
-        if (_rowNodes.isNotEmpty && _rowNodes.first.isNotEmpty) {
-          _completeSearchSubmitFocus(_rowNodes.first.first);
-        } else {
-          _searchSubmitFocus.cancel();
-        }
-      },
-      onAborted: () => _searchSubmitFocus.cancel(),
-    );
-    _boardRuntime.catalogSearch = _catalogSearch;
-    _catalogSearch.addListener(_onCatalogSearchChanged);
-    _favourites = FavRowsController(
-      readContext: () => context,
-      isLive: () => mounted,
-      readIsTelevision: () => widget.isTelevision,
-      commit: (fn) => setState(fn),
-      addonForContinue: _addonForContinue,
-      readCatalogQuery: () => _catalogQuery,
-      readCatalogSearching: () => _catalogSearching,
-      focusContent: _focusContent,
-      focusRelativeHomeRail: _focusRelativeHomeRail,
-      readHomeDisabled: () => _homeDisabled,
-      maybeAutoFocusBoard: _maybeAutoFocusBoard,
-      openItem: _openItem,
-      refreshAfterPlayback: _refreshAfterPlayback,
-      requestRowFocus: _requestRowFocus,
-    );
-    _boardRuntime.favourites = _favourites;
-    _keyword = KeywordSearchController(
-      isLive: () => mounted,
-      onCancelSubmitFocus: () => _searchSubmitFocus.cancel(),
-      onCompleteSubmitFocus: _completeSearchSubmitFocus,
-      onRestoreQuery: (q) => _searchController.text = q,
-    );
-    _keyword.addListener(_onKeywordChanged);
-    _cwNodes.onRequestRowFocus = (nodes, index) => _requestRowFocus(nodes, index);
-    _cw = ContinueWatchingController(
-      nodes: _cwNodes,
-      isLive: () => mounted,
-      readMergedRows: widget.readCwMergedRows,
-      onMaybeAutoFocusBoard: _maybeAutoFocusBoard,
-      onRefreshBoundSources: _refreshBoundSources,
-      onSnack: _snack,
-      onAnnounceTrakt: () => _cwFlows.announceTrakt(),
-      onAnnounceSimkl: () => _cwFlows.announceSimkl(),
-      onAnnounceMdblist: () => _cwFlows.announceMdblist(),
-    );
-    _boardRuntime.cw = _cw;
-    _cw.actions = ContinueWatchingActions(
-      imdbOf: _imdbOf,
-      addonForContinue: _addonForContinue,
-      openItem: (item, addon, {isTraktSource = false, isMdblistSource = false, initialSeason, initialEpisode}) =>
-          _openItem(
-            item,
-            addon,
-            isTraktSource: isTraktSource,
-            isMdblistSource: isMdblistSource,
-            initialSeason: initialSeason,
-            initialEpisode: initialEpisode,
-          ),
-      onCatalogPlay: (item, addon, {isTraktSource = false, isMdblistSource = false, preferTraktResume = false}) =>
-          _onCatalogPlay(
-            item,
-            addon,
-            isTraktSource: isTraktSource,
-            isMdblistSource: isMdblistSource,
-            preferTraktResume: preferTraktResume,
-          ),
-      playSelection: _playSelection,
-      popUntilNotDetail: () {
-        Navigator.of(context).popUntil(
-          (route) => route.settings.name != kCatalogDetailRouteName,
-        );
-      },
-    );
-    _cwFlows = ContinueWatchingFlows(
-      controller: _cw,
-      contextOf: () => context,
-      wrap: _withHomeExpandedCardSettings,
-      isBound: _isBound,
-      isTelevision: () => widget.isTelevision,
-      pikpakOnly: () => _pikpakOnly,
-      isLive: () => mounted,
-      searchMode: () => widget.searchMode,
-      discoverMode: () => widget.discoverMode,
-      loading: () => _loading,
-      activeTvTabIndex: () => MainPageBridge.activeTvTabIndex,
-      tabIndex: () => _tabIndex,
-      routeIsCurrent: () => ModalRoute.of(context)?.isCurrent ?? true,
-      homeDisabled: () => _homeDisabled,
-      favNodeLists: () => [for (final kind in _favourites.favRowKinds) _favourites.favNodesFor(kind)],
-      catalogRowNodes: () => _rowNodes,
-      showSnack: (msg) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-            width: 420,
-          ),
-        );
-      },
-      onAfterSeeAllReturn: _afterSeeAllReturn,
-      refreshAfterPlayback: _refreshAfterPlayback,
-    );
-    _cw.bindings = ContinueWatchingBindings(
-      openLocal: _cw.openLocal,
-      playLocal: _cw.playLocal,
-      removeLocal: (item) => _cw.removeLocalCwItem(item, imdbOf: _imdbOf),
-      seeAllLocal: _cwFlows.openLocalSeeAll,
-      openTrakt: _cw.openTrakt,
-      playTrakt: _cw.playTrakt,
-      removeTrakt: _cw.removeTraktCwItem,
-      seeAllTrakt: _cwFlows.openTraktSeeAll,
-      openSimkl: _cw.openSimkl,
-      playSimkl: _cw.playSimkl,
-      removeSimkl: _removeSimklCwItem,
-      seeAllSimkl: _cwFlows.openSimklSeeAll,
-      openMdblist: _cw.openMdblist,
-      playMdblist: _cw.playMdblist,
-      removeMdblist: (item) => _cw.removeMdblistCwItem(item, imdbOf: _imdbOf),
-      canRemoveMdblist: (item) =>
-          _cw.canRemoveMdblistCwItem(item, imdbOf: _imdbOf),
-      seeAllMdblist: _cwFlows.openMdblistSeeAll,
-      openIptv: _openIptvCwItem,
-      removeIptv: _cw.removeIptvCwItem,
-    );
-    _cw.addListener(_onContinueWatchingChanged);
+    _boardRuntime.stageActive = () => _stageActive;
+    _boardRuntime.stageRailKey = () => _canvasRailKey;
+    _content.initialize(readMergedRows: widget.readCwMergedRows);
     WidgetsBinding.instance.addObserver(this);
     _profileSessionOwner = ProfileSessionMemory.captureOwner();
     // This one widget backs three tabs (Home board / dedicated Search / Discover).
     AnalyticsService.screenView(
       searchScreenAnalyticsName(
         searchMode: widget.searchMode,
-        discoverMode: widget.discoverMode,
+        discoverMode: false,
       ),
     );
     MainPageBridge.registerTvContentFocusHandler(_tabIndex, _focusContent);
-    if (!widget.searchMode && !widget.discoverMode) {
+    if (!widget.searchMode) {
       StorageService.localCompletionRevision.addListener(
         _onLocalCompletionChanged,
       );
@@ -996,7 +816,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // separate tab that can't reach this screen's state). Only the Home board
     // (not the Search/Discover variants) claims it; the opener switches here via
     // switchTab(15) right after setting it, so it's present by the time we mount.
-    if (!widget.searchMode && !widget.discoverMode) {
+    if (!widget.searchMode) {
       MainPageBridge.registerCatalogDetailOpenHandler(
         _openPendingCatalogDetail,
       );
@@ -1012,27 +832,10 @@ class _SearchScreenState extends State<SearchScreenHost>
     // Discover tab on the MDBList source, focused on that list. The nav
     // rebuilds this screen fresh on every tab switch, so the payload set right
     // before switchTab(18) is present by the time we mount.
-    if (widget.discoverMode) {
-      final pending = MainPageBridge.pendingMdblistListOpen;
-      if (pending != null) {
-        MainPageBridge.pendingMdblistListOpen = null;
-        _discMdblistList = MdblistListChoice(
-          id: (pending['id'] as num?)?.toInt() ?? -1,
-          name: pending['name'] as String? ?? 'Untitled list',
-          ownerName: pending['ownerName'] as String?,
-          itemCount: (pending['itemCount'] as num?)?.toInt() ?? 0,
-          liked: pending['liked'] == true,
-          likes: (pending['likes'] as num?)?.toInt() ?? 0,
-        );
-        _discSource = _discMdblist;
-        unawaited(StorageService.setDiscoverLastSource(_discMdblist));
-      }
-    }
+
     _hero.registerTv();
     _discover.addListener(_onDiscoverPreferencesChanged);
-    if (widget.discoverMode) {
-      _discover.start(isTelevision: widget.isTelevision);
-    }
+
     MainPageBridge.addIntegrationListener(_onIntegrationsChanged);
     // Playback that ran in a separate ACTIVITY (Android TV native player,
     // DeoVR, external app) pushes no Flutter route, so nothing on the board
@@ -1053,7 +856,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     if (searchScreenRestoresKeyword(
       isTelevision: widget.isTelevision,
       searchMode: widget.searchMode,
-      discoverMode: widget.discoverMode,
+      discoverMode: false,
     )) {
       restoredKeyword = _keyword.restore(_profileSessionOwner, _variantKey);
       if (restoredKeyword) _mode = SearchBoardMode.keyword;
@@ -1061,7 +864,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // Home board only: live-refresh when the Home Rows manager changes which
     // rows are hidden (on non-TV, Settings is a pushed route so the board isn't
     // rebuilt on return; on TV a tab switch already reloads it fresh).
-    if (!widget.searchMode && !widget.discoverMode) {
+    if (!widget.searchMode) {
       MainPageBridge.addHomeSettingsListener(_reloadForHomeSettings);
       // IPTV list mutations (picker, IPTV settings, provider deletion,
       // reconcile, import) all bump the store revision — the only signal a
@@ -1114,7 +917,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // The focus latch: interacting with the field pins the sheet open, even
     // while the Spotlight shell is not yet eligible — an async style/hero
     // arrival can then never unmount a focused (still blank) field.
-    if (!widget.isTelevision && !widget.searchMode && !widget.discoverMode) {
+    if (!widget.isTelevision && !widget.searchMode) {
       _searchFocusNode.addListener(_onSearchFocusLatchSheet);
     }
     _boardScroll.addListener(_onBoardScroll);
@@ -1133,15 +936,6 @@ class _SearchScreenState extends State<SearchScreenHost>
     // results grid (_buildBoard) would sit on its initial spinner forever.
     if (widget.searchMode) {
       _loading = false;
-    } else if (widget.discoverMode) {
-      // Discover browses one source at a time via the Source dropdown, so it
-      // skips the board's catalog pipeline and just primes the Continue Watching
-      // + Trakt rows its first two sources draw from. _refreshPikpakOnly gates the
-      // Quick-Play affordance the same way the board does.
-      _loading = false;
-      _refreshPikpakOnly();
-      _loadDiscoverAddons();
-      _primeDiscoverRows();
     } else {
       // TV board: last-resort focus reclaim. Several load/reload paths dispose
       // FocusNodes wholesale (_applySections rebuilds every catalog row's
@@ -1269,7 +1063,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     // single-owner rule keys off scrobbling), so re-read local CW before the
     // tracker rows; _reloadForHomeSettings can legitimately return early when
     // no row/layout preference changed.
-    if (!widget.searchMode && !widget.discoverMode) _loadContinueWatching();
+    if (!widget.searchMode) _loadContinueWatching();
     // Trakt/Simkl Continue Watching rows are never rendered on the dedicated
     // Search tab, so don't refetch them there.
     if (!widget.searchMode) {
@@ -1283,71 +1077,31 @@ class _SearchScreenState extends State<SearchScreenHost>
     // Search/Discover must never run the board pipeline. Deferred while a
     // catalog search is showing (see _requestBoardReload); safe against
     // overlap via _boardLoadGen.
-    if (!widget.searchMode && !widget.discoverMode && _trackerExtrasEnabled) {
+    if (!widget.searchMode && _trackerExtrasEnabled) {
       _requestBoardReload();
     }
   }
 
-  Future<void> _refreshTraktAuthState() async {
-    final auth = await TraktService.instance.isAuthenticated();
-    if (!mounted || auth == _isTraktAuthenticated) return;
-    setState(() => _isTraktAuthenticated = auth);
-  }
+  Future<void> _refreshTraktAuthState() => _content.refreshTraktAuthState();
 
-  Future<void> _refreshSimklAuthState() async {
-    final auth = await SimklService.instance.isAuthenticated();
-    if (!mounted || auth == _isSimklAuthenticated) return;
-    setState(() => _isSimklAuthenticated = auth);
-  }
+  Future<void> _refreshSimklAuthState() => _content.refreshSimklAuthState();
 
-  Future<void> _refreshMdblistAuthState() async {
-    final auth = await MdblistService.instance.isAuthenticated();
-    if (!mounted || auth == _isMdblistAuthenticated) return;
-    final leaveLists = !auth && _mode == SearchBoardMode.lists;
-    if (leaveLists) {
-      _listsToken++;
-      _disposeListsNodes();
-    }
-    setState(() {
-      _isMdblistAuthenticated = auth;
-      if (leaveLists) {
-        _mode = SearchBoardMode.catalog;
-        _listsQuery = '';
-        _listsResults = const [];
-        _listsSearching = false;
-        _listsError = null;
-      }
-    });
-    // A disconnect can remove the currently selected mode. Keep the shared
-    // query useful by resolving it through Catalog after the selector falls
-    // back, unless those exact Catalog results are already present.
-    if (leaveLists) {
-      final query = _searchController.text.trim();
-      if (query.isNotEmpty && query != _catalogQuery) {
-        _runCatalogSearch(query);
-      }
-      if (widget.isTelevision) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _searchFocusNode.requestFocus();
-        });
-      }
-    }
-  }
+  Future<void> _refreshMdblistAuthState() => _content.refreshMdblistAuthState();
 
   @override
   void dispose() {
-    _board.removeListener(_onBoardChanged);
+    _board.removeListener(_content.onBoardChanged);
     _board.dispose();
-    _catalogSearch.removeListener(_onCatalogSearchChanged);
+    _catalogSearch.removeListener(_content.onCatalogSearchChanged);
     _catalogSearch.dispose();
     _keyword.preserve(
       _profileSessionOwner,
       _variantKey,
       modeIsKeyword: _mode == SearchBoardMode.keyword,
     );
-    _keyword.removeListener(_onKeywordChanged);
+    _keyword.removeListener(_content.onKeywordChanged);
     _keyword.dispose();
-    _cw.removeListener(_onContinueWatchingChanged);
+    _cw.removeListener(_content.onContinueWatchingChanged);
     _cw.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _spotlightHeroNode.dispose();
@@ -1358,7 +1112,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     MdblistService.instance.playbackRevision.removeListener(
       _onMdblistPlaybackRevision,
     );
-    if (!widget.searchMode && !widget.discoverMode) {
+    if (!widget.searchMode) {
       MainPageBridge.unregisterCatalogDetailOpenHandler(
         _openPendingCatalogDetail,
       );
@@ -1366,7 +1120,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     if (widget.searchMode) {
       MainPageBridge.unregisterTabBackHandler('search', _handleSearchBack);
     }
-    if (!widget.isTelevision && !widget.searchMode && !widget.discoverMode) {
+    if (!widget.isTelevision && !widget.searchMode) {
       // Same closure that registered — the bridge's mid-transition contract.
       MainPageBridge.unregisterTabBackHandler('home', _handleHomeBack);
       _searchFocusNode.removeListener(_onSearchFocusLatchSheet);
@@ -1392,7 +1146,7 @@ class _SearchScreenState extends State<SearchScreenHost>
         _onTvHeroArtworkQualityChanged) {
       MainPageBridge.tvHeroArtworkQualityChanged = null;
     }
-    if (widget.isTelevision && !widget.searchMode && !widget.discoverMode) {
+    if (widget.isTelevision && !widget.searchMode) {
       _heroTrailerShowing.removeListener(_onCanvasTrailerShowingChanged);
       HardwareKeyboard.instance.removeHandler(_onCanvasTheaterKey);
       HardwareKeyboard.instance.removeHandler(_onStageHoldKey);
@@ -1415,7 +1169,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     _modeDropdownNode.dispose();
     _disposeListsNodes();
     _discover.removeListener(_onDiscoverPreferencesChanged);
-    _discover.dispose(isTelevision: widget.discoverMode && widget.isTelevision);
+    _discover.dispose(isTelevision: false);
     _boardScroll.dispose();
     _catalogSourcesBtnFocus.dispose();
     _disposeNodes();
@@ -1491,7 +1245,7 @@ class _SearchScreenState extends State<SearchScreenHost>
         collections: collections,
         hideWatched: HideWatchedPrefs.enabled,
       ),
-      isHomeBoard: !widget.searchMode && !widget.discoverMode,
+      isHomeBoard: !widget.searchMode,
     );
     if (action.nothingChanged) return;
     // Hide-watched changes row MEMBERSHIP, so it takes the full reload path.
@@ -1529,7 +1283,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       return;
     }
     final saved = await StorageService.getHomeDefaultSourceType();
-    if (!mounted || widget.searchMode || widget.discoverMode) return;
+    if (!mounted || widget.searchMode) return;
     final mode =
         saved == 'keyword' &&
             ProfilePolicyGuard.allowsSync(ProfileFeature.keywordSearch)
@@ -1570,7 +1324,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       // stragglers, bounding what an enabled config can add to first paint
       // (nothing at all is fetched in the default, nothing-enabled config).
       final listRowsFuture =
-          widget.searchMode || widget.discoverMode || !_trackerExtrasEnabled
+          widget.searchMode || !_trackerExtrasEnabled
           ? Future.value(const <HomeListSection>[])
           // catchError at creation, not at the await: a superseded load
           // returns before awaiting this future, and an unawaited throw
@@ -1617,7 +1371,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       // batch — its catalog may sit far down the board (or be hidden as a
       // row), so it can't wait for a batch to happen to include it. Home
       // board only, like the list rows above.
-      if (!widget.searchMode && !widget.discoverMode) {
+      if (!widget.searchMode) {
         unawaited(_resolveSpotlightHeroSource(addons));
       }
       // First batch is blocking so the board isn't empty on first paint; skip
@@ -1630,7 +1384,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       // Imported collections follow Nuvio's order: pinned ones lead the
       // board, the rest sit after the tracker list rows and before every
       // addon catalog row. No network — folders are static tiles.
-      final collectionRows = widget.searchMode || widget.discoverMode
+      final collectionRows = widget.searchMode
           ? const <HomeCollectionSection>[]
           : HomeBoardController.buildCollectionSections(
               collections: _homeCollections,
@@ -1685,39 +1439,11 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// Production catalog-page adapter for [HomeBoardController]: same
   /// [fetchFilteredPage] + hide-watched predicate as the origin `_fetchBoardBatch`
   /// / `_loadMoreRow` / `_resolveSpotlightHeroSource` inlines.
-  Future<FilteredPage> _fetchBoardCatalog(
-    StremioAddon addon,
-    StremioAddonCatalog catalog, {
-    required int skip,
-    Set<String>? seenIds,
-    int minItems = 12,
-  }) => fetchFilteredPage(
-    (s, onRaw) =>
-        _stremio.fetchCatalog(addon, catalog, skip: s, onRawCount: onRaw),
-    skip: skip,
-    hides: WatchedFilter.predicate,
-    seenIds: seenIds,
-    minItems: minItems,
-  );
 
-  void _onBoardChanged() {
-    _syncBoardRowNodes();
-    if (mounted) setState(() {});
-  }
 
-  void _onCatalogSearchChanged() {
-    if (mounted) setState(() {});
-  }
 
-  void _onKeywordChanged() {
-    if (mounted) setState(() {});
-  }
 
-  void _onContinueWatchingChanged() {
-    if (mounted) setState(() {});
-  }
 
-  void _syncBoardRowNodes() => _boardRuntime.syncBoardRowNodes();
 
   /// After a batch lands, if the board still doesn't fill the viewport (so the
   /// user can't scroll to trigger more) keep pulling batches until it does or
@@ -1732,7 +1458,6 @@ class _SearchScreenState extends State<SearchScreenHost>
 
   /// Append newly-loaded board rows without disturbing the rows already shown:
   /// grow the per-row focus nodes in lockstep with [_sections].
-  void _appendSections(List<CatalogSection> more) => _boardRuntime.appendSections(more);
 
   /// Fetch the next page for a single catalog row and append it in place, so
   /// rows grow without bound as the user scrolls right (Stremio-style). Only
@@ -1742,62 +1467,21 @@ class _SearchScreenState extends State<SearchScreenHost>
   Future<void> _loadMoreRow(int rowIndex) => _boardRuntime.loadMoreRow(rowIndex);
 
   /// IMDb id for a catalog item, or null when it isn't a `tt…` id.
-  String? _imdbOf(StremioMeta item) => _contentData.imdbOf(item);
 
-  bool _isBound(StremioMeta item) => _contentData.isBound(item);
+  bool _isBound(StremioMeta item) => _content.isBound(item);
 
-  int _boundCountFor(StremioMeta item) => _contentData.boundCountFor(item);
 
   /// Re-read how many pinned sources each currently-displayed title has. Called
   /// after sections load and after any bind/unbind/playback.
-  Future<void> _refreshBoundSources() async {
-    // Cover every on-screen tile that renders a bound badge: catalog sections
-    // AND the Continue Watching rows (whose titles may not appear in any
-    // section, so editing their sources must still refresh the CW card badge).
-    final items = [
-      for (final section in _sections) ...section.items,
-      ..._cwMovies,
-      ..._cwSeries,
-      ..._traktMovies,
-      ..._traktSeries,
-      ..._simklMovies,
-      ..._simklSeries,
-      ..._mdblistMovies,
-      ..._mdblistSeries,
-    ];
-    final result = _contentData.readBoundCounts(items);
-    final counts = result is Future<Map<String, int>> ? await result : result;
-    if (!mounted) return;
-    setState(
-      () => _boundCounts
-        ..clear()
-        ..addAll(counts),
-    );
-  }
 
   /// PikPak is "only" when it's enabled and no add/resolve provider has a key.
-  Future<void> _refreshPikpakOnly() async {
-    final pikpak = await ProviderCredentialPrefs.getPikPakEnabled();
-    final rd = await StorageService.getApiKey();
-    final tb = await StorageService.getTorboxApiKey();
-    final pm = await StorageService.getPremiumizeApiKey();
-    final ad = await StorageService.getAllDebridApiKey();
-    final anyOther =
-        (rd != null && rd.isNotEmpty) ||
-        (tb != null && tb.isNotEmpty) ||
-        (pm != null && pm.isNotEmpty) ||
-        (ad != null && ad.isNotEmpty);
-    final onlyPikpak = pikpak && !anyOther;
-    if (mounted && onlyPikpak != _pikpakOnly) {
-      setState(() => _pikpakOnly = onlyPikpak);
-    }
-  }
+  Future<void> _refreshPikpakOnly() => _content.refreshPikpakOnly();
 
   Future<void> _loadContinueWatching() => _cw.loadContinueWatching();
 
   void _onLocalCompletionChanged() => _cw.onLocalCompletionChanged(
         searchMode: widget.searchMode,
-        discoverMode: widget.discoverMode,
+        discoverMode: false,
       );
 
   Future<void> _loadIptvContinueWatching() =>
@@ -1806,17 +1490,6 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// Open an IPTV Continue Watching card: a series routes to the merged Xtream
   /// series page, a movie resumes playback. Both go through [IptvCwRouter];
   /// [_playedSinceRefresh] latches so the return refresh rebuilds the shelves.
-  Future<void> _openIptvCwItem(StremioMeta item) async {
-    final entry = _iptvCwByKey[item.id];
-    if (entry == null) return;
-    _playedSinceRefresh = true;
-    await IptvCwRouter.open(context, entry, isTelevision: widget.isTelevision);
-    if (!mounted) return;
-    // Off-TV push() awaits to the pop; on TV the native-return hook
-    // ([_onPlaybackReturned]) refreshes. Refresh here too for the in-app path
-    // (series detail / in-app player) so a resumed position updates the shelf.
-    await _refreshAfterPlayback();
-  }
 
   /// Focus a card in the Continue Watching row at [cwIndex] (index into the
   /// visible CW rows), clamping the column to that row's length. Returns
@@ -1839,25 +1512,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// Resolve the addon that a Continue Watching title should route through.
   /// Prefers the stored source addon; falls back to any homepage addon, then a
   /// minimal placeholder so Play still works even if the addon is gone.
-  StremioAddon _addonForContinue(String? addonId) {
-    if (addonId != null && _addonsById.containsKey(addonId)) {
-      return _addonsById[addonId]!;
-    }
-    // "Any homepage addon" means a REAL catalog addon — the Trakt/Simkl list
-    // rows that now lead _homeSections carry only a placeholder addon (empty
-    // baseUrl), which can't serve /meta or /stream.
-    for (final s in _homeSections) {
-      if (s is! HomeListSection && s is! HomeCollectionSection) {
-        return s.addon;
-      }
-    }
-    return StremioAddon(
-      id: addonId ?? 'continue_watching',
-      name: 'Continue Watching',
-      manifestUrl: '',
-      baseUrl: '',
-    );
-  }
+  StremioAddon _addonForContinue(String? addonId) => _content.addonForContinue(addonId);
 
   /// Open a board-section item through the right pipeline for its source.
   /// Trakt list rows keep Trakt semantics (`isTraktSource` — status chips,
@@ -1949,15 +1604,11 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// Open a plain Simkl-list title (Discover's Simkl Trending/watchlist lists) —
   /// a normal catalog detail, no resume. The CW list uses [ContinueWatchingController.openSimkl]
   /// instead, so a title browsed fresh here never opens mid-episode.
-  void _openSimklItem(StremioMeta item) {
-    _openItem(item, _addonForContinue(item.sourceAddon?.id));
-  }
+  void _openSimklItem(StremioMeta item) => _content.actions.openSimklItem(item);
 
   /// Quick-play a plain Simkl-list title like any other catalog item (no
   /// resume). The CW list uses [ContinueWatchingController.playSimkl].
-  void _playSimklItem(StremioMeta item) {
-    _onCatalogPlay(item, _addonForContinue(item.sourceAddon?.id));
-  }
+  void _playSimklItem(StremioMeta item) => _content.actions.playSimklItem(item);
 
   Future<void> _loadTraktContinueWatching({bool refreshBound = true}) =>
       _cw.loadTraktContinueWatching(refreshBound: refreshBound);
@@ -1997,22 +1648,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     );
   }
 
-  Future<void> _handleContinueDetailAction(
-    TraktItemMenuAction action,
-    String imdbId,
-  ) async {
-    if (action != TraktItemMenuAction.removeFromPlayback) return;
-    await _cw.handleContinueDetailAction(
-      imdbId: imdbId,
-      popDetail: () => Navigator.of(context).pop(),
-    );
-  }
 
-  Future<void> _removeFromTraktContinueWatching(
-    String imdbId, {
-    bool popDetail = true,
-  }) =>
-      _cw.removeFromTraktContinueWatching(imdbId, popDetail: popDetail);
 
   bool _cwMenuOpen = false;
 
@@ -2051,15 +1687,6 @@ class _SearchScreenState extends State<SearchScreenHost>
     });
   }
 
-  Future<void> _removeSimklCwItem(StremioMeta item) async {
-    await handleSimklMenuAction(
-      context,
-      item,
-      SimklItemMenuAction.removeFromContinueWatching,
-    );
-    if (!mounted) return;
-    await _loadSimklContinueWatching(refreshBound: false);
-  }
 
   Future<void> _loadSimklContinueWatching({bool refreshBound = true}) =>
       _cw.loadSimklContinueWatching(refreshBound: refreshBound);
@@ -2072,79 +1699,20 @@ class _SearchScreenState extends State<SearchScreenHost>
 
   void _onMdblistPlaybackRevision() => _cw.onMdblistPlaybackRevision(
         searchMode: widget.searchMode,
-        discoverMode: widget.discoverMode,
+        discoverMode: false,
         isRouteCurrent: () => ModalRoute.of(context)?.isCurrent ?? true,
       );
 
   /// Swap the displayed sections (homepage or search results): rebuild the
   /// per-row focus nodes and reset the hero to the first item.
-  void _applySections(List<CatalogSection> sections) {
-    _boardGen++;
-    _boardAppliedAt = DateTime.now();
-    // Rail keys are content-addressed by stable Home-row id, so a reload can
-    // preserve the active rail even when its numeric section index changes.
-    _pendingStageAdvanceKey = null;
-    _pendingStageAdvanceAt = null;
-    _stageGeneration++;
-    _disposeNodes();
-    for (final section in sections) {
-      _rowNodes.add(
-        List.generate(
-          section.items.length,
-          (i) => FocusNode(debugLabel: 'search_r${_rowNodes.length}_c$i'),
-        ),
-      );
-    }
-    setState(() => _sections = sections);
-    _publishTopShelfSpotlight();
-    unawaited(_refreshBoundSources());
-    // Seed the hero with the first item so it isn't blank before DPAD focus
-    // lands (see [_heroActive] for when the hero is shown).
-    if (_heroActive) {
-      // Seed from the first real title: a pinned collection row can lead the
-      // board, and folder tiles can't drive the hero.
-      StremioMeta? first;
-      for (final section in sections) {
-        if (section is HomeCollectionSection) continue;
-        if (section.items.isNotEmpty) {
-          first = section.items.first;
-          break;
-        }
-      }
-      _heroItem.value = first;
-      _heroEnriched.value = null;
-      // Outside the null-check: a board that reloads EMPTY must clear the
-      // shell stage too (null item → null art), not keep the last title's.
-      _hero.publishAmbientArt(first, null);
-      if (first != null) {
-        _hero.enrich(first);
-        _hero.updateTint(first);
-        // Billboard effect: the seeded spotlight starts its trailer too, so
-        // opening Home settles into a living hero without any DPAD input.
-        // A board reload is a fresh visit — lift any after-the-feature
-        // suppression, and drop any Canvas favourites override + live feed
-        // (a reload landing while a favourite held focus would otherwise
-        // keep its stale art/title on the stage — or resume its stream —
-        // with no cell focused, and let the seeded trailer start beneath).
-        _hero.trailerSuppressed = false;
-        _canvasFavFocus.value = null;
-        _hero.clearLiveIptv();
-        _hero.scheduleTrailer(first);
-      } else {
-        _hero.clearTrailer();
-        // Clear the COLOUR too, not just the art — an empty reload otherwise
-        // left the departed title's tint on the shell stage + sidebar glass.
-        _heroTint.value = null;
-        _hero.publishTintToShell(null);
-      }
-    }
-  }
+  void _applySections(List<CatalogSection> sections) => _content.applySections(sections);
+
+  @override
+  void seedHero(List<CatalogSection> sections) => _hero.seedSections(sections);
 
   /// Cross-addon catalog search, grouped as one horizontal row per addon so it
   /// matches the board (not a merged grid).
-  Future<void> _runCatalogSearch(String query) async {
-    await _catalogSearch.run(query);
-  }
+  Future<void> _runCatalogSearch(String query) => _content.runCatalogSearch(query);
 
   /// Cancel any pending search and return to the homepage board.
   void _restoreHome() {
@@ -2179,14 +1747,14 @@ class _SearchScreenState extends State<SearchScreenHost>
     _boardRuntime.maybeCompleteDeferredDown();
     if (_autoFocusSettled || _autoFocusScheduled) return;
     if (!widget.isTelevision) return;
-    if (widget.searchMode || widget.discoverMode) return;
+    if (widget.searchMode) return;
     _autoFocusScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Coalesced pass: reads the final top after every same-frame load's
       // setState has applied, so multiple loads don't race.
       _autoFocusScheduled = false;
       if (!mounted || _autoFocusSettled) return;
-      if (widget.searchMode || widget.discoverMode) return;
+      if (widget.searchMode) return;
       // Only when this is the tab the user is actually looking at. During the
       // ~350ms tab cross-fade the outgoing board is still mounted and shares the
       // ModalRoute, so isCurrent can't tell them apart — the active-tab index
@@ -2362,10 +1930,6 @@ class _SearchScreenState extends State<SearchScreenHost>
   void _focusContent() {
     // Discover tab: enter on the Source dropdown (the leading filter); Down from
     // there drops into the grid.
-    if (widget.discoverMode) {
-      _discSourceNode.requestFocus();
-      return;
-    }
     // Dedicated Search tab: land on the results when they're on-screen, else the
     // field (the blank prompt has nothing focusable below it). Only focus board
     // rows when a query is actually showing them — otherwise their nodes aren't
@@ -2528,7 +2092,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       _hideHomeCardTitlesAndRatings ? 0 : _artPosterCaptionBand(context);
 
   bool get _homeBoardMode =>
-      widget.isTelevision && !widget.searchMode && !widget.discoverMode;
+      widget.isTelevision && !widget.searchMode;
 
   // ── Off-TV Spotlight shell state ─────────────────────────────────────────
   //
@@ -2556,7 +2120,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// would otherwise render a large empty hero.
   bool get _spotlightShellActive =>
       !widget.searchMode &&
-      !widget.discoverMode &&
+      !false &&
       shouldUseOffTvSpotlightShell(
         rawStyle: _tvHomeStyle,
         loading: _loading,
@@ -2657,68 +2221,33 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// Deferred stage move: DOWN past the last rail asked for a batch that had
   /// not arrived. Keyed by the rail the user pressed DOWN on, so a batch that
   /// lands after they have moved elsewhere is ignored.
-  String? _pendingStageAdvanceKey;
-  DateTime? _pendingStageAdvanceAt;
 
   /// The node that pressed the key. A deferred move is only ever completed
   /// while THAT node still holds focus — the rail key alone isn't enough
   /// (moving LEFT along the same rail, or out to the sidebar, leaves it
   /// unchanged), and a late batch must never yank the user somewhere else.
-  FocusNode? _pendingStageOrigin;
 
   /// Atrium-only: the pending move fills the window's EMPTY lower row rather
   /// than scrolling the window on.
-  bool _pendingStageAdvanceFillsLower = false;
 
   /// A RIGHT that ran off the END of a rail whose catalog still had pages.
   /// Mosaic's grid depends on it: DOWN there always leaves for the next rail,
   /// so RIGHT is the only way through a long catalog and eating the keypress
   /// would strand the user at the page boundary.
-  String? _pendingStageRightKey;
-  int _pendingStageRightCol = -1;
-  DateTime? _pendingStageRightAt;
-  FocusNode? _pendingStageRightOrigin;
 
-  void _deferStageRight(String railKey, int col) {
-    final origin = FocusManager.instance.primaryFocus;
-    if (origin == null) return;
-    _pendingStageRightKey = railKey;
-    _pendingStageRightCol = col;
-    _pendingStageRightAt = DateTime.now();
-    _pendingStageRightOrigin = origin;
-  }
+  void _deferStageRight(String railKey, int col) =>
+      _boardRuntime.deferStageRight(railKey, col);
 
   /// Record a deferred rail move, anchored to whoever pressed the key.
-  void _deferStageAdvance(String railKey, {bool fillsLower = false}) {
-    final origin = FocusManager.instance.primaryFocus;
-    if (origin == null) return;
-    _pendingStageAdvanceKey = railKey;
-    _pendingStageAdvanceAt = DateTime.now();
-    _pendingStageAdvanceFillsLower = fillsLower;
-    _pendingStageOrigin = origin;
-  }
+  void _deferStageAdvance(String railKey, {bool fillsLower = false}) =>
+      _boardRuntime.deferStageAdvance(railKey, fillsLower: fillsLower);
 
   /// Shared staleness test for both deferred moves.
-  bool _stageDeferralStillValid(DateTime at, FocusNode? origin) =>
-      _stageActive &&
-      origin != null &&
-      identical(FocusManager.instance.primaryFocus, origin) &&
-      DateTime.now().difference(at) <= SearchBoardRuntime.pendingDownMaxAge;
+
 
   /// Called when a ROW's next page lands: completes a deferred RIGHT if the
   /// user is still sitting on the cell they pressed it from.
-  void _maybeCompleteStageRight() {
-    final key = _pendingStageRightKey;
-    final at = _pendingStageRightAt;
-    final col = _pendingStageRightCol;
-    final origin = _pendingStageRightOrigin;
-    if (key == null || at == null) return;
-    _pendingStageRightKey = null;
-    _pendingStageRightAt = null;
-    _pendingStageRightCol = -1;
-    _pendingStageRightOrigin = null;
-    if (_canvasRailKey != key) return;
-    if (!_stageDeferralStillValid(at, origin)) return;
+  void _continueStageRight(String key, int col, FocusNode? origin) {
     _stagePostFrameFocus(() {
       // Re-check INSIDE the frame: focus can move during the post-frame gap.
       if (!identical(FocusManager.instance.primaryFocus, origin)) return null;
@@ -2748,14 +2277,14 @@ class _SearchScreenState extends State<SearchScreenHost>
     _atriumFocusedRailKey.value = null;
     _tonightCard.value = null;
     _stageCol.value = 0;
-    _pendingStageAdvanceKey = null;
-    _pendingStageAdvanceAt = null;
-    _pendingStageAdvanceFillsLower = false;
-    _pendingStageOrigin = null;
-    _pendingStageRightKey = null;
-    _pendingStageRightAt = null;
-    _pendingStageRightCol = -1;
-    _pendingStageRightOrigin = null;
+    _boardRuntime.pendingStageAdvanceKey = null;
+    _boardRuntime.pendingStageAdvanceAt = null;
+    _boardRuntime.pendingStageAdvanceFillsLower = false;
+    _boardRuntime.pendingStageOrigin = null;
+    _boardRuntime.pendingStageRightKey = null;
+    _boardRuntime.pendingStageRightAt = null;
+    _boardRuntime.pendingStageRightCol = -1;
+    _boardRuntime.pendingStageRightOrigin = null;
     _stageHoldLatchedKey = null;
     _stageGeneration++;
   }
@@ -3267,7 +2796,7 @@ class _SearchScreenState extends State<SearchScreenHost>
       _spotlightHeroSection?.items.take(8).toList() ?? const [];
 
   void _publishTopShelfSpotlight() {
-    if (!PlatformUtil.isTvOS || widget.searchMode || widget.discoverMode) {
+    if (!PlatformUtil.isTvOS || widget.searchMode) {
       return;
     }
     unawaited(
@@ -3828,17 +3357,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// Called when one lands: completes the move only if the user is STILL on
   /// the rail they pressed DOWN from, and the request hasn't gone stale — a
   /// late batch must never yank focus out of wherever they went instead.
-  void _maybeCompleteStageAdvance() {
-    final key = _pendingStageAdvanceKey;
-    final at = _pendingStageAdvanceAt;
-    final fillLower = _pendingStageAdvanceFillsLower;
-    final origin = _pendingStageOrigin;
-    if (key == null || at == null) return;
-    _pendingStageAdvanceKey = null;
-    _pendingStageAdvanceAt = null;
-    _pendingStageAdvanceFillsLower = false;
-    _pendingStageOrigin = null;
-    if (!_stageDeferralStillValid(at, origin)) return;
+  void _continueStageAdvance(String key, bool fillLower, FocusNode? origin) {
     final rails = _stageRails;
     final i = rails.indexWhere((r) => _canvasRailKeyOf(r) == key);
     if (i < 0 || i + 1 >= rails.length) return;
@@ -5137,21 +4656,9 @@ class _SearchScreenState extends State<SearchScreenHost>
     _restoreHome();
   }
 
-  void _completeSearchSubmitFocus(FocusNode target) {
-    _searchSubmitFocus.complete(
-      field: _searchFocusNode,
-      isMounted: () => mounted,
-      requestFocus: target.requestFocus,
-      targetHasFocus: () => target.hasFocus,
-    );
-  }
+  void _completeSearchSubmitFocus(FocusNode target) => _content.completeSearchSubmitFocus(target);
 
-  void _disposeListsNodes() {
-    for (final n in _listsNodes) {
-      n.dispose();
-    }
-    _listsNodes.clear();
-  }
+  void _disposeListsNodes() => _content.disposeListsNodes();
 
   void _clearListsSearch() {
     _listsToken++;
@@ -5341,314 +4848,47 @@ class _SearchScreenState extends State<SearchScreenHost>
   // ── Playback / detail delegation ───────────────────────────────────────────
 
   /// Load the experimental merged-series-page flag once on init.
-  Future<void> _loadMergedSeriesFlag() async {
-    final on = await StorageService.getMergedSeriesPageEnabled();
-    if (mounted && on != _mergedSeriesPage) {
-      setState(() => _mergedSeriesPage = on);
-    }
-  }
+  Future<void> _loadMergedSeriesFlag() => _content.loadMergedSeriesFlag();
 
   void _openItem(
     StremioMeta item,
     StremioAddon addon, {
     bool isTraktSource = false,
     bool isMdblistSource = false,
-    // Shared-element tag from the tapped board cell: the poster flies into the
-    // detail page's backdrop. Null (non-board callers) = regular transition.
+
+
     String? heroTag,
-    // For a series opened at a specific episode (Trakt Calendar): scroll the
-    // episodes panel to this season/episode. Ignored by the movie/legacy paths.
+
+
     int? initialSeason,
     int? initialEpisode,
-    // When set, switch back to this tab once the detail route closes — lets a
-    // cross-tab opener (the Calendar) return the user to where they came from.
+
+
     int? returnToTabOnClose,
-  }) {
-    TitleOpener(
-      getContext: () => context,
-      isTelevision: () => widget.isTelevision,
-      mergedSeriesPage: () => _mergedSeriesPage,
-      pikpakOnly: () => _pikpakOnly,
-      cwIds: _cwIds,
-      traktByImdb: _traktByImdb,
-      mdblistByImdb: _mdblistByImdb,
-      simklByImdb: _simklByImdb,
-      isTraktAuthenticated: () => _isTraktAuthenticated,
-      isSimklAuthenticated: () => _isSimklAuthenticated,
-      isMdblistAuthenticated: () => _isMdblistAuthenticated,
-      imdbOf: _imdbOf,
-      isBound: _isBound,
-      boundCountFor: _boundCountFor,
-      onActiveAddon: (id) => _selectionPlayback.activeAddonId = id,
-      resolveResumeInfo: _resolveResumeInfo,
-      onCatalogPlay: _onCatalogPlay,
-      onCatalogBrowse: _onCatalogBrowse,
-      onItemSelected: _browseSelection,
-      onQuickPlay: _playSelection,
-      onSelectSource: _handleEditOrSelectSource,
-      onDetailQuickAction: _handleDetailQuickAction,
-      onDetailSimklQuickAction: _handleDetailSimklQuickAction,
-      onDetailMdblistQuickAction: _handleDetailMdblistQuickAction,
-      onLoaderArt: _selectionPlayback.adoptDetailArt,
-      getRecommendations: _stremio.getRecommendations,
-      fetchMetaDetails: _stremio.fetchMetaDetails,
-      onAfterPlayback: _refreshAfterPlayback,
-      onRefreshTraktAuth: _refreshTraktAuthState,
-      onRefreshSimklAuth: _refreshSimklAuthState,
-      onRefreshMdblistAuth: _refreshMdblistAuthState,
-    ).open(
-      item,
-      addon,
-      isTraktSource: isTraktSource,
-      isMdblistSource: isMdblistSource,
-      heroTag: heroTag,
-      initialSeason: initialSeason,
-      initialEpisode: initialEpisode,
-      returnToTabOnClose: returnToTabOnClose,
-    );
-  }
+  }) => _content.actions.openItem(item, addon, isTraktSource: isTraktSource, isMdblistSource: isMdblistSource, heroTag: heroTag, initialSeason: initialSeason, initialEpisode: initialEpisode, returnToTabOnClose: returnToTabOnClose);
 
   /// Dispatch a detail-screen quick action. Reuses the shared
   /// [handleTraktMenuAction] for the standard actions and handles the
   /// Continue-Watching removal locally. The detail page stays underneath (like
   /// Play/Sources), so Back returns to it.
-  Future<void> _handleDetailQuickAction(
-    StremioMeta item,
-    StremioAddon addon,
-    TraktItemMenuAction action, {
-    required bool inCw,
-    String? imdb,
-    // Set by the merged detail sheet's inline rating strip, which already knows
-    // the score — skips the rating dialog rather than asking twice.
-    int? presetRating,
-  }) async {
-    if (action == TraktItemMenuAction.removeFromPlayback) {
-      if (imdb != null) await _handleContinueDetailAction(action, imdb);
-      return;
-    }
-    if (action == TraktItemMenuAction.removeFromTraktPlayback) {
-      if (imdb != null) await _removeFromTraktContinueWatching(imdb);
-      return;
-    }
-    await handleTraktMenuAction(
-      context,
-      item,
-      action,
-      // "Select Source" when nothing is bound → straight to the picker; when a
-      // source is already bound → the rich edit dialog (list / reorder / remove
-      // / add). Matches the catalog/aggregated detail flow.
-      onSelectSource: _openBindSources,
-      onEditSource: _handleEditOrSelectSource,
-      onPlayRandomEpisode: (m) => _playRandomEpisodeFromDetail(m, addon),
-      onSearchPacks: _searchPacksFromDetail,
-      onAddToStremioTv: _addToStremioTvFromDetail,
-      presetRating: presetRating,
-    );
-    // A Trakt watched-state change moves a title in/out of Continue Watching,
-    // so reload the board's Trakt rows — otherwise the board is stale when the
-    // user backs out of the detail (old home reloads its list after these).
-    // Skipped on the dedicated Search tab, which never renders those rows.
-    if (mounted &&
-        !widget.searchMode &&
-        (action == TraktItemMenuAction.markWatched ||
-            action == TraktItemMenuAction.markUnwatched)) {
-      _loadTraktContinueWatching(refreshBound: false);
-    }
-  }
 
   /// Dispatch a detail-screen Simkl quick action — mirrors
   /// [_handleDetailQuickAction], simpler since Simkl's menu has no app
   /// actions (Select Source etc.) or Continue-Watching removal to special-case.
-  Future<void> _handleDetailSimklQuickAction(
-    StremioMeta item,
-    SimklItemMenuAction action, {
-    int? presetRating,
-  }) async {
-    await handleSimklMenuAction(
-      context,
-      item,
-      action,
-      presetRating: presetRating,
-    );
-    // Any status change can add/remove a title from the Simkl CW rows: On Hold
-    // and remove/completed/dropped take it OFF, while Watching makes a series
-    // newly eligible as an "up next" card. So reload the rows on every one that
-    // shifts CW membership. Skipped on the dedicated Search tab (no rows there).
-    if (mounted &&
-        !widget.searchMode &&
-        (action == SimklItemMenuAction.removeFromContinueWatching ||
-            action == SimklItemMenuAction.removeFromList ||
-            action == SimklItemMenuAction.moveToCompleted ||
-            action == SimklItemMenuAction.moveToDropped ||
-            action == SimklItemMenuAction.moveToOnHold ||
-            action == SimklItemMenuAction.moveToWatching)) {
-      _loadSimklContinueWatching(refreshBound: false);
-    }
-  }
 
-  Future<void> _handleDetailMdblistQuickAction(
-    StremioMeta item,
-    MdblistItemMenuAction action, {
-    int? presetRating,
-  }) async {
-    if (action == MdblistItemMenuAction.removeFromContinueWatching) {
-      await _cw.removeMdblistCwItem(item, imdbOf: _imdbOf);
-      return;
-    }
-    await handleMdblistMenuAction(
-      context,
-      item,
-      action,
-      presetRating: presetRating,
-    );
-    if (!mounted || widget.searchMode) return;
-    if (action == MdblistItemMenuAction.markWatched ||
-        action == MdblistItemMenuAction.markUnwatched ||
-        action == MdblistItemMenuAction.drop ||
-        action == MdblistItemMenuAction.restore) {
-      await _loadMdblistContinueWatching(refreshBound: false);
-    }
-  }
 
   /// "Select/Edit Source" entry: edit dialog when a source is already bound,
   /// otherwise the add-source picker.
-  Future<void> _handleEditOrSelectSource(StremioMeta item) async {
-    final imdb = _imdbOf(item);
-    final bound = imdb == null
-        ? const <SeriesSource>[]
-        : await SeriesSourceService.getSources(imdb);
-    if (!mounted) return;
-    if (bound.isNotEmpty) {
-      await _showEditSourceDialog(item, bound);
-    } else {
-      await _showAddSourcePicker(item);
-    }
-  }
 
   /// Manage bound sources. Body: [SourceBindingDialogs.showEdit].
-  Future<void> _showEditSourceDialog(
-    StremioMeta item,
-    List<SeriesSource> initial,
-  ) =>
-      SourceBindingDialogs.showEdit(
-        context: context,
-        item: item,
-        cloudRoutes: SourceBindingRoutes.cloud,
-        initial: initial,
-        onRefreshBound: _refreshBoundSources,
-        onTorrentSearch: _openBindSources,
-        onKeywordSearch: _openKeywordBind,
-        onSnack: _snack,
-        isHostMounted: () => mounted,
-      );
 
   /// Add-source picker. Body: [SourceBindingDialogs.showAdd].
-  Future<void> _showAddSourcePicker(StremioMeta item) =>
-      SourceBindingDialogs.showAdd(
-        context: context,
-        item: item,
-        cloudRoutes: SourceBindingRoutes.cloud,
-        onRefreshBound: _refreshBoundSources,
-        onTorrentSearch: _openBindSources,
-        onKeywordSearch: _openKeywordBind,
-        onSnack: _snack,
-        isHostMounted: () => mounted,
-      );
 
-  Future<void> _addToStremioTvFromDetail(StremioMeta item) async {
-    final result = await StremioTvCatalogPickerDialog.show(context, item: item);
-    if (!mounted || result == null) return;
-    _snack(result.message);
-  }
 
-  void _searchPacksFromDetail(StremioMeta item) {
-    final imdb = _imdbOf(item);
-    if (imdb == null) {
-      _snack('No IMDb match to find packs for "${item.name}".');
-      return;
-    }
-    _browseSelection(
-      AdvancedSearchSelection(
-        imdbId: imdb,
-        isSeries: true,
-        title: item.name,
-        year: item.year,
-        contentType: item.type,
-        posterUrl: item.poster,
-      ),
-    );
-  }
 
   /// Resolve a meta-capable addon (for episode listings): the preferred addon
   /// if it serves meta, otherwise the first enabled addon that does.
-  Future<StremioAddon?> _metaAddonFor(StremioAddon preferred) async {
-    if (preferred.resources.contains('meta') && preferred.baseUrl.isNotEmpty) {
-      return preferred;
-    }
-    for (final a in await _stremio.getEnabledAddons()) {
-      if (a.resources.contains('meta') && a.baseUrl.isNotEmpty) return a;
-    }
-    return null;
-  }
 
-  Future<void> _playRandomEpisodeFromDetail(
-    StremioMeta item,
-    StremioAddon addon,
-  ) async {
-    final imdb = _imdbOf(item);
-    if (imdb == null) {
-      _snack('No IMDb match to pick an episode for "${item.name}".');
-      return;
-    }
-    final metaAddon = await _metaAddonFor(addon);
-    // If we fell back to a different meta addon than the item's origin, its
-    // content id won't match — query by IMDb id instead of the origin's id.
-    final contentId = (metaAddon != null && metaAddon.id == addon.id)
-        ? item.id
-        : imdb;
-    final videos = metaAddon == null
-        ? null
-        : await _stremio.fetchSeriesMeta(metaAddon, contentId);
-    if (!mounted) return;
-    if (videos != null) {
-      unawaited(
-        LocalSeriesCompletionService.instance.recordRawEpisodeInventory(
-          imdbId: imdb,
-          seriesTitle: item.name,
-          videos: videos,
-        ),
-      );
-    }
-
-    final episodes = <({int season, int episode})>[];
-    for (final v in videos ?? const <Map<String, dynamic>>[]) {
-      final sRaw = v['season'];
-      final s = sRaw is num ? sRaw.toInt() : null;
-      if (s == null || s <= 0) continue; // skip specials (season 0)
-      final eRaw = v['number'] ?? v['episode'];
-      final e = eRaw is num ? eRaw.toInt() : null;
-      if (e == null) continue;
-      episodes.add((season: s, episode: e));
-    }
-    if (episodes.isEmpty) {
-      _snack("Couldn't load episodes for \"${item.name}\".");
-      return;
-    }
-
-    final pick = episodes[Random().nextInt(episodes.length)];
-    _playSelection(
-      AdvancedSearchSelection(
-        imdbId: imdb,
-        isSeries: true,
-        title: item.name,
-        year: item.year,
-        season: pick.season,
-        episode: pick.episode,
-        contentType: item.type,
-        posterUrl: item.poster,
-      ),
-    );
-  }
 
   // Catalog Play = auto-best in-tab; Sources = manual list in-tab. For a series
   // Play auto-plays the resume episode (last-played by imdbId → title, else
@@ -5658,330 +4898,58 @@ class _SearchScreenState extends State<SearchScreenHost>
     StremioAddon addon, {
     bool isTraktSource = false,
     bool isMdblistSource = false,
-    // Merged series page: episodes are already shown inline, so a no-IMDb
-    // series must NOT fall back to pushing a standalone EpisodesScreen (that
-    // would stack a duplicate episode list on top). It resolves the resume
-    // episode against the raw catalog id and plays via the addon /stream path.
-    bool skipEpisodeFallback = false,
-    // Merged detail Resume: honour Trakt's paused position for ANY authenticated
-    // title (not just Trakt-CW-sourced ones), so Play matches the Trakt-first
-    // label from [_resolveResumeInfo]. Off elsewhere (Home/row quick-play keep
-    // their local-vs-Trakt-CW split untouched).
-    bool preferTraktResume = false,
-    // The episode the pressed button was promising, when the caller had already
-    // resolved one (merged detail). It wins over [_reconcileSeriesResume]: that
-    // reconciler only reads resume/CW positions, while the merged page's episode
-    // engine also advances off watched state. A show whose progress lives in a
-    // tracker's WATCHED list but not its continue-watching list reconciles to the
-    // empty-candidates fallback (S01E01) while the label correctly reads S1E2 —
-    // and Play would then start the pilot under a "Resume · S1E2" button.
-    ({bool started, int season, int episode})? promisedTarget,
-    // Primary-button hold: run the exact same target/scrobble reconciliation,
-    // but hand the resulting selection to the manual Sources page instead of
-    // auto-playing it. Used for series; movies already have a direct Sources
-    // callback and do not need to enter this resolver.
-    bool browseSourcesOnly = false,
-  }) async {
-    // The loader's backdrop/logo/meta line for this title. Captured here (the
-    // one play entry point that still holds the catalog meta) and read back in
-    // [SelectionPlaybackOwner.metaFor], which only ever sees a selection.
-    _selectionPlayback.captureCatalogArt(item);
-    var cancelled = false;
-    final resolving = preferTraktResume
-        ? TorrentPlaybackService.showResolvingOverlay(
-            context,
-            meta: PlaybackMeta.catalog(
-              imdbId: item.effectiveImdbId,
-              contentType: item.type,
-              title: item.name,
-              posterUrl: item.poster,
-              year: item.year,
-              addonId: addon.id,
-              art: _selectionPlayback.pendingArt,
-            ),
-            title: item.name,
-            onCancel: () => cancelled = true,
-          )
-        : null;
-    Future<void> launch(AdvancedSearchSelection selection) async {
-      debugPrint(
-        '[SeriesResume] ${browseSourcesOnly ? 'sources-open' : 'play-launch'} '
-        'title="${selection.title}" '
-        'id=${selection.imdbId} season=${selection.season} '
-        'episode=${selection.episode} trakt=${selection.traktSource} '
-        'traktPct=${selection.traktProgressPercent} '
-        'simkl=${selection.simklSource} '
-        'simklPct=${selection.simklProgressPercent} '
-        'mdblist=${selection.mdblistSource} '
-        'mdblistPct=${selection.mdblistProgressPercent}',
-      );
-      resolving?.dismiss();
-      if (cancelled) return;
-      if (browseSourcesOnly) {
-        _browseSelection(selection);
-      } else {
-        await _playSelection(selection);
-      }
-    }
 
-    try {
-      // Set the active addon before any early return so a movie play carries the
-      // right addon id into meta.addonId (addon-stream resume/next), instead of a
-      // stale one left over from a previously-browsed series.
-      _selectionPlayback.activeAddonId = addon.id;
-      final decision = await _catalogPlayResolver.resolvePlay(
-        item,
-        addon,
-        isTraktSource: isTraktSource,
-        isMdblistSource: isMdblistSource,
-        skipEpisodeFallback: skipEpisodeFallback,
-        preferTraktResume: preferTraktResume,
-        promisedTarget: promisedTarget,
-        browseSourcesOnly: browseSourcesOnly,
-        isCancelled: () => cancelled || !mounted,
-      );
-      switch (decision) {
-        case CatalogPlayLaunch(:final selection):
-          await launch(selection);
-        case CatalogPlayOpenEpisodes():
-          if (!cancelled) {
-            _openEpisodes(
-              item,
-              addon,
-              isTraktSource: isTraktSource,
-              isMdblistSource: isMdblistSource,
-            );
-          }
-        case CatalogPlayAborted():
-          break;
-      }
-    } finally {
-      resolving?.dismiss();
-    }
-  }
+
+
+
+    bool skipEpisodeFallback = false,
+
+
+
+
+    bool preferTraktResume = false,
+
+
+
+
+
+
+
+    ({bool started, int season, int episode})? promisedTarget,
+
+
+
+
+    bool browseSourcesOnly = false,
+  }) => _content.actions.onCatalogPlay(item, addon, isTraktSource: isTraktSource, isMdblistSource: isMdblistSource, skipEpisodeFallback: skipEpisodeFallback, preferTraktResume: preferTraktResume, promisedTarget: promisedTarget, browseSourcesOnly: browseSourcesOnly);
 
   /// Read-only mirror of [_onCatalogPlay]'s resume resolution, used to label the
   /// detail screen's primary button. Forwarder — body lives on
   /// [CatalogPlayResolver.resolveResumeInfo].
-  Future<({bool started, int? season, int? episode})> _resolveResumeInfo(
-    StremioMeta item,
-    StremioAddon addon, {
-    bool isTraktSource = false,
-    bool isMdblistSource = false,
-  }) =>
-      _catalogPlayResolver.resolveResumeInfo(
-        item,
-        addon,
-        isTraktSource: isTraktSource,
-        isMdblistSource: isMdblistSource,
-        isCancelled: () => !mounted,
-      );
 
   /// Play/browse selection. Resolve half is [CatalogPlayResolver.onCatalogBrowse];
   /// the host still opens episodes / the Sources page.
-  void _onCatalogBrowse(
-    StremioMeta item,
-    StremioAddon addon, {
-    bool isTraktSource = false,
-    bool isMdblistSource = false,
-  }) {
-    final decision = _catalogPlayResolver.onCatalogBrowse(
-      item,
-      isTraktSource: isTraktSource,
-      isMdblistSource: isMdblistSource,
-    );
-    if (decision.openEpisodes) {
-      _openEpisodes(
-        item,
-        addon,
-        isTraktSource: isTraktSource,
-        isMdblistSource: isMdblistSource,
-      );
-    } else if (decision.selection != null) {
-      _browseSelection(decision.selection!);
-    }
-  }
 
-  void _openEpisodes(
-    StremioMeta item,
-    StremioAddon addon, {
-    bool isTraktSource = false,
-    bool isMdblistSource = false,
-  }) {
-    _selectionPlayback.activeAddonId = addon.id;
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            settings: const RouteSettings(name: kEpisodesRouteName),
-            builder: (_) => EpisodesScreen(
-              show: item,
-              addon: addon,
-              isTelevision: widget.isTelevision,
-              isTraktSource: isTraktSource,
-              isMdblistSource: isMdblistSource,
-              // EpisodesScreen pops itself (and the detail route) before firing
-              // these, so we're back on the Search screen when they run.
-              onQuickPlay: _playSelection,
-              onItemSelected: _browseSelection,
-              // "Select Source" button: manage/pin sources via the same picker
-              // the detail screen uses (edit dialog when already bound, else the
-              // Torrent Search / Local / RD / TorBox picker) for a consistent
-              // entry point.
-              boundSourceCount: _boundCountFor,
-              onSelectSource: _handleEditOrSelectSource,
-            ),
-          ),
-        )
-        .then((_) {
-          // EpisodesScreen can mark watched / play; its plays route through
-          // _playSelection (which clears too), but marks don't — never let a
-          // pre-visit reconciled answer survive the trip.
-          _catalogPlayResolver.clearSeriesResumeCache();
-          _refreshBoundSources();
-        });
-  }
 
   /// Open the source picker (bind mode) to pin a source for [show]. For a series
   /// this searches season/complete packs (no episode), matching Home.
-  void _openBindSources(StremioMeta show) {
-    final imdb = _imdbOf(show);
-    if (imdb == null) {
-      _snack('No IMDb match to pin a source for "${show.name}".');
-      return;
-    }
-    final sel = AdvancedSearchSelection(
-      imdbId: imdb,
-      isSeries: show.type == 'series',
-      title: show.name,
-      year: show.year,
-      contentType: show.type,
-      posterUrl: show.poster,
-    );
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (_) => _SourcesScreen(
-              selection: sel,
-              meta: _selectionPlayback.metaFor(sel),
-              isTelevision: widget.isTelevision,
-              bindMode: true,
-            ),
-          ),
-        )
-        .then((_) => _refreshBoundSources());
-  }
 
   /// Free-text keyword bind: push the sources screen seeded with a pack query
   /// (series → `name complete`, movie → `name year`), where tapping a result
   /// pins it as [show]'s bound source. The query is editable.
-  void _openKeywordBind(StremioMeta show) {
-    final imdb = _imdbOf(show);
-    if (imdb == null) {
-      _snack('No IMDb match to pin a source for "${show.name}".');
-      return;
-    }
-    final isSeries = show.type == 'series';
-    final seed = isSeries
-        ? '${show.name} complete'
-        : (show.year != null && show.year!.isNotEmpty
-              ? '${show.name} ${show.year}'
-              : show.name);
-    final sel = AdvancedSearchSelection(
-      imdbId: imdb,
-      isSeries: isSeries,
-      title: show.name,
-      year: show.year,
-      contentType: show.type,
-      posterUrl: show.poster,
-    );
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (_) => _SourcesScreen(
-              selection: sel,
-              meta: _selectionPlayback.metaFor(sel),
-              isTelevision: widget.isTelevision,
-              bindMode: true,
-              keywordSeed: seed,
-            ),
-          ),
-        )
-        .then((_) => _refreshBoundSources());
-  }
 
   /// Catalog auto-best play — the service picks the provider, shows the real
   /// cinematic overlay, searches, and plays (with source list + content
   /// metadata so the in-player Sources switcher + Continue Watching work).
   // Decision: this >10-line adapter retains State.context error timing and
   // listener try/finally. Remove with real G17/Q2 caller/lifecycle migration.
-  Future<void> _playSelection(AdvancedSearchSelection sel) async {
-    // Playback is about to change every resume signal — never let a
-    // pre-playback reconciled answer survive into the post-playback reads.
-    _catalogPlayResolver.clearSeriesResumeCache();
-    // Row quick-play skips the detail page, so there's no detail route whose
-    // pop can drive the post-playback refresh — this method has to do it. WHEN
-    // it can depends on the player: the in-app route only completes the await
-    // below once it pops (playback over, progress final), while an external
-    // activity returns control immediately, still mid-launch. Latch which one
-    // took the stream so a native/external launch doesn't fire a pointless
-    // tracker refetch while the player is still opening — its real refresh
-    // arrives via _onPlaybackReturned.
-    var external = false;
-    void onExternal() => external = true;
-    MainPageBridge.addExternalPlayerLaunchListener(onExternal);
-    try {
-      await _selectionPlayback.launch(context, sel, routes: _selectionRoutes);
-    } finally {
-      MainPageBridge.removeExternalPlayerLaunchListener(onExternal);
-    }
-    if (!mounted) return;
-    // The full refresh only when the in-app player has genuinely finished AND
-    // the board is what's on screen. An external launch is still opening, and a
-    // detail page / See-All on top owns the refresh through its own route
-    // callback — the latch keeps that deferred pass aware playback happened, so
-    // skipping here loses nothing and avoids refreshing an invisible board.
-    await _selectionPlayback.refreshAfterLaunch(
-      context,
-      external: external,
-      routes: _selectionRoutes,
-    );
-  }
 
   /// Manual sources list in-tab — the screen searches itself (own loading) and
   /// each tap plays with the full source list + content metadata.
   // Decision: this >10-line adapter logs/guards before State.context. Remove
   // with real G17/Q2 caller migration; do not replace with an eager forwarder.
-  void _browseSelection(
-    AdvancedSearchSelection sel, {
-    // Set only by the Play-button hand-off: the press already said "play", so
-    // the row the user picks must not re-ask via the post-torrent action.
-    bool forcePlayOnTap = false,
-  }) {
-    // Every route into the manual list lands here — the Play-button hand-off,
-    // the movie Sources button, and the episode long-press — so this is where
-    // the episode the list will search is finally fixed.
-    debugPrint(
-      '[SeriesResume] picker-open title="${sel.title}" id=${sel.imdbId} '
-      'target=S${sel.season}E${sel.episode} label="${sel.formattedLabel}"',
-    );
-    if (sel.imdbId.isEmpty) {
-      _snack('No IMDb match to find sources for "${sel.title}".');
-      return;
-    }
-    _selectionPlayback.browse(
-      context,
-      sel,
-      routes: _selectionRoutes,
-      forcePlayOnTap: forcePlayOnTap,
-    );
-  }
 
-  void _snack(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), duration: const Duration(seconds: 3)),
-    );
-  }
+  void _snack(String message) => _content.actions.snack(message);
 
   // ── Build ──────────────────────────────────────────────────────────────────
 
@@ -6013,9 +4981,7 @@ class _SearchScreenState extends State<SearchScreenHost>
         //  • Home-New board on desktop/mobile classic — keeps a persistent
         //    search bar above the board; the separate Search tab is an
         //    additional way in on TV and sidebar layouts, not a replacement.
-        child: widget.discoverMode
-            ? SafeArea(child: _buildDiscover())
-            : (widget.isTelevision && !widget.searchMode)
+        child: (widget.isTelevision && !widget.searchMode)
             ? SafeArea(child: _buildBoard())
             : _spotlightShellActive
             ? _buildSpotlightShell()
@@ -6841,260 +5807,20 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// counts once. The board's `_load` does this via `_refreshBoundSources`; the
   /// Trakt loader only refreshes bound counts when Trakt is connected, so
   /// non-Trakt users would otherwise never get badges in Discover.
-  Future<void> _primeDiscoverRows() async {
-    await Future.wait([
-      _loadContinueWatching(),
-      _loadTraktContinueWatching(refreshBound: false),
-      // Populates _simklAll/_simklProgress for the Simkl source's Continue
-      // Watching list (folded into that source, like Trakt's).
-      _loadSimklContinueWatching(refreshBound: false),
-      _loadMdblistContinueWatching(refreshBound: false),
-    ]);
-    if (mounted) await _refreshBoundSources();
-  }
 
   /// Apply fixed/remembered sources from local preferences immediately, then
   /// hydrate add-ons separately. Add-on defaults wait only for the inventory
   /// needed to validate them, and a source picked during that wait always wins.
-  Future<void> _loadDiscoverAddons() async {
-    final revision = _discSourceRevision;
-    final values = await Future.wait([
-      StorageService.getDiscoverDefaultSource(),
-      StorageService.getDiscoverLastSource(),
-    ]);
-    if (!mounted) return;
-    final defaultSource = values[0];
-    final lastSource = values[1];
-    var landing = defaultSource == StorageService.discoverDefaultRememberLast
-        ? lastSource
-        : defaultSource;
-    final fixedSource =
-        landing == _discCw ||
-        landing == _discTrakt ||
-        landing == _discSimkl ||
-        (kMdblistEnabled && landing == _discMdblist);
 
-    // Search→MDBList handoff is a stronger, explicit navigation intent. For
-    // ordinary fixed defaults, paint now instead of waiting on manifests.
-    if (fixedSource &&
-        discoverLandingLoadIsCurrent(
-          capturedRevision: revision,
-          currentRevision: _discSourceRevision,
-          hasPendingHandoff: _discMdblistList != null,
-        )) {
-      if (_discSource != landing) setState(() => _discSource = landing);
-      unawaited(StorageService.setDiscoverLastSource(landing));
-    }
-
-    List<StremioAddon> addons = const [];
-    try {
-      addons = await _stremio.getCatalogAddons();
-    } catch (_) {}
-    if (!mounted) return;
-    final browsable = [
-      for (final a in addons)
-        if (a.catalogs.any((c) => c.isBrowsable)) a,
-    ];
-    landing = resolveDiscoverLandingSource(
-      defaultSource: defaultSource,
-      lastSource: lastSource,
-      mdblistEnabled: kMdblistEnabled,
-      browsableAddonIds: browsable.map((a) => a.id),
-    );
-    setState(() {
-      _discAddons = browsable;
-      for (final a in addons) {
-        _addonsById.putIfAbsent(a.id, () => a);
-      }
-      if (!fixedSource &&
-          discoverLandingLoadIsCurrent(
-            capturedRevision: revision,
-            currentRevision: _discSourceRevision,
-            hasPendingHandoff: _discMdblistList != null,
-          )) {
-        _discSource = landing;
-      }
-    });
-    if (!fixedSource &&
-        discoverLandingLoadIsCurrent(
-          capturedRevision: revision,
-          currentRevision: _discSourceRevision,
-          hasPendingHandoff: _discMdblistList != null,
-        )) {
-      unawaited(StorageService.setDiscoverLastSource(landing));
-    }
-  }
 
   /// The Discover tab: a "Source" dropdown over a single browsable grid. Each
   /// source is rendered by the matching See-All panel in [embedded] mode (no
   /// Scaffold/back header), with the Source dropdown injected as its leading
   /// filter so DPAD walks Source → the panel's own filters → grid. All item
   /// open/play/bound wiring is this screen's existing board handlers.
-  Widget _buildDiscover() => DiscoverView(
-    isTelevision: widget.isTelevision,
-    lifecycle: _discover,
-    panel: _buildDiscoverPanel(),
-  );
 
-  Widget _buildDiscoverPanel() {
-    final source = StremioDropdown<String>(
-      label: 'Source',
-      value: _discSource,
-      isTelevision: widget.isTelevision,
-      // TV: a quiet violet segment leading the filter line — the row's identity
-      // color (chrome accent), distinct from the white filter values.
-      quiet: widget.isTelevision,
-      quietAccent: true,
-      focusNode: _discSourceNode,
-      options: [
-        for (final o in discoverSourceDropdownOptions(
-          mdblistEnabled: kMdblistEnabled,
-          mdblistAuthenticated: _isMdblistAuthenticated,
-          currentSource: _discSource,
-          addons: [
-            for (final a in _discAddons) (id: a.id, name: a.name),
-          ],
-        ))
-          StremioDropdownOption(o.value, o.label),
-      ],
-      onSelected: (s) {
-        if (s == _discSource) return;
-        // Swapping source re-mounts the grid and drops DPAD focus back onto the
-        // Source dropdown — clear the rail (and the stage backdrop behind it)
-        // so they show the prompt/ink, not a stale title from the previous
-        // source, until a new tile is focused.
-        _discFocused.value = null;
-        _discShown.value = null;
-        setState(() {
-          _discSourceRevision++;
-          _discSource = s;
-        });
-        unawaited(StorageService.setDiscoverLastSource(s));
-        // The swap re-mounts the embedded panel (new ValueKey), which re-attaches
-        // this shared node; pin the DPAD ring back on the Source dropdown so it
-        // isn't lost in the dispose/reattach.
-        if (widget.isTelevision) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) _discSourceNode.requestFocus();
-          });
-        }
-      },
-    );
 
-    if (_discSource == _discTrakt) {
-      return TraktSeeAllScreen(
-        key: const ValueKey('disc_trakt'),
-        cwItems: _traktAll,
-        cwProgress: _cw.cwCardMaps(CwKind.trakt).progress,
-        onOpen: _cw.openTrakt,
-        onQuickPlay: _pikpakOnly ? null : _cw.playTrakt,
-        onItemFocused: _onDiscFocused,
-        isBound: _isBound,
-        isTelevision: widget.isTelevision,
-        embedded: true,
-        leading: source,
-        leadingNode: _discSourceNode,
-      );
-    }
 
-    if (_discSource == _discSimkl) {
-      return SimklSeeAllScreen(
-        key: const ValueKey('disc_simkl'),
-        // CW is folded in as the leading "List" option (like the Trakt source).
-        // Plain open/play for the browse lists; the CW-aware handlers (resume at
-        // the paused/up-next episode) apply ONLY while the CW list is showing.
-        cwItems: _simklAll,
-        cwProgress: _simklProgress,
-        onOpen: _openSimklItem,
-        onQuickPlay: _pikpakOnly ? null : _playSimklItem,
-        cwOnOpen: _cw.openSimkl,
-        cwOnQuickPlay: _pikpakOnly ? null : _cw.playSimkl,
-        onItemFocused: _onDiscFocused,
-        isBound: _isBound,
-        isTelevision: widget.isTelevision,
-        embedded: true,
-        leading: source,
-        leadingNode: _discSourceNode,
-      );
-    }
-
-    if (_discSource == _discMdblist) {
-      // MDBList items are plain catalog titles (StremioMeta w/ imdb id), so they
-      // open and quick-play through the same generic catalog paths as an addon
-      // catalog item — no MDBList-specific handlers needed.
-      return MdblistSeeAllScreen(
-        key: const ValueKey('disc_mdblist'),
-        initialList: _discMdblistList,
-        onOpen: (item) => _openItem(
-          item,
-          _addonForContinue(item.sourceAddon?.id),
-          isMdblistSource: true,
-        ),
-        onQuickPlay: _pikpakOnly
-            ? null
-            : (item) => _onCatalogPlay(
-                item,
-                _addonForContinue(item.sourceAddon?.id),
-                isMdblistSource: true,
-              ),
-        onItemFocused: _onDiscFocused,
-        isBound: _isBound,
-        isTelevision: widget.isTelevision,
-        embedded: true,
-        leading: source,
-        leadingNode: _discSourceNode,
-      );
-    }
-
-    // An installed addon catalog source.
-    if (_discSource.startsWith(_discAddonPrefix)) {
-      final addon = _addonsById[_discSource.substring(_discAddonPrefix.length)];
-      final catalog = addon?.catalogs.cast<StremioAddonCatalog?>().firstWhere(
-        (c) => c != null && c.isBrowsable,
-        orElse: () => null,
-      );
-      if (addon != null && catalog != null) {
-        return CatalogSeeAllScreen(
-          key: ValueKey('disc_${addon.id}'),
-          addon: addon,
-          initialCatalog: catalog,
-          isTelevision: widget.isTelevision,
-          onOpenItem: (item) => _openItem(item, addon),
-          onQuickPlay: _pikpakOnly
-              ? null
-              : (item) => _onCatalogPlay(item, addon),
-          onItemFocused: _onDiscFocused,
-          embedded: true,
-          leading: source,
-          leadingNode: _discSourceNode,
-        );
-      }
-      // Addon vanished (uninstalled) — fall through to Continue Watching.
-    }
-
-    // Default: Continue Watching.
-    return ContinueWatchingSeeAllScreen(
-      key: const ValueKey('disc_cw'),
-      title: 'Continue Watching',
-      items: _cwAll,
-      progressOf: (m) => _cw.cwCardProgress(CwKind.local, m),
-      onOpen: _cw.openLocal,
-      onQuickPlay: _pikpakOnly ? null : _cw.playLocal,
-      onItemFocused: _onDiscFocused,
-      isBound: _isBound,
-      isTelevision: widget.isTelevision,
-      embedded: true,
-      leading: source,
-      leadingNode: _discSourceNode,
-      // Re-fetch when a detail/player route pops back so finished titles drop out
-      // (the quick-play path doesn't reload _cwAll on its own).
-      onReload: () async {
-        await _loadContinueWatching();
-        if (!mounted) return const <StremioMeta>[];
-        return List<StremioMeta>.of(_cwAll);
-      },
-    );
-  }
 
   Widget _buildBoard() {
     if (_loading) {
@@ -7806,7 +6532,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// controls. Search stays independent: its standalone result walls retain
   /// their normal labels and badges.
   Widget _withHomeExpandedCardSettings(Widget child) {
-    if (widget.searchMode || widget.discoverMode) return child;
+    if (widget.searchMode) return child;
     return DiscoverCardSettingsScope(
       showTypeTags: DiscoverPrefs.showTypeTags,
       showRatings: DiscoverPrefs.showRatings,
@@ -7920,7 +6646,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   }
 
   /// A real content player launched — see [_playedSinceRefresh].
-  void _markPlaybackStarted() => _playedSinceRefresh = true;
+  void _markPlaybackStarted() => _content.markPlaybackStarted();
 
   /// Re-read everything a finished playback (or a detail/See-All visit) can
   /// change: local Continue Watching, then — when something actually played —
@@ -7937,25 +6663,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// Fire-and-forget from route callbacks and the playback-return listener, so
   /// a transient storage/network error must not become an unhandled async
   /// exception (a stale row is recoverable; a crash-log isn't warranted).
-  Future<void> _refreshAfterPlayback({bool trackers = false}) async {
-    _catalogPlayResolver.clearSeriesResumeCache();
-    // Consume the latch up front: a second refresh racing this one must not
-    // repeat the tracker fetches this one is already doing.
-    final withTrackers = trackers || _playedSinceRefresh;
-    _playedSinceRefresh = false;
-    try {
-      await _favourites.loadMyWatchlist();
-      if (!mounted) return;
-      await _cw.reloadAfterPlayback(
-        searchMode: widget.searchMode,
-        withTrackers: withTrackers,
-      );
-      if (!mounted) return;
-      await _refreshBoundSources();
-    } catch (e) {
-      debugPrint('SearchScreen: post-playback refresh failed: $e');
-    }
-  }
+  Future<void> _refreshAfterPlayback({bool trackers = false}) => _content.refreshAfterPlayback(trackers: trackers);
 
   /// Playback ran in a separate ACTIVITY and the app just came back (see
   /// [MainPageBridge.notifyPlaybackReturned]). Only refresh when the board is
@@ -7963,11 +6671,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// the refresh and the board re-reads through the covering route's `.then`
   /// when it pops — so this can't double up with it. The latch survives until
   /// then, so the deferred refresh still knows playback happened.
-  void _onPlaybackReturned() {
-    if (!mounted) return;
-    if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
-    unawaited(_refreshAfterPlayback());
-  }
+  void _onPlaybackReturned() => _content.onPlaybackReturned();
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -7986,7 +6690,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   /// Refresh state that a See-All screen may have changed (Continue Watching
   /// progress/removal, bound sources) when it pops back to the board — plus the
   /// tracker rows when the user played something from the grid.
-  Future<void> _afterSeeAllReturn() => _refreshAfterPlayback();
+  Future<void> _afterSeeAllReturn() => _content.afterSeeAllReturn();
 
   /// Shared header for a board rail: a "Popular Movies"-style title (the
   /// content type lives in the words — [CatalogSection.rowTitle]) with the

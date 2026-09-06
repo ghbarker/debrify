@@ -325,14 +325,20 @@ void main() {
         discover,
         contains("The Discover STAGE layout (`discover_layout` = 'stage'"),
       );
-      final handoff = RegExp(
-        r'Widget _buildDiscover\(\)\s*=>\s*DiscoverView\(([\s\S]*?)\);',
-      ).firstMatch(host);
-      expect(handoff, isNotNull, reason: 'host must hand off to DiscoverView');
-      final arguments = handoff!.group(1)!;
+      final composition = File(
+        'lib/screens/search/discover_screen.dart',
+      ).readAsStringSync();
+      final handoffs = RegExp(
+        r'DiscoverView\(([\s\S]*?)\n\s*\)',
+      ).allMatches(composition).toList();
+      expect(handoffs, hasLength(1),
+          reason: 'actual Discover composition must build one DiscoverView');
+      final arguments = handoffs.single.group(1)!;
       expect(arguments, matches(RegExp(r'panel:\s*_buildDiscoverPanel\(\),')));
       expect(RegExp(r'_buildDiscoverPanel\(').allMatches(arguments), hasLength(1));
       expect(host, isNot(contains('Widget _buildDiscoverStage(')));
+      expect(host, isNot(contains('Widget _buildDiscover(')));
+      expect(host, isNot(contains('Widget _buildDiscoverPanel(')));
       expect(_homeSwitchChunk(host), isNot(contains('_buildDiscoverStage')));
       expect(_homeSwitchChunk(host), isNot(contains('DiscoverView')));
     });

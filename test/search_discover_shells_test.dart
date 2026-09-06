@@ -6,6 +6,9 @@ import 'package:debrify/screens/search/discover_screen.dart';
 import 'package:debrify/screens/search/search_screen_shells.dart';
 import 'package:debrify/screens/search_screen.dart';
 import 'package:debrify/services/storage_service.dart';
+import 'discover_screen_origin_test.dart' show mountDiscover;
+import 'favourites_rows_origin_test.dart'
+    show prepareFavourites, closeFavourites;
 
 Widget _shell({
   bool isTelevision = false,
@@ -18,6 +21,16 @@ Widget _shell({
 );
 
 void main() {
+  testWidgets('Discover dispatch mounts its composition without legacy host',
+      (tester) async {
+    await prepareFavourites(tester);
+    await mountDiscover(tester);
+    expect(find.byType(SearchScreenHost), findsNothing);
+    expect(tester.state(find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_DiscoverComposition')).mounted, isTrue);
+    await closeFavourites(tester);
+  });
+
   group('searchMode vs discoverMode vs Home tab / variant', () {
     test('Home is tab 15 / variant board / analytics home', () {
       expect(searchScreenTabIndex(searchMode: false, discoverMode: false), 15);
@@ -105,9 +118,8 @@ void main() {
       expect((search.host as SearchScreenHost).searchMode, isTrue);
       expect((search.host as SearchScreenHost).discoverMode, isFalse);
       final discover = _shell(discoverMode: true) as DiscoverScreen;
-      expect(discover.host, isA<SearchScreenHost>());
-      expect((discover.host as SearchScreenHost).discoverMode, isTrue);
-      expect((discover.host as SearchScreenHost).searchMode, isFalse);
+      expect(discover.host, isNull,
+          reason: 'intentional cutover: Discover composes without legacy State');
       expect((_shell() as SearchScreenHost).searchMode, isFalse);
       expect((_shell() as SearchScreenHost).discoverMode, isFalse);
     });
