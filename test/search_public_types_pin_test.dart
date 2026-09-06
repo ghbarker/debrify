@@ -86,8 +86,15 @@ void main() {
     });
 
     test('favourites kinds stay the six leading-row values', () {
+      final favourites = File(
+        'lib/screens/search/fav_row_ref.dart',
+      ).readAsStringSync();
       expect(
-        cards,
+        host,
+        contains("export 'search/fav_row_ref.dart' show FavKind, FavRowRef;"),
+      );
+      expect(
+        favourites,
         contains(
           RegExp(
             r'enum _?FavKind \{\s*'
@@ -104,16 +111,19 @@ void main() {
     });
 
     test('FavRowRef is value-equal on kind + list; IPTV lists use list >= 0', () {
-      expect(cards, contains(RegExp(r'class _?FavRowRef \{')));
-      expect(cards, contains(RegExp(r'final _?FavKind kind;')));
-      expect(cards, contains('final int list;'));
+      final favourites = File(
+        'lib/screens/search/fav_row_ref.dart',
+      ).readAsStringSync();
+      expect(favourites, contains(RegExp(r'class _?FavRowRef \{')));
+      expect(favourites, contains(RegExp(r'final _?FavKind kind;')));
+      expect(favourites, contains('final int list;'));
       expect(
-        cards,
+        favourites,
         contains(RegExp(r'const _?FavRowRef\(this\.kind, \[this\.list = -1\]\);')),
       );
-      expect(cards, contains('bool get isIptvList => list >= 0;'));
+      expect(favourites, contains('bool get isIptvList => list >= 0;'));
       expect(
-        cards,
+        favourites,
         contains(
           RegExp(
             r'other is _?FavRowRef && other\.kind == kind && other\.list == list',
