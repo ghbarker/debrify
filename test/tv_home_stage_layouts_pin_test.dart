@@ -91,6 +91,52 @@ void _expectDeckSource(String host, String stage) {
   expect(_methodBody(stage, 'build'), contains('bindings.seedFocus();'));
 }
 
+const _mosaicDispatch =
+    'return MosaicStage(bindings: _mosaicBindings, isTelevision: widget.isTelevision);';
+
+String _mosaicSource() =>
+    File('lib/screens/search/stages/mosaic_board_stage.dart').readAsStringSync();
+
+void _expectMosaicEmpty(String stage) {
+  final body = _methodBody(stage, 'build');
+  expect(body, contains('bindings.resolveRail()'));
+  expect(body, matches(RegExp(
+    r'if \(view == null\)\s*\{\s*'
+    r'return BrandLoadingStage\(isTelevision: isTelevision\);\s*\}',
+  )));
+}
+
+void _expectMosaicSource(String host, String stage) {
+  expect(_homeSwitchChunk(host), contains(_mosaicDispatch));
+  expect(stage, contains('class MosaicStage extends StatelessWidget'));
+  expect(_methodBody(stage, 'build'), contains('return LayoutBuilder('));
+  _expectMosaicEmpty(stage);
+  expect(_methodBody(stage, 'build'), contains('bindings.seedFocus();'));
+}
+
+const _promenadeDispatch =
+    'return PromenadeStage(bindings: _promenadeBindings, isTelevision: widget.isTelevision);';
+
+String _promenadeSource() =>
+    File('lib/screens/search/stages/promenade_board_stage.dart').readAsStringSync();
+
+void _expectPromenadeEmpty(String stage) {
+  final body = _methodBody(stage, 'build');
+  expect(body, contains('bindings.resolveRail()'));
+  expect(body, matches(RegExp(
+    r'if \(view == null\)\s*\{\s*'
+    r'return BrandLoadingStage\(isTelevision: isTelevision\);\s*\}',
+  )));
+}
+
+void _expectPromenadeSource(String host, String stage) {
+  expect(_homeSwitchChunk(host), contains(_promenadeDispatch));
+  expect(stage, contains('class PromenadeStage extends StatelessWidget'));
+  expect(_methodBody(stage, 'build'), contains('return LayoutBuilder('));
+  _expectPromenadeEmpty(stage);
+  expect(_methodBody(stage, 'build'), contains('bindings.seedFocus();'));
+}
+
 void main() {
   late String host;
   late String layouts;
@@ -196,8 +242,8 @@ void main() {
       expect(chunk, isNot(contains("case 'classic':")));
       expect(chunk, contains('return _CanvasBoardStage(host: this);'));
       expect(chunk, contains('return _AtriumBoardStage(host: this);'));
-      expect(chunk, contains('return _MosaicBoardStage(host: this);'));
-      expect(chunk, contains('return _PromenadeBoardStage(host: this);'));
+      expect(chunk, contains(_mosaicDispatch));
+      expect(chunk, contains(_promenadeDispatch));
       expect(chunk, contains(_deckDispatch));
       expect(chunk, contains('return TonightStage(content: _tonight, isTelevision: widget.isTelevision);'));
       expect(chunk, contains('return SpotlightStage(readFrame: () {'));
@@ -216,6 +262,50 @@ void main() {
   });
 
   group('stage builders (source pin)', () {
+    test('Promenade source inventory rejects dispatch, empty guard and seed removal', () {
+      final stage = _promenadeSource();
+      _expectPromenadeSource(host, stage);
+      // Finite source-copy controls, not runtime or origin behavior evidence.
+      expect(
+        () => _expectPromenadeSource(host.replaceFirst(_promenadeDispatch, ''), stage),
+        throwsA(isA<TestFailure>()),
+      );
+      final emptyGuard = RegExp(
+        r'if \(view == null\)\s*\{\s*'
+        r'return BrandLoadingStage\(isTelevision: isTelevision\);\s*\}',
+      );
+      expect(emptyGuard.allMatches(stage), hasLength(1));
+      expect(
+        () => _expectPromenadeSource(host, stage.replaceFirst(emptyGuard, '')),
+        throwsA(isA<TestFailure>()),
+      );
+      expect(
+        () => _expectPromenadeSource(host, stage.replaceFirst('bindings.seedFocus();', '')),
+        throwsA(isA<TestFailure>()),
+      );
+    });
+    test('Mosaic source inventory rejects dispatch, empty guard and seed removal', () {
+      final stage = _mosaicSource();
+      _expectMosaicSource(host, stage);
+      // Finite source-copy controls, not runtime or origin behavior evidence.
+      expect(
+        () => _expectMosaicSource(host.replaceFirst(_mosaicDispatch, ''), stage),
+        throwsA(isA<TestFailure>()),
+      );
+      final emptyGuard = RegExp(
+        r'if \(view == null\)\s*\{\s*'
+        r'return BrandLoadingStage\(isTelevision: isTelevision\);\s*\}',
+      );
+      expect(emptyGuard.allMatches(stage), hasLength(1));
+      expect(
+        () => _expectMosaicSource(host, stage.replaceFirst(emptyGuard, '')),
+        throwsA(isA<TestFailure>()),
+      );
+      expect(
+        () => _expectMosaicSource(host, stage.replaceFirst('bindings.seedFocus();', '')),
+        throwsA(isA<TestFailure>()),
+      );
+    });
     test('Deck source inventory rejects dispatch, empty guard and seed removal', () {
       final stage = _deckSource();
       _expectDeckSource(host, stage);
@@ -240,6 +330,14 @@ void main() {
     });
     test('all seven Home stage builders exist', () {
       for (final name in kTvHomeStageBuilderNames) {
+        if (name == '_buildPromenadeBoard') {
+          expect(_methodBody(_promenadeSource(), 'build'), contains('return LayoutBuilder('));
+          continue;
+        }
+        if (name == '_buildMosaicBoard') {
+          expect(_methodBody(_mosaicSource(), 'build'), contains('return LayoutBuilder('));
+          continue;
+        }
         if (name == '_buildDeckBoard') {
           expect(_methodBody(_deckSource(), 'build'), contains('return LayoutBuilder('));
           continue;
@@ -269,8 +367,8 @@ void main() {
       const widgets = [
         '_CanvasBoardStage',
         '_AtriumBoardStage',
-        '_MosaicBoardStage',
-        '_PromenadeBoardStage',
+        'MosaicStage',
+        'PromenadeStage',
         'DeckStage',
         'TonightStage',
         'SpotlightStage',
@@ -294,6 +392,14 @@ void main() {
           '_buildPromenadeBoard',
           '_buildDeckBoard',
         ]) {
+          if (name == '_buildPromenadeBoard') {
+            _expectPromenadeEmpty(_promenadeSource());
+            continue;
+          }
+          if (name == '_buildMosaicBoard') {
+            _expectMosaicEmpty(_mosaicSource());
+            continue;
+          }
           if (name == '_buildDeckBoard') {
             _expectDeckEmpty(_deckSource());
             continue;
@@ -399,6 +505,14 @@ void main() {
           '_buildMosaicBoard',
           '_buildDeckBoard',
         ]) {
+          if (name == '_buildPromenadeBoard') {
+            expect(_methodBody(_promenadeSource(), 'build'), contains('bindings.seedFocus();'));
+            continue;
+          }
+          if (name == '_buildMosaicBoard') {
+            expect(_methodBody(_mosaicSource(), 'build'), contains('bindings.seedFocus();'));
+            continue;
+          }
           if (name == '_buildDeckBoard') {
             expect(_methodBody(_deckSource(), 'build'), contains('bindings.seedFocus();'));
             continue;
