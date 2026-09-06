@@ -533,38 +533,6 @@ class _SeeAllLinkState extends State<_SeeAllLink> {
   }
 }
 
-/// The kinds of leading saved-content rows. Render order (Watchlist Movies,
-/// Watchlist Series, Playlist, Debrify TV, Stremio TV, IPTV) is defined by
-/// [_SearchScreenState._favRowKinds], the single source of truth for rendering
-/// and the index-based DPAD focus wiring.
-enum FavKind {
-  watchlistMovies,
-  watchlistSeries,
-  iptv,
-  debrify,
-  stremio,
-  playlist,
-}
-
-/// One visible favourites-family row: a singleton [kind] row ([list] == -1),
-/// or — for `kind == FavKind.iptv` with [list] >= 0 — the IPTV custom-list
-/// row at that index of [_SearchScreenState._iptvListRows]. Value-equal so
-/// rebuilt ref lists compare cleanly.
-class FavRowRef {
-  final FavKind kind;
-  final int list;
-  const FavRowRef(this.kind, [this.list = -1]);
-
-  bool get isIptvList => list >= 0;
-
-  @override
-  bool operator ==(Object other) =>
-      other is FavRowRef && other.kind == kind && other.list == list;
-
-  @override
-  int get hashCode => Object.hash(kind, list);
-}
-
 /// One opted-in IPTV custom list shown as a Home row. [channels] are rebuilt
 /// from the stored list metadata alone (no provider fetch) with their full
 /// presentation fields — a list can hold VOD alongside live channels, and the

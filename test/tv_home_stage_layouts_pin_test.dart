@@ -177,7 +177,7 @@ void main() {
       expect(chunk, contains('return _PromenadeBoardStage(host: this);'));
       expect(chunk, contains('return _DeckBoardStage(host: this);'));
       expect(chunk, contains('return _TonightBoardStage(host: this);'));
-      expect(chunk, contains('return _SpotlightBoardStage(host: this);'));
+      expect(chunk, contains('return SpotlightStage(readFrame: () {'));
     });
 
     test('classic LayoutBuilder hero/rows stay after the switch', () {
@@ -195,6 +195,16 @@ void main() {
   group('stage builders (source pin)', () {
     test('all seven Home stage builders exist', () {
       for (final name in kTvHomeStageBuilderNames) {
+        if (name == '_buildSpotlightBoard') {
+          final stage = File(
+            'lib/screens/search/stages/spotlight_board_stage.dart',
+          ).readAsStringSync();
+          expect(
+            _methodBody(stage, 'build'),
+            contains('return SpotlightBoard('),
+          );
+          continue;
+        }
         expect(layouts.contains('Widget $name('), isTrue, reason: name);
       }
     });
@@ -207,7 +217,7 @@ void main() {
         '_PromenadeBoardStage',
         '_DeckBoardStage',
         '_TonightBoardStage',
-        '_SpotlightBoardStage',
+        'SpotlightStage',
       ];
       for (final name in widgets) {
         expect(
@@ -273,16 +283,35 @@ void main() {
     test(
       'Spotlight always builds SpotlightBoard; empty shelves are dispatch-only',
       () {
-        final body = _methodBody(layouts, '_buildSpotlightBoard');
-        expect(body, contains('return SpotlightBoard('));
-        expect(body, contains('trailersEnabled: _heroTrailerEnabled,'));
+        final stage = File(
+          'lib/screens/search/stages/spotlight_board_stage.dart',
+        ).readAsStringSync();
+        final body = _methodBody(stage, 'build');
         expect(
-          body,
+          stage,
           contains(
-            'onDwell: (item) => _scheduleHeroTrailer(item, fromSpotlight: true),',
+            'const SpotlightStage({super.key, required this.readFrame});',
           ),
         );
-        expect(body, contains('fullBleed: true,'));
+        expect(body, contains('final frame = readFrame();'));
+        final frameMatch = RegExp(
+          r'return SpotlightStage\(readFrame: \(\) \{([\s\S]*?)\n\s*\}\);',
+        ).firstMatch(_homeSwitchChunk(host));
+        expect(frameMatch, isNotNull);
+        final frame = frameMatch!.group(1)!;
+        expect(body, contains('return SpotlightBoard('));
+        expect(body, contains('trailersEnabled: frame.trailersEnabled,'));
+        expect(body, contains('onDwell: frame.onDwell,'));
+        expect(body, contains('trailer: frame.trailer,'));
+        expect(frame, contains('trailersEnabled: _heroTrailerEnabled,'));
+        expect(
+          frame,
+          matches(
+            r'onDwell: \(StremioMeta item\) =>\s*'
+            r'_scheduleHeroTrailer\(item, fromSpotlight: true\),',
+          ),
+        );
+        expect(frame, contains('fullBleed: true,'));
         expect(
           body,
           isNot(contains('BrandLoadingStage')),

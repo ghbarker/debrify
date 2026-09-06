@@ -8,7 +8,7 @@ import '../../services/home_collection_rows.dart';
 import '../../services/home_list_rows.dart';
 import '../../services/home_row_order.dart';
 import '../../utils/platform_util.dart';
-import '../search_screen.dart' show FavKind, FavRowRef;
+import 'fav_row_ref.dart';
 import 'catalog_search_controller.dart';
 import 'continue_watching_controller.dart';
 import 'fav_rows_controller.dart';

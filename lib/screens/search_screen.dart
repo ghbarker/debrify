@@ -41,6 +41,9 @@ import 'search/keyword_search_controller.dart';
 import 'search/continue_watching_controller.dart';
 import 'search/continue_watching_row.dart';
 import 'search/fav_rows_controller.dart';
+import 'search/fav_row_ref.dart';
+import 'search/stages/spotlight_board_stage.dart';
+import 'search/stages/spotlight_stage_content.dart';
 import 'search/fav_row.dart';
 import 'search/hero_presenter.dart';
 import 'search/discover_lifecycle.dart';
@@ -67,7 +70,6 @@ import '../services/torrent_bulk_add_service.dart';
 import '../services/torrent_playback_service.dart';
 import '../services/torrent_service.dart';
 import '../services/playback/catalog_play_resolver.dart';
-import '../utils/continue_watching_presentation.dart';
 import '../utils/dialog_tap_guard.dart';
 import '../utils/format_tag_detector.dart';
 import '../utils/torrent_filter_matcher.dart';
@@ -102,11 +104,12 @@ import '../widgets/trakt/trakt_menu_helpers.dart';
 import 'settings/tv_home_style_page.dart'
     show effectiveOffTvHomeStyle, shouldUseOffTvSpotlightShell;
 
+export 'search/fav_row_ref.dart' show FavKind, FavRowRef;
+
 part 'search/search_sources.dart';
 part 'search/search_card_widgets.dart';
 part 'search/search_hero_widgets.dart';
 part 'search/search_stage_widgets.dart';
-part 'search/stages/spotlight_board_stage.dart';
 part 'search/stages/canvas_board_stage.dart';
 part 'search/stages/promenade_board_stage.dart';
 part 'search/stages/atrium_board_stage.dart';
@@ -2807,299 +2810,26 @@ class _SearchScreenState extends State<SearchScreenHost>
     );
   }
 
-  List<SpotlightShelf> get _spotlightShelves => [
-    for (final rail in _canvasRails) _spotlightShelfForRail(rail),
-  ];
-
-  SpotlightShelf _spotlightShelfForRail(CanvasRail rail) {
-    // Rail identity — the same key Canvas/Atrium key their rails by — so the
-    // board reuses shelf subtrees when tracker rows front-insert.
-    final railKey = _canvasRailKeyOf(rail);
-    final row = rail.cw;
-    if (row != null) {
-      return SpotlightShelf(
-        id: railKey,
-        title: row.title,
-        // The tag used to be folded into the title text; now it IS the tag —
-        // the same pill grammar the catalog rows wear.
-        tag: row.tag,
-        nodes: row.nodes,
-        // Already nullable on the row itself — a tracker row with no grid
-        // behind it hands over null and simply draws no chevron.
-        onSeeAll: row.onSeeAll,
-        // Caption-free like catalog rows in PORTRAIT off TV. LANDSCAPE flips
-        // the premise: a textless still needs the title, and CW's second line
-        // adds its useful episode / remaining-time context.
-        captions: _homeLandscapeCards,
-        items: [
-          for (var col = 0; col < row.items.length; col++)
-            _spotlightContinueWatchingCard(
-              row,
-              row.items[col],
-              rail.cwIndex,
-              col,
-            ),
-        ],
-      );
-    }
-    final fav = rail.favKind;
-    if (fav != null) return _spotlightFavShelf(fav, id: railKey);
-    final i = rail.sectionIndex!;
-    final section = _sections[i];
-    if (section is HomeCollectionSection) {
-      return SpotlightShelf(
-        id: railKey,
-        title: section.title,
-        tag: _catalogSourceTag(section),
-        nodes: i < _rowNodes.length ? _rowNodes[i] : const [],
-        onSeeAll: () => _openCatalogSeeAll(section),
-        // A brand-logo tile needs no caption; captions stay on only while
-        // some folder still wants its title drawn.
-        captions: section.collection.folders.any((f) => !f.hideTitle),
-        items: [
-          for (final m in section.items)
-            SpotlightCard(
-              image: m.poster,
-              fallbackImage: m.background,
-              previewBuilder: section.focusArtOf(m) == null
-                  ? null
-                  : (_) => CachedNetworkImage(
-                      imageUrl: section.focusArtOf(m)!,
-                      fit: BoxFit.cover,
-                    ),
-              title: m.name,
-              shape: section.landscapeTiles
-                  ? SpotlightCardShape.wide
-                  : SpotlightCardShape.poster,
-              onOpen: () => _openCollectionFolder(section, m),
-            ),
-        ],
-      );
-    }
-    return SpotlightShelf(
-      id: railKey,
-      title: _sections[i].title,
-      tag: _catalogSourceTag(_sections[i]),
-      nodes: i < _rowNodes.length ? _rowNodes[i] : const [],
-      // The same destination the classic rails' "See All" link opens —
-      // including the tracker-list rows, which _openCatalogSeeAll routes to
-      // their own browser rather than the catalog pager.
-      onSeeAll: () => _openCatalogSeeAll(_sections[i]),
-      // Catalog cards go caption-free off TV in PORTRAIT — the art is the
-      // label; a caption repeating the poster's own title was the
-      // reference's one piece of noise we added ourselves. That rationale
-      // inverts for LANDSCAPE, where the backdrop is a textless still and
-      // the caption is the only identity the card has.
-      captions: _homeLandscapeCards,
-      items: [
-        for (final m in _sections[i].items)
-          SpotlightCard(
-            image: _homeLandscapeCards ? _wideArtUrl(m) : m.poster,
-            fallbackImage: _homeLandscapeCards ? m.poster : null,
-            title: m.name,
-            rating: m.imdbRating,
-            shape: _homeLandscapeCards
-                ? SpotlightCardShape.wide
-                : SpotlightCardShape.poster,
-            watchedImdbId: m.type == 'movie' || m.type == 'series'
-                ? (m.effectiveImdbId ?? m.id)
-                : null,
-            watchedContentType: m.type,
-            onOpen: () => _openItem(m, _sections[i].addon),
-          ),
-      ],
-    );
-  }
-
-  SpotlightCard _spotlightContinueWatchingCard(
-    CwRow row,
-    StremioMeta item,
-    int cwIndex,
-    int col,
-  ) {
-    final wideArt = _wideArtUrl(item);
-    final episodeArt = item.type == 'series'
-        ? row.episodeArtworkOf(item)
-        : null;
-    return SpotlightCard(
-      image: _homeLandscapeCards ? (episodeArt ?? wideArt) : item.poster,
-      // An episode still is best-effort. If it fails at image-decode time (not
-      // only during lookup), fall back to the same show art CW used before.
-      fallbackImage: _homeLandscapeCards
-          ? (episodeArt != null ? wideArt : item.poster)
-          : null,
-      title: item.name,
-      subtitle: continueWatchingCardSubtitle(
-        episodeLabel: row.episodeOf(item),
-        minutesLeft: row.remainingMinutesOf(item),
+  SpotlightStageContent get _spotlightContent => SpotlightStageContent(
+    board: _boardRuntime,
+    favourites: _favourites,
+    bindings: (
+      landscapeCards: () => _homeLandscapeCards,
+      railKeyOf: _canvasRailKeyOf,
+      wideArtUrl: _wideArtUrl,
+      catalogSourceTag: _catalogSourceTag,
+      stvFavArt: _stvFavArt,
+      iptvPreview: (channel) => SpotlightIptvCardPreview(
+        channel: channel, ambientVolume: _heroTrailerVolume,
       ),
-      rating: item.imdbRating,
-      shape: _homeLandscapeCards
-          ? SpotlightCardShape.wide
-          : SpotlightCardShape.poster,
-      // `CwRow` publishes a 0..1 fraction; the card draws 0..100.
-      progress: (row.progressOf(item) ?? 0) * 100,
-      onOpen: () => row.onOpen(item),
-      // Spotlight used to bypass the shared CW hold handler and Quick Play
-      // unconditionally. Route through the same preference-aware menu path as
-      // every other Home layout so disabled means Play/Remove and enabled
-      // means immediate playback on both touch and DPAD.
-      onOptions: () => _openCwCardMenu(row, item, cwIndex, col),
-    );
-  }
+      openCatalogSeeAll: _openCatalogSeeAll,
+      openCollectionFolder: _openCollectionFolder,
+      openItem: _openItem,
+      openCwCardMenu: _openCwCardMenu,
+    ),
+  );
 
-  /// A favourites rail as Spotlight cards.
-  ///
-  /// The four kinds are NOT the same shape. A playlist is a container rather
-  /// than a title, so it keeps the poster it was given (or its override) and
-  /// says how many items it holds. The three channel kinds carry LOGOS — wide,
-  /// frequently transparent marks — which a 2:3 crop cuts in half, so they get
-  /// a square tile that contains the art on a plate instead of filling with it.
-  SpotlightShelf _spotlightFavShelf(FavRowRef ref, {String? id}) {
-    final nodes = _favourites.favNodesFor(ref);
-    if (ref.isIptvList) {
-      final row = _favourites.iptvListRows[ref.list];
-      return SpotlightShelf(
-        id: id,
-        title: row.title,
-        nodes: nodes,
-        items: [
-          for (final ch in row.channels)
-            SpotlightCard(
-              image: ch.logoUrl,
-              title: ch.name,
-              subtitle: 'LIVE',
-              shape: _homeLandscapeCards
-                  ? SpotlightCardShape.wideChannel
-                  : SpotlightCardShape.channel,
-              onOpen: () => _favourites.playIptvListChannel(ch),
-              previewBuilder: ch.isLive
-                  ? (_) => SpotlightIptvCardPreview(
-                      channel: ch,
-                      ambientVolume: _heroTrailerVolume,
-                    )
-                  : null,
-            ),
-        ],
-      );
-    }
-    switch (ref.kind) {
-      case FavKind.watchlistMovies:
-      case FavKind.watchlistSeries:
-        final isMovies = ref.kind == FavKind.watchlistMovies;
-        final items = isMovies ? _favourites.watchlistMovieItems : _favourites.watchlistSeriesItems;
-        return SpotlightShelf(
-          id: id,
-          title: isMovies ? 'Watchlist Movies' : 'Watchlist Series',
-          nodes: nodes,
-          // Same rule as the catalog rows off TV: pure poster cards in
-          // portrait, captions back for landscape backdrops. The subtitle
-          // stays on the card because TV still renders overlay captions
-          // (this flag is non-TV only) — dropping it here would have
-          // changed TV cards too.
-          captions: _homeLandscapeCards,
-          items: [
-            for (final item in items)
-              SpotlightCard(
-                image: _homeLandscapeCards ? _wideArtUrl(item) : item.poster,
-                fallbackImage: _homeLandscapeCards ? item.poster : null,
-                title: item.name,
-                rating: item.imdbRating,
-                subtitle: isMovies ? 'MOVIE' : 'SERIES',
-                shape: _homeLandscapeCards
-                    ? SpotlightCardShape.wide
-                    : SpotlightCardShape.poster,
-                watchedImdbId: item.effectiveImdbId ?? item.id,
-                watchedContentType: item.type,
-                onOpen: () => _favourites.openMyWatchlistItem(item),
-              ),
-          ],
-        );
-      case FavKind.playlist:
-        return SpotlightShelf(
-          id: id,
-          title: 'Playlists',
-          nodes: nodes,
-          items: [
-            for (final item in _favourites.playlistItems)
-              SpotlightCard(
-                image: item['posterUrl'] as String?,
-                title: (item['title'] as String?) ?? 'Unknown',
-                progress: _favourites.playlistProgressFor(item),
-                onOpen: () => _favourites.onPlaylistItemTap(item),
-              ),
-          ],
-        );
-      case FavKind.iptv:
-        return SpotlightShelf(
-          id: id,
-          title: 'IPTV Favourites',
-          nodes: nodes,
-          items: [
-            for (final ch in _favourites.iptvFavChannels)
-              SpotlightCard(
-                image: ch.logoUrl,
-                title: ch.name,
-                subtitle: 'LIVE',
-                shape: _homeLandscapeCards
-                    ? SpotlightCardShape.wideChannel
-                    : SpotlightCardShape.channel,
-                onOpen: () => _favourites.playIptvChannel(ch),
-                previewBuilder: ch.isLive
-                    ? (_) => SpotlightIptvCardPreview(
-                        channel: ch,
-                        ambientVolume: _heroTrailerVolume,
-                      )
-                    : null,
-              ),
-          ],
-        );
-      case FavKind.debrify:
-        return SpotlightShelf(
-          id: id,
-          title: 'Debrify TV',
-          nodes: nodes,
-          items: [
-            for (final ch in _favourites.tvFavChannels)
-              SpotlightCard(
-                title: ch.name,
-                subtitle: 'CHANNEL ${ch.channelNumber}',
-                shape: _homeLandscapeCards
-                    ? SpotlightCardShape.wideChannel
-                    : SpotlightCardShape.channel,
-                onOpen: () => _favourites.playChannel(ch),
-              ),
-          ],
-        );
-      case FavKind.stremio:
-        return SpotlightShelf(
-          id: id,
-          title: 'Stremio TV',
-          nodes: nodes,
-          items: [
-            for (final ch in _favourites.stvFavChannels)
-              SpotlightCard(
-                image: _stvFavArt(ch, landscape: _homeLandscapeCards),
-                fallbackImage: _homeLandscapeCards
-                    ? _favourites.stvNowPlaying(ch)?.item.poster
-                    : null,
-                title: ch.displayName,
-                subtitle: 'STREMIO TV',
-                // The now-playing TITLE's rating — the card wears title art,
-                // so the rating follows the title, not the channel.
-                rating: _favourites.stvNowPlaying(ch)?.item.imdbRating,
-                // Title art, not a channel logo: follow the user's Spotlight
-                // title-card orientation instead of containing it as a square
-                // station mark.
-                shape: _homeLandscapeCards
-                    ? SpotlightCardShape.wide
-                    : SpotlightCardShape.poster,
-                onOpen: () => _favourites.playStremioTvChannel(ch),
-              ),
-          ],
-        );
-    }
-  }
+  List<SpotlightShelf> get _spotlightShelves => _spotlightContent.shelves;
 
   /// A Stremio TV favourite's card art: the channel's rotating now-playing
   /// poster — the same resolution the classic and Canvas rails use. Spotlight
@@ -5886,7 +5616,54 @@ class _SearchScreenState extends State<SearchScreenHost>
         // render, not what the screen has: a stylish empty board is worse than
         // classic.
         if (_spotlightShelves.every((s) => s.items.isEmpty)) break;
-        return _SpotlightBoardStage(host: this);
+        return SpotlightStage(readFrame: () {
+          // Keep the original child-build timing and paging rail snapshot.
+          final rails = _canvasRails;
+          return (
+            rails: rails,
+            boardKey: _spotlightKey,
+            hero: _spotlightHero,
+            sections: _spotlightShelves,
+            heroNode: _spotlightHeroNode,
+            heroAddon: _spotlightHeroSection?.addon,
+            dpad: widget.isTelevision,
+            showCardTitlesAndRatings: !_hideHomeCardTitlesAndRatings,
+            onHeroOpen: _openItem,
+            board: _boardRuntime,
+            trailersEnabled: _heroTrailerEnabled,
+            onDwell: (StremioMeta item) =>
+                _scheduleHeroTrailer(item, fromSpotlight: true),
+            onTrailerStop: _clearHeroTrailer,
+            trailer: _heroTrailerRenderable
+                ? _HeroTrailerLayer(
+                    trailer: _heroTrailer,
+                    isTelevision: widget.isTelevision,
+                    heroHeight: 540,
+                    // Full bleed on every form factor — a letterboxed 16:9 band
+                    // was tried on the phone and read as a TV set embedded in the
+                    // artwork (user call). The portrait cover-crop is the design;
+                    // it gets its sharpness from the 1080p resolve and the
+                    // medium-filter texture sampling instead.
+                    fullBleed: true,
+                    volume: _heroTrailerVolume,
+                    loading: _heroTrailerLoading,
+                    onPlayingChanged: _onHeroTrailerPlaying,
+                    takeover: _heroTrailerTakeover,
+                  )
+                : null,
+            // TV only: the glass stage the publish feeds exists behind the TV
+            // sidebar rail. Off-TV there is no consumer, and writing the shared
+            // notifiers from a phone Home would leave stale art for the next TV
+            // session of a hot-restarted debug run.
+            onAmbient: widget.isTelevision
+                ? (art, tint) {
+                    if (!mounted) return;
+                    MainPageBridge.tvAmbientArt.value = art;
+                    MainPageBridge.tvHeroTint.value = tint;
+                  }
+                : null,
+          );
+        });
     }
 
     final tv = widget.isTelevision;

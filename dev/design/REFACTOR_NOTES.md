@@ -722,3 +722,7 @@ PR139 Windows exact-pair exit79 diagnosed read-only as native flutter_tester.exe
 ### Discover refresh ordering: retained coupling
 Post140 read-only review found no existing public seam that independently observes Discover private watchlist-node synchronization or separates watchlist and CW awaits: both start through the memoized preference future, and Discover cannot arm Home deferred-down state. Preserve the full FavRows adapter/lifetime; replacing it with a bare loader is not authorized by current pins. No additional136-equivalent test counts as closing this gap. A bounded real Home-consumer focus pin is assigned separately and will not be described as Discover or independent-await proof.
 
+
+### Onboarding restore compatibility quirk (preserve, not fix)
+Actual pre-S2 6d26 export excludes initial_setup_complete_v1 while authenticated profile setupComplete is true. Current restore can import canonical true into a destination retaining compatibility false; the next public isInitialSetupComplete reconciles that false into canonical readiness and removes the compatibility key. Subsequent re-export is false. Locke's exclusion fixture pins this observed outcome; no claim that readiness stays unchanged or that preferences are authoritative in general. Do not fix within the ownership extraction. Evidence branch refactor/s2-profile-onboarding-state fixture checkpoint; final commit pending.
+
