@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../models/stremio_addon.dart';
 import '../../services/analytics_service.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/tv_keys.dart';
 
@@ -16,7 +16,7 @@ import '../../utils/tv_keys.dart';
 /// (All on / All off / Invert) is one arrow-up away from any list top.
 ///
 /// Storage-compatible with the old dialog: persists the same
-/// [StorageService.setStremioTvDisabledFilters] id set (addon id, catalog id
+/// [StremioTvPrefs.setStremioTvDisabledFilters] id set (addon id, catalog id
 /// `addon:catalog:type`, genre id `addon:catalog:type:genre`). On save the
 /// set is regenerated from leaf state, which also normalizes any stale
 /// parent-level ids left behind by the old sheet.
@@ -229,7 +229,7 @@ class _StremioTvFilterPageState extends State<StremioTvFilterPage> {
       }
       if (addonAllOff && a.cats.isNotEmpty) out.add(a.id);
     }
-    await StorageService.setStremioTvDisabledFilters(out);
+    await StremioTvPrefs.setStremioTvDisabledFilters(out);
   }
 
   // ==========================================================================

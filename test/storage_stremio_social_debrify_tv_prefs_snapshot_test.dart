@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 import 'package:debrify/services/storage/social_prefs.dart';
 import 'dart:convert';
 
@@ -25,41 +26,41 @@ void main() {
 
   group('Stremio TV prefs', () {
     test('defaults when no keys are stored', () async {
-      expect(await StorageService.getStremioTvRotationMinutes(), 90);
-      expect(await StorageService.getStremioTvSeriesRotationMinutes(), 45);
-      expect(await StorageService.getStremioTvRandomEpisodes(), isFalse);
-      expect(await StorageService.getStremioTvAutoRefresh(), isTrue);
-      expect(await StorageService.getStremioTvHideNowPlaying(), isFalse);
-      expect(await StorageService.getStremioTvTorrentsFirst(), isTrue);
-      expect(await StorageService.getStremioTvPreferredQuality(), 'auto');
-      expect(await StorageService.getStremioTvDebridProvider(), 'auto');
-      expect(await StorageService.getStremioTvMaxStartPercent(), -1);
-      expect(await StorageService.isStremioTvChannelFavorited('ch1'), isFalse);
-      expect(await StorageService.getStremioTvFavoriteChannelIds(), isEmpty);
-      expect(await StorageService.getStremioTvLocalCatalogs(), isEmpty);
-      expect(await StorageService.getStremioTvCatalogRepoUrls(), isEmpty);
-      expect(await StorageService.getStremioTvDisabledFilters(), isEmpty);
+      expect(await StremioTvPrefs.getStremioTvRotationMinutes(), 90);
+      expect(await StremioTvPrefs.getStremioTvSeriesRotationMinutes(), 45);
+      expect(await StremioTvPrefs.getStremioTvRandomEpisodes(), isFalse);
+      expect(await StremioTvPrefs.getStremioTvAutoRefresh(), isTrue);
+      expect(await StremioTvPrefs.getStremioTvHideNowPlaying(), isFalse);
+      expect(await StremioTvPrefs.getStremioTvTorrentsFirst(), isTrue);
+      expect(await StremioTvPrefs.getStremioTvPreferredQuality(), 'auto');
+      expect(await StremioTvPrefs.getStremioTvDebridProvider(), 'auto');
+      expect(await StremioTvPrefs.getStremioTvMaxStartPercent(), -1);
+      expect(await StremioTvPrefs.isStremioTvChannelFavorited('ch1'), isFalse);
+      expect(await StremioTvPrefs.getStremioTvFavoriteChannelIds(), isEmpty);
+      expect(await StremioTvPrefs.getStremioTvLocalCatalogs(), isEmpty);
+      expect(await StremioTvPrefs.getStremioTvCatalogRepoUrls(), isEmpty);
+      expect(await StremioTvPrefs.getStremioTvDisabledFilters(), isEmpty);
     });
 
     test('StorageService writes the historical Stremio TV key bytes', () async {
-      await StorageService.setStremioTvRotationMinutes(30);
-      await StorageService.setStremioTvSeriesRotationMinutes(15);
-      await StorageService.setStremioTvRandomEpisodes(true);
-      await StorageService.setStremioTvAutoRefresh(false);
-      await StorageService.setStremioTvHideNowPlaying(true);
-      await StorageService.setStremioTvTorrentsFirst(false);
-      await StorageService.setStremioTvPreferredQuality('1080p');
-      await StorageService.setStremioTvDebridProvider('realdebrid');
-      await StorageService.setStremioTvMaxStartPercent(25);
-      await StorageService.setStremioTvChannelFavorited('alpha', true);
-      await StorageService.setStremioTvChannelFavorited('beta', true);
-      await StorageService.setStremioTvLocalCatalogs(const [
+      await StremioTvPrefs.setStremioTvRotationMinutes(30);
+      await StremioTvPrefs.setStremioTvSeriesRotationMinutes(15);
+      await StremioTvPrefs.setStremioTvRandomEpisodes(true);
+      await StremioTvPrefs.setStremioTvAutoRefresh(false);
+      await StremioTvPrefs.setStremioTvHideNowPlaying(true);
+      await StremioTvPrefs.setStremioTvTorrentsFirst(false);
+      await StremioTvPrefs.setStremioTvPreferredQuality('1080p');
+      await StremioTvPrefs.setStremioTvDebridProvider('realdebrid');
+      await StremioTvPrefs.setStremioTvMaxStartPercent(25);
+      await StremioTvPrefs.setStremioTvChannelFavorited('alpha', true);
+      await StremioTvPrefs.setStremioTvChannelFavorited('beta', true);
+      await StremioTvPrefs.setStremioTvLocalCatalogs(const [
         {'id': 'cat-1', 'name': 'Local'},
       ]);
-      await StorageService.setStremioTvCatalogRepoUrls(const [
+      await StremioTvPrefs.setStremioTvCatalogRepoUrls(const [
         'https://repo.example/catalogs.json',
       ]);
-      await StorageService.setStremioTvDisabledFilters({'addon:x', 'genre:y'});
+      await StremioTvPrefs.setStremioTvDisabledFilters({'addon:x', 'genre:y'});
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getInt('stremio_tv_rotation_minutes'), 30);
@@ -111,37 +112,37 @@ void main() {
           'stremio_tv_disabled_channel_filters_v1': jsonEncode(['addon:z']),
         });
 
-        expect(await StorageService.getStremioTvRotationMinutes(), 12);
-        expect(await StorageService.getStremioTvSeriesRotationMinutes(), 8);
-        expect(await StorageService.getStremioTvRandomEpisodes(), isTrue);
-        expect(await StorageService.getStremioTvAutoRefresh(), isFalse);
-        expect(await StorageService.getStremioTvHideNowPlaying(), isTrue);
-        expect(await StorageService.getStremioTvTorrentsFirst(), isFalse);
-        expect(await StorageService.getStremioTvPreferredQuality(), '2160p');
-        expect(await StorageService.getStremioTvDebridProvider(), 'torbox');
-        expect(await StorageService.getStremioTvMaxStartPercent(), 0);
-        expect(await StorageService.isStremioTvChannelFavorited('fav'), isTrue);
-        expect(await StorageService.getStremioTvFavoriteChannelIds(), {'fav'});
-        expect(await StorageService.getStremioTvLocalCatalogs(), [
+        expect(await StremioTvPrefs.getStremioTvRotationMinutes(), 12);
+        expect(await StremioTvPrefs.getStremioTvSeriesRotationMinutes(), 8);
+        expect(await StremioTvPrefs.getStremioTvRandomEpisodes(), isTrue);
+        expect(await StremioTvPrefs.getStremioTvAutoRefresh(), isFalse);
+        expect(await StremioTvPrefs.getStremioTvHideNowPlaying(), isTrue);
+        expect(await StremioTvPrefs.getStremioTvTorrentsFirst(), isFalse);
+        expect(await StremioTvPrefs.getStremioTvPreferredQuality(), '2160p');
+        expect(await StremioTvPrefs.getStremioTvDebridProvider(), 'torbox');
+        expect(await StremioTvPrefs.getStremioTvMaxStartPercent(), 0);
+        expect(await StremioTvPrefs.isStremioTvChannelFavorited('fav'), isTrue);
+        expect(await StremioTvPrefs.getStremioTvFavoriteChannelIds(), {'fav'});
+        expect(await StremioTvPrefs.getStremioTvLocalCatalogs(), [
           {'id': 'c', 'title': 'T'},
         ]);
-        expect(await StorageService.getStremioTvCatalogRepoUrls(), [
+        expect(await StremioTvPrefs.getStremioTvCatalogRepoUrls(), [
           'https://a/b',
         ]);
-        expect(await StorageService.getStremioTvDisabledFilters(), {'addon:z'});
+        expect(await StremioTvPrefs.getStremioTvDisabledFilters(), {'addon:z'});
       },
     );
 
     test(
       'empty local catalogs and disabled filters remove their keys',
       () async {
-        await StorageService.setStremioTvLocalCatalogs(const [
+        await StremioTvPrefs.setStremioTvLocalCatalogs(const [
           {'id': 'keep', 'name': 'K'},
         ]);
-        await StorageService.setStremioTvDisabledFilters({'addon:x'});
+        await StremioTvPrefs.setStremioTvDisabledFilters({'addon:x'});
 
-        await StorageService.setStremioTvLocalCatalogs(const []);
-        await StorageService.setStremioTvDisabledFilters({});
+        await StremioTvPrefs.setStremioTvLocalCatalogs(const []);
+        await StremioTvPrefs.setStremioTvDisabledFilters({});
 
         final prefs = await SharedPreferences.getInstance();
         expect(prefs.containsKey('stremio_tv_local_catalogs_v1'), isFalse);
@@ -154,72 +155,72 @@ void main() {
 
     test('local catalog add/update/remove quirks', () async {
       expect(
-        await StorageService.addStremioTvLocalCatalog({'name': 'no id'}),
+        await StremioTvPrefs.addStremioTvLocalCatalog({'name': 'no id'}),
         isFalse,
       );
       expect(
-        await StorageService.addStremioTvLocalCatalog({
+        await StremioTvPrefs.addStremioTvLocalCatalog({
           'id': 'a',
           'name': 'One',
         }),
         isTrue,
       );
       expect(
-        await StorageService.addStremioTvLocalCatalog({
+        await StremioTvPrefs.addStremioTvLocalCatalog({
           'id': 'a',
           'name': 'Dup',
         }),
         isFalse,
       );
       expect(
-        await StorageService.updateStremioTvLocalCatalog({'name': 'no id'}),
+        await StremioTvPrefs.updateStremioTvLocalCatalog({'name': 'no id'}),
         isFalse,
       );
       expect(
-        await StorageService.updateStremioTvLocalCatalog({
+        await StremioTvPrefs.updateStremioTvLocalCatalog({
           'id': 'missing',
           'name': 'Nope',
         }),
         isFalse,
       );
       expect(
-        await StorageService.updateStremioTvLocalCatalog({
+        await StremioTvPrefs.updateStremioTvLocalCatalog({
           'id': 'a',
           'name': 'Renamed',
         }),
         isTrue,
       );
-      expect(await StorageService.getStremioTvLocalCatalogs(), [
+      expect(await StremioTvPrefs.getStremioTvLocalCatalogs(), [
         {'id': 'a', 'name': 'Renamed'},
       ]);
-      await StorageService.removeStremioTvLocalCatalog('a');
-      expect(await StorageService.getStremioTvLocalCatalogs(), isEmpty);
+      await StremioTvPrefs.removeStremioTvLocalCatalog('a');
+      expect(await StremioTvPrefs.getStremioTvLocalCatalogs(), isEmpty);
     });
 
     test('catalog repo URL add is idempotent; remove is silent', () async {
       expect(
-        await StorageService.addStremioTvCatalogRepoUrl('https://r/1'),
+        await StremioTvPrefs.addStremioTvCatalogRepoUrl('https://r/1'),
         isTrue,
       );
       expect(
-        await StorageService.addStremioTvCatalogRepoUrl('https://r/1'),
+        await StremioTvPrefs.addStremioTvCatalogRepoUrl('https://r/1'),
         isFalse,
       );
-      await StorageService.removeStremioTvCatalogRepoUrl('https://r/missing');
-      expect(await StorageService.getStremioTvCatalogRepoUrls(), [
+      await StremioTvPrefs.removeStremioTvCatalogRepoUrl('https://r/missing');
+      expect(await StremioTvPrefs.getStremioTvCatalogRepoUrls(), [
         'https://r/1',
       ]);
-      await StorageService.removeStremioTvCatalogRepoUrl('https://r/1');
-      expect(await StorageService.getStremioTvCatalogRepoUrls(), isEmpty);
+      await StremioTvPrefs.removeStremioTvCatalogRepoUrl('https://r/1');
+      expect(await StremioTvPrefs.getStremioTvCatalogRepoUrls(), isEmpty);
     });
 
     test(
       'unfavorite removes the id; corrupt favorites read as empty',
       () async {
-        await StorageService.setStremioTvChannelFavorited('keep', true);
-        await StorageService.setStremioTvChannelFavorited('drop', true);
-        await StorageService.setStremioTvChannelFavorited('drop', false);
-        expect(await StorageService.getStremioTvFavoriteChannelIds(), {'keep'});
+        await StremioTvPrefs.setStremioTvChannelFavorited('keep', true);
+        await StremioTvPrefs.setStremioTvChannelFavorited('drop', true);
+        await StremioTvPrefs.setStremioTvChannelFavorited('drop', false);
+        expect(await StremioTvPrefs.getStremioTvFavoriteChannelIds(), {'keep'});
 
         SharedPreferences.setMockInitialValues(<String, Object>{
           'stremio_tv_favorite_channels_v1': 'not-json{',
@@ -227,12 +228,12 @@ void main() {
           'stremio_tv_disabled_channel_filters_v1': 'not-json{',
         });
         expect(
-          await StorageService.isStremioTvChannelFavorited('keep'),
+          await StremioTvPrefs.isStremioTvChannelFavorited('keep'),
           isFalse,
         );
-        expect(await StorageService.getStremioTvFavoriteChannelIds(), isEmpty);
-        expect(await StorageService.getStremioTvLocalCatalogs(), isEmpty);
-        expect(await StorageService.getStremioTvDisabledFilters(), isEmpty);
+        expect(await StremioTvPrefs.getStremioTvFavoriteChannelIds(), isEmpty);
+        expect(await StremioTvPrefs.getStremioTvLocalCatalogs(), isEmpty);
+        expect(await StremioTvPrefs.getStremioTvDisabledFilters(), isEmpty);
       },
     );
 
@@ -246,7 +247,7 @@ void main() {
             4,
           ]),
         });
-        expect(await StorageService.getStremioTvLocalCatalogs(), [
+        expect(await StremioTvPrefs.getStremioTvLocalCatalogs(), [
           {'id': 'ok', 'name': 'Keep'},
         ]);
       },

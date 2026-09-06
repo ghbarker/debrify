@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 import 'package:debrify/services/storage/my_watchlist_store.dart';
 import 'package:debrify/services/storage/iptv_prefs.dart';
 import 'package:debrify/services/storage/playback_progress_store.dart';
@@ -288,7 +289,7 @@ class FavRowsController {
   /// a now-playing poster. Silently leaves the row empty on any error.
   Future<void> loadStremioTvFavorites() async {
     try {
-      final ids = await StorageService.getStremioTvFavoriteChannelIds();
+      final ids = await StremioTvPrefs.getStremioTvFavoriteChannelIds();
       if (ids.isEmpty) {
         if (!mounted) return;
         commit(() => stvFavChannels = const []);
@@ -296,8 +297,8 @@ class FavRowsController {
         return;
       }
       final rotations = await Future.wait([
-        StorageService.getStremioTvRotationMinutes(),
-        StorageService.getStremioTvSeriesRotationMinutes(),
+        StremioTvPrefs.getStremioTvRotationMinutes(),
+        StremioTvPrefs.getStremioTvSeriesRotationMinutes(),
       ]);
       final rotation = rotations[0];
       final seriesRotation = rotations[1];

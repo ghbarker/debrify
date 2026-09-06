@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 import 'package:debrify/services/storage/social_prefs.dart';
 import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import 'package:debrify/services/storage/ambient_trailer_prefs.dart' show AmbientTrailerPrefs;
@@ -166,10 +167,10 @@ void _expectSettings(
 }
 
 Future<void> _seedThroughStorageService() async {
-  await StorageService.setStremioTvRotationMinutes(37);
-  await StorageService.setStremioTvAutoRefresh(false);
-  await StorageService.setStremioTvDebridProvider('realdebrid');
-  await StorageService.setStremioTvCatalogRepoUrls(
+  await StremioTvPrefs.setStremioTvRotationMinutes(37);
+  await StremioTvPrefs.setStremioTvAutoRefresh(false);
+  await StremioTvPrefs.setStremioTvDebridProvider('realdebrid');
+  await StremioTvPrefs.setStremioTvCatalogRepoUrls(
     _setterSettings['stremio_tv_catalog_repo_urls_v1']! as List<String>,
   );
   await SocialPrefs.setRedditRecentSubreddits(
@@ -234,12 +235,12 @@ Future<Map<String, Object?>> _readThroughStorageService(
     if (!_setterSettings.containsKey(key))
       key: (await ProfilePreferences.instance()).get(key),
   'stremio_tv_rotation_minutes':
-      await StorageService.getStremioTvRotationMinutes(),
-  'stremio_tv_auto_refresh': await StorageService.getStremioTvAutoRefresh(),
+      await StremioTvPrefs.getStremioTvRotationMinutes(),
+  'stremio_tv_auto_refresh': await StremioTvPrefs.getStremioTvAutoRefresh(),
   'stremio_tv_debrid_provider':
-      await StorageService.getStremioTvDebridProvider(),
+      await StremioTvPrefs.getStremioTvDebridProvider(),
   'stremio_tv_catalog_repo_urls_v1':
-      await StorageService.getStremioTvCatalogRepoUrls(),
+      await StremioTvPrefs.getStremioTvCatalogRepoUrls(),
   'reddit_recent_subreddits': await SocialPrefs.getRedditRecentSubreddits(),
   'lemmy_favorite_communities':
       await SocialPrefs.getLemmyFavoriteCommunities(),

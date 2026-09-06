@@ -1,3 +1,4 @@
+import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 import 'package:debrify/services/storage/provider_credential_prefs.dart';
 import 'package:flutter/material.dart';
 import '../../services/analytics_service.dart';
@@ -37,18 +38,18 @@ class _StremioTvSettingsPageState extends State<StremioTvSettingsPage> {
 
     try {
       final rotationMinutes =
-          await StorageService.getStremioTvRotationMinutes();
+          await StremioTvPrefs.getStremioTvRotationMinutes();
       final seriesRotationMinutes =
-          await StorageService.getStremioTvSeriesRotationMinutes();
-      final autoRefresh = await StorageService.getStremioTvAutoRefresh();
+          await StremioTvPrefs.getStremioTvSeriesRotationMinutes();
+      final autoRefresh = await StremioTvPrefs.getStremioTvAutoRefresh();
       final preferredQuality =
-          await StorageService.getStremioTvPreferredQuality();
-      final debridProvider = await StorageService.getStremioTvDebridProvider();
+          await StremioTvPrefs.getStremioTvPreferredQuality();
+      final debridProvider = await StremioTvPrefs.getStremioTvDebridProvider();
       final maxStartPercent =
-          await StorageService.getStremioTvMaxStartPercent();
-      final hideNowPlaying = await StorageService.getStremioTvHideNowPlaying();
-      final randomEpisodes = await StorageService.getStremioTvRandomEpisodes();
-      final torrentsFirst = await StorageService.getStremioTvTorrentsFirst();
+          await StremioTvPrefs.getStremioTvMaxStartPercent();
+      final hideNowPlaying = await StremioTvPrefs.getStremioTvHideNowPlaying();
+      final randomEpisodes = await StremioTvPrefs.getStremioTvRandomEpisodes();
+      final torrentsFirst = await StremioTvPrefs.getStremioTvTorrentsFirst();
 
       // Detect which providers are configured
       final providers = <MapEntry<String, String>>[];
@@ -78,7 +79,7 @@ class _StremioTvSettingsPageState extends State<StremioTvSettingsPage> {
         if (_debridProvider != 'auto' &&
             !providers.any((p) => p.key == _debridProvider)) {
           _debridProvider = 'auto';
-          StorageService.setStremioTvDebridProvider('auto');
+          StremioTvPrefs.setStremioTvDebridProvider('auto');
         }
         _loading = false;
       });
@@ -94,7 +95,7 @@ class _StremioTvSettingsPageState extends State<StremioTvSettingsPage> {
 
   Future<void> _setRotationMinutes(int value) async {
     try {
-      await StorageService.setStremioTvRotationMinutes(value);
+      await StremioTvPrefs.setStremioTvRotationMinutes(value);
       setState(() => _rotationMinutes = value);
     } catch (e) {
       if (mounted) {
@@ -107,7 +108,7 @@ class _StremioTvSettingsPageState extends State<StremioTvSettingsPage> {
 
   Future<void> _setSeriesRotationMinutes(int value) async {
     try {
-      await StorageService.setStremioTvSeriesRotationMinutes(value);
+      await StremioTvPrefs.setStremioTvSeriesRotationMinutes(value);
       setState(() => _seriesRotationMinutes = value);
     } catch (e) {
       if (mounted) {
@@ -120,7 +121,7 @@ class _StremioTvSettingsPageState extends State<StremioTvSettingsPage> {
 
   Future<void> _setAutoRefresh(bool value) async {
     try {
-      await StorageService.setStremioTvAutoRefresh(value);
+      await StremioTvPrefs.setStremioTvAutoRefresh(value);
       setState(() => _autoRefresh = value);
     } catch (e) {
       if (mounted) {
@@ -133,7 +134,7 @@ class _StremioTvSettingsPageState extends State<StremioTvSettingsPage> {
 
   Future<void> _setPreferredQuality(String value) async {
     try {
-      await StorageService.setStremioTvPreferredQuality(value);
+      await StremioTvPrefs.setStremioTvPreferredQuality(value);
       setState(() => _preferredQuality = value);
     } catch (e) {
       if (mounted) {
@@ -146,7 +147,7 @@ class _StremioTvSettingsPageState extends State<StremioTvSettingsPage> {
 
   Future<void> _setMaxStartPercent(int value) async {
     try {
-      await StorageService.setStremioTvMaxStartPercent(value);
+      await StremioTvPrefs.setStremioTvMaxStartPercent(value);
       setState(() => _maxStartPercent = value);
     } catch (e) {
       if (mounted) {
@@ -159,7 +160,7 @@ class _StremioTvSettingsPageState extends State<StremioTvSettingsPage> {
 
   Future<void> _setRandomEpisodes(bool value) async {
     try {
-      await StorageService.setStremioTvRandomEpisodes(value);
+      await StremioTvPrefs.setStremioTvRandomEpisodes(value);
       setState(() => _randomEpisodes = value);
     } catch (e) {
       if (mounted) {
@@ -172,7 +173,7 @@ class _StremioTvSettingsPageState extends State<StremioTvSettingsPage> {
 
   Future<void> _setHideNowPlaying(bool value) async {
     try {
-      await StorageService.setStremioTvHideNowPlaying(value);
+      await StremioTvPrefs.setStremioTvHideNowPlaying(value);
       setState(() => _hideNowPlaying = value);
     } catch (e) {
       if (mounted) {
@@ -185,7 +186,7 @@ class _StremioTvSettingsPageState extends State<StremioTvSettingsPage> {
 
   Future<void> _setDebridProvider(String value) async {
     try {
-      await StorageService.setStremioTvDebridProvider(value);
+      await StremioTvPrefs.setStremioTvDebridProvider(value);
       setState(() => _debridProvider = value);
     } catch (e) {
       if (mounted) {
@@ -517,7 +518,7 @@ class _StremioTvSettingsPageState extends State<StremioTvSettingsPage> {
                             value: _torrentsFirst,
                             onChanged: (v) async {
                               setState(() => _torrentsFirst = v);
-                              await StorageService.setStremioTvTorrentsFirst(v);
+                              await StremioTvPrefs.setStremioTvTorrentsFirst(v);
                             },
                             contentPadding: EdgeInsets.zero,
                           ),

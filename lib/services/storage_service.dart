@@ -29,7 +29,6 @@ import 'storage/iptv_prefs.dart';
 import 'storage/app_style_prefs.dart';
 import 'storage/player_prefs.dart';
 import 'storage/provider_credential_prefs.dart';
-import 'storage/stremio_tv_prefs.dart';
 import 'storage/playback_progress_store.dart';
 
 export 'storage/home_prefs.dart'
@@ -1889,106 +1888,37 @@ class StorageService {
       RemoteDevicePrefs.clearRemoteLastDevice();
 
   // Stremio TV Settings — forwarding façade; bodies live on StremioTvPrefs.
-  static Future<int> getStremioTvRotationMinutes() =>
-      StremioTvPrefs.getStremioTvRotationMinutes();
 
-  static Future<void> setStremioTvRotationMinutes(int value) =>
-      StremioTvPrefs.setStremioTvRotationMinutes(value);
 
-  static Future<int> getStremioTvSeriesRotationMinutes() =>
-      StremioTvPrefs.getStremioTvSeriesRotationMinutes();
 
-  static Future<void> setStremioTvSeriesRotationMinutes(int value) =>
-      StremioTvPrefs.setStremioTvSeriesRotationMinutes(value);
 
-  static Future<bool> getStremioTvRandomEpisodes() =>
-      StremioTvPrefs.getStremioTvRandomEpisodes();
 
-  static Future<void> setStremioTvRandomEpisodes(bool value) =>
-      StremioTvPrefs.setStremioTvRandomEpisodes(value);
 
-  static Future<bool> getStremioTvAutoRefresh() =>
-      StremioTvPrefs.getStremioTvAutoRefresh();
 
-  static Future<void> setStremioTvAutoRefresh(bool value) =>
-      StremioTvPrefs.setStremioTvAutoRefresh(value);
 
-  static Future<bool> getStremioTvHideNowPlaying() =>
-      StremioTvPrefs.getStremioTvHideNowPlaying();
 
-  static Future<void> setStremioTvHideNowPlaying(bool value) =>
-      StremioTvPrefs.setStremioTvHideNowPlaying(value);
 
-  static Future<bool> getStremioTvTorrentsFirst() =>
-      StremioTvPrefs.getStremioTvTorrentsFirst();
 
-  static Future<void> setStremioTvTorrentsFirst(bool value) =>
-      StremioTvPrefs.setStremioTvTorrentsFirst(value);
 
-  static Future<String> getStremioTvPreferredQuality() =>
-      StremioTvPrefs.getStremioTvPreferredQuality();
 
-  static Future<void> setStremioTvPreferredQuality(String value) =>
-      StremioTvPrefs.setStremioTvPreferredQuality(value);
 
-  static Future<String> getStremioTvDebridProvider() =>
-      StremioTvPrefs.getStremioTvDebridProvider();
 
-  static Future<void> setStremioTvDebridProvider(String value) =>
-      StremioTvPrefs.setStremioTvDebridProvider(value);
 
-  static Future<int> getStremioTvMaxStartPercent() =>
-      StremioTvPrefs.getStremioTvMaxStartPercent();
 
-  static Future<void> setStremioTvMaxStartPercent(int value) =>
-      StremioTvPrefs.setStremioTvMaxStartPercent(value);
 
-  static Future<bool> isStremioTvChannelFavorited(String channelId) =>
-      StremioTvPrefs.isStremioTvChannelFavorited(channelId);
 
-  static Future<void> setStremioTvChannelFavorited(
-    String channelId,
-    bool isFavorited,
-  ) => StremioTvPrefs.setStremioTvChannelFavorited(channelId, isFavorited);
 
-  static Future<Set<String>> getStremioTvFavoriteChannelIds() =>
-      StremioTvPrefs.getStremioTvFavoriteChannelIds();
 
-  static Future<List<Map<String, dynamic>>> getStremioTvLocalCatalogs() =>
-      StremioTvPrefs.getStremioTvLocalCatalogs();
 
-  static Future<void> setStremioTvLocalCatalogs(
-    List<Map<String, dynamic>> catalogs,
-  ) => StremioTvPrefs.setStremioTvLocalCatalogs(catalogs);
 
-  static Future<bool> addStremioTvLocalCatalog(
-    Map<String, dynamic> catalog,
-  ) => StremioTvPrefs.addStremioTvLocalCatalog(catalog);
 
-  static Future<void> removeStremioTvLocalCatalog(String catalogId) =>
-      StremioTvPrefs.removeStremioTvLocalCatalog(catalogId);
 
-  static Future<bool> updateStremioTvLocalCatalog(
-    Map<String, dynamic> catalog,
-  ) => StremioTvPrefs.updateStremioTvLocalCatalog(catalog);
 
-  static Future<List<String>> getStremioTvCatalogRepoUrls() =>
-      StremioTvPrefs.getStremioTvCatalogRepoUrls();
 
-  static Future<void> setStremioTvCatalogRepoUrls(List<String> urls) =>
-      StremioTvPrefs.setStremioTvCatalogRepoUrls(urls);
 
-  static Future<bool> addStremioTvCatalogRepoUrl(String url) =>
-      StremioTvPrefs.addStremioTvCatalogRepoUrl(url);
 
-  static Future<void> removeStremioTvCatalogRepoUrl(String url) =>
-      StremioTvPrefs.removeStremioTvCatalogRepoUrl(url);
 
-  static Future<Set<String>> getStremioTvDisabledFilters() =>
-      StremioTvPrefs.getStremioTvDisabledFilters();
 
-  static Future<void> setStremioTvDisabledFilters(Set<String> disabled) =>
-      StremioTvPrefs.setStremioTvDisabledFilters(disabled);
 
 
   /// Search addon selection policy lives in CatalogSearchPrefs.

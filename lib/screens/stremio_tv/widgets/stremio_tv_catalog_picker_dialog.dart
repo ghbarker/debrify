@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../utils/tv_keys.dart';
 import '../../../models/stremio_addon.dart';
-import '../../../services/storage_service.dart';
+import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 import '../../../theme/app_theme_scope.dart';
 import '../../../widgets/tv_text_field.dart';
 
@@ -87,7 +87,7 @@ class _StremioTvCatalogPickerDialogState
   }
 
   Future<void> _loadCatalogs() async {
-    final allCatalogs = await StorageService.getStremioTvLocalCatalogs();
+    final allCatalogs = await StremioTvPrefs.getStremioTvLocalCatalogs();
     final compatibleCatalogs =
         allCatalogs.where((catalog) {
           final type = catalog['type'] as String? ?? 'movie';
@@ -827,7 +827,7 @@ class _StremioTvLocalCatalogEditor {
     final trimmedName = catalogName.trim();
     if (trimmedName.isEmpty) return null;
 
-    final existing = await StorageService.getStremioTvLocalCatalogs();
+    final existing = await StremioTvPrefs.getStremioTvLocalCatalogs();
     if (existing.any(
       (catalog) => (catalog['name'] as String?) == trimmedName,
     )) {
@@ -837,7 +837,7 @@ class _StremioTvLocalCatalogEditor {
       );
     }
 
-    await StorageService.addStremioTvLocalCatalog({
+    await StremioTvPrefs.addStremioTvLocalCatalog({
       'id': _generateId(trimmedName),
       'name': trimmedName,
       'type': item.type,
@@ -857,7 +857,7 @@ class _StremioTvLocalCatalogEditor {
   }) async {
     if (catalogId.isEmpty) return null;
 
-    final existing = await StorageService.getStremioTvLocalCatalogs();
+    final existing = await StremioTvPrefs.getStremioTvLocalCatalogs();
     final index = existing.indexWhere((catalog) => catalog['id'] == catalogId);
     if (index < 0) return null;
 
@@ -879,7 +879,7 @@ class _StremioTvLocalCatalogEditor {
     catalog['items'] = items;
     catalog['updatedAt'] = DateTime.now().toIso8601String();
 
-    final updated = await StorageService.updateStremioTvLocalCatalog(catalog);
+    final updated = await StremioTvPrefs.updateStremioTvLocalCatalog(catalog);
     if (!updated) return null;
 
     return StremioTvCatalogPickerResult(

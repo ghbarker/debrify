@@ -23,23 +23,23 @@ void main() {
   tearDown(ProfileRuntime.debugReset);
 
   test(
-    'Stremio TV StorageService writes are readable through StremioTvPrefs',
+    'Stremio TV owner writes preserve the characterized values',
     () async {
-      await StorageService.setStremioTvRotationMinutes(30);
-      await StorageService.setStremioTvSeriesRotationMinutes(15);
-      await StorageService.setStremioTvRandomEpisodes(true);
-      await StorageService.setStremioTvAutoRefresh(false);
-      await StorageService.setStremioTvHideNowPlaying(true);
-      await StorageService.setStremioTvTorrentsFirst(false);
-      await StorageService.setStremioTvPreferredQuality('1080p');
-      await StorageService.setStremioTvDebridProvider('realdebrid');
-      await StorageService.setStremioTvMaxStartPercent(25);
-      await StorageService.setStremioTvChannelFavorited('alpha', true);
-      await StorageService.setStremioTvLocalCatalogs(const [
+      await StremioTvPrefs.setStremioTvRotationMinutes(30);
+      await StremioTvPrefs.setStremioTvSeriesRotationMinutes(15);
+      await StremioTvPrefs.setStremioTvRandomEpisodes(true);
+      await StremioTvPrefs.setStremioTvAutoRefresh(false);
+      await StremioTvPrefs.setStremioTvHideNowPlaying(true);
+      await StremioTvPrefs.setStremioTvTorrentsFirst(false);
+      await StremioTvPrefs.setStremioTvPreferredQuality('1080p');
+      await StremioTvPrefs.setStremioTvDebridProvider('realdebrid');
+      await StremioTvPrefs.setStremioTvMaxStartPercent(25);
+      await StremioTvPrefs.setStremioTvChannelFavorited('alpha', true);
+      await StremioTvPrefs.setStremioTvLocalCatalogs(const [
         {'id': 'cat-1', 'name': 'Local'},
       ]);
-      await StorageService.setStremioTvCatalogRepoUrls(const ['https://r/1']);
-      await StorageService.setStremioTvDisabledFilters({'addon:x'});
+      await StremioTvPrefs.setStremioTvCatalogRepoUrls(const ['https://r/1']);
+      await StremioTvPrefs.setStremioTvDisabledFilters({'addon:x'});
 
       expect(await StremioTvPrefs.getStremioTvRotationMinutes(), 30);
       expect(await StremioTvPrefs.getStremioTvSeriesRotationMinutes(), 15);

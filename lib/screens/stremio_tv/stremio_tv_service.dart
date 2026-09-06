@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import '../../models/stremio_addon.dart';
 import '../../models/stremio_tv/stremio_tv_channel.dart';
 import '../../models/stremio_tv/stremio_tv_now_playing.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/stremio_tv_prefs.dart';
 import '../../services/stremio_service.dart';
 import '../../services/tvmaze_service.dart';
 import '../../utils/stremio_tv_episode_picker.dart';
@@ -32,12 +32,12 @@ class StremioTvService {
   /// For catalogs that support genre filtering, each genre becomes its own
   /// channel (e.g., "Popular Movies - Crime", "Popular Movies - Action").
   /// Catalogs without genre support remain as a single channel.
-  /// All channels are auto-numbered 1..N. Favorite status is loaded from StorageService.
+  /// All channels are auto-numbered 1..N. Favorite status is loaded from StremioTvPrefs.
   Future<List<StremioTvChannel>> discoverChannels() async {
     try {
       final addons = await _stremioService.getCatalogAddons();
-      final favoriteIds = await StorageService.getStremioTvFavoriteChannelIds();
-      final disabled = await StorageService.getStremioTvDisabledFilters();
+      final favoriteIds = await StremioTvPrefs.getStremioTvFavoriteChannelIds();
+      final disabled = await StremioTvPrefs.getStremioTvDisabledFilters();
 
       final channels = <StremioTvChannel>[];
       int channelNumber = 1;
@@ -84,7 +84,7 @@ class StremioTvService {
       }
 
       // Append local catalog channels
-      final localCatalogs = await StorageService.getStremioTvLocalCatalogs();
+      final localCatalogs = await StremioTvPrefs.getStremioTvLocalCatalogs();
       for (final catalog in localCatalogs) {
         final catalogId = catalog['id'] as String? ?? '';
         final catalogName = catalog['name'] as String? ?? 'Unknown';
@@ -189,7 +189,7 @@ class StremioTvService {
     // stay under "Local Catalogs" (addon id 'local'). The addon id here becomes
     // the group prefix of each catalog's filter id, and discoverChannels derives
     // the same prefix from mdblistListId — keep the two in sync.
-    final localCatalogs = await StorageService.getStremioTvLocalCatalogs();
+    final localCatalogs = await StremioTvPrefs.getStremioTvLocalCatalogs();
     StremioAddonCatalog toCatalog(Map<String, dynamic> c) => StremioAddonCatalog(
       id: c['id'] as String? ?? '',
       type: c['type'] as String? ?? 'movie',
