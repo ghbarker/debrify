@@ -11,6 +11,7 @@ import 'package:background_downloader/background_downloader.dart';
 import 'package:path_provider/path_provider.dart';
 import '../utils/app_storage.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'storage/download_destination_prefs.dart';
 import 'storage_service.dart';
 import 'android_native_downloader.dart';
 import 'android_download_history.dart';
@@ -2244,7 +2245,7 @@ class DownloadService {
     String? treeUri;
     if (Platform.isAndroid) {
       try {
-        final saved = await StorageService.getDownloadTreeUri();
+        final saved = await DownloadDestinationPrefs.getDownloadTreeUri();
         if (saved != null && saved.isNotEmpty) {
           if (await _validateTreeUriCached(saved)) {
             treeUri = saved;
@@ -2254,7 +2255,7 @@ class DownloadService {
             debugPrint(
               'DL: custom download folder grant lost; falling back to default',
             );
-            await StorageService.clearDownloadTreeUri();
+            await DownloadDestinationPrefs.clearDownloadTreeUri();
           }
         }
       } catch (_) {}
@@ -2794,13 +2795,13 @@ class DownloadService {
     String? treeName;
     try {
       await stagedFile.writeAsBytes(bytes, flush: true);
-      final savedTreeUri = await StorageService.getDownloadTreeUri();
+      final savedTreeUri = await DownloadDestinationPrefs.getDownloadTreeUri();
       if (savedTreeUri != null && savedTreeUri.isNotEmpty) {
         if (await _validateTreeUriCached(savedTreeUri)) {
           treeUri = savedTreeUri;
-          treeName = await StorageService.getDownloadTreeDisplayName();
+          treeName = await DownloadDestinationPrefs.getDownloadTreeDisplayName();
         } else {
-          await StorageService.clearDownloadTreeUri();
+          await DownloadDestinationPrefs.clearDownloadTreeUri();
         }
       }
 
@@ -2917,7 +2918,7 @@ class DownloadService {
     // for when the folder comes back.
     if (Platform.isWindows || Platform.isLinux) {
       try {
-        final saved = await StorageService.getDownloadDirPath();
+        final saved = await DownloadDestinationPrefs.getDownloadDirPath();
         if (saved != null && saved.isNotEmpty) {
           if (await _validateDownloadDirCached(saved)) {
             return saved;
