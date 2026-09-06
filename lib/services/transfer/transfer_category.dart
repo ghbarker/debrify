@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../cloud/cloud_credentials.dart';
 import '../iptv_transfer_payload.dart';
-import '../storage_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'backup_models.dart';
 
 /// How a category travels on the remote config wire.
@@ -120,7 +120,7 @@ class TransferBuildContext {
   }
 
   Future<Map<String, dynamic>> trackingPreferences() async {
-    return _tracking ??= await StorageService.buildTrackingPreferencesPayload();
+    return _tracking ??= await TrackingPrefs.buildTrackingPreferencesPayload();
   }
 
   Future<Set<String>> scrobbleTargets() async {

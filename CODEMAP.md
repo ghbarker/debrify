@@ -303,8 +303,13 @@ Same plan table also lists (not extra “sites”, but still consumers until T1/
   routing preference and Addons hub; their six public host facades remain.
   **S2-5:** tracking source policy, catalog-sync switches, and Trakt / Simkl /
   MDBList credentials live in `lib/services/storage/tracking_prefs.dart`
-  (`TrackingPrefs`, owns `trackingSourceRevision`). `home_tick_sources` stays
-  on HomePrefs; TrackingPrefs bumps the revision after that write.
+  (`TrackingPrefs`, owns `trackingSourceRevision`). Q2 routes Tracking consumers
+  directly to the owner: 46 facades retired and 14 live host dependency edges
+  removed; host -51 / production -41 lines including one approved unused model
+  import removal. Host notifier/key aliases and reset statements remain unchanged;
+  strict Storage ownership stays OPEN, with retained compatibility deferred to
+  separately scoped Q2 work. `home_tick_sources` stays on HomePrefs; TrackingPrefs
+  bumps the same revision after that write.
   **Ambient trailer policy:** `lib/services/storage/ambient_trailer_prefs.dart`
   owns detail audio/volume plus the autoplay scalar pair (three keys); HomePrefs keeps
   the two home keys. StorageService re-exports the same AmbientTrailerSurface

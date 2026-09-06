@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:debrify/models/tracking_source.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/secret_vault.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,7 +31,7 @@ void main() {
       'scrobble masters seed every tracker on and persist the key',
       () async {
         expect(
-          await StorageService.getTrackingScrobbleTargets(),
+          await TrackingPrefs.getTrackingScrobbleTargets(),
           Set<TrackingSource>.of(TrackingSource.values),
         );
         final prefs = await SharedPreferences.getInstance();
@@ -45,54 +46,54 @@ void main() {
 
     test('progress source, fallback notice, catalog switches', () async {
       expect(
-        await StorageService.getWatchProgressSource(),
+        await TrackingPrefs.getWatchProgressSource(),
         WatchProgressSource.smart,
       );
       expect(
-        await StorageService.takeTrackingProgressFallbackNotice(),
+        await TrackingPrefs.takeTrackingProgressFallbackNotice(),
         isFalse,
       );
-      expect(await StorageService.getTraktSyncCatalogItems(), isFalse);
-      expect(await StorageService.getSimklSyncCatalogItems(), isFalse);
-      expect(await StorageService.getMdblistSyncCatalogItems(), isFalse);
+      expect(await TrackingPrefs.getTraktSyncCatalogItems(), isFalse);
+      expect(await TrackingPrefs.getSimklSyncCatalogItems(), isFalse);
+      expect(await TrackingPrefs.getMdblistSyncCatalogItems(), isFalse);
     });
 
     test('tracker credentials and MDBList bookkeeping', () async {
-      expect(await StorageService.getTraktAccessToken(), isNull);
-      expect(await StorageService.getTraktRefreshToken(), isNull);
-      expect(await StorageService.getTraktUsername(), isNull);
-      expect(await StorageService.getTraktTokenExpiry(), isNull);
-      expect(await StorageService.hasTraktCredential(), isFalse);
-      expect(await StorageService.getSimklAccessToken(), isNull);
-      expect(await StorageService.getSimklUsername(), isNull);
-      expect(await StorageService.hasSimklCredential(), isFalse);
-      expect(await StorageService.getMdblistApiKey(), isNull);
-      expect(await StorageService.getMdblistUsername(), isNull);
-      expect(await StorageService.hasMdblistCredential(), isFalse);
-      expect(await StorageService.getMdblistSavedClones(), isEmpty);
-      expect(await StorageService.getMdblistSyncCheckpoint(), isNull);
+      expect(await TrackingPrefs.getTraktAccessToken(), isNull);
+      expect(await TrackingPrefs.getTraktRefreshToken(), isNull);
+      expect(await TrackingPrefs.getTraktUsername(), isNull);
+      expect(await TrackingPrefs.getTraktTokenExpiry(), isNull);
+      expect(await TrackingPrefs.hasTraktCredential(), isFalse);
+      expect(await TrackingPrefs.getSimklAccessToken(), isNull);
+      expect(await TrackingPrefs.getSimklUsername(), isNull);
+      expect(await TrackingPrefs.hasSimklCredential(), isFalse);
+      expect(await TrackingPrefs.getMdblistApiKey(), isNull);
+      expect(await TrackingPrefs.getMdblistUsername(), isNull);
+      expect(await TrackingPrefs.hasMdblistCredential(), isFalse);
+      expect(await TrackingPrefs.getMdblistSavedClones(), isEmpty);
+      expect(await TrackingPrefs.getMdblistSyncCheckpoint(), isNull);
     });
   });
 
   test('StorageService writes the historical tracking key bytes', () async {
-    await StorageService.setTrackingScrobbleTargets(<TrackingSource>{
+    await TrackingPrefs.setTrackingScrobbleTargets(<TrackingSource>{
       TrackingSource.local,
       TrackingSource.trakt,
     });
-    await StorageService.setWatchProgressSource(WatchProgressSource.simkl);
-    await StorageService.setHomeTickSources(<TrackingSource>{
+    await TrackingPrefs.setWatchProgressSource(WatchProgressSource.simkl);
+    await TrackingPrefs.setHomeTickSources(<TrackingSource>{
       TrackingSource.local,
       TrackingSource.mdblist,
     });
-    await StorageService.setTraktSyncCatalogItems(true);
-    await StorageService.setSimklSyncCatalogItems(true);
-    await StorageService.setMdblistSyncCatalogItems(true);
-    await StorageService.setTraktUsername('trakt-user');
-    await StorageService.setTraktTokenExpiry(1_700_000_000_000);
-    await StorageService.setSimklUsername('simkl-user');
-    await StorageService.setMdblistUsername('mdb-user');
-    await StorageService.setMdblistSavedClone(42, 99);
-    await StorageService.setMdblistSyncCheckpoint(<String, dynamic>{
+    await TrackingPrefs.setTraktSyncCatalogItems(true);
+    await TrackingPrefs.setSimklSyncCatalogItems(true);
+    await TrackingPrefs.setMdblistSyncCatalogItems(true);
+    await TrackingPrefs.setTraktUsername('trakt-user');
+    await TrackingPrefs.setTraktTokenExpiry(1_700_000_000_000);
+    await TrackingPrefs.setSimklUsername('simkl-user');
+    await TrackingPrefs.setMdblistUsername('mdb-user');
+    await TrackingPrefs.setMdblistSavedClone(42, 99);
+    await TrackingPrefs.setMdblistSyncCheckpoint(<String, dynamic>{
       'cursor': 'abc',
       'n': 3,
     });
@@ -138,30 +139,30 @@ void main() {
       });
 
       expect(
-        await StorageService.getTrackingScrobbleTargets(),
+        await TrackingPrefs.getTrackingScrobbleTargets(),
         <TrackingSource>{TrackingSource.local, TrackingSource.simkl},
       );
       expect(
-        await StorageService.getWatchProgressSource(),
+        await TrackingPrefs.getWatchProgressSource(),
         WatchProgressSource.local,
       );
-      expect(await StorageService.getHomeTickSources(), <TrackingSource>{
+      expect(await TrackingPrefs.getHomeTickSources(), <TrackingSource>{
         TrackingSource.trakt,
       });
-      expect(await StorageService.getTraktSyncCatalogItems(), isTrue);
-      expect(await StorageService.getSimklSyncCatalogItems(), isFalse);
-      expect(await StorageService.getMdblistSyncCatalogItems(), isTrue);
-      expect(await StorageService.getTraktUsername(), 'raw-trakt');
-      expect(await StorageService.getTraktTokenExpiry(), 99);
-      expect(await StorageService.getSimklUsername(), 'raw-simkl');
-      expect(await StorageService.getMdblistUsername(), 'raw-mdb');
-      expect(await StorageService.getMdblistSavedClones(), {7: 8});
-      expect(await StorageService.getMdblistSyncCheckpoint(), {'ok': true});
-      expect(await StorageService.takeTrackingProgressFallbackNotice(), isTrue);
+      expect(await TrackingPrefs.getTraktSyncCatalogItems(), isTrue);
+      expect(await TrackingPrefs.getSimklSyncCatalogItems(), isFalse);
+      expect(await TrackingPrefs.getMdblistSyncCatalogItems(), isTrue);
+      expect(await TrackingPrefs.getTraktUsername(), 'raw-trakt');
+      expect(await TrackingPrefs.getTraktTokenExpiry(), 99);
+      expect(await TrackingPrefs.getSimklUsername(), 'raw-simkl');
+      expect(await TrackingPrefs.getMdblistUsername(), 'raw-mdb');
+      expect(await TrackingPrefs.getMdblistSavedClones(), {7: 8});
+      expect(await TrackingPrefs.getMdblistSyncCheckpoint(), {'ok': true});
+      expect(await TrackingPrefs.takeTrackingProgressFallbackNotice(), isTrue);
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey('tracking_progress_fallback_notice'), isFalse);
       expect(
-        await StorageService.takeTrackingProgressFallbackNotice(),
+        await TrackingPrefs.takeTrackingProgressFallbackNotice(),
         isFalse,
       );
     },
@@ -172,7 +173,7 @@ void main() {
       'watch_progress_source': 'plex',
     });
     expect(
-      await StorageService.getWatchProgressSource(),
+      await TrackingPrefs.getWatchProgressSource(),
       WatchProgressSource.smart,
     );
   });
@@ -182,7 +183,7 @@ void main() {
       'trakt_sync_catalog_items': false,
       'mdblist_sync_catalog_items': false,
     });
-    expect(await StorageService.getTrackingScrobbleTargets(), <TrackingSource>{
+    expect(await TrackingPrefs.getTrackingScrobbleTargets(), <TrackingSource>{
       TrackingSource.local,
       TrackingSource.simkl,
     });
@@ -192,7 +193,7 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'simkl_sync_catalog_items': false,
     });
-    expect(await StorageService.getTrackingScrobbleTargets(), <TrackingSource>{
+    expect(await TrackingPrefs.getTrackingScrobbleTargets(), <TrackingSource>{
       TrackingSource.local,
       TrackingSource.trakt,
       TrackingSource.mdblist,
@@ -200,23 +201,23 @@ void main() {
   });
 
   test('enableTrackingScrobbleTarget is idempotent when already on', () async {
-    await StorageService.setTrackingScrobbleTargets(<TrackingSource>{
+    await TrackingPrefs.setTrackingScrobbleTargets(<TrackingSource>{
       TrackingSource.local,
       TrackingSource.trakt,
     });
     final revision = StorageService.trackingSourceRevision.value;
-    await StorageService.enableTrackingScrobbleTarget(TrackingSource.trakt);
+    await TrackingPrefs.enableTrackingScrobbleTarget(TrackingSource.trakt);
     expect(StorageService.trackingSourceRevision.value, revision);
   });
 
   test('enableTrackingScrobbleTarget bumps revision when it adds', () async {
-    await StorageService.setTrackingScrobbleTargets(<TrackingSource>{
+    await TrackingPrefs.setTrackingScrobbleTargets(<TrackingSource>{
       TrackingSource.local,
     });
     final revision = StorageService.trackingSourceRevision.value;
-    await StorageService.enableTrackingScrobbleTarget(TrackingSource.simkl);
+    await TrackingPrefs.enableTrackingScrobbleTarget(TrackingSource.simkl);
     expect(StorageService.trackingSourceRevision.value, revision + 1);
-    expect(await StorageService.getTrackingScrobbleTargets(), <TrackingSource>{
+    expect(await TrackingPrefs.getTrackingScrobbleTargets(), <TrackingSource>{
       TrackingSource.local,
       TrackingSource.simkl,
     });
@@ -224,88 +225,88 @@ void main() {
 
   test('setTrackingScrobbleTargets / progress / ticks bump revision', () async {
     var revision = StorageService.trackingSourceRevision.value;
-    await StorageService.setTrackingScrobbleTargets(<TrackingSource>{
+    await TrackingPrefs.setTrackingScrobbleTargets(<TrackingSource>{
       TrackingSource.local,
     });
     expect(StorageService.trackingSourceRevision.value, revision + 1);
 
     revision = StorageService.trackingSourceRevision.value;
-    await StorageService.setWatchProgressSource(WatchProgressSource.trakt);
+    await TrackingPrefs.setWatchProgressSource(WatchProgressSource.trakt);
     expect(StorageService.trackingSourceRevision.value, revision + 1);
 
     revision = StorageService.trackingSourceRevision.value;
-    await StorageService.setHomeTickSources(<TrackingSource>{
+    await TrackingPrefs.setHomeTickSources(<TrackingSource>{
       TrackingSource.local,
     });
     expect(StorageService.trackingSourceRevision.value, revision + 1);
 
     revision = StorageService.trackingSourceRevision.value;
-    await StorageService.reseedTrackingScrobbleTargetsFromLegacy();
+    await TrackingPrefs.reseedTrackingScrobbleTargetsFromLegacy();
     expect(StorageService.trackingSourceRevision.value, revision + 1);
   });
 
   test('disconnected dedicated progress falls back and sets notice', () async {
-    await StorageService.setWatchProgressSource(WatchProgressSource.trakt);
+    await TrackingPrefs.setWatchProgressSource(WatchProgressSource.trakt);
     expect(
-      await StorageService.fallbackDisconnectedProgressSource(
+      await TrackingPrefs.fallbackDisconnectedProgressSource(
         TrackingSource.trakt,
       ),
       isTrue,
     );
     expect(
-      await StorageService.getWatchProgressSource(),
+      await TrackingPrefs.getWatchProgressSource(),
       WatchProgressSource.smart,
     );
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getBool('tracking_progress_fallback_notice'), isTrue);
-    expect(await StorageService.takeTrackingProgressFallbackNotice(), isTrue);
+    expect(await TrackingPrefs.takeTrackingProgressFallbackNotice(), isTrue);
   });
 
   test('fallback no-ops when progress source is not that tracker', () async {
-    await StorageService.setWatchProgressSource(WatchProgressSource.simkl);
+    await TrackingPrefs.setWatchProgressSource(WatchProgressSource.simkl);
     expect(
-      await StorageService.fallbackDisconnectedProgressSource(
+      await TrackingPrefs.fallbackDisconnectedProgressSource(
         TrackingSource.trakt,
       ),
       isFalse,
     );
     expect(
-      await StorageService.getWatchProgressSource(),
+      await TrackingPrefs.getWatchProgressSource(),
       WatchProgressSource.simkl,
     );
-    expect(await StorageService.takeTrackingProgressFallbackNotice(), isFalse);
+    expect(await TrackingPrefs.takeTrackingProgressFallbackNotice(), isFalse);
   });
 
   test('smart / local progress never owns a disconnected tracker', () async {
-    await StorageService.setWatchProgressSource(WatchProgressSource.smart);
+    await TrackingPrefs.setWatchProgressSource(WatchProgressSource.smart);
     expect(
-      await StorageService.fallbackDisconnectedProgressSource(
+      await TrackingPrefs.fallbackDisconnectedProgressSource(
         TrackingSource.mdblist,
       ),
       isFalse,
     );
-    await StorageService.setWatchProgressSource(WatchProgressSource.local);
+    await TrackingPrefs.setWatchProgressSource(WatchProgressSource.local);
     expect(
-      await StorageService.fallbackDisconnectedProgressSource(
+      await TrackingPrefs.fallbackDisconnectedProgressSource(
         TrackingSource.local,
       ),
       isFalse,
     );
     expect(
-      await StorageService.getWatchProgressSource(),
+      await TrackingPrefs.getWatchProgressSource(),
       WatchProgressSource.local,
     );
   });
 
   test('tracking payload encode / apply and hide_watched', () async {
-    await StorageService.applyTrackingPreferencesPayload(<String, dynamic>{
+    await TrackingPrefs.applyTrackingPreferencesPayload(<String, dynamic>{
       'scrobble_targets': <String>['trakt', 'nope'],
       'progress_source': 'mdblist',
       'home_tick_sources': <String>['local', 'simkl', 'ghost'],
       'hide_watched': true,
     });
 
-    final payload = await StorageService.buildTrackingPreferencesPayload();
+    final payload = await TrackingPrefs.buildTrackingPreferencesPayload();
     expect(
       payload['scrobble_targets'],
       containsAll(<String>['local', 'trakt']),
@@ -321,12 +322,12 @@ void main() {
   test(
     'applyTrackingPreferencesPayload ignores unknown progress_source',
     () async {
-      await StorageService.setWatchProgressSource(WatchProgressSource.local);
-      await StorageService.applyTrackingPreferencesPayload(<String, dynamic>{
+      await TrackingPrefs.setWatchProgressSource(WatchProgressSource.local);
+      await TrackingPrefs.applyTrackingPreferencesPayload(<String, dynamic>{
         'progress_source': 'plex',
       });
       expect(
-        await StorageService.getWatchProgressSource(),
+        await TrackingPrefs.getWatchProgressSource(),
         WatchProgressSource.local,
       );
     },
@@ -335,54 +336,54 @@ void main() {
   test(
     'Trakt / Simkl / MDBList secrets round-trip through the vault',
     () async {
-      await StorageService.setTraktAccessToken('trakt-access');
-      await StorageService.setTraktRefreshToken('trakt-refresh');
-      await StorageService.setSimklAccessToken('simkl-access');
-      await StorageService.saveMdblistApiKey('mdb-key');
+      await TrackingPrefs.setTraktAccessToken('trakt-access');
+      await TrackingPrefs.setTraktRefreshToken('trakt-refresh');
+      await TrackingPrefs.setSimklAccessToken('simkl-access');
+      await TrackingPrefs.saveMdblistApiKey('mdb-key');
 
-      expect(await StorageService.getTraktAccessToken(), 'trakt-access');
-      expect(await StorageService.getTraktRefreshToken(), 'trakt-refresh');
-      expect(await StorageService.getSimklAccessToken(), 'simkl-access');
-      expect(await StorageService.getMdblistApiKey(), 'mdb-key');
-      expect(await StorageService.hasTraktCredential(), isTrue);
-      expect(await StorageService.hasSimklCredential(), isTrue);
-      expect(await StorageService.hasMdblistCredential(), isTrue);
+      expect(await TrackingPrefs.getTraktAccessToken(), 'trakt-access');
+      expect(await TrackingPrefs.getTraktRefreshToken(), 'trakt-refresh');
+      expect(await TrackingPrefs.getSimklAccessToken(), 'simkl-access');
+      expect(await TrackingPrefs.getMdblistApiKey(), 'mdb-key');
+      expect(await TrackingPrefs.hasTraktCredential(), isTrue);
+      expect(await TrackingPrefs.hasSimklCredential(), isTrue);
+      expect(await TrackingPrefs.hasMdblistCredential(), isTrue);
     },
   );
 
   test(
     'clearTraktAuth drops username/expiry and falls back progress',
     () async {
-      await StorageService.setTraktAccessToken('access');
-      await StorageService.setTraktRefreshToken('refresh');
-      await StorageService.setTraktUsername('alice');
-      await StorageService.setTraktTokenExpiry(123);
-      await StorageService.setWatchProgressSource(WatchProgressSource.trakt);
+      await TrackingPrefs.setTraktAccessToken('access');
+      await TrackingPrefs.setTraktRefreshToken('refresh');
+      await TrackingPrefs.setTraktUsername('alice');
+      await TrackingPrefs.setTraktTokenExpiry(123);
+      await TrackingPrefs.setWatchProgressSource(WatchProgressSource.trakt);
 
-      final shouldRevoke = await StorageService.clearTraktAuth();
+      final shouldRevoke = await TrackingPrefs.clearTraktAuth();
       expect(shouldRevoke, isTrue);
-      expect(await StorageService.getTraktAccessToken(), isNull);
-      expect(await StorageService.getTraktRefreshToken(), isNull);
-      expect(await StorageService.getTraktUsername(), isNull);
-      expect(await StorageService.getTraktTokenExpiry(), isNull);
+      expect(await TrackingPrefs.getTraktAccessToken(), isNull);
+      expect(await TrackingPrefs.getTraktRefreshToken(), isNull);
+      expect(await TrackingPrefs.getTraktUsername(), isNull);
+      expect(await TrackingPrefs.getTraktTokenExpiry(), isNull);
       expect(
-        await StorageService.getWatchProgressSource(),
+        await TrackingPrefs.getWatchProgressSource(),
         WatchProgressSource.smart,
       );
-      expect(await StorageService.takeTrackingProgressFallbackNotice(), isTrue);
+      expect(await TrackingPrefs.takeTrackingProgressFallbackNotice(), isTrue);
     },
   );
 
   test('clearSimklAuth drops username and falls back progress', () async {
-    await StorageService.setSimklAccessToken('simkl-access');
-    await StorageService.setSimklUsername('bob');
-    await StorageService.setWatchProgressSource(WatchProgressSource.simkl);
+    await TrackingPrefs.setSimklAccessToken('simkl-access');
+    await TrackingPrefs.setSimklUsername('bob');
+    await TrackingPrefs.setWatchProgressSource(WatchProgressSource.simkl);
 
-    await StorageService.clearSimklAuth();
-    expect(await StorageService.getSimklAccessToken(), isNull);
-    expect(await StorageService.getSimklUsername(), isNull);
+    await TrackingPrefs.clearSimklAuth();
+    expect(await TrackingPrefs.getSimklAccessToken(), isNull);
+    expect(await TrackingPrefs.getSimklUsername(), isNull);
     expect(
-      await StorageService.getWatchProgressSource(),
+      await TrackingPrefs.getWatchProgressSource(),
       WatchProgressSource.smart,
     );
   });
@@ -390,19 +391,19 @@ void main() {
   test(
     'clearMdblistAuth drops username, clones, checkpoint, and progress',
     () async {
-      await StorageService.saveMdblistApiKey('mdb-key');
-      await StorageService.setMdblistUsername('carol');
-      await StorageService.setMdblistSavedClone(1, 2);
-      await StorageService.setMdblistSyncCheckpoint(<String, dynamic>{'n': 1});
-      await StorageService.setWatchProgressSource(WatchProgressSource.mdblist);
+      await TrackingPrefs.saveMdblistApiKey('mdb-key');
+      await TrackingPrefs.setMdblistUsername('carol');
+      await TrackingPrefs.setMdblistSavedClone(1, 2);
+      await TrackingPrefs.setMdblistSyncCheckpoint(<String, dynamic>{'n': 1});
+      await TrackingPrefs.setWatchProgressSource(WatchProgressSource.mdblist);
 
-      await StorageService.clearMdblistAuth();
-      expect(await StorageService.getMdblistApiKey(), isNull);
-      expect(await StorageService.getMdblistUsername(), isNull);
-      expect(await StorageService.getMdblistSavedClones(), isEmpty);
-      expect(await StorageService.getMdblistSyncCheckpoint(), isNull);
+      await TrackingPrefs.clearMdblistAuth();
+      expect(await TrackingPrefs.getMdblistApiKey(), isNull);
+      expect(await TrackingPrefs.getMdblistUsername(), isNull);
+      expect(await TrackingPrefs.getMdblistSavedClones(), isEmpty);
+      expect(await TrackingPrefs.getMdblistSyncCheckpoint(), isNull);
       expect(
-        await StorageService.getWatchProgressSource(),
+        await TrackingPrefs.getWatchProgressSource(),
         WatchProgressSource.smart,
       );
     },
@@ -411,9 +412,9 @@ void main() {
   test(
     'empty MDBList username removes the key; Trakt empty string persists',
     () async {
-      await StorageService.setMdblistUsername('keep');
-      await StorageService.setMdblistUsername('');
-      await StorageService.setTraktUsername('');
+      await TrackingPrefs.setMdblistUsername('keep');
+      await TrackingPrefs.setMdblistUsername('');
+      await TrackingPrefs.setTraktUsername('');
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey('mdblist_username'), isFalse);
       expect(prefs.getString('trakt_username'), '');
@@ -421,25 +422,25 @@ void main() {
   );
 
   test('MDBList clone / checkpoint encodings and corrupt reads', () async {
-    await StorageService.setMdblistSavedClone(10, 20);
-    await StorageService.setMdblistSavedClone(11, 21);
-    expect(await StorageService.getMdblistSavedClones(), {10: 20, 11: 21});
-    await StorageService.removeMdblistSavedClone(10);
-    expect(await StorageService.getMdblistSavedClones(), {11: 21});
-    await StorageService.retireMdblistSavedCloneMarkers();
-    expect(await StorageService.getMdblistSavedClones(), isEmpty);
+    await TrackingPrefs.setMdblistSavedClone(10, 20);
+    await TrackingPrefs.setMdblistSavedClone(11, 21);
+    expect(await TrackingPrefs.getMdblistSavedClones(), {10: 20, 11: 21});
+    await TrackingPrefs.removeMdblistSavedClone(10);
+    expect(await TrackingPrefs.getMdblistSavedClones(), {11: 21});
+    await TrackingPrefs.retireMdblistSavedCloneMarkers();
+    expect(await TrackingPrefs.getMdblistSavedClones(), isEmpty);
 
-    await StorageService.setMdblistSyncCheckpoint(<String, dynamic>{'k': 'v'});
-    expect(await StorageService.getMdblistSyncCheckpoint(), {'k': 'v'});
-    await StorageService.setMdblistSyncCheckpoint(null);
-    expect(await StorageService.getMdblistSyncCheckpoint(), isNull);
+    await TrackingPrefs.setMdblistSyncCheckpoint(<String, dynamic>{'k': 'v'});
+    expect(await TrackingPrefs.getMdblistSyncCheckpoint(), {'k': 'v'});
+    await TrackingPrefs.setMdblistSyncCheckpoint(null);
+    expect(await TrackingPrefs.getMdblistSyncCheckpoint(), isNull);
 
     SharedPreferences.setMockInitialValues(<String, Object>{
       'mdblist_saved_clones': 'not-json',
       'mdblist_sync_checkpoint_v1': '[1]',
     });
-    expect(await StorageService.getMdblistSavedClones(), isEmpty);
-    expect(await StorageService.getMdblistSyncCheckpoint(), isNull);
+    expect(await TrackingPrefs.getMdblistSavedClones(), isEmpty);
+    expect(await TrackingPrefs.getMdblistSyncCheckpoint(), isNull);
   });
 
   test('public tracking key names stay on the façade', () {

@@ -22,6 +22,7 @@ import 'udp_command_service.dart';
 import '../../widgets/remote/remote_pairing_dialog.dart';
 import '../../services/main_page_bridge.dart';
 import '../../services/stremio_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_badges_service.dart';
 import '../../services/tracking_source_policy.dart';
@@ -3199,7 +3200,7 @@ class RemoteCommandRouter {
     try {
       final decoded = jsonDecode(data);
       if (decoded is! Map) throw const FormatException();
-      await StorageService.applyTrackingPreferencesPayload(decoded);
+      await TrackingPrefs.applyTrackingPreferencesPayload(decoded);
       final requested = decoded['progress_source']?.toString();
       final effective = await TrackingSourcePolicy.load();
       final fellBack =
@@ -3207,7 +3208,7 @@ class RemoteCommandRouter {
           requested != WatchProgressSource.smart.name &&
           effective.progressSource == WatchProgressSource.smart;
       if (fellBack) {
-        await StorageService.takeTrackingProgressFallbackNotice();
+        await TrackingPrefs.takeTrackingProgressFallbackNotice();
       }
       _showSnackBar(
         fellBack
@@ -3370,18 +3371,18 @@ class RemoteCommandRouter {
         return;
       }
 
-      await StorageService.setTraktAccessToken(accessToken);
-      await StorageService.setTraktRefreshToken(refreshToken);
+      await TrackingPrefs.setTraktAccessToken(accessToken);
+      await TrackingPrefs.setTraktRefreshToken(refreshToken);
       if (expiry != null) {
-        await StorageService.setTraktTokenExpiry(expiry);
+        await TrackingPrefs.setTraktTokenExpiry(expiry);
       }
       if (username != null && username.isNotEmpty) {
-        await StorageService.setTraktUsername(username);
+        await TrackingPrefs.setTraktUsername(username);
       }
       // Match interactive connect: a freshly imported Trakt session starts
       // with catalog scrobbling on.
-      await StorageService.setTraktSyncCatalogItems(true);
-      await StorageService.enableTrackingScrobbleTarget(TrackingSource.trakt);
+      await TrackingPrefs.setTraktSyncCatalogItems(true);
+      await TrackingPrefs.enableTrackingScrobbleTarget(TrackingSource.trakt);
 
       debugPrint('RemoteCommandRouter: Trakt session configured successfully');
       _showSnackBar('Trakt connected successfully');
@@ -3407,14 +3408,14 @@ class RemoteCommandRouter {
         return;
       }
 
-      await StorageService.setSimklAccessToken(accessToken);
+      await TrackingPrefs.setSimklAccessToken(accessToken);
       if (username != null && username.isNotEmpty) {
-        await StorageService.setSimklUsername(username);
+        await TrackingPrefs.setSimklUsername(username);
       }
       // Match interactive connect: a freshly imported Simkl session starts
       // with catalog scrobbling on.
-      await StorageService.setSimklSyncCatalogItems(true);
-      await StorageService.enableTrackingScrobbleTarget(TrackingSource.simkl);
+      await TrackingPrefs.setSimklSyncCatalogItems(true);
+      await TrackingPrefs.enableTrackingScrobbleTarget(TrackingSource.simkl);
 
       debugPrint('RemoteCommandRouter: Simkl session configured successfully');
       _showSnackBar('Simkl connected successfully');
@@ -3440,7 +3441,7 @@ class RemoteCommandRouter {
         _showSnackBar('MDBList: API key validation failed', isError: true);
         return;
       }
-      await StorageService.setMdblistSyncCatalogItems(true);
+      await TrackingPrefs.setMdblistSyncCatalogItems(true);
       MainPageBridge.notifyIntegrationChanged();
       _showSnackBar('MDBList connected successfully');
     } catch (_) {

@@ -8,6 +8,7 @@ import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_session_memory.dart';
 import 'package:debrify/services/secret_vault.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter/material.dart';
@@ -107,8 +108,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.runAsync(() async {
-      await StorageService.setTraktAccessToken('same-account-token');
-      await StorageService.setTraktTokenExpiry(
+      await TrackingPrefs.setTraktAccessToken('same-account-token');
+      await TrackingPrefs.setTraktTokenExpiry(
         DateTime.now().add(const Duration(days: 1)).millisecondsSinceEpoch,
       );
     });
@@ -194,7 +195,7 @@ void main() {
           });
           expect(unexpected, isEmpty);
           expect(
-            await tester.runAsync(StorageService.getTraktAccessToken),
+            await tester.runAsync(TrackingPrefs.getTraktAccessToken),
             'same-account-token',
           );
         } finally {

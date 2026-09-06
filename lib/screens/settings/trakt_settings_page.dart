@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/analytics_service.dart';
 import '../../services/main_page_bridge.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../../services/trakt/trakt_service.dart';
 import '../../utils/platform_util.dart';
 import 'widgets/settings_widgets.dart';
@@ -242,7 +242,7 @@ class _TraktSettingsPageState extends State<TraktSettingsPage> {
       _username = null;
     });
     MainPageBridge.notifyIntegrationChanged();
-    final fellBack = await StorageService.takeTrackingProgressFallbackNotice();
+    final fellBack = await TrackingPrefs.takeTrackingProgressFallbackNotice();
     if (!mounted) return;
     _showSnackBar(
       fellBack

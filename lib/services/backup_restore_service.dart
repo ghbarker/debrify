@@ -5,7 +5,7 @@ import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
 
 import 'iptv_transfer_payload.dart';
-import 'storage_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'transfer/backup_models.dart';
 import 'transfer/backup_selection.dart';
 import 'transfer/transfer_category.dart';
@@ -330,7 +330,7 @@ class BackupRestoreService {
       //
       // Same as the pre-registry `else if`: this also runs when tracking
       // preferences were not selected, as long as the key is absent.
-      await StorageService.reseedTrackingScrobbleTargetsFromLegacy();
+      await TrackingPrefs.reseedTrackingScrobbleTargetsFromLegacy();
     }
 
     return report;

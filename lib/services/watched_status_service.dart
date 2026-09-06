@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'simkl/simkl_service.dart';
 import 'local_series_completion_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'storage_service.dart';
 import 'trakt/trakt_service.dart';
 import 'mdblist/mdblist_service.dart';
@@ -105,7 +106,7 @@ class WatchedStatusService extends ChangeNotifier {
 
   void _refreshTickPolicy() {
     unawaited(() async {
-      final next = await StorageService.getHomeTickSources();
+      final next = await TrackingPrefs.getHomeTickSources();
       if (setEquals(next, _tickSources)) return;
       _tickSources = next;
       notifyListeners();

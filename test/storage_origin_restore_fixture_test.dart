@@ -29,6 +29,7 @@ import 'package:debrify/services/profiles/profile_scope.dart';
 import 'package:debrify/services/secret_vault.dart';
 import 'package:debrify/services/storage/download_destination_prefs.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/utils/app_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -199,14 +200,14 @@ Future<void> _seedThroughStorageService() async {
   await StorageService.setThemeOverrides('{"synthetic":"fixture"}');
   await StorageService.setPhoneNavStyle('floating');
   await StorageService.setTvUiScalePercent(80);
-  await StorageService.setTrackingScrobbleTargets({
+  await TrackingPrefs.setTrackingScrobbleTargets({
     TrackingSource.local,
     TrackingSource.mdblist,
   });
-  await StorageService.setWatchProgressSource(WatchProgressSource.simkl);
-  await StorageService.setTraktSyncCatalogItems(true);
-  await StorageService.setSimklSyncCatalogItems(false);
-  await StorageService.setMdblistSyncCatalogItems(true);
+  await TrackingPrefs.setWatchProgressSource(WatchProgressSource.simkl);
+  await TrackingPrefs.setTraktSyncCatalogItems(true);
+  await TrackingPrefs.setSimklSyncCatalogItems(false);
+  await TrackingPrefs.setMdblistSyncCatalogItems(true);
   // Additional domains share typed data and the actual profile preference API.
   // The independent recipe specifies physical encodings, not exporter output.
   await _writeValues({
@@ -272,14 +273,14 @@ Future<Map<String, Object?>> _readThroughStorageService(
   'phone_nav_style': await StorageService.getPhoneNavStyle(),
   'tv_ui_scale_percent': await StorageService.getTvUiScalePercent(),
   'tracking_scrobble_targets':
-      (await StorageService.getTrackingScrobbleTargets())
+      (await TrackingPrefs.getTrackingScrobbleTargets())
           .map((s) => s.name)
           .toList(),
-  'watch_progress_source': (await StorageService.getWatchProgressSource()).name,
-  'trakt_sync_catalog_items': await StorageService.getTraktSyncCatalogItems(),
-  'simkl_sync_catalog_items': await StorageService.getSimklSyncCatalogItems(),
+  'watch_progress_source': (await TrackingPrefs.getWatchProgressSource()).name,
+  'trakt_sync_catalog_items': await TrackingPrefs.getTraktSyncCatalogItems(),
+  'simkl_sync_catalog_items': await TrackingPrefs.getSimklSyncCatalogItems(),
   'mdblist_sync_catalog_items':
-      await StorageService.getMdblistSyncCatalogItems(),
+      await TrackingPrefs.getMdblistSyncCatalogItems(),
 };
 
 Map<String, Object?> _values(PortableProfilePackage package) =>
@@ -536,6 +537,112 @@ void main() {
       expect(retained.length, 7);
       _expectSettings({for (final key in retained) key: prefs.get('$prefix$key')},
           {for (final key in retained) key: homeValues[key]});
+    });
+  }
+
+
+  // Separate single Home tick StringList domain: actual exporter admission.
+  const tickScenario = 'home-tick-sources';
+  final tickDomain = _recipe['residualDomains'][tickScenario] as Map;
+  final tickValues = Map<String, Object?>.from(tickDomain['values'] as Map);
+  Future<void> expectTickReaders() async {
+    final revision = StorageService.trackingSourceRevision.value;
+    final sources = await TrackingPrefs.getHomeTickSources();
+    expect(sources.map((source) => source.storageName).toList(),
+        tickDomain['expectedPublicRead']);
+    expect(StorageService.trackingSourceRevision.value, revision,
+        reason: 'The public getter alone does not increment the notifier');
+  }
+  if (_generate) {
+    test('$tickScenario: generate actual pre-S2 one-key export', () async {
+      final head = await Process.run('git', ['rev-parse', 'HEAD']);
+      expect(head.exitCode, 0);
+      expect(head.stdout.toString().trim(), _origin);
+      final diff = await Process.run('git', ['diff', '--exit-code', _origin, '--', 'lib']);
+      expect(diff.exitCode, 0, reason: 'Old production must remain unchanged');
+      final config = File('.dart_tool/package_config.json');
+      final metadata = jsonDecode(await config.readAsString()) as Map;
+      final app = (metadata['packages'] as List).cast<Map>().singleWhere((e) => e['name'] == 'debrify');
+      final library = config.absolute.uri.resolve(app['rootUri'] as String).resolve(app['packageUri'] as String).resolve('services/storage_service.dart');
+      expect(p.equals(library.toFilePath(), p.join(Directory.current.path, 'lib', 'services', 'storage_service.dart')), isTrue);
+      expect(tickValues.keys, ['home_tick_sources']);
+      await _writeValues(tickValues);
+      final prefs = await ProfilePreferences.instance();
+      _expectSettings({for (final key in tickValues.keys) key: prefs.get(key)}, tickValues);
+      final package = await export();
+      _expectSettings(_values(package), tickValues);
+      expect(package.resources, isEmpty);
+      final bytes = await PortableProfilePackage.encodeEncryptedBytes(package, _passphrase);
+      final decoded = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+      _expectSettings(_values(decoded), tickValues);
+      await File('$_directory/$tickScenario.encrypted.json').writeAsBytes(bytes);
+      await File('$_directory/$tickScenario.manifest.json').writeAsString(const JsonEncoder.withIndent('  ').convert({
+        'origin': _origin, 'scenario': tickScenario, 'syntheticOnly': true,
+        'sha256': await _digest(bytes), 'includeSecrets': false,
+        'representedSettings': tickValues,
+        'keyTypes': tickValues.map((key, value) => MapEntry(key, _type(value))),
+        'excludedKeys': <String>[], 'omissions': package.omissions,
+      }));
+    });
+  } else {
+    test('$tickScenario: restore physical values before public reads', () async {
+      final manifest = jsonDecode(await File('$_directory/$tickScenario.manifest.json').readAsString()) as Map;
+      final bytes = await File('$_directory/$tickScenario.encrypted.json').readAsBytes();
+      expect(manifest['origin'], _origin);
+      expect(manifest['syntheticOnly'], isTrue);
+      expect(manifest['sha256'], await _digest(bytes));
+      expect(manifest['representedSettings'], tickValues);
+      expect(manifest['excludedKeys'], isEmpty);
+      expect(manifest['keyTypes'], tickValues.map((key, value) => MapEntry(key, _type(value))));
+      var package = await PortableProfilePackage.decrypt(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>, _passphrase);
+      _expectSettings(_values(package), tickValues);
+      expect(package.resources, isEmpty);
+      if (_mutation.isNotEmpty) {
+        final mutation = (tickDomain['mutations'] as Map)[_mutation] as Map?;
+        expect(mutation, isNotNull);
+        final values = {..._values(package)};
+        final key = mutation!['key'] as String;
+        if (mutation['operation'] == 'rename') {
+          values['synthetic_wrong_tick_key'] = values.remove(key);
+        } else {
+          values[key] = mutation['value'];
+        }
+        final mutant = PortableProfilePackage(
+          mode: package.mode, createdAt: package.createdAt, profiles: package.profiles,
+          resources: package.resources, omissions: package.omissions,
+          sections: {...package.sections,
+            package.profiles.single['preferencesSection'] as String: await PortableProfilePackage.buildSection(values)},
+        );
+        package = await PortableProfilePackage.decrypt(await PortableProfilePackage.encrypt(mutant, _passphrase), _passphrase);
+        _expectSettings(_values(package), values);
+      }
+      final prefs = await SharedPreferences.getInstance();
+      for (final key in tickValues.keys) {
+        await prefs.setString('p.$profileId.g.1.$key', 'synthetic old generation');
+        await prefs.setString('p.$otherProfileId.g.1.$key', 'synthetic other profile');
+        await prefs.setString('p.$profileId.g.7.$key', 'synthetic other generation');
+      }
+      await prefs.setString('p.$profileId.g.1.tick_fixture_sentinel', 'untouched');
+      final report = await ProfileRestoreCoordinator(registry: registry, cipher: cipher).restore(
+        package: package, destinationProfileId: profileId,
+        authorization: await ProfileAuthorizationContext.capture(registry),
+      );
+      expect(report.publishedGeneration, 2);
+      final prefix = ProfileRuntime.capture().preferencePrefix;
+      // Valid semantic mutants fail here, AFTER successful decode and restore.
+      _expectSettings({for (final key in tickValues.keys) key: prefs.get('$prefix$key')}, tickValues);
+      await expectTickReaders();
+      _expectSettings({for (final key in tickValues.keys) key: prefs.get('$prefix$key')}, tickValues);
+      for (final key in tickValues.keys) {
+        expect(prefs.get('p.$profileId.g.1.$key'), 'synthetic old generation');
+        expect(prefs.get('p.$otherProfileId.g.1.$key'), 'synthetic other profile');
+        expect(prefs.get('p.$profileId.g.7.$key'), 'synthetic other generation');
+      }
+      expect(prefs.get('${prefix}tick_fixture_sentinel'), 'untouched');
+      expect(prefs.get('p.$profileId.g.1.tick_fixture_sentinel'), 'untouched');
+      for (final secrets in [false, true]) {
+        _expectSettings(_values(await export(includeSecrets: secrets)), {...tickValues, 'tick_fixture_sentinel': 'untouched'});
+      }
     });
   }
 
@@ -2140,20 +2247,20 @@ void main() {
             }, unchangedOther);
           }
           if (!isResidual) {
-            expect(await StorageService.getMdblistSavedClones(), {
+            expect(await TrackingPrefs.getMdblistSavedClones(), {
               101: 201,
               102: 202,
             });
             expect(
-              await StorageService.getMdblistSyncCheckpoint(),
+              await TrackingPrefs.getMdblistSyncCheckpoint(),
               jsonDecode(_settings['mdblist_sync_checkpoint_v1']! as String),
             );
             expect(
-              await StorageService.takeTrackingProgressFallbackNotice(),
+              await TrackingPrefs.takeTrackingProgressFallbackNotice(),
               true,
             );
             expect(
-              await StorageService.takeTrackingProgressFallbackNotice(),
+              await TrackingPrefs.takeTrackingProgressFallbackNotice(),
               false,
             );
           }

@@ -10,6 +10,7 @@ import '../mdblist/mdblist_service.dart';
 import '../mdblist/mdblist_sync_coordinator.dart';
 import '../pikpak_api_service.dart';
 import '../remote_control/remote_constants.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../storage_service.dart';
 import '../stream_badges_service.dart';
 import '../stremio_service.dart';
@@ -433,13 +434,13 @@ Future<void> _buildPikpak(TransferBuildContext ctx) async {
 
 Future<void> _buildTrakt(TransferBuildContext ctx) async {
   if (!ctx.includeCredentials) return;
-  final access = await StorageService.getTraktAccessToken();
-  final refresh = await StorageService.getTraktRefreshToken();
+  final access = await TrackingPrefs.getTraktAccessToken();
+  final refresh = await TrackingPrefs.getTraktRefreshToken();
   if (access == null || access.isEmpty || refresh == null || refresh.isEmpty) {
     return;
   }
-  final expiry = await StorageService.getTraktTokenExpiry();
-  final username = await StorageService.getTraktUsername();
+  final expiry = await TrackingPrefs.getTraktTokenExpiry();
+  final username = await TrackingPrefs.getTraktUsername();
   ctx.payload['trakt'] = <String, dynamic>{
     'access_token': access,
     'refresh_token': refresh,
@@ -450,9 +451,9 @@ Future<void> _buildTrakt(TransferBuildContext ctx) async {
 
 Future<void> _buildSimkl(TransferBuildContext ctx) async {
   if (!ctx.includeCredentials) return;
-  final access = await StorageService.getSimklAccessToken();
+  final access = await TrackingPrefs.getSimklAccessToken();
   if (access == null || access.isEmpty) return;
-  final username = await StorageService.getSimklUsername();
+  final username = await TrackingPrefs.getSimklUsername();
   ctx.payload['simkl'] = <String, dynamic>{
     'access_token': access,
     if (username != null && username.isNotEmpty) 'username': username,
@@ -461,10 +462,10 @@ Future<void> _buildSimkl(TransferBuildContext ctx) async {
 
 Future<void> _buildMdblist(TransferBuildContext ctx) async {
   if (!ctx.includeCredentials) return;
-  final apiKey = await StorageService.getMdblistApiKey();
+  final apiKey = await TrackingPrefs.getMdblistApiKey();
   if (apiKey == null || apiKey.isEmpty) return;
-  final username = await StorageService.getMdblistUsername();
-  final checkpoint = await StorageService.getMdblistSyncCheckpoint();
+  final username = await TrackingPrefs.getMdblistUsername();
+  final checkpoint = await TrackingPrefs.getMdblistSyncCheckpoint();
   final scrobbleTargets = await ctx.scrobbleTargets();
   ctx.payload['mdblist'] = <String, dynamic>{
     'api_key': apiKey,
@@ -677,19 +678,19 @@ Future<void> _applyTrakt(TransferApplyContext ctx) async {
         refresh != null &&
         refresh.isNotEmpty) {
       try {
-        await StorageService.setTraktAccessToken(access);
-        await StorageService.setTraktRefreshToken(refresh);
+        await TrackingPrefs.setTraktAccessToken(access);
+        await TrackingPrefs.setTraktRefreshToken(refresh);
         final expiry = (t['expiry_ms'] as num?)?.toInt();
         if (expiry != null) {
-          await StorageService.setTraktTokenExpiry(expiry);
+          await TrackingPrefs.setTraktTokenExpiry(expiry);
         }
         final username = t['username'] as String?;
         if (username != null && username.isNotEmpty) {
-          await StorageService.setTraktUsername(username);
+          await TrackingPrefs.setTraktUsername(username);
         }
         // Match interactive connect: a freshly imported Trakt session
         // starts with catalog scrobbling on.
-        await StorageService.setTraktSyncCatalogItems(true);
+        await TrackingPrefs.setTraktSyncCatalogItems(true);
         ctx.report.trakt = true;
       } catch (_) {
         ctx.report.errors.add('Trakt: restore failed');
@@ -704,14 +705,14 @@ Future<void> _applySimkl(TransferApplyContext ctx) async {
     final access = s['access_token'] as String?;
     if (access != null && access.isNotEmpty) {
       try {
-        await StorageService.setSimklAccessToken(access);
+        await TrackingPrefs.setSimklAccessToken(access);
         final username = s['username'] as String?;
         if (username != null && username.isNotEmpty) {
-          await StorageService.setSimklUsername(username);
+          await TrackingPrefs.setSimklUsername(username);
         }
         // Match interactive connect: a freshly imported Simkl session
         // starts with catalog scrobbling on.
-        await StorageService.setSimklSyncCatalogItems(true);
+        await TrackingPrefs.setSimklSyncCatalogItems(true);
         ctx.report.simkl = true;
       } catch (_) {
         ctx.report.errors.add('Simkl: restore failed');
@@ -726,14 +727,14 @@ Future<void> _applyMdblist(TransferApplyContext ctx) async {
     final apiKey = m['api_key'] as String?;
     if (apiKey != null && apiKey.isNotEmpty) {
       try {
-        await StorageService.saveMdblistApiKey(apiKey);
+        await TrackingPrefs.saveMdblistApiKey(apiKey);
         final username = m['username'] as String?;
-        await StorageService.setMdblistUsername(username);
-        await StorageService.setMdblistSyncCatalogItems(
+        await TrackingPrefs.setMdblistUsername(username);
+        await TrackingPrefs.setMdblistSyncCatalogItems(
           m['sync_catalog_items'] as bool? ?? true,
         );
         final checkpoint = m['sync_checkpoint'];
-        await StorageService.setMdblistSyncCheckpoint(
+        await TrackingPrefs.setMdblistSyncCheckpoint(
           checkpoint is Map ? Map<String, dynamic>.from(checkpoint) : null,
         );
         // The key was written directly (not via connect()), so the MDBList
@@ -860,7 +861,7 @@ Future<void> _applyTrackingPreferences(TransferApplyContext ctx) async {
   final trackingPreferences = ctx.map['trackingPreferences'];
   if (trackingPreferences is Map) {
     try {
-      await StorageService.applyTrackingPreferencesPayload(trackingPreferences);
+      await TrackingPrefs.applyTrackingPreferencesPayload(trackingPreferences);
     } catch (_) {
       ctx.report.errors.add('Tracking preferences: restore failed');
     }
@@ -903,13 +904,13 @@ Future<TransferInventory> _inspectPikpak() async {
 }
 
 Future<TransferInventory> _inspectTrakt() async {
-  final access = await StorageService.getTraktAccessToken(
+  final access = await TrackingPrefs.getTraktAccessToken(
     forRemoteTransfer: true,
   );
-  final refresh = await StorageService.getTraktRefreshToken(
+  final refresh = await TrackingPrefs.getTraktRefreshToken(
     forRemoteTransfer: true,
   );
-  final username = await StorageService.getTraktUsername();
+  final username = await TrackingPrefs.getTraktUsername();
   final ok =
       access != null &&
       access.isNotEmpty &&
@@ -923,10 +924,10 @@ Future<TransferInventory> _inspectTrakt() async {
 }
 
 Future<TransferInventory> _inspectSimkl() async {
-  final access = await StorageService.getSimklAccessToken(
+  final access = await TrackingPrefs.getSimklAccessToken(
     forRemoteTransfer: true,
   );
-  final username = await StorageService.getSimklUsername();
+  final username = await TrackingPrefs.getSimklUsername();
   final ok = access != null && access.isNotEmpty;
   return TransferInventory(
     isConfigured: ok,
@@ -939,8 +940,8 @@ Future<TransferInventory> _inspectMdblist() async {
   if (!kMdblistEnabled) {
     return const TransferInventory(isConfigured: false, defaultSelected: false);
   }
-  final apiKey = await StorageService.getMdblistApiKey(forRemoteTransfer: true);
-  final username = await StorageService.getMdblistUsername();
+  final apiKey = await TrackingPrefs.getMdblistApiKey(forRemoteTransfer: true);
+  final username = await TrackingPrefs.getMdblistUsername();
   final ok = apiKey?.isNotEmpty ?? false;
   return TransferInventory(
     isConfigured: ok,
@@ -1085,17 +1086,17 @@ Future<Object?> _readPikpakWire(TransferSendContext ctx) async {
 }
 
 Future<Object?> _readTraktWire(TransferSendContext ctx) async {
-  final access = await StorageService.getTraktAccessToken(
+  final access = await TrackingPrefs.getTraktAccessToken(
     forRemoteTransfer: ctx.forRemoteTransfer,
   );
-  final refresh = await StorageService.getTraktRefreshToken(
+  final refresh = await TrackingPrefs.getTraktRefreshToken(
     forRemoteTransfer: ctx.forRemoteTransfer,
   );
   if (access == null || access.isEmpty || refresh == null || refresh.isEmpty) {
     return null;
   }
-  final expiry = await StorageService.getTraktTokenExpiry();
-  final username = await StorageService.getTraktUsername();
+  final expiry = await TrackingPrefs.getTraktTokenExpiry();
+  final username = await TrackingPrefs.getTraktUsername();
   return <String, Object?>{
     'access_token': access,
     'refresh_token': refresh,
@@ -1105,11 +1106,11 @@ Future<Object?> _readTraktWire(TransferSendContext ctx) async {
 }
 
 Future<Object?> _readSimklWire(TransferSendContext ctx) async {
-  final access = await StorageService.getSimklAccessToken(
+  final access = await TrackingPrefs.getSimklAccessToken(
     forRemoteTransfer: ctx.forRemoteTransfer,
   );
   if (access == null || access.isEmpty) return null;
-  final username = await StorageService.getSimklUsername();
+  final username = await TrackingPrefs.getSimklUsername();
   return <String, Object?>{
     'access_token': access,
     if (username != null) 'username': username,
@@ -1117,11 +1118,11 @@ Future<Object?> _readSimklWire(TransferSendContext ctx) async {
 }
 
 Future<Object?> _readMdblistWire(TransferSendContext ctx) async {
-  final apiKey = await StorageService.getMdblistApiKey(
+  final apiKey = await TrackingPrefs.getMdblistApiKey(
     forRemoteTransfer: ctx.forRemoteTransfer,
   );
   if (apiKey == null || apiKey.isEmpty) return null;
-  final username = await StorageService.getMdblistUsername();
+  final username = await TrackingPrefs.getMdblistUsername();
   return <String, Object?>{
     'api_key': apiKey,
     if (username != null) 'username': username,
@@ -1179,4 +1180,4 @@ Future<Object?> _readStreamBadgesWire(TransferSendContext ctx) async {
 }
 
 Future<Object?> _readTrackingPreferencesWire(TransferSendContext ctx) =>
-    StorageService.buildTrackingPreferencesPayload();
+    TrackingPrefs.buildTrackingPreferencesPayload();

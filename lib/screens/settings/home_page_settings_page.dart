@@ -9,6 +9,7 @@ import '../../services/mdblist/mdblist_list_source.dart';
 import '../../services/mdblist/mdblist_service.dart';
 import '../../services/simkl/simkl_service.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../../services/storage_service.dart';
 import '../../services/stremio_service.dart';
 import '../../services/trakt/trakt_list_source.dart';
@@ -216,7 +217,7 @@ class _HomePageSettingsPageState extends State<HomePageSettingsPage> {
         }
       }
 
-      final traktConnected = await probe(StorageService.hasTraktCredential);
+      final traktConnected = await probe(TrackingPrefs.hasTraktCredential);
       final simklConnected = await probe(
         () => SimklService.instance.isAuthenticated(),
       );

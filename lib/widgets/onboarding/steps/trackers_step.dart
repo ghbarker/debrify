@@ -6,7 +6,7 @@ import '../../../theme/widgets/parallax_focus.dart';
 import '../../../services/analytics_service.dart';
 import '../../../services/main_page_bridge.dart';
 import '../../../services/mdblist/mdblist_service.dart';
-import '../../../services/storage_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../../tv_text_field.dart';
 import '../controllers/tracker_auth_controller.dart';
 import '../onboarding_focus.dart';
@@ -207,7 +207,7 @@ class TrackersStep extends StatelessWidget {
                         });
                         return;
                       }
-                      await StorageService.setMdblistSyncCatalogItems(true);
+                      await TrackingPrefs.setMdblistSyncCatalogItems(true);
                       AnalyticsService.integrationConnected('mdblist', {
                         'surface': 'onboarding',
                         'method': 'api_key',

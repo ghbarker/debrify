@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../models/tracking_source.dart';
-import '../storage_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../episode_tracker_snapshot_revision.dart';
 import '../../models/profiles/profile_policy.dart';
 import '../profiles/profile_async_authorization.dart';
@@ -57,7 +57,7 @@ class MdblistService {
     Uri? baseUri,
   }) : _client = client ?? http.Client(),
        _apiKeyProvider =
-           apiKeyProvider ?? (() => StorageService.getMdblistApiKey()),
+           apiKeyProvider ?? (() => TrackingPrefs.getMdblistApiKey()),
        _featureEnabled = featureEnabled ?? (() => kMdblistEnabled),
        _baseUri = baseUri ?? Uri.parse(_base) {
     _transport = MdblistTransport(
@@ -250,7 +250,7 @@ class MdblistService {
     return key != null && key.isNotEmpty;
   }
 
-  Future<String?> getUsername() => StorageService.getMdblistUsername();
+  Future<String?> getUsername() => TrackingPrefs.getMdblistUsername();
 
   /// Validates [apiKey] against the API. On success, persists the key + the
   /// resolved username, caches the snapshot in [currentAccount], and returns
@@ -266,10 +266,10 @@ class MdblistService {
     if (snapshot == null) return null;
 
     Future<void> commit() async {
-      await StorageService.saveMdblistApiKey(key);
-      await StorageService.enableTrackingScrobbleTarget(TrackingSource.mdblist);
-      await StorageService.setMdblistUsername(snapshot.username);
-      await StorageService.setMdblistSyncCheckpoint(null);
+      await TrackingPrefs.saveMdblistApiKey(key);
+      await TrackingPrefs.enableTrackingScrobbleTarget(TrackingSource.mdblist);
+      await TrackingPrefs.setMdblistUsername(snapshot.username);
+      await TrackingPrefs.setMdblistSyncCheckpoint(null);
       if (capability == null || capability.isCurrentlyActive) {
         _clearCache();
         currentAccount = snapshot;
@@ -297,7 +297,7 @@ class MdblistService {
     if (snapshot != null) {
       Future<void> commit() async {
         if (snapshot.username != null) {
-          await StorageService.setMdblistUsername(snapshot.username);
+          await TrackingPrefs.setMdblistUsername(snapshot.username);
         }
         if (capability == null || capability.isCurrentlyActive) {
           currentAccount = snapshot;
@@ -316,7 +316,7 @@ class MdblistService {
   Future<void> logout() async {
     final capability = await _captureCapability();
     Future<void> clear() async {
-      await StorageService.clearMdblistAuth();
+      await TrackingPrefs.clearMdblistAuth();
       currentAccount = null;
       _clearCache();
       authRevision.value++;
@@ -1954,10 +1954,10 @@ class MdblistService {
     final deleted = await deleteList(cloneListId, capability: capability);
     if (!deleted) return false;
     if (capability == null) {
-      await StorageService.removeMdblistSavedClone(sourceListId);
+      await TrackingPrefs.removeMdblistSavedClone(sourceListId);
     } else {
       await capability.runIfCurrent(
-        () => StorageService.removeMdblistSavedClone(sourceListId),
+        () => TrackingPrefs.removeMdblistSavedClone(sourceListId),
       );
     }
     return true;

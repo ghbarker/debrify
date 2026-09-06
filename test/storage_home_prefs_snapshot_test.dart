@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:debrify/models/tracking_source.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import 'package:debrify/services/storage_service.dart'
     hide HomeCardOrientation, HomeHeroSourceMode, HomeHeroSource, HomeExtraRow;
 import 'package:flutter_test/flutter_test.dart';
@@ -196,7 +197,7 @@ void main() {
       mode: HomeHeroSourceMode.auto,
       ids: const [],
     ));
-    await StorageService.setHomeTickSources({TrackingSource.trakt});
+    await TrackingPrefs.setHomeTickSources({TrackingSource.trakt});
     await HomePrefs.setHomeHeroTrailerEnabled(false);
     await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(
       AmbientTrailerSurface.homeHero,
@@ -316,7 +317,7 @@ void main() {
     expect(hero.mode, HomeHeroSourceMode.random);
     expect(hero.ids, isEmpty);
     expect(
-      await StorageService.getHomeTickSources(),
+      await TrackingPrefs.getHomeTickSources(),
       Set<TrackingSource>.of(TrackingSource.values),
     );
     expect(await HomePrefs.getHomeHeroTrailerEnabled(), isTrue);
@@ -349,7 +350,7 @@ void main() {
         mode: HomeHeroSourceMode.custom,
         ids: ['cinemeta:movie:top', 'cinemeta:series:top'],
       ));
-      await StorageService.setHomeTickSources({
+      await TrackingPrefs.setHomeTickSources({
         TrackingSource.local,
         TrackingSource.simkl,
       });
@@ -424,7 +425,7 @@ void main() {
       final hero = await HomePrefs.getHomeHeroSource();
       expect(hero.mode, HomeHeroSourceMode.auto);
       expect(hero.ids, ['kept']);
-      expect(await StorageService.getHomeTickSources(), {
+      expect(await TrackingPrefs.getHomeTickSources(), {
         TrackingSource.mdblist,
       });
       expect(await HomePrefs.getHomeHeroTrailerEnabled(), isFalse);
@@ -565,26 +566,26 @@ void main() {
     'home tick sources: absent is all, empty list is none, unknowns drop',
     () async {
       expect(
-        await StorageService.getHomeTickSources(),
+        await TrackingPrefs.getHomeTickSources(),
         Set<TrackingSource>.of(TrackingSource.values),
       );
 
-      await StorageService.setHomeTickSources(<TrackingSource>{});
+      await TrackingPrefs.setHomeTickSources(<TrackingSource>{});
       final prefs = await SharedPreferences.getInstance();
       // Quirk: empty set writes an empty list; it does not remove the key.
       expect(prefs.getStringList('home_tick_sources'), isEmpty);
-      expect(await StorageService.getHomeTickSources(), isEmpty);
+      expect(await TrackingPrefs.getHomeTickSources(), isEmpty);
 
       SharedPreferences.setMockInitialValues(<String, Object>{
         'home_tick_sources': <String>['local', 'nope', 'simkl', 'local'],
       });
-      expect(await StorageService.getHomeTickSources(), {
+      expect(await TrackingPrefs.getHomeTickSources(), {
         TrackingSource.local,
         TrackingSource.simkl,
       });
 
       final before = StorageService.trackingSourceRevision.value;
-      await StorageService.setHomeTickSources({TrackingSource.trakt});
+      await TrackingPrefs.setHomeTickSources({TrackingSource.trakt});
       expect(StorageService.trackingSourceRevision.value, before + 1);
       final after = await SharedPreferences.getInstance();
       expect(after.getStringList('home_tick_sources'), ['trakt']);
@@ -676,7 +677,7 @@ void main() {
         mode: HomeHeroSourceMode.custom,
         ids: ['cinemeta:movie:top'],
       ));
-      await StorageService.setHomeTickSources({TrackingSource.simkl});
+      await TrackingPrefs.setHomeTickSources({TrackingSource.simkl});
       await HomePrefs.setHomeHeroTrailerEnabled(false);
       await AmbientTrailerPrefs.setAmbientTrailerAudioEnabled(
         AmbientTrailerSurface.homeHero,
@@ -739,7 +740,7 @@ void main() {
       expect(await HomePrefs.getHomeRowOrder(), ['fav:iptv']);
       final hero = await HomePrefs.getHomeHeroSource();
       expect(hero.mode, HomeHeroSourceMode.auto);
-      expect(await StorageService.getHomeTickSources(), {
+      expect(await TrackingPrefs.getHomeTickSources(), {
         TrackingSource.mdblist,
       });
       expect(await HomePrefs.getHomeHeroTrailerEnabled(), isTrue);

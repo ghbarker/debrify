@@ -22,6 +22,7 @@ import '../pikpak_api_service.dart';
 import '../premiumize_account_service.dart';
 import '../remote_control/remote_command_router.dart';
 import '../simkl/simkl_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../storage_service.dart';
 import '../stream_badges_service.dart';
 import '../stremio_service.dart';
@@ -125,7 +126,7 @@ class ProfileAppLifecycleParticipant implements ProfileLifecycleParticipant {
       _warmed('Simkl', scope, SimklService.instance.resetProfileScope);
       _warmed('PikPak', scope, PikPakApiService.instance.resetProfileScope);
       _warmed('MDBList', scope, MdblistService.instance.resetProfileScope);
-      await StorageService.retireMdblistSavedCloneMarkers();
+      await TrackingPrefs.retireMdblistSavedCloneMarkers();
       _warmed('IPTV', scope, IptvService.instance.clearCache);
       _warmed('Xtream', scope, XtreamCodesService.instance.clearCache);
       _warmed('DiscoverPrefs', scope, DiscoverPrefs.resetProfileScope);

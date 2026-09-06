@@ -13,7 +13,7 @@ import '../../services/mdblist/mdblist_service.dart';
 import '../../services/mdblist/mdblist_sync_coordinator.dart';
 import '../../services/simkl/simkl_continue_watching_service.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
-import '../../services/storage_service.dart';
+import 'package:debrify/services/storage/tracking_prefs.dart';
 import '../../services/tracking_source_policy.dart';
 import '../../services/trakt/trakt_continue_watching_service.dart';
 import '../../services/trakt/trakt_service.dart';
@@ -742,7 +742,7 @@ class ContinueWatchingController extends ChangeNotifier {
     // Every CW reload passes through here (init, Home-settings change,
     // integration change, post-playback), so it is the one place the card
     // lookups need their Progress source refreshed.
-    final progressSource = await StorageService.getWatchProgressSource();
+    final progressSource = await TrackingPrefs.getWatchProgressSource();
     final enabled = await HomePrefs.getHomeContinueWatchingEnabled();
     if (!_live || token != cwLoadToken) return;
     if (progressSource != cwProgressSource) {
