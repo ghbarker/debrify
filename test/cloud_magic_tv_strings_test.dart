@@ -55,7 +55,6 @@ const _watchFlowPaths = <String>[
   'lib/screens/debrify_tv/watch/pikpak_watch_flow.dart',
   'lib/screens/debrify_tv/watch/premiumize_watch_flow.dart',
   'lib/screens/debrify_tv/watch/provider_watch_flow.dart',
-  'lib/screens/debrify_tv/watch/real_debrid_watch_flow.dart',
   'lib/screens/debrify_tv/watch/torbox_watch_flow.dart',
   'lib/screens/debrify_tv/watch/windowed_watch_queue.dart',
   'lib/screens/debrify_tv/watch/quick_windowed_watch_programme.dart',

@@ -5,7 +5,7 @@ import 'debrify_tv/watch/torbox_watch_flow.dart';
 import 'debrify_tv/watch/pikpak_watch_flow.dart';
 import 'debrify_tv/watch/premiumize_watch_flow.dart';
 import 'debrify_tv/watch/alldebrid_watch_flow.dart';
-import 'debrify_tv/watch/real_debrid_watch_flow.dart';
+import 'debrify_tv/watch/cached_locked_watch_programme.dart';
 import 'dart:async';
 import 'dart:math';
 
@@ -333,7 +333,6 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
   /// API. Each candidate is added trusting the `ready` flag (no polling) and
   /// links are unlocked lazily on demand.
   late final _alldebridWatch = AlldebridWatchFlow(_watchBindings);
-  late final _realDebridWatch = RealDebridWatchFlow(_watchBindings);
 
   late final ChannelImportExport _importExport = ChannelImportExport(host: this);
   // Mixed queue: can contain Torrent items or RD-restricted link maps
@@ -1417,8 +1416,10 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         // (sequential add-and-probe, no cache-check API) but resolves each candidate
         // through AllDebrid's `ready`-flag add (no polling) and lazily unlocks links
         // on demand. The background prefetcher keeps upcoming items prepared.
-        await _alldebridWatch.watchAllDebridWithCachedTorrents(
+        await runCachedLockedWatch(
+          _watchBindings,
           cachedTorrents,
+          provider: CachedLockedProvider.allDebrid,
           applyNsfwFilter: channel.avoidNsfw || _viewerForcesNsfw,
           channelName: channel.name,
           channelId: channel.id,
@@ -1426,8 +1427,10 @@ class _DebrifyTVScreenState extends State<DebrifyTVScreen>
         );
       case CloudProviderId.debrid:
         debugPrint('🎬 [WATCH] Launching RealDebrid flow...');
-        await _realDebridWatch.watchWithCachedTorrents(
+        await runCachedLockedWatch(
+          _watchBindings,
           cachedTorrents,
+          provider: CachedLockedProvider.realDebrid,
           applyNsfwFilter: channel.avoidNsfw || _viewerForcesNsfw,
           channelName: channel.name,
           channelId: channel.id,
