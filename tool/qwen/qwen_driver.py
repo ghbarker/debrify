@@ -288,15 +288,15 @@ def deterministic_fix(text, issue):
             del lines[idx]
             body = "\n".join(lines)
             # Field declaration: `Type name;` (mutable) or `final Type name;`
-            decl = re.compile(r"^(\s*)((?:final\s+)?[\w<>?, ]+?)\s+" + re.escape(name) + r";\s*$", re.M)
+            decl = re.compile(r"^(\s*)((?:final\s+)?[\w<>?, ]+?)\s+" + re.escape(name) + r";[ \t]*$", re.M)
             hits = list(decl.finditer(body))
             if len(hits) != 1:
                 return None
             other_uses = len(re.findall(r"\b" + re.escape(name) + r"\b", body)) - 1  # minus the declaration
             h = hits[0]
             if other_uses == 0:
-                body = body[:h.start()] + body[h.end() + 1:] if body[h.end():h.end() + 1] == "\n" else body[:h.start()] + body[h.end():]
-                return body, f"removed parameter `{name}` and its unused field"
+                end = h.end() + 1 if body[h.end():h.end() + 1] == "\n" else h.end()
+                return body[:h.start()] + body[end:], f"removed parameter `{name}` and its unused field"
             body = body[:h.start()] + f"{h.group(1)}{h.group(2)} {name} = {default};" + body[h.end():]
             return body, f"removed parameter `{name}`; field keeps its default `{default}` as an initialiser"
         return None
