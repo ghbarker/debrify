@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 
 import '../../../services/text_brightness.dart';
 import '../../../theme/app_looks.dart';
+import '../../../theme/app_motion.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/app_theme_controller.dart';
 import '../../../theme/app_theme_scope.dart';
 import '../../../theme/appearance_preview.dart';
 import '../../../theme/widgets/theme_preview_stage.dart';
+import '../../../utils/platform_util.dart';
 import '../../../widgets/detail/theme/detail_themes.dart';
 
 /// The live preview pinned to the top of Appearance.
@@ -35,6 +37,7 @@ class AppearancePreviewCard extends StatefulWidget {
     this.activeLookId,
     this.candidate = false,
     this.focusNode,
+    this.singleRow,
   });
 
   /// What to draw.
@@ -60,6 +63,12 @@ class AppearancePreviewCard extends StatefulWidget {
   /// The strip's focus node — on TV, the pane node this card claims.
   final FocusNode? focusNode;
 
+  /// One horizontal, scrolling row of chips instead of a Wrap. Null means
+  /// "on a television": Left/Right is the only way a D-pad walks the strip,
+  /// so a wrapped second row would be unreachable; pointer surfaces keep the
+  /// Wrap, where every chip stays under the mouse without scrolling.
+  final bool? singleRow;
+
   @override
   State<AppearancePreviewCard> createState() => _AppearancePreviewCardState();
 }
@@ -69,6 +78,25 @@ class _AppearancePreviewCardState extends State<AppearancePreviewCard> {
   /// across the strip resolves each Look once, not once per frame.
   final Map<String, AppTheme> _cache = {};
   static const int _kCacheCap = 16;
+  final GlobalKey _cardKey = GlobalKey();
+
+  /// The strip took focus (TV Up/Down landed on it). Coming from the rows
+  /// below, only the strip would be on screen and nothing brings the stage
+  /// back — so scroll the WHOLE card to the top of the pane. Post-frame: the
+  /// focus change setState may still be pending layout.
+  void _reveal() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _cardKey.currentContext;
+      if (!mounted || ctx == null) return;
+      final motion = AppMotion.of(ctx);
+      Scrollable.ensureVisible(
+        ctx,
+        alignment: 0,
+        duration: motion.scaled(const Duration(milliseconds: 220)),
+        curve: motion.standard,
+      );
+    });
+  }
 
   AppTheme _resolve(AppearancePreviewState s) {
     final hit = _cache[s.cacheKey];
@@ -88,6 +116,7 @@ class _AppearancePreviewCardState extends State<AppearancePreviewCard> {
     final shown = _resolve(widget.state);
     final radius = app.shape.br(13);
     return Container(
+      key: _cardKey,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
       decoration: BoxDecoration(
         color: Color.alphaBlend(
@@ -114,6 +143,8 @@ class _AppearancePreviewCardState extends State<AppearancePreviewCard> {
             focusNode: widget.focusNode,
             onPreview: widget.onPreview,
             onApply: widget.onApply,
+            onFocused: _reveal,
+            singleRow: widget.singleRow ?? PlatformUtil.isTelevision,
           ),
         ],
       ),
@@ -182,6 +213,8 @@ class _LookStrip extends StatefulWidget {
     required this.focusNode,
     required this.onPreview,
     required this.onApply,
+    this.onFocused,
+    this.singleRow = false,
   });
 
   final List<AppLook> looks;
@@ -189,6 +222,8 @@ class _LookStrip extends StatefulWidget {
   final FocusNode? focusNode;
   final ValueChanged<AppLook?>? onPreview;
   final Future<void> Function(AppLook look) onApply;
+  final VoidCallback? onFocused;
+  final bool singleRow;
 
   @override
   State<_LookStrip> createState() => _LookStripState();
@@ -203,6 +238,52 @@ class _LookStripState extends State<_LookStrip> {
   bool _focused = false;
   AppLook? _hover;
 
+  /// One horizontal row, never a Wrap: Left/Right is the only way a D-pad
+  /// moves along the strip, so a second wrapped row would be unreachable.
+  final ScrollController _scroll = ScrollController();
+  final GlobalKey _viewportKey = GlobalKey();
+  List<GlobalKey> _chipKeys = const [];
+
+  void _syncChipKeys() {
+    if (_chipKeys.length != widget.looks.length) {
+      _chipKeys = List.generate(widget.looks.length, (_) => GlobalKey());
+    }
+  }
+
+  /// Scrolls the strip (horizontally only — never the pane) so the
+  /// highlighted chip is fully on screen, with a little breathing room.
+  void _keepChipVisible() {
+    if (!widget.singleRow) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      if (_highlight < 0 || _highlight >= _chipKeys.length) return;
+      final chip = _chipKeys[_highlight].currentContext?.findRenderObject();
+      final viewport = _viewportKey.currentContext?.findRenderObject();
+      if (chip is! RenderBox || viewport is! RenderBox) return;
+      const pad = 12.0;
+      final visibleLeft = chip
+          .localToGlobal(Offset.zero, ancestor: viewport)
+          .dx;
+      final left = visibleLeft + _scroll.offset;
+      final right = left + chip.size.width;
+      final extent = viewport.size.width;
+      var target = _scroll.offset;
+      if (left - pad < _scroll.offset) {
+        target = left - pad;
+      } else if (right + pad > _scroll.offset + extent) {
+        target = right + pad - extent;
+      }
+      target = target.clamp(0.0, _scroll.position.maxScrollExtent);
+      if (target == _scroll.offset) return;
+      final motion = AppMotion.of(context);
+      _scroll.animateTo(
+        target,
+        duration: motion.scaled(const Duration(milliseconds: 160)),
+        curve: motion.standard,
+      );
+    });
+  }
+
   @override
   void didUpdateWidget(covariant _LookStrip old) {
     super.didUpdateWidget(old);
@@ -213,6 +294,7 @@ class _LookStripState extends State<_LookStrip> {
   void dispose() {
     _release(widget.focusNode);
     _ownNode?.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -243,6 +325,10 @@ class _LookStripState extends State<_LookStrip> {
       }
     });
     _emit();
+    if (focused) {
+      widget.onFocused?.call();
+      _keepChipVisible();
+    }
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
@@ -255,12 +341,14 @@ class _LookStripState extends State<_LookStrip> {
       if (_highlight == 0) return KeyEventResult.ignored;
       setState(() => _highlight--);
       _emit();
+      _keepChipVisible();
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowRight) {
       if (_highlight < widget.looks.length - 1) {
         setState(() => _highlight++);
         _emit();
+        _keepChipVisible();
       }
       // Trapped at the end so directional traversal cannot carry focus off
       // to whatever happens to sit to the right.
@@ -280,36 +368,55 @@ class _LookStripState extends State<_LookStrip> {
 
   @override
   Widget build(BuildContext context) {
+    _syncChipKeys();
+    Widget chip(int i) => KeyedSubtree(
+      key: _chipKeys[i],
+      child: _LookChip(
+        look: widget.looks[i],
+        active: widget.looks[i].id == widget.activeLookId,
+        highlighted: _focused && i == _highlight,
+        onEnter: () {
+          _hover = widget.looks[i];
+          _emit();
+        },
+        onExit: () {
+          if (_hover?.id == widget.looks[i].id) _hover = null;
+          _emit();
+        },
+        onTap: () {
+          // A tap also moves the keyboard highlight, so a later OK
+          // re-applies what was just chosen rather than a stale chip.
+          setState(() => _highlight = i);
+          widget.onApply(widget.looks[i]);
+        },
+      ),
+    );
+    final Widget body = widget.singleRow
+        ? SingleChildScrollView(
+            key: _viewportKey,
+            controller: _scroll,
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < widget.looks.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  chip(i),
+                ],
+              ],
+            ),
+          )
+        : Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [for (var i = 0; i < widget.looks.length; i++) chip(i)],
+          );
     return Focus(
       focusNode: _node,
       onFocusChange: _onFocusChange,
       onKeyEvent: _onKey,
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        children: [
-          for (var i = 0; i < widget.looks.length; i++)
-            _LookChip(
-              look: widget.looks[i],
-              active: widget.looks[i].id == widget.activeLookId,
-              highlighted: _focused && i == _highlight,
-              onEnter: () {
-                _hover = widget.looks[i];
-                _emit();
-              },
-              onExit: () {
-                if (_hover?.id == widget.looks[i].id) _hover = null;
-                _emit();
-              },
-              onTap: () {
-                // A tap also moves the keyboard highlight, so a later OK
-                // re-applies what was just chosen rather than a stale chip.
-                setState(() => _highlight = i);
-                widget.onApply(widget.looks[i]);
-              },
-            ),
-        ],
-      ),
+      child: body,
     );
   }
 }
@@ -421,7 +528,15 @@ class _LookChip extends StatelessWidget {
 /// is on the card the moment the user comes back — or while the page is still
 /// open, where the shell keeps the card visible.
 class AppearancePreviewHost extends StatefulWidget {
-  const AppearancePreviewHost({super.key, this.focusNode, this.applyLook});
+  const AppearancePreviewHost({
+    super.key,
+    this.focusNode,
+    this.applyLook,
+    this.singleRow,
+  });
+
+  /// See [AppearancePreviewCard.singleRow]; null follows the platform.
+  final bool? singleRow;
 
   /// The strip's focus node — on TV, the pane node this card claims.
   final FocusNode? focusNode;
@@ -494,6 +609,7 @@ class _AppearancePreviewHostState extends State<AppearancePreviewHost> {
       activeLookId: active?.id,
       candidate: candidate != null && candidate.id != active?.id,
       focusNode: widget.focusNode,
+      singleRow: widget.singleRow,
       onPreview: (look) {
         if (look?.id == _candidate?.id) return;
         setState(() => _candidate = look);
