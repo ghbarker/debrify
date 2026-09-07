@@ -618,6 +618,14 @@ is an editor mirror, not the source of truth. How to add a provider:
   (`IptvZapController` + `IptvZapSession`; host keeps `_IptvZapSession`
   adapter; `onSwitch(channel)` is the host `_switchToIptvChannel`; overlay
   reads banner `ValueNotifier`s via host getters).
+  Episode display projection (dock title + fetched flag, subtitle, OTT
+  metadata): `lib/screens/video_player/episode_display_projection.dart`
+  (`EpisodeDisplayProjection.titleInfo/subtitle/enhancedMetadata`, bodies
+  verbatim) over the `EpisodeDisplayInputs` snapshot in
+  `lib/screens/video_player/episode_display_inputs.dart`; host keeps the
+  `_episodeDisplayInputs` getter (fourteen reads, origin first-read order;
+  lazy `_seriesPlaylist` evaluated at the call). Host -197 across V1-B0/B1 /
+  whole production +120; pure projection, no state ownership claim.
   Controls overlay:
   `lib/screens/video_player/widgets/controls.dart`. Track/source sheets: `lib/screens/video_player/widgets/`.
 - Launch + native TV: `lib/services/video_player_launcher.dart` 🔴 (`_launchOnAndroidTv`, `_push`),

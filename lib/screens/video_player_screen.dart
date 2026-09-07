@@ -56,6 +56,7 @@ import 'package:media_kit_video/media_kit_video.dart' as mkv;
 // Video Player Components
 import 'video_player/models/playlist_entry.dart';
 import 'video_player/episode_display_inputs.dart';
+import 'video_player/episode_display_projection.dart';
 import 'video_player/player_launch_config.dart';
 import 'video_player/resume_controller.dart';
 import 'video_player/player_tracker_lifecycle.dart';
@@ -3070,7 +3071,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   /// The episode display projection's reads, each taken once in origin
   /// first-read order; the lazy, cache-writing `_seriesPlaylist` is evaluated
   /// here, at the call, exactly where the origin evaluated it first.
-  // ignore: unused_element
   EpisodeDisplayInputs get _episodeDisplayInputs => EpisodeDisplayInputs(
     seriesPlaylist: _seriesPlaylist,
     activePlaylist: _activePlaylist,
@@ -3087,236 +3087,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     effectiveContentEpisode: _effectiveContentEpisode,
     subtitle: widget.subtitle,
   );
-
-  /// Get the current episode title for display
-  String _getCurrentEpisodeTitle() => _getCurrentEpisodeTitleInfo().title;
-
-  /// The dock title plus whether it's a fetched, human name (TVMaze episode
-  /// title, catalog content title, channel name) as opposed to a release
-  /// filename. TvControls skips its release-noise cleaner for fetched names —
-  /// the token list would truncate a real title containing e.g. "Proper".
-  ({String title, bool fetched}) _getCurrentEpisodeTitleInfo() {
-    final seriesPlaylist = _seriesPlaylist;
-    if (seriesPlaylist != null &&
-        seriesPlaylist.isSeries &&
-        _activePlaylist != null) {
-      // Find the current episode info
-      if (_currentIndex >= 0 && _currentIndex < _activePlaylist!.length) {
-        try {
-          final currentEpisode = seriesPlaylist.allEpisodes.firstWhere(
-            (episode) => episode.originalIndex == _currentIndex,
-            orElse: () => seriesPlaylist.allEpisodes.first,
-          );
-
-          // Return episode title if available, otherwise use the playlist entry title
-          if (currentEpisode.episodeInfo?.title != null &&
-              currentEpisode.episodeInfo!.title!.isNotEmpty) {
-            final episodeTitle = currentEpisode.episodeInfo!.title!;
-            // "Show — Episode" when TVMaze supplied the official show name;
-            // the subtitle then drops the name to avoid saying it twice.
-            final show = seriesPlaylist.tvmazeShowName;
-            return (
-              title: show == null || show.isEmpty
-                  ? episodeTitle
-                  : '$show — $episodeTitle',
-              fetched: true,
-            );
-          } else if (currentEpisode.seriesInfo.season != null &&
-              currentEpisode.seriesInfo.episode != null) {
-            // Catalog singleton without TVMaze data yet: the clean catalog
-            // title beats a bare "Episode N".
-            final contentTitle = _effectiveContentTitle;
-            if (_activePlaylist!.length == 1 &&
-                contentTitle != null &&
-                contentTitle.isNotEmpty &&
-                _effectiveStremioTvChannels == null) {
-              return (title: contentTitle, fetched: true);
-            }
-            final episodeTitle = 'Episode ${currentEpisode.seriesInfo.episode}';
-            final show = seriesPlaylist.tvmazeShowName;
-            return (
-              title: show == null || show.isEmpty
-                  ? episodeTitle
-                  : '$show — $episodeTitle',
-              fetched: true,
-            );
-          }
-        } catch (e) {
-          // Silently fail
-        }
-      }
-    }
-
-    // Stremio TV: use dynamic title when a channel switch has occurred
-    if (_hasStremioTvGuide && _dynamicTitle.isNotEmpty) {
-      return (title: _dynamicTitle, fetched: true);
-    }
-
-    // Catalog single stream (Quick Play / Sources tap): prefer the clean
-    // content title over the release filename. Packs are handled by the
-    // series branch above; Debrify TV, IPTV and Stremio TV keep their
-    // dynamic titles.
-    final contentTitle = _effectiveContentTitle;
-    if (contentTitle != null &&
-        contentTitle.isNotEmpty &&
-        widget.requestMagicNext == null &&
-        _effectiveIptvChannels == null &&
-        _effectiveStremioTvChannels == null &&
-        (_activePlaylist == null || _activePlaylist!.length <= 1)) {
-      return (title: contentTitle, fetched: true);
-    }
-
-    // Fallback to the current playlist entry title
-    if (_activePlaylist != null &&
-        _currentIndex >= 0 &&
-        _currentIndex < _activePlaylist!.length) {
-      return (title: _activePlaylist![_currentIndex].title, fetched: false);
-    }
-
-    // If Debrify TV (no playlist) is active, use dynamic title when available
-    // (a Debrify TV title can be a torrent name — keep the cleaner on it).
-    if ((_activePlaylist == null || _activePlaylist!.isEmpty) &&
-        widget.requestMagicNext != null) {
-      return _dynamicTitle.isNotEmpty
-          ? (title: _dynamicTitle, fetched: false)
-          : (title: widget.title, fetched: false);
-    }
-
-    // IPTV: use current channel name
-    final iptvChannels = _effectiveIptvChannels;
-    if (iptvChannels != null &&
-        _currentIptvIndex >= 0 &&
-        _currentIptvIndex < iptvChannels.length) {
-      return (
-        title: iptvChannels[_currentIptvIndex].numberedName,
-        fetched: true,
-      );
-    }
-
-    // Final fallback
-    return (title: widget.title, fetched: false);
-  }
-
-  /// Get the current episode subtitle for display
-  String? _getCurrentEpisodeSubtitle() {
-    final seriesPlaylist = _seriesPlaylist;
-    if (seriesPlaylist != null &&
-        seriesPlaylist.isSeries &&
-        _activePlaylist != null) {
-      // Find the current episode info
-      if (_currentIndex >= 0 && _currentIndex < _activePlaylist!.length) {
-        try {
-          final currentEpisode = seriesPlaylist.allEpisodes.firstWhere(
-            (episode) => episode.originalIndex == _currentIndex,
-            orElse: () => seriesPlaylist.allEpisodes.first,
-          );
-
-          // Return series name and season/episode info as subtitle
-          if (currentEpisode.seriesInfo.season != null &&
-              currentEpisode.seriesInfo.episode != null) {
-            // Catalog singleton: the filename-parsed series name can be a
-            // mangled release string; the clean catalog title is authoritative.
-            // While TVMaze hasn't supplied an episode title yet, the title line
-            // is already showing the catalog name — don't repeat it here.
-            final contentTitle = _effectiveContentTitle;
-            final isCatalogSingleton =
-                _activePlaylist!.length == 1 &&
-                contentTitle != null &&
-                contentTitle.isNotEmpty &&
-                _effectiveStremioTvChannels == null;
-            final seasonEpisode =
-                'Season ${currentEpisode.seriesInfo.season}, Episode ${currentEpisode.seriesInfo.episode}';
-            // When TVMaze supplied the show name, the TITLE line already
-            // reads "Show — Episode", so repeating the name here would say
-            // it twice. Without it, fall back to the filename-parsed series
-            // name — release strings only as a last resort, same rule as the
-            // native player's OTT identity row.
-            final showName = seriesPlaylist.tvmazeShowName;
-            if (showName != null && showName.isNotEmpty) {
-              return seasonEpisode;
-            }
-            if (isCatalogSingleton) {
-              final hasEpisodeTitle =
-                  currentEpisode.episodeInfo?.title?.isNotEmpty == true;
-              return hasEpisodeTitle
-                  ? '$contentTitle • $seasonEpisode'
-                  : seasonEpisode;
-            }
-            return '${seriesPlaylist.seriesTitle} • $seasonEpisode';
-          }
-        } catch (e) {}
-      }
-    }
-
-    // IPTV: use current channel group as subtitle
-    final iptvChannels = _effectiveIptvChannels;
-    if (iptvChannels != null &&
-        _currentIptvIndex >= 0 &&
-        _currentIptvIndex < iptvChannels.length) {
-      return iptvChannels[_currentIptvIndex].group ?? 'IPTV';
-    }
-
-    // Catalog single stream: when the title shows the clean content name,
-    // surface the episode identity (and the release detail line) here.
-    final contentTitle = _effectiveContentTitle;
-    if (contentTitle != null &&
-        contentTitle.isNotEmpty &&
-        widget.requestMagicNext == null &&
-        _effectiveStremioTvChannels == null &&
-        (_activePlaylist == null || _activePlaylist!.length <= 1)) {
-      final season = _effectiveContentSeason;
-      final episode = _effectiveContentEpisode;
-      final parts = <String>[
-        if (season != null && episode != null)
-          'Season $season, Episode $episode',
-        if (widget.subtitle != null && widget.subtitle!.trim().isNotEmpty)
-          widget.subtitle!,
-      ];
-      if (parts.isNotEmpty) return parts.join(' • ');
-    }
-
-    // Fallback to the current subtitle or widget subtitle
-    return widget.subtitle;
-  }
-
-  /// Get enhanced metadata for OTT-style display
-  Map<String, dynamic> _getEnhancedMetadata() {
-    final seriesPlaylist = _seriesPlaylist;
-
-    if (seriesPlaylist != null &&
-        seriesPlaylist.isSeries &&
-        _activePlaylist != null) {
-      // Find the current episode info
-      if (_currentIndex >= 0 && _currentIndex < _activePlaylist!.length) {
-        try {
-          final currentEpisode = seriesPlaylist.allEpisodes.firstWhere(
-            (episode) => episode.originalIndex == _currentIndex,
-            orElse: () => seriesPlaylist.allEpisodes.first,
-          );
-
-          if (currentEpisode.episodeInfo != null) {
-            final episodeInfo = currentEpisode.episodeInfo!;
-
-            final metadata = {
-              'rating': episodeInfo.rating,
-              'runtime': episodeInfo.runtime,
-              'year': episodeInfo.year,
-              'airDate': episodeInfo.airDate,
-              'language': episodeInfo.language,
-              'genres': episodeInfo.genres,
-              'network': episodeInfo.network,
-              'country': episodeInfo.country,
-              'plot': episodeInfo.plot,
-            };
-
-            return metadata;
-          }
-        } catch (e) {}
-      }
-    }
-
-    return {};
-  }
 
   /// Find the next logical episode index for auto-advance
   int _findNextEpisodeIndex() {
@@ -7092,12 +6862,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
             final showIdentity =
                 widget.showVideoTitle && !widget.showChannelName;
             final titleInfo = showIdentity
-                ? _getCurrentEpisodeTitleInfo()
+                ? EpisodeDisplayProjection.titleInfo(_episodeDisplayInputs)
                 : null;
             return TvControls(
               title: titleInfo?.title ?? '',
               titleIsClean: titleInfo?.fetched ?? false,
-              subtitle: showIdentity ? _getCurrentEpisodeSubtitle() : null,
+              subtitle: showIdentity
+                  ? EpisodeDisplayProjection.subtitle(_episodeDisplayInputs)
+                  : null,
               infoPanel:
                   _buildIptvInfoPanel(flush: true) ??
                   _buildDebrifyTvInfoPanel(flush: true),
@@ -7770,7 +7542,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   Widget? _buildDebrifyTvInfoPanel({required bool flush}) {
     if (!_debrifyTvOwnsIdentity) return null;
     final name = (_currentChannelName ?? widget.channelName)?.trim();
-    final title = widget.showVideoTitle ? _getCurrentEpisodeTitle() : null;
+    final title = widget.showVideoTitle
+        ? EpisodeDisplayProjection.titleInfo(_episodeDisplayInputs).title
+        : null;
     if ((name == null || name.isEmpty) &&
         _currentChannelNumber == null &&
         (title == null || title.isEmpty)) {
@@ -8679,12 +8453,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                                   title:
                                       widget.showVideoTitle &&
                                           !widget.showChannelName
-                                      ? _getCurrentEpisodeTitle()
+                                      ? EpisodeDisplayProjection.titleInfo(
+                                          _episodeDisplayInputs,
+                                        ).title
                                       : '',
                                   subtitle:
                                       widget.showVideoTitle &&
                                           !widget.showChannelName
-                                      ? _getCurrentEpisodeSubtitle()
+                                      ? EpisodeDisplayProjection.subtitle(
+                                          _episodeDisplayInputs,
+                                        )
                                       : null,
                                   // Merged into the dock: the channel panel rides on
                                   // top of the transport bar as one surface.
@@ -8741,7 +8519,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                                       _dockExtent.value = h;
                                     }
                                   },
-                                  enhancedMetadata: _getEnhancedMetadata(),
+                                  enhancedMetadata:
+                                      EpisodeDisplayProjection.enhancedMetadata(
+                                        _episodeDisplayInputs,
+                                      ),
                                   clock: _playbackUiClock,
                                   isPlaying: _isPlaying,
                                   isReady: isReady,

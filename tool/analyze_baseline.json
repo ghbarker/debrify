@@ -2965,8 +2965,8 @@
       "severity": "INFO",
       "type": "LINT",
       "code": "EMPTY_CATCHES",
-      "path": "lib/screens/video_player_screen.dart",
-      "line": 4870,
+      "path": "lib/screens/video_player/episode_display_projection.dart",
+      "line": 169,
       "column": 21,
       "length": 2,
       "message": "Empty catch block."
@@ -2975,8 +2975,8 @@
       "severity": "INFO",
       "type": "LINT",
       "code": "EMPTY_CATCHES",
-      "path": "lib/screens/video_player_screen.dart",
-      "line": 4937,
+      "path": "lib/screens/video_player/episode_display_projection.dart",
+      "line": 237,
       "column": 21,
       "length": 2,
       "message": "Empty catch block."
