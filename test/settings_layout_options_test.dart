@@ -256,6 +256,93 @@ void main() {
     },
   );
 
+  // Every other row: choosing its second option writes exactly that row's
+  // pref (one new key, the expected suffix) through the writer, and the
+  // stage shows the choice as applied.
+  for (final (rowId, option, keySuffix, tv) in const [
+    ('tvSidebarStyle', 'Island', 'tv_sidebar_style', true),
+    ('iptvAppearance', 'First Edition', 'iptv_style', true),
+    ('debrifyTvAppearance', 'Spotlight', 'debrify_tv_style', true),
+    ('playerGuideStyle', 'Cinema Glass', 'iptv_player_guide_style', true),
+    ('playLoaderStyle', 'Classic', 'play_loader_style', true),
+    ('parentsGuideStyle', 'Classic', 'parents_guide_style', true),
+    ('profileAppearance', 'Theater', 'profile_gate_style_v1', true),
+    ('playerDock', 'Cinema Bar', 'player_dock_style', false),
+    ('navigationStyleAppearance', 'Floating button', 'phone_nav_style', false),
+    ('desktopSidebarStyle', 'Pill', 'desktop_sidebar_style', false),
+  ]) {
+    testWidgets('$rowId: choosing $option writes only $keySuffix', (
+      tester,
+    ) async {
+      await pumpAppearance(
+        tester,
+        surface: tv ? SettingsLayoutSurface.tv : SettingsLayoutSurface.phone,
+      );
+      final before = await prefKeys();
+      await tester.ensureVisible(row(rowId));
+      await tester.pumpAndSettle();
+      await tester.tap(chip(rowId, option));
+      await tester.pumpAndSettle();
+
+      final added = (await prefKeys()).difference(before);
+      expect(added, hasLength(1), reason: 'exactly one pref written: $added');
+      expect(added.single, endsWith(keySuffix));
+      final r = tester.widget<SettingsOptionRow>(row(rowId));
+      final chosen = r.options.options.firstWhere((o) => o.label == option);
+      expect(shownLayout(tester), (rowId, chosen.id));
+      expect(find.text('Applied'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('the More chip is the last stop on the row and opens the page', (
+    tester,
+  ) async {
+    final node = FocusNode(debugLabel: 'pane-0');
+    addTearDown(node.dispose);
+    var opened = 0;
+    final options = SettingsLayoutOptions(
+      rowId: 'playerDock',
+      options: const [
+        LayoutOption('classic', 'Classic', 'a'),
+        LayoutOption('auto', 'Adaptive', 'b'),
+      ],
+      current: () => 'classic',
+      apply: (_) async {},
+      moreLabel: 'Colour & size',
+      onMore: () async => opened++,
+    );
+    await pump(
+      tester,
+      SettingsOptionRow(
+        icon: Icons.tune_rounded,
+        title: 'Player Controls',
+        options: options,
+        focusNode: node,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Colour & size'), findsOneWidget);
+
+    node.requestFocus();
+    await tester.pumpAndSettle();
+    // Classic → Adaptive → More; Right traps there.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(node.hasFocus, isTrue);
+    expect(find.text('More options'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(opened, 1);
+
+    await tester.tap(find.text('Colour & size'));
+    await tester.pumpAndSettle();
+    expect(opened, 2);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a pane node reused after the row is gone carries no handler', (
     tester,
   ) async {
