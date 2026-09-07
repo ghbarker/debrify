@@ -16,6 +16,7 @@ import '../services/imdb_enrichment_service.dart';
 import '../services/imdb_parents_guide_service.dart';
 import '../services/main_page_bridge.dart';
 import '../services/series_source_service.dart';
+import '../services/watched_filter.dart';
 import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import '../widgets/detail/theme/detail_theme.dart';
 import '../widgets/detail/catalog_detail_action_row.dart';
@@ -527,7 +528,10 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
       return;
     }
     try {
-      final recs = await loader();
+      // Same "Hide watched titles" decider as the home rows and search: a
+      // watched recommendation simply doesn't show. Single-shot like those —
+      // no re-apply when the watched snapshot lands later.
+      final recs = WatchedFilter.apply(await loader());
       if (mounted) {
         setState(() {
           _recommendations = recs;

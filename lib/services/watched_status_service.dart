@@ -71,6 +71,23 @@ class WatchedStatusService extends ChangeNotifier {
     _snapshotWaiters.clear();
   }
 
+  /// Publishes a synthetic LOCAL snapshot so tests can exercise the
+  /// hide-watched path without the tracker fetches [refresh] would start.
+  @visibleForTesting
+  void debugPublishSnapshot({
+    Set<String> movies = const {},
+    Set<String> series = const {},
+  }) {
+    _localMovies = {for (final id in movies) id.trim().toLowerCase()};
+    _localSeries = {for (final id in series) id.trim().toLowerCase()};
+    _markSnapshot();
+    notifyListeners();
+  }
+
+  /// Undoes [debugPublishSnapshot] (and any real snapshot) between tests.
+  @visibleForTesting
+  void debugResetSnapshot() => resetProfileScope();
+
   bool isWatched(String imdbId, String contentType) {
     final id = imdbId.trim().toLowerCase();
     if (id.isEmpty) return false;

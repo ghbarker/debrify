@@ -303,7 +303,7 @@ void main() {
     );
   });
 
-  testWidgets('a series walks identity → seasons → episodes → cast → sources', (
+  testWidgets('a series walks identity → seasons → episodes → sources → cast', (
     tester,
   ) async {
     _surface(tester, const Size(960, 2000));
@@ -316,15 +316,54 @@ void main() {
     // what order — not about what happens to be painted, and the default
     // finder quietly conflates the two.
     expect(find.byType(ShowcaseSeasons, skipOffstage: false), findsOneWidget);
-    // seasons → episodes → cast
+    // seasons → episodes → sources
     for (var i = 0; i < 3; i++) {
       await _press(tester, LogicalKeyboardKey.arrowDown);
     }
-    expect(find.byType(ShowcaseCast, skipOffstage: false), findsOneWidget);
-    await _press(tester, LogicalKeyboardKey.arrowDown);
     expect(find.byType(ShowcaseSources, skipOffstage: false), findsOneWidget);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    expect(find.byType(ShowcaseCast, skipOffstage: false), findsOneWidget);
     // Nothing threw and the page is intact — the ladder is contiguous.
     expect(find.byType(DetailShowcase), findsOneWidget);
+  });
+
+  testWidgets('Cast renders directly above More Like This, below Sources', (
+    tester,
+  ) async {
+    _surface(tester, const Size(960, 2000));
+    await tester.pumpWidget(
+      _host(
+        _model(
+          recs: const [
+            StremioMeta(id: 'tt1', imdbId: 'tt1', type: 'series', name: 'R1'),
+          ],
+        ),
+        tall: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The rendering, not just the ladder: the actors sit IMMEDIATELY above
+    // the titles they lead you to, with Sources above both.
+    double top(Type t) => tester
+        .getTopLeft(find.byType(t, skipOffstage: false))
+        .dy;
+    expect(top(ShowcaseSources), lessThan(top(ShowcaseCast)));
+    expect(top(ShowcaseCast), lessThan(top(ShowcaseRecs)));
+
+    // And the DPAD ladder agrees: seasons → episodes → sources → cast → recs.
+    for (var i = 0; i < 4; i++) {
+      await _press(tester, LogicalKeyboardKey.arrowDown);
+    }
+    final castNodes = tester.widget<ShowcaseCast>(
+      find.byType(ShowcaseCast, skipOffstage: false),
+    ).nodes;
+    expect(castNodes.any((n) => n.hasFocus), isTrue);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    final recNodes = tester.widget<ShowcaseRecs>(
+      find.byType(ShowcaseRecs, skipOffstage: false),
+    ).nodes;
+    expect(recNodes.any((n) => n.hasFocus), isTrue);
   });
 
   testWidgets('a single-season show has no Seasons band and no hole', (
@@ -358,11 +397,19 @@ void main() {
     await tester.pumpWidget(_host(_model(withCast: false), tall: true));
     await tester.pumpAndSettle();
     expect(find.byType(ShowcaseCast, skipOffstage: false), findsNothing);
-    // seasons → episodes → sources, with Cast absent from the ladder entirely.
+    // seasons → episodes → sources, then Cast is absent from the ladder
+    // entirely: a fourth DOWN from Sources lands nowhere, not on a hole.
     for (var i = 0; i < 3; i++) {
       await _press(tester, LogicalKeyboardKey.arrowDown);
     }
     expect(find.byType(ShowcaseSources, skipOffstage: false), findsOneWidget);
+    final sourceNodes = tester.widget<ShowcaseSources>(
+      find.byType(ShowcaseSources, skipOffstage: false),
+    ).nodes;
+    expect(sourceNodes.any((n) => n.hasFocus), isTrue);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    expect(sourceNodes.any((n) => n.hasFocus), isTrue,
+        reason: 'no band below Sources here, so the cursor stays put');
   });
 
   testWidgets('the Sources band always exists, with the Find tile alone when '
@@ -370,8 +417,8 @@ void main() {
     _surface(tester, const Size(960, 2000));
     await tester.pumpWidget(_host(_model(), tall: true));
     await tester.pumpAndSettle();
-    // seasons → episodes → cast → sources.
-    for (var i = 0; i < 4; i++) {
+    // seasons → episodes → sources.
+    for (var i = 0; i < 3; i++) {
       await _press(tester, LogicalKeyboardKey.arrowDown);
     }
     // An empty Sources band is not an empty state to hide — "Pin source" is
