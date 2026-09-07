@@ -48,11 +48,24 @@ class DetailTrailerInputs {
 /// playing" chip); the host listens once and rebuilds, exactly as its
 /// `setState` calls used to.
 class DetailTrailerController extends ChangeNotifier {
-  DetailTrailerController({required this.read});
+  DetailTrailerController({
+    required this.read,
+    @visibleForTesting this.streamResolver,
+    @visibleForTesting this.standaloneLauncher,
+  });
 
   /// Live view of the host's configuration. Called at every use rather than
   /// captured, so it behaves like the `widget.…` reads it replaces.
   final DetailTrailerInputs Function() read;
+
+  /// Test seam for the YouTube → IMDb stream resolve. Production always uses
+  /// the services.
+  final Future<YoutubeResolvedStreams?> Function(String ytId)? streamResolver;
+
+  /// Test seam for the standalone player launch (the fallback path).
+  /// Production always pushes the real player route.
+  final Future<void> Function(BuildContext context, VideoPlayerLaunchArgs args)?
+  standaloneLauncher;
 
   bool _disposed = false;
 
@@ -95,6 +108,20 @@ class DetailTrailerController extends ChangeNotifier {
   /// Whether the trailer is currently brought forward to fullscreen.
   bool _foreground = false;
   bool get foreground => _foreground;
+
+  /// A Trailer press is waiting on the backdrop to produce frames before it
+  /// promotes (see [play]). Distinct from [foreground] so the page doesn't fade
+  /// out onto a still-buffering surface.
+  bool _promotePending = false;
+
+  /// The backdrop must hold a live player: either the trailer is fullscreen or
+  /// a press is waiting to make it so. The host feeds the backdrop its stream
+  /// and keeps it enabled while this holds, REGARDLESS of the autoplay setting
+  /// and the Showcase scroll depth — with autoplay off there is no ambient
+  /// loop, and this is what lets the same surface still carry an explicit
+  /// watch. Drops with [exitForeground], and the backdrop falls back to
+  /// whatever the ambient rules say (loop on, or torn down).
+  bool get foregroundRequested => _foreground || _promotePending;
 
   /// The ambient backdrop trailer is live with frames on screen — the Trailer
   /// button reads "Watch Trailer" to say "it's playing, tap to view".
@@ -165,20 +192,7 @@ class DetailTrailerController extends ChangeNotifier {
     _resolving = willAutoplay;
     notifyListeners();
     if (!willAutoplay) return;
-    YoutubeResolvedStreams? streams;
-    try {
-      streams = await YoutubeService.resolveStreams(ytId);
-    } catch (_) {
-      streams = null;
-    }
-    // Backup source: IMDb's own trailer MP4s, for when YouTube resolution is
-    // blocked (regional client kills) — the backdrop still gets to move.
-    if (streams == null || !(streams.playUrl?.isNotEmpty ?? false)) {
-      final imdbId = read().item.effectiveImdbId;
-      if (imdbId != null) {
-        streams = await ImdbTrailerService.resolveTrailer(imdbId);
-      }
-    }
+    final streams = await _resolveStreams(ytId);
     if (_disposed) return;
     final playable = streams?.playUrl?.isNotEmpty ?? false;
     _streams = streams;
@@ -196,6 +210,30 @@ class DetailTrailerController extends ChangeNotifier {
         notifyListeners();
       }
     });
+  }
+
+  /// YouTube first, then IMDb's own trailer MP4s as the backup source for when
+  /// YouTube resolution is blocked (regional client kills) — the same ladder
+  /// for the ambient prefetch and the Trailer press, so a blocked YouTube can
+  /// neither keep the backdrop still nor reduce the button to a "Couldn't
+  /// load trailer" snackbar when IMDb hosts the same clip. Never throws; null
+  /// (or an unplayable result) means nothing to play.
+  Future<YoutubeResolvedStreams?> _resolveStreams(String ytId) async {
+    final override = streamResolver;
+    if (override != null) return override(ytId);
+    YoutubeResolvedStreams? streams;
+    try {
+      streams = await YoutubeService.resolveStreams(ytId);
+    } catch (_) {
+      streams = null;
+    }
+    if (streams == null || !(streams.playUrl?.isNotEmpty ?? false)) {
+      final imdbId = read().item.effectiveImdbId;
+      if (imdbId != null) {
+        streams = await ImdbTrailerService.resolveTrailer(imdbId);
+      }
+    }
+    return streams;
   }
 
   void exitForeground(BuildContext context) {
@@ -220,12 +258,30 @@ class DetailTrailerController extends ChangeNotifier {
     }
   }
 
-  /// Trailer button. Seamless path: if the ambient backdrop trailer is already
-  /// playing, bring that *same* player forward (unmute + controls) in place — no
-  /// second decoder, no re-buffer. Fallback path (autoplay off / not resolved /
-  /// reduced motion): resolve fresh and launch the standalone player as before.
+  /// Trailer button. Always ends in full-page IN-APP playback off-TV — the
+  /// backdrop's own player brought forward (unmuted, controls, Back/Escape
+  /// settles it back into the page):
+  ///
+  ///  1. Frames already on screen ([HeroTrailerBackdropState.canPromote]) →
+  ///     promote the *same* player in place. No second decoder, no re-buffer.
+  ///  2. Otherwise resolve the stream fresh, hand it to the backdrop (which
+  ///     starts its engine even with autoplay off — see [foregroundRequested])
+  ///     and park on [HeroTrailerBackdropState.whenPromotable]; the first
+  ///     rendered frame promotes. A "Loading trailer…" snackbar covers the wait
+  ///     so the press never looks ignored.
+  ///
+  /// The standalone player remains ONLY for the documented exceptions: TV
+  /// (native Exo underlay — its video isn't Flutter pixels), OS reduced motion
+  /// (the backdrop never starts a player under it), no backdrop mounted, and an
+  /// engine that fails or never renders a frame within the wait.
+  ///
+  /// Streams are always re-resolved on a press that can't promote at once:
+  /// googlevideo URLs carry an `expire` param and go dead after a few hours, so
+  /// a page left open would otherwise hand a stale URL to a fresh engine. The
+  /// resolve is cached with a TTL, so a live prefetch costs nothing extra.
   Future<void> play(BuildContext context) async {
-    if (backdropKey.currentState?.canPromote ?? false) {
+    final backdrop = backdropKey.currentState;
+    if (backdrop != null && backdrop.canPromote) {
       _foreground = true;
       notifyListeners();
       return;
@@ -234,11 +290,15 @@ class DetailTrailerController extends ChangeNotifier {
     final ytId = _ytId;
     if (ytId == null || _loading) return;
 
-    // Always resolve fresh on tap. The autoplay-prefetched [streams] is
-    // deliberately NOT reused here: googlevideo URLs carry an `expire` param and
-    // go dead after a few hours, so a page left open would hand the player a
-    // stale URL. Re-resolving costs one request and keeps playback reliable.
+    // Decide the path BEFORE the resolve: asking the backdrop also lifts its
+    // per-visit playback latches so the URL it's about to receive can start.
+    final inPlace =
+        backdrop != null &&
+        !read().isTelevision &&
+        backdrop.requestForegroundStart();
+
     _loading = true;
+    _promotePending = inPlace;
     notifyListeners();
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -254,49 +314,76 @@ class DetailTrailerController extends ChangeNotifier {
               Text('Loading trailer…'),
             ],
           ),
-          duration: Duration(seconds: 4),
+          duration: Duration(seconds: 20),
         ),
       );
     }
 
-    YoutubeResolvedStreams? streams;
     try {
-      streams = await YoutubeService.resolveStreams(ytId);
-    } catch (_) {
-      streams = null;
-    }
-    // Same backup as the ambient path: a blocked YouTube must not reduce the
-    // Trailer button to a "Couldn't load trailer" snackbar when IMDb hosts
-    // the same trailer as a plain MP4.
-    if (streams == null || !(streams.playUrl?.isNotEmpty ?? false)) {
-      final imdbId = read().item.effectiveImdbId;
-      if (imdbId != null) {
-        streams = await ImdbTrailerService.resolveTrailer(imdbId);
+      final streams = await _resolveStreams(ytId);
+      if (_disposed || !context.mounted) return;
+
+      final playUrl = streams?.playUrl;
+      if (playUrl == null || playUrl.isEmpty) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Couldn\'t load trailer')));
+        return;
+      }
+
+      if (inPlace) {
+        // The host reads [streams] + [foregroundRequested] and feeds the
+        // backdrop on this notification; a new URL restarts a live engine on
+        // the fresh media, a first URL starts one.
+        _streams = streams;
+        notifyListeners();
+        final ready = await backdrop.whenPromotable();
+        if (_disposed || !context.mounted) return;
+        if (ready && backdrop.canPromote) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          _foreground = true;
+          return;
+        }
+        // The wait can end because something covered this page (Play pressed,
+        // the content player launching tears the trailer down) — never stack
+        // a trailer route on top of that.
+        final route = ModalRoute.of(context);
+        if (route != null && !route.isCurrent) return;
+      }
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      _loading = false;
+      _promotePending = false;
+      notifyListeners();
+      await _launchStandalone(context, streams!);
+    } finally {
+      // One notification settles every exit: promoted (foreground set above),
+      // failed, or handed to the standalone player.
+      if (!_disposed) {
+        _loading = false;
+        _promotePending = false;
+        notifyListeners();
       }
     }
+  }
 
-    if (_disposed || !context.mounted) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    _loading = false;
-    notifyListeners();
-
-    final playUrl = streams?.playUrl;
-    if (playUrl == null || playUrl.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Couldn\'t load trailer')));
-      return;
-    }
-
-    await VideoPlayerLauncher.push(
+  Future<void> _launchStandalone(
+    BuildContext context,
+    YoutubeResolvedStreams streams,
+  ) {
+    final args = VideoPlayerLaunchArgs(
+      videoUrl: streams.playUrl!,
+      audioUrl: streams.audioUrl,
+      fallbackUrl: streams.muxedPlaybackFallback,
+      title: '${read().item.name} — Trailer',
+      viewMode: PlaylistViewMode.sorted,
+    );
+    final override = standaloneLauncher;
+    if (override != null) return override(context, args);
+    return VideoPlayerLauncher.push(
       context,
-      VideoPlayerLaunchArgs(
-        videoUrl: playUrl,
-        audioUrl: streams?.audioUrl,
-        fallbackUrl: streams?.muxedPlaybackFallback,
-        title: '${read().item.name} — Trailer',
-        viewMode: PlaylistViewMode.sorted,
-      ),
+      args,
       // Watching the trailer must not suppress the ambient trailer backdrop.
       isTrailer: true,
     );

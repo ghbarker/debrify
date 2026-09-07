@@ -362,6 +362,16 @@ class _MergedDetailScreenState extends State<MergedDetailScreen>
   /// legibility over a sharp one.
   bool get _wantsSharpStill => _style == 'showcase' && !_bodyDeep;
 
+  /// The backdrop gets the trailer stream when the ambient loop is wanted
+  /// (autoplay on, hero in view) OR the user has pressed Trailer: that press
+  /// must end fullscreen in-app whatever the autoplay setting says, and the
+  /// backdrop's own player is the only surface that can carry it — so the URL
+  /// is handed over for the press even with autoplay off, and held through the
+  /// wait for first frames and the fullscreen itself. Once the trailer closes
+  /// the ambient rules alone decide again (loop on, or torn down).
+  bool get _wantsTrailerVideo =>
+      _trailer.foregroundRequested || (_trailer.autoplayEnabled && !_bodyDeep);
+
   /// The two focus anchors the shell owns, handed to whichever body draws.
   late final DetailFocusCoordinator _focusCoordinator = DetailFocusCoordinator(
     backNode: _backButtonFocusNode,
@@ -1095,11 +1105,10 @@ class _MergedDetailScreenState extends State<MergedDetailScreen>
                 // reference's trailer belongs to the key-art frame, and playing
                 // one under a blurred field is a decoder held for nothing. It
                 // also frees the process's single video output for whatever the
-                // user opens next.
-                videoUrl: _trailer.autoplayEnabled && !_bodyDeep
-                    ? _trailer.streams?.playUrl
-                    : null,
-                audioUrl: _trailer.autoplayEnabled && !_bodyDeep
+                // user opens next. Overridden by an explicit Trailer press
+                // (fullscreen, or waiting to be) — see [_wantsTrailerVideo].
+                videoUrl: _wantsTrailerVideo ? _trailer.streams?.playUrl : null,
+                audioUrl: _wantsTrailerVideo
                     ? _trailer.streams?.audioUrl
                     : null,
                 // Resolution and decoder startup already provide a natural
@@ -1108,7 +1117,9 @@ class _MergedDetailScreenState extends State<MergedDetailScreen>
                 // Suspend at the Play press, before source/resume resolution.
                 // The pipeline loader is a PopupRoute rather than a PageRoute,
                 // so RouteAware.didPushNext cannot provide this lifecycle beat.
-                enabled: _trailer.autoplayEnabled && !_playLaunching,
+                enabled:
+                    (_trailer.autoplayEnabled || _trailer.foregroundRequested) &&
+                    !_playLaunching,
                 ambientVolume: _trailer.ambientVolume,
                 foreground: _trailer.foreground,
                 onRequestClose: () => _trailer.exitForeground(context),
