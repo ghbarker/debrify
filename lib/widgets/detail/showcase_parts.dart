@@ -8,8 +8,10 @@ import '../../services/imdb_enrichment_service.dart';
 import '../../services/imdb_parents_guide_service.dart';
 import '../../services/series_source_service.dart';
 import '../../services/trakt/trakt_episode_model.dart';
+import '../../theme/app_focus.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_theme_scope.dart';
+import '../../theme/widgets/hover_grow.dart';
 import '../../theme/widgets/parallax_focus.dart';
 import '../../utils/platform_util.dart';
 import '../../utils/tv_keys.dart';
@@ -2292,6 +2294,11 @@ class _CastTileState extends State<_CastTile> {
   Widget build(BuildContext context) {
     final url = widget.member.imageUrl;
     final k = ShowcaseMetrics.of(context).k;
+    // Under any look but the parallax one ParallaxFocus returns its child
+    // untouched, so the shared grow is this tile's cursor there — and stays
+    // out of the way where the lift already owns the growth.
+    final grows =
+        AppThemeScope.of(context).focus.expression != FocusExpression.parallax;
     return Focus(
       focusNode: widget.node,
       onFocusChange: (v) {
@@ -2307,26 +2314,31 @@ class _CastTileState extends State<_CastTile> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ParallaxFocus(
-                focused: _f || hovered,
-                shape: ParallaxShape.castCircle,
-                radius: BorderRadius.circular(widget.size / 2),
-                child: ClipOval(
-                  child: SizedBox(
-                    width: widget.size,
-                    height: widget.size,
-                    child: (url != null && url.isNotEmpty)
-                        ? CachedNetworkImage(
-                            imageUrl: url,
-                            fit: BoxFit.cover,
-                            cacheManager: DebrifyImageCache.manager,
-                            memCacheWidth: 260,
-                            placeholder: (_, __) =>
-                                const ColoredBox(color: Color(0xFF4A4A55)),
-                            errorWidget: (_, __, ___) =>
-                                const ColoredBox(color: Color(0xFF4A4A55)),
-                          )
-                        : const ColoredBox(color: Color(0xFF4A4A55)),
+              HoverGrow(
+                active: _f || hovered,
+                isTelevision: PlatformUtil.isTelevision,
+                enabled: grows,
+                child: ParallaxFocus(
+                  focused: _f || hovered,
+                  shape: ParallaxShape.castCircle,
+                  radius: BorderRadius.circular(widget.size / 2),
+                  child: ClipOval(
+                    child: SizedBox(
+                      width: widget.size,
+                      height: widget.size,
+                      child: (url != null && url.isNotEmpty)
+                          ? CachedNetworkImage(
+                              imageUrl: url,
+                              fit: BoxFit.cover,
+                              cacheManager: DebrifyImageCache.manager,
+                              memCacheWidth: 260,
+                              placeholder: (_, __) =>
+                                  const ColoredBox(color: Color(0xFF4A4A55)),
+                              errorWidget: (_, __, ___) =>
+                                  const ColoredBox(color: Color(0xFF4A4A55)),
+                            )
+                          : const ColoredBox(color: Color(0xFF4A4A55)),
+                    ),
                   ),
                 ),
               ),
@@ -2590,7 +2602,11 @@ class _PosterState extends State<_Poster> {
   @override
   Widget build(BuildContext context) {
     final url = widget.item.poster;
-    final slot = _slotFill(AppThemeScope.of(context));
+    final app = AppThemeScope.of(context);
+    final slot = _slotFill(app);
+    // See _CastTile: the shared grow is the cursor wherever the parallax lift
+    // is not the theme's expression, and disabled where it is.
+    final grows = app.focus.expression != FocusExpression.parallax;
     return Focus(
       focusNode: widget.node,
       onFocusChange: (v) {
@@ -2607,24 +2623,29 @@ class _PosterState extends State<_Poster> {
           // while its width stays `m.poster`, drawing a 2:3 poster at about
           // 0.53:1.
           child: Align(
-            child: ParallaxFocus(
-              focused: _f || hovered,
-              radius: BorderRadius.circular(7),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(7),
-                child: SizedBox(
-                  width: widget.width,
-                  height: widget.height,
-                  child: (url != null && url.isNotEmpty)
-                      ? CachedNetworkImage(
-                          imageUrl: url,
-                          fit: BoxFit.cover,
-                          cacheManager: DebrifyImageCache.manager,
-                          memCacheWidth: 300,
-                          placeholder: (_, __) => ColoredBox(color: slot),
-                          errorWidget: (_, __, ___) => ColoredBox(color: slot),
-                        )
-                      : ColoredBox(color: slot),
+            child: HoverGrow(
+              active: _f || hovered,
+              isTelevision: PlatformUtil.isTelevision,
+              enabled: grows,
+              child: ParallaxFocus(
+                focused: _f || hovered,
+                radius: BorderRadius.circular(7),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(7),
+                  child: SizedBox(
+                    width: widget.width,
+                    height: widget.height,
+                    child: (url != null && url.isNotEmpty)
+                        ? CachedNetworkImage(
+                            imageUrl: url,
+                            fit: BoxFit.cover,
+                            cacheManager: DebrifyImageCache.manager,
+                            memCacheWidth: 300,
+                            placeholder: (_, __) => ColoredBox(color: slot),
+                            errorWidget: (_, __, ___) => ColoredBox(color: slot),
+                          )
+                        : ColoredBox(color: slot),
+                  ),
                 ),
               ),
             ),

@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/stremio_addon.dart';
+import '../theme/app_motion.dart';
 import '../theme/app_theme_scope.dart';
+import '../theme/widgets/hover_grow.dart';
 import '../theme/widgets/themed_artwork.dart';
 import '../utils/platform_util.dart';
 import '../utils/tv_keys.dart';
@@ -113,12 +115,16 @@ class _CatalogItemTileState extends State<CatalogItemTile> {
     final supportsWatched = isMovie || item.type.toLowerCase() == 'series';
     final movieId = item.effectiveImdbId ?? item.id;
     final board = widget.boardChrome;
+    // Resolved once per build, hoisted above every animated widget below —
+    // the theme's tempo and the platform's reduced-motion setting reach every
+    // duration in this tile through it.
+    final motion = AppMotion.of(context);
     // TVs are low-powered: keep the focus highlight but make it instant
     // (no per-frame tweening of large posters/shadows). Board chrome animates
-    // instead — [CardFocusRise] is shaped to be cheap enough for it.
-    final fx = widget.isTelevision
-        ? Duration.zero
-        : const Duration(milliseconds: 180);
+    // instead — [CardFocusRise] is shaped to be cheap enough for it. The
+    // shadow below shares this with the [HoverGrow] scale so the two never
+    // drift apart.
+    final fx = HoverGrow.durationFor(motion, widget.isTelevision);
 
     // The POSTER, and nothing else. Split from [chrome] because
     // `ThemedArtwork`'s frame is a treatment of the image: handing it the
@@ -152,12 +158,12 @@ class _CatalogItemTileState extends State<CatalogItemTile> {
               ? HomeTheme.imageFadeIn(widget.isTelevision)
               : (widget.isTelevision
                     ? Duration.zero
-                    : const Duration(milliseconds: 250)),
+                    : motion.scaled(const Duration(milliseconds: 250))),
           fadeOutDuration: board
               ? HomeTheme.imageFadeOut(widget.isTelevision)
               : (widget.isTelevision
                     ? Duration.zero
-                    : const Duration(milliseconds: 100)),
+                    : motion.scaled(const Duration(milliseconds: 100))),
           placeholder: (_, __) => _placeholder(item.name),
           errorWidget: (_, __, ___) => _placeholder(item.name),
         )
@@ -329,12 +335,15 @@ class _CatalogItemTileState extends State<CatalogItemTile> {
         ],
       );
     } else {
-      card = AnimatedScale(
-        duration: fx,
-        curve: Curves.easeOutCubic,
-        scale: _active ? 1.08 : 1.0,
+      // The grow is the shared one — every poster tile in the app gets bigger
+      // by the same amount at the same tempo (1.12 under a pointer, the TV's
+      // calmer 1.045 under DPAD), so this grid and the board's shelf agree.
+      card = HoverGrow(
+        active: _active,
+        isTelevision: widget.isTelevision,
         child: AnimatedContainer(
           duration: fx,
+          curve: motion.standard,
           decoration: BoxDecoration(
             borderRadius: app.shape.br(14),
             boxShadow: [
@@ -432,10 +441,10 @@ class _CatalogItemTileState extends State<CatalogItemTile> {
               // keeps the glide.
               duration: widget.isTelevision
                   ? (board && !PlatformUtil.isAndroidTvCached
-                      ? const Duration(milliseconds: 140)
+                      ? motion.scaled(const Duration(milliseconds: 140))
                       : Duration.zero)
-                  : const Duration(milliseconds: 280),
-              curve: Curves.easeOutCubic,
+                  : motion.scaled(const Duration(milliseconds: 280)),
+              curve: motion.standard,
             );
           });
         }

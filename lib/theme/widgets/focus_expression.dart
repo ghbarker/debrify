@@ -4,6 +4,7 @@ import '../../utils/platform_util.dart';
 import '../app_focus.dart';
 import '../app_motion.dart';
 import '../app_theme_scope.dart';
+import 'hover_grow.dart';
 import 'parallax_focus.dart';
 
 // Callers pick their lift shape at the same site they build the box.
@@ -46,6 +47,25 @@ class FocusExpressionBox extends StatelessWidget {
   /// row past BOTH screen edges and the focused row reads as cut off.
   final ParallaxShape shape;
 
+  /// Whether this is a POSTER TILE or CARD with its own gap to grow into —
+  /// the "hovered box gets bigger" feedback, by [FocusTokens.hoverScaleFor]
+  /// through [HoverGrow], on top of whatever the expression draws.
+  ///
+  /// Off (the default) the box is the theme's CURSOR and nothing more: a
+  /// settings row or a pill under `ring` gets a ring, and under `scale` the
+  /// small [FocusTokens.scale] that every focusable can afford. On, the tile
+  /// grows by the shared tile figure whatever the expression: `ring`,
+  /// `underline`, `invert` and `flood` keep their decoration and gain the
+  /// grow, while `scale` and `lift` hand their own scale OVER to it — the
+  /// cursor's 1.06 / 1.02 is replaced, not stacked, so a tile carries exactly
+  /// one scale transform under every expression. `parallax` is untouched:
+  /// `ParallaxFocus` owns that lift at its own per-shape peak.
+  ///
+  /// The point is that a pointer on Windows gets the same answer from every
+  /// poster, whichever look is running — a theme's cursor decides what is
+  /// DRAWN on the tile, and the tile figure decides how much it grows.
+  final bool grow;
+
   const FocusExpressionBox({
     super.key,
     required this.child,
@@ -54,6 +74,7 @@ class FocusExpressionBox extends StatelessWidget {
     this.on,
     this.inverted,
     this.shape = ParallaxShape.poster,
+    this.grow = false,
   });
 
   @override
@@ -172,6 +193,15 @@ class FocusExpressionBox extends StatelessWidget {
         ),
         child: body,
       );
+    }
+
+    // A poster tile grows by the shared tile figure — the one every catalog
+    // grid and the detail's recommendation row grow by — on the grow's own
+    // tempo (`motion.base` off TV; the TV snaps, as the rest of this cursor
+    // does). It REPLACES the cursor scale below rather than stacking on it,
+    // so `scale` and `lift` tiles carry one transform, not 1.12 × 1.06.
+    if (grow) {
+      return HoverGrow(active: focused, isTelevision: tv, child: body);
     }
 
     // Scale, for both `scale` and `lift`. A transform, so it is affordable on

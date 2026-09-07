@@ -11,6 +11,7 @@ import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/catalog_item_detail_screen.dart';
 import 'package:debrify/services/mdblist/mdblist_menu_helpers.dart';
 import 'package:debrify/services/simkl/simkl_menu_helpers.dart';
+import 'package:debrify/theme/app_focus.dart';
 import 'package:debrify/theme/app_theme.dart';
 import 'package:debrify/theme/app_theme_scope.dart';
 import 'package:debrify/widgets/detail/theme/detail_themes.dart';
@@ -1008,9 +1009,11 @@ void main() {
             as BoxDecoration;
     expect(deco.border!.top.color, DetailThemes.signal.focus);
     expect(deco.border!.top.width, 2);
+    // The shared pointer/keyboard grow, not a figure of this card's own —
+    // see `FocusTokens.hoverScale`.
     expect(
       ancestorOf<AnimatedScale>(tester, find.text('Neighbour One').last).scale,
-      1.05,
+      FocusTokens.legacy.hoverScaleFor(false),
     );
 
     await tester.tap(find.text('Neighbour One').last);
