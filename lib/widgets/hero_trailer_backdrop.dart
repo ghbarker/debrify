@@ -24,7 +24,11 @@ import 'trailer_engine.dart';
 /// Trailer button) and the *same* player unblurs, unmutes and grows to fullscreen
 /// with minimal controls — no second decoder, no re-buffer, no restart. The
 /// detail page fades its own content out around it; [onRequestClose] fires when
-/// the user dismisses the fullscreen trailer.
+/// the user dismisses the fullscreen trailer. On Android TV the native underlay
+/// engine promotes the same way: its video is already full-bleed on a hardware
+/// plane behind Flutter, so promotion is the page hiding its layers, the native
+/// player unmuting, and this widget's chrome painting over the video with
+/// D-pad handling (Select play/pause, Back exits).
 ///
 /// Single-decoder discipline (the whole game on weak TV hardware): the trailer
 /// player is paused the instant any route is pushed on top (via [appRouteObserver]
@@ -192,6 +196,18 @@ class HeroTrailerBackdropState extends State<HeroTrailerBackdrop>
   /// last interaction; a click/tap brings it back.
   Timer? _controlsTimer;
 
+  /// The fullscreen chrome's key handler node. Claimed explicitly on every
+  /// promotion (not just via autofocus) so a remote always lands on it: on TV
+  /// the page content is focus-excluded the same frame this widget is asked
+  /// to promote, and the chrome only mounts once the promotion animation has
+  /// ticked — `requestFocus` on the not-yet-attached node is honoured the
+  /// moment it attaches, so the claim is safe against that ordering. The
+  /// parent hands focus back to the page when the foreground ends
+  /// (`onRequestClose` → its own re-anchor), so nothing is released here.
+  final FocusNode _foregroundFocus = FocusNode(
+    debugLabel: 'HeroTrailerBackdrop.foreground',
+  );
+
   /// Drives the backdrop → fullscreen transition (0 = ambient, 1 = foreground).
   late final AnimationController _fg;
 
@@ -305,9 +321,15 @@ class HeroTrailerBackdropState extends State<HeroTrailerBackdrop>
   /// fullscreen trailer at all; when it can't, the parent keeps its standalone
   /// player fallback.
   ///
-  /// The documented refusals: OS reduced motion (this backdrop never starts a
-  /// player under it — see [_canPlay]) and a native underlay engine (TV), whose
-  /// video is not Flutter pixels and can't carry the fullscreen chrome.
+  /// The one documented refusal: OS reduced motion (this backdrop never starts
+  /// a player under it — see [_canPlay]). A native underlay engine (TV) is NOT
+  /// a refusal: its video lives on a hardware plane behind Flutter, but the
+  /// Flutter surface still composites over it, so the fullscreen chrome (plain
+  /// widgets above the punched hole) reads exactly as it does off-TV. Only
+  /// pixel effects on the video itself (blur) are impossible there, and the
+  /// foreground wants none. The underlay is already full-bleed behind the whole
+  /// page, so on TV "foreground" is the parent hiding its layers, this widget
+  /// unmuting the native player and painting the controls over it.
   ///
   /// The per-visit content/external-playback latches are LIFTED here: they exist
   /// so the ambient loop doesn't resume behind or after a feature on its own,
@@ -317,7 +339,6 @@ class HeroTrailerBackdropState extends State<HeroTrailerBackdrop>
   /// [didUpdateWidget] as usual.
   bool requestForegroundStart() {
     if (_reduceMotion) return false;
-    if (_engine?.rendersUnderlay ?? false) return false;
     _stoppedForContentPlayback = false;
     _stoppedForExternalPlayback = false;
     if (_canPlay && _engine == null && _startTimer == null) _scheduleStart();
@@ -709,6 +730,9 @@ class HeroTrailerBackdropState extends State<HeroTrailerBackdrop>
     _fg.forward();
     _applyVolume(foreground: true);
     _engine?.play();
+    // Claim the remote/keyboard: Select = play/pause, ←/→ = seek, Back bubbles
+    // to the parent's PopScope. See [_foregroundFocus] for the attach ordering.
+    _foregroundFocus.requestFocus();
   }
 
   void _exitForeground() {
@@ -908,6 +932,7 @@ class HeroTrailerBackdropState extends State<HeroTrailerBackdrop>
     // leave the OS locked sideways for the next screen.
     _restoreOrientation();
     _fg.dispose();
+    _foregroundFocus.dispose();
     _resolvePromotableWaiters(false);
     _engine?.dispose();
     // Engines parked for a post-frame release die with the widget — don't
@@ -1023,11 +1048,13 @@ class HeroTrailerBackdropState extends State<HeroTrailerBackdrop>
     );
   }
 
-  /// DPAD/keyboard handling for the fullscreen trailer. The page content is
-  /// focus-excluded while foregrounded, so this node holds focus: OK toggles
-  /// play/pause (or reveals hidden chrome first), ←/→ seek ±10s, ↑/↓ are
-  /// consumed so focus can't wander. Back is left to bubble into the parent's
-  /// PopScope, which demotes the trailer.
+  /// DPAD/keyboard handling for the fullscreen trailer — the same chrome on
+  /// every platform, TV included (the underlay video sits behind Flutter, the
+  /// chrome paints over it). The page content is focus-excluded while
+  /// foregrounded, so this node holds focus: OK toggles play/pause (or reveals
+  /// hidden chrome first), ←/→ seek ±10s, ↑/↓ are consumed so focus can't
+  /// wander. Back is left to bubble into the parent's PopScope, which demotes
+  /// the trailer and re-anchors the remote on the page.
   KeyEventResult _onForegroundKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
@@ -1064,6 +1091,7 @@ class HeroTrailerBackdropState extends State<HeroTrailerBackdrop>
       child: IgnorePointer(
         ignoring: !interactive,
         child: Focus(
+          focusNode: _foregroundFocus,
           autofocus: true,
           onKeyEvent: _onForegroundKey,
           child: Stack(
