@@ -8,5 +8,5 @@ set REPO=%HERE%..\..
 where py >nul 2>nul && (set PY=py -3) || (set PY=python)
 %PY% "%HERE%qwen_driver.py" --worktree "%REPO%" %*
 echo.
-echo Report: %HERE%qwen_report.md
+echo Report: %REPO%\..\qwen_report.md
 pause

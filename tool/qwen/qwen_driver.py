@@ -56,21 +56,33 @@ SAFE_RULES = {
     "no_leading_underscores_for_local_identifiers",
     "deprecated_member_use",  # alias pairs only, see below
 }
-ALIAS_DEPRECATIONS = ("'background' is deprecated", "'onBackground' is deprecated",
-                      "'cacheExtent' is deprecated")
+# ColorScheme.background / onBackground are dead arguments once nothing in lib
+# reads the deprecated getters (the driver checks that before enabling them).
+# cacheExtent -> scrollCacheExtent changes the parameter type, so it is NOT an alias.
+ALIAS_DEPRECATIONS = ("'background' is deprecated", "'onBackground' is deprecated")
+DEPRECATED_GETTER_READS = re.compile(r"(colorScheme|scheme)\.(background|onBackground)\b")
 
 SYSTEM_PROMPT = """You are a careful Dart/Flutter maintenance worker. You remove exactly the
 analyzer issues listed from ONE file and change nothing else. Behaviour must
 not change. Allowed edits, and only these:
-  a. Delete a private declaration, field, getter/setter pair, or optional
-     parameter that the analyzer reports as unreferenced or never given. When
-     you delete a never-given optional parameter, also delete its unused field
-     and its constructor initialiser, nothing else.
-  b. Replace a deprecated member with the replacement the issue names, only
-     when it is a plain alias: background->surface, onBackground->onSurface,
-     cacheExtent->scrollCacheExtent.
-  c. Rename a local variable that starts with an underscore to the same name
-     without it, updating its uses inside that one function only.
+  a. Unreferenced private declaration or getter/setter pair: delete it.
+  b. Never-given optional constructor parameter (`this.x = default` that no
+     caller passes): delete the parameter from the constructor. Then look at
+     the field `x`. If nothing else in the file reads or assigns it, delete the
+     field too. If the field IS read or assigned elsewhere, KEEP it and give it
+     the parameter's former default as an inline initialiser, for example
+     `bool isExpanded = false;` or `List<T> children = const [];`, so that no
+     non-nullable field is left without a value.
+  c. Unused field (assigned but never read): if its only assignment is
+     `_field = <expression>;`, delete the field declaration and replace that
+     statement with `<expression>;` so the expression (for example a `.listen(`
+     call) still runs exactly as before. If the field is assigned in more than
+     one place, answer SKIP.
+  d. Deprecated `background:` / `onBackground:` arguments to a ColorScheme
+     constructor: delete the whole argument line. Do NOT rename it to `surface`
+     or `onSurface`; the constructor already receives those.
+  e. Local variable starting with an underscore: rename it to the same name
+     without the underscore, updating its uses inside that one function only.
 Never: rename or reorder anything else, change any string, add comments,
 reformat lines you did not have to touch, change other signatures, touch
 imports unless a deleted declaration was their only user.
@@ -112,11 +124,26 @@ def analyze(worktree, rel):
     return issues
 
 
-def is_safe(issue):
+def lib_reads_deprecated_scheme_getters(worktree):
+    """True if any lib file reads ColorScheme.background / onBackground, in which
+    case deleting the constructor arguments would change what those reads return."""
+    for root, _, names in os.walk(os.path.join(worktree, "lib")):
+        for n in names:
+            if n.endswith(".dart"):
+                try:
+                    text = open(os.path.join(root, n), encoding="utf-8", errors="replace").read()
+                except OSError:
+                    continue
+                if DEPRECATED_GETTER_READS.search(text):
+                    return True
+    return False
+
+
+def is_safe(issue, scheme_getters_read):
     if issue["rule"] not in SAFE_RULES:
         return False
     if issue["rule"] == "deprecated_member_use":
-        return issue["msg"].startswith(ALIAS_DEPRECATIONS)
+        return issue["msg"].startswith(ALIAS_DEPRECATIONS) and not scheme_getters_read
     return True
 
 
@@ -194,8 +221,11 @@ def related_tests(worktree, rel):
     return sorted(found)
 
 
+GENERATED = ["pubspec.lock", "analysis_options.yaml", "linux", "macos", "windows"]
+
+
 def revert(worktree, rel):
-    git(worktree, "checkout", "--", rel, "pubspec.lock", "analysis_options.yaml")
+    git(worktree, "checkout", "--", rel, *GENERATED)
 
 
 def attempt(worktree, rel, targets, before, host, model, feedback, log):
@@ -258,14 +288,15 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     wt = os.path.abspath(args.worktree)
-    report = os.path.join(os.path.dirname(os.path.abspath(__file__)), "qwen_report.md")
+    # Report lives OUTSIDE the repository so it never dirties the tree.
+    report = os.path.join(os.path.dirname(wt), "qwen_report.md")
     lines = [f"# Local-model cleanup run {dt.datetime.now():%Y-%m-%d %H:%M}", ""]
 
     def log(s):
         print(s, flush=True)
         lines.append(s)
 
-    _, status = git(wt, "status", "--short")
+    _, status = git(wt, "status", "--short", "--untracked-files=no")
     if status.strip():
         log("ABORT: worktree is dirty:\n" + status)
         return 2
@@ -278,13 +309,16 @@ def main():
             log(f"ABORT: cannot reach the model server at {args.host}: {e}")
             return 2
     log(f"worktree `{wt}` HEAD {head.strip()} model `{model}` host {args.host}")
+    scheme_getters_read = lib_reads_deprecated_scheme_getters(wt)
+    if scheme_getters_read:
+        log("note: lib reads ColorScheme.background/onBackground; those deprecations are left alone")
 
     for rel in TASK_FILES:
         if args.only and rel not in args.only:
             continue
         log(f"\n## {rel}")
         before = analyze(wt, rel)
-        targets = [i for i in before if is_safe(i)]
+        targets = [i for i in before if is_safe(i, scheme_getters_read)]
         log(f"  analyzer: {len(before)} issue(s), {len(targets)} in scope, {len(before) - len(targets)} left alone")
         for t in targets:
             log(f"    - line {t['line']} [{t['rule']}] {t['msg'][:90]}")
@@ -297,7 +331,7 @@ def main():
             except Exception as e:
                 ok, info = False, f"driver error: {e}"
             if ok:
-                git(wt, "checkout", "--", "pubspec.lock", "analysis_options.yaml")
+                git(wt, "checkout", "--", *GENERATED)
                 msg = f"Cleanup: remove {len(targets)} analyzer item(s) in {os.path.basename(rel)}"
                 git(wt, *AUTHOR, "commit", "-q", "-m", msg, "--", rel)
                 _, h = git(wt, "rev-parse", "--short", "HEAD")
