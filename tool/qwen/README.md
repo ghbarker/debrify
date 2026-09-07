@@ -23,7 +23,7 @@ commits on success. Nothing is pushed by the driver.
 
     tool\qwen\run_qwen.cmd
 
-Options pass through: `--dry-run` (list targets, no model call),
+Options pass through: `--discover` (analyze all of lib and work every unowned file with in-scope issues, not just the five listed), `--dry-run` (list targets, no model call),
 `--only lib/theme/app_theme_adapter.dart`, `--host http://localhost:11434`
 (Ollama), `--model <id>`.
 
