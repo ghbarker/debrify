@@ -242,17 +242,6 @@ class AndroidTvPlayerBridge {
     AnalyticsService.playbackHeartbeat(player);
   }
 
-  // Deprecated: use _streamNextProvider
-  static StreamNextProvider? get _torboxNextProvider => _streamNextProvider;
-  static set _torboxNextProvider(StreamNextProvider? provider) =>
-      _streamNextProvider = provider;
-
-  // Deprecated: use _playbackFinishedCallback
-  static PlaybackFinishedCallback? get _torboxFinishedCallback =>
-      _playbackFinishedCallback;
-  static set _torboxFinishedCallback(PlaybackFinishedCallback? callback) =>
-      _playbackFinishedCallback = callback;
-
   /// Get custom font info for Android TV player
   static Future<Map<String, String?>> _getCustomFontInfo() async {
     try {
