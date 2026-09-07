@@ -266,7 +266,8 @@ class _DetailDossierState extends State<DetailDossier> {
                   scrollDirection: Axis.horizontal,
                   itemCount: cast.length.clamp(0, 8),
                   separatorBuilder: (_, __) => const SizedBox(width: 11),
-                  itemBuilder: (context, i) => _CastChip(member: cast[i]),
+                  itemBuilder: (context, i) =>
+                      _CastChip(member: cast[i], onTap: m.castAction(cast[i])),
                 ),
               ),
             ),
@@ -412,7 +413,8 @@ class _DetailDossierState extends State<DetailDossier> {
                 scrollDirection: Axis.horizontal,
                 itemCount: cast.length.clamp(0, 12),
                 separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, i) => _CastChip(member: cast[i]),
+                itemBuilder: (context, i) =>
+                    _CastChip(member: cast[i], onTap: m.castAction(cast[i])),
               ),
             ),
           ),
@@ -581,13 +583,17 @@ class _DetailDossierState extends State<DetailDossier> {
 /// Non-focusable cast portrait — informational only.
 class _CastChip extends StatelessWidget {
   final CastMember member;
-  const _CastChip({required this.member});
+
+  /// Pointer-only: the chips are deliberately not focusable (see the
+  /// identity card), so a remote never lands on them.
+  final VoidCallback? onTap;
+  const _CastChip({required this.member, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final t = DetailThemeScope.of(context);
     final url = member.imageUrl;
-    return SizedBox(
+    final chip = SizedBox(
       width: 58,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -619,6 +625,15 @@ class _CastChip extends StatelessWidget {
             style: TextStyle(color: t.tx2, fontSize: 9.5),
           ),
         ],
+      ),
+    );
+    if (onTap == null) return chip;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: chip,
       ),
     );
   }

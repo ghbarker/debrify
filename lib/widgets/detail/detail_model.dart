@@ -183,6 +183,10 @@ class DetailModel {
   final VoidCallback? onManageSources;
   final void Function(StremioMeta)? onRecommendationTap;
 
+  /// A cast tile was chosen: the host opens the actor's known-for titles.
+  /// Null leaves every cast tile informational, exactly as before.
+  final void Function(CastMember)? onCastTap;
+
   /// Filmstrip pushes the focused episode's still here; the shell paints it as
   /// an ambient layer. Null clears it.
   final void Function(String?) onAmbientStill;
@@ -246,6 +250,7 @@ class DetailModel {
     this.onTrackersTertiary,
     this.onManageSources,
     required this.onRecommendationTap,
+    this.onCastTap,
     required this.onAmbientStill,
     this.onDepth,
     required this.focus,
@@ -282,6 +287,16 @@ class DetailModel {
       imdbExtra?.hasAwards == true ? imdbExtra!.awardsLine : null;
 
   List<CastMember> get cast => imdbExtra?.cast ?? const [];
+
+  /// What selecting [member] does, or null when it does nothing: the host
+  /// supplied no [onCastTap], or IMDb gave the credit no name id to look up.
+  /// One decider so every layout gates its tiles the same way.
+  VoidCallback? castAction(CastMember member) {
+    final open = onCastTap;
+    final id = member.nameId;
+    if (open == null || id == null || id.isEmpty) return null;
+    return () => open(member);
+  }
 
   /// Label→value pairs for the Details block. Empty when nothing is known —
   /// callers must omit the whole section rather than render an empty one.

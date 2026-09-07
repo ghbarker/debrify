@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/imdb_enrichment_service.dart';
+import 'detail_focus_chrome.dart';
 
 // ── Certificate badge ──────────────────────────────────────────────────────
 
@@ -107,46 +108,78 @@ class CatalogDetailMetacriticBadge extends StatelessWidget {
 
 // ── Cast avatar ──────────────────────────────────────────────────────────
 
-class CatalogDetailCastAvatar extends StatelessWidget {
+class CatalogDetailCastAvatar extends StatefulWidget {
   final CastMember member;
   final double size;
+
+  /// Opens the actor's known-for titles. With it the avatar is a focusable
+  /// tap target with the gold focus ring; without it, the static badge it was.
+  final VoidCallback? onTap;
   const CatalogDetailCastAvatar({
     super.key,
     required this.member,
     required this.size,
+    this.onTap,
   });
 
   @override
+  State<CatalogDetailCastAvatar> createState() =>
+      _CatalogDetailCastAvatarState();
+}
+
+class _CatalogDetailCastAvatarState extends State<CatalogDetailCastAvatar> {
+  bool _focused = false;
+
+  CastMember get member => widget.member;
+  double get size => widget.size;
+
+  @override
   Widget build(BuildContext context) {
+    final onTap = widget.onTap;
+    final avatar = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: 0.06),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.12),
+          width: 0.5,
+        ),
+        boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 8)],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: member.imageUrl != null
+          ? CachedNetworkImage(
+              imageUrl: member.imageUrl!,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => _initials(),
+              errorWidget: (_, __, ___) => _initials(),
+            )
+          : _initials(),
+    );
     return SizedBox(
       width: size + 8,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.06),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12),
-                width: 0.5,
+          if (onTap == null)
+            avatar
+          else
+            DetailFocusHalo(
+              focused: _focused,
+              child: Material(
+                color: Colors.transparent,
+                shape: const CircleBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: onTap,
+                  onFocusChange: (f) => setState(() => _focused = f),
+                  customBorder: const CircleBorder(),
+                  child: avatar,
+                ),
               ),
-              boxShadow: const [
-                BoxShadow(color: Color(0x33000000), blurRadius: 8),
-              ],
             ),
-            clipBehavior: Clip.antiAlias,
-            child: member.imageUrl != null
-                ? CachedNetworkImage(
-                    imageUrl: member.imageUrl!,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => _initials(),
-                    errorWidget: (_, __, ___) => _initials(),
-                  )
-                : _initials(),
-          ),
           const SizedBox(height: 6),
           Text(
             member.name.split(' ').last,

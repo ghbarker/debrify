@@ -770,7 +770,10 @@ class _DetailConsoleState extends State<DetailConsole> {
           for (final member in cast.take(6))
             Padding(
               padding: const EdgeInsets.only(bottom: 9),
-              child: _CastPortrait(member: member),
+              child: _CastPortrait(
+                member: member,
+                onTap: m.castAction(member),
+              ),
             ),
         ],
       ),
@@ -863,13 +866,17 @@ class _DetailConsoleState extends State<DetailConsole> {
 
 class _CastPortrait extends StatelessWidget {
   final CastMember member;
-  const _CastPortrait({required this.member});
+
+  /// Pointer-only: the reference pane is ONE focus target by design (see
+  /// [_ReferencePane]), so on a remote the portrait stays informational.
+  final VoidCallback? onTap;
+  const _CastPortrait({required this.member, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final t = DetailThemeScope.of(context);
     final url = member.imageUrl;
-    return Row(
+    final row = Row(
       children: [
         ClipRRect(
           borderRadius: t.brCast,
@@ -917,6 +924,15 @@ class _CastPortrait extends StatelessWidget {
           ),
         ),
       ],
+    );
+    if (onTap == null) return row;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: row,
+      ),
     );
   }
 }

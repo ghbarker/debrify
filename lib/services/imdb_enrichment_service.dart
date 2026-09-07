@@ -7,7 +7,16 @@ class CastMember {
   final String name;
   final String? character;
   final String? imageUrl;
-  const CastMember({required this.name, this.character, this.imageUrl});
+
+  /// IMDb name id ("nm0000123"), the key for the person's known-for titles.
+  /// Null when the credit carried none — the tile then stays informational.
+  final String? nameId;
+  const CastMember({
+    required this.name,
+    this.character,
+    this.imageUrl,
+    this.nameId,
+  });
 }
 
 /// One "Did You Know" card: a piece of trivia, a goof, or a quote.
@@ -210,6 +219,7 @@ class ImdbEnrichmentService {
           category { text }
           credits(limit: 8) {
             name {
+              id
               nameText { text }
               primaryImage { url }
             }
@@ -313,6 +323,7 @@ class ImdbEnrichmentService {
               name: name,
               character: character,
               imageUrl: imageUrl,
+              nameId: nameMap?['id'] as String?,
             ));
           }
         }
