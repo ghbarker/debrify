@@ -1042,8 +1042,16 @@ class HeroTrailerBackdropState extends State<HeroTrailerBackdrop>
                     child: engine.buildVideo(fit: BoxFit.cover),
                   ),
           ),
-        // Foreground controls — only interactive/painted while promoted.
-        if (t > 0.01 && engine != null) _buildForegroundControls(t),
+        // Foreground controls — painted/interactive as [t] rises, but MOUNTED
+        // the very frame [foreground] flips (before the promote animation has
+        // ticked). That frame is when the parent focus-excludes the page, and
+        // if nothing focusable exists in this route yet, primary focus
+        // collapses to the route's bare scope — which the TV Home board reads
+        // as "focus died" and reclaims onto one of its cells (underneath this
+        // page), so the remote's next Select opened a different title. With
+        // the chrome mounted here its node is what the scope falls back to.
+        if ((widget.foreground || t > 0.01) && engine != null)
+          _buildForegroundControls(t),
       ],
     );
   }

@@ -254,15 +254,26 @@ void main() {
         expect(trailer.ambientPlaying, isTrue);
         expect(backdropOf(tester).canPromote, isTrue);
 
-        await tester.tap(find.text('Trailer'));
+        // The remote: focus the Trailer action, press Select.
+        tester.state<_HostState>(find.byType(_Host)).focusTrailerButton();
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.select);
         await tester.pump();
         expect(trailer.foreground, isTrue);
         expect(h.launches, isEmpty);
         expect(h.engines, hasLength(1));
         // Unmuted to the foreground level on the native engine.
         expect(engine.volumes.last, 100);
+        // In the very frame the page was focus-excluded the chrome's node
+        // already holds primary focus — never a bare scope, which the TV Home
+        // board (underneath this route) would read as dead focus and reclaim.
+        expect(
+          tester.binding.focusManager.primaryFocus,
+          isNot(isA<FocusScopeNode>()),
+        );
+        expect(chromeFocus(tester).hasPrimaryFocus, isTrue);
 
-        // The chrome paints over the underlay and the remote lands on it:
+        // The chrome paints over the underlay and the remote stays on it:
         // Select toggles play/pause.
         await tester.pump(const Duration(milliseconds: 500));
         expect(find.byTooltip('Close trailer'), findsOneWidget);
@@ -450,6 +461,10 @@ class _HostState extends State<_Host> {
 
   /// Where the controller re-anchors the remote after a TV foreground exit.
   bool get leftEntryHasFocus => _leftEntry.hasFocus;
+
+  /// Park the remote on the Trailer action (it doubles as the left-entry
+  /// node here), as a D-pad user would have before pressing Select.
+  void focusTrailerButton() => _leftEntry.requestFocus();
 
   @override
   void initState() {

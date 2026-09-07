@@ -64,10 +64,15 @@ void main() {
       // underlay, and the chrome's node holds focus for the remote.
       rebuild(() => foreground = true);
       await tester.pump();
+      // Same frame as the flip: chrome mounted and holding primary focus
+      // (a bare-scope frame would let a TV board's dead-focus reclaim steal
+      // the remote), before the promote animation has painted anything.
+      expect(find.byTooltip('Close trailer'), findsOneWidget);
+      final chrome = Focus.of(tester.element(find.byTooltip('Close trailer')));
+      expect(chrome.hasPrimaryFocus, isTrue);
       await tester.pump(const Duration(milliseconds: 500));
       expect(engine.volumes.last, 100);
       expect(find.byTooltip('Close trailer'), findsOneWidget);
-      final chrome = Focus.of(tester.element(find.byTooltip('Close trailer')));
       expect(chrome.hasPrimaryFocus, isTrue);
       // Select = pause, Select again = play; → seeks +10s.
       await tester.sendKeyEvent(LogicalKeyboardKey.select);
