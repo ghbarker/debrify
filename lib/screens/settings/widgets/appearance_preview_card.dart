@@ -204,9 +204,25 @@ class _LookStripState extends State<_LookStrip> {
   AppLook? _hover;
 
   @override
+  void didUpdateWidget(covariant _LookStrip old) {
+    super.didUpdateWidget(old);
+    if (old.focusNode != widget.focusNode) _release(old.focusNode);
+  }
+
+  @override
   void dispose() {
+    _release(widget.focusNode);
     _ownNode?.dispose();
     super.dispose();
+  }
+
+  /// The pane node is owned by the layout and outlives this widget. Focus does
+  /// not clear an external node's onKeyEvent on dispose, and FocusNode.attach
+  /// keeps the old handler when the next Focus supplies none — so without this
+  /// the node keeps routing Left/Right to a disposed State and every key event
+  /// in the app throws from inside the focus manager.
+  void _release(FocusNode? node) {
+    if (node != null && node.onKeyEvent == _onKey) node.onKeyEvent = null;
   }
 
   /// Pointer beats keyboard: a hovered chip is what the eye is on.
@@ -230,6 +246,7 @@ class _LookStripState extends State<_LookStrip> {
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (!mounted) return KeyEventResult.ignored;
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.arrowLeft) {
