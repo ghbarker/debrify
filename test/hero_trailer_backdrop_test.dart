@@ -32,6 +32,60 @@ void main() {
     expect(engine.firstFrameCompleted, isFalse);
     expect(engine.buildVideoCalls, greaterThan(0));
   });
+
+  testWidgets(
+    'whenPromotable resolves true on the first frame and false on teardown',
+    (tester) async {
+      var engine = _PendingFirstFrameEngine();
+      var enabled = true;
+      late StateSetter rebuild;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return HeroTrailerBackdrop(
+                imageUrl: null,
+                videoUrl: 'https://example.invalid/trailer.mp4',
+                enabled: enabled,
+                startDelay: Duration.zero,
+                engineFactory: () async => engine,
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 1));
+      await tester.pump();
+
+      HeroTrailerBackdropState state() => tester
+          .state<HeroTrailerBackdropState>(find.byType(HeroTrailerBackdrop));
+      expect(state().canPromote, isFalse);
+
+      // Parked during the buffer window; the rendered frame releases it.
+      var ready = state().whenPromotable();
+      engine.renderFirstFrame();
+      await tester.pump();
+      expect(await ready, isTrue);
+      expect(state().canPromote, isTrue);
+      // Already promotable → answered at once.
+      expect(await state().whenPromotable(), isTrue);
+
+      // A teardown while parked (the master switch flips off) answers false
+      // instead of leaving the caller waiting on a player that won't come.
+      rebuild(() => enabled = false);
+      await tester.pump();
+      expect(state().canPromote, isFalse);
+      engine = _PendingFirstFrameEngine();
+      rebuild(() => enabled = true);
+      await tester.pump(const Duration(milliseconds: 1));
+      await tester.pump();
+      ready = state().whenPromotable();
+      rebuild(() => enabled = false);
+      await tester.pump();
+      expect(await ready, isFalse);
+    },
+  );
 }
 
 class _PendingFirstFrameEngine implements TrailerEngine {
@@ -40,6 +94,10 @@ class _PendingFirstFrameEngine implements TrailerEngine {
   int buildVideoCalls = 0;
 
   bool get firstFrameCompleted => _firstFrame.isCompleted;
+
+  void renderFirstFrame() {
+    if (!_firstFrame.isCompleted) _firstFrame.complete();
+  }
 
   @override
   bool get rendersUnderlay => true;
