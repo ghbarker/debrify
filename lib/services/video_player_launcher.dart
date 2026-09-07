@@ -730,6 +730,20 @@ class VideoPlayerLauncher {
   @visibleForTesting
   static Widget Function(VideoPlayerLaunchArgs)? debugPlayerWidgetBuilder;
 
+  /// Substitutes only the native-TV bridge call. Host test runs never reach
+  /// [AndroidTvPlayerBridge.launchTorrentPlayback] — it returns false off
+  /// Android before touching the platform channel — so this seam receives the
+  /// exact payload map that would have crossed it plus the live playlist
+  /// resolver, and stands in for the bridge's launch result. Null in
+  /// production; payload construction and resolver wiring stay real.
+  @visibleForTesting
+  static Future<bool> Function(
+    Map<String, dynamic> payload,
+    Future<Map<String, dynamic>?> Function(Map<String, dynamic> request)
+    resolveStream,
+  )?
+  debugAndroidTvLaunch;
+
   /// Select the single URL handed to an external player.
   ///
   /// External-player intents, URL schemes, and generic commands cannot
@@ -3122,7 +3136,9 @@ class VideoPlayerLauncher {
         }
       }
 
-      final launched = await AndroidTvPlayerBridge.launchTorrentPlayback(
+      final launched =
+          await debugAndroidTvLaunch?.call(payloadMap, resolver.handleRequest) ??
+          await AndroidTvPlayerBridge.launchTorrentPlayback(
         payload: payloadMap,
         onProgress: (progress) =>
             _handleProgressUpdate(result.payload, progress),
