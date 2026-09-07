@@ -3136,9 +3136,12 @@ class VideoPlayerLauncher {
         }
       }
 
-      final launched =
-          await debugAndroidTvLaunch?.call(payloadMap, resolver.handleRequest) ??
-          await AndroidTvPlayerBridge.launchTorrentPlayback(
+      // Branch first, then await only the selected call: with no override the
+      // production path awaits exactly the bridge, nothing else.
+      final launchOverride = debugAndroidTvLaunch;
+      final launched = launchOverride != null
+          ? await launchOverride(payloadMap, resolver.handleRequest)
+          : await AndroidTvPlayerBridge.launchTorrentPlayback(
         payload: payloadMap,
         onProgress: (progress) =>
             _handleProgressUpdate(result.payload, progress),
