@@ -319,12 +319,13 @@ class _DetailHoldHintPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = DetailThemeScope.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+        border: Border.all(color: t.hair),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -332,13 +333,13 @@ class _DetailHoldHintPill extends StatelessWidget {
           Icon(
             Icons.more_horiz_rounded,
             size: 15,
-            color: Colors.white.withValues(alpha: 0.92),
+            color: t.tx,
           ),
           const SizedBox(width: 6),
           Text(
             'Long press for more actions',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.92),
+              color: t.tx,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
