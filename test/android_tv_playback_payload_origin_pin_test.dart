@@ -421,6 +421,98 @@ void main() {
     );
     expect(missing, isNull);
   });
+
+  testWidgets(
+    'series startIndex on an updatedAt tie follows stored key order, so the '
+    'first-encountered episode keeps the win',
+    (tester) async {
+      const showTitle = 'Pinned Tie Show';
+      final s01e01 = entry('Pinned.Tie.Show.S01E01.1080p.WEB.mkv');
+      final s01e02 = entry('Pinned.Tie.Show.S01E02.1080p.WEB.mkv');
+      final s01e03 = entry('Pinned.Tie.Show.S01E03.1080p.WEB.mkv');
+
+      // The series start index comes from
+      // `PlaybackProgressStore.getLastPlayedEpisode`, which scans the decoded
+      // seasons/episodes maps with a STRICT `updatedAt > lastUpdated`. On an
+      // exact tie the strict compare never fires again, so the FIRST entry in
+      // map iteration order keeps the win — not the highest episode, and not
+      // the last one written. That iteration order is the stored key order:
+      // `writePlaybackStateMap` json-encodes in insertion order and
+      // `readPlaybackStateMap` decodes back into a document-ordered map.
+      //
+      // `saveSeriesPlaybackState` stamps `DateTime.now()` and so cannot make a
+      // tie on demand; seed the same map it writes, through the same public
+      // store API, with E2 stored BEFORE E1 at an identical `updatedAt`. E2
+      // therefore wins the tie despite the higher episode number, which is
+      // what makes the rule observable rather than merely consistent with a
+      // "lowest episode wins" reading.
+      const tiedUpdatedAt = 1700000000000;
+      Map<String, dynamic> episodeState(int positionMs) => <String, dynamic>{
+        'positionMs': positionMs,
+        'durationMs': 2400000,
+        'speed': 1.0,
+        'aspect': 'contain',
+        'updatedAt': tiedUpdatedAt,
+      };
+      // The map key is `series_` + the series title lowercased with every
+      // non-alphanumeric run replaced by `_`; the launcher looks it up under
+      // the title the SeriesPlaylist derives from these filenames, which is
+      // the same slug as `showTitle`.
+      await PlaybackProgressStore.writePlaybackStateMap(<String, dynamic>{
+        'series_pinned_tie_show': <String, dynamic>{
+          'type': 'series',
+          'title': showTitle,
+          'seasons': <String, dynamic>{
+            '1': <String, dynamic>{
+              '2': episodeState(222000),
+              '1': episodeState(111000),
+            },
+          },
+        },
+      });
+
+      final payload = await launch(
+        tester,
+        VideoPlayerLaunchArgs(
+          videoUrl: s01e01.url,
+          title: 'Pinned.Tie.Show.S01.1080p.WEB',
+          contentTitle: showTitle,
+          contentType: 'series',
+          playlist: [s01e01, s01e02, s01e03],
+          isAndroidTvOverride: () => true,
+          disableExternalPlayer: true,
+          suppressTraktAutoSync: true,
+        ),
+      );
+
+      expect(payload['contentType'], 'series');
+      final items = (payload['items'] as List).cast<Map>();
+      expect(items, hasLength(3));
+      expect(items.map((i) => i['episode']).toList(), [1, 2, 3]);
+      // Both seeded episodes really did reach the payload at the same clock.
+      expect(items[0]['resumePositionMs'], 111000);
+      expect(items[1]['resumePositionMs'], 222000);
+      expect(items[0]['updatedAt'], tiedUpdatedAt);
+      expect(items[1]['updatedAt'], tiedUpdatedAt);
+      expect(items[2]['resumePositionMs'], 0);
+
+      // The tie winner is S01E02 — stored first — so the launch starts there.
+      // A non-strict compare would hand the win to the later-stored S01E01 and
+      // this would be 0.
+      expect(payload['startIndex'], 1);
+
+      final nextMap = Map<String, dynamic>.from(
+        payload['nextEpisodeMap'] as Map,
+      );
+      final prevMap = Map<String, dynamic>.from(
+        payload['prevEpisodeMap'] as Map,
+      );
+      // Navigation off the resolved start index: forward to S01E03, back to
+      // S01E01.
+      expect(nextMap['1'], 2);
+      expect(prevMap['1'], 0);
+    },
+  );
 }
 
 /// Every outbound HTTP call in this path (Cinemeta / TVMaze enrichment) is
