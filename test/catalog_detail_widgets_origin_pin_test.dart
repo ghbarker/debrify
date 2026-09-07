@@ -989,11 +989,21 @@ void main() {
     // No poster in the payload, so the card shows its text fallback twice:
     // once inside the poster box, once as the caption underneath.
     expect(find.text('Neighbour One'), findsNWidgets(2));
-    final caption = tester.widget<Text>(find.text('Neighbour One').last).style!;
+    // The caption's style sits on the AnimatedDefaultTextStyle above it since
+    // the TV focus tempo landed — it tweens with the grow instead of snapping.
+    final caption = ancestorOf<AnimatedDefaultTextStyle>(
+      tester,
+      find.text('Neighbour One').last,
+    ).style;
     expect(caption.color, Colors.white.withValues(alpha: 0.82));
     expect(caption.fontSize, 12);
 
-    final poster = ancestorOf<Container>(tester, find.text('Neighbour One').first);
+    // An AnimatedContainer since the TV focus tempo landed: the border
+    // tweens on the same beat as the grow instead of snapping beside it.
+    final poster = ancestorOf<AnimatedContainer>(
+      tester,
+      find.text('Neighbour One').first,
+    );
     expect(poster.constraints?.maxWidth, 120);
     expect(poster.constraints?.maxHeight, 180);
     var deco = poster.decoration! as BoxDecoration;
@@ -1004,7 +1014,7 @@ void main() {
     await focusOn(tester, find.text('Neighbour One').last);
 
     deco =
-        ancestorOf<Container>(tester, find.text('Neighbour One').first)
+        ancestorOf<AnimatedContainer>(tester, find.text('Neighbour One').first)
                 .decoration!
             as BoxDecoration;
     expect(deco.border!.top.color, DetailThemes.signal.focus);

@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../theme/app_motion.dart';
 import '../../utils/platform_util.dart';
 import '../home/home_theme.dart';
 
@@ -116,12 +117,17 @@ class DetailFocusHalo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final motion = AppMotion.of(context);
     return AnimatedContainer(
-      // Snap on TV (house focus idiom): a 140ms ring fade per DPAD move makes
-      // held-key surfing repaint every element in flight on the weak GPU.
-      duration: PlatformUtil.isTelevision
-          ? Duration.zero
-          : const Duration(milliseconds: 140),
+      // The shared TV focus beat (`AppMotion.tvFocus`): the ring leaving one
+      // control fades over the same 120ms the ring arriving on the next
+      // draws in. A border colour, so the tween is cheap even under a held
+      // key — a snapped ring read as the old button flashing off.
+      duration: motion.focusTempo(
+        PlatformUtil.isTelevision,
+        const Duration(milliseconds: 140),
+      ),
+      curve: motion.standard,
       foregroundDecoration: BoxDecoration(
         shape: radius == null ? BoxShape.circle : BoxShape.rectangle,
         borderRadius: radius,

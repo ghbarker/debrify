@@ -278,6 +278,36 @@ class AppMotion {
   Curve get standard => tokens.standard;
   Curve get emphasized => tokens.emphasized;
 
+  /// The TV cursor's tempo: how long focus takes to LEAVE one control and
+  /// ARRIVE on the next, as one shared figure for every control class.
+  ///
+  /// Every TV focus site used to snap (`Duration.zero`) for raster cost, and
+  /// the snap is what a viewer reads as a flash: the old control drops its
+  /// treatment in the very frame the new one gains it, so for one frame the
+  /// eye sees two states swap rather than one cursor move. A short tween on
+  /// BOTH ends — the loser and the gainer on the same duration and the same
+  /// curve — is what makes the cursor read as travelling. The figure is the
+  /// theme's `fast` (legacy 120ms): the shipped tempo of the board rise, the
+  /// one TV control that already animated and the one nobody called laggy.
+  /// Reduced motion collapses it to zero through [scaled], like every other
+  /// duration this API vends; that is also the only way a TV site may snap.
+  ///
+  /// A site that animates on TV must stay GPU-cheap over the tween: a
+  /// transform, a colour or an alpha — never a blur radius or a spread that
+  /// changes, which re-derives a shadow every frame. Shadows keep their
+  /// geometry on both ends and fade their colour; a transparent one costs
+  /// nothing at rest. `CardFocusRise` is the reference shape.
+  Duration get tvFocus => scaled(tokens.fast);
+
+  /// [tvFocus] on a TV; [otherwise] anywhere else, at the theme's tempo.
+  ///
+  /// The shape every focus site had by hand as `tv ? Duration.zero : literal`,
+  /// with the TV branch routed through the one token. The pointer figure
+  /// keeps its number and gains the theme's scale and the reduced-motion
+  /// collapse — the same migration every other adopted literal made.
+  Duration focusTempo(bool isTv, Duration otherwise) =>
+      isTv ? tvFocus : scaled(otherwise);
+
   /// [d] at this theme's tempo — or nothing at all under reduced motion.
   ///
   /// Rounds to whole microseconds, so a scaled duration is still exact rather

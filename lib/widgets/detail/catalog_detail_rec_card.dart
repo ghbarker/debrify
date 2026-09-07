@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../models/stremio_addon.dart';
+import '../../theme/app_motion.dart';
 import '../../theme/widgets/hover_grow.dart';
 import '../../utils/tv_keys.dart';
 import '../movie_watched_badge.dart';
@@ -45,6 +46,10 @@ class _CatalogDetailRecCardState extends State<CatalogDetailRecCard> {
     // the fallback IS the shipped gold. Hoisted out of the tree below so the
     // lookup happens once per build, never inside an animated builder.
     final t = DetailThemeScope.maybeOf(context);
+    // The grow's tempo, shared with the border and the caption below so the
+    // three arrive — and leave — together. Resolved once, above the tree.
+    final motion = AppMotion.of(context);
+    final fx = HoverGrow.durationFor(motion, widget.tv);
     return Focus(
       onFocusChange: (f) => setState(() => _focused = f),
       onKeyEvent: (node, event) {
@@ -64,8 +69,8 @@ class _CatalogDetailRecCardState extends State<CatalogDetailRecCard> {
           onTap: widget.onTap,
           behavior: HitTestBehavior.opaque,
           // The shared grow — this row gets bigger under a pointer by the
-          // same amount, at the same tempo, as the catalog grids do. TV
-          // snaps, as before.
+          // same amount, at the same tempo, as the catalog grids do; on TV
+          // it runs on the shared focus beat like every other tile.
           child: HoverGrow(
             active: _active,
             isTelevision: widget.tv,
@@ -77,7 +82,9 @@ class _CatalogDetailRecCardState extends State<CatalogDetailRecCard> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Container(
+                    child: AnimatedContainer(
+                      duration: fx,
+                      curve: motion.standard,
                       width: widget.width,
                       height: widget.posterHeight,
                       decoration: BoxDecoration(
@@ -120,10 +127,9 @@ class _CatalogDetailRecCardState extends State<CatalogDetailRecCard> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    widget.item.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  AnimatedDefaultTextStyle(
+                    duration: fx,
+                    curve: motion.standard,
                     style: TextStyle(
                       color: Colors.white.withValues(
                         alpha: _active ? 1.0 : 0.82,
@@ -131,6 +137,11 @@ class _CatalogDetailRecCardState extends State<CatalogDetailRecCard> {
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       height: 1.2,
+                    ),
+                    child: Text(
+                      widget.item.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

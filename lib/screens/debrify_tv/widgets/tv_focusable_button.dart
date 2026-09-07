@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../theme/app_motion.dart';
 import '../../../theme/app_theme_scope.dart';
 import '../../../theme/ui_feedback.dart';
 import '../../../theme/widgets/focus_expression.dart';
@@ -112,11 +113,13 @@ class _TvFocusableButtonState extends State<TvFocusableButton> {
     final Widget cursor = ownCursor
         ? AnimatedScale(
             scale: _isFocused ? 1.1 : 1.0,
-            // TV: snap — animating the scale re-rasters the button (and its
-            // blurred shadow) for ~12 frames per focus move.
-            duration: PlatformUtil.isTelevision
-                ? Duration.zero
-                : const Duration(milliseconds: 200),
+            // TV: the shared focus beat (`AppMotion.tvFocus`, ~7 frames) —
+            // the button the cursor leaves shrinks over the same beat the
+            // next one grows, instead of both snapping.
+            duration: AppMotion.of(context).focusTempo(
+              PlatformUtil.isTelevision,
+              const Duration(milliseconds: 200),
+            ),
             curve: Curves.easeOut,
             child: button(fill: widget.backgroundColor, ink: restingInk),
           )

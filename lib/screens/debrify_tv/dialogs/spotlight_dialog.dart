@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../theme/app_motion.dart';
 import '../../../theme/app_theme_scope.dart';
 import '../../../utils/platform_util.dart';
 import '../../../utils/tv_keys.dart';
@@ -314,9 +315,12 @@ class _DebrifyTvDialogButtonState extends State<DebrifyTvDialogButton> {
         child: GestureDetector(
           onTap: widget.onPressed,
           child: AnimatedContainer(
-            duration: PlatformUtil.isTelevision
-                ? Duration.zero
-                : const Duration(milliseconds: 160),
+            // TV: the shared focus beat (`AppMotion.tvFocus`) — the button
+            // the cursor leaves settles over the beat the next one lifts.
+            duration: AppMotion.of(context).focusTempo(
+              PlatformUtil.isTelevision,
+              const Duration(milliseconds: 160),
+            ),
             curve: Curves.easeOutCubic,
             constraints: const BoxConstraints(minHeight: 46),
             padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 12),
@@ -327,15 +331,16 @@ class _DebrifyTvDialogButtonState extends State<DebrifyTvDialogButton> {
               color: disabled ? tv.fillWeak.withValues(alpha: .35) : fill,
               borderRadius: app.shape.br(23),
               border: Border.all(color: focused ? app.core.tx : tv.hairline),
-              boxShadow: focused
-                  ? const [
-                      BoxShadow(
-                        color: Color(0x77000000),
-                        blurRadius: 24,
-                        offset: Offset(0, 12),
-                      ),
-                    ]
-                  : null,
+              // Fixed geometry, alpha only — no blur re-derived per frame.
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0x77000000).withValues(
+                    alpha: focused ? 0x77 / 0xFF : 0.0,
+                  ),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ],
             ),
             child: Row(
               mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
@@ -506,9 +511,11 @@ class _DebrifyTvDialogOptionCardState extends State<DebrifyTvDialogOptionCard> {
         child: GestureDetector(
           onTap: widget.onPressed,
           child: AnimatedContainer(
-            duration: PlatformUtil.isTelevision
-                ? Duration.zero
-                : const Duration(milliseconds: 170),
+            // TV: the shared focus beat — see the button above.
+            duration: AppMotion.of(context).focusTempo(
+              PlatformUtil.isTelevision,
+              const Duration(milliseconds: 170),
+            ),
             curve: Curves.easeOutCubic,
             constraints: BoxConstraints(minHeight: widget.vertical ? 210 : 112),
             padding: const EdgeInsets.all(18),
@@ -519,15 +526,16 @@ class _DebrifyTvDialogOptionCardState extends State<DebrifyTvDialogOptionCard> {
               color: focused ? app.core.tx : tv.fillWeak,
               borderRadius: app.shape.br(18),
               border: Border.all(color: focused ? app.core.tx : tv.hairline),
-              boxShadow: focused
-                  ? const [
-                      BoxShadow(
-                        color: Color(0x88000000),
-                        blurRadius: 30,
-                        offset: Offset(0, 16),
-                      ),
-                    ]
-                  : null,
+              // Fixed geometry, alpha only — no blur re-derived per frame.
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0x88000000).withValues(
+                    alpha: focused ? 0x88 / 0xFF : 0.0,
+                  ),
+                  blurRadius: 30,
+                  offset: const Offset(0, 16),
+                ),
+              ],
             ),
             child: widget.vertical
                 ? Column(
