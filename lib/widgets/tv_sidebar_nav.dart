@@ -1255,14 +1255,14 @@ class _TvProfileItemWidget extends StatelessWidget {
                     : isFocused
                     ? app.shell.navFocus.withValues(alpha: 0.22)
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: app.shape.brPill,
               ),
               // The ring is a FOREGROUND border so it never insets the row —
               // a decoration border pads the child by its width, and the
               // collapsed rail has no 3px to spare (nor should the content
               // shift when the ring appears).
               foregroundDecoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: app.shape.brPill,
                 border: Border.all(
                   color: app.fade(
                     app.core.tx,
