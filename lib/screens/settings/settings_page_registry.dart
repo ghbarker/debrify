@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'settings_page_spec.dart';
 import 'settings_search.dart';
+import 'widgets/appearance_preview_card.dart';
 import 'widgets/settings_widgets.dart';
+
+/// Pane nodes the Appearance preview claims on TV — its whole Look strip is
+/// one focus stop. Kept next to the registry's count so the two agree.
+const int kAppearancePreviewTvNodes = 1;
 
 /// Canonical 13-category rail. Labels MUST stay in this order — pinned by
 /// `test/settings_page_order_pin_test.dart`.
@@ -242,7 +247,9 @@ class SettingsPageRegistry {
   /// About version chip is the existing case). Used to size the pane node
   /// pool so a new row cannot land past the pool.
   int tvFocusableCount(String category) {
-    var n = 0;
+    // The Appearance preview card is mounted by buildSettingsCategoryChildren
+    // rather than registered as a page, and its Look strip takes one node.
+    var n = category == 'Appearance' ? kAppearancePreviewTvNodes : 0;
     for (final page in pages) {
       if (!page.tv || page.category != category) continue;
       if (page.kindOn(SettingsLayoutSurface.tv) == SettingsRowKind.info) {
@@ -375,6 +382,12 @@ Widget settingsPageRow(
 /// TV: [paneNodes] are claimed sequentially so Up/Down stays contiguous —
 /// the DPAD walker only advances to the immediately adjacent live node, so
 /// a gap strands Down. Info tiles and section headers take no node.
+///
+/// Appearance opens with [AppearancePreviewHost], which is not a page: it
+/// claims the FIRST node (its Look strip is one focus stop, Left/Right inside
+/// it) so entering the pane lands on the preview and Down reaches the Presets
+/// rows. [SettingsPageRegistry.tvFocusableCount] counts that node too, so the
+/// pane pool always covers it.
 List<Widget> buildSettingsCategoryChildren({
   required SettingsPageRegistry registry,
   required SettingsLayoutSurface surface,
@@ -393,6 +406,9 @@ List<Widget> buildSettingsCategoryChildren({
   }
 
   final heroes = <Widget>[];
+  if (category == 'Appearance') {
+    heroes.add(AppearancePreviewHost(focusNode: nextNode()));
+  }
   final grouped = <String?, List<SettingsPageSpec>>{};
   for (final page in pages) {
     if (page.kindOn(surface) == SettingsRowKind.lookHero) {
