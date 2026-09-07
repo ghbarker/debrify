@@ -256,6 +256,12 @@ class DetailModel {
   double? get rating => imdbExtra?.rating ?? item.imdbRating;
   String? get certificate => imdbExtra?.certificate;
   String? get runtime => imdbExtra?.runtime;
+
+  /// How many IMDb votes stand behind [rating]; null when unknown.
+  int? get voteCount => imdbExtra?.voteCount;
+
+  /// Metacritic metascore (0–100); null when IMDb carries none.
+  int? get metacritic => imdbExtra?.metacriticScore;
   String? get logo => item.logo;
   String? get poster => item.poster;
   String? get backdrop => item.background ?? item.poster;
