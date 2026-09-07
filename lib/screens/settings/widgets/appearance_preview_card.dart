@@ -396,7 +396,8 @@ class _LookStripState extends State<_LookStrip> {
             key: _viewportKey,
             controller: _scroll,
             scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
+            // Clip at the strip's own bounds: with Clip.none the off-screen
+            // chips painted straight across the card's padding and border.
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
