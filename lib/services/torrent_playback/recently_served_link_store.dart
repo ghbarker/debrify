@@ -1,0 +1,101 @@
+/// In-memory record of which links were recently served for which title, so
+/// the failover chain can demote links that evidently didn't play instead
+/// of serving them again on a re-click.
+///
+/// Bounded ([maxEntries], oldest evicted first) and process-local on
+/// purpose: the demotion window is minutes, and a link that was dead ten
+/// minutes ago says nothing about tomorrow.
+///
+/// What "evidently didn't play" means here — a deliberate refinement of the
+/// reference resolver, which can only see requests: the reference treats a
+/// repeat request inside a short min-gap as the player's own retry (sticky
+/// repeat) and everything else as a re-click. The app has a direct signal:
+/// the startup decoder gate. So the player [record]s every candidate it
+/// hands to the decoder and [markPlayed]s the one the gate accepted; the
+/// accepted link is thereby never demoted, while every attempted-but-rejected
+/// link (and a link whose session was abandoned before the gate opened) stays
+/// demoted for the window. No time-based sticky-repeat heuristic is needed.
+library;
+
+import 'dart:collection';
+
+import 'failover_chain.dart';
+
+class RecentlyServedLinkStore {
+  RecentlyServedLinkStore({this.maxEntries = 1000, DateTime Function()? clock})
+    : _clock = clock ?? DateTime.now;
+
+  /// The player's shared store.
+  static final RecentlyServedLinkStore instance = RecentlyServedLinkStore();
+
+  final int maxEntries;
+  final DateTime Function() _clock;
+
+  /// `identity\u0000linkKey` → served-at, insertion-ordered so the head is
+  /// the oldest record.
+  final LinkedHashMap<String, DateTime> _servedAt = LinkedHashMap();
+
+  static String _key(String identity, String linkKey) => '$identity\u0000$linkKey';
+
+  /// Title/episode identity the store is scoped by: IMDb id when known, else
+  /// the display title, plus season/episode for series. A re-click on S01E02
+  /// must not demote S01E01's links.
+  static String identityFor({
+    String? imdbId,
+    String? title,
+    int? season,
+    int? episode,
+  }) {
+    final id = (imdbId ?? '').trim();
+    final base = id.isNotEmpty ? id : (title ?? '').trim().toLowerCase();
+    final se = (season != null || episode != null)
+        ? '|s${season ?? '-'}e${episode ?? '-'}'
+        : '';
+    return '$base$se';
+  }
+
+  int get length => _servedAt.length;
+
+  /// Marks [linkKey] as served for [identity] now. Re-recording an existing
+  /// link refreshes its timestamp and moves it to the newest slot.
+  void record(String identity, String linkKey) {
+    final key = _key(identity, linkKey);
+    _servedAt.remove(key);
+    _servedAt[key] = _clock();
+    while (_servedAt.length > maxEntries) {
+      _servedAt.remove(_servedAt.keys.first);
+    }
+  }
+
+  /// The decoder accepted [linkKey]: it evidently played, so it is no longer
+  /// a demotion candidate for this title.
+  void markPlayed(String identity, String linkKey) {
+    _servedAt.remove(_key(identity, linkKey));
+  }
+
+  /// Whether [linkKey] was served for [identity] within [window] and never
+  /// marked played. A zero/negative window is "demotion off".
+  bool wasServedWithin(String identity, String linkKey, Duration window) {
+    if (window <= Duration.zero) return false;
+    final at = _servedAt[_key(identity, linkKey)];
+    if (at == null) return false;
+    return _clock().difference(at) <= window;
+  }
+
+  /// Read-only view scoped to one title for [FailoverChain.build].
+  RecentlyServedLinks viewFor(String identity, Duration window) =>
+      _ScopedView(this, identity, window);
+
+  void clear() => _servedAt.clear();
+}
+
+class _ScopedView extends RecentlyServedLinks {
+  const _ScopedView(this._store, this._identity, this._window);
+  final RecentlyServedLinkStore _store;
+  final String _identity;
+  final Duration _window;
+
+  @override
+  bool isDemoted(String linkKey) =>
+      _store.wasServedWithin(_identity, linkKey, _window);
+}

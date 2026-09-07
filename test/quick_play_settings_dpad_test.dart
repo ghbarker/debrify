@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:debrify/models/quick_play_rules.dart';
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/settings/quick_play_settings_page.dart';
 import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
@@ -92,13 +93,118 @@ void main() {
     expect(focusLabel(), 'quick-play-priority-stremio:beta');
     await down(tester);
     expect(focusLabel(), 'quick-play-priority-stremio:gamma');
+    // The failover chain switch sits between the list and Restore defaults;
+    // collapsed (default off) it is the section's only stop.
+    await down(tester);
+    expect(focusLabel(), 'quick-play-chain-enabled');
     await down(tester);
     expect(focusLabel(), 'quick-play-reset');
 
-    // And back UP re-enters the list from below.
+    // And back UP re-enters the chain switch, then the list from below.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(focusLabel(), 'quick-play-chain-enabled');
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
     await tester.pumpAndSettle();
     expect(focusLabel(), 'quick-play-priority-stremio:gamma');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('enabling the failover chain exposes every knob to DPAD', (
+    tester,
+  ) async {
+    seedAddons();
+    await pumpTvPage(tester);
+
+    for (var i = 0; i < 6; i++) {
+      await down(tester); // torrents, attempts, alpha, beta, gamma, chain
+    }
+    expect(focusLabel(), 'quick-play-chain-enabled');
+    await ok(tester); // switch the chain on
+    expect(
+      (await QuickPlayPolicyPrefs.getQuickPlayRules(
+        isMovie: true,
+      )).failoverChain.enabled,
+      isTrue,
+    );
+
+    // Provider order rows, in shipped precedence.
+    for (final id in [
+      'debrid',
+      'torbox',
+      'premiumize',
+      'alldebrid',
+      'pikpak',
+    ]) {
+      await down(tester);
+      expect(focusLabel(), 'quick-play-chain-provider-$id');
+    }
+    await down(tester);
+    expect(focusLabel(), 'quick-play-chain-siblings');
+    await down(tester);
+    expect(focusLabel(), 'quick-play-chain-later');
+    await down(tester);
+    expect(focusLabel(), 'quick-play-chain-match');
+    await down(tester);
+    expect(focusLabel(), 'quick-play-chain-probe');
+    await down(tester);
+    expect(focusLabel(), 'quick-play-chain-probe-timeout');
+    for (final id in [
+      'debrid',
+      'torbox',
+      'premiumize',
+      'alldebrid',
+      'pikpak',
+    ]) {
+      await down(tester);
+      expect(focusLabel(), 'quick-play-chain-never-probe-$id');
+    }
+    await down(tester);
+    expect(focusLabel(), 'quick-play-chain-demotion');
+    await down(tester);
+    expect(focusLabel(), 'quick-play-reset');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('OK picks a chain provider row, DPAD moves it, order persists', (
+    tester,
+  ) async {
+    seedAddons();
+    await QuickPlayPolicyPrefs.setQuickPlayRules(
+      QuickPlayRules.debrifyDefault(isMovie: true).copyWith(
+        preset: QuickPlayPreset.custom,
+        failoverChain: FailoverChainPolicy.defaults.copyWith(enabled: true),
+      ),
+      isMovie: true,
+    );
+    await pumpTvPage(tester);
+
+    for (var i = 0; i < 6; i++) {
+      await down(tester);
+    }
+    expect(focusLabel(), 'quick-play-chain-enabled');
+    await down(tester); // debrid
+    await down(tester); // torbox
+    expect(focusLabel(), 'quick-play-chain-provider-torbox');
+
+    await ok(tester); // pick up TorBox
+    expect(find.text('Moving…'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(focusLabel(), 'quick-play-chain-provider-torbox');
+    await ok(tester); // drop
+    expect(find.text('Moving…'), findsNothing);
+
+    final rules = await QuickPlayPolicyPrefs.getQuickPlayRules(isMovie: true);
+    expect(rules.failoverChain.providerOrder, [
+      'torbox',
+      'debrid',
+      'premiumize',
+      'alldebrid',
+      'pikpak',
+    ]);
+    // The Addon Priority list was not touched.
+    expect(rules.sourcePriority, isEmpty);
     expect(tester.takeException(), isNull);
   });
 
