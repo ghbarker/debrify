@@ -65,9 +65,21 @@ class CardFocusRise extends StatelessWidget {
   /// Sits inside the AspectRatio so the theme's ring hugs the card rather than
   /// whatever slot the shelf handed us, and takes no `on:` — a poster's
   /// background is its artwork, which this widget never sees.
+  ///
+  /// `grow: true`: this is a poster card, so the theme's cursor grows it by
+  /// the shared [HoverGrow] figure on top of whatever it draws — a ring, an
+  /// underline, an inverted or flooded face, a lift — and `scale`/`lift`
+  /// hand their small cursor scale over to that one figure. Without it a
+  /// pointer on a `ring` look lit the ring and moved nothing, which on a
+  /// desktop is the one piece of feedback the user was asking for.
   Widget _cursor(bool ownCursor, Widget child) => ownCursor
       ? child
-      : FocusExpressionBox(focused: active, radius: 10, child: child);
+      : FocusExpressionBox(
+          focused: active,
+          radius: 10,
+          grow: true,
+          child: child,
+        );
 
   @override
   Widget build(BuildContext context) {
@@ -89,9 +101,13 @@ class CardFocusRise extends StatelessWidget {
     // The grow is the shared one: `FocusTokens.hoverScaleFor` — the TV pop
     // calmed from 1.09 to the Nuvio-class 1.045 (with the lighter ring the
     // smaller lift reads premium, and neighbours shift less), and the same
-    // 1.12 under a pointer that every other poster tile grows by.
+    // 1.12 under a pointer that every other poster tile grows by. Legacy only
+    // at this level: off legacy the SAME grow is applied by the theme's
+    // cursor (`FocusExpressionBox.grow`, inside the AspectRatio), so every
+    // card carries exactly one scale transform whichever path it takes.
     return HoverGrow(
-      active: active && ownCursor,
+      active: active,
+      enabled: ownCursor,
       isTelevision: isTelevision,
       animateOnTv: true,
       child: AspectRatio(

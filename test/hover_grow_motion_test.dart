@@ -5,10 +5,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:debrify/models/stremio_addon.dart';
+import 'package:debrify/theme/app_art.dart';
 import 'package:debrify/theme/app_focus.dart';
+import 'package:debrify/theme/app_light.dart';
 import 'package:debrify/theme/app_motion.dart';
+import 'package:debrify/theme/app_surface.dart';
 import 'package:debrify/theme/app_theme.dart';
 import 'package:debrify/theme/app_theme_scope.dart';
+import 'package:debrify/theme/theme_spec.dart';
+import 'package:debrify/theme/widgets/focus_expression.dart';
+import 'package:debrify/theme/widgets/parallax_focus.dart';
+import 'package:debrify/utils/platform_util.dart';
 import 'package:debrify/widgets/catalog_item_tile.dart';
 import 'package:debrify/widgets/detail/catalog_detail_rec_card.dart';
 import 'package:debrify/widgets/detail/theme/detail_themes.dart';
@@ -245,6 +252,267 @@ void main() {
       final grown = scaleUnder(tester, CatalogDetailRecCard);
       expect(grown.scale, FocusTokens.tvHoverScale);
       expect(grown.duration, Duration.zero);
+    });
+  });
+  group('under a premium look, the theme cursor grows the tile too', () {
+    /// A theme whose only interesting property is its focus expression, built
+    /// through `ThemeSpec` so it travels the same derivation the shipped looks
+    /// do — `scale` 1.06 for the scale cursor, 1.02 + an 8px rise for lift.
+    AppTheme themeWith(FocusExpression e) => ThemeSpec(
+      id: 'probe',
+      label: 'Probe',
+      subtitle: 'test fixture',
+      ground: const Color(0xFF101010),
+      sunken: const Color(0xFF0A0A0A),
+      raised: const Color(0xFF1A1A1A),
+      ink: const Color(0xFFFFFFFF),
+      accent: const Color(0xFFFFFFFF),
+      separation: SeparationModel.fill,
+      scrim: ScrimStyle.bottomGradient,
+      frame: ArtFrame.bleed,
+      focusExpression: e,
+      motion: MotionCharacter.settle,
+      radius: 7,
+    ).build();
+
+    /// The board chrome: `CatalogItemTile` -> `CardFocusRise` -> the theme's
+    /// `FocusExpressionBox`. The same path the home board's cells and the
+    /// favourites strip take.
+    Widget boardTile({required bool tv, FocusNode? node}) => CatalogItemTile(
+      item: item,
+      isTelevision: tv,
+      focusNode: node,
+      hasBoundSource: false,
+      onOpen: () {},
+      boardChrome: true,
+    );
+
+    List<AnimatedScale> scalesUnder(WidgetTester tester, Type of) => tester
+        .widgetList<AnimatedScale>(
+          find.descendant(
+            of: find.byType(of),
+            matching: find.byType(AnimatedScale),
+          ),
+        )
+        .toList();
+
+    Iterable<AnimatedContainer> cursorBoxes(WidgetTester tester) =>
+        tester.widgetList<AnimatedContainer>(
+          find.descendant(
+            of: find.byType(FocusExpressionBox),
+            matching: find.byType(AnimatedContainer),
+          ),
+        );
+
+    /// The ring: a foreground border with a visible colour.
+    bool ringLit(WidgetTester tester) => cursorBoxes(tester).any((c) {
+      final d = c.foregroundDecoration;
+      final border = d is BoxDecoration ? d.border : null;
+      return border is Border && border.top.color.a > 0;
+    });
+
+    /// The underline: a bar of the cursor's width, filled.
+    bool barLit(WidgetTester tester, AppTheme theme) =>
+        cursorBoxes(tester).any((c) {
+          final d = c.decoration;
+          final fill = d is BoxDecoration ? d.color : null;
+          return c.constraints?.maxHeight == theme.focus.widthFor(false) &&
+              fill != null &&
+              fill.a > 0;
+        });
+
+    /// The lift: a translation by the theme's rise.
+    bool lifted(WidgetTester tester, AppTheme theme) =>
+        cursorBoxes(tester).any(
+          (c) => c.transform?.getTranslation().y == -theme.focus.lift,
+        );
+
+    for (final e in [
+      FocusExpression.ring,
+      FocusExpression.underline,
+      FocusExpression.invert,
+      FocusExpression.flood,
+      FocusExpression.lift,
+    ]) {
+      testWidgets(
+        '${e.name}: a pointer grows the board card 1.12 and the cursor still '
+        'draws',
+        (tester) async {
+          final theme = themeWith(e);
+          await tester.pumpWidget(host(boardTile(tv: false), theme: theme));
+          await tester.pump();
+
+          // Rest state: one scale transform, at the identity — the legacy
+          // HoverGrow is disabled off legacy, so the tile is not scaled twice.
+          expect(
+            find.descendant(
+              of: find.byType(CardFocusRise),
+              matching: find.byType(FocusExpressionBox),
+            ),
+            findsOneWidget,
+          );
+          final rest = scalesUnder(tester, CardFocusRise);
+          expect(rest, hasLength(1), reason: 'exactly one scale transform');
+          expect(rest.single.scale, 1.0);
+
+          await hover(tester, find.byType(CatalogItemTile));
+          final grown = scalesUnder(tester, CardFocusRise);
+          expect(grown, hasLength(1), reason: 'exactly one scale transform');
+          expect(grown.single.scale, theme.focus.hoverScaleFor(false));
+          expect(grown.single.scale, 1.12);
+          // The grow's tempo, from the theme: the same figure the classic
+          // grids and the recommendation row run on.
+          expect(grown.single.duration, theme.motion.base);
+          expect(grown.single.curve, theme.motion.standard);
+
+          // And the expression is still drawn ON the grown tile.
+          switch (e) {
+            case FocusExpression.ring:
+            // Invert and flood need `inverted` to replace the surface; a
+            // poster has none to offer, so they degrade to the ring — which
+            // must still be there.
+            case FocusExpression.invert:
+            case FocusExpression.flood:
+              expect(ringLit(tester), isTrue, reason: 'the ring still draws');
+            case FocusExpression.underline:
+              expect(barLit(tester, theme), isTrue, reason: 'the bar draws');
+            case FocusExpression.lift:
+              expect(lifted(tester, theme), isTrue, reason: 'the rise stays');
+              expect(theme.focus.scale, 1.02, reason: 'the cursor scale…');
+              expect(grown.single.scale, isNot(1.02),
+                  reason: '…yields to the tile figure, not stacked on it');
+            case FocusExpression.scale:
+            case FocusExpression.parallax:
+              fail('not a non-scaling expression');
+          }
+        },
+      );
+    }
+
+    testWidgets('scale: the tile figure replaces the 1.06 cursor scale — one '
+        'transform, not two', (tester) async {
+      final theme = themeWith(FocusExpression.scale);
+      expect(theme.focus.scale, 1.06);
+      await tester.pumpWidget(host(boardTile(tv: false), theme: theme));
+      await tester.pump();
+      expect(scalesUnder(tester, CardFocusRise), hasLength(1));
+
+      await hover(tester, find.byType(CatalogItemTile));
+      final grown = scalesUnder(tester, CardFocusRise);
+      expect(grown, hasLength(1), reason: 'no double scaling');
+      // A poster tile has its own gap to grow into, so it takes the shared
+      // tile figure; the small cursor scale stays for settings rows and pills.
+      expect(grown.single.scale, 1.12);
+    });
+
+    testWidgets('parallax: ParallaxFocus owns the lift; no HoverGrow at all', (
+      tester,
+    ) async {
+      final theme = themeWith(FocusExpression.parallax);
+      await tester.pumpWidget(host(boardTile(tv: false), theme: theme));
+      await tester.pump();
+      await hover(tester, find.byType(CatalogItemTile));
+      expect(scalesUnder(tester, CardFocusRise), isEmpty,
+          reason: 'the spring lift is the only scale on the card');
+      expect(
+        find.descendant(
+          of: find.byType(CardFocusRise),
+          matching: find.byType(ParallaxFocus),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a keyboard cursor takes the same path as the pointer', (
+      tester,
+    ) async {
+      final node = FocusNode();
+      addTearDown(node.dispose);
+      await tester.pumpWidget(
+        host(
+          boardTile(tv: false, node: node),
+          theme: themeWith(FocusExpression.ring),
+        ),
+      );
+      await tester.pump();
+      node.requestFocus();
+      await tester.pump();
+      await tester.pump();
+      final grown = scalesUnder(tester, CardFocusRise);
+      expect(grown, hasLength(1));
+      expect(grown.single.scale, 1.12);
+      expect(ringLit(tester), isTrue);
+    });
+
+    testWidgets('reduced motion keeps the grow and drops the tween', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          boardTile(tv: false),
+          theme: themeWith(FocusExpression.ring),
+          reduceMotion: true,
+        ),
+      );
+      await tester.pump();
+      await hover(tester, find.byType(CatalogItemTile));
+      final grown = scalesUnder(tester, CardFocusRise).single;
+      expect(grown.scale, 1.12);
+      expect(grown.duration, Duration.zero);
+    });
+
+    testWidgets('a TV keeps the calm 1.045 and snaps, like the rest of the '
+        'cursor', (tester) async {
+      PlatformUtil.debugSetAndroidTvCached(true);
+      addTearDown(() => PlatformUtil.debugSetAndroidTvCached(null));
+      final node = FocusNode();
+      addTearDown(node.dispose);
+      await tester.pumpWidget(
+        host(
+          boardTile(tv: true, node: node),
+          theme: themeWith(FocusExpression.ring),
+        ),
+      );
+      await tester.pump();
+      node.requestFocus();
+      await tester.pump();
+      await tester.pump();
+      final grown = scalesUnder(tester, CardFocusRise).single;
+      expect(grown.scale, FocusTokens.tvHoverScale);
+      expect(grown.scale, 1.045);
+      expect(grown.duration, Duration.zero);
+    });
+
+    testWidgets('the cursor on anything that is NOT a tile is unchanged', (
+      tester,
+    ) async {
+      // A settings row or a pill: `grow` is off by default, so `scale` keeps
+      // its small 1.06 and `ring` adds no transform at all.
+      await tester.pumpWidget(
+        host(
+          const FocusExpressionBox(
+            focused: true,
+            radius: 8,
+            child: SizedBox.expand(),
+          ),
+          theme: themeWith(FocusExpression.scale),
+        ),
+      );
+      final small = scalesUnder(tester, FocusExpressionBox);
+      expect(small, hasLength(1));
+      expect(small.single.scale, 1.06);
+
+      await tester.pumpWidget(
+        host(
+          const FocusExpressionBox(
+            focused: true,
+            radius: 8,
+            child: SizedBox.expand(),
+          ),
+          theme: themeWith(FocusExpression.ring),
+        ),
+      );
+      expect(scalesUnder(tester, FocusExpressionBox), isEmpty);
     });
   });
 }
