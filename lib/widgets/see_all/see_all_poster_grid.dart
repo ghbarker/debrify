@@ -468,7 +468,12 @@ class SeeAllPosterGridState extends State<SeeAllPosterGrid> {
             child: ListView.builder(
               controller: _scroll,
               scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.hardEdge,
+              // The pointer grow (1.12) outruns the 20px slack on a tall
+              // shelf, and a hard edge would shave the lifted card's top
+              // and bottom. Same as the showcase rails: nothing is laid out
+              // beyond the viewport to leak, so the clip only ever cost the
+              // cursor.
+              clipBehavior: Clip.none,
               // ~1.5 cards of lookahead, matching the wall's reasoning: a
               // DPAD target must already be built, since requestFocus on an
               // unbuilt tile's detached node is a silent no-op (dead DPAD).

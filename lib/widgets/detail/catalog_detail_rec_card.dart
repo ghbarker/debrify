@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../models/stremio_addon.dart';
+import '../../theme/widgets/hover_grow.dart';
 import '../../utils/tv_keys.dart';
 import '../movie_watched_badge.dart';
 import 'theme/detail_theme.dart';
@@ -62,12 +63,12 @@ class _CatalogDetailRecCardState extends State<CatalogDetailRecCard> {
         child: GestureDetector(
           onTap: widget.onTap,
           behavior: HitTestBehavior.opaque,
-          child: AnimatedScale(
-            duration: widget.tv
-                ? Duration.zero
-                : const Duration(milliseconds: 150),
-            curve: Curves.easeOutCubic,
-            scale: _active ? 1.05 : 1.0,
+          // The shared grow — this row gets bigger under a pointer by the
+          // same amount, at the same tempo, as the catalog grids do. TV
+          // snaps, as before.
+          child: HoverGrow(
+            active: _active,
+            isTelevision: widget.tv,
             child: SizedBox(
               width: widget.width,
               child: Column(
