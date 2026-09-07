@@ -12,7 +12,6 @@ test/series_parser_test.dart :: SeriesParser Tests should NOT treat 5-letter rel
 test/series_parser_test.dart :: cleanCollectionTitle Tests should preserve numbers in show title like Beverly Hills 90210
 test/series_parser_test.dart :: cleanCollectionTitle Tests PHASE 2: should handle alternative season range - through
 test/series_parser_test.dart :: cleanCollectionTitle Tests PHASE 2: should handle alternative season range - thru
-test/detail_theme_test.dart :: no raw colour literals survive in the themed files detail_episode_cells.dart
 test/xmltv_legacy_guide_retention_test.dart :: a guide with nothing to import is still dropped
 test/profiles/edit_profile_screen_test.dart :: rendering no control goes missing in a regrouping
 
