@@ -30,10 +30,13 @@ import json
 import os
 import re
 import subprocess
+import shutil
 import sys
 import urllib.request
 
-FLUTTER = r"C:\Users\hunth\flutter\bin\flutter.bat"
+# Flutter: FLUTTER_BIN env var, else whatever is on PATH, else the laptop's install.
+FLUTTER = (os.environ.get("FLUTTER_BIN") or shutil.which("flutter")
+           or shutil.which("flutter.bat") or r"C:\Users\hunth\flutter\bin\flutter.bat")
 AUTHOR = ["-c", "user.name=Ghbarker", "-c", "user.email=granthbarker@gmail.com"]
 
 # Files no refactor lane owns. Keep in sync with the board registration.
