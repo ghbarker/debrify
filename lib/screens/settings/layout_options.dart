@@ -34,6 +34,10 @@ class SettingsLayoutOptions {
   final String? moreLabel;
   final Future<void> Function()? onMore;
 
+  /// Secondary settings the preview should honour but the row does not
+  /// choose — the dock's palette and size. Read when a target is built.
+  final String Function()? variant;
+
   const SettingsLayoutOptions({
     required this.rowId,
     required this.options,
@@ -41,6 +45,7 @@ class SettingsLayoutOptions {
     required this.apply,
     this.moreLabel,
     this.onMore,
+    this.variant,
   }) : assert(
          (moreLabel == null) == (onMore == null),
          'moreLabel and onMore come together',
@@ -70,6 +75,8 @@ class LayoutRowValues {
   final String playerGuideStyle;
   final String playLoaderStyle;
   final String playerDockStyle;
+  final String playerDockPalette;
+  final String playerDockSize;
   final String parentsGuideStyle;
   final String profileGateStyle;
   final String phoneNavStyle;
@@ -85,6 +92,8 @@ class LayoutRowValues {
     this.playerGuideStyle = 'classic',
     this.playLoaderStyle = 'marquee',
     this.playerDockStyle = 'classic',
+    this.playerDockPalette = 'ultraviolet',
+    this.playerDockSize = 'auto',
     this.parentsGuideStyle = 'compass',
     this.profileGateStyle = 'stage_cards',
     this.phoneNavStyle = 'classic',

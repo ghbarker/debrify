@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_theme.dart';
 import '../../../theme/app_theme_scope.dart';
+import 'layout_preview_chrome.dart';
 import 'layout_preview_detail.dart';
+import 'layout_preview_live_tv.dart';
+import 'layout_preview_player.dart';
 import 'layout_preview_tv_home.dart';
 import 'schematic_kit.dart';
 
@@ -28,11 +31,16 @@ class LayoutPreviewStage extends StatelessWidget {
     required this.theme,
     required this.rowId,
     required this.optionId,
+    this.variant,
   });
 
   final AppTheme theme;
   final String rowId;
   final String optionId;
+
+  /// Secondary settings the picture honours — see
+  /// `LayoutPreviewTarget.variant`.
+  final String? variant;
 
   static const double canvasWidth = 320;
   static const double canvasHeight = 180;
@@ -62,7 +70,11 @@ class LayoutPreviewStage extends StatelessWidget {
               child: SizedBox(
                 width: canvasWidth,
                 height: canvasHeight,
-                child: LayoutSchematic(rowId: rowId, optionId: optionId),
+                child: LayoutSchematic(
+                  rowId: rowId,
+                  optionId: optionId,
+                  variant: variant,
+                ),
               ),
             ),
           );
@@ -79,10 +91,12 @@ class LayoutSchematic extends StatelessWidget {
     super.key,
     required this.rowId,
     required this.optionId,
+    this.variant,
   });
 
   final String rowId;
   final String optionId;
+  final String? variant;
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +111,7 @@ class LayoutSchematic extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Stack(
         clipBehavior: Clip.hardEdge,
-        children: layoutSchematicChildren(kit, rowId, optionId),
+        children: layoutSchematicChildren(kit, rowId, optionId, variant),
       ),
     );
   }
@@ -109,8 +123,9 @@ class LayoutSchematic extends StatelessWidget {
 List<Widget> layoutSchematicChildren(
   SchematicKit kit,
   String rowId,
-  String optionId,
-) {
+  String optionId, [
+  String? variant,
+]) {
   switch (rowId) {
     case 'detailPageStyle':
       return detailPageSchematic(kit, optionId);
@@ -118,6 +133,26 @@ List<Widget> layoutSchematicChildren(
       return tvHomeSchematic(kit, optionId);
     case 'discoverLayout':
       return discoverSchematic(kit, optionId);
+    case 'tvSidebarStyle':
+      return tvSidebarSchematic(kit, optionId);
+    case 'desktopSidebarStyle':
+      return desktopSidebarSchematic(kit, optionId);
+    case 'navigationStyleAppearance':
+      return phoneNavSchematic(kit, optionId);
+    case 'profileAppearance':
+      return profilePickerSchematic(kit, optionId);
+    case 'iptvAppearance':
+      return iptvSchematic(kit, optionId);
+    case 'debrifyTvAppearance':
+      return debrifyTvSchematic(kit, optionId);
+    case 'playerGuideStyle':
+      return playerGuideSchematic(kit, optionId);
+    case 'playLoaderStyle':
+      return playLoaderSchematic(kit, optionId);
+    case 'parentsGuideStyle':
+      return parentsGuideSchematic(kit, optionId);
+    case 'playerDock':
+      return playerDockPreview(kit, optionId, variant);
   }
   return kit.generic();
 }

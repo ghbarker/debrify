@@ -15,12 +15,17 @@ class LayoutPreviewTarget {
   /// say "Applied" rather than "Not applied yet".
   final bool applied;
 
+  /// Secondary settings the picture honours (the dock's palette and size),
+  /// from [SettingsLayoutOptions.variant]. Null for most rows.
+  final String? variant;
+
   const LayoutPreviewTarget({
     required this.rowId,
     required this.rowTitle,
     required this.optionId,
     required this.optionLabel,
     required this.applied,
+    this.variant,
   });
 
   LayoutPreviewTarget asApplied() => LayoutPreviewTarget(
@@ -29,6 +34,7 @@ class LayoutPreviewTarget {
     optionId: optionId,
     optionLabel: optionLabel,
     applied: true,
+    variant: variant,
   );
 
   @override
@@ -38,10 +44,11 @@ class LayoutPreviewTarget {
       other.optionId == optionId &&
       other.applied == applied &&
       other.rowTitle == rowTitle &&
-      other.optionLabel == optionLabel;
+      other.optionLabel == optionLabel &&
+      other.variant == variant;
 
   @override
-  int get hashCode => Object.hash(rowId, optionId, applied);
+  int get hashCode => Object.hash(rowId, optionId, applied, variant);
 
   @override
   String toString() =>
