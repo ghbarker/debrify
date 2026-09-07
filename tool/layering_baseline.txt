@@ -6,4 +6,6 @@
 # The previously recorded 90 ceiling was not the #72 ceiling; restore shrink-only.
 # fix/layering-six-identities: 52 -> 46 (badge model, transfer glyphs, provider
 # presentation, CloudSelectSourceOpener seam). Lowered from 77 to 46.
-46
+# refactor/remove-dead-result-widgets: 46 -> 42 (AggregatedSearchResults and
+# TraktResultsView deleted along with the CloudSelectSourceOpener seam).
+42
