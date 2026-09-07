@@ -241,8 +241,10 @@ class MotionTokens {
 ///
 /// `MediaQuery.disableAnimations` collapses every duration THIS API vends to
 /// zero. It cannot reach route-controller duration (a `PageTransitionsBuilder`
-/// receives an animation the route already created) and it does not reach
-/// literals that have not been migrated. Both are stated limits, not bugs.
+/// receives an animation the route already created — which is why
+/// `AppPageTransitionsBuilder` renders a plain fast fade under reduced motion
+/// instead) and it does not reach literals that have not been migrated. Both
+/// are stated limits, not bugs.
 ///
 /// **It applies under the legacy theme too, and that is deliberate.** The
 /// house rule is that legacy renders byte-for-byte what it always has — and

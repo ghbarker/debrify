@@ -3,56 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../services/text_brightness.dart';
-import '../utils/platform_util.dart';
 import '../widgets/detail/theme/detail_theme.dart';
+import 'app_page_transitions.dart';
 import 'app_theme.dart';
 import 'app_type.dart';
-
-/// TV-aware page transition: on Android TV every push/pop animates a
-/// full-screen layer, and the default Material zoom transition (scale + fade +
-/// snapshotting) is visibly janky on weak TV GPUs — it's a big part of why the
-/// app doesn't feel native there. TV gets a plain fast fade instead: the
-/// incoming page fades in over the first 40% of the route animation (~120ms of
-/// the standard 300ms), which reads as an instant, native-style switch and
-/// costs one opacity layer. Phones keep the stock zoom transition untouched.
-///
-/// The TV check reads [PlatformUtil.isTelevision] per transition build —
-/// warmed in main() before runApp — so the ThemeData stays const/synchronous.
-///
-/// (Moved verbatim from `main.dart` when the ThemeData construction moved into
-/// this adapter; every built theme shares it.)
-class TvAwarePageTransitionsBuilder extends PageTransitionsBuilder {
-  const TvAwarePageTransitionsBuilder();
-
-  static const PageTransitionsBuilder _phoneDefault =
-      ZoomPageTransitionsBuilder();
-
-  @override
-  Widget buildTransitions<T>(
-    PageRoute<T> route,
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
-    if (PlatformUtil.isTelevision) {
-      return FadeTransition(
-        opacity: CurvedAnimation(
-          parent: animation,
-          curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
-        ),
-        child: child,
-      );
-    }
-    return _phoneDefault.buildTransitions(
-      route,
-      context,
-      animation,
-      secondaryAnimation,
-      child,
-    );
-  }
-}
 
 /// Builds `ThemeData` and system-bar styles from an [AppTheme].
 ///
@@ -66,9 +20,23 @@ class TvAwarePageTransitionsBuilder extends PageTransitionsBuilder {
 ///   never by `copyWith` over the legacy one, which has already been through
 ///   the text-brightness pass and would double-apply the preset.
 abstract final class AppThemeAdapter {
-  /// Shared by both paths — TV gets the fast fade, phones the stock zoom.
+  /// Shared by both paths, and registered for EVERY platform so the decision
+  /// lives in one place: [AppPageTransitionsBuilder] picks the TV fade, the
+  /// reduced-motion fade, the Cupertino slide (iPhone/iPad) or the shared-axis
+  /// transition per route. Route motion is app-wide behaviour rather than
+  /// theme identity — the legacy theme shares it exactly as it always shared
+  /// the TV fade.
   static const PageTransitionsTheme pageTransitions = PageTransitionsTheme(
-    builders: {TargetPlatform.android: TvAwarePageTransitionsBuilder()},
+    // Every TargetPlatform — a const map cannot iterate the enum, and the
+    // adapter test pins that none is missing.
+    builders: {
+      TargetPlatform.android: AppPageTransitionsBuilder(),
+      TargetPlatform.fuchsia: AppPageTransitionsBuilder(),
+      TargetPlatform.iOS: AppPageTransitionsBuilder(),
+      TargetPlatform.linux: AppPageTransitionsBuilder(),
+      TargetPlatform.macOS: AppPageTransitionsBuilder(),
+      TargetPlatform.windows: AppPageTransitionsBuilder(),
+    },
   );
 
   /// TEST-ONLY: skip the GoogleFonts wrapper and use the raw type skeleton.
@@ -141,8 +109,9 @@ abstract final class AppThemeAdapter {
   static ThemeData _legacyBase() => ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
-    // TV: fast fade instead of the Material zoom push/pop (see
-    // TvAwarePageTransitionsBuilder). Phones/desktop keep their defaults.
+    // Route motion is app-wide, not part of the legacy pin (see
+    // AppPageTransitionsBuilder): TV keeps its fast fade, phones/desktop get
+    // the shared-axis transition.
     pageTransitionsTheme: pageTransitions,
     colorScheme: const ColorScheme.dark(
       primary: Color(
