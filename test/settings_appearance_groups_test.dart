@@ -4,6 +4,7 @@ import 'package:debrify/screens/settings/settings_catalog.dart';
 import 'package:debrify/screens/settings/settings_page_registry.dart';
 import 'package:debrify/screens/settings/settings_page_spec.dart';
 import 'package:debrify/screens/settings/widgets/appearance_preview_card.dart';
+import 'package:debrify/screens/settings/widgets/settings_option_row.dart';
 import 'package:debrify/screens/settings/widgets/settings_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -133,6 +134,9 @@ List<int> _claimedIndices(List<Widget> widgets, List<FocusNode> pool) {
     } else if (w is SettingsTile) {
       node = w.focusNode;
     } else if (w is SettingsToggleTile) {
+      node = w.focusNode;
+    } else if (w is SettingsOptionRow) {
+      // An inline layouts row: one node for the whole strip.
       node = w.focusNode;
     }
     if (node != null) {
