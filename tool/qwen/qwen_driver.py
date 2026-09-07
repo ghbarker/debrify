@@ -266,23 +266,80 @@ def read_text(path):
     return raw.decode("utf-8").replace("\r\n", "\n"), b"\r\n" in raw
 
 
+def deterministic_fix(text, issue):
+    """Mechanical edits the driver performs itself; returns (new_text, description) or None.
+    Only unambiguous, single-site patterns; anything else goes to the model."""
+    lines = text.split("\n")
+    idx = issue["line"] - 1
+    if idx < 0 or idx >= len(lines):
+        return None
+    line = lines[idx]
+    rule = issue["rule"]
+
+    if rule in ("unused_import", "duplicate_import", "unnecessary_import") and line.strip().startswith("import "):
+        del lines[idx]
+        return "\n".join(lines), "deleted the import line"
+
+    if rule == "unused_element_parameter":
+        # `this.x = default,` inside a constructor, never passed by any caller.
+        m = re.match(r"^(\s*)this\.(\w+)\s*=\s*(.+?),\s*$", line)
+        if m:
+            name, default = m.group(2), m.group(3)
+            del lines[idx]
+            body = "\n".join(lines)
+            # Field declaration: `Type name;` (mutable) or `final Type name;`
+            decl = re.compile(r"^(\s*)((?:final\s+)?[\w<>?, ]+?)\s+" + re.escape(name) + r";\s*$", re.M)
+            hits = list(decl.finditer(body))
+            if len(hits) != 1:
+                return None
+            other_uses = len(re.findall(r"\b" + re.escape(name) + r"\b", body)) - 1  # minus the declaration
+            h = hits[0]
+            if other_uses == 0:
+                body = body[:h.start()] + body[h.end() + 1:] if body[h.end():h.end() + 1] == "\n" else body[:h.start()] + body[h.end():]
+                return body, f"removed parameter `{name}` and its unused field"
+            body = body[:h.start()] + f"{h.group(1)}{h.group(2)} {name} = {default};" + body[h.end():]
+            return body, f"removed parameter `{name}`; field keeps its default `{default}` as an initialiser"
+        return None
+
+    if rule == "prefer_final_fields":
+        m = re.match(r"^(\s*)(static\s+)?(?!final\b)([\w<>?, ]+?\s+_\w+\s*(?:=.*)?;)\s*$", line)
+        if m:
+            lines[idx] = f"{m.group(1)}{m.group(2) or ''}final {m.group(3)}"
+            return "\n".join(lines), "added `final`"
+        return None
+
+    if rule == "deprecated_member_use" and re.match(r"^\s*(background|onBackground):\s*.+,\s*(//.*)?$", line):
+        del lines[idx]
+        return "\n".join(lines), "deleted the deprecated ColorScheme argument line"
+
+    return None
+
+
 def fix_one(worktree, rel, issue, before_keys, scheme_read, tests, baseline_fails, host, model, feedback, log):
-    """Ask the model for this one issue, verify, return (ok, info, exposed_issues)."""
+    """Fix this one issue (deterministically if possible, else via the model), verify,
+    return (ok, info, exposed_issues)."""
     path = os.path.join(worktree, rel)
     current, crlf = read_text(path)
-    user = (f"FILE: {rel}\n\nTHE ONE ISSUE TO REMOVE:\n  line {issue['line']}: [{issue['rule']}] {issue['msg']}\n"
-            + (f"\nYOUR PREVIOUS ANSWER WAS REJECTED BECAUSE:\n{feedback}\nFix that; the source below is the current file.\n" if feedback else "")
-            + "\n" + source_context(current, issue))
-    log(f"    -> asking {model} for line {issue['line']} [{issue['rule']}]")
-    reply = chat(host, model, [{"role": "system", "content": SYSTEM_PROMPT},
-                               {"role": "user", "content": user}])
-    if reply.strip().upper().startswith("SKIP"):
-        return False, "model skipped: " + reply.strip()[:200], []
-    new, info = apply_blocks(current, reply)
-    if new is None:
-        return False, info, []
-    if new == current:
-        return False, "the edit produced no change", []
+    det = deterministic_fix(current, issue) if feedback is None else None
+    if det is not None:
+        new, info = det
+        log(f"    -> driver applied a deterministic edit: {info}")
+    else:
+        user = (f"FILE: {rel}\n\nTHE ONE ISSUE TO REMOVE:\n  line {issue['line']}: [{issue['rule']}] {issue['msg']}\n"
+                + (f"\nYOUR PREVIOUS ANSWER WAS REJECTED BECAUSE:\n{feedback}\nFix that; the source below is the current file.\n" if feedback else "")
+                + "\n" + source_context(current, issue))
+        log(f"    -> asking {model} for line {issue['line']} [{issue['rule']}]")
+        reply = chat(host, model, [{"role": "system", "content": SYSTEM_PROMPT},
+                                   {"role": "user", "content": user}])
+        if reply.strip().upper().startswith("SKIP"):
+            return False, "model skipped: " + reply.strip()[:200], []
+        new, info = apply_blocks(current, reply)
+        if new is None:
+            log("    model reply (rejected):\n" + "\n".join("      | " + l for l in reply.strip().splitlines()[:40]))
+            return False, info, []
+        if new == current:
+            return False, "the edit produced no change", []
+        log("    model reply:\n" + "\n".join("      | " + l for l in reply.strip().splitlines()[:40]))
     write_text(path, new, crlf)
 
     after = analyze(worktree, rel)
