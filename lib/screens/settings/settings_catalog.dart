@@ -194,8 +194,10 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       desktopOrder: 0,
       tvOrder: 0,
       phoneGroup: kGroupPresets,
-      desktopKind: SettingsRowKind.lookHero,
-      tvKind: SettingsRowKind.lookHero,
+      // A plain row on every surface: the live preview card above Presets
+      // carries the active Look, so a second hero card would say it twice.
+      desktopGroup: kGroupPresets,
+      tvGroup: kGroupPresets,
       subtitleOf: () => b.looksLabel,
       keywords: [
         'app',
