@@ -187,6 +187,57 @@ void main() {
     );
   }, tags: ['golden']);
 
+  testWidgets('Appearance opens on the live preview; one node, Left/Right inside', (
+    tester,
+  ) async {
+    final entry = FocusNode(debugLabel: 'settings-test-entry-appearance');
+    addTearDown(entry.dispose);
+    await _pumpTv(tester, const Size(960, 540), entry);
+
+    entry.requestFocus();
+    await tester.pump();
+    // Rail: Connections → Trackers → Home & Display → Appearance. The pane
+    // follows rail focus, so the preview is already up before entering.
+    for (var i = 0; i < 3; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+    }
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'settings-tv-rail-3');
+    expect(find.text('LIVE PREVIEW'), findsOneWidget);
+
+    // Enter: the first pane node is the preview's Look strip.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'settings-tv-pane-0');
+
+    // Right browses Looks WITHOUT leaving the node or applying anything.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'settings-tv-pane-0');
+    expect(find.text('PREVIEWING'), findsOneWidget);
+    expect(find.text('Not applied yet'), findsOneWidget);
+
+    // Down reaches the first Presets row; Up comes back to the strip.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'settings-tv-pane-1');
+    expect(find.text('PREVIEWING'), findsNothing, reason: 'blur reverts');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'settings-tv-pane-0');
+
+    await expectLater(
+      find.byType(SettingsTvLayout),
+      matchesGoldenFile('goldens/settings_spotlight_tv_appearance.png'),
+    );
+
+    // Left from the first chip hands back to the SELECTED rail item.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'settings-tv-rail-3');
+    expect(tester.takeException(), isNull);
+  }, tags: ['golden']);
+
   testWidgets('TV layout tolerates enlarged system text', (tester) async {
     final entry = FocusNode(debugLabel: 'settings-test-entry-large-text');
     addTearDown(entry.dispose);

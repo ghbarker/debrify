@@ -66,6 +66,7 @@ import 'settings/settings_search.dart';
 import 'settings/settings_catalog.dart';
 import 'settings/settings_page_registry.dart';
 import 'settings/settings_page_spec.dart';
+import 'settings/layout_options.dart';
 import 'settings/discover_layout_page.dart';
 import 'settings/discover_settings_page.dart';
 import 'settings/iptv_style_page.dart';
@@ -99,6 +100,7 @@ import 'settings/profile_backup_flows.dart';
 import 'settings/backup_restore_page.dart';
 import 'settings/download_location_controller.dart';
 import 'settings/profile_appearance_page.dart';
+import 'settings/widgets/appearance_preview_card.dart';
 import 'settings/widgets/settings_widgets.dart';
 import 'settings/pikpak_settings_page.dart';
 import 'settings/real_debrid_settings_page.dart';
@@ -997,6 +999,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
       tvKeyboardEnabled: _tvKeyboardEnabled,
       onToggleTvKeyboard: _toggleTvKeyboard,
       isAndroidTv: _isAndroidTv,
+      layoutValues: LayoutRowValues(
+        tvHomeStyle: _tvHomeStyle,
+        discoverLayout: _discoverLayout,
+        detailPageStyle: _detailPageStyle,
+        tvSidebarStyle: _tvSidebarStyle,
+        iptvStyle: _iptvStyle,
+        debrifyTvStyle: _debrifyTvStyle,
+        playerGuideStyle: _playerGuideStyle,
+        playLoaderStyle: _playLoaderStyle,
+        playerDockStyle: _playerDockStyle,
+        playerDockPalette: _playerDockPalette,
+        playerDockSize: _playerDockSize,
+        parentsGuideStyle: _parentsGuideStyle,
+        profileGateStyle: ProfileGateStyle.cached,
+        phoneNavStyle: _phoneNavStyle,
+        desktopSidebarStyle: _desktopSidebarStyle,
+      ),
+      onLayoutApplied: _onLayoutApplied,
       isTelevision: _isTelevision,
       isAndroid: _isAndroid,
       isPhone: _isPhone,
@@ -2356,6 +2376,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  /// An inline Screen-layouts row has already persisted [value] (through the
+  /// opener page's own setter); mirror it into the state that feeds the row
+  /// captions and search subtitles — what the page-pop re-read did before.
+  void _onLayoutApplied(String rowId, String value) {
+    if (!mounted) return;
+    setState(() {
+      switch (rowId) {
+        case 'tvHomeStyle':
+          _tvHomeStyle = value;
+        case 'discoverLayout':
+          _discoverLayout = value;
+        case 'detailPageStyle':
+          _detailPageStyle = value;
+        case 'tvSidebarStyle':
+          _tvSidebarStyle = value;
+        case 'iptvAppearance':
+          _iptvStyle = value;
+        case 'debrifyTvAppearance':
+          _debrifyTvStyle = value;
+        case 'playerGuideStyle':
+          _playerGuideStyle = value;
+        case 'playLoaderStyle':
+          _playLoaderStyle = value;
+        case 'playerDock':
+          _playerDockStyle = value;
+        case 'parentsGuideStyle':
+          _parentsGuideStyle = value;
+        case 'navigationStyleAppearance':
+          _phoneNavStyle = value;
+        case 'desktopSidebarStyle':
+          _desktopSidebarStyle = value;
+        // profileAppearance: ProfileGateStyle.cached is the state; the
+        // rebuild alone picks it up.
+      }
+    });
+  }
+
   /// Same contract as [_openTvHomeStyle], for the details-page layout picker.
   Future<void> _openDetailPageStylePage() async {
     await pushSettingsPage(context, const DetailPageStylePage());
@@ -2720,7 +2777,21 @@ class _SettingsLayout extends StatelessWidget {
         onTap: () => unawaited(summaryTarget.onTap()),
       ),
       categoryBuilder: _buildSpotlightCategory,
+      pinnedHeaderBuilder: _buildSpotlightPinnedHeader,
     );
+  }
+
+  /// The Appearance live preview, pinned above the scrolling category body
+  /// on every non-television surface (see [SettingsSpotlightShell]). Every
+  /// other category has nothing to pin.
+  Widget? _buildSpotlightPinnedHeader(BuildContext context, int category) {
+    if (category < 0 || category >= _kAdaptiveSettingsCategories.length) {
+      return null;
+    }
+    if (_kAdaptiveSettingsCategories[category].label != 'Appearance') {
+      return null;
+    }
+    return const AppearancePreviewHost();
   }
 
   Widget _buildConnectionGrid(
@@ -2779,6 +2850,10 @@ class _SettingsLayout extends StatelessWidget {
           surface: SettingsLayoutSurface.desktop,
           category: label,
           accentColor: label == 'Danger Zone' ? t.danger : null,
+          // The Appearance preview is pinned separately — see
+          // _buildSpotlightPinnedHeader — so it must not also appear inline
+          // here (the shell would then show it twice).
+          includeAppearancePreview: label != 'Appearance',
         );
         if (kids.isEmpty && label == 'Profiles') {
           return SettingsSection(

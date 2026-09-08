@@ -3,6 +3,12 @@
 /// The `debrifyDefault` factories below are the shipped Quick Play contract.
 /// Keep those values in sync with the legacy fallbacks in StorageService when
 /// the default behavior intentionally changes.
+library;
+
+import 'failover_chain_policy.dart';
+
+export 'failover_chain_policy.dart';
+
 enum QuickPlayPreset {
   debrifyDefault,
   addonOrder,
@@ -76,6 +82,11 @@ class QuickPlayRules {
   /// provider order (enabled engines, then installed streaming addons).
   final List<String> sourcePriority;
 
+  /// Opt-in click-time failover chain (see [FailoverChainPolicy]). Defaults
+  /// to the shipped (disabled) policy, which is also what profiles saved
+  /// before this field existed decode to.
+  final FailoverChainPolicy failoverChain;
+
   const QuickPlayRules({
     required this.preset,
     required this.sourceMode,
@@ -93,6 +104,7 @@ class QuickPlayRules {
     required this.addonTimeoutSeconds,
     required this.failedPackCacheHours,
     this.sourcePriority = const [],
+    this.failoverChain = FailoverChainPolicy.defaults,
   });
 
   factory QuickPlayRules.debrifyDefault({required bool isMovie}) =>
@@ -177,6 +189,7 @@ class QuickPlayRules {
     int? addonTimeoutSeconds,
     int? failedPackCacheHours,
     List<String>? sourcePriority,
+    FailoverChainPolicy? failoverChain,
   }) => QuickPlayRules(
     preset: preset ?? this.preset,
     sourceMode: sourceMode ?? this.sourceMode,
@@ -202,6 +215,7 @@ class QuickPlayRules {
         .clamp(0, 168)
         .toInt(),
     sourcePriority: sourcePriority ?? this.sourcePriority,
+    failoverChain: failoverChain ?? this.failoverChain,
   );
 
   Map<String, dynamic> toJson() => {
@@ -221,6 +235,9 @@ class QuickPlayRules {
     'addonTimeoutSeconds': addonTimeoutSeconds,
     'failedPackCacheHours': failedPackCacheHours,
     if (sourcePriority.isNotEmpty) 'sourcePriority': sourcePriority,
+    // Emitted only when customized so default profiles serialize exactly as
+    // before (origin-restore fixtures compare stored bytes to toJson()).
+    if (!failoverChain.isDefault) 'failoverChain': failoverChain.toJson(),
   };
 
   factory QuickPlayRules.fromJson(
@@ -306,6 +323,13 @@ class QuickPlayRules {
             growable: false,
           ) ??
           const [],
+      failoverChain: FailoverChainPolicy.fromJson(
+        json['failoverChain'] is Map
+            ? (json['failoverChain'] as Map).map(
+                (key, value) => MapEntry(key.toString(), value),
+              )
+            : null,
+      ),
     );
   }
 
@@ -328,7 +352,8 @@ class QuickPlayRules {
       searchTimeoutSeconds == other.searchTimeoutSeconds &&
       addonTimeoutSeconds == other.addonTimeoutSeconds &&
       failedPackCacheHours == other.failedPackCacheHours &&
-      _listEquals(sourcePriority, other.sourcePriority);
+      _listEquals(sourcePriority, other.sourcePriority) &&
+      failoverChain == other.failoverChain;
 
   @override
   int get hashCode => Object.hash(
@@ -348,5 +373,6 @@ class QuickPlayRules {
     addonTimeoutSeconds,
     failedPackCacheHours,
     Object.hashAll(sourcePriority),
+    failoverChain,
   );
 }

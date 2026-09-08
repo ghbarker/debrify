@@ -31,6 +31,7 @@ import '../subtitle_font_service.dart';
 import '../play_loader_style.dart';
 import '../text_brightness.dart';
 import '../trakt/trakt_service.dart';
+import '../tv_motion_profile.dart';
 import '../watched_status_service.dart';
 import '../torbox_account_service.dart';
 import '../tv_hero_artwork_quality_controller.dart';
@@ -185,6 +186,7 @@ class ProfileAppLifecycleParticipant implements ProfileLifecycleParticipant {
       await TextBrightnessController.warm();
       await PlayLoaderStyleController.warm();
       await AppThemeController.warm();
+      await TvMotionController.warm();
       await TvHeroArtworkQualityController.warm();
       await DiscoverPrefs.warmUp();
       await HideWatchedPrefs.warmUp();

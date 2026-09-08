@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../models/iptv_playlist.dart';
 import '../../services/iptv_epg_service.dart';
 import 'styles/iptv_style.dart';
+import '../../theme/app_motion.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/tv_keys.dart';
@@ -1355,7 +1356,9 @@ class _ScheduleRowState extends State<_ScheduleRow> {
               context,
               alignment: 0.5,
               alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
-              duration: Duration.zero,
+              // The TV branch (pointer surfaces returned above): the shared
+              // scroll-follow — a snap under snappy, a glide under smooth.
+              duration: AppMotion.of(context).tvScroll,
             );
           });
         }

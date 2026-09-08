@@ -219,8 +219,8 @@ void main() {
       originalTotal += calls.allMatches(original).length;
       removedTotal += calls.allMatches(entry == path ? removed : original).length;
     }
-    expect(originalTotal, greaterThanOrEqualTo(484));
-    expect(greaterThanOrEqualTo(484).matches(removedTotal, {}), isFalse);
+    expect(originalTotal, greaterThanOrEqualTo(486));
+    expect(greaterThanOrEqualTo(486).matches(removedTotal, {}), isFalse);
   });
 
   test('new bare radius in favourite artwork is still detected', () {
@@ -246,8 +246,9 @@ void main() {
     // 490 until G4-5 pulled the cloud chrome out of the two files screens:
     // twelve identical token calls across the two hosts became six in the
     // shared widgets below. The floor tracks a revert, not a site budget, so
-    // de-duplication lowers it.
-    expect(calls, greaterThanOrEqualTo(484),
+    // de-duplication lowers it. 484 -> 486 when the TV sidebar's profile row
+    // took `brPill` for its fill and its foreground ring.
+    expect(calls, greaterThanOrEqualTo(486),
         reason: 'the shape sweep converted 500 sites; only \$calls remain');
   });
 }

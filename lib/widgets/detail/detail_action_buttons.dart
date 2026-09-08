@@ -4,6 +4,7 @@
 // replace the host's private members.
 
 import 'package:flutter/material.dart';
+import '../../theme/app_motion.dart';
 import '../../utils/platform_util.dart';
 import '../../utils/tv_keys.dart';
 import 'detail_focus_chrome.dart';
@@ -69,12 +70,17 @@ class _DetailPrimaryButtonState extends State<DetailPrimaryButton> {
 
   @override
   Widget build(BuildContext context) {
+    final motion = AppMotion.of(context);
     final button = AnimatedScale(
-      // Snap on TV: every frame of the scale pop re-rasters the pill AND its
-      // blur-18 glow shadow; instant scale keeps the glow a one-time paint.
-      duration: PlatformUtil.isTelevision
-          ? Duration.zero
-          : const Duration(milliseconds: 140),
+      // The shared TV focus beat: the pill and the ring around it leave and
+      // arrive together with whatever the cursor came from. The glow below
+      // is a static shadow carried by this transform — rasterised once, so
+      // the tween only moves it — which is what keeps this affordable.
+      duration: motion.focusTempo(
+        PlatformUtil.isTelevision,
+        const Duration(milliseconds: 140),
+      ),
+      curve: motion.focusCurve(PlatformUtil.isTelevision, motion.standard),
       scale: _focused ? 1.05 : 1.0,
       child: DetailFocusHalo(
         focused: _focused,

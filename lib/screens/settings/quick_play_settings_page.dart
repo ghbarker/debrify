@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../models/quick_play_rules.dart';
 import '../../services/analytics_service.dart';
+import '../../services/cloud/cloud_provider_id.dart';
 import '../../services/source_priority.dart';
 import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import '../../theme/app_theme_scope.dart';
@@ -17,9 +18,10 @@ import 'widgets/settings_widgets.dart';
 /// Quick Play settings, simplified: Movies/Series tabs, an "Addon Priority"
 /// list (torrent engines and Stremio addons in one flat, reorderable list),
 /// a "Prefer torrents" switch, a "Streams to try" failover budget, and — for
-/// series — a "Prefer season packs" switch. The underlying [QuickPlayRules]
-/// engine keeps every capability; legacy customizations still load and apply,
-/// they just can't be edited here anymore.
+/// series — a "Prefer season packs" switch, plus the opt-in "Failover chain"
+/// section exposing every [FailoverChainPolicy] knob. The underlying
+/// [QuickPlayRules] engine keeps every capability; legacy customizations still
+/// load and apply, they just can't be edited here anymore.
 class QuickPlaySettingsPage extends StatefulWidget {
   const QuickPlaySettingsPage({super.key});
 
@@ -58,6 +60,23 @@ class _QuickPlaySettingsPageState extends State<QuickPlaySettingsPage> {
   final _reset = FocusNode(debugLabel: 'quick-play-reset');
   final Map<String, FocusNode> _rowNodes = {};
 
+  // Failover chain section. One node per control so TV DPAD walks every knob.
+  final _chainToggle = FocusNode(debugLabel: 'quick-play-chain-enabled');
+  final _chainSiblings = FocusNode(debugLabel: 'quick-play-chain-siblings');
+  final _chainLater = FocusNode(debugLabel: 'quick-play-chain-later');
+  final _chainMatch = FocusNode(debugLabel: 'quick-play-chain-match');
+  final _chainProbe = FocusNode(debugLabel: 'quick-play-chain-probe');
+  final _chainProbeTimeout = FocusNode(
+    debugLabel: 'quick-play-chain-probe-timeout',
+  );
+  final _chainDemotion = FocusNode(debugLabel: 'quick-play-chain-demotion');
+  final Map<String, FocusNode> _chainRowNodes = {};
+  final Map<String, FocusNode> _chainNeverProbeNodes = {};
+
+  /// TV pick-up/drop reorder for the chain's provider order (parallel to
+  /// [_pickedKey] for the Addon Priority list).
+  String? _chainPicked;
+
   QuickPlayRules get _rules => _series ? _show : _movie;
   bool get _isMovie => !_series;
   List<SourceProviderRef> get _ordered =>
@@ -85,6 +104,15 @@ class _QuickPlaySettingsPageState extends State<QuickPlaySettingsPage> {
       _attemptsNode,
       _reset,
       ..._rowNodes.values,
+      _chainToggle,
+      _chainSiblings,
+      _chainLater,
+      _chainMatch,
+      _chainProbe,
+      _chainProbeTimeout,
+      _chainDemotion,
+      ..._chainRowNodes.values,
+      ..._chainNeverProbeNodes.values,
     ]) {
       node.dispose();
     }
@@ -276,6 +304,82 @@ class _QuickPlaySettingsPageState extends State<QuickPlaySettingsPage> {
     () => FocusNode(debugLabel: 'quick-play-priority-$key'),
   );
 
+  // ---------------------------------------------------------------------
+  // Failover chain
+
+  FailoverChainPolicy get _chain => _rules.failoverChain;
+
+  void _setChain(FailoverChainPolicy Function(FailoverChainPolicy) change) =>
+      _change((r) => r.copyWith(failoverChain: change(r.failoverChain)));
+
+  static String _providerName(String id) =>
+      CloudProviderId.fromPlaybackId(id)?.displayName ?? id;
+
+  FocusNode _chainNodeFor(String id) => _chainRowNodes.putIfAbsent(
+    id,
+    () => FocusNode(debugLabel: 'quick-play-chain-provider-$id'),
+  );
+
+  FocusNode _neverProbeNodeFor(String id) => _chainNeverProbeNodes.putIfAbsent(
+    id,
+    () => FocusNode(debugLabel: 'quick-play-chain-never-probe-$id'),
+  );
+
+  void _moveChainRow(int from, int to) {
+    final list = List<String>.from(_chain.providerOrder);
+    if (from == to || from < 0 || to < 0) return;
+    if (from >= list.length || to >= list.length) return;
+    final item = list.removeAt(from);
+    list.insert(to, item);
+    _setChain((c) => c.copyWith(providerOrder: list));
+  }
+
+  /// Same pick-up/drop grammar as [_rowKey], over the chain's provider list.
+  KeyEventResult _chainRowKey(int index, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    final order = _chain.providerOrder;
+    final pickedIndex = _chainPicked == null
+        ? -1
+        : order.indexOf(_chainPicked!);
+    final picked = pickedIndex >= 0;
+
+    if (isActivateOrSpaceKey(key)) {
+      setState(
+        () => _chainPicked = _chainPicked == order[index] ? null : order[index],
+      );
+      return KeyEventResult.handled;
+    }
+    if (!picked) return KeyEventResult.ignored;
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown) {
+      final to = key == LogicalKeyboardKey.arrowUp
+          ? pickedIndex - 1
+          : pickedIndex + 1;
+      if (to >= 0 && to < order.length) {
+        final movedId = order[pickedIndex];
+        _moveChainRow(pickedIndex, to);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final node = _chainRowNodes[movedId];
+          if (node != null && mounted) {
+            node.requestFocus();
+            final ctx = node.context;
+            if (ctx != null) tvRevealMinimal(ctx);
+          }
+        });
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape ||
+        key == LogicalKeyboardKey.goBack ||
+        key == LogicalKeyboardKey.arrowLeft) {
+      setState(() => _chainPicked = null);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowRight) return KeyEventResult.handled;
+    return KeyEventResult.ignored;
+  }
+
   void _restore() async {
     await QuickPlayPolicyPrefs.restoreQuickPlayDefaults();
     if (!mounted) return;
@@ -288,6 +392,7 @@ class _QuickPlaySettingsPageState extends State<QuickPlaySettingsPage> {
       // dropdown keeps showing the old value until the page is reopened.
       _playMode = 'quick';
       _pickedKey = null;
+      _chainPicked = null;
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Restored default Quick Play behavior')),
@@ -363,6 +468,18 @@ class _QuickPlaySettingsPageState extends State<QuickPlaySettingsPage> {
                 ),
                 const SizedBox(height: 10),
                 _priorityList(),
+                const SizedBox(height: 24),
+                _heading(
+                  'Failover chain',
+                  'Off, Debrify falls back down the source list in order. On, '
+                      'it follows a chain: the stream you picked, then streams '
+                      'from the same debrid service at the nearest resolution, '
+                      'then later services in your order. "Streams to try" '
+                      'still caps the total.',
+                ),
+                const SizedBox(height: 10),
+                _chainToggleTile(),
+                if (_chain.enabled) ..._chainKnobs(),
                 const SizedBox(height: 18),
                 _ActionRow(
                   node: _reset,
@@ -536,6 +653,301 @@ class _QuickPlaySettingsPageState extends State<QuickPlaySettingsPage> {
     ),
   );
 
+  Widget _chainToggleTile() => _Panel(
+    child: SettingsToggleTile(
+      focusNode: _chainToggle,
+      icon: Icons.alt_route_rounded,
+      title: 'Use failover chain',
+      subtitle: _chain.enabled
+          ? 'Same service first, nearest resolution first, then later services.'
+          : 'Fall back down the source list in order (Debrify default).',
+      subtitleMaxLines: 2,
+      value: _chain.enabled,
+      onChanged: (v) => _setChain((c) => c.copyWith(enabled: v)),
+    ),
+  );
+
+  List<Widget> _chainKnobs() => [
+    const SizedBox(height: 24),
+    _heading(
+      'Provider order',
+      PlatformUtil.isTelevision
+          ? 'After the service you picked, only services below it are tried. Press OK to pick up a row, move it with ▲▼, press OK to drop.'
+          : 'After the service you picked, only services below it are tried. Use the arrows, or press Enter on a row and move it with ↑↓.',
+    ),
+    const SizedBox(height: 10),
+    _chainOrderList(),
+    const SizedBox(height: 24),
+    _heading(
+      'Same-service streams',
+      'How many other streams from the same debrid service to try, '
+          'nearest resolution first (same, then just below, then above).',
+    ),
+    const SizedBox(height: 10),
+    _countSelect(
+      node: _chainSiblings,
+      value: _chain.maxSiblings,
+      onChanged: (n) => _setChain((c) => c.copyWith(maxSiblings: n)),
+    ),
+    const SizedBox(height: 24),
+    _heading(
+      'Streams per later service',
+      'How many streams to try from each later service, best resolution '
+          'match first.',
+    ),
+    const SizedBox(height: 10),
+    _countSelect(
+      node: _chainLater,
+      value: _chain.maxPerLaterProvider,
+      onChanged: (n) => _setChain((c) => c.copyWith(maxPerLaterProvider: n)),
+    ),
+    const SizedBox(height: 24),
+    _heading(
+      'Resolution match',
+      'How strictly fallbacks must match the resolution you picked.',
+    ),
+    const SizedBox(height: 10),
+    _matchSelect(),
+    const SizedBox(height: 24),
+    _heading(
+      'Liveness probe',
+      'Before playing a fallback, ask the host for its first byte '
+          '(Range: bytes=0-0). Dead links are skipped without waiting on the '
+          'player. Services where a probe costs something are served blind.',
+    ),
+    const SizedBox(height: 10),
+    _Panel(
+      child: SettingsToggleTile(
+        focusNode: _chainProbe,
+        icon: Icons.network_check_rounded,
+        title: 'Probe before playing',
+        subtitle: _chain.probeEnabled
+            ? 'One tiny request per candidate; one retry on timeout.'
+            : 'Hand every candidate straight to the player.',
+        subtitleMaxLines: 2,
+        value: _chain.probeEnabled,
+        onChanged: (v) => _setChain((c) => c.copyWith(probeEnabled: v)),
+      ),
+    ),
+    if (_chain.probeEnabled) ...[
+      const SizedBox(height: 10),
+      _probeTimeoutSelect(),
+      const SizedBox(height: 10),
+      _neverProbePanel(),
+    ],
+    const SizedBox(height: 24),
+    _heading(
+      'Demote recently served links',
+      'If you re-pick a title soon after a link failed to start, that link '
+          'is tried last instead of first.',
+    ),
+    const SizedBox(height: 10),
+    _demotionSelect(),
+  ];
+
+  Widget _chainOrderList() {
+    final order = _chain.providerOrder;
+    return _Panel(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < order.length; i++)
+            _PriorityRow(
+              key: ValueKey('quick-play-chain-provider-${order[i]}'),
+              node: _chainNodeFor(order[i]),
+              index: i,
+              provider: SourceProviderRef(
+                key: order[i],
+                name: _providerName(order[i]),
+                isEngine: false,
+              ),
+              tag: 'Debrid service',
+              picked: _chainPicked == order[i],
+              isFirst: i == 0,
+              isLast: i == order.length - 1,
+              showDivider: i < order.length - 1,
+              onKey: (event) => _chainRowKey(i, event),
+              onTap: () => setState(
+                () => _chainPicked = _chainPicked == order[i] ? null : order[i],
+              ),
+              onMoveUp: i > 0 ? () => _moveChainRow(i, i - 1) : null,
+              onMoveDown: i < order.length - 1
+                  ? () => _moveChainRow(i, i + 1)
+                  : null,
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 0–10 mirrors [FailoverChainPolicy.maxCap].
+  Widget _countSelect({
+    required FocusNode node,
+    required int value,
+    required ValueChanged<int> onChanged,
+  }) => _Panel(
+    child: SettingsSelectDropdown(
+      focusNode: node,
+      value: '$value',
+      options: [
+        for (var n = 0; n <= FailoverChainPolicy.maxCap; n++)
+          SettingsSelectOption(
+            '$n',
+            n == 0
+                ? 'None'
+                : n == 1
+                ? '1 stream'
+                : n == 3
+                ? '3 streams (default)'
+                : '$n streams',
+          ),
+      ],
+      onChanged: (v) => onChanged(int.tryParse(v) ?? 3),
+    ),
+  );
+
+  Widget _matchSelect() => _Panel(
+    child: SettingsSelectDropdown(
+      focusNode: _chainMatch,
+      value: _chain.resolutionMatch.name,
+      options: const [
+        SettingsSelectOption(
+          'nearestBelowFirst',
+          'Nearest resolution (default)',
+          'Same resolution first, then the next one down, then up.',
+        ),
+        SettingsSelectOption(
+          'exactOnly',
+          'Same resolution only',
+          'Skip anything that is not the resolution you picked.',
+        ),
+        SettingsSelectOption(
+          'ignore',
+          'Ignore resolution',
+          'Keep each service’s own stream order.',
+        ),
+      ],
+      onChanged: (v) => _setChain(
+        (c) => c.copyWith(
+          resolutionMatch: FailoverResolutionMatch.values.firstWhere(
+            (m) => m.name == v,
+            orElse: () => FailoverResolutionMatch.nearestBelowFirst,
+          ),
+        ),
+      ),
+    ),
+  );
+
+  Widget _probeTimeoutSelect() {
+    final steps = {
+      1,
+      2,
+      3,
+      5,
+      8,
+      10,
+      15,
+      20,
+      30,
+      _chain.probeTimeoutSeconds,
+    }.toList()..sort();
+    return _Panel(
+      child: SettingsSelectDropdown(
+        focusNode: _chainProbeTimeout,
+        value: '${_chain.probeTimeoutSeconds}',
+        options: [
+          for (final s in steps)
+            SettingsSelectOption(
+              '$s',
+              s == 5
+                  ? 'Probe timeout: 5 seconds (default)'
+                  : 'Probe timeout: $s ${s == 1 ? 'second' : 'seconds'}',
+              s <= 2
+                  ? 'Fast, but slow-to-wake hosts read as dead.'
+                  : s >= 15
+                  ? 'Patient; a dead host can hold up the chain this long.'
+                  : null,
+            ),
+        ],
+        onChanged: (v) => _setChain(
+          (c) => c.copyWith(probeTimeoutSeconds: int.tryParse(v) ?? 5),
+        ),
+      ),
+    );
+  }
+
+  Widget _neverProbePanel() {
+    final t = AppThemeScope.of(context).settings;
+    final ids = FailoverChainPolicy.defaultProviderOrder;
+    return _Panel(
+      child: Column(
+        children: [
+          for (var i = 0; i < ids.length; i++) ...[
+            if (i > 0) Divider(height: 1, color: t.line),
+            SettingsToggleTile(
+              focusNode: _neverProbeNodeFor(ids[i]),
+              icon: Icons.do_not_disturb_on_rounded,
+              title: 'Never probe ${_providerName(ids[i])}',
+              subtitle: switch (ids[i]) {
+                'premiumize' => 'Each probe mints a new link on your account.',
+                'pikpak' => 'Each probe can queue a real download.',
+                _ => 'Serve this service’s links blind.',
+              },
+              subtitleMaxLines: 2,
+              value: _chain.neverProbeProviders.contains(ids[i]),
+              onChanged: (v) => _setChain(
+                (c) => c.copyWith(
+                  neverProbeProviders: v
+                      ? {...c.neverProbeProviders, ids[i]}
+                      : ({...c.neverProbeProviders}..remove(ids[i])),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _demotionSelect() {
+    final steps = {
+      0,
+      2,
+      5,
+      10,
+      15,
+      30,
+      60,
+      120,
+      _chain.demotionWindowMinutes,
+    }.toList()..sort();
+    return _Panel(
+      child: SettingsSelectDropdown(
+        focusNode: _chainDemotion,
+        value: '${_chain.demotionWindowMinutes}',
+        options: [
+          for (final m in steps)
+            SettingsSelectOption(
+              '$m',
+              m == 0
+                  ? 'Off'
+                  : m == 10
+                  ? '10 minutes (default)'
+                  : m >= 60
+                  ? '${m ~/ 60} ${m == 60 ? 'hour' : 'hours'}'
+                  : '$m minutes',
+              m == 0
+                  ? 'Always start from the stream you picked.'
+                  : 'Links that failed within this window go to the end of the chain.',
+            ),
+        ],
+        onChanged: (v) => _setChain(
+          (c) => c.copyWith(demotionWindowMinutes: int.tryParse(v) ?? 10),
+        ),
+      ),
+    );
+  }
+
   Widget _priorityList() {
     final t = AppThemeScope.of(context).settings;
     if (_ordered.isEmpty) {
@@ -610,6 +1022,9 @@ class _PriorityRow extends StatefulWidget {
   final VoidCallback? onMoveUp;
   final VoidCallback? onMoveDown;
 
+  /// Quiet type tag under the name; defaults to engine/addon.
+  final String? tag;
+
   const _PriorityRow({
     super.key,
     required this.node,
@@ -623,6 +1038,7 @@ class _PriorityRow extends StatefulWidget {
     required this.onTap,
     required this.onMoveUp,
     required this.onMoveDown,
+    this.tag,
   });
 
   @override
@@ -700,7 +1116,10 @@ class _PriorityRowState extends State<_PriorityRow> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          widget.provider.isEngine ? 'Torrent engine' : 'Addon',
+                          widget.tag ??
+                              (widget.provider.isEngine
+                                  ? 'Torrent engine'
+                                  : 'Addon'),
                           style: TextStyle(color: t.dim, fontSize: 11),
                         ),
                       ],

@@ -7,6 +7,7 @@ import '../../models/sidebar_configuration.dart';
 import '../../services/analytics_service.dart';
 import '../../services/main_page_bridge.dart';
 import 'package:debrify/services/storage/app_style_prefs.dart';
+import '../../theme/app_motion.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/platform_util.dart';
 import '../../utils/tv_keys.dart';
@@ -72,7 +73,11 @@ class _SidebarCustomizationPageState extends State<SidebarCustomizationPage> {
     if (rowContext != null) {
       Scrollable.ensureVisible(
         rowContext,
-        duration: Duration.zero,
+        // TV: `AppMotion.tvScroll`; a desktop keyboard keeps the jump.
+        duration: AppMotion.of(rowContext).scrollTempo(
+          PlatformUtil.isTelevision,
+          Duration.zero,
+        ),
         alignmentPolicy: alignmentPolicy,
       );
     }

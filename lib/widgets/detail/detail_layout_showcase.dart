@@ -248,8 +248,9 @@ class _DetailShowcaseState extends State<DetailShowcase> {
   final GlobalKey _dykKey = GlobalKey();
 
   /// The focused band by KEY, never by index. Cast arrives when IMDb
-  /// enrichment lands and inserts itself above Sources — an index would then
-  /// point at the wrong band and the next key would be read as Cast's.
+  /// enrichment lands and inserts itself between Sources and More Like This —
+  /// an index would then point at the wrong band and the next key would be
+  /// read as Cast's.
   String _bandKey = 'identity';
   final Map<String, int> _col = {};
   int _handledGeneration = -1;
@@ -912,16 +913,6 @@ class _DetailShowcaseState extends State<DetailShowcase> {
         ),
       );
     }
-    if (m.cast.isNotEmpty) {
-      bands.add(
-        _Band(
-          'cast',
-          _grow(_castNodes, m.cast.length, 'showcase-cast'),
-          _castKey,
-          150,
-        ),
-      );
-    }
     if (_hasGuide) {
       bands.add(
         _Band(
@@ -952,6 +943,19 @@ class _DetailShowcaseState extends State<DetailShowcase> {
         165,
       ),
     );
+    // Cast sits directly above More Like This — the actors lead into the
+    // titles they lead you to. The order here is the DPAD order; _pageBody
+    // renders the same sequence.
+    if (m.cast.isNotEmpty) {
+      bands.add(
+        _Band(
+          'cast',
+          _grow(_castNodes, m.cast.length, 'showcase-cast'),
+          _castKey,
+          150,
+        ),
+      );
+    }
     if (m.recommendations.isNotEmpty) {
       bands.add(
         _Band(
@@ -1163,19 +1167,6 @@ class _DetailShowcaseState extends State<DetailShowcase> {
                         ).first,
                       ),
                     ),
-                  if (m.cast.isNotEmpty)
-                    _band(
-                      'cast',
-                      ShowcaseCast(
-                        key: _castKey,
-                        cast: m.cast,
-                        nodes: _grow(
-                          _castNodes,
-                          m.cast.length,
-                          'showcase-cast',
-                        ),
-                      ),
-                    ),
                   if (_hasGuide)
                     _band(
                       'guide',
@@ -1209,6 +1200,20 @@ class _DetailShowcaseState extends State<DetailShowcase> {
                           : '⌕  Season packs',
                     ),
                   ),
+                  if (m.cast.isNotEmpty)
+                    _band(
+                      'cast',
+                      ShowcaseCast(
+                        key: _castKey,
+                        cast: m.cast,
+                        nodes: _grow(
+                          _castNodes,
+                          m.cast.length,
+                          'showcase-cast',
+                        ),
+                        onTap: m.onCastTap,
+                      ),
+                    ),
                   if (m.recommendations.isNotEmpty)
                     _band(
                       'recs',

@@ -108,6 +108,11 @@ import 'video_player/widgets/sync_stepper_overlay.dart';
 import 'video_player/widgets/debrify_tv_banner.dart';
 import '../models/stremio_subtitle.dart';
 import '../models/torrent.dart';
+import '../models/failover_chain_policy.dart';
+import '../services/stream_url_validator.dart';
+import '../services/torrent_playback/failover_chain.dart';
+import '../services/torrent_playback/playback_candidate_ranking.dart';
+import '../services/torrent_playback/recently_served_link_store.dart';
 import '../models/android_video_renderer_mode.dart';
 import '../services/series_source_fetcher.dart';
 import '../services/scrobble/scrobble.dart';
@@ -4913,13 +4918,53 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       initialAttemptAlreadyFailed: initialAttemptAlreadyFailed,
     );
     var attempts = start.attempts;
+    // Opt-in failover chain (Quick Play → Failover chain). Disabled (the
+    // default), the walk below is the legacy linear ladder from the ranked
+    // start, so behaviour is unchanged. Enabled, FailoverChain decides the
+    // ORDER only: same-provider siblings by nearest resolution, then later
+    // providers, recently-served-and-not-played links last. "Streams to try"
+    // (maxAttempts) still bounds total decoder attempts in both modes.
+    final chainPolicy = rules?.failoverChain ?? FailoverChainPolicy.defaults;
+    final chainEnabled = chainPolicy.enabled;
+    final servedStore = RecentlyServedLinkStore.instance;
+    final servedIdentity = RecentlyServedLinkStore.identityFor(
+      imdbId: _effectiveContentImdbId,
+      title: widget.title,
+      season: _effectiveContentSeason,
+      episode: _effectiveContentEpisode,
+    );
+    final List<int> walk;
+    if (chainEnabled) {
+      final chain = FailoverChain.build(
+        candidates: sources,
+        clickedIndex: firstIndex,
+        policy: chainPolicy,
+        resolverProvider: widget.startupResolverProvider,
+        recentlyServed: servedStore.viewFor(
+          servedIdentity,
+          Duration(minutes: chainPolicy.demotionWindowMinutes),
+        ),
+      );
+      // The clicked row already failed: drop it wherever the chain put it
+      // (same meaning as rankedFailoverStart skipping to the next index).
+      walk = initialAttemptAlreadyFailed
+          ? chain.where((i) => i != firstIndex).toList()
+          : chain;
+    } else {
+      walk = [for (var i = start.sourceIndex; i < sources.length; i++) i];
+    }
+    // Probe-dead candidates never reached the decoder and don't spend a
+    // "Streams to try" slot; this keeps the first-open overlay rule honest.
+    var probeRejected = 0;
     debugPrint(
       '[StartupFailover] event=begin platform=flutter contentType=$contentType '
       'sourceCount=${sources.length} selectedIndex=$firstIndex '
       'startIndex=${start.sourceIndex} initialFailed=$initialAttemptAlreadyFailed '
       'tryNext=$tryNext maxAttempts=$maxAttempts '
       'targetSeason=${_effectiveContentSeason ?? '-'} '
-      'targetEpisode=${_effectiveContentEpisode ?? '-'}',
+      'targetEpisode=${_effectiveContentEpisode ?? '-'} '
+      'chain=$chainEnabled '
+      'walk=${chainEnabled ? walk.take(24).join(',') : 'linear'}',
     );
 
     final pikPakResolver =
@@ -4933,11 +4978,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           initialAttemptAlreadyFailed: initialAttemptAlreadyFailed,
         );
 
-    for (
-      var sourceIndex = start.sourceIndex;
-      sourceIndex < sources.length && attempts < maxAttempts;
-      sourceIndex++
-    ) {
+    for (final sourceIndex in walk) {
+      // Same bound the legacy loop condition applied before each candidate.
+      if (attempts >= maxAttempts) break;
       final source = sources[sourceIndex];
       // The launch URL is already resolved and playable in-app regardless of
       // how its source row is typed — never skip it over streamType.
@@ -4970,7 +5013,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       // A debrid-direct first open isn't "checking" anything — it's loading
       // the user's own source; say so. Failover retries keep the counter
       // (the ladder really is trying alternatives at that point).
-      final firstAttempt = attempts == 1 && !initialAttemptAlreadyFailed;
+      final firstAttempt =
+          attempts == 1 && probeRejected == 0 && !initialAttemptAlreadyFailed;
       final debridFirstOpen =
           firstAttempt &&
           !pikPakResolver &&
@@ -5077,6 +5121,55 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         );
         continue;
       }
+      // Failover chain: liveness probe (GET Range: bytes=0-0) before the
+      // decoder. Skipped where a probe COSTS something (the policy's
+      // never-probe providers — Premiumize mints a link per probe, PikPak
+      // queues a download) and for IP-bound proxy links that must not be
+      // touched by Dart before the player (AIOStreams, same rule as the
+      // direct-link HEAD preflight). Dead links are remembered so a re-click
+      // inside the demotion window tries them last.
+      final servedLinkKey = chainEnabled
+          ? FailoverChain.linkKeyOf(source)
+          : null;
+      if (chainEnabled && chainPolicy.probeEnabled) {
+        final provider = FailoverChain.providerOf(
+          source,
+          resolverProvider: widget.startupResolverProvider,
+        );
+        final probeAllowed =
+            !chainPolicy.neverProbeProviders.contains(provider) &&
+            PlaybackCandidateRanking.shouldPreflightDirectStream(source);
+        if (probeAllowed) {
+          final alive = await StreamUrlValidator.isAliveByRangeProbe(
+            url,
+            timeout: Duration(seconds: chainPolicy.probeTimeoutSeconds),
+            headers: httpHeaders,
+          );
+          if (!mounted) return false;
+          if (!alive) {
+            debugPrint(
+              '[StartupFailover] event=candidate_reject platform=flutter '
+              '$sourceFields reason=probe_dead provider=$provider',
+            );
+            if (servedLinkKey != null) {
+              servedStore.record(servedIdentity, servedLinkKey);
+            }
+            probeRejected++;
+            attempts--;
+            continue;
+          }
+        } else {
+          debugPrint(
+            '[StartupFailover] event=probe_skip platform=flutter '
+            '$sourceFields provider=$provider',
+          );
+        }
+      }
+      // Remember every link handed to the decoder; the one it accepts is
+      // cleared below, so only evidently-unplayed links get demoted.
+      if (servedLinkKey != null) {
+        servedStore.record(servedIdentity, servedLinkKey);
+      }
       // Debrid-resolved torrents bypass the decode probe (see
       // _openStartupDebridDirect); addon direct URLs keep it, and so do
       // PikPak sessions — cold-storage opens are the slowest in the app and
@@ -5103,6 +5196,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       if (!mounted) return false;
       if (!ok) continue;
 
+      if (servedLinkKey != null) {
+        servedStore.markPlayed(servedIdentity, servedLinkKey);
+      }
       _currentSourceIndex = sourceIndex;
       _currentStreamUrl = url;
       if (resolvedPlaylist != null && resolvedPlaylist.isNotEmpty) {

@@ -1,5 +1,7 @@
 import 'package:debrify/screens/settings/settings_spotlight_shell.dart';
+import 'package:debrify/screens/settings/widgets/appearance_preview_card.dart';
 import 'package:debrify/screens/settings/widgets/settings_widgets.dart';
+import 'package:debrify/theme/appearance_preview.dart';
 import 'package:debrify/services/main_page_bridge.dart';
 import 'package:debrify/services/text_brightness.dart';
 import 'package:debrify/theme/app_theme.dart';
@@ -100,17 +102,26 @@ const _categories = [
   ),
 ];
 
+/// The live preview, as production mounts it via `pinnedHeaderBuilder` — but
+/// on a pure state rather than the controller, so the golden pins the card
+/// and not whatever theme a previous test left applied.
+Widget? _pinnedHeader(BuildContext context, int index) {
+  if (index != 3) return null;
+  return AppearancePreviewCard(
+    state: const AppearancePreviewState(
+      themeId: 'spotlight',
+      lookLabel: 'Spotlight',
+    ),
+    activeLookId: 'spotlight',
+    onApply: (_) async {},
+  );
+}
+
 Widget _categoryBody(int index) {
   if (index == 3) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SettingsLookHero(
-          label: 'Spotlight',
-          subtitle: 'Full-bleed art, borderless focus, and ambient detail.',
-          onTap: _noop,
-        ),
-        const SizedBox(height: 18),
         SettingsSection(
           title: 'Presets',
           blurb: 'One pick sets theme, layouts, and launch motion together.',
@@ -196,6 +207,7 @@ Future<void> _pumpShell(
             onTap: () {},
           ),
           categoryBuilder: (context, index) => _categoryBody(index),
+          pinnedHeaderBuilder: _pinnedHeader,
         ),
       ),
     ),
@@ -245,7 +257,8 @@ void main() {
 
     expect(find.byKey(const Key('settings-compact-detail')), findsOneWidget);
     expect(find.text('Make it feel like yours.'), findsOneWidget);
-    expect(find.text('Spotlight'), findsOneWidget);
+    // Caption and Look chip both name it.
+    expect(find.text('Spotlight'), findsNWidgets(2));
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -342,7 +355,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Make it feel like yours.'), findsOneWidget);
-      expect(find.text('Spotlight'), findsOneWidget);
+      // Caption and Look chip both name it.
+      expect(find.text('Spotlight'), findsNWidgets(2));
       expect(tester.takeException(), isNull);
     }
   });

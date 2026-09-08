@@ -16,8 +16,10 @@ import '../services/imdb_enrichment_service.dart';
 import '../services/imdb_parents_guide_service.dart';
 import '../services/main_page_bridge.dart';
 import '../services/series_source_service.dart';
+import '../services/watched_filter.dart';
 import 'package:debrify/services/storage/quick_play_policy_prefs.dart';
 import '../widgets/detail/theme/detail_theme.dart';
+import '../widgets/detail/actor_titles_view.dart';
 import '../widgets/detail/catalog_detail_action_row.dart';
 import '../widgets/detail/catalog_detail_backdrop.dart';
 import '../widgets/detail/catalog_detail_badges.dart';
@@ -34,6 +36,7 @@ import '../services/simkl/simkl_menu_helpers.dart';
 import '../services/simkl/simkl_service.dart';
 import '../services/mdblist/mdblist_menu_helpers.dart';
 import '../utils/artwork_url.dart';
+import 'episodes_screen.dart' show kCatalogDetailRouteName;
 
 /// Cinematic detail screen for a catalog item.
 ///
@@ -527,7 +530,10 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
       return;
     }
     try {
-      final recs = await loader();
+      // Same "Hide watched titles" decider as the home rows and search: a
+      // watched recommendation simply doesn't show. Single-shot like those —
+      // no re-apply when the watched snapshot lands later.
+      final recs = WatchedFilter.apply(await loader());
       if (mounted) {
         setState(() {
           _recommendations = recs;
@@ -1308,7 +1314,15 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                 children: [
                   for (var i = 0; i < cast.length; i++) ...[
                     if (i > 0) const SizedBox(width: 14),
-                    CatalogDetailCastAvatar(member: cast[i], size: avatarSize),
+                    CatalogDetailCastAvatar(
+                      member: cast[i],
+                      size: avatarSize,
+                      onTap:
+                          widget.onRecommendationTap == null ||
+                              (cast[i].nameId ?? '').isEmpty
+                          ? null
+                          : () => _openActor(cast[i]),
+                    ),
                   ],
                 ],
               ),
@@ -1316,6 +1330,21 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
           ),
         ],
       ),
+    );
+  }
+
+  /// A cast avatar was chosen: push the actor's known-for page, whose titles
+  /// open through the same [onRecommendationTap] the "More Like This" rail
+  /// uses.
+  void _openActor(CastMember member) {
+    final open = widget.onRecommendationTap;
+    if (open == null) return;
+    ActorTitlesView.show(
+      context,
+      member: member,
+      onOpenTitle: open,
+      isTelevision: widget.isTelevision,
+      routeName: kCatalogDetailRouteName,
     );
   }
 

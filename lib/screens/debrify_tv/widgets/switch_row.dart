@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../theme/app_motion.dart';
 import '../../../theme/app_theme_scope.dart';
 import '../../../utils/platform_util.dart';
 import '../../../utils/tv_keys.dart';
@@ -65,23 +66,26 @@ class _SwitchRowState extends State<SwitchRow> {
         return KeyEventResult.ignored;
       },
       child: AnimatedContainer(
-        // TV: snap — see TvFocusableCard.
-        duration: PlatformUtil.isTelevision
-            ? Duration.zero
-            : const Duration(milliseconds: 150),
+        // TV: the shared focus beat (`AppMotion.tvFocus`) — see
+        // TvFocusableCard. The shadow keeps its geometry and fades its
+        // alpha, so no blur is re-derived mid-tween.
+        duration: AppMotion.of(context).focusTempo(
+          PlatformUtil.isTelevision,
+          const Duration(milliseconds: 150),
+        ),
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: _isFocused ? app.core.tx : tv.hairline),
-          boxShadow: _isFocused
-              ? const [
-                  BoxShadow(
-                    color: Color(0x66000000),
-                    blurRadius: 20,
-                    offset: Offset(0, 10),
-                  ),
-                ]
-              : null,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0x66000000).withValues(
+                alpha: _isFocused ? 0.4 : 0.0,
+              ),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: SwitchListTile(
           title: Text(

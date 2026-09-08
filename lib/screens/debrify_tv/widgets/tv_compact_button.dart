@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../theme/app_motion.dart';
 import '../../../utils/platform_util.dart';
 import '../../../utils/tv_keys.dart';
 
@@ -33,6 +34,13 @@ class _TvCompactButtonState extends State<TvCompactButton> {
   @override
   Widget build(BuildContext context) {
     final isDisabled = widget.onPressed == null;
+    // TV: the shared focus beat (`AppMotion.tvFocus`); the button's own
+    // 150ms under a pointer. Scale and chrome ride the one figure.
+    final motion = AppMotion.of(context);
+    final fx = motion.focusTempo(
+      PlatformUtil.isTelevision,
+      const Duration(milliseconds: 150),
+    );
 
     return Focus(
       focusNode: widget.focusNode,
@@ -62,15 +70,12 @@ class _TvCompactButtonState extends State<TvCompactButton> {
         onTap: widget.onPressed,
         child: AnimatedScale(
           scale: _isFocused ? 1.05 : 1.0,
-          // TV: snap — see TvFocusableCard.
-          duration: PlatformUtil.isTelevision
-              ? Duration.zero
-              : const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
+          duration: fx,
+          // A transform: the TV profile's curve is safe here (`emphasized`
+          // under smooth); the decoration below stays on its own easeOut.
+          curve: motion.focusCurve(PlatformUtil.isTelevision, Curves.easeOut),
           child: AnimatedContainer(
-            duration: PlatformUtil.isTelevision
-                ? Duration.zero
-                : const Duration(milliseconds: 150),
+            duration: fx,
             height: 36,
             padding: EdgeInsets.symmetric(
               horizontal: widget.label != null ? 12 : 10,
@@ -89,15 +94,17 @@ class _TvCompactButtonState extends State<TvCompactButton> {
                           : Colors.white24),
                 width: _isFocused ? 2 : 1,
               ),
-              boxShadow: _isFocused
-                  ? [
-                      BoxShadow(
-                        color: widget.backgroundColor.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        spreadRadius: 0,
-                      ),
-                    ]
-                  : null,
+              // Fixed geometry, alpha only: a shadow whose blur grew from
+              // nothing would re-derive per frame; transparent is skipped.
+              boxShadow: [
+                BoxShadow(
+                  color: widget.backgroundColor.withValues(
+                    alpha: _isFocused ? 0.3 : 0.0,
+                  ),
+                  blurRadius: 8,
+                  spreadRadius: 0,
+                ),
+              ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

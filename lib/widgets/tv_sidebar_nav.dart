@@ -290,7 +290,9 @@ class TvSidebarNavState extends State<TvSidebarNav>
         if (scrollable != null && scrollable.position.maxScrollExtent > 0) {
           Scrollable.ensureVisible(
             ctx,
-            duration: Duration.zero,
+            // The shared TV scroll-follow: a snap under snappy, a glide
+            // under smooth. This sidebar only exists on a television.
+            duration: _motion.tvScroll,
             alignment: 0.3,
           );
         }
@@ -1062,6 +1064,8 @@ class TvSidebarNavState extends State<TvSidebarNav>
             onTap: () => _selectMenuItem(index),
             onKeyEvent: (e) => _handleKeyEvent(index, e),
             labelCurve: _motion.standard,
+            focusFx: _motion.tvFocus,
+            focusCurve: _motion.standard,
             style: _style,
           ),
         ),
@@ -1098,6 +1102,8 @@ class TvSidebarNavState extends State<TvSidebarNav>
             focusNode: _focusNodes[index],
             onTap: () => _selectMenuItem(index),
             onKeyEvent: (event) => _handleKeyEvent(index, event),
+            focusFx: _motion.tvFocus,
+            focusCurve: _motion.standard,
             style: _style,
           ),
         ],
@@ -1202,6 +1208,12 @@ class _TvProfileItemWidget extends StatelessWidget {
   final KeyEventResult Function(KeyEvent) onKeyEvent;
   final String style;
 
+  /// The TV focus beat (`AppMotion.tvFocus`) and its curve, passed down like
+  /// [app] — the row's focus chrome tweens on them so the row the cursor
+  /// leaves dims over exactly the beat the next one lights.
+  final Duration focusFx;
+  final Curve focusCurve;
+
   const _TvProfileItemWidget({
     required this.app,
     required this.profile,
@@ -1210,6 +1222,8 @@ class _TvProfileItemWidget extends StatelessWidget {
     required this.focusNode,
     required this.onTap,
     required this.onKeyEvent,
+    required this.focusFx,
+    required this.focusCurve,
     required this.style,
   });
 
@@ -1230,7 +1244,12 @@ class _TvProfileItemWidget extends StatelessWidget {
             final collapsedSlot = style == 'island'
                 ? TvSidebarNav.collapsedWidth - 12
                 : TvSidebarNav.collapsedWidth - 20;
-            return Container(
+            // Fill and border are colours, so the focus tween is cheap; the
+            // values below depend on focus alone (not the expand), so an
+            // implicit tween never lags the pane.
+            return AnimatedContainer(
+              duration: focusFx,
+              curve: focusCurve,
               height: style == 'badge' ? 52 : 46,
               decoration: BoxDecoration(
                 color: whiteFocus
@@ -1238,17 +1257,30 @@ class _TvProfileItemWidget extends StatelessWidget {
                     : isFocused
                     ? app.shell.navFocus.withValues(alpha: 0.22)
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(999),
-                border: isFocused && !whiteFocus
-                    ? Border.all(color: app.fade(app.core.tx, 0.55), width: 1.5)
-                    : null,
+                borderRadius: app.shape.brPill,
+              ),
+              // The ring is a FOREGROUND border so it never insets the row —
+              // a decoration border pads the child by its width, and the
+              // collapsed rail has no 3px to spare (nor should the content
+              // shift when the ring appears).
+              foregroundDecoration: BoxDecoration(
+                borderRadius: app.shape.brPill,
+                border: Border.all(
+                  color: app.fade(
+                    app.core.tx,
+                    isFocused && !whiteFocus ? 0.55 : 0,
+                  ),
+                  width: 1.5,
+                ),
               ),
               child: Row(
                 children: [
                   SizedBox(
                     width: collapsedSlot,
                     child: Center(
-                      child: Container(
+                      child: AnimatedContainer(
+                        duration: focusFx,
+                        curve: focusCurve,
                         width: 34,
                         height: 34,
                         clipBehavior: Clip.antiAlias,
@@ -1283,11 +1315,9 @@ class _TvProfileItemWidget extends StatelessWidget {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      profile.name,
-                                      maxLines: 1,
-                                      softWrap: false,
-                                      overflow: TextOverflow.clip,
+                                    AnimatedDefaultTextStyle(
+                                      duration: focusFx,
+                                      curve: focusCurve,
                                       style: TextStyle(
                                         color: whiteFocus
                                             ? app.shell.railInk
@@ -1297,10 +1327,16 @@ class _TvProfileItemWidget extends StatelessWidget {
                                             : 13.5,
                                         fontWeight: FontWeight.w800,
                                       ),
+                                      child: Text(
+                                        profile.name,
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        overflow: TextOverflow.clip,
+                                      ),
                                     ),
-                                    Text(
-                                      profile.isAdmin ? 'Admin' : 'Profile',
-                                      maxLines: 1,
+                                    AnimatedDefaultTextStyle(
+                                      duration: focusFx,
+                                      curve: focusCurve,
                                       style: TextStyle(
                                         color: whiteFocus
                                             ? app.shell.railInk.withValues(
@@ -1309,16 +1345,22 @@ class _TvProfileItemWidget extends StatelessWidget {
                                             : app.fade(app.core.tx, 0.48),
                                         fontSize: 9.5,
                                       ),
+                                      child: Text(
+                                        profile.isAdmin ? 'Admin' : 'Profile',
+                                        maxLines: 1,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                              Icon(
+                              _TvNavIcon(
                                 Icons.chevron_right_rounded,
                                 size: 18,
                                 color: whiteFocus
                                     ? app.shell.railInk.withValues(alpha: 0.7)
                                     : app.fade(app.core.tx, 0.48),
+                                duration: focusFx,
+                                curve: focusCurve,
                               ),
                               const SizedBox(width: 10),
                             ],
@@ -1341,9 +1383,11 @@ class _TvProfileItemWidget extends StatelessWidget {
 /// becomes a stadium pill — a purple→cyan gradient ring with a static glow
 /// when focused, faint glass when selected. Both visuals bake the shared
 /// expand value into their colors (AnimatedBuilder rebuilds, no Opacity
-/// layers), and focus state still snaps instantly on focus move (no per-move
-/// animation — animated blur janks a weak TV GPU). No per-item
-/// AnimationController.
+/// layers). Focus chrome tweens on the shared TV focus beat
+/// (`AppMotion.tvFocus`): colours and alphas only — a blurred glow keeps its
+/// geometry and fades, since re-deriving a blur per frame is what janked a
+/// weak TV GPU — so the row the cursor leaves dims over exactly the beat the
+/// next one lights instead of both snapping. No per-item AnimationController.
 class _TvNavItemWidget extends StatelessWidget {
   /// Passed down, never looked up here — see [TvSidebarNavState._buildNavItems].
   final AppTheme app;
@@ -1365,6 +1409,11 @@ class _TvNavItemWidget extends StatelessWidget {
   /// reason [app] is — see [TvSidebarNavState._buildNavItems].
   final Curve labelCurve;
 
+  /// The TV focus beat (`AppMotion.tvFocus`) and its curve — every style's
+  /// focus chrome tweens on them. Passed down like [labelCurve].
+  final Duration focusFx;
+  final Curve focusCurve;
+
   /// Visual style (see [TvSidebarNav.navStyle]) — visuals only; the Focus /
   /// key wrapper is shared by every style.
   final String style;
@@ -1382,6 +1431,8 @@ class _TvNavItemWidget extends StatelessWidget {
     required this.onTap,
     required this.onKeyEvent,
     required this.labelCurve,
+    required this.focusFx,
+    required this.focusCurve,
     this.style = 'classic',
   });
 
@@ -1453,18 +1504,18 @@ class _TvNavItemWidget extends StatelessWidget {
                 // Ring = FOCUS, coin = CURRENT TAB — independent, so the
                 // common entry case (focus lands on the current tab) still
                 // shows where focus is: a ring around the coin.
-                child: Container(
+                child: AnimatedContainer(
+                  duration: focusFx,
+                  curve: focusCurve,
                   width: 42,
                   height: 42,
-                  decoration: isFocused
-                      ? BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: app.fade(app.core.tx, 0.9),
-                            width: 2,
-                          ),
-                        )
-                      : null,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: app.fade(app.core.tx, isFocused ? 0.9 : 0),
+                      width: 2,
+                    ),
+                  ),
                   child: Center(
                     child: Container(
                       width: 34,
@@ -1482,7 +1533,13 @@ class _TvNavItemWidget extends StatelessWidget {
                             )
                           : null,
                       child: Center(
-                        child: Icon(item.icon, size: 19, color: iconColor),
+                        child: _TvNavIcon(
+                      item.icon,
+                      size: 19,
+                      color: iconColor,
+                      duration: focusFx,
+                      curve: focusCurve,
+                    ),
                       ),
                     ),
                   ),
@@ -1495,11 +1552,9 @@ class _TvNavItemWidget extends StatelessWidget {
                   expand: expand,
                   index: index,
                   curve: labelCurve,
-                  child: Text(
-                    item.label,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.clip,
+                  child: AnimatedDefaultTextStyle(
+                    duration: focusFx,
+                    curve: focusCurve,
                     style: TextStyle(
                       color: isFocused
                           ? app.core.tx
@@ -1511,6 +1566,12 @@ class _TvNavItemWidget extends StatelessWidget {
                           ? FontWeight.w800
                           : FontWeight.w600,
                       letterSpacing: marquee ? -0.3 : 0.1,
+                    ),
+                    child: Text(
+                      item.label,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.clip,
                     ),
                   ),
                 ),
@@ -1536,19 +1597,29 @@ class _TvNavItemWidget extends StatelessWidget {
             : Colors.white.withValues(alpha: isSelected ? 0.95 : 0.80);
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Container(
+          child: AnimatedContainer(
+            duration: focusFx,
+            curve: focusCurve,
             decoration: BoxDecoration(
-              color: isFocused
-                  ? Colors.white
-                  : isSelected
-                  ? Colors.white.withValues(alpha: 0.14)
-                  : null,
+              color: Colors.white.withValues(
+                alpha: isFocused
+                    ? 1
+                    : isSelected
+                    ? 0.14
+                    : 0,
+              ),
               borderRadius: app.shape.br(23),
             ),
             child: Row(
               children: [
                 const SizedBox(width: 14),
-                Icon(item.icon, size: 17, color: ink),
+                _TvNavIcon(
+                  item.icon,
+                  size: 17,
+                  color: ink,
+                  duration: focusFx,
+                  curve: focusCurve,
+                ),
                 const SizedBox(width: 11),
                 Expanded(
                   child: ClipRect(
@@ -1556,11 +1627,9 @@ class _TvNavItemWidget extends StatelessWidget {
                       expand: expand,
                       index: index,
                       curve: labelCurve,
-                      child: Text(
-                        item.label,
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.clip,
+                      child: AnimatedDefaultTextStyle(
+                        duration: focusFx,
+                        curve: focusCurve,
                         style: TextStyle(
                           color: ink,
                           fontSize: 14.5,
@@ -1568,6 +1637,12 @@ class _TvNavItemWidget extends StatelessWidget {
                               ? FontWeight.w700
                               : FontWeight.w600,
                           letterSpacing: -0.1,
+                        ),
+                        child: Text(
+                          item.label,
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.clip,
                         ),
                       ),
                     ),
@@ -1620,16 +1695,24 @@ class _TvNavItemWidget extends StatelessWidget {
                 },
               ),
             ),
-            // Open pill.
-            if (t > 0.01 && (isFocused || isSelected))
+            // Open pill. Always mounted while the pane is open — transparent
+            // for an idle row — so focus never inserts it, only fades it.
+            if (t > 0.01)
               Positioned.fill(
-                child: Container(
+                child: AnimatedContainer(
+                  duration: focusFx,
+                  curve: focusCurve,
                   margin: const EdgeInsets.only(right: 6),
                   decoration: BoxDecoration(
                     borderRadius: app.shape.br(14),
-                    color: isFocused
-                        ? app.fade(app.core.tx, t)
-                        : app.fade(app.core.tx, 0.10 * t),
+                    color: app.fade(
+                      app.core.tx,
+                      isFocused
+                          ? t
+                          : isSelected
+                          ? 0.10 * t
+                          : 0,
+                    ),
                   ),
                 ),
               ),
@@ -1638,7 +1721,13 @@ class _TvNavItemWidget extends StatelessWidget {
                 SizedBox(
                   width: TvSidebarNav.collapsedWidth - 20,
                   child: Center(
-                    child: Icon(item.icon, size: 19, color: iconColor),
+                    child: _TvNavIcon(
+                      item.icon,
+                      size: 19,
+                      color: iconColor,
+                      duration: focusFx,
+                      curve: focusCurve,
+                    ),
                   ),
                 ),
                 Expanded(
@@ -1647,11 +1736,9 @@ class _TvNavItemWidget extends StatelessWidget {
                       expand: expand,
                       index: index,
                       curve: labelCurve,
-                      child: Text(
-                        item.label,
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.clip,
+                      child: AnimatedDefaultTextStyle(
+                        duration: focusFx,
+                        curve: focusCurve,
                         style: TextStyle(
                           color: isFocused
                               ? app.shell.railInk
@@ -1662,6 +1749,12 @@ class _TvNavItemWidget extends StatelessWidget {
                           fontWeight: (isFocused || isSelected)
                               ? FontWeight.w800
                               : FontWeight.w600,
+                        ),
+                        child: Text(
+                          item.label,
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.clip,
                         ),
                       ),
                     ),
@@ -1728,20 +1821,21 @@ class _TvNavItemWidget extends StatelessWidget {
                   ),
                 ),
               ),
-            // Open: the row pill.
-            if (t > 0.01 && (isFocused || isSelected))
+            // Open: the row pill. Always mounted while the pane is open —
+            // transparent for an idle row — so focus only fades the ring in.
+            if (t > 0.01)
               Positioned.fill(
-                child: Container(
+                child: AnimatedContainer(
+                  duration: focusFx,
+                  curve: focusCurve,
                   margin: const EdgeInsets.only(right: 6, top: 4, bottom: 4),
                   decoration: BoxDecoration(
                     borderRadius: app.shape.br(16),
-                    color: isSelected ? app.fade(app.core.tx, t) : null,
-                    border: isFocused
-                        ? Border.all(
-                            color: app.fade(app.core.tx, 0.9 * t),
-                            width: 1.6,
-                          )
-                        : null,
+                    color: app.fade(app.core.tx, isSelected ? t : 0),
+                    border: Border.all(
+                      color: app.fade(app.core.tx, isFocused ? 0.9 * t : 0),
+                      width: 1.6,
+                    ),
                   ),
                 ),
               ),
@@ -1754,7 +1848,13 @@ class _TvNavItemWidget extends StatelessWidget {
               child: SizedBox(
                 width: TvSidebarNav.collapsedWidth - 20,
                 child: Center(
-                  child: Icon(item.icon, size: 19, color: iconColor),
+                  child: _TvNavIcon(
+                      item.icon,
+                      size: 19,
+                      color: iconColor,
+                      duration: focusFx,
+                      curve: focusCurve,
+                    ),
                 ),
               ),
             ),
@@ -1770,11 +1870,9 @@ class _TvNavItemWidget extends StatelessWidget {
                   curve: labelCurve,
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(
-                      item.label,
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.clip,
+                    child: AnimatedDefaultTextStyle(
+                      duration: focusFx,
+                      curve: focusCurve,
                       style: TextStyle(
                         color: isSelected
                             ? app.shell.railInk
@@ -1785,6 +1883,12 @@ class _TvNavItemWidget extends StatelessWidget {
                         fontWeight: (isFocused || isSelected)
                             ? FontWeight.w800
                             : FontWeight.w600,
+                      ),
+                      child: Text(
+                        item.label,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.clip,
                       ),
                     ),
                   ),
@@ -1813,11 +1917,12 @@ class _TvNavItemWidget extends StatelessWidget {
         ? app.fade(app.core.tx, 0.94)
         : app.fade(app.core.tx, 0.5);
 
-    // Highlights snap instantly as focus moves between items (no per-move
-    // animation — animated blur is what made item-to-item navigation
-    // sluggish on the weak TV GPU); glows are static, painted when focus
-    // lands. Only the puck↔pill cross-dissolve animates, riding the shared
-    // 200ms expand with alphas baked into the colors.
+    // The focus chrome tweens on the shared TV focus beat with its alphas
+    // baked into the colours — the ring and the glow keep their geometry
+    // and fade (animated BLUR is what made item-to-item navigation sluggish
+    // on the weak TV GPU; a fading colour is not, and a transparent shadow
+    // is skipped). The puck↔pill cross-dissolve still rides the shared
+    // expand the same way.
     return Stack(
       children: [
         // COLLAPSED visual: the glass puck behind the icon. Alphas are
@@ -1872,70 +1977,97 @@ class _TvNavItemWidget extends StatelessWidget {
         // EXPANDED visual: the stadium pill behind the whole row —
         // liquid purple→cyan ring + glow for focus, faint glass for the
         // selected tab. Alphas ride t so the collapsed rail stays clean
-        // (the pill would otherwise peek out from behind the puck).
+        // (the pill would otherwise peek out from behind the puck), and
+        // ride the focus fraction `f` so the ring dissolves in and out on
+        // the focus beat — both pills are painted, each at its own alpha,
+        // rather than one replacing the other.
         Positioned.fill(
-          child: AnimatedBuilder(
-            animation: expand,
-            builder: (context, _) {
-              final t = expand.value;
-              if (t < 0.01 || !active) return const SizedBox.shrink();
-              if (isFocused) {
-                return Container(
-                  decoration: BoxDecoration(
-                    borderRadius: app.shape.br(21),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        accentSoft.withValues(alpha: t),
-                        _kRimCyan.withValues(alpha: t),
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: accent.withValues(alpha: 0.45 * t),
-                        blurRadius: 20,
-                        spreadRadius: -3,
+          child: _FocusFade(
+            focused: isFocused,
+            duration: focusFx,
+            curve: focusCurve,
+            builder: (context, f) => AnimatedBuilder(
+              animation: expand,
+              builder: (context, _) {
+                final t = expand.value;
+                if (t < 0.01 || (!isSelected && f < 0.001)) {
+                  return const SizedBox.shrink();
+                }
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (isSelected && f < 0.999)
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: app.shape.br(21),
+                          gradient: LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              app.fade(app.core.tx, 0.08 * t * (1 - f)),
+                              app.fade(app.core.tx, 0.02 * t * (1 - f)),
+                            ],
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(1.4),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: app.shape.br(20),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          const Color(0xFF241B4D).withValues(alpha: 0.94 * t),
-                          const Color(0xFF1A1338).withValues(alpha: 0.94 * t),
-                        ],
+                    if (f > 0.001)
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: app.shape.br(21),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              accentSoft.withValues(alpha: t * f),
+                              _kRimCyan.withValues(alpha: t * f),
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: accent.withValues(alpha: 0.45 * t * f),
+                              blurRadius: 20,
+                              spreadRadius: -3,
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(1.4),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            borderRadius: app.shape.br(20),
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                const Color(
+                                  0xFF241B4D,
+                                ).withValues(alpha: 0.94 * t * f),
+                                const Color(
+                                  0xFF1A1338,
+                                ).withValues(alpha: 0.94 * t * f),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                  ],
                 );
-              }
-              return Container(
-                decoration: BoxDecoration(
-                  borderRadius: app.shape.br(21),
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      app.fade(app.core.tx, 0.08 * t),
-                      app.fade(app.core.tx, 0.02 * t),
-                    ],
-                  ),
-                ),
-              );
-            },
+              },
+            ),
           ),
         ),
         Row(
           children: [
             SizedBox(
               width: TvSidebarNav.collapsedWidth - 20, // rail - padding(2×10)
-              child: Center(child: Icon(item.icon, color: iconColor, size: 20)),
+              child: Center(
+                child: _TvNavIcon(
+                  item.icon,
+                  color: iconColor,
+                  size: 20,
+                  duration: focusFx,
+                  curve: focusCurve,
+                ),
+              ),
             ),
             Expanded(
               child: ClipRect(
@@ -1947,11 +2079,9 @@ class _TvNavItemWidget extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Flexible(
-                        child: Text(
-                          item.label,
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.clip,
+                        child: AnimatedDefaultTextStyle(
+                          duration: focusFx,
+                          curve: focusCurve,
                           style: TextStyle(
                             color: labelColor,
                             fontSize: 13.5,
@@ -1959,6 +2089,12 @@ class _TvNavItemWidget extends StatelessWidget {
                                 ? FontWeight.w700
                                 : FontWeight.w500,
                             letterSpacing: 0.1,
+                          ),
+                          child: Text(
+                            item.label,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.clip,
                           ),
                         ),
                       ),
@@ -1994,35 +2130,95 @@ class _TvNavItemWidget extends StatelessWidget {
         ),
         // Leading tick — active-tab marker, expanded only (collapsed,
         // the lit puck marks the tab). Focused rows drop it: the
-        // gradient ring is the marker there.
-        if (isSelected && !isFocused)
+        // gradient ring is the marker there. Fades with the ring rather
+        // than blinking out the frame the ring appears.
+        if (isSelected)
           Positioned(
             left: 0,
             top: 0,
             bottom: 0,
-            child: AnimatedBuilder(
-              animation: expand,
-              builder: (context, _) {
-                final t = expand.value;
-                if (t < 0.01) return const SizedBox.shrink();
-                return Center(
-                  child: Container(
-                    width: 3.5,
-                    height: 15,
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.75 * t),
-                      borderRadius: const BorderRadius.horizontal(
-                        right: Radius.circular(4),
+            child: _FocusFade(
+              focused: isFocused,
+              duration: focusFx,
+              curve: focusCurve,
+              builder: (context, f) => AnimatedBuilder(
+                animation: expand,
+                builder: (context, _) {
+                  final t = expand.value;
+                  if (t < 0.01 || f > 0.999) return const SizedBox.shrink();
+                  return Center(
+                    child: Container(
+                      width: 3.5,
+                      height: 15,
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.75 * t * (1 - f)),
+                        borderRadius: const BorderRadius.horizontal(
+                          right: Radius.circular(4),
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
       ],
     );
   }
+}
+
+/// The focus fraction: 0 at rest, 1 focused, tweening between them on the TV
+/// focus beat. For chrome whose colours are already baked with the expand
+/// value `t` — where an `AnimatedContainer` retargeted every frame of the
+/// expand would lag it — the fraction multiplies into the same alphas
+/// instead, so the ring fades on the focus beat and the pane still opens on
+/// its own. Plain widgets inside; the builder holds no inherited lookups.
+class _FocusFade extends StatelessWidget {
+  final bool focused;
+  final Duration duration;
+  final Curve curve;
+  final Widget Function(BuildContext context, double f) builder;
+
+  const _FocusFade({
+    required this.focused,
+    required this.duration,
+    required this.curve,
+    required this.builder,
+  });
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    tween: Tween<double>(end: focused ? 1 : 0),
+    duration: duration,
+    curve: curve,
+    builder: (context, f, _) => builder(context, f),
+  );
+}
+
+/// An icon whose colour crosses over on the focus beat with the chrome
+/// around it, instead of snapping a frame ahead of the row's fill.
+class _TvNavIcon extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final double size;
+  final Duration duration;
+  final Curve curve;
+
+  const _TvNavIcon(
+    this.icon, {
+    required this.color,
+    required this.size,
+    required this.duration,
+    required this.curve,
+  });
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<Color?>(
+    tween: ColorTween(end: color),
+    duration: duration,
+    curve: curve,
+    builder: (_, c, __) => Icon(icon, size: size, color: c ?? color),
+  );
 }
 
 /// ISLAND's floating glass capsule around the item group: detached from the

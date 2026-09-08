@@ -8,6 +8,7 @@ import '../models/stremio_addon.dart';
 import '../services/main_page_bridge.dart';
 import '../services/trakt/trakt_service.dart';
 import '../services/trakt/trakt_item_transformer.dart';
+import '../theme/app_motion.dart';
 import 'home/home_theme.dart';
 import 'section_reveal.dart';
 import 'home_focus_controller.dart';
@@ -283,7 +284,11 @@ class HomeTraktNowPlayingCardState extends State<HomeTraktNowPlayingCard>
               Scrollable.ensureVisible(
                 context,
                 alignment: 0.5,
-                duration: Duration.zero,
+                // TV: `AppMotion.tvScroll`; elsewhere the shipped jump.
+                duration: AppMotion.of(context).scrollTempo(
+                  widget.isTelevision,
+                  Duration.zero,
+                ),
               );
             }
           });

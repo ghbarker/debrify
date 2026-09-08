@@ -7,6 +7,7 @@ import '../../services/storage_service.dart';
 import '../../services/torrent_service.dart';
 import '../../services/analytics_service.dart';
 import '../../utils/platform_util.dart';
+import '../../utils/tv_reveal.dart';
 import '../../widgets/tv_text_field.dart';
 import 'widgets/settings_widgets.dart';
 import '../../theme/app_theme_scope.dart';
@@ -40,7 +41,16 @@ class _IndexerManagersSettingsPageState
   List<IndexerManagerConfig> _configs = [];
   bool _loading = true;
   final FocusNode _addButtonFocus = FocusNode(debugLabel: 'indexer-add-button');
-  final FocusNode _firstRowFocus = FocusNode(debugLabel: 'indexer-first-row');
+
+  // Per-row DPAD focus nodes, keyed by config id and created lazily (see
+  // `_nodeFor`) — one map per control kind, mirroring the
+  // Map<String, FocusNode> idiom quick_play_settings_page.dart uses for its
+  // own dynamic-length DPAD list. Kept for the whole page lifetime so a
+  // listener is attached exactly once per row per control.
+  final Map<String, FocusNode> _switchFocusNodes = {};
+  final Map<String, FocusNode> _testFocusNodes = {};
+  final Map<String, FocusNode> _editFocusNodes = {};
+  final Map<String, FocusNode> _deleteFocusNodes = {};
 
   @override
   void initState() {
@@ -52,9 +62,50 @@ class _IndexerManagersSettingsPageState
   @override
   void dispose() {
     _addButtonFocus.dispose();
-    _firstRowFocus.dispose();
+    for (final node in [
+      ..._switchFocusNodes.values,
+      ..._testFocusNodes.values,
+      ..._editFocusNodes.values,
+      ..._deleteFocusNodes.values,
+    ]) {
+      node.dispose();
+    }
     super.dispose();
   }
+
+  /// House DPAD idiom (see webdav_settings_page.dart's `_focusAndReveal`):
+  /// scroll a newly-focused control into view, since a plain `requestFocus`
+  /// skips the traversal policy's ensure-visible step.
+  ///
+  /// Wired as a FocusNode listener rather than fired from a key handler:
+  /// unlike webdav's TvTextField rows (explicit onUpArrow/onDownArrow
+  /// hooks), this page's Switch/IconButton controls take DPAD focus through
+  /// Flutter's default traversal, so a listener is the only spot that sees
+  /// every focus arrival regardless of what triggered it.
+  void _revealOnFocus(FocusNode node) {
+    if (!node.hasFocus) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final ctx = node.context;
+      if (ctx != null && ctx.mounted) tvRevealMinimal(ctx);
+    });
+  }
+
+  FocusNode _nodeFor(Map<String, FocusNode> nodes, String id, String label) =>
+      nodes.putIfAbsent(id, () {
+        final node = FocusNode(debugLabel: label);
+        node.addListener(() => _revealOnFocus(node));
+        return node;
+      });
+
+  FocusNode _switchFocusNode(String id) =>
+      _nodeFor(_switchFocusNodes, id, 'indexer-switch-$id');
+  FocusNode _testFocusNode(String id) =>
+      _nodeFor(_testFocusNodes, id, 'indexer-test-$id');
+  FocusNode _editFocusNode(String id) =>
+      _nodeFor(_editFocusNodes, id, 'indexer-edit-$id');
+  FocusNode _deleteFocusNode(String id) =>
+      _nodeFor(_deleteFocusNodes, id, 'indexer-delete-$id');
 
   Future<void> _loadConfigs() async {
     final configs = await StorageService.getIndexerManagerConfigs(
@@ -75,7 +126,10 @@ class _IndexerManagersSettingsPageState
         // stranded — don't steal focus the user already placed somewhere.
         final primary = FocusManager.instance.primaryFocus;
         if (primary != null && primary is! FocusScopeNode) return;
-        (_configs.isEmpty ? _addButtonFocus : _firstRowFocus).requestFocus();
+        (_configs.isEmpty
+                ? _addButtonFocus
+                : _switchFocusNode(_configs.first.id))
+            .requestFocus();
       });
     }
   }
@@ -176,7 +230,10 @@ class _IndexerManagersSettingsPageState
     if (PlatformUtil.isTelevision) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        (_configs.isEmpty ? _addButtonFocus : _firstRowFocus).requestFocus();
+        (_configs.isEmpty
+                ? _addButtonFocus
+                : _switchFocusNode(_configs.first.id))
+            .requestFocus();
       });
     }
   }
@@ -354,7 +411,6 @@ class _IndexerManagersSettingsPageState
     final app = AppThemeScope.of(context);
     final t = app.settings;
     final theme = Theme.of(context);
-    final bool isFirst = _configs.isNotEmpty && config.id == _configs.first.id;
     final icon = Icon(
       config.type == IndexerManagerType.prowlarr
           ? Icons.hub_rounded
@@ -391,7 +447,7 @@ class _IndexerManagersSettingsPageState
         _FocusRing(
           borderRadius: 20,
           child: Switch(
-            focusNode: isFirst ? _firstRowFocus : null,
+            focusNode: _switchFocusNode(config.id),
             value: config.enabled,
             onChanged: config.connectionReadOnly
                 ? null
@@ -399,6 +455,7 @@ class _IndexerManagersSettingsPageState
           ),
         ),
         IconButton(
+          focusNode: _testFocusNode(config.id),
           visualDensity: VisualDensity.compact,
           style: _focusableIconStyle,
           onPressed: config.connectionReadOnly
@@ -408,6 +465,7 @@ class _IndexerManagersSettingsPageState
           tooltip: 'Test connection',
         ),
         IconButton(
+          focusNode: _editFocusNode(config.id),
           visualDensity: VisualDensity.compact,
           style: _focusableIconStyle,
           onPressed: config.connectionReadOnly
@@ -417,6 +475,7 @@ class _IndexerManagersSettingsPageState
           tooltip: 'Edit',
         ),
         IconButton(
+          focusNode: _deleteFocusNode(config.id),
           visualDensity: VisualDensity.compact,
           style: _focusableIconStyle,
           onPressed: config.connectionReadOnly

@@ -390,6 +390,16 @@ void main() {
     expect(launches, 1);
 
     firstLaunch.complete();
+    // Two pumps, deliberately. The launch future resolves in a microtask and
+    // it is `_guardPlay`'s `finally` that flips the guard and schedules the
+    // rebuild -- but the test binding only draws a frame in a pump that
+    // ALREADY had one scheduled when it began; the microtask flush that runs
+    // the setState comes after that check. A single pump used to pass only
+    // because a 140ms implicit animation on the Showcase pill ignored
+    // `disableAnimations` and kept a frame pending; every focus tween now
+    // honours reduced motion, so nothing else is ticking here. The first
+    // pump settles the future, the second renders the frame it scheduled.
+    await tester.pump();
     await tester.pump();
     expect(trailer().enabled, isTrue);
     await tester.tap(find.text('Play'));

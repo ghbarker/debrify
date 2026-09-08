@@ -63,13 +63,34 @@ class FocusTokens {
   /// Vertical rise, in logical pixels, for [FocusExpression.lift].
   final double lift;
 
+  /// How far a POSTER TILE or CARD grows when a pointer hovers it or a
+  /// non-TV keyboard cursor lands on it — the "hovered box gets bigger"
+  /// feedback of the catalog grids, the board rise and the detail's
+  /// recommendation row.
+  ///
+  /// Distinct from [scale] on purpose: that one is the theme's CURSOR, and it
+  /// is applied to everything focusable (a settings row, a pill, a button),
+  /// so it has to stay small. This is a figure for a tile that has its own
+  /// gap to grow into, read through [hoverScaleFor] so TV keeps its calmer
+  /// pop whatever a theme asks for. Every shipped theme takes the default —
+  /// a theme that wants a different pointer feel sets it here, ONCE, rather
+  /// than at the four sites that used to carry their own literal.
+  final double hoverScale;
+
   const FocusTokens({
     required this.expression,
     required this.width,
     required this.offset,
     required this.scale,
     required this.lift,
+    this.hoverScale = 1.12,
   });
+
+  /// The TV pop, shared by every tile that grows under DPAD focus. Nuvio-class
+  /// 1.045: two cards animate on every DPAD move (loser + gainer), and with
+  /// the light ring the small lift reads premium while neighbours shift less.
+  /// Not a theme choice — it is the raster budget of the platform.
+  static const double tvHoverScale = 1.045;
 
   /// Today's app: an in-bounds ring at Signal's shipped width, no scale, no
   /// lift.
@@ -114,4 +135,9 @@ class FocusTokens {
   /// Scale is honoured on TV — it is a transform, not a raster — but the lift
   /// shadow it usually travels with is filtered by the surface layer.
   double scaleFor(bool isTv) => scale;
+
+  /// The tile-growth figure for [hoverScale], with the TV policy applied: a
+  /// TV always gets [tvHoverScale], never the theme's pointer figure. Same
+  /// rule shape as [widthFor] — the platform wins over the theme.
+  double hoverScaleFor(bool isTv) => isTv ? tvHoverScale : hoverScale;
 }

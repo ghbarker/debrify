@@ -8,8 +8,8 @@ import '../pikpak/pikpak_files_screen.dart';
 import '../premiumize/premiumize_files_screen.dart';
 import '../torbox/torbox_downloads_screen.dart';
 
-/// Bind-source cloud browsers for catalog, Trakt, and aggregated search.
-/// [fromPlaybackId] only — `rd` does not open Real-Debrid.
+/// Bind-source cloud browsers. [fromPlaybackId] only — `rd` does not open
+/// Real-Debrid.
 class CloudBrowseSelectSource {
   CloudBrowseSelectSource._();
 

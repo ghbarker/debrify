@@ -11,6 +11,7 @@ import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/screens/catalog_item_detail_screen.dart';
 import 'package:debrify/services/mdblist/mdblist_menu_helpers.dart';
 import 'package:debrify/services/simkl/simkl_menu_helpers.dart';
+import 'package:debrify/theme/app_focus.dart';
 import 'package:debrify/theme/app_theme.dart';
 import 'package:debrify/theme/app_theme_scope.dart';
 import 'package:debrify/widgets/detail/theme/detail_themes.dart';
@@ -988,11 +989,21 @@ void main() {
     // No poster in the payload, so the card shows its text fallback twice:
     // once inside the poster box, once as the caption underneath.
     expect(find.text('Neighbour One'), findsNWidgets(2));
-    final caption = tester.widget<Text>(find.text('Neighbour One').last).style!;
+    // The caption's style sits on the AnimatedDefaultTextStyle above it since
+    // the TV focus tempo landed — it tweens with the grow instead of snapping.
+    final caption = ancestorOf<AnimatedDefaultTextStyle>(
+      tester,
+      find.text('Neighbour One').last,
+    ).style;
     expect(caption.color, Colors.white.withValues(alpha: 0.82));
     expect(caption.fontSize, 12);
 
-    final poster = ancestorOf<Container>(tester, find.text('Neighbour One').first);
+    // An AnimatedContainer since the TV focus tempo landed: the border
+    // tweens on the same beat as the grow instead of snapping beside it.
+    final poster = ancestorOf<AnimatedContainer>(
+      tester,
+      find.text('Neighbour One').first,
+    );
     expect(poster.constraints?.maxWidth, 120);
     expect(poster.constraints?.maxHeight, 180);
     var deco = poster.decoration! as BoxDecoration;
@@ -1003,14 +1014,16 @@ void main() {
     await focusOn(tester, find.text('Neighbour One').last);
 
     deco =
-        ancestorOf<Container>(tester, find.text('Neighbour One').first)
+        ancestorOf<AnimatedContainer>(tester, find.text('Neighbour One').first)
                 .decoration!
             as BoxDecoration;
     expect(deco.border!.top.color, DetailThemes.signal.focus);
     expect(deco.border!.top.width, 2);
+    // The shared pointer/keyboard grow, not a figure of this card's own —
+    // see `FocusTokens.hoverScale`.
     expect(
       ancestorOf<AnimatedScale>(tester, find.text('Neighbour One').last).scale,
-      1.05,
+      FocusTokens.legacy.hoverScaleFor(false),
     );
 
     await tester.tap(find.text('Neighbour One').last);

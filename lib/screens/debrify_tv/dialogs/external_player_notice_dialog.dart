@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:debrify/services/storage/debrify_tv_prefs.dart';
+import '../../../theme/app_motion.dart';
 import '../../../theme/app_theme_scope.dart';
 import '../../../utils/platform_util.dart';
 import '../../../utils/tv_keys.dart';
@@ -183,10 +184,11 @@ class _DontShowAgainRowState extends State<_DontShowAgainRow> {
       child: GestureDetector(
         onTap: () => widget.onChanged(!widget.value),
         child: AnimatedContainer(
-          // TV: snap — see SwitchRow.
-          duration: PlatformUtil.isTelevision
-              ? Duration.zero
-              : const Duration(milliseconds: 150),
+          // TV: the shared focus beat — see SwitchRow.
+          duration: AppMotion.of(context).focusTempo(
+            PlatformUtil.isTelevision,
+            const Duration(milliseconds: 150),
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: background,

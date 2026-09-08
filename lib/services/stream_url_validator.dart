@@ -185,4 +185,58 @@ class StreamUrlValidator {
       return false;
     }
   }
+
+  /// Liveness probe for the click-time failover chain: one `GET` carrying
+  /// `Range: bytes=0-0`, alive iff the terminal status is 200 or 206.
+  ///
+  /// Deliberately NOT [isPlayableVideoUrl]: no size floor, no HLS carve-out,
+  /// no lenient mode. The chain has its own next candidate ready, so the
+  /// probe is a cheap yes/no — a host that answers anything but 200/206, a
+  /// connection/TLS/DNS error, or a body that never starts within [timeout]
+  /// (retried once, the reference's one-retry-on-timeout) is dead and the
+  /// chain moves on. Redirects are followed by the client (GET, ≤5 hops).
+  /// The response body is cancelled immediately, so a host that ignores the
+  /// range never streams the file. Callers keep providers where a probe
+  /// COSTS something (Premiumize link minting, PikPak) out of here — see
+  /// `FailoverChainPolicy.neverProbeProviders`.
+  static Future<bool> isAliveByRangeProbe(
+    String url, {
+    required Duration timeout,
+    Map<String, String>? headers,
+  }) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme) return false;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final client = clientFactory();
+      try {
+        final request = http.Request('GET', uri)
+          ..headers.addAll({...?headers, 'Range': 'bytes=0-0'});
+        final streamed = await client.send(request).timeout(timeout);
+        // Never read the body: a 1-byte 206 is what we asked for, but a
+        // 200 that ignored the range would be the whole file.
+        unawaited(streamed.stream.listen((_) {}).cancel());
+        final alive = streamed.statusCode == 200 || streamed.statusCode == 206;
+        debugPrint(
+          'StreamUrlValidator: RANGE probe → ${streamed.statusCode} '
+          '(${alive ? 'alive' : 'dead'}, attempt ${attempt + 1})',
+        );
+        return alive;
+      } on TimeoutException {
+        debugPrint(
+          'StreamUrlValidator: RANGE probe timed out after '
+          '${timeout.inMilliseconds}ms (attempt ${attempt + 1})',
+        );
+        if (attempt == 0) continue;
+        return false;
+      } catch (e) {
+        // Connection refused, TLS rejection, failed host lookup: an active
+        // refusal, not a slow host — dead on the first answer.
+        debugPrint('StreamUrlValidator: RANGE probe failed: ${e.runtimeType}');
+        return false;
+      } finally {
+        client.close();
+      }
+    }
+    return false;
+  }
 }

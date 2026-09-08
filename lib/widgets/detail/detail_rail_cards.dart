@@ -12,15 +12,18 @@ import '../../services/imdb_enrichment_service.dart';
 import '../movie_watched_badge.dart';
 import 'detail_focus_chrome.dart';
 
-/// Cast avatar — focusable (no-op tap) so DPAD-down can walk the info column
-/// through it, with a visible gold ring while focused.
+/// Cast avatar — focusable so DPAD-down can walk the info column through it,
+/// with a visible gold ring while focused. [onTap] opens the actor's titles;
+/// null keeps the tile a no-op waypoint.
 class DetailCastTile extends StatefulWidget {
   final CastMember member;
   final Color fallback;
+  final VoidCallback? onTap;
   const DetailCastTile({
     super.key,
     required this.member,
     required this.fallback,
+    this.onTap,
   });
 
   @override
@@ -44,7 +47,7 @@ class _DetailCastTileState extends State<DetailCastTile> {
               shape: const CircleBorder(),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
-                onTap: () {},
+                onTap: widget.onTap ?? () {},
                 onFocusChange: (f) => setState(() => _focused = f),
                 customBorder: const CircleBorder(),
                 child: SizedBox(

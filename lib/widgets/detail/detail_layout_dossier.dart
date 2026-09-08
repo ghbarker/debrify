@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 
 import '../../services/debrify_image_cache.dart';
 import '../../services/imdb_enrichment_service.dart';
+import '../../theme/app_motion.dart';
+import '../../utils/platform_util.dart';
 import '../episodes_panel.dart';
 import '../horizontal_mouse_wheel.dart';
 import '../parents_guide_section.dart';
@@ -266,7 +268,8 @@ class _DetailDossierState extends State<DetailDossier> {
                   scrollDirection: Axis.horizontal,
                   itemCount: cast.length.clamp(0, 8),
                   separatorBuilder: (_, __) => const SizedBox(width: 11),
-                  itemBuilder: (context, i) => _CastChip(member: cast[i]),
+                  itemBuilder: (context, i) =>
+                      _CastChip(member: cast[i], onTap: m.castAction(cast[i])),
                 ),
               ),
             ),
@@ -412,7 +415,8 @@ class _DetailDossierState extends State<DetailDossier> {
                 scrollDirection: Axis.horizontal,
                 itemCount: cast.length.clamp(0, 12),
                 separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, i) => _CastChip(member: cast[i]),
+                itemBuilder: (context, i) =>
+                    _CastChip(member: cast[i], onTap: m.castAction(cast[i])),
               ),
             ),
           ),
@@ -581,13 +585,17 @@ class _DetailDossierState extends State<DetailDossier> {
 /// Non-focusable cast portrait — informational only.
 class _CastChip extends StatelessWidget {
   final CastMember member;
-  const _CastChip({required this.member});
+
+  /// Pointer-only: the chips are deliberately not focusable (see the
+  /// identity card), so a remote never lands on them.
+  final VoidCallback? onTap;
+  const _CastChip({required this.member, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final t = DetailThemeScope.of(context);
     final url = member.imageUrl;
-    return SizedBox(
+    final chip = SizedBox(
       width: 58,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -621,6 +629,15 @@ class _CastChip extends StatelessWidget {
         ],
       ),
     );
+    if (onTap == null) return chip;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: chip,
+      ),
+    );
   }
 }
 
@@ -651,7 +668,35 @@ class _RecPosterState extends State<_RecPoster> {
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: widget.onTap,
-            onFocusChange: (f) => setState(() => _focused = f),
+            onFocusChange: (f) {
+              setState(() => _focused = f);
+              // Lazily-built horizontal rail: default traversal can land here
+              // without ever scrolling it into view (the card may have just
+              // entered the cache extent, or the pane's own onKeyEvent — see
+              // `_rightKey` — may have moved focus programmatically instead
+              // of via the framework's own key-driven traversal). Follow
+              // explicitly so the cursor is never invisible.
+              //
+              // This predates the TV motion profile (PR #281 landed before
+              // #276) and was left on a bare snap. Route it through
+              // `AppMotion.tvScroll` like every other TV scroll-follow: zero
+              // under snappy (unchanged), the profile's glide under smooth.
+              // Off TV the jump is untouched.
+              if (f) {
+                final tv = PlatformUtil.isTelevision;
+                final motion = AppMotion.of(context);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted || !context.mounted) return;
+                  Scrollable.ensureVisible(
+                    context,
+                    alignment: 0.5,
+                    alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+                    duration: tv ? motion.tvScroll : Duration.zero,
+                    curve: motion.tvScrollCurve,
+                  );
+                });
+              }
+            },
             child: (poster != null && poster.isNotEmpty)
                 ? CachedNetworkImage(
                     imageUrl: poster,

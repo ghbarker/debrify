@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
+import '../../services/tv_motion_profile.dart';
+import 'layout_options.dart';
 import 'settings_search.dart';
 import 'settings_spotlight_shell.dart';
 import 'widgets/settings_widgets.dart';
@@ -12,8 +15,10 @@ import 'widgets/settings_widgets.dart';
 enum SettingsLayoutSurface { phone, desktop, tv }
 
 /// How the row is drawn. Info tiles take no TV pane focus node (the
-/// About version chip is the existing case).
-enum SettingsRowKind { tile, toggle, info, lookHero, url }
+/// About version chip is the existing case). [options] rows draw their
+/// [SettingsPageSpec.layoutOptions] inline as chips under ONE focus node
+/// (Left/Right inside the row), and never open a page.
+enum SettingsRowKind { tile, toggle, info, lookHero, url, options }
 
 /// Sub-setting that lives inside a page and deep-links to that page.
 class SettingsLeafSpec {
@@ -84,6 +89,10 @@ class SettingsPageSpec {
   /// name, not the rail category).
   final String? leafPageName;
 
+  /// The inline option set for a [SettingsRowKind.options] row. [opener], if
+  /// still set, is used by search only — the row itself never opens it.
+  final SettingsLayoutOptions? layoutOptions;
+
   const SettingsPageSpec({
     required this.id,
     required this.row,
@@ -116,7 +125,15 @@ class SettingsPageSpec {
     this.toggleValue,
     this.onToggle,
     this.leafPageName,
-  });
+    this.layoutOptions,
+  }) : assert(
+         layoutOptions != null ||
+             (kind != SettingsRowKind.options &&
+                 phoneKind != SettingsRowKind.options &&
+                 desktopKind != SettingsRowKind.options &&
+                 tvKind != SettingsRowKind.options),
+         'an options row needs layoutOptions',
+       );
 
   String get title => titleOf?.call() ?? row.title;
 
@@ -350,6 +367,15 @@ class SettingsPageBindings {
   final bool tvKeyboardEnabled;
   final ValueChanged<bool> onToggleTvKeyboard;
 
+  /// The applied Screen-layouts values, so an inline row can mark its active
+  /// option synchronously — the same state that feeds the `*Label` fields.
+  final LayoutRowValues layoutValues;
+
+  /// Fired after an inline row has persisted [value] for [rowId], so the
+  /// settings screen can update the state behind [layoutValues] and the
+  /// search subtitles without a page pop to hook.
+  final void Function(String rowId, String value) onLayoutApplied;
+
   final bool isAndroidTv;
   final bool isTelevision;
   final bool isAndroid;
@@ -390,6 +416,11 @@ class SettingsPageBindings {
   final List<String> Function() extraDetailPageKeywords;
   final List<String> Function() extraProfileAppearanceKeywords;
   final List<String> Function() extraPlayerKeywords;
+
+  /// Appearance → TV motion. Null means the live controller
+  /// (`TvMotionController.notifier` / `.select`); tests inject their own.
+  final ValueListenable<TvMotionProfile>? tvMotionProfile;
+  final Future<void> Function(TvMotionProfile profile)? selectTvMotionProfile;
 
   const SettingsPageBindings({
     required this.openHomePage,
@@ -490,6 +521,8 @@ class SettingsPageBindings {
     this.onToggleAutoUpdateChecks = _ignoreToggle,
     this.tvKeyboardEnabled = true,
     this.onToggleTvKeyboard = _ignoreToggle,
+    this.layoutValues = const LayoutRowValues(),
+    this.onLayoutApplied = _ignoreLayout,
     this.isAndroidTv = false,
     this.isTelevision = false,
     this.isAndroid = false,
@@ -529,10 +562,13 @@ class SettingsPageBindings {
     this.extraDetailPageKeywords = _emptyKeywords,
     this.extraProfileAppearanceKeywords = _emptyKeywords,
     this.extraPlayerKeywords = _emptyKeywords,
+    this.tvMotionProfile,
+    this.selectTvMotionProfile,
   });
 
   static Future<void> _noop() async {}
   static void _ignoreToggle(bool _) {}
+  static void _ignoreLayout(String _, String _) {}
   static List<String> _emptyKeywords() => const [];
 
   /// Bindings that open nothing — widget tests and the fake-page test.

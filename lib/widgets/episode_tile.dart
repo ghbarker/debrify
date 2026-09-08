@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/trakt/trakt_episode_model.dart';
+import '../theme/app_motion.dart';
 import '../theme/widgets/themed_artwork.dart';
 import '../utils/tv_keys.dart';
 import 'detail/theme/detail_theme.dart';
@@ -61,10 +62,16 @@ class _EpisodeTileState extends State<EpisodeTile> {
   /// fallback IS the shipped gold.
   late DetailTheme _t;
 
+  /// The theme's tempo, resolved in the one hook that may depend on
+  /// inherited widgets and still re-runs when they change — the tile's
+  /// helpers below build outside `build`'s own scope.
+  late AppMotion _motion;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _t = DetailThemeScope.maybeOf(context);
+    _motion = AppMotion.of(context);
   }
 
   /// D-pad selection within the action row while the card holds focus.
@@ -120,8 +127,13 @@ class _EpisodeTileState extends State<EpisodeTile> {
     ];
   }
 
-  Duration get _fx =>
-      widget.isTelevision ? Duration.zero : const Duration(milliseconds: 170);
+  /// The shared TV focus beat on a TV; the row's own 170ms under a pointer.
+  /// Scale, border, shadow and play glyph all ride it, so the row losing the
+  /// cursor settles over exactly the beat the next one lifts.
+  Duration get _fx => _motion.focusTempo(
+        widget.isTelevision,
+        const Duration(milliseconds: 170),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -136,9 +148,12 @@ class _EpisodeTileState extends State<EpisodeTile> {
               context,
               alignment: 0.5,
               alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
-              duration: widget.isTelevision
-                  ? Duration.zero
-                  : const Duration(milliseconds: 260),
+              // TV: `AppMotion.tvScroll` — the snap under snappy, a short
+              // glide under smooth. The pointer figure keeps its number.
+              duration: _motion.scrollTempo(
+                widget.isTelevision,
+                const Duration(milliseconds: 260),
+              ),
               curve: Curves.easeOutCubic,
             );
           });
@@ -171,7 +186,7 @@ class _EpisodeTileState extends State<EpisodeTile> {
           behavior: HitTestBehavior.opaque,
           child: AnimatedScale(
             duration: _fx,
-            curve: Curves.easeOutCubic,
+            curve: _motion.focusCurve(widget.isTelevision, Curves.easeOutCubic),
             scale: _active ? 1.012 : 1.0,
             child: AnimatedContainer(
               duration: _fx,
@@ -184,18 +199,25 @@ class _EpisodeTileState extends State<EpisodeTile> {
                       : Colors.white.withValues(alpha: 0.06),
                   width: _active ? 2.5 : 1,
                 ),
+                // Fixed geometry, colour-only tweens (the `CardFocusRise`
+                // idiom): no blur radius changes per frame, a transparent
+                // shadow is skipped, and the endpoints are the shipped ones.
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: _active ? 0.55 : 0.3),
-                    blurRadius: _active ? 28 : 12,
+                    color: Colors.black.withValues(alpha: _active ? 0.0 : 0.3),
+                    blurRadius: 12,
                     offset: const Offset(0, 10),
                   ),
-                  if (_active)
-                    BoxShadow(
-                      color: _t.fade(_t.focus, 0.38),
-                      blurRadius: 32,
-                      spreadRadius: 1,
-                    ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: _active ? 0.55 : 0.0),
+                    blurRadius: 28,
+                    offset: const Offset(0, 10),
+                  ),
+                  BoxShadow(
+                    color: _t.fade(_t.focus, _active ? 0.38 : 0.0),
+                    blurRadius: 32,
+                    spreadRadius: 1,
+                  ),
                 ],
               ),
               child: LayoutBuilder(

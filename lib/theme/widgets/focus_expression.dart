@@ -4,6 +4,7 @@ import '../../utils/platform_util.dart';
 import '../app_focus.dart';
 import '../app_motion.dart';
 import '../app_theme_scope.dart';
+import 'hover_grow.dart';
 import 'parallax_focus.dart';
 
 // Callers pick their lift shape at the same site they build the box.
@@ -46,6 +47,25 @@ class FocusExpressionBox extends StatelessWidget {
   /// row past BOTH screen edges and the focused row reads as cut off.
   final ParallaxShape shape;
 
+  /// Whether this is a POSTER TILE or CARD with its own gap to grow into —
+  /// the "hovered box gets bigger" feedback, by [FocusTokens.hoverScaleFor]
+  /// through [HoverGrow], on top of whatever the expression draws.
+  ///
+  /// Off (the default) the box is the theme's CURSOR and nothing more: a
+  /// settings row or a pill under `ring` gets a ring, and under `scale` the
+  /// small [FocusTokens.scale] that every focusable can afford. On, the tile
+  /// grows by the shared tile figure whatever the expression: `ring`,
+  /// `underline`, `invert` and `flood` keep their decoration and gain the
+  /// grow, while `scale` and `lift` hand their own scale OVER to it — the
+  /// cursor's 1.06 / 1.02 is replaced, not stacked, so a tile carries exactly
+  /// one scale transform under every expression. `parallax` is untouched:
+  /// `ParallaxFocus` owns that lift at its own per-shape peak.
+  ///
+  /// The point is that a pointer on Windows gets the same answer from every
+  /// poster, whichever look is running — a theme's cursor decides what is
+  /// DRAWN on the tile, and the tile figure decides how much it grows.
+  final bool grow;
+
   const FocusExpressionBox({
     super.key,
     required this.child,
@@ -54,6 +74,7 @@ class FocusExpressionBox extends StatelessWidget {
     this.on,
     this.inverted,
     this.shape = ParallaxShape.poster,
+    this.grow = false,
   });
 
   @override
@@ -63,11 +84,14 @@ class FocusExpressionBox extends StatelessWidget {
     final f = app.focus;
     final motion = AppMotion.of(context);
     final ring = on == null ? app.core.focus : app.core.focusOn(on!);
-    // The cursor SNAPS on TV. Everything else here is already gated on the
-    // platform for raster cost; this one is gated for feel — a ring that
-    // tweens across a shelf at three metres reads as lag, and the two TV focus
-    // widgets this replaced both used `Duration.zero` for exactly that reason.
-    final duration = tv ? Duration.zero : motion.fast;
+    // One tempo for the cursor leaving and the cursor arriving. On TV that is
+    // the shared `tvFocus` beat — a SNAPPED cursor (the policy this replaced)
+    // read as the old control flashing off in the frame the new one lit, and
+    // 120ms is short enough that a held key still never sees the ring trail
+    // the keypress. Everything below that is expensive per frame — the bloom,
+    // the lift shadow — is gated on the platform separately; what animates
+    // here on TV is a border colour, an alpha and a transform.
+    final duration = tv ? motion.tvFocus : motion.fast;
 
     // `flood` and `invert` REPLACE the surface, and this widget paints behind
     // its child — so over an opaque card (artwork, a gradient, a tinted row)
@@ -101,10 +125,33 @@ class FocusExpressionBox extends StatelessWidget {
 
     Widget body = child;
 
-    if (focused && replacesSurface && inverted != null) {
-      body = ColoredBox(
-        color: app.core.accent,
-        child: inverted!(context, app.inkOn(app.core.accent)),
+    // The inverted face fades IN over the resting one rather than replacing
+    // it: swapping the child on focus remounts the subtree — the flash no
+    // duration can hide — and the two faces cross-dissolving on the cursor's
+    // own tempo is the whole point of the tempo. Kept out of focus and hit
+    // testing: the resting child underneath stays the one thing that acts,
+    // so the tree never carries a second button.
+    if (replacesSurface && inverted != null) {
+      body = Stack(
+        fit: StackFit.passthrough,
+        children: [
+          body,
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ExcludeFocus(
+                child: AnimatedOpacity(
+                  opacity: focused ? 1 : 0,
+                  duration: duration,
+                  curve: motion.standard,
+                  child: ColoredBox(
+                    color: app.core.accent,
+                    child: inverted!(context, app.inkOn(app.core.accent)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       );
     }
 
@@ -140,15 +187,19 @@ class FocusExpressionBox extends StatelessWidget {
     }
 
     // The bloom. Off on TV — a blurred shadow that re-rasters on every focus
-    // move is the most expensive thing a cursor can do on a weak GPU.
+    // move is the most expensive thing a cursor can do on a weak GPU. Always
+    // in the tree where it is on, so gaining focus never remounts the child:
+    // fixed geometry, colour fades (transparent at rest costs nothing).
     final bloom = app.light.bloomFor(tv);
-    if (focused && bloom > 0) {
-      body = DecoratedBox(
+    if (bloom > 0) {
+      body = AnimatedContainer(
+        duration: duration,
+        curve: motion.standard,
         decoration: BoxDecoration(
           borderRadius: app.shape.br(radius),
           boxShadow: [
             BoxShadow(
-              color: ring.withValues(alpha: 0.28),
+              color: ring.withValues(alpha: focused ? 0.28 : 0),
               blurRadius: bloom,
               spreadRadius: 1,
             ),
@@ -174,6 +225,15 @@ class FocusExpressionBox extends StatelessWidget {
       );
     }
 
+    // A poster tile grows by the shared tile figure — the one every catalog
+    // grid and the detail's recommendation row grow by — on the grow's own
+    // tempo (`motion.base` off TV; `tvFocus` on it, as the rest of this
+    // cursor does). It REPLACES the cursor scale below rather than stacking on it,
+    // so `scale` and `lift` tiles carry one transform, not 1.12 × 1.06.
+    if (grow) {
+      return HoverGrow(active: focused, isTelevision: tv, child: body);
+    }
+
     // Scale, for both `scale` and `lift`. A transform, so it is affordable on
     // TV — unlike the shadow it usually travels with.
     final scale = f.scaleFor(tv);
@@ -181,7 +241,10 @@ class FocusExpressionBox extends StatelessWidget {
       body = AnimatedScale(
         scale: focused ? scale : 1,
         duration: duration,
-        curve: motion.standard,
+        // A transform: the one place in this stack the smooth profile's
+        // overshooting curve is safe. The ring, bloom and lift above lerp
+        // decorations and stay on `standard` — see [AppMotion.tvFocusCurve].
+        curve: motion.focusCurve(tv, motion.standard),
         child: body,
       );
     }

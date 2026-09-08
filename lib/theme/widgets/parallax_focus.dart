@@ -5,6 +5,7 @@ import 'package:flutter/physics.dart';
 
 import '../../utils/platform_util.dart';
 import '../app_focus.dart';
+import '../app_motion.dart';
 import '../app_theme_scope.dart';
 
 /// What kind of thing is lifting, which sets how far it may lift.
@@ -188,6 +189,7 @@ class ParallaxFocus extends StatelessWidget {
         scale: 1,
       );
     }
+    final tvMotion = AppMotion.of(context);
     return _ParallaxBody(
       focused: focused,
       shape: shape,
@@ -195,6 +197,11 @@ class ParallaxFocus extends StatelessWidget {
       spring: app.motion.focusSpring,
       curve: app.motion.emphasized,
       duration: app.motion.base,
+      // The Android TV paths run on the shared TV focus tempo, resolved here
+      // in build (never in the tick) so the lift the arriving card runs is
+      // the beat the leaving card — and every non-parallax cursor — runs.
+      tvFocus: tvMotion.tvFocus,
+      tvFocusCurve: tvMotion.focusCurve(true, Curves.easeOutCubic),
       fixedScaleForeground: fixedScaleForeground,
       // Android TV degrades to the lite body unless a [ParallaxRichScope]
       // above opts this subtree into the full effect (the detail page does).
@@ -236,6 +243,15 @@ class _ParallaxBody extends StatefulWidget {
   final SpringDescription? spring;
   final Curve curve;
   final Duration duration;
+
+  /// [AppMotion.tvFocus]: the Android TV ease-out's length, lite and rich.
+  final Duration tvFocus;
+
+  /// [AppMotion.focusCurve] for the same paths: the shipped ease-out under
+  /// the snappy profile, the theme's `emphasized` under smooth. The
+  /// controller is unbounded, so an overshooting curve lands the way the
+  /// spring does rather than clamping flat.
+  final Curve tvFocusCurve;
   final Widget? fixedScaleForeground;
 
   /// Opts this body into the full effect on Android TV (spring + tilt + glare)
@@ -250,6 +266,8 @@ class _ParallaxBody extends StatefulWidget {
     required this.spring,
     required this.curve,
     required this.duration,
+    required this.tvFocus,
+    required this.tvFocusCurve,
     required this.fixedScaleForeground,
     required this.richTv,
   });
@@ -349,8 +367,9 @@ class _ParallaxBodyState extends State<_ParallaxBody>
     // second, and on a box that pays real raster cost for every animated
     // frame the tail IS the lag — a held key keeps two cards perpetually
     // mid-spring. A short ease-out reaches the same endpoint in about a
-    // tenth of the frames and reads crisper under DPAD repeat. Same
-    // policy family as the lite body below.
+    // tenth of the frames and reads crisper under DPAD repeat. Its length is
+    // `AppMotion.tvFocus`, the beat every other TV cursor runs on, so a
+    // parallax poster and the ring beside it leave and arrive together.
     //
     // Rich subtrees hybridize on Android TV: DURING a rapid run both cards
     // of every step drop to this same lite pipeline — the tilt's perspective
@@ -367,8 +386,8 @@ class _ParallaxBodyState extends State<_ParallaxBody>
       _c
           .animateTo(
             target,
-            duration: const Duration(milliseconds: 140),
-            curve: Curves.easeOutCubic,
+            duration: widget.tvFocus,
+            curve: widget.tvFocusCurve,
           )
           .whenCompleteOrCancel(() {
         if (mounted &&
@@ -383,16 +402,16 @@ class _ParallaxBodyState extends State<_ParallaxBody>
     }
 
     // Android TV rich, at STEP cadence: keep the tilt and the glare but
-    // drive them with a short ease-out instead of the settle spring. The
-    // spring's ~1s tail kept BOTH cards of every step animating between
+    // drive them with the same short ease-out instead of the settle spring.
+    // The spring's ~1s tail kept BOTH cards of every step animating between
     // moves — at a normal stepping pace the board never stopped rastering
     // rich frames, which is most of what "Home still feels heavy" was.
     // The tilt rides controller velocity, so the brief curve still leans.
     if (PlatformUtil.isAndroidTvCached) {
       _c.animateTo(
         target,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
+        duration: widget.tvFocus,
+        curve: widget.tvFocusCurve,
       );
       return;
     }

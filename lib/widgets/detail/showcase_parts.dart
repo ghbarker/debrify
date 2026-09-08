@@ -8,8 +8,11 @@ import '../../services/imdb_enrichment_service.dart';
 import '../../services/imdb_parents_guide_service.dart';
 import '../../services/series_source_service.dart';
 import '../../services/trakt/trakt_episode_model.dart';
+import '../../theme/app_focus.dart';
+import '../../theme/app_motion.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_theme_scope.dart';
+import '../../theme/widgets/hover_grow.dart';
 import '../../theme/widgets/parallax_focus.dart';
 import '../../utils/platform_util.dart';
 import '../../utils/tv_keys.dart';
@@ -454,8 +457,14 @@ class ShowcaseStickyLogo extends StatelessWidget {
 
 // ── identity ───────────────────────────────────────────────────────────────
 
-/// Chip, logo (or title), meta line with tracker marks, synopsis, tech line,
-/// and a row of at most four buttons.
+/// Chip, logo (or title), the metadata block, and a row of at most four
+/// buttons.
+///
+/// Wide (desktop + TV): a score row (IMDb rating with its vote count,
+/// Metacritic, the certificate badge, tracker marks), a facts line (year ·
+/// runtime · every genre), honors, and a 3-line synopsis that expands in place
+/// on pointer surfaces. Compact: the phone stack — meta line, synopsis with
+/// MORE, tech line.
 class ShowcaseIdentity extends StatelessWidget {
   final DetailModel model;
   final FocusNode primaryNode;
@@ -593,9 +602,13 @@ class ShowcaseIdentity extends StatelessWidget {
     // the screen height overstates it by the top AND bottom insets and the peek
     // would be pushed off the bottom.
     //
-    // Compact: the height is a MINIMUM, not a fix — the centered stack's
-    // synopsis expands in place (MORE), and growing the band is the only
-    // honest response; a fixed box would overflow.
+    // The height is a MINIMUM, not a fix, on BOTH tiers. The synopsis expands
+    // in place (MORE) — compact's centered stack and the wide block alike —
+    // and growing the band is the only honest response; a fixed box would
+    // overflow the moment a long plot opened, or the moment enlarged text
+    // pushed the metadata block past the screenful. When the block fits, a
+    // bottom-aligned min-height box lays out pixel-for-pixel like the fixed
+    // one did.
     final metrics = ShowcaseMetrics.of(context);
     if (metrics.compact) {
       return Container(
@@ -604,9 +617,10 @@ class ShowcaseIdentity extends StatelessWidget {
         child: _identityColumnCompact(context, m, actions, metrics),
       );
     }
-    return SizedBox(
-      height: height,
-      child: _identityColumn(context, m, actions),
+    return Container(
+      constraints: BoxConstraints(minHeight: height),
+      alignment: Alignment.bottomLeft,
+      child: _identityColumn(context, m, actions, metrics),
     );
   }
 
@@ -667,43 +681,70 @@ class ShowcaseIdentity extends StatelessWidget {
     );
   }
 
+  /// The wide identity — desktop and TV.
+  ///
+  /// The metadata is a BLOCK here, not a caption. The previous cut showed
+  /// "Series · Crime · Drama", a 7.5pt rating box and three lines of 10.5pt
+  /// plot in a 410-wide column, with the certificate buried in a 9.5pt tech
+  /// line; on a 1080p monitor none of it registered and the page read as
+  /// having no metadata at all, even though every field had been fetched.
   Widget _identityColumn(
     BuildContext context,
     DetailModel m,
     List<Widget> actions,
+    ShowcaseMetrics metrics,
   ) {
-    final metrics = ShowcaseMetrics.of(context);
+    final k = metrics.k;
+    final hasFacts = _FactsLine.has(m);
     return Padding(
       padding: EdgeInsets.fromLTRB(metrics.gutter, 0, metrics.gutter, 26),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        // Anchored to the FOOT of the screenful, as the reference is.
+        // Anchored to the FOOT of the screenful, as the reference is — the
+        // parent aligns this column to its bottom edge, so min here and end
+        // on the axis produce the same footing a max column did.
         mainAxisAlignment: MainAxisAlignment.end,
-        mainAxisSize: MainAxisSize.max,
+        mainAxisSize: MainAxisSize.min,
         children: [
           _Chip(label: m.isMovie ? 'Film' : 'Series'),
           const SizedBox(height: 9),
           _LogoOrTitle(url: m.logo, name: m.name),
-          const SizedBox(height: 10),
-          _MetaLine(model: m),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
+          _ScoreRow(model: m),
+          if (hasFacts) ...[const SizedBox(height: 8), _FactsLine(model: m)],
           if (_hasHonors(m)) ...[
-            _HonorsLine(model: m),
             const SizedBox(height: 8),
+            _HonorsLine(model: m),
           ],
-          if ((m.synopsis ?? '').isNotEmpty)
-            SizedBox(
-              width: 410 * metrics.k,
-              child: Text(
-                m.synopsis!,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: _t(10.5 * metrics.k, a: 0.74).copyWith(height: 1.42),
+          if ((m.synopsis ?? '').isNotEmpty) ...[
+            const SizedBox(height: 10),
+            // ~600 on the 960 canvas: wide enough that three lines carry a
+            // real paragraph, narrow enough to stay a column over the art
+            // rather than a banner across it. Loose, not fixed — a narrow
+            // window hands the text what it has instead of overflowing.
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 600 * k),
+              child: _ExpandableSynopsis(
+                text: m.synopsis!,
+                collapsedLines: 3,
+                textAlign: TextAlign.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                style: _t(12 * k, a: 0.82).copyWith(height: 1.45),
+                affordanceStyle: _t(
+                  9.5 * k,
+                  w: FontWeight.w700,
+                  a: 0.9,
+                ).copyWith(letterSpacing: 0.8),
+                // No MORE on a television: a GestureDetector is inert under a
+                // DPAD, and this band's focus ladder is counted by the layout
+                // (primary + action circles) — a new focusable here would
+                // strand the cursor. The plot stays clamped to three lines.
+                expandable: !m.isTelevision,
+                affordanceOnlyWhenClipped: true,
               ),
             ),
-          const SizedBox(height: 11),
-          _TechLine(model: m),
-          const SizedBox(height: 11),
+          ],
+          const SizedBox(height: 14),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -793,12 +834,39 @@ class _LogoOrTitle extends StatelessWidget {
   }
 }
 
-/// Two lines + MORE; tapping expands in place (the identity band grows).
-/// Collapse comes back with LESS — a one-way expander leaves a wall of text
-/// parked over the artwork.
+/// A clamped synopsis + MORE; tapping expands in place (the identity band
+/// grows). Collapse comes back with LESS — a one-way expander leaves a wall of
+/// text parked over the artwork.
+///
+/// Defaults are the compact phone idiom (two centered lines, 12.5pt, MORE
+/// always shown). The wide identity passes its own lines, style and alignment,
+/// and asks for the affordance only when the text is actually clipped — a
+/// MORE under a plot that already fits is a control that does nothing.
 class _ExpandableSynopsis extends StatefulWidget {
   final String text;
-  const _ExpandableSynopsis({required this.text});
+  final int collapsedLines;
+  final TextAlign textAlign;
+  final CrossAxisAlignment crossAxisAlignment;
+  final TextStyle? style;
+  final TextStyle? affordanceStyle;
+
+  /// False renders the clamp with no MORE and no tap: the TV path, where a
+  /// gesture-only control is unreachable and misleading.
+  final bool expandable;
+
+  /// Measure the collapsed text first and show MORE only if it overflows.
+  final bool affordanceOnlyWhenClipped;
+
+  const _ExpandableSynopsis({
+    required this.text,
+    this.collapsedLines = 2,
+    this.textAlign = TextAlign.center,
+    this.crossAxisAlignment = CrossAxisAlignment.center,
+    this.style,
+    this.affordanceStyle,
+    this.expandable = true,
+    this.affordanceOnlyWhenClipped = false,
+  });
 
   @override
   State<_ExpandableSynopsis> createState() => _ExpandableSynopsisState();
@@ -807,32 +875,54 @@ class _ExpandableSynopsis extends StatefulWidget {
 class _ExpandableSynopsisState extends State<_ExpandableSynopsis> {
   bool _open = false;
 
+  TextStyle get _style =>
+      widget.style ?? _t(12.5, a: 0.78).copyWith(height: 1.5);
+
+  TextStyle get _affordanceStyle =>
+      widget.affordanceStyle ??
+      _t(10.5, w: FontWeight.w700, a: 0.9).copyWith(letterSpacing: 0.8);
+
+  bool _clips(BuildContext context, double maxWidth) {
+    if (!maxWidth.isFinite) return true;
+    final painter = TextPainter(
+      text: TextSpan(text: widget.text, style: _style),
+      maxLines: widget.collapsedLines,
+      textAlign: widget.textAlign,
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout(maxWidth: maxWidth);
+    final clipped = painter.didExceedMaxLines;
+    painter.dispose();
+    return clipped;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final text = Text(
+      widget.text,
+      maxLines: _open ? null : widget.collapsedLines,
+      textAlign: widget.textAlign,
+      overflow: _open ? null : TextOverflow.ellipsis,
+      style: _style,
+    );
+    if (!widget.expandable) return text;
+    final affordance = Text(_open ? 'LESS' : 'MORE', style: _affordanceStyle);
+    Widget column(bool showAffordance) => GestureDetector(
       onTap: () => setState(() => _open = !_open),
       behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: widget.crossAxisAlignment,
         children: [
-          Text(
-            widget.text,
-            maxLines: _open ? null : 2,
-            textAlign: TextAlign.center,
-            overflow: _open ? null : TextOverflow.ellipsis,
-            style: _t(12.5, a: 0.78).copyWith(height: 1.5),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            _open ? 'LESS' : 'MORE',
-            style: _t(
-              10.5,
-              w: FontWeight.w700,
-              a: 0.9,
-            ).copyWith(letterSpacing: 0.8),
-          ),
+          text,
+          if (showAffordance) ...[const SizedBox(height: 3), affordance],
         ],
       ),
+    );
+    if (!widget.affordanceOnlyWhenClipped) return column(true);
+    return LayoutBuilder(
+      builder: (context, constraints) =>
+          column(_open || _clips(context, constraints.maxWidth)),
     );
   }
 }
@@ -861,7 +951,7 @@ class _Chip extends StatelessWidget {
   }
 }
 
-/// The meta line — and where the trackers live.
+/// The compact meta line — and where the trackers live on a phone.
 ///
 /// Trakt and Simkl are READOUT here, not buttons: filled when tracked, hollow
 /// when not, never focusable. Tracker state describes what a title is to you;
@@ -888,27 +978,225 @@ class _MetaLine extends StatelessWidget {
           const SizedBox(width: 7),
           _RatingBox(value: m.rating!),
         ],
-        if (m.hasTrakt) ...[
-          const SizedBox(width: 8),
-          _TrackerMark(
-            letter: 'T',
-            on: m.traktTracked,
-            tint: const Color(0xFFED1C24),
-          ),
-        ],
-        if (m.hasSimkl) ...[
-          const SizedBox(width: 5),
-          _TrackerMark(
-            letter: 'S',
-            on: m.simklTracked,
-            tint: const Color(0xFF0B87C4),
-          ),
-        ],
-        if (m.hasMdblist) ...[
-          const SizedBox(width: 5),
-          _TrackerMark(letter: 'M', on: m.mdblistTracked, tint: kMdblistPurple),
-        ],
+        ..._trackerMarks(m, lead: 8, gap: 5),
       ],
+    );
+  }
+}
+
+/// The tracker readout marks, in a Row's children shape: [lead] before the
+/// first, [gap] between the rest. Shared by the compact meta line and the wide
+/// score row so the two tiers can never disagree on which trackers show.
+List<Widget> _trackerMarks(
+  DetailModel m, {
+  required double lead,
+  required double gap,
+}) {
+  final marks = <Widget>[
+    if (m.hasTrakt)
+      _TrackerMark(
+        letter: 'T',
+        on: m.traktTracked,
+        tint: const Color(0xFFED1C24),
+      ),
+    if (m.hasSimkl)
+      _TrackerMark(
+        letter: 'S',
+        on: m.simklTracked,
+        tint: const Color(0xFF0B87C4),
+      ),
+    if (m.hasMdblist)
+      _TrackerMark(letter: 'M', on: m.mdblistTracked, tint: kMdblistPurple),
+  ];
+  return [
+    for (var i = 0; i < marks.length; i++) ...[
+      SizedBox(width: i == 0 ? lead : gap),
+      marks[i],
+    ],
+  ];
+}
+
+/// The wide identity's score row: the IMDb rating as a filled pill with its
+/// vote count, the Metacritic score, the certificate as an outlined badge,
+/// then the tracker marks. Everything here is READOUT — nothing focuses.
+///
+/// Wraps rather than rows: at 1.8× text on a 960 TV the five items can pass
+/// the column, and a wrapped second line beats a RenderFlex overflow.
+class _ScoreRow extends StatelessWidget {
+  final DetailModel model;
+
+  const _ScoreRow({required this.model});
+
+  @override
+  Widget build(BuildContext context) {
+    final m = model;
+    final k = ShowcaseMetrics.of(context).k;
+    final items = <Widget>[
+      if (m.rating != null) _RatingPill(value: m.rating!, votes: m.voteCount),
+      if (m.metacritic != null)
+        _ScoreChip(label: 'METACRITIC', value: '${m.metacritic}'),
+      if ((m.certificate ?? '').isNotEmpty)
+        _CertificateBadge(text: m.certificate!),
+    ];
+    final marks = _trackerMarks(m, lead: 0, gap: 5);
+    if (items.isEmpty && marks.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 8 * k,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        ...items,
+        if (marks.isNotEmpty)
+          Row(mainAxisSize: MainAxisSize.min, children: marks),
+      ],
+    );
+  }
+}
+
+/// "★ 9.3" with the vote count muted beside it — the one number most people
+/// come to the page for, at a weight that reads from a sofa.
+class _RatingPill extends StatelessWidget {
+  final double value;
+  final int? votes;
+
+  const _RatingPill({required this.value, required this.votes});
+
+  @override
+  Widget build(BuildContext context) {
+    final k = ShowcaseMetrics.of(context).k;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8 * k, vertical: 3.5 * k),
+      decoration: BoxDecoration(
+        color: _ink.withValues(alpha: 0.14),
+        border: Border.all(color: _ink.withValues(alpha: 0.42), width: 0.75),
+        borderRadius: BorderRadius.circular(5 * k),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Text('★', style: _t(11 * k, a: 0.95)),
+          SizedBox(width: 4 * k),
+          Text(
+            value.toStringAsFixed(1),
+            style: _t(13 * k, w: FontWeight.w800, a: 0.98),
+          ),
+          if (votes != null && votes! > 0) ...[
+            SizedBox(width: 6 * k),
+            Text(_compactCount(votes!), style: _t(9.5 * k, a: 0.62)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Label + value hairline chip, the [_HonorsLine] family — used for the
+/// Metacritic score so it sits beside the IMDb pill without competing.
+class _ScoreChip extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _ScoreChip({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final k = ShowcaseMetrics.of(context).k;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 7 * k, vertical: 3.5 * k),
+      decoration: BoxDecoration(
+        border: Border.all(color: _ink.withValues(alpha: 0.34), width: 0.75),
+        borderRadius: BorderRadius.circular(4 * k),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label ',
+            style: _t(
+              8 * k,
+              w: FontWeight.w700,
+              a: 0.62,
+            ).copyWith(letterSpacing: 0.8),
+          ),
+          Text(value, style: _t(11 * k, w: FontWeight.w800, a: 0.95)),
+        ],
+      ),
+    );
+  }
+}
+
+/// The age rating as a badge — "TV-MA", "PG-13" — outlined at full ink so it
+/// carries the weight a certificate has on a poster, not a footnote's.
+class _CertificateBadge extends StatelessWidget {
+  final String text;
+
+  const _CertificateBadge({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final k = ShowcaseMetrics.of(context).k;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 7 * k, vertical: 3 * k),
+      decoration: BoxDecoration(
+        border: Border.all(color: _ink.withValues(alpha: 0.78), width: 1.25),
+        borderRadius: BorderRadius.circular(3.5 * k),
+      ),
+      child: Text(
+        text.toUpperCase(),
+        style: _t(
+          10.5 * k,
+          w: FontWeight.w800,
+          a: 0.96,
+        ).copyWith(letterSpacing: 0.7),
+      ),
+    );
+  }
+}
+
+/// 1 834 000 → "1.8M", 120 300 → "120K", 950 → "950".
+String _compactCount(int n) {
+  String trim(double v) {
+    final s = v >= 10 ? v.round().toString() : v.toStringAsFixed(1);
+    return s.endsWith('.0') ? s.substring(0, s.length - 2) : s;
+  }
+
+  if (n >= 1000000) return '${trim(n / 1000000)}M';
+  if (n >= 1000) return '${trim(n / 1000)}K';
+  return '$n';
+}
+
+/// Year · runtime · every genre, as one readable line. The compact meta line
+/// takes two genres because a phone column has room for two; the wide column
+/// has room for the list, and a title's fourth genre is often the one that
+/// says what it actually is.
+class _FactsLine extends StatelessWidget {
+  final DetailModel model;
+
+  const _FactsLine({required this.model});
+
+  static List<String> _bits(DetailModel m) => [
+    if ((m.year ?? '').isNotEmpty) m.year!,
+    if ((m.runtime ?? '').isNotEmpty) m.runtime!,
+    ...m.genres,
+  ];
+
+  static bool has(DetailModel m) => _bits(m).isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    final bits = _bits(model);
+    if (bits.isEmpty) return const SizedBox.shrink();
+    final k = ShowcaseMetrics.of(context).k;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: 640 * k),
+      child: Text(
+        bits.join('  ·  '),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: _t(11 * k, a: 0.8),
+      ),
     );
   }
 }
@@ -1054,8 +1342,10 @@ class _HonorsLine extends StatelessWidget {
   }
 }
 
-/// Year · seasons/runtime. NOT Dolby/CC/HDR badges: nothing is fetched at page
-/// open, so those could only ever be decoration pretending to be data.
+/// Year · runtime · certificate — the compact identity's tech line (the wide
+/// tier splits these across [_ScoreRow] and [_FactsLine]). NOT Dolby/CC/HDR
+/// badges: nothing is fetched at page open, so those could only ever be
+/// decoration pretending to be data.
 class _TechLine extends StatelessWidget {
   final DetailModel model;
 
@@ -1156,8 +1446,18 @@ class _PrimaryState extends State<_Primary> {
           final m = ShowcaseMetrics.of(context);
           final compact = m.compact;
           final solid = _f || compact;
+          // The flip runs on the shared TV focus beat — the same 120ms the
+          // circles beside it and the poster above it use — so a step off
+          // the pill reads as the cursor moving, not the pill blinking out.
+          // Resolved here, above the tween; never inside its builder.
+          final motion = AppMotion.of(context);
+          final fx = motion.focusTempo(
+            PlatformUtil.isTelevision,
+            const Duration(milliseconds: 140),
+          );
           return AnimatedContainer(
-            duration: const Duration(milliseconds: 140),
+            duration: fx,
+            curve: motion.standard,
             height: compact ? 44 : 30 * m.k,
             padding: EdgeInsets.symmetric(horizontal: compact ? 24 : 17 * m.k),
             alignment: Alignment.center,
@@ -1168,39 +1468,50 @@ class _PrimaryState extends State<_Primary> {
               color: solid ? _ink : _ink.withValues(alpha: 0.22),
               borderRadius: BorderRadius.circular(compact ? 22 : 15 * m.k),
             ),
-            child: widget.busy
-                ? SizedBox(
-                    width: compact ? 44 : 32 * m.k,
-                    child: Center(
-                      child: SizedBox(
-                        width: compact ? 16 : 11 * m.k,
-                        height: compact ? 16 : 11 * m.k,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: solid ? Colors.black : _ink,
+            // The ink crosses over WITH the fill rather than snapping ahead
+            // of it — black type on a still-translucent pill was the frame
+            // that read as a flash. One colour tween feeds glyph and label.
+            child: TweenAnimationBuilder<Color?>(
+              duration: fx,
+              curve: motion.standard,
+              tween: ColorTween(end: solid ? Colors.black : _ink),
+              builder: (_, fg, __) {
+                final ink = fg ?? _ink;
+                return widget.busy
+                    ? SizedBox(
+                        width: compact ? 44 : 32 * m.k,
+                        child: Center(
+                          child: SizedBox(
+                            width: compact ? 16 : 11 * m.k,
+                            height: compact ? 16 : 11 * m.k,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: ink,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.play_arrow_rounded,
-                        size: compact ? 20 : 14 * m.k,
-                        color: solid ? Colors.black : _ink,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        widget.label,
-                        style: TextStyle(
-                          fontSize: compact ? 15 : 10.5 * m.k,
-                          fontWeight: FontWeight.w600,
-                          color: solid ? Colors.black : _ink,
-                        ),
-                      ),
-                    ],
-                  ),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.play_arrow_rounded,
+                            size: compact ? 20 : 14 * m.k,
+                            color: ink,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            widget.label,
+                            style: TextStyle(
+                              fontSize: compact ? 15 : 10.5 * m.k,
+                              fontWeight: FontWeight.w600,
+                              color: ink,
+                            ),
+                          ),
+                        ],
+                      );
+              },
+            ),
           );
         },
       ),
@@ -1261,12 +1572,26 @@ class _CircleState extends State<_Circle> {
             // Hover and focus both light the pill: DPAD/keyboard land on
             // `_f`, a desktop pointer on `_h` — same treatment either way.
             final lit = _f || _h;
+            // The shared TV focus beat (the pill, the poster and the ring
+            // all run it), or the circle's own 140ms under a pointer.
+            final motion = AppMotion.of(context);
+            final fx = motion.focusTempo(
+              PlatformUtil.isTelevision,
+              const Duration(milliseconds: 140),
+            );
+            // The glyph's ink crosses over with the fill, on the same tween,
+            // so no frame shows black on a still-translucent circle.
             final glyph =
                 widget.mark ??
-                Icon(
-                  widget.icon,
-                  size: compact ? 20 : 13 * m.k,
-                  color: lit ? Colors.black : _ink,
+                TweenAnimationBuilder<Color?>(
+                  duration: fx,
+                  curve: motion.standard,
+                  tween: ColorTween(end: lit ? Colors.black : _ink),
+                  builder: (_, fg, __) => Icon(
+                    widget.icon,
+                    size: compact ? 20 : 13 * m.k,
+                    color: fg ?? _ink,
+                  ),
                 );
             // Lit (non-compact): the circle stretches into a pill that
             // names itself — the tooltip a DPAD user can actually read.
@@ -1275,42 +1600,46 @@ class _CircleState extends State<_Circle> {
             // falls back to the platform's long-press Tooltip below.
             final labelled = lit && !compact;
             final body = AnimatedContainer(
-              duration: const Duration(milliseconds: 140),
+              duration: fx,
+              curve: motion.standard,
               height: d,
               decoration: BoxDecoration(
                 color: lit ? _ink : _ink.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(d / 2),
               ),
               child: AnimatedSize(
-                duration: const Duration(milliseconds: 140),
-                curve: Curves.easeOutCubic,
+                duration: fx,
+                curve: motion.standard,
                 alignment: Alignment.centerLeft,
-                child: labelled
-                    ? Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10 * m.k),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            glyph,
-                            SizedBox(width: 6 * m.k),
-                            Text(
-                              widget.label,
-                              maxLines: 1,
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 11 * m.k,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                          ],
+                // ONE row in both states: the glyph keeps its resting
+                // circle as its slot and the label joins to its right, so
+                // stretching into the pill never rebuilds the glyph. The
+                // old shape swapped a bare circle for a padded row, which
+                // remounted the icon — a flash no duration could hide.
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: d,
+                      height: d,
+                      child: Center(child: glyph),
+                    ),
+                    if (labelled)
+                      Padding(
+                        padding: EdgeInsets.only(right: 10 * m.k),
+                        child: Text(
+                          widget.label,
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 11 * m.k,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
+                          ),
                         ),
-                      )
-                    : SizedBox(
-                        width: d,
-                        height: d,
-                        child: Center(child: glyph),
                       ),
+                  ],
+                ),
               ),
             );
             if (!compact) return body;
@@ -1437,7 +1766,9 @@ class _SeasonDropdownState extends State<_SeasonDropdown> {
       onKeyEvent: (_, e) => _activate(e, _open),
       child: GestureDetector(
         onTap: _open,
-        child: Container(
+        child: AnimatedContainer(
+          duration: AppMotion.of(context).fast,
+          curve: AppMotion.of(context).standard,
           height: 34,
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
@@ -1488,6 +1819,10 @@ class _SeasonPillState extends State<_SeasonPill> {
   @override
   Widget build(BuildContext context) {
     final k = ShowcaseMetrics.of(context).k;
+    // The pill's fill and its type share the TV focus beat with the lift
+    // `ParallaxFocus` runs, so all three leave and arrive together.
+    final motion = AppMotion.of(context);
+    final fx = PlatformUtil.isTelevision ? motion.tvFocus : motion.fast;
     return Focus(
       focusNode: widget.node,
       onFocusChange: (v) {
@@ -1509,23 +1844,31 @@ class _SeasonPillState extends State<_SeasonPill> {
           focused: _f,
           shape: ParallaxShape.pill,
           radius: BorderRadius.circular(12.5 * k),
-          child: Container(
+          child: AnimatedContainer(
+            duration: fx,
+            curve: motion.standard,
             height: 25 * k,
             alignment: Alignment.center,
             padding: EdgeInsets.symmetric(horizontal: 15 * k),
             decoration: BoxDecoration(
-              color: (_f || widget.active)
-                  ? _ink.withValues(alpha: _f ? 0.28 : 0.18)
-                  : null,
+              color: _ink.withValues(
+                alpha: _f
+                    ? 0.28
+                    : widget.active
+                    ? 0.18
+                    : 0,
+              ),
               borderRadius: BorderRadius.circular(12.5 * k),
             ),
-            child: Text(
-              widget.label,
+            child: AnimatedDefaultTextStyle(
+              duration: fx,
+              curve: motion.standard,
               style: _t(
                 12.5 * k,
                 w: FontWeight.w600,
                 a: widget.active || _f ? 1 : 0.55,
               ),
+              child: Text(widget.label),
             ),
           ),
         ),
@@ -1580,6 +1923,12 @@ class ShowcaseEpisodeCell extends StatelessWidget {
     // focus by lifting, and the caption below it gains a filled card. Splitting
     // them lets each do its own job.
     final slot = _slotFill(AppThemeScope.of(context));
+    // The plate rides the TV focus beat with the still's lift above it.
+    final motion = AppMotion.of(context);
+    final fx = motion.focusTempo(
+      PlatformUtil.isTelevision,
+      const Duration(milliseconds: 160),
+    );
     return SizedBox(
       width: cellWidth ?? m.epCell,
       child: Column(
@@ -1660,7 +2009,8 @@ class ShowcaseEpisodeCell extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
+            duration: fx,
+            curve: motion.standard,
             width: double.infinity,
             // Padded on BOTH states, so gaining the plate does not shift the
             // text sideways — only its ground appears.
@@ -1746,6 +2096,12 @@ class ShowcaseEpisodeCardCompact extends StatelessWidget {
     final watched = p >= 100;
     final url = episode.thumbnailUrl ?? fallbackImage;
     final slot = _slotFill(app);
+    // The plate rides the TV focus beat with the still's lift above it.
+    final motion = AppMotion.of(context);
+    final fx = motion.focusTempo(
+      PlatformUtil.isTelevision,
+      const Duration(milliseconds: 160),
+    );
 
     return ParallaxFocus(
       focused: focused,
@@ -1816,7 +2172,8 @@ class ShowcaseEpisodeCardCompact extends StatelessWidget {
             ),
             Expanded(
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
+                duration: fx,
+                curve: motion.standard,
                 // The wide/TV cell's answer to focus, echoed here for the
                 // scroll-settled card: the caption gains an ink plate while
                 // the still lifts. Padded identically in BOTH states so
@@ -1962,7 +2319,15 @@ class ShowcaseCast extends StatelessWidget {
   final List<CastMember> cast;
   final List<FocusNode> nodes;
 
-  const ShowcaseCast({super.key, required this.cast, required this.nodes});
+  /// Opens the actor's known-for titles; null keeps the band read-only.
+  final void Function(CastMember)? onTap;
+
+  const ShowcaseCast({
+    super.key,
+    required this.cast,
+    required this.nodes,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1976,8 +2341,12 @@ class ShowcaseCast extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: m.gutter),
         itemCount: cast.length,
         separatorBuilder: (_, __) => SizedBox(width: m.castGap),
-        itemBuilder: (context, i) =>
-            _CastTile(member: cast[i], node: nodes[i], size: m.circle),
+        itemBuilder: (context, i) => _CastTile(
+          member: cast[i],
+          node: nodes[i],
+          size: m.circle,
+          onTap: onTap,
+        ),
       ),
     );
   }
@@ -1987,11 +2356,13 @@ class _CastTile extends StatefulWidget {
   final CastMember member;
   final FocusNode node;
   final double size;
+  final void Function(CastMember)? onTap;
 
   const _CastTile({
     required this.member,
     required this.node,
     required this.size,
+    this.onTap,
   });
 
   @override
@@ -2005,61 +2376,83 @@ class _CastTileState extends State<_CastTile> {
   Widget build(BuildContext context) {
     final url = widget.member.imageUrl;
     final k = ShowcaseMetrics.of(context).k;
+    // Under any look but the parallax one ParallaxFocus returns its child
+    // untouched, so the shared grow is this tile's cursor there — and stays
+    // out of the way where the lift already owns the growth.
+    final grows =
+        AppThemeScope.of(context).focus.expression != FocusExpression.parallax;
+    // Only a credit IMDb gave a name id can lead anywhere. Without one (or
+    // without a host handler) the tile stays ambient reading — SELECT and tap
+    // do nothing — but the lift still answers "am I on this one".
+    final open = widget.onTap;
+    final nameId = widget.member.nameId;
+    final VoidCallback? activate =
+        open == null || nameId == null || nameId.isEmpty
+        ? null
+        : () => open(widget.member);
     return Focus(
       focusNode: widget.node,
       onFocusChange: (v) {
         setState(() => _f = v);
         if (v) _keepVisible(context);
       },
-      // Basic cursor: a cast tile is ambient reading — SELECT and tap do
-      // nothing — but the lift still answers "am I on this one".
+      onKeyEvent: (_, e) => _activate(e, activate),
       child: _Hover(
-        cursor: MouseCursor.defer,
-        builder: (context, hovered) => SizedBox(
-          width: widget.size,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ParallaxFocus(
-                focused: _f || hovered,
-                shape: ParallaxShape.castCircle,
-                radius: BorderRadius.circular(widget.size / 2),
-                child: ClipOval(
-                  child: SizedBox(
-                    width: widget.size,
-                    height: widget.size,
-                    child: (url != null && url.isNotEmpty)
-                        ? CachedNetworkImage(
-                            imageUrl: url,
-                            fit: BoxFit.cover,
-                            cacheManager: DebrifyImageCache.manager,
-                            memCacheWidth: 260,
-                            placeholder: (_, __) =>
-                                const ColoredBox(color: Color(0xFF4A4A55)),
-                            errorWidget: (_, __, ___) =>
-                                const ColoredBox(color: Color(0xFF4A4A55)),
-                          )
-                        : const ColoredBox(color: Color(0xFF4A4A55)),
+        cursor: activate == null ? MouseCursor.defer : SystemMouseCursors.click,
+        builder: (context, hovered) => GestureDetector(
+          onTap: activate,
+          behavior: HitTestBehavior.opaque,
+          child: SizedBox(
+            width: widget.size,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                HoverGrow(
+                  active: _f || hovered,
+                  isTelevision: PlatformUtil.isTelevision,
+                  enabled: grows,
+                  child: ParallaxFocus(
+                    focused: _f || hovered,
+                    shape: ParallaxShape.castCircle,
+                    radius: BorderRadius.circular(widget.size / 2),
+                    child: ClipOval(
+                      child: SizedBox(
+                        width: widget.size,
+                        height: widget.size,
+                        child: (url != null && url.isNotEmpty)
+                            ? CachedNetworkImage(
+                                imageUrl: url,
+                                fit: BoxFit.cover,
+                                cacheManager: DebrifyImageCache.manager,
+                                memCacheWidth: 260,
+                                placeholder: (_, __) =>
+                                    const ColoredBox(color: Color(0xFF4A4A55)),
+                                errorWidget: (_, __, ___) =>
+                                    const ColoredBox(color: Color(0xFF4A4A55)),
+                              )
+                            : const ColoredBox(color: Color(0xFF4A4A55)),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 9),
-              Text(
-                widget.member.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: _t(12.5 * k),
-              ),
-              if ((widget.member.character ?? '').isNotEmpty)
+                const SizedBox(height: 9),
                 Text(
-                  widget.member.character!,
+                  widget.member.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: _t(11.5 * k, a: 0.55),
+                  style: _t(12.5 * k),
                 ),
-            ],
+                if ((widget.member.character ?? '').isNotEmpty)
+                  Text(
+                    widget.member.character!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: _t(11.5 * k, a: 0.55),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -2303,7 +2696,11 @@ class _PosterState extends State<_Poster> {
   @override
   Widget build(BuildContext context) {
     final url = widget.item.poster;
-    final slot = _slotFill(AppThemeScope.of(context));
+    final app = AppThemeScope.of(context);
+    final slot = _slotFill(app);
+    // See _CastTile: the shared grow is the cursor wherever the parallax lift
+    // is not the theme's expression, and disabled where it is.
+    final grows = app.focus.expression != FocusExpression.parallax;
     return Focus(
       focusNode: widget.node,
       onFocusChange: (v) {
@@ -2320,24 +2717,29 @@ class _PosterState extends State<_Poster> {
           // while its width stays `m.poster`, drawing a 2:3 poster at about
           // 0.53:1.
           child: Align(
-            child: ParallaxFocus(
-              focused: _f || hovered,
-              radius: BorderRadius.circular(7),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(7),
-                child: SizedBox(
-                  width: widget.width,
-                  height: widget.height,
-                  child: (url != null && url.isNotEmpty)
-                      ? CachedNetworkImage(
-                          imageUrl: url,
-                          fit: BoxFit.cover,
-                          cacheManager: DebrifyImageCache.manager,
-                          memCacheWidth: 300,
-                          placeholder: (_, __) => ColoredBox(color: slot),
-                          errorWidget: (_, __, ___) => ColoredBox(color: slot),
-                        )
-                      : ColoredBox(color: slot),
+            child: HoverGrow(
+              active: _f || hovered,
+              isTelevision: PlatformUtil.isTelevision,
+              enabled: grows,
+              child: ParallaxFocus(
+                focused: _f || hovered,
+                radius: BorderRadius.circular(7),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(7),
+                  child: SizedBox(
+                    width: widget.width,
+                    height: widget.height,
+                    child: (url != null && url.isNotEmpty)
+                        ? CachedNetworkImage(
+                            imageUrl: url,
+                            fit: BoxFit.cover,
+                            cacheManager: DebrifyImageCache.manager,
+                            memCacheWidth: 300,
+                            placeholder: (_, __) => ColoredBox(color: slot),
+                            errorWidget: (_, __, ___) => ColoredBox(color: slot),
+                          )
+                        : ColoredBox(color: slot),
+                  ),
                 ),
               ),
             ),

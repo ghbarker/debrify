@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:debrify/screens/settings/settings_catalog.dart';
 import 'package:debrify/screens/settings/settings_page_registry.dart';
 import 'package:debrify/screens/settings/settings_page_spec.dart';
+import 'package:debrify/screens/settings/widgets/appearance_preview_card.dart';
+import 'package:debrify/screens/settings/widgets/settings_option_row.dart';
 import 'package:debrify/screens/settings/widgets/settings_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,6 +38,18 @@ void main() {
     }
   });
 
+  test('the live preview opens the pane and claims exactly node zero', () {
+    expect(appearance.first, isA<AppearancePreviewHost>());
+    final preview = appearance.first as AppearancePreviewHost;
+    expect(nodes.indexOf(preview.focusNode!), 0);
+    expect(
+      appearance.whereType<AppearancePreviewHost>().length,
+      1,
+      reason: 'one preview card — the old ACTIVE LOOK hero is absorbed',
+    );
+    expect(appearance.whereType<SettingsLookHero>(), isEmpty);
+  });
+
   test('pane focus indices are contiguous from zero across every group', () {
     final indices = _claimedIndices(appearance, nodes);
     expect(indices, isNotEmpty);
@@ -64,6 +78,14 @@ void main() {
       lessThan(pool),
       reason: 'a row past the pool throws on build',
     );
+    // The registry's own count must agree with what was actually claimed —
+    // it sizes the pool, and it has to know about the preview's node.
+    final registry = SettingsPageRegistry(
+      pages: buildSettingsPages(
+        SettingsPageBindings.noop(isAndroidTv: true, isTelevision: true),
+      ),
+    );
+    expect(registry.tvFocusableCount('Appearance'), highest + 1);
   });
 
   test('every group carries a header and an explanation', () {
@@ -105,11 +127,16 @@ List<int> _claimedIndices(List<Widget> widgets, List<FocusNode> pool) {
   final out = <int>[];
   void walk(Widget w) {
     FocusNode? node;
-    if (w is SettingsLookHero) {
+    if (w is AppearancePreviewHost) {
+      node = w.focusNode;
+    } else if (w is SettingsLookHero) {
       node = w.focusNode;
     } else if (w is SettingsTile) {
       node = w.focusNode;
     } else if (w is SettingsToggleTile) {
+      node = w.focusNode;
+    } else if (w is SettingsOptionRow) {
+      // An inline layouts row: one node for the whole strip.
       node = w.focusNode;
     }
     if (node != null) {

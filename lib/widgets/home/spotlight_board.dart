@@ -2650,11 +2650,16 @@ class _CardState extends State<_Card> {
     // FocusExpressionBox: its parallax arm clips the glare at the theme's
     // scaled radius, and Spotlight's 0.7 shape scale would shrink the
     // shipped look's clip from 7 to 4.9.
+    // `grow: true` — a poster card with its own band to grow into: off
+    // parallax the theme's cursor also grows the art by the shared tile figure
+    // (`HoverGrow`), so a pointer on this board gets the same "bigger" every
+    // other poster gives, whichever look is running.
     final cursored = app.focus.expression == FocusExpression.parallax
         ? art
         : FocusExpressionBox(
             focused: _f || _h,
             radius: widget.radius,
+            grow: true,
             child: art,
           );
 

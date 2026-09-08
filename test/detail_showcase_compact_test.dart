@@ -665,9 +665,9 @@ void main() {
     expect(_bandOpacity(tester, 'seasons'), 1,
         reason: 'the peek band is visible at rest, so it has already arrived');
 
-    // Cast sits a screenful further down. Mounted — `cacheExtent` builds well
-    // past the fold — but not yet arrived, which is exactly the case a
-    // mount-triggered reveal gets wrong.
+    // Cast sits well below the fold (under Episodes and Sources). Mounted —
+    // `cacheExtent` builds well past the fold — but not yet arrived, which is
+    // exactly the case a mount-triggered reveal gets wrong.
     expect(_bandOpacity(tester, 'cast'), 0,
         reason: 'built ahead of the fold, but not revealed');
 
@@ -690,7 +690,8 @@ void main() {
     // which composes the paint transforms of every ancestor. Measuring a band
     // through a half-played entrance parks it off its `rest` alignment, so
     // the band is snapped to rest BEFORE the scroll is computed.
-    for (var i = 0; i < 3; i++) {
+    // seasons → episodes → sources → cast.
+    for (var i = 0; i < 4; i++) {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
     }

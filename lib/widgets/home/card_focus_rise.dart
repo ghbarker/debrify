@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_motion.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../theme/widgets/focus_expression.dart';
+import '../../theme/widgets/hover_grow.dart';
 
 /// Violet-300 focus ring — a light ring over dark art pops at 10ft, while the
-/// deep accent stays for chrome (tags, sidebar). Pairs with the calm 1.045
-/// scale below.
+/// deep accent stays for chrome (tags, sidebar). Pairs with the calm TV pop
+/// (`FocusTokens.tvHoverScale`) the rise below grows by.
 const Color kCardFocusRing = Color(0xFFA78BFA);
 
 /// Shared focus "rise" chrome for 2:3 poster cards: scale, shadow and
@@ -16,9 +18,11 @@ const Color kCardFocusRing = Color(0xFFA78BFA);
 /// TWO fixed-blur layers whose colours crossfade (blurRadius/offset are
 /// identical on both ends of the lerp, so the tween never re-derives a blur —
 /// it only fades a pre-shaped one, and the transparent lift layer is skipped
-/// at rest); the ring fades via opacity (skipped at 0). 120ms on TV: two cards
-/// animate on every DPAD move (loser + gainer), so the shorter the tween, the
-/// shorter the double-repaint window.
+/// at rest); the ring fades via opacity (skipped at 0). `AppMotion.tvFocus`
+/// on TV (legacy 120ms): two cards animate on every DPAD move (loser +
+/// gainer), so the shorter the tween, the shorter the double-repaint window —
+/// and since this rise was the first TV control to animate, its tempo is the
+/// one every other TV focus treatment now shares.
 ///
 /// Lives here, outside the board, because the Discover stage's shelf wears the
 /// same grammar — focus-feel tuning has to land ONCE for every poster the user
@@ -63,32 +67,51 @@ class CardFocusRise extends StatelessWidget {
   /// Sits inside the AspectRatio so the theme's ring hugs the card rather than
   /// whatever slot the shelf handed us, and takes no `on:` — a poster's
   /// background is its artwork, which this widget never sees.
+  ///
+  /// `grow: true`: this is a poster card, so the theme's cursor grows it by
+  /// the shared [HoverGrow] figure on top of whatever it draws — a ring, an
+  /// underline, an inverted or flooded face, a lift — and `scale`/`lift`
+  /// hand their small cursor scale over to that one figure. Without it a
+  /// pointer on a `ring` look lit the ring and moved nothing, which on a
+  /// desktop is the one piece of feedback the user was asking for.
   Widget _cursor(bool ownCursor, Widget child) => ownCursor
       ? child
-      : FocusExpressionBox(focused: active, radius: 10, child: child);
+      : FocusExpressionBox(
+          focused: active,
+          radius: 10,
+          grow: true,
+          child: child,
+        );
 
   @override
   Widget build(BuildContext context) {
-    final focusFx = isTelevision
-        ? const Duration(milliseconds: 120)
-        : const Duration(milliseconds: 160);
+    // One tempo for the whole trio, from the theme — [HoverGrow] runs its
+    // scale on the same figure, so the shadow and the ring below can never
+    // drift from it. Resolved here in build, above every animated widget.
+    final motion = AppMotion.of(context);
+    final focusFx = HoverGrow.durationFor(motion, isTelevision);
     // Legacy keeps the whole rise — scale, lift shadow and ring — because that
     // trio IS this widget's cursor, and it is tuned as one: the ring is 2.5 on
     // TV but 1.5 elsewhere, and `FocusTokens.legacy` is 2.5 with no width
     // override to hand a site. Every other theme gets one cursor, the one it
     // asked for, instead of the theme's expression stacked on this one.
     final ownCursor = AppThemeScope.of(context).isLegacy;
-    return AnimatedScale(
-      duration: focusFx,
-      curve: Curves.easeOutCubic,
-      // TV pop calmed from 1.09 to the Nuvio-class 1.045: with the lighter
-      // ring the smaller lift reads premium, and neighbours shift less.
-      scale: active && ownCursor ? (isTelevision ? 1.045 : 1.05) : 1.0,
+    // The grow is the shared one: `FocusTokens.hoverScaleFor` — the TV pop
+    // calmed from 1.09 to the Nuvio-class 1.045 (with the lighter ring the
+    // smaller lift reads premium, and neighbours shift less), and the same
+    // 1.12 under a pointer that every other poster tile grows by. Legacy only
+    // at this level: off legacy the SAME grow is applied by the theme's
+    // cursor (`FocusExpressionBox.grow`, inside the AspectRatio), so every
+    // card carries exactly one scale transform whichever path it takes.
+    return HoverGrow(
+      active: active,
+      enabled: ownCursor,
+      isTelevision: isTelevision,
       child: AspectRatio(
         aspectRatio: aspectRatio,
         child: _cursor(ownCursor, AnimatedContainer(
           duration: focusFx,
-          curve: Curves.easeOutCubic,
+          curve: motion.standard,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
@@ -124,7 +147,7 @@ class CardFocusRise extends StatelessWidget {
                     child: IgnorePointer(
                       child: AnimatedContainer(
                         duration: focusFx,
-                        curve: Curves.easeOutCubic,
+                        curve: motion.standard,
                         color: active ? Colors.transparent : restVeil,
                       ),
                     ),
@@ -139,7 +162,7 @@ class CardFocusRise extends StatelessWidget {
                       child: AnimatedOpacity(
                         opacity: active ? 1.0 : 0.0,
                         duration: focusFx,
-                        curve: Curves.easeOutCubic,
+                        curve: motion.standard,
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),

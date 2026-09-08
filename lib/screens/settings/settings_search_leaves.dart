@@ -1,3 +1,4 @@
+import '../../services/tv_motion_profile.dart';
 import 'settings_page_spec.dart';
 
 /// In-page options, keyed by [SettingsPageSpec.id]. Moved verbatim from
@@ -21,6 +22,36 @@ Map<String, List<SettingsLeafSpec>> settingsLeavesByPage(
   );
 
   return {
+    // Appearance → Display → TV motion. Each chip is its own hit, and a hit
+    // APPLIES the profile — the row has no page to open.
+    'tvMotion': [
+      for (final profile in TvMotionProfile.values)
+        leaf(
+          'TV motion: ${profile.label}',
+          profile.blurb,
+          const [
+            'tv motion',
+            'motion',
+            'animation',
+            'animations',
+            'focus',
+            'tween',
+            'transition',
+            'transitions',
+            'smooth',
+            'snappy',
+            'fast',
+            'slow',
+            'speed',
+            'tempo',
+            'shield',
+            'display',
+            'home & display',
+          ],
+          onTap: () =>
+              (b.selectTvMotionProfile ?? TvMotionController.select)(profile),
+        ),
+    ],
     'torbox': [
       leaf(
         'Check Torbox cache during searches',
@@ -454,6 +485,60 @@ Map<String, List<SettingsLeafSpec>> settingsLeavesByPage(
         'Prefer season packs',
         'Grab whole seasons, or fetch one episode',
         const ['series', 'packs', 'season pack', 'episode'],
+      ),
+      leaf(
+        'Failover chain',
+        'Same service first, nearest resolution, then later services',
+        const [
+          'failover',
+          'fallback',
+          'chain',
+          'resolution',
+          'siblings',
+          'debrid',
+          'provider order',
+          'later providers',
+          'streams per service',
+        ],
+      ),
+      leaf(
+        'Provider order',
+        'Which debrid services the failover chain tries, and in what order',
+        const [
+          'debrid order',
+          'real-debrid',
+          'torbox',
+          'premiumize',
+          'alldebrid',
+          'pikpak',
+          'reorder',
+          'failover',
+        ],
+      ),
+      leaf(
+        'Resolution match',
+        'Nearest resolution, same resolution only, or ignore resolution',
+        const ['resolution', '1080p', '4k', 'quality', 'match', 'failover'],
+      ),
+      leaf(
+        'Liveness probe',
+        'Check a link is alive (Range: bytes=0-0) before playing it',
+        const [
+          'probe',
+          'range',
+          'liveness',
+          'dead link',
+          'timeout',
+          'never probe',
+          'premiumize',
+          'pikpak',
+          'failover',
+        ],
+      ),
+      leaf(
+        'Demote recently served links',
+        'Links that just failed are tried last on a re-pick',
+        const ['demote', 'recently served', 'window', 'retry', 'failover'],
       ),
       leaf(
         'Restore defaults',

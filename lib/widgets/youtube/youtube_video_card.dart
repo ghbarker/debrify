@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/youtube_service.dart';
+import '../../theme/app_motion.dart';
 import '../../theme/app_theme_scope.dart';
 import '../browse/brand_accent.dart';
 import '../../utils/tv_keys.dart';
@@ -89,6 +90,7 @@ class _YoutubeVideoCardState extends State<YoutubeVideoCard> {
     final fx = widget.isTelevision
         ? Duration.zero
         : const Duration(milliseconds: 160);
+    final motion = AppMotion.of(context);
 
     return Focus(
       focusNode: _focusNode,
@@ -100,9 +102,12 @@ class _YoutubeVideoCardState extends State<YoutubeVideoCard> {
               context,
               alignment: 0.5,
               alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
-              duration: widget.isTelevision
-                  ? Duration.zero
-                  : const Duration(milliseconds: 280),
+              // TV: `AppMotion.tvScroll` (the snap under snappy, a glide
+              // under smooth); the pointer figure keeps its number.
+              duration: motion.scrollTempo(
+                widget.isTelevision,
+                const Duration(milliseconds: 280),
+              ),
               curve: Curves.easeOutCubic,
             );
           });

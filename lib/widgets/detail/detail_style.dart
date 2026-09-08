@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../theme/app_light.dart';
+import '../../theme/app_motion.dart';
 import '../../theme/app_texture.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/platform_util.dart';
@@ -298,22 +299,33 @@ class DetailFocusRing extends StatelessWidget {
     // `isTelevision`, so the Apple TV port gets the same policy — see the
     // note in theme/app_texture.dart.
     final tv = PlatformUtil.isTelevision;
+    // The shared TV focus beat, or the ring's own 140ms under a pointer: the
+    // ring leaving fades over the same beat the ring arriving draws in, so
+    // a step across the action row reads as one cursor moving rather than
+    // two rings swapping. A border colour — cheap even under a held key.
+    final motion = AppMotion.of(context);
+    final fx = motion.focusTempo(tv, const Duration(milliseconds: 140));
     // An outward ring cannot be a foreground decoration — it has to be drawn
     // outside the child's bounds, which only a non-layout-affecting overlay
     // can do. Signal's offset is 0, so Signal keeps the in-bounds path exactly.
+    // Always mounted, fading — so focus never inserts a sibling and the
+    // child's own subtree stays put.
     if (t.focusOffset > 0) {
       final o = t.focusOffset;
       return Stack(
         clipBehavior: Clip.none,
         children: [
           child,
-          if (focused)
-            Positioned(
-              left: -o,
-              top: -o,
-              right: -o,
-              bottom: -o,
-              child: IgnorePointer(
+          Positioned(
+            left: -o,
+            top: -o,
+            right: -o,
+            bottom: -o,
+            child: IgnorePointer(
+              child: AnimatedOpacity(
+                opacity: focused ? 1 : 0,
+                duration: fx,
+                curve: motion.standard,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     shape: radius == null
@@ -330,13 +342,13 @@ class DetailFocusRing extends StatelessWidget {
                 ),
               ),
             ),
+          ),
         ],
       );
     }
     return AnimatedContainer(
-      // Snap on TV (house idiom): a ring fade per DPAD move repaints every
-      // element in flight while a held key surfs the rail.
-      duration: tv ? Duration.zero : const Duration(milliseconds: 140),
+      duration: fx,
+      curve: motion.standard,
       foregroundDecoration: BoxDecoration(
         shape: radius == null ? BoxShape.circle : BoxShape.rectangle,
         borderRadius: radius,

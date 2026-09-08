@@ -7,6 +7,8 @@ import '../../services/debrify_image_cache.dart';
 import '../../services/imdb_parents_guide_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/trakt/trakt_episode_model.dart';
+import '../../theme/app_motion.dart';
+import '../../utils/platform_util.dart';
 import '../episodes_panel.dart';
 import '../horizontal_mouse_wheel.dart';
 import '../parents_guide_section.dart';
@@ -785,7 +787,11 @@ class _DetailPremiumState extends State<DetailPremium> {
         targetContext,
         alignment: 0.5,
         alignmentPolicy: alignmentPolicy,
-        duration: Duration.zero,
+        // TV: `AppMotion.tvScroll`; elsewhere the shipped jump.
+        duration: AppMotion.of(targetContext).scrollTempo(
+          PlatformUtil.isTelevision,
+          Duration.zero,
+        ),
       );
     });
   }

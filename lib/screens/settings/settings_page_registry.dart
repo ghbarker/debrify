@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'settings_page_spec.dart';
 import 'settings_search.dart';
+import 'widgets/appearance_preview_card.dart';
+import 'widgets/settings_option_row.dart';
 import 'widgets/settings_widgets.dart';
+
+/// Pane nodes the Appearance preview claims on TV — its whole Look strip is
+/// one focus stop. Kept next to the registry's count so the two agree.
+const int kAppearancePreviewTvNodes = 1;
 
 /// Canonical 13-category rail. Labels MUST stay in this order — pinned by
 /// `test/settings_page_order_pin_test.dart`.
@@ -242,7 +248,9 @@ class SettingsPageRegistry {
   /// About version chip is the existing case). Used to size the pane node
   /// pool so a new row cannot land past the pool.
   int tvFocusableCount(String category) {
-    var n = 0;
+    // The Appearance preview card is mounted by buildSettingsCategoryChildren
+    // rather than registered as a page, and its Look strip takes one node.
+    var n = category == 'Appearance' ? kAppearancePreviewTvNodes : 0;
     for (final page in pages) {
       if (!page.tv || page.category != category) continue;
       if (page.kindOn(SettingsLayoutSurface.tv) == SettingsRowKind.info) {
@@ -351,6 +359,19 @@ Widget settingsPageRow(
       );
     case SettingsRowKind.info:
       return SettingsInfoTile.spec(spec.row, value: spec.resolvedSubtitle);
+    case SettingsRowKind.options:
+      // One node for the whole row (Left/Right inside), like any other row —
+      // so the TV pane's positional walk and tvFocusableCount are unchanged.
+      // singleRow follows the SURFACE being built, not ambient device
+      // detection: a long option list (Details Page's 11) wraps into an
+      // unreachable second row on any D-pad surface, tests included.
+      return SettingsOptionRow(
+        icon: spec.row.icon,
+        title: spec.title,
+        options: spec.layoutOptions!,
+        focusNode: focusNode,
+        singleRow: surface == SettingsLayoutSurface.tv,
+      );
     case SettingsRowKind.url:
       return SettingsTile.spec(
         spec.row,
@@ -375,12 +396,27 @@ Widget settingsPageRow(
 /// TV: [paneNodes] are claimed sequentially so Up/Down stays contiguous —
 /// the DPAD walker only advances to the immediately adjacent live node, so
 /// a gap strands Down. Info tiles and section headers take no node.
+///
+/// Appearance opens with [AppearancePreviewHost], which is not a page: it
+/// claims the FIRST node (its Look strip is one focus stop, Left/Right inside
+/// it) so entering the pane lands on the preview and Down reaches the Presets
+/// rows. [SettingsPageRegistry.tvFocusableCount] counts that node too, so the
+/// pane pool always covers it.
+///
+/// [includeAppearancePreview] (default true) controls only whether the
+/// preview WIDGET is in the returned list — the node it claims is reserved
+/// either way, so every other row's index is identical regardless. A shell
+/// that pins the preview outside the scrolling body passes false here and
+/// builds `AppearancePreviewHost(focusNode: paneNodes[0])` itself as the
+/// pinned header (see `settings_spotlight_shell.dart` and
+/// `settings_tv_layout.dart`).
 List<Widget> buildSettingsCategoryChildren({
   required SettingsPageRegistry registry,
   required SettingsLayoutSurface surface,
   required String category,
   List<FocusNode>? paneNodes,
   Color? accentColor,
+  bool includeAppearancePreview = true,
 }) {
   final pages = registry.visibleOn(surface, category: category);
   if (pages.isEmpty) return const [];
@@ -393,6 +429,10 @@ List<Widget> buildSettingsCategoryChildren({
   }
 
   final heroes = <Widget>[];
+  if (category == 'Appearance') {
+    final node = nextNode();
+    if (includeAppearancePreview) heroes.add(AppearancePreviewHost(focusNode: node));
+  }
   final grouped = <String?, List<SettingsPageSpec>>{};
   for (final page in pages) {
     if (page.kindOn(surface) == SettingsRowKind.lookHero) {

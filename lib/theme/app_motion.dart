@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../services/tv_motion_profile.dart';
 import '../widgets/detail/theme/detail_theme.dart';
 import 'app_theme_scope.dart';
+import 'tv_motion_scope.dart';
+
+export '../services/tv_motion_profile.dart' show TvMotionProfile;
 
 /// A theme's tempo.
 ///
@@ -165,7 +169,9 @@ class MotionTokens {
   };
 
   /// Entrance choreography is a full-screen animation on the one platform
-  /// that cannot afford one.
+  /// that cannot afford one — under the snappy profile. This is the RAW token
+  /// policy; sites read [AppMotion.entrance], which also lets the smooth
+  /// profile keep the reveal and collapses it under reduced motion.
   EntranceStyle entranceFor(bool isTv) => isTv ? EntranceStyle.none : entrance;
 
   /// Lives here rather than as a private extension elsewhere: a reconstruction
@@ -241,8 +247,10 @@ class MotionTokens {
 ///
 /// `MediaQuery.disableAnimations` collapses every duration THIS API vends to
 /// zero. It cannot reach route-controller duration (a `PageTransitionsBuilder`
-/// receives an animation the route already created) and it does not reach
-/// literals that have not been migrated. Both are stated limits, not bugs.
+/// receives an animation the route already created — which is why
+/// `AppPageTransitionsBuilder` renders a plain fast fade under reduced motion
+/// instead) and it does not reach literals that have not been migrated. Both
+/// are stated limits, not bugs.
 ///
 /// **It applies under the legacy theme too, and that is deliberate.** The
 /// house rule is that legacy renders byte-for-byte what it always has — and
@@ -262,12 +270,25 @@ class AppMotion {
   /// surface that has opted out.
   final bool reduced;
 
-  const AppMotion(this.tokens, {required this.reduced});
+  /// How much a television may move — see [TvMotionProfile]. Read from
+  /// [TvMotionScope] by [of]; defaults to snappy (the shipped TV figures) for
+  /// a hand-built instance, so every pin written against the old behaviour
+  /// still describes it. Ignored by every non-TV getter.
+  final TvMotionProfile profile;
+
+  const AppMotion(
+    this.tokens, {
+    required this.reduced,
+    this.profile = TvMotionProfile.snappy,
+  });
 
   static AppMotion of(BuildContext context) => AppMotion(
     AppThemeScope.of(context).motion,
     reduced: MediaQuery.maybeDisableAnimationsOf(context) ?? false,
+    profile: TvMotionScope.of(context),
   );
+
+  bool get _smooth => profile == TvMotionProfile.smooth;
 
   Duration get fast => scaled(tokens.fast);
   Duration get base => scaled(tokens.base);
@@ -275,6 +296,105 @@ class AppMotion {
 
   Curve get standard => tokens.standard;
   Curve get emphasized => tokens.emphasized;
+
+  /// The TV cursor's tempo: how long focus takes to LEAVE one control and
+  /// ARRIVE on the next, as one shared figure for every control class.
+  ///
+  /// Every TV focus site used to snap (`Duration.zero`) for raster cost, and
+  /// the snap is what a viewer reads as a flash: the old control drops its
+  /// treatment in the very frame the new one gains it, so for one frame the
+  /// eye sees two states swap rather than one cursor move. A short tween on
+  /// BOTH ends — the loser and the gainer on the same duration and the same
+  /// curve — is what makes the cursor read as travelling. The figure is the
+  /// theme's `fast` (legacy 120ms): the shipped tempo of the board rise, the
+  /// one TV control that already animated and the one nobody called laggy.
+  /// Reduced motion collapses it to zero through [scaled], like every other
+  /// duration this API vends; that is also the only way a TV site may snap.
+  ///
+  /// A site that animates on TV must stay GPU-cheap over the tween: a
+  /// transform, a colour or an alpha — never a blur radius or a spread that
+  /// changes, which re-derives a shadow every frame. Shadows keep their
+  /// geometry on both ends and fade their colour; a transparent one costs
+  /// nothing at rest. `CardFocusRise` is the reference shape.
+  ///
+  /// The [profile] picks the figure: snappy is `fast` (the 120ms above);
+  /// smooth is `base` (legacy 220ms) — the pointer surfaces' own tempo, on a
+  /// box that renders it without dropping frames. The raster rules above
+  /// hold under both: a longer tween on the same cheap properties.
+  Duration get tvFocus => scaled(_smooth ? tokens.base : tokens.fast);
+
+  /// The curve a TV focus TRANSFORM runs on — the tile grow, the pill scale,
+  /// the parallax lift. Snappy keeps the theme's `standard`; smooth is
+  /// `emphasized`, the overshoot that makes a longer move read as arriving
+  /// with weight rather than merely taking longer.
+  ///
+  /// TRANSFORMS ONLY, by the token's own rule ("never use it on a size that
+  /// clips"). A colour or an alpha tween beside the transform stays on
+  /// `standard`: `Color.lerp` clamps, but a lerped `BoxDecoration` does not
+  /// — an overshooting `t` scales a departing shadow list negative and a
+  /// changing border width past zero, which asserts. Both run the same
+  /// [tvFocus] length, so the control still leaves and arrives as one.
+  Curve get tvFocusCurve => _smooth ? tokens.emphasized : tokens.standard;
+
+  /// [tvFocusCurve] on a TV; [otherwise] anywhere else — and under snappy,
+  /// where the site's own curve IS today's value and stays byte-exact.
+  Curve focusCurve(bool isTv, Curve otherwise) =>
+      isTv && _smooth ? tokens.emphasized : otherwise;
+
+  /// How long a TV scroll-follow (`Scrollable.ensureVisible` when the cursor
+  /// lands on a row) takes. Snappy: zero — the shipped jump, chosen because
+  /// even a short glide is a scrolled repaint on every frame of every step
+  /// on a weak box. Smooth: ~260ms on `standard`, the figure the pointer
+  /// surfaces' lists already follow at. Reduced motion collapses it to zero
+  /// in both profiles; the pointer figure a site passes to [scrollTempo]
+  /// gains the theme's scale and the same collapse.
+  Duration get tvScroll =>
+      _smooth ? scaled(const Duration(milliseconds: 260)) : Duration.zero;
+
+  /// The curve for [tvScroll]. Always `standard`: a scroll that overshoots
+  /// its target reads as a mis-scroll, not as weight.
+  Curve get tvScrollCurve => tokens.standard;
+
+  /// [tvScroll] on a TV; [otherwise] anywhere else, at the theme's tempo.
+  ///
+  /// [tvSnappy] is the TV figure the snappy profile keeps — zero for every
+  /// site but the Apple TV board glide, which passes its own 140ms.
+  Duration scrollTempo(
+    bool isTv,
+    Duration otherwise, {
+    Duration tvSnappy = Duration.zero,
+  }) => isTv ? (_smooth ? tvScroll : scaled(tvSnappy)) : scaled(otherwise);
+
+  /// The entrance choreography a TV gets for [style]. Snappy: none — the
+  /// full-screen reveal the weak box cannot afford. Smooth: [style] itself,
+  /// the same choreography the theme plays off TV.
+  EntranceStyle tvEntrance(EntranceStyle style) =>
+      _smooth ? style : EntranceStyle.none;
+
+  /// How this page's content arrives, everything considered: the theme's
+  /// token, the TV profile, and reduced motion — under which nothing arrives
+  /// with a fade or a rise, anywhere. The one entrance read a site may make.
+  EntranceStyle entrance(bool isTv) {
+    if (reduced) return EntranceStyle.none;
+    return isTv ? tvEntrance(tokens.entrance) : tokens.entrance;
+  }
+
+  /// Whether a TV route runs the shared-axis transition (smooth) instead of
+  /// the fast fade (snappy). Static because the one caller —
+  /// `AppPageTransitionsBuilder.buildTransitions` — runs per frame and may
+  /// not resolve an inherited [AppMotion]; it hands in the controller's
+  /// current profile the way it reads `PlatformUtil.isTelevision`.
+  static bool tvRoutesSharedAxis(TvMotionProfile profile) =>
+      profile == TvMotionProfile.smooth;
+
+  /// [tvFocus] on a TV; [otherwise] anywhere else, at the theme's tempo.
+  ///
+  /// The shape every focus site had by hand as `tv ? Duration.zero : literal`,
+  /// with the TV branch routed through the one token. The pointer figure
+  /// keeps its number and gains the theme's scale and the reduced-motion
+  /// collapse — the same migration every other adopted literal made.
+  Duration focusTempo(bool isTv, Duration otherwise) =>
+      isTv ? tvFocus : scaled(otherwise);
 
   /// [d] at this theme's tempo — or nothing at all under reduced motion.
   ///

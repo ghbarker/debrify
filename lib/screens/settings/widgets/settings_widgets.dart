@@ -12,6 +12,7 @@ import '../../../theme/app_theme.dart';
 import '../../../theme/app_surface.dart';
 import '../../../theme/app_theme_scope.dart';
 import '../../../theme/widgets/parallax_focus.dart';
+import '../../../utils/platform_util.dart';
 import '../../../widgets/shimmer.dart';
 
 /// Shared visual tokens for the Settings screens.
@@ -178,6 +179,11 @@ abstract final class SettingsRows {
     icon: Icons.hd_rounded,
     title: 'Rendering',
     subtitle: '',
+  );
+  static const tvMotion = SettingsRowContent(
+    icon: Icons.slow_motion_video_rounded,
+    title: 'TV motion',
+    subtitle: 'How much this TV moves: smooth or snappy',
   );
   static const tvHeroArtworkQuality = SettingsRowContent(
     icon: Icons.photo_size_select_large_rounded,
@@ -1500,10 +1506,17 @@ class _ConnectionCardState extends State<ConnectionCard> {
         child: MouseRegion(
           onEnter: (_) => setState(() => _hovered = true),
           onExit: (_) => setState(() => _hovered = false),
-          // Plain Container (snap, no tween): animating a blurred BoxShadow
-          // re-rasterizes per frame and janks weak TV GPUs (see
-          // tv_sidebar_nav.dart for the same rule).
-          child: Container(
+          // The shared TV focus beat (`AppMotion.tvFocus`), so the card the
+          // cursor leaves settles over exactly the beat the next one lights.
+          // Cheap to tween: fill and border are colours, and the glow keeps
+          // its geometry on both ends and fades its alpha — a blur radius
+          // that changed per frame is what used to jank weak TV GPUs, and a
+          // transparent shadow is skipped outright.
+          child: AnimatedContainer(
+            duration: PlatformUtil.isTelevision
+                ? _motion.tvFocus
+                : _motion.fast,
+            curve: _motion.standard,
             decoration: BoxDecoration(
               color: inverse
                   ? app.core.tx
@@ -1517,15 +1530,15 @@ class _ConnectionCardState extends State<ConnectionCard> {
                 color: inverse ? app.core.tx : (_focused ? t.accent : t.line),
                 width: 1,
               ),
-              boxShadow: _focused && !inverse
-                  ? [
-                      BoxShadow(
-                        color: t.accent.withValues(alpha: 0.28),
-                        blurRadius: 18,
-                        offset: const Offset(0, 6),
-                      ),
-                    ]
-                  : null,
+              boxShadow: [
+                BoxShadow(
+                  color: t.accent.withValues(
+                    alpha: _focused && !inverse ? 0.28 : 0.0,
+                  ),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
             child: Material(
               color: Colors.transparent,
@@ -1779,6 +1792,9 @@ class _SettingsLookHeroState extends State<SettingsLookHero> {
     final inverse = lit && app.focus.expression == FocusExpression.parallax;
     final foreground = inverse ? app.inkOn(app.core.tx) : app.core.tx;
     final radius = app.shape.br(13);
+    // The shared TV focus beat — see the note on `ConnectionCard`.
+    final motion = AppMotion.of(context);
+    final fx = PlatformUtil.isTelevision ? motion.tvFocus : motion.fast;
     return ParallaxFocus(
       focused: _focused,
       shape: ParallaxShape.settingsRow,
@@ -1792,7 +1808,9 @@ class _SettingsLookHeroState extends State<SettingsLookHero> {
           onHover: (value) => setState(() => _hovered = value),
           onTap: () async => await widget.onTap(),
           borderRadius: radius,
-          child: Container(
+          child: AnimatedContainer(
+            duration: fx,
+            curve: motion.standard,
             constraints: const BoxConstraints(minHeight: 116),
             padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 18),
             decoration: BoxDecoration(
@@ -2037,12 +2055,18 @@ class _SettingsTileState extends State<SettingsTile> {
         ? (inverse ? Color.lerp(t.danger, foreground, 0.38)! : t.danger)
         : (inverse ? foreground : (lit ? t.accent2 : t.dim));
     final radius = app.shape.br(12);
-    // Snap, don't tween — per-keypress decoration lerps add cost on TV.
+    // The shared TV focus beat — see the note on `ConnectionCard`. A fill
+    // and a border colour: cheap per frame, and the row the cursor leaves
+    // dims over exactly the beat the next one lights.
+    final motion = AppMotion.of(context);
+    final fx = PlatformUtil.isTelevision ? motion.tvFocus : motion.fast;
     return ParallaxFocus(
       focused: _focused,
       shape: ParallaxShape.settingsRow,
       radius: radius,
-      child: Container(
+      child: AnimatedContainer(
+        duration: fx,
+        curve: motion.standard,
         decoration: BoxDecoration(
           color: inverse ? app.core.tx : (lit ? t.panel2 : Colors.transparent),
           borderRadius: radius,
@@ -2245,12 +2269,16 @@ class _SettingsToggleTileState extends State<SettingsToggleTile> {
         spotlight && lit && app.focus.expression == FocusExpression.parallax;
     final foreground = inverse ? app.inkOn(app.core.tx) : app.core.tx;
     final radius = app.shape.br(12);
-    // Snap, don't tween — per-keypress decoration lerps add cost on TV.
+    // The shared TV focus beat — see the note on `ConnectionCard`.
+    final motion = AppMotion.of(context);
+    final fx = PlatformUtil.isTelevision ? motion.tvFocus : motion.fast;
     return ParallaxFocus(
       focused: _focused,
       shape: ParallaxShape.settingsRow,
       radius: radius,
-      child: Container(
+      child: AnimatedContainer(
+        duration: fx,
+        curve: motion.standard,
         decoration: BoxDecoration(
           color: inverse ? app.core.tx : (lit ? t.panel2 : Colors.transparent),
           borderRadius: radius,

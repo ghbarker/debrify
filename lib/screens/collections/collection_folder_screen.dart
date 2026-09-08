@@ -9,13 +9,13 @@ import '../../services/analytics_service.dart';
 import '../../services/collection_folder_loader.dart';
 import '../../services/home_collections_store.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
+import '../../services/storage_service.dart';
 import '../../services/stremio_service.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/home_rail_metrics.dart';
 import '../../widgets/collections/folder_hero_band.dart';
-import '../../widgets/collections/rail_see_all_pill.dart';
+import '../../widgets/collections/rail_header_focus.dart';
 import '../../widgets/home/row_tag_pill.dart';
-import '../../widgets/see_all/discover_shelf_scope.dart';
 import '../../widgets/see_all/see_all_filter_bar.dart';
 import '../../widgets/see_all/see_all_filter_focus.dart';
 import '../../widgets/see_all/see_all_header.dart';
@@ -23,26 +23,41 @@ import '../../widgets/see_all/see_all_poster_grid.dart';
 import '../../widgets/see_all/stremio_dropdown.dart';
 import '../../widgets/skeleton_poster.dart';
 import '../see_all/catalog_see_all_screen.dart';
+import '../search/board_shelf_row.dart';
 
 /// Full-screen browser for one folder of an imported collection — where a
-/// folder tile on the Home board and the collection row's "See All" land.
+/// folder tile on the Home board and the collection row's tap land.
 ///
 /// Each catalog in a folder is its own list. Two layouts, chosen in
 /// Settings › Home Screen › Collections:
 ///
-///  * **Rows** — one horizontal rail per list, each with its own See All
-///    into the regular catalog browser; a collection with `showAllTab` also
-///    offers an "All" view that pages every list into one merged grid.
-///  * **Tabs** — one list at a time as a full poster grid, picked from a
-///    List chip (plus "All" when the collection enables it).
+///  * **Rows** — plain stacked rails, styled and spaced like the Home board
+///    (no hero band, no filter dropdowns): a minimal header, then one rail
+///    per list. Tapping/selecting a rail's header opens that list's regular
+///    catalog browser; a collection with `showAllTab` also gets a leading
+///    "All" row that switches to one merged grid of every list. Folder
+///    switching lives on Home (every folder is already its own tile in the
+///    collection's row) so it isn't duplicated here — Back returns to it.
+///  * **Tabs** — a hero band, Folder/List/Sort dropdowns, and one list at a
+///    time as a full poster grid (plus "All" when the collection enables
+///    it), like Nuvio.
+///
+/// Neither layout shows a "See all" link or a position counter on a
+/// collection rail — those only ever belonged to the regular catalog
+/// See-All screens.
 ///
 /// Lists switched off in the Home Rows manager (`collectionlist:` ids in the
 /// disabled set) are left out of every view.
 ///
-/// Rails reuse [SeeAllPosterGrid] in shelf mode (under a
-/// [DiscoverShelfScope]), so focus walking, paging and card chrome are the
-/// Discover stage's own; this screen only adds the vertical DPAD ladder
-/// between rails (See-All pill → cards → next rail's pill).
+/// Rails render through [BoardShelfRow] — the same [BoardCell] widget (art,
+/// [CardFocusRise] scale/shadow/focus-ring, hover-grow) and row gutter Home's
+/// own board rails paint, so a folder reads as an actual Home row rather
+/// than an approximation of one. This screen owns paging, folder switching
+/// and the vertical DPAD ladder between rails (a rail's header → its cards →
+/// the next rail's header); [BoardShelfRow] owns only the row itself. The
+/// merged "All" grid and the Tabs layout's single-list view stay on
+/// [SeeAllPosterGrid] — they're full poster walls, not rows, and were never
+/// meant to read as Home.
 class CollectionFolderScreen extends StatefulWidget {
   final HomeCollection collection;
   final int initialFolderIndex;
@@ -81,9 +96,9 @@ class _Rail {
   final CollectionCatalogSource source;
   final StremioAddon addon;
   final StremioAddonCatalog catalog;
-  final GlobalKey<SeeAllPosterGridState> gridKey = GlobalKey();
+  final GlobalKey<BoardShelfRowState> gridKey = GlobalKey();
   final GlobalKey containerKey = GlobalKey();
-  final FocusNode seeAllNode = FocusNode(debugLabel: 'collection_rail_seeall');
+  final FocusNode headerNode = FocusNode(debugLabel: 'collection_rail_header');
   final List<StremioMeta> items = [];
   int nextSkip = 0;
   bool loadingInitial = true;
@@ -100,7 +115,7 @@ class _Rail {
   /// Hidden once loaded empty — an empty rail is noise, like on Home.
   bool get visible => loadingInitial || items.isNotEmpty;
 
-  void dispose() => seeAllNode.dispose();
+  void dispose() => headerNode.dispose();
 }
 
 class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
@@ -119,6 +134,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   List<StremioAddon> _addons = const [];
   Set<String> _disabled = const {};
   bool _booted = false;
+  bool _landscapeCards = false;
 
   List<_Rail> _rails = const [];
   List<String> _unresolved = const [];
@@ -140,10 +156,13 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
 
   final FocusNode _backNode = FocusNode(debugLabel: 'collection_back');
   final FocusNode _folderNode = FocusNode(debugLabel: 'collection_folder');
-  final FocusNode _viewNode = FocusNode(debugLabel: 'collection_view');
   final FocusNode _listNode = FocusNode(debugLabel: 'collection_list');
   final FocusNode _sortNode = FocusNode(debugLabel: 'collection_sort');
   final FocusNode _retryNode = FocusNode(debugLabel: 'collection_retry');
+
+  /// Rows layout only: the header of the leading "All" row (Tabs reaches the
+  /// same merged grid through the List chip's "All" option instead).
+  final FocusNode _allRowNode = FocusNode(debugLabel: 'collection_all_row');
 
   HomeCollection get _collection => widget.collection;
   bool get _hasFolders => _collection.folders.isNotEmpty;
@@ -186,6 +205,13 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
     } catch (_) {
       _disabled = const {};
     }
+    try {
+      _landscapeCards =
+          (await HomePrefs.getHomeCardOrientation()) ==
+          HomeCardOrientation.landscape;
+    } catch (_) {
+      _landscapeCards = false;
+    }
     _layout = await HomeCollectionsStore.instance.getFolderLayout();
     if (!mounted) return;
     _booted = true;
@@ -200,10 +226,10 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
     _railsScroll.dispose();
     _backNode.dispose();
     _folderNode.dispose();
-    _viewNode.dispose();
     _listNode.dispose();
     _sortNode.dispose();
     _retryNode.dispose();
+    _allRowNode.dispose();
     super.dispose();
   }
 
@@ -450,15 +476,12 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   _Rail? get _tabRail =>
       _tab >= 0 && _tab < _rails.length ? _rails[_tab] : null;
 
+  /// Tabs-only: the filter bar's own DPAD row (Rows has no filter bar at
+  /// all, so [_handleFilterKeys] never runs there).
   List<FocusNode> get _filterNodes => [
     _folderNode,
-    if (_tabs) ...[
-      if (_rails.isNotEmpty) _listNode,
-      _sortNode,
-    ] else ...[
-      if (_offersAll) _viewNode,
-      if (_view == _View.all) _sortNode,
-    ],
+    if (_rails.isNotEmpty) _listNode,
+    _sortNode,
   ];
 
   bool get _showingEmpty {
@@ -471,19 +494,28 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
     return _visibleRails.isEmpty;
   }
 
-  /// DPAD-down from the filter line: the first rail's See-All pill (Rows) or
-  /// the grid on screen (Tabs / All); the Retry button when there's nothing.
+  /// DPAD-down from the header. Tabs keeps its filter bar's own ladder (this
+  /// only fires from the bar's last chip or the header itself) and jumps
+  /// straight into whichever grid is on screen. Rows always lands on the
+  /// next rung down instead — the "All" row's header when the folder offers
+  /// one, else the first rail's header — same as any other rail-to-rail
+  /// step, so a second DPAD-down is what actually enters a grid. Either way,
+  /// an empty result sends focus to the Retry button.
   void _enterContent() {
     if (_showingEmpty) {
       _retryNode.requestFocus();
       return;
     }
-    if (_showingAll) {
-      _allGridKey.currentState?.focusFirst();
+    if (_tabs) {
+      if (_showingAll) {
+        _allGridKey.currentState?.focusFirst();
+      } else {
+        _tabGridKey.currentState?.focusFirst();
+      }
       return;
     }
-    if (_tabs) {
-      _tabGridKey.currentState?.focusFirst();
+    if (_offersAll) {
+      _allRowNode.requestFocus();
       return;
     }
     final rails = _visibleRails;
@@ -491,18 +523,27 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
       _retryNode.requestFocus();
       return;
     }
-    rails.first.seeAllNode.requestFocus();
+    rails.first.headerNode.requestFocus();
   }
 
-  /// The chip the grid hands focus back to on DPAD-up.
-  FocusNode get _gridExitNode =>
-      _tabs && _rails.isNotEmpty ? _listNode : _folderNode;
+  /// Where the grid hands focus back to on DPAD-up: the List chip (Tabs), the
+  /// Folder chip when a folder with no lists left the filter bar as the only
+  /// stop (Tabs), or the "All" row's header (Rows — the only way Rows reaches
+  /// a merged grid is through that row).
+  FocusNode get _gridExitNode {
+    if (_tabs) return _rails.isNotEmpty ? _listNode : _folderNode;
+    return _offersAll ? _allRowNode : _backNode;
+  }
 
   void _focusRailAbove(_Rail r) {
     final rails = _visibleRails;
     final i = rails.indexOf(r);
     if (i <= 0) {
-      _folderNode.requestFocus();
+      if (_offersAll) {
+        _allRowNode.requestFocus();
+      } else {
+        _backNode.requestFocus();
+      }
       return;
     }
     rails[i - 1].gridKey.currentState?.focusFirst();
@@ -512,7 +553,14 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
     final rails = _visibleRails;
     final i = rails.indexOf(r);
     if (i < 0 || i + 1 >= rails.length) return;
-    rails[i + 1].seeAllNode.requestFocus();
+    rails[i + 1].headerNode.requestFocus();
+  }
+
+  /// DPAD-down from the "All" row's header: the first rail's header, mirroring
+  /// how a rail's own header sits one rung above its grid.
+  void _focusFirstRailHeader() {
+    final rails = _visibleRails;
+    if (rails.isNotEmpty) rails.first.headerNode.requestFocus();
   }
 
   void _ensureRailVisible(_Rail r) {
@@ -555,15 +603,19 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
               subtitle: subtitle,
               isTelevision: widget.isTelevision,
               backNode: _backNode,
-              onFilterDown: () => _folderNode.requestFocus(),
+              // Rows has no filter bar to land on — DPAD-down goes straight
+              // into the rails (or the "All" row above them).
+              onFilterDown: _tabs
+                  ? () => _folderNode.requestFocus()
+                  : _enterContent,
             ),
-            if (_hasFolders)
+            if (_tabs && _hasFolders)
               FolderHeroBand(
                 key: ValueKey('folder-hero-${_folder.id}'),
                 folder: _folder,
                 isTelevision: widget.isTelevision,
               ),
-            _buildFilterBar(),
+            if (_tabs) _buildFilterBar(),
             Expanded(child: _buildBody()),
           ],
         ),
@@ -585,6 +637,8 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
     onSelected: _onSortChanged,
   );
 
+  /// Tabs layout only — Folder / List / Sort dropdowns under the hero band.
+  /// Rows has no filter bar (see the class doc).
   Widget _buildFilterBar() {
     final folders = _collection.folders;
     return Focus(
@@ -595,7 +649,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
         padding: const EdgeInsets.fromLTRB(24, 10, 24, 12),
         child: SeeAllFilterBar(
           isTelevision: widget.isTelevision,
-          activeCount: _sort != _sortDefault && (_tabs || _showingAll) ? 1 : 0,
+          activeCount: _sort != _sortDefault ? 1 : 0,
           buildChips: () => [
             StremioDropdown<int>(
               label: 'Folder',
@@ -608,75 +662,147 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
               ],
               onSelected: _onFolderChanged,
             ),
-            if (_tabs) ...[
-              if (_rails.isNotEmpty)
-                StremioDropdown<int>(
-                  label: 'List',
-                  value: _tab,
-                  isTelevision: widget.isTelevision,
-                  focusNode: _listNode,
-                  options: [
-                    for (var i = 0; i < _rails.length; i++)
-                      StremioDropdownOption(i, _rails[i].title),
-                    if (_offersAll)
-                      const StremioDropdownOption(_kAllTab, 'All'),
-                  ],
-                  onSelected: _onTabChanged,
-                ),
-              _sortChip(),
-            ] else ...[
-              if (_offersAll)
-                StremioDropdown<_View>(
-                  label: 'View',
-                  value: _view,
-                  isTelevision: widget.isTelevision,
-                  focusNode: _viewNode,
-                  options: const [
-                    StremioDropdownOption(_View.lists, 'Lists'),
-                    StremioDropdownOption(_View.all, 'All'),
-                  ],
-                  onSelected: _onViewChanged,
-                ),
-              if (_view == _View.all) _sortChip(),
-            ],
+            if (_rails.isNotEmpty)
+              StremioDropdown<int>(
+                label: 'List',
+                value: _tab,
+                isTelevision: widget.isTelevision,
+                focusNode: _listNode,
+                options: [
+                  for (var i = 0; i < _rails.length; i++)
+                    StremioDropdownOption(i, _rails[i].title),
+                  if (_offersAll) const StremioDropdownOption(_kAllTab, 'All'),
+                ],
+                onSelected: _onTabChanged,
+              ),
+            _sortChip(),
           ],
         ),
       ),
     );
   }
 
-  /// Same poster geometry as a Home board rail, so a folder reads as Home
-  /// with different lists.
-  DiscoverShelfMetrics _railMetrics(BuildContext context) {
+  /// Horizontal padding around a rail's header and row — matches Home's own
+  /// board rail gutter.
+  static const double _railHPad = 24;
+
+  /// Same card geometry as the ACTIVE Home layout, so a folder reads as Home
+  /// with different lists — not just some Home layout's cards. Canvas (the
+  /// shipped TV default) sizes its shelf by a completely different formula
+  /// than the classic board; matching whichever one is actually on screen is
+  /// what makes the folder read as "this device's Home", not just "a Home".
+  ({double width, double height}) _railCardSize(BuildContext context) {
+    if (widget.isTelevision && StorageService.tvHomeStyleCached == 'canvas') {
+      final size = canvasRailCardSize(
+        context,
+        landscapeCards: _landscapeCards,
+      );
+      return (width: size.width, height: size.height);
+    }
     final posterW = homeRailPosterWidth(
       context,
       isTelevision: widget.isTelevision,
     );
-    return DiscoverShelfMetrics(cardHeight: posterW * 1.5, hPad: 24);
+    return (width: posterW, height: posterW * 1.5);
   }
 
   Widget _buildBody() {
     if (!_booted) {
       return SkeletonPosterGrid(isTelevision: widget.isTelevision);
     }
-    if (_showingAll) return _buildAll();
-    if (_tabs) return _buildTab();
+    // Tabs keeps its filter bar on screen at all times, so the merged grid
+    // can simply take over the body — the List chip is still there to switch
+    // away. Rows has no such permanent chrome, so its "All" toggle has to
+    // stay on screen instead (see _buildLists): only Tabs replaces the body
+    // outright.
+    if (_tabs) return _showingAll ? _buildAll() : _buildTab();
     return _buildLists();
   }
 
   Widget _buildLists() {
+    final size = _railCardSize(context);
+    final posterW = size.width;
+    final cellH = size.height;
+    // The merged grid stays under the SAME "All" row rather than replacing
+    // it — that row is the only way Rows offers back into it, so pressing it
+    // again (now reading "Lists") is how you leave.
+    if (_offersAll && _view == _View.all) {
+      return Column(
+        children: [
+          _buildAllRow(),
+          Expanded(child: _buildAll()),
+        ],
+      );
+    }
     final rails = _visibleRails;
     if (rails.isEmpty) return _buildEmpty();
-    final m = _railMetrics(context);
+    final showAllRow = _offersAll;
     return ListView.builder(
       controller: _railsScroll,
       padding: const EdgeInsets.only(bottom: 24),
-      itemCount: rails.length,
-      itemBuilder: (context, i) => _buildRail(rails[i], m),
+      itemCount: (showAllRow ? 1 : 0) + rails.length,
+      itemBuilder: (context, i) {
+        if (showAllRow && i == 0) return _buildAllRow();
+        return _buildRail(
+          rails[i - (showAllRow ? 1 : 0)],
+          posterW: posterW,
+          cellH: cellH,
+        );
+      },
     );
   }
 
-  Widget _buildRail(_Rail r, DiscoverShelfMetrics m) {
+  /// The leading row a `showAllTab` collection gets in Rows layout — where
+  /// the removed View dropdown's Lists/All choice moved to. Reads "All" and
+  /// switches to the merged grid (kept under this same header, so pressing
+  /// it again — now reading "Lists" — is how you get back).
+  Widget _buildAllRow() {
+    final app = AppThemeScope.of(context);
+    final tv = widget.isTelevision;
+    final showingAll = _view == _View.all;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        _railHPad,
+        14,
+        _railHPad,
+        showingAll ? 8 : 14,
+      ),
+      child: RailHeaderFocus(
+        node: _allRowNode,
+        isTelevision: tv,
+        onPressed: () => _onViewChanged(showingAll ? _View.lists : _View.all),
+        onUp: () => _backNode.requestFocus(),
+        onDown: showingAll
+            ? () => _allGridKey.currentState?.focusFirst()
+            : _focusFirstRailHeader,
+        onFocused: () {},
+        child: Row(
+          children: [
+            Text(
+              showingAll ? 'Lists' : 'All',
+              style: TextStyle(
+                color: app.core.tx,
+                fontSize: tv ? 18 : 16,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.2,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              showingAll ? 'Back to every list' : 'Every list merged',
+              style: TextStyle(
+                color: app.fade(app.core.tx, 0.5),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRail(_Rail r, {required double posterW, required double cellH}) {
     final app = AppThemeScope.of(context);
     final tv = widget.isTelevision;
     return Column(
@@ -685,62 +811,85 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(m.hPad, 14, m.hPad, 0),
-          child: Row(
-            children: [
-              Flexible(
-                child: Text(
-                  r.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: app.core.tx,
-                    fontSize: tv ? 18 : 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.2,
+          padding: EdgeInsets.fromLTRB(_railHPad, 14, _railHPad, 0),
+          child: RailHeaderFocus(
+            node: r.headerNode,
+            isTelevision: tv,
+            // On TV a row's name is a label, exactly like Home's own row
+            // names — not a control. Off TV it still opens the full catalog
+            // browse, the tap affordance every list title has always had.
+            onPressed: tv ? null : () => _openRailSeeAll(r),
+            onUp: () => _focusRailAbove(r),
+            onDown: () => r.gridKey.currentState?.focusFirst(),
+            onFocused: () => _ensureRailVisible(r),
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    r.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: app.core.tx,
+                      fontSize: tv ? 18 : 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              RowTagPill(r.addon.name),
-              const Spacer(),
-              RailSeeAllPill(
-                node: r.seeAllNode,
+                const SizedBox(width: 10),
+                RowTagPill(r.addon.name),
+              ],
+            ),
+          ),
+        ),
+        r.loadingInitial
+            ? _railSkeleton(posterW: posterW, cellH: cellH)
+            : BoardShelfRow(
+                key: r.gridKey,
+                items: r.items,
                 isTelevision: tv,
-                onPressed: () => _openRailSeeAll(r),
-                onUp: () => _focusRailAbove(r),
-                onDown: () => r.gridKey.currentState?.focusFirst(),
-                onFocused: () => _ensureRailVisible(r),
+                posterW: posterW,
+                cellH: cellH,
+                loadingMore: r.loadingMore,
+                onOpen: widget.onOpenItem,
+                onQuickPlay: widget.onQuickPlay,
+                onItemFocused: (item) {
+                  _ensureRailVisible(r);
+                  widget.onItemFocused?.call(item);
+                },
+                isBound: widget.isBound,
+                onLoadMore: () => _loadMoreRail(r),
+                onExitTop: tv ? () => r.headerNode.requestFocus() : null,
+                onExitBottom: tv ? () => _focusRailBelow(r) : null,
               ),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: m.columnHeight,
-          child: DiscoverShelfScope(
-            metrics: m,
-            child: r.loadingInitial
-                ? SkeletonPosterGrid(isTelevision: tv)
-                : SeeAllPosterGrid(
-                    key: r.gridKey,
-                    items: r.items,
-                    isTelevision: tv,
-                    loadingMore: r.loadingMore,
-                    exhausted: r.exhausted,
-                    onOpen: widget.onOpenItem,
-                    onQuickPlay: widget.onQuickPlay,
-                    onItemFocused: (item) {
-                      _ensureRailVisible(r);
-                      widget.onItemFocused?.call(item);
-                    },
-                    isBound: widget.isBound,
-                    onLoadMore: () => _loadMoreRail(r),
-                    onExitTop: tv ? () => r.seeAllNode.requestFocus() : null,
-                    onExitBottom: tv ? () => _focusRailBelow(r) : null,
-                  ),
-          ),
-        ),
       ],
+    );
+  }
+
+  /// Loading placeholder for one rail, in [BoardShelfRow]'s own row shape
+  /// (same gutter, same card size) so real posters fill in with no layout
+  /// shift once the fetch lands.
+  Widget _railSkeleton({required double posterW, required double cellH}) {
+    return SizedBox(
+      height: cellH + 14,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const NeverScrollableScrollPhysics(),
+        clipBehavior: Clip.hardEdge,
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        itemCount: 6,
+        itemBuilder: (context, index) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 11),
+          child: Center(
+            child: SizedBox(
+              width: posterW,
+              height: cellH,
+              child: const ShimmerBox(),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
