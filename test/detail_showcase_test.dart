@@ -79,6 +79,7 @@ DetailModel _model({
   VoidCallback? onPrimary,
   VoidCallback? onPrimaryLongPress,
   bool openingDataReady = true,
+  void Function(CastMember)? onCastTap,
 }) {
   final item = StremioMeta(
     id: 'tt0903747',
@@ -97,8 +98,16 @@ DetailModel _model({
     imdbExtra: withCast
         ? const ImdbEnrichment(
             cast: [
-              CastMember(name: 'A Person', character: 'Someone'),
-              CastMember(name: 'B Person', character: 'Someone Else'),
+              CastMember(
+                name: 'A Person',
+                character: 'Someone',
+                nameId: 'nm0000001',
+              ),
+              CastMember(
+                name: 'B Person',
+                character: 'Someone Else',
+                nameId: 'nm0000002',
+              ),
             ],
           )
         : null,
@@ -140,6 +149,7 @@ DetailModel _model({
     onToggleMyWatchlist: withMyWatchlist ? () {} : null,
     onManageSources: () {},
     onRecommendationTap: (_) {},
+    onCastTap: onCastTap,
     onAmbientStill: (_) {},
     onDepth: onDepth,
     focus: DetailFocusCoordinator(
@@ -345,9 +355,8 @@ void main() {
 
     // The rendering, not just the ladder: the actors sit IMMEDIATELY above
     // the titles they lead you to, with Sources above both.
-    double top(Type t) => tester
-        .getTopLeft(find.byType(t, skipOffstage: false))
-        .dy;
+    double top(Type t) =>
+        tester.getTopLeft(find.byType(t, skipOffstage: false)).dy;
     expect(top(ShowcaseSources), lessThan(top(ShowcaseCast)));
     expect(top(ShowcaseCast), lessThan(top(ShowcaseRecs)));
 
@@ -355,15 +364,84 @@ void main() {
     for (var i = 0; i < 4; i++) {
       await _press(tester, LogicalKeyboardKey.arrowDown);
     }
-    final castNodes = tester.widget<ShowcaseCast>(
-      find.byType(ShowcaseCast, skipOffstage: false),
-    ).nodes;
+    final castNodes = tester
+        .widget<ShowcaseCast>(find.byType(ShowcaseCast, skipOffstage: false))
+        .nodes;
     expect(castNodes.any((n) => n.hasFocus), isTrue);
     await _press(tester, LogicalKeyboardKey.arrowDown);
-    final recNodes = tester.widget<ShowcaseRecs>(
-      find.byType(ShowcaseRecs, skipOffstage: false),
-    ).nodes;
+    final recNodes = tester
+        .widget<ShowcaseRecs>(find.byType(ShowcaseRecs, skipOffstage: false))
+        .nodes;
     expect(recNodes.any((n) => n.hasFocus), isTrue);
+  });
+
+  testWidgets('tapping a cast tile reports the member', (tester) async {
+    _surface(tester, const Size(960, 2000));
+    final tapped = <CastMember>[];
+    await tester.pumpWidget(_host(_model(onCastTap: tapped.add), tall: true));
+    await tester.pumpAndSettle();
+
+    // The band sits below the identity screenful; walking DOWN to it scrolls
+    // it on stage, which is the only way a pointer can reach it.
+    for (var i = 0; i < 4; i++) {
+      await _press(tester, LogicalKeyboardKey.arrowDown);
+    }
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('B Person'));
+    await tester.pump();
+
+    expect(tapped.map((m) => m.name), ['B Person']);
+    expect(tapped.single.nameId, 'nm0000002');
+  });
+
+  testWidgets('DPAD: OK on a focused cast tile opens it', (tester) async {
+    // The model is a television one; the OK path is the tile's own key
+    // handler, which is platform-independent, so the TV opening gate is not
+    // part of what is under test here.
+    _surface(tester, const Size(960, 2000));
+    final tapped = <CastMember>[];
+    final model = _model(onCastTap: tapped.add);
+    await tester.pumpWidget(_host(model, tall: true));
+    await tester.pumpAndSettle();
+
+    // seasons → episodes → sources → cast
+    for (var i = 0; i < 4; i++) {
+      await _press(tester, LogicalKeyboardKey.arrowDown);
+    }
+    final castNodes = tester
+        .widget<ShowcaseCast>(find.byType(ShowcaseCast, skipOffstage: false))
+        .nodes;
+    int focused() => castNodes.indexWhere((n) => n.hasFocus);
+    expect(focused(), isNot(-1), reason: 'DOWN never reached the cast band');
+
+    await _press(tester, LogicalKeyboardKey.select);
+    expect(tapped.map((m) => m.name), [model.cast[focused()].name]);
+
+    // RIGHT walks the band; OK opens the neighbour.
+    final before = focused();
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    final after = focused();
+    expect(after, before == castNodes.length - 1 ? before : before + 1);
+    await _press(tester, LogicalKeyboardKey.select);
+    expect(tapped.length, 2);
+    expect(tapped.last.name, model.cast[after].name);
+  });
+
+  testWidgets('without a handler a cast tile stays inert', (tester) async {
+    _surface(tester, const Size(960, 2000));
+    await tester.pumpWidget(_host(_model(), tall: true));
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 4; i++) {
+      await _press(tester, LogicalKeyboardKey.arrowDown);
+    }
+    await _press(tester, LogicalKeyboardKey.select);
+    await tester.tap(
+      find.text('A Person', skipOffstage: false),
+      warnIfMissed: false,
+    );
+    await tester.pump();
+    // Nothing threw and the page is intact.
+    expect(find.byType(DetailShowcase), findsOneWidget);
   });
 
   testWidgets('a single-season show has no Seasons band and no hole', (
@@ -403,13 +481,18 @@ void main() {
       await _press(tester, LogicalKeyboardKey.arrowDown);
     }
     expect(find.byType(ShowcaseSources, skipOffstage: false), findsOneWidget);
-    final sourceNodes = tester.widget<ShowcaseSources>(
-      find.byType(ShowcaseSources, skipOffstage: false),
-    ).nodes;
+    final sourceNodes = tester
+        .widget<ShowcaseSources>(
+          find.byType(ShowcaseSources, skipOffstage: false),
+        )
+        .nodes;
     expect(sourceNodes.any((n) => n.hasFocus), isTrue);
     await _press(tester, LogicalKeyboardKey.arrowDown);
-    expect(sourceNodes.any((n) => n.hasFocus), isTrue,
-        reason: 'no band below Sources here, so the cursor stays put');
+    expect(
+      sourceNodes.any((n) => n.hasFocus),
+      isTrue,
+      reason: 'no band below Sources here, so the cursor stays put',
+    );
   });
 
   testWidgets('the Sources band always exists, with the Find tile alone when '

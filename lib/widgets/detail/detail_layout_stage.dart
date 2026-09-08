@@ -390,7 +390,10 @@ class _DetailStageState extends State<DetailStage> {
         mainAxisSpacing: 10,
       ),
       itemCount: cast.length,
-      itemBuilder: (context, i) => _CastLine(member: cast[i]),
+      itemBuilder: (context, i) => _CastLine(
+        member: cast[i],
+        onTap: m.castAction(cast[i]),
+      ),
     );
   }
 
@@ -621,15 +624,27 @@ class _TabButtonState extends State<_TabButton> {
       k == LogicalKeyboardKey.space;
 }
 
-class _CastLine extends StatelessWidget {
+/// One cast row. With [onTap] it is a focusable InkWell — the same shape the
+/// Similar panel's posters take, so DOWN from the Cast tab lands on the grid
+/// and OK opens the actor. Without one it is the informational row it was.
+class _CastLine extends StatefulWidget {
   final CastMember member;
-  const _CastLine({required this.member});
+  final VoidCallback? onTap;
+  const _CastLine({required this.member, this.onTap});
+
+  @override
+  State<_CastLine> createState() => _CastLineState();
+}
+
+class _CastLineState extends State<_CastLine> {
+  bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
     final t = DetailThemeScope.of(context);
+    final member = widget.member;
     final url = member.imageUrl;
-    return Row(
+    final row = Row(
       children: [
         ClipRRect(
           borderRadius: t.brCast,
@@ -676,6 +691,25 @@ class _CastLine extends StatelessWidget {
           ),
         ),
       ],
+    );
+    final onTap = widget.onTap;
+    if (onTap == null) return row;
+    return DetailFocusRing(
+      focused: _focused,
+      radius: t.brRadius,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: t.brRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          onFocusChange: (f) => setState(() => _focused = f),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: row,
+          ),
+        ),
+      ),
     );
   }
 }

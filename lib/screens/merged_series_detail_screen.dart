@@ -18,6 +18,7 @@ import '../services/imdb_parents_guide_service.dart';
 import '../services/main_page_bridge.dart';
 import '../services/storage_service.dart';
 import '../services/watched_filter.dart';
+import '../widgets/detail/actor_titles_view.dart';
 import '../widgets/detail/detail_episode_cells.dart';
 import '../widgets/detail/detail_layout_console.dart';
 import '../widgets/detail/detail_layout_dossier.dart';
@@ -1448,6 +1449,7 @@ class _MergedDetailScreenState extends State<MergedDetailScreen>
               await _loadBoundSources();
             },
       onRecommendationTap: widget.onRecommendationTap,
+      onCastTap: widget.onRecommendationTap == null ? null : _openActor,
       onAmbientStill: (url) {
         if (!mounted || _focusedStillUrl == url) return;
         setState(() => _focusedStillUrl = url);
@@ -2545,7 +2547,30 @@ class _MergedDetailScreenState extends State<MergedDetailScreen>
     );
   }
 
-  Widget _castTile(CastMember m) => DetailCastTile(member: m, fallback: _glass2);
+  Widget _castTile(CastMember m) => DetailCastTile(
+    member: m,
+    fallback: _glass2,
+    onTap: widget.onRecommendationTap == null || (m.nameId ?? '').isEmpty
+        ? null
+        : () => _openActor(m),
+  );
+
+  /// A cast tile was chosen: push the actor's known-for page. Its titles open
+  /// through the same [onRecommendationTap] the "More Like This" rail uses, so
+  /// an actor's film lands on exactly the page a recommendation would.
+  void _openActor(CastMember member) {
+    final open = widget.onRecommendationTap;
+    if (open == null) return;
+    ActorTitlesView.show(
+      context,
+      member: member,
+      onOpenTitle: open,
+      // Classic is never wrapped in a DetailThemeScope, so it gets Signal.
+      theme: _style == 'classic' ? null : _theme,
+      isTelevision: widget.isTelevision,
+      routeName: kCatalogDetailRouteName,
+    );
+  }
 
   Widget _recCard(StremioMeta rec) => DetailRecCard(
     rec: rec,

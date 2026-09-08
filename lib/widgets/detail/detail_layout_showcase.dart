@@ -1211,6 +1211,7 @@ class _DetailShowcaseState extends State<DetailShowcase> {
                           m.cast.length,
                           'showcase-cast',
                         ),
+                        onTap: m.onCastTap,
                       ),
                     ),
                   if (m.recommendations.isNotEmpty)

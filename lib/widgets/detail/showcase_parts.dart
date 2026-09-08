@@ -2319,7 +2319,15 @@ class ShowcaseCast extends StatelessWidget {
   final List<CastMember> cast;
   final List<FocusNode> nodes;
 
-  const ShowcaseCast({super.key, required this.cast, required this.nodes});
+  /// Opens the actor's known-for titles; null keeps the band read-only.
+  final void Function(CastMember)? onTap;
+
+  const ShowcaseCast({
+    super.key,
+    required this.cast,
+    required this.nodes,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2333,8 +2341,12 @@ class ShowcaseCast extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: m.gutter),
         itemCount: cast.length,
         separatorBuilder: (_, __) => SizedBox(width: m.castGap),
-        itemBuilder: (context, i) =>
-            _CastTile(member: cast[i], node: nodes[i], size: m.circle),
+        itemBuilder: (context, i) => _CastTile(
+          member: cast[i],
+          node: nodes[i],
+          size: m.circle,
+          onTap: onTap,
+        ),
       ),
     );
   }
@@ -2344,11 +2356,13 @@ class _CastTile extends StatefulWidget {
   final CastMember member;
   final FocusNode node;
   final double size;
+  final void Function(CastMember)? onTap;
 
   const _CastTile({
     required this.member,
     required this.node,
     required this.size,
+    this.onTap,
   });
 
   @override
@@ -2367,66 +2381,78 @@ class _CastTileState extends State<_CastTile> {
     // out of the way where the lift already owns the growth.
     final grows =
         AppThemeScope.of(context).focus.expression != FocusExpression.parallax;
+    // Only a credit IMDb gave a name id can lead anywhere. Without one (or
+    // without a host handler) the tile stays ambient reading — SELECT and tap
+    // do nothing — but the lift still answers "am I on this one".
+    final open = widget.onTap;
+    final nameId = widget.member.nameId;
+    final VoidCallback? activate =
+        open == null || nameId == null || nameId.isEmpty
+        ? null
+        : () => open(widget.member);
     return Focus(
       focusNode: widget.node,
       onFocusChange: (v) {
         setState(() => _f = v);
         if (v) _keepVisible(context);
       },
-      // Basic cursor: a cast tile is ambient reading — SELECT and tap do
-      // nothing — but the lift still answers "am I on this one".
+      onKeyEvent: (_, e) => _activate(e, activate),
       child: _Hover(
-        cursor: MouseCursor.defer,
-        builder: (context, hovered) => SizedBox(
-          width: widget.size,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              HoverGrow(
-                active: _f || hovered,
-                isTelevision: PlatformUtil.isTelevision,
-                enabled: grows,
-                child: ParallaxFocus(
-                  focused: _f || hovered,
-                  shape: ParallaxShape.castCircle,
-                  radius: BorderRadius.circular(widget.size / 2),
-                  child: ClipOval(
-                    child: SizedBox(
-                      width: widget.size,
-                      height: widget.size,
-                      child: (url != null && url.isNotEmpty)
-                          ? CachedNetworkImage(
-                              imageUrl: url,
-                              fit: BoxFit.cover,
-                              cacheManager: DebrifyImageCache.manager,
-                              memCacheWidth: 260,
-                              placeholder: (_, __) =>
-                                  const ColoredBox(color: Color(0xFF4A4A55)),
-                              errorWidget: (_, __, ___) =>
-                                  const ColoredBox(color: Color(0xFF4A4A55)),
-                            )
-                          : const ColoredBox(color: Color(0xFF4A4A55)),
+        cursor: activate == null ? MouseCursor.defer : SystemMouseCursors.click,
+        builder: (context, hovered) => GestureDetector(
+          onTap: activate,
+          behavior: HitTestBehavior.opaque,
+          child: SizedBox(
+            width: widget.size,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                HoverGrow(
+                  active: _f || hovered,
+                  isTelevision: PlatformUtil.isTelevision,
+                  enabled: grows,
+                  child: ParallaxFocus(
+                    focused: _f || hovered,
+                    shape: ParallaxShape.castCircle,
+                    radius: BorderRadius.circular(widget.size / 2),
+                    child: ClipOval(
+                      child: SizedBox(
+                        width: widget.size,
+                        height: widget.size,
+                        child: (url != null && url.isNotEmpty)
+                            ? CachedNetworkImage(
+                                imageUrl: url,
+                                fit: BoxFit.cover,
+                                cacheManager: DebrifyImageCache.manager,
+                                memCacheWidth: 260,
+                                placeholder: (_, __) =>
+                                    const ColoredBox(color: Color(0xFF4A4A55)),
+                                errorWidget: (_, __, ___) =>
+                                    const ColoredBox(color: Color(0xFF4A4A55)),
+                              )
+                            : const ColoredBox(color: Color(0xFF4A4A55)),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 9),
-              Text(
-                widget.member.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: _t(12.5 * k),
-              ),
-              if ((widget.member.character ?? '').isNotEmpty)
+                const SizedBox(height: 9),
                 Text(
-                  widget.member.character!,
+                  widget.member.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: _t(11.5 * k, a: 0.55),
+                  style: _t(12.5 * k),
                 ),
-            ],
+                if ((widget.member.character ?? '').isNotEmpty)
+                  Text(
+                    widget.member.character!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: _t(11.5 * k, a: 0.55),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
