@@ -356,6 +356,16 @@ class SettingsPageBindings {
   final String detailPageStyleLabel;
   final String profileAppearanceLabel;
   final String phoneNavStyleLabel;
+  final String realDebridSubtitle;
+  final String torboxSubtitle;
+  final String premiumizeSubtitle;
+  final String allDebridSubtitle;
+  final String pikpakSubtitle;
+  final String webDavSubtitle;
+  final String indexerManagersSubtitle;
+  final String traktSubtitle;
+  final String simklSubtitle;
+  final String mdblistSubtitle;
   final String downloadLocationSubtitle;
   final String updateSubtitle;
   final String supportDonationLabel;
@@ -511,6 +521,16 @@ class SettingsPageBindings {
     this.detailPageStyleLabel = '',
     this.profileAppearanceLabel = '',
     this.phoneNavStyleLabel = '',
+    this.realDebridSubtitle = '',
+    this.torboxSubtitle = '',
+    this.premiumizeSubtitle = '',
+    this.allDebridSubtitle = '',
+    this.pikpakSubtitle = '',
+    this.webDavSubtitle = '',
+    this.indexerManagersSubtitle = '',
+    this.traktSubtitle = '',
+    this.simklSubtitle = '',
+    this.mdblistSubtitle = '',
     this.downloadLocationSubtitle = '',
     this.updateSubtitle = '',
     this.supportDonationLabel = 'Support Debrify',

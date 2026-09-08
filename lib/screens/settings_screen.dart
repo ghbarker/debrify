@@ -987,6 +987,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       phoneNavStyleLabel: _phoneNavStyle == 'floating'
           ? 'Floating button'
           : 'Classic bar',
+      realDebridSubtitle: _rdInfo.caption,
+      torboxSubtitle: _torboxInfo.caption,
+      premiumizeSubtitle: _premiumizeInfo.caption,
+      allDebridSubtitle: _allDebridInfo.caption,
+      pikpakSubtitle: _pikpakInfo.caption,
+      webDavSubtitle: _webDavInfo.caption,
+      indexerManagersSubtitle: _indexerManagersInfo.caption,
+      traktSubtitle: _traktInfo.caption,
+      simklSubtitle: _simklInfo.caption,
+      mdblistSubtitle: _mdblistInfo.caption,
       downloadLocationSubtitle: _downloadLocation.downloadLocationSubtitle,
       updateSubtitle: _updateSubtitle,
       supportDonationLabel: _supportSettingsLabel,
@@ -1121,25 +1131,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildTvLayout() {
     return SettingsTvLayout(
-      connections: [
-        _rdInfo,
-        _torboxInfo,
-        _premiumizeInfo,
-        _allDebridInfo,
-        _pikpakInfo,
-        _webDavInfo,
-        _iptvInfo,
-        _indexerManagersInfo,
-      ],
-      // Watch history lives on its own rail category — Connections had grown
-      // to ten cards covering five unrelated jobs.
-      tracking: _trackingInfo,
-      trackers: [
-        _traktInfo,
-        _simklInfo,
-        // MDBList hidden for the alpha (unfinished) — see [kMdblistEnabled].
-        if (kMdblistEnabled) _mdblistInfo,
-      ],
       firstFocusNode: _firstCardFocusNode,
       onOpenSearch: _openSettingsSearch,
       showSwitchProfile:
@@ -1165,10 +1156,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // MDBList hidden for the alpha (unfinished) — see [kMdblistEnabled].
         mdblist: kMdblistEnabled ? _mdblistInfo : null,
         indexerManagers: _indexerManagersInfo,
-        firstCardFocusNode: _firstCardFocusNode,
       ),
       onOpenSearch: _openSettingsSearch,
       pages: _settingsPages,
+      firstFocusNode: _firstCardFocusNode,
     );
   }
 
@@ -1183,142 +1174,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {});
   }
 
-  /// Flat, searchable index of every settings destination. Built fresh on open
-  /// so dynamic copy (download folder, update status, connection captions) and
-  /// live toggle values are current. Navigable entries reuse the same
-  /// `_openXxx` handlers the layouts wire, so actions never drift; toggle
-  /// entries read/write the same state fields as their inline rows.
+  /// Flat, searchable index of every settings destination. Built fresh on
+  /// open so dynamic copy (download folder, update status, connection
+  /// captions) and live toggle values are current. Navigable entries reuse
+  /// the same `_openXxx` handlers the layouts wire, so actions never drift;
+  /// toggle entries read/write the same state fields as their inline rows.
   ///
-  /// Connection cards stay live [conn] entries so status/captions stay
-  /// current. Everything else — pages, search-only destinations, and in-page
-  /// leaves — is derived from [SettingsPageRegistry.searchIndex]. Trackers
-  /// follow Connections so the two headings stay contiguous (see
-  /// SettingsSearchPage first-appearance grouping).
-  List<SettingsSearchEntry> _buildSearchIndex() {
-    SettingsSearchEntry conn(
-      ConnectionInfo info,
-      List<String> keywords, {
-      // Trakt/Simkl/MDBList now live under their own heading; search results
-      // must say where the thing actually is.
-      String category = 'Connections',
-    }) => SettingsSearchEntry(
-      icon: Icons.link_rounded,
-      title: info.title,
-      subtitle: info.caption,
-      category: category,
-      keywords: ['integration', ...keywords],
-      onTap: info.onTap,
-    );
-
-    return [
-      conn(_rdInfo, const [
-        'debrid',
-        'real-debrid',
-        'rd',
-        'premium',
-        'api key',
-        'add api key',
-        'logout',
-        'login',
-        'account',
-      ]),
-      conn(_torboxInfo, const [
-        'debrid',
-        'premium',
-        'api key',
-        'add api key',
-        'logout',
-        'login',
-        'account',
-      ]),
-      conn(_premiumizeInfo, const [
-        'debrid',
-        'premium',
-        'api key',
-        'add api key',
-        'logout',
-        'login',
-        'account',
-      ]),
-      conn(_allDebridInfo, const [
-        'debrid',
-        'ad',
-        'premium',
-        'api key',
-        'add api key',
-        'logout',
-        'login',
-        'account',
-      ]),
-      conn(_pikpakInfo, const [
-        'cloud',
-        'storage',
-        'login',
-        'account',
-        'email',
-        'password',
-        'logout',
-        'change account',
-        'remove account',
-      ]),
-      conn(_webDavInfo, const [
-        'cloud',
-        'nas',
-        'server',
-        'seedbox',
-        'url',
-        'username',
-        'password',
-        'app token',
-      ]),
-      conn(_iptvInfo, const [
-        'live tv',
-        'm3u',
-        'playlist',
-        'channels',
-        'epg',
-        'xtream',
-      ]),
-      conn(_indexerManagersInfo, const [
-        'indexer',
-        'torznab',
-        'jackett',
-        'prowlarr',
-        'engines',
-      ]),
-      // Trackers — keep this block last in the Connections neighbourhood so
-      // the two categories stay contiguous; see SettingsSearchPage.
-      conn(_traktInfo, const [
-        'scrobble',
-        'sync',
-        'watch history',
-        'watchlist',
-        'login',
-        'activate',
-        'device code',
-        'logout',
-      ], category: 'Trackers'),
-      conn(_trackingInfo, const [
-        'scrobble',
-        'sync catalog',
-        'watch progress',
-        'continue watching source',
-        'home ticks',
-      ], category: 'Trackers'),
-      conn(_simklInfo, const [
-        'scrobble',
-        'sync',
-        'watch history',
-        'login',
-        'pin',
-        'device code',
-        'logout',
-      ], category: 'Trackers'),
-      if (kMdblistEnabled)
-        conn(_mdblistInfo, const ['lists', 'ratings'], category: 'Trackers'),
-      ..._settingsRegistry.searchIndex(),
-    ];
-  }
+  /// Every destination — including the storage-provider and tracking rows
+  /// under Connections — is now a registered [SettingsPageSpec], so the
+  /// whole index is derived from [SettingsPageRegistry.searchIndex].
+  List<SettingsSearchEntry> _buildSearchIndex() => _settingsRegistry.searchIndex();
 
   Future<void> _openTorrentSettings() async {
     if (!await _ensureProfileFeature(ProfileFeature.torrentSearch)) return;
@@ -2693,14 +2558,25 @@ final List<SettingsCategoryDefinition> _kAdaptiveSettingsCategories = [
 ];
 
 class _SettingsLayout extends StatelessWidget {
+  // Data-only now (never mounted into the tree): the storage-provider and
+  // tracking rows render through the registry like every other row, but the
+  // desktop spotlight's "service health" summary card still wants the raw
+  // connected/status/caption data, so the same ConnectionInfo values are
+  // threaded through this holder rather than duplicating them.
   final ConnectionsSummary connections;
   final VoidCallback onOpenSearch;
   final List<SettingsPageSpec> pages;
+
+  /// Focus target for the TV-sidebar hand-off and post-logout restores when
+  /// this (non-Android-TV, e.g. tvOS/remote-driven desktop) layout is showing
+  /// — attached to the Connections category's first row.
+  final FocusNode? firstFocusNode;
 
   const _SettingsLayout({
     required this.connections,
     required this.onOpenSearch,
     this.pages = const [],
+    this.firstFocusNode,
   });
 
   List<Widget> _phoneCategory(SettingsCategorySpec cat, Color danger) {
@@ -2708,6 +2584,7 @@ class _SettingsLayout extends StatelessWidget {
       registry: SettingsPageRegistry(pages: pages),
       surface: SettingsLayoutSurface.phone,
       category: cat.label,
+      firstRowFocusNode: cat.id == 'connections' ? firstFocusNode : null,
       accentColor: cat.destructive
           ? danger.withValues(alpha: 0.85)
           : null,
@@ -2728,12 +2605,6 @@ class _SettingsLayout extends StatelessWidget {
     connections.webDav,
     connections.indexerManagers,
     connections.iptv,
-  ];
-
-  List<ConnectionInfo> get _trackerServices => [
-    connections.trakt,
-    connections.simkl,
-    if (connections.mdblist != null) connections.mdblist!,
   ];
 
   Widget _buildSpotlight(BuildContext context) {
@@ -2779,86 +2650,41 @@ class _SettingsLayout extends StatelessWidget {
     );
   }
 
-  Widget _buildConnectionGrid(
-    BuildContext context,
-    List<ConnectionInfo> items, {
-    bool singleFullWidth = false,
-  }) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final twoColumns =
-            constraints.maxWidth >= 680 &&
-            !(singleFullWidth && items.length == 1);
-        final width = twoColumns
-            ? (constraints.maxWidth - 10) / 2
-            : constraints.maxWidth;
-        return Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            for (final info in items)
-              SizedBox(
-                width: width,
-                child: ConnectionCard(info: info, isLeftColumn: false),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
   Widget _buildSpotlightCategory(BuildContext context, int category) {
     final t = AppThemeScope.of(context).settings;
-    switch (category) {
-      case 0:
-        return _buildConnectionGrid(context, _providerConnections);
-      case 1:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SettingsSectionLabel('Tracking'),
-            _buildConnectionGrid(context, [
-              connections.tracking,
-            ], singleFullWidth: true),
-            const SizedBox(height: 22),
-            const SettingsSectionLabel('Tracker services'),
-            _buildConnectionGrid(context, _trackerServices),
-          ],
-        );
-      default:
-        if (category < 0 || category >= kSettingsCategories.length) {
-          return const SizedBox.shrink();
-        }
-        final label = kSettingsCategories[category].label;
-        final kids = buildSettingsCategoryChildren(
-          registry: SettingsPageRegistry(pages: pages),
-          surface: SettingsLayoutSurface.desktop,
-          category: label,
-          accentColor: label == 'Danger Zone' ? t.danger : null,
-        );
-        if (kids.isEmpty && label == 'Profiles') {
-          return SettingsSection(
-            title: '',
-            children: [
-              SettingsTile.spec(
-                SettingsRowContent(
-                  icon: Icons.info_outline_rounded,
-                  title: 'Profiles unavailable',
-                  subtitle: ProfileBootstrap.legacyReasonSummary
-                      .split('\n')
-                      .first,
-                ),
-                onTap: () => showLegacyModeInfoDialog(context),
-              ),
-            ],
-          );
-        }
-        if (kids.isEmpty) return const SizedBox.shrink();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: kids,
-        );
+    if (category < 0 || category >= kSettingsCategories.length) {
+      return const SizedBox.shrink();
     }
+    final label = kSettingsCategories[category].label;
+    final kids = buildSettingsCategoryChildren(
+      registry: SettingsPageRegistry(pages: pages),
+      surface: SettingsLayoutSurface.desktop,
+      category: label,
+      firstRowFocusNode: label == 'Connections' ? firstFocusNode : null,
+      accentColor: label == 'Danger Zone' ? t.danger : null,
+    );
+    if (kids.isEmpty && label == 'Profiles') {
+      return SettingsSection(
+        title: '',
+        children: [
+          SettingsTile.spec(
+            SettingsRowContent(
+              icon: Icons.info_outline_rounded,
+              title: 'Profiles unavailable',
+              subtitle: ProfileBootstrap.legacyReasonSummary
+                  .split('\n')
+                  .first,
+            ),
+            onTap: () => showLegacyModeInfoDialog(context),
+          ),
+        ],
+      );
+    }
+    if (kids.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: kids,
+    );
   }
 
   @override
@@ -2878,13 +2704,9 @@ class _SettingsLayout extends StatelessWidget {
                 const SettingsHeader(),
                 const SizedBox(height: 18),
                 _SettingsSearchBar(onTap: onOpenSearch),
-                const SizedBox(height: 24),
-                // Connections section with cards
-                connections,
                 ...[
                   for (final cat in kSettingsCategories)
-                    if (cat.id != 'connections' && cat.id != 'trackers')
-                      ..._phoneCategory(cat, t.danger),
+                    ..._phoneCategory(cat, t.danger),
                 ],
               ],
             ),

@@ -32,15 +32,6 @@ import '../../theme/app_theme_scope.dart';
 /// `_SettingsLayout`. All actions/dialogs still live in the parent State —
 /// this is presentation + focus only.
 class SettingsTvLayout extends StatefulWidget {
-  final List<ConnectionInfo> connections;
-
-  /// Cross-service watch-history policy, visually separated from the account
-  /// connections below it in the Trackers category.
-  final ConnectionInfo tracking;
-
-  /// Watch-history services (Trakt, Simkl, MDBList) in their own section.
-  final List<ConnectionInfo> trackers;
-
   /// Focus target the sidebar hand-off and post-logout restores aim at —
   /// attached to the first rail item.
   final FocusNode? firstFocusNode;
@@ -52,15 +43,11 @@ class SettingsTvLayout extends StatefulWidget {
   final bool showSupportDonation;
 
   /// Bound settings pages from [SettingsPageRegistry]. Empty falls back
-  /// to the production catalog (existing layout tests only exercise the
-  /// Connections pane, which is still a special-case card grid).
+  /// to the production catalog.
   final List<SettingsPageSpec> pages;
 
   const SettingsTvLayout({
     super.key,
-    required this.connections,
-    required this.tracking,
-    required this.trackers,
     required this.firstFocusNode,
     required this.onOpenSearch,
     this.showSwitchProfile = false,
@@ -160,17 +147,10 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
       _rail.length,
       (i) => FocusNode(debugLabel: 'settings-tv-rail-$i'),
     );
-    // The pool must cover whichever category has the most rows. Connections
-    // and Trackers each have one node per card; the fixed categories have
-    // at most [_kMaxCategoryRows]. Computed over all three rather than
-    // assuming Connections is always the biggest — it no longer holds every
-    // provider.
+    // The pool must cover whichever category has the most rows.
     var poolSize = _kMaxCategoryRows;
     final catalogMax = _pageRegistry.tvMaxFocusableRows;
     if (catalogMax > poolSize) poolSize = catalogMax;
-    for (final n in [widget.connections.length, widget.trackers.length + 1]) {
-      if (n > poolSize) poolSize = n;
-    }
     _paneNodes = List.generate(
       poolSize,
       (i) => FocusNode(debugLabel: 'settings-tv-pane-$i'),
@@ -306,16 +286,9 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
 
   KeyEventResult _paneKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    if (_selected.value == 1) return _trackerPaneKey(event);
     final key = event.logicalKey;
     final i = _paneNodes.indexWhere((n) => n.hasFocus);
-    final grid =
-        _selected.value == 0 && MediaQuery.sizeOf(context).width >= 880;
     if (key == LogicalKeyboardKey.arrowLeft) {
-      if (grid && i > 0 && i.isOdd && _isPaneRowLive(i - 1)) {
-        _focusPaneRow(i - 1, travel: const Offset(-1, 0));
-        return KeyEventResult.handled;
-      }
       // Return to the category we're viewing, not whichever rail item happens
       // to sit to the left geometrically.
       ParallaxTravel.note(const Offset(-1, 0));
@@ -323,9 +296,6 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowRight) {
-      if (grid && i >= 0 && i.isEven && _isPaneRowLive(i + 1)) {
-        _focusPaneRow(i + 1, travel: const Offset(1, 0));
-      }
       // Nothing to the right of the pane — trap so focus can't escape.
       return KeyEventResult.handled;
     }
@@ -335,70 +305,15 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
     // mounted — the pool is reused across categories and a FocusNode's context
     // is NOT nulled on unmount, so `context != null` would be a stale true for
     // a node last attached by a larger, previously-visited category.
-    final step = grid ? 2 : 1;
     if (key == LogicalKeyboardKey.arrowUp) {
-      if (i - step >= 0 && _isPaneRowLive(i - step)) {
-        _focusPaneRow(i - step, travel: const Offset(0, -1));
+      if (i - 1 >= 0 && _isPaneRowLive(i - 1)) {
+        _focusPaneRow(i - 1, travel: const Offset(0, -1));
       }
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowDown) {
-      if (i >= 0 && i + step < _paneNodes.length && _isPaneRowLive(i + step)) {
-        _focusPaneRow(i + step, travel: const Offset(0, 1));
-      }
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
-  }
-
-  /// Tracking is a full-width policy card above a separate two-column account
-  /// grid, so the generic even/odd grid walker cannot describe its geometry.
-  KeyEventResult _trackerPaneKey(KeyEvent event) {
-    final key = event.logicalKey;
-    final i = _paneNodes.indexWhere((n) => n.hasFocus);
-    if (i < 0) return KeyEventResult.ignored;
-    final count = widget.trackers.length + 1;
-    final twoColumns = MediaQuery.sizeOf(context).width >= 880;
-
-    if (key == LogicalKeyboardKey.arrowLeft) {
-      // Provider cards use indices 1...: even indices are the right column.
-      if (twoColumns && i >= 2 && i.isEven && _isPaneRowLive(i - 1)) {
-        _focusPaneRow(i - 1, travel: const Offset(-1, 0));
-      } else {
-        ParallaxTravel.note(const Offset(-1, 0));
-        _railNodes[_selected.value].requestFocus();
-      }
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowRight) {
-      if (twoColumns &&
-          i >= 1 &&
-          i.isOdd &&
-          i + 1 < count &&
-          _isPaneRowLive(i + 1)) {
-        _focusPaneRow(i + 1, travel: const Offset(1, 0));
-      }
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowUp) {
-      final target = !twoColumns
-          ? i - 1
-          : i <= 2
-          ? 0
-          : i - 2;
-      if (target >= 0 && target != i && _isPaneRowLive(target)) {
-        _focusPaneRow(target, travel: const Offset(0, -1));
-      }
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowDown) {
-      final target = !twoColumns
-          ? i + 1
-          : i == 0
-          ? 1
-          : i + 2;
-      if (target < count && _isPaneRowLive(target)) {
-        _focusPaneRow(target, travel: const Offset(0, 1));
+      if (i >= 0 && i + 1 < _paneNodes.length && _isPaneRowLive(i + 1)) {
+        _focusPaneRow(i + 1, travel: const Offset(0, 1));
       }
       return KeyEventResult.handled;
     }
@@ -656,118 +571,43 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
   }
 
   List<Widget> _buildPaneChildren(int category) {
-    switch (category) {
-      case 0: // Connections
-        return [_buildConnectionGrid(widget.connections)];
-      case 1: // Trackers
-        return [_buildTrackerGroups()];
-      default:
-        if (category < 0 || category >= kSettingsCategories.length) {
-          return const [];
-        }
-        // Nodes stay CONTIGUOUS from 0 — the DPAD walker only advances to
-        // the immediately adjacent live node, so a gap strands Down.
-        // buildSettingsCategoryChildren claims [_paneNodes] sequentially
-        // (headers and info tiles take no node).
-        final label = kSettingsCategories[category].label;
-        final t = AppThemeScope.of(context).settings;
-        final built = buildSettingsCategoryChildren(
-          registry: _pageRegistry,
-          surface: SettingsLayoutSurface.tv,
-          category: label,
-          paneNodes: _paneNodes,
-          accentColor: label == 'Danger Zone' ? t.danger : null,
-        );
-        if (built.isEmpty && label == 'Profiles') {
-          return [
-            SettingsSection(
-              title: '',
-              children: [
-                SettingsTile.spec(
-                  SettingsRowContent(
-                    icon: Icons.info_outline_rounded,
-                    title: 'Profiles unavailable',
-                    subtitle: ProfileBootstrap.legacyReasonSummary
-                        .split('\n')
-                        .first,
-                  ),
-                  onTap: () => showLegacyModeInfoDialog(context),
-                  focusNode: _paneNodes[0],
-                ),
-              ],
-            ),
-          ];
-        }
-        return built;
+    if (category < 0 || category >= kSettingsCategories.length) {
+      return const [];
     }
-  }
-
-  Widget _buildConnectionGrid(List<ConnectionInfo> connections) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final twoColumns = MediaQuery.sizeOf(context).width >= 880;
-        final width = twoColumns
-            ? (constraints.maxWidth - 12) / 2
-            : constraints.maxWidth;
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            for (var i = 0; i < connections.length; i++)
-              SizedBox(
-                width: width,
-                child: ConnectionCard(
-                  info: connections[i],
-                  focusNode: _paneNodes[i],
-                  isLeftColumn: false,
-                ),
-              ),
-          ],
-        );
-      },
+    // Nodes stay CONTIGUOUS from 0 — the DPAD walker only advances to
+    // the immediately adjacent live node, so a gap strands Down.
+    // buildSettingsCategoryChildren claims [_paneNodes] sequentially
+    // (headers and info tiles take no node).
+    final label = kSettingsCategories[category].label;
+    final t = AppThemeScope.of(context).settings;
+    final built = buildSettingsCategoryChildren(
+      registry: _pageRegistry,
+      surface: SettingsLayoutSurface.tv,
+      category: label,
+      paneNodes: _paneNodes,
+      accentColor: label == 'Danger Zone' ? t.danger : null,
     );
-  }
-
-  Widget _buildTrackerGroups() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final twoColumns = MediaQuery.sizeOf(context).width >= 880;
-        final width = twoColumns
-            ? (constraints.maxWidth - 12) / 2
-            : constraints.maxWidth;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    if (built.isEmpty && label == 'Profiles') {
+      return [
+        SettingsSection(
+          title: '',
           children: [
-            const SettingsSectionLabel('Tracking'),
-            SizedBox(
-              width: constraints.maxWidth,
-              child: ConnectionCard(
-                info: widget.tracking,
-                focusNode: _paneNodes[0],
-                isLeftColumn: false,
+            SettingsTile.spec(
+              SettingsRowContent(
+                icon: Icons.info_outline_rounded,
+                title: 'Profiles unavailable',
+                subtitle: ProfileBootstrap.legacyReasonSummary
+                    .split('\n')
+                    .first,
               ),
-            ),
-            const SizedBox(height: 22),
-            const SettingsSectionLabel('Tracker services'),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                for (var i = 0; i < widget.trackers.length; i++)
-                  SizedBox(
-                    width: width,
-                    child: ConnectionCard(
-                      info: widget.trackers[i],
-                      focusNode: _paneNodes[i + 1],
-                      isLeftColumn: false,
-                    ),
-                  ),
-              ],
+              onTap: () => showLegacyModeInfoDialog(context),
+              focusNode: _paneNodes[0],
             ),
           ],
-        );
-      },
-    );
+        ),
+      ];
+    }
+    return built;
   }
 }
 

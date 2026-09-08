@@ -1,5 +1,4 @@
 import 'package:debrify/screens/settings/settings_tv_layout.dart';
-import 'package:debrify/screens/settings/widgets/settings_widgets.dart';
 import 'package:debrify/services/text_brightness.dart';
 import 'package:debrify/theme/app_theme.dart';
 import 'package:debrify/theme/app_theme_adapter.dart';
@@ -8,30 +7,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Future<void> _noop() async {}
 void _voidNoop() {}
 
-ConnectionInfo _connection(String title, {bool connected = true}) =>
-    ConnectionInfo(
-      title: title,
-      connected: connected,
-      status: connected ? 'Active' : 'Not connected',
-      caption: connected ? 'Ready for playback' : 'Connect this service',
-      onTap: _noop,
-    );
-
-SettingsTvLayout _layout(FocusNode entry) => SettingsTvLayout(
-  connections: [
-    _connection('Real Debrid'),
-    _connection('Torbox'),
-    _connection('Premiumize', connected: false),
-    _connection('AllDebrid'),
-  ],
-  tracking: _connection('Tracking'),
-  trackers: [_connection('Trakt'), _connection('Simkl', connected: false)],
-  firstFocusNode: entry,
-  onOpenSearch: _voidNoop,
-);
+/// [pages] defaults to the production catalog (via [SettingsTvLayout]'s
+/// noop-binding fallback) — Connections is a plain registry-driven category
+/// like every other one now, so these tests exercise the real Storage
+/// Providers row order rather than a synthetic fixture.
+SettingsTvLayout _layout(FocusNode entry) =>
+    SettingsTvLayout(firstFocusNode: entry, onOpenSearch: _voidNoop);
 
 Future<void> _pumpTv(
   WidgetTester tester,
@@ -64,7 +47,7 @@ Future<void> _pumpTv(
 }
 
 void main() {
-  testWidgets('TV grid keeps deterministic two-dimensional DPAD movement', (
+  testWidgets('TV pane keeps deterministic single-column DPAD movement', (
     tester,
   ) async {
     final entry = FocusNode(debugLabel: 'settings-test-entry');
@@ -78,6 +61,8 @@ void main() {
       'settings-tv-rail-0',
     );
 
+    // Right enters the pane on the Connections category's first row
+    // (Real-Debrid, the first Storage Providers row).
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pump();
     expect(
@@ -85,7 +70,8 @@ void main() {
       'settings-tv-pane-0',
     );
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    // Down/Up walk the single column one row at a time — no grid geometry.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pump();
     expect(
       FocusManager.instance.primaryFocus?.debugLabel,
@@ -96,16 +82,25 @@ void main() {
     await tester.pump();
     expect(
       FocusManager.instance.primaryFocus?.debugLabel,
-      'settings-tv-pane-3',
+      'settings-tv-pane-2',
     );
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    // Right does nothing — the pane traps it, there is nothing beside a row.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pump();
     expect(
       FocusManager.instance.primaryFocus?.debugLabel,
       'settings-tv-pane-2',
     );
 
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(
+      FocusManager.instance.primaryFocus?.debugLabel,
+      'settings-tv-pane-1',
+    );
+
+    // Left always returns to the rail item for the category being viewed.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pump();
     expect(
@@ -115,7 +110,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('compact logical TV falls back to one connection column', (
+  testWidgets('TV pane survives a compact TV width without exceptions', (
     tester,
   ) async {
     final entry = FocusNode(debugLabel: 'settings-test-entry-compact');
@@ -129,47 +124,9 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pump();
 
-    // On compact TV the grid becomes a list, so Down advances by one.
     expect(
       FocusManager.instance.primaryFocus?.debugLabel,
       'settings-tv-pane-1',
-    );
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('Tracker policy and services are separate DPAD sections', (
-    tester,
-  ) async {
-    final entry = FocusNode(debugLabel: 'settings-test-entry-trackers');
-    addTearDown(entry.dispose);
-    await _pumpTv(tester, const Size(960, 540), entry);
-
-    entry.requestFocus();
-    await tester.pump();
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-    await tester.pump();
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-    await tester.pump();
-
-    expect(find.text('TRACKING'), findsOneWidget);
-    expect(find.text('TRACKER SERVICES'), findsOneWidget);
-    expect(
-      FocusManager.instance.primaryFocus?.debugLabel,
-      'settings-tv-pane-0',
-    );
-
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-    await tester.pump();
-    expect(
-      FocusManager.instance.primaryFocus?.debugLabel,
-      'settings-tv-pane-1',
-    );
-
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-    await tester.pump();
-    expect(
-      FocusManager.instance.primaryFocus?.debugLabel,
-      'settings-tv-pane-2',
     );
     expect(tester.takeException(), isNull);
   });
@@ -196,13 +153,13 @@ void main() {
 
     entry.requestFocus();
     await tester.pump();
-    // Rail: Connections → Trackers → Home & Display → Appearance. The pane
-    // follows rail focus, so the preview is already up before entering.
-    for (var i = 0; i < 3; i++) {
+    // Rail: Connections → Home & Display → Appearance. The pane follows
+    // rail focus, so the preview is already up before entering.
+    for (var i = 0; i < 2; i++) {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
     }
-    expect(FocusManager.instance.primaryFocus?.debugLabel, 'settings-tv-rail-3');
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'settings-tv-rail-2');
     expect(find.text('LIVE PREVIEW'), findsOneWidget);
 
     // Enter: the first pane node is the preview's Look strip.
@@ -234,7 +191,7 @@ void main() {
     // Left from the first chip hands back to the SELECTED rail item.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
-    expect(FocusManager.instance.primaryFocus?.debugLabel, 'settings-tv-rail-3');
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'settings-tv-rail-2');
     expect(tester.takeException(), isNull);
   }, tags: ['golden']);
 

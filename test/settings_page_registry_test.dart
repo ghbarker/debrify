@@ -9,7 +9,6 @@ import 'package:debrify/theme/app_theme.dart';
 import 'package:debrify/theme/app_theme_adapter.dart';
 import 'package:debrify/theme/app_theme_scope.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'dart:io';
 
@@ -28,7 +27,7 @@ void main() {
         title: 'Fake Lane Page',
         subtitle: 'Registered once for S1',
       ),
-      category: 'Playback',
+      category: 'Connections',
       opener: () async {},
       keywords: const ['fake-lane-keyword'],
       phoneOrder: 20,
@@ -47,15 +46,15 @@ void main() {
 
   test('one registration lights up titlesOn for phone, desktop and TV', () {
     expect(
-      registry.titlesOn(SettingsLayoutSurface.phone, category: 'Playback'),
+      registry.titlesOn(SettingsLayoutSurface.phone, category: 'Connections'),
       contains('Fake Lane Page'),
     );
     expect(
-      registry.titlesOn(SettingsLayoutSurface.desktop, category: 'Playback'),
+      registry.titlesOn(SettingsLayoutSurface.desktop, category: 'Connections'),
       contains('Fake Lane Page'),
     );
     expect(
-      registry.titlesOn(SettingsLayoutSurface.tv, category: 'Playback'),
+      registry.titlesOn(SettingsLayoutSurface.tv, category: 'Connections'),
       contains('Fake Lane Page'),
     );
   });
@@ -65,7 +64,7 @@ void main() {
       (e) => e.title == 'Fake Lane Page',
     );
     expect(hit, isNotEmpty);
-    expect(hit.first.category, 'Playback');
+    expect(hit.first.category, 'Connections');
     expect(hit.first.matches(['fake-lane-keyword']), isTrue);
   });
 
@@ -122,7 +121,7 @@ void main() {
           buildSettingsCategoryChildren(
             registry: registry,
             surface: surface,
-            category: 'Playback',
+            category: 'Connections',
           ),
         ),
       );
@@ -148,23 +147,6 @@ void main() {
         builder: (context, child) => AppThemeScope(theme: theme, child: child!),
         home: Scaffold(
           body: SettingsTvLayout(
-            connections: [
-              ConnectionInfo(
-                title: 'Real Debrid',
-                connected: true,
-                status: 'Active',
-                caption: 'Ready',
-                onTap: () async {},
-              ),
-            ],
-            tracking: ConnectionInfo(
-              title: 'Tracking',
-              connected: true,
-              status: 'Active',
-              caption: 'Ready',
-              onTap: () async {},
-            ),
-            trackers: const [],
             firstFocusNode: entry,
             onOpenSearch: () {},
             pages: registry.pages,
@@ -174,13 +156,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Rail: 0 Connections, 1 Trackers, 2 Home, 3 Appearance, 4 Playback.
+    // Rail: 0 Connections (the fake page's category, and the rail's first
+    // entry) — no navigation needed, just enter the pane.
     entry.requestFocus();
     await tester.pump();
-    for (var i = 0; i < 4; i++) {
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-      await tester.pump();
-    }
     expect(find.text('Fake Lane Page'), findsOneWidget);
   });
 

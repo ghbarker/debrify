@@ -10,38 +10,24 @@ import 'widgets/settings_widgets.dart';
 /// one focus stop. Kept next to the registry's count so the two agree.
 const int kAppearancePreviewTvNodes = 1;
 
-/// Canonical 13-category rail. Labels MUST stay in this order — pinned by
+/// Canonical category rail. Labels MUST stay in this order — pinned by
 /// `test/settings_page_order_pin_test.dart`.
 const List<SettingsCategorySpec> kSettingsCategories = [
   SettingsCategorySpec(
     id: 'connections',
     icon: Icons.link_rounded,
     label: 'Connections',
-    tvSubtitle: 'Debrid, cloud, IPTV & more',
+    tvSubtitle: 'Storage, search, IPTV & tracking',
     tvTitle: 'Services, all in one place.',
     tvDescription:
-        'See what is ready, what needs attention, and where playback will go.',
-    desktopSubtitle: 'Debrid, cloud, IPTV & more',
+        'Storage providers, search & playback routing, IPTV sources, and '
+        'watch-history tracking, together.',
+    desktopSubtitle: 'Storage, search, IPTV & tracking',
     desktopEyebrow: 'Connections',
     desktopTitle: 'Services, all in one place.',
     desktopDescription:
-        'See what is ready, what needs attention, and where playback will go '
-        'before opening a provider.',
-  ),
-  SettingsCategorySpec(
-    id: 'trackers',
-    icon: Icons.sync_rounded,
-    label: 'Trackers',
-    tvSubtitle: 'Trakt & Simkl watch history',
-    tvTitle: 'Keep every watch in sync.',
-    tvDescription:
-        'Choose how tracking works, then connect each watch-history service.',
-    desktopSubtitle: 'Trakt & Simkl watch history',
-    desktopEyebrow: 'Trackers',
-    desktopTitle: 'Keep every watch in sync.',
-    desktopDescription:
-        'Choose how tracking works, then connect each watch-history service '
-        'without digging through account screens.',
+        'Storage providers, search & playback routing, IPTV sources, and '
+        'watch-history tracking, together.',
   ),
   SettingsCategorySpec(
     id: 'homeDisplay',
@@ -74,36 +60,6 @@ const List<SettingsCategorySpec> kSettingsCategories = [
         'what matters.',
   ),
   SettingsCategorySpec(
-    id: 'playback',
-    icon: Icons.play_circle_outline_rounded,
-    label: 'Playback',
-    tvSubtitle: 'Player, skip segments, subtitles & audio',
-    tvTitle: 'Playback without surprises.',
-    tvDescription:
-        'Choose how videos start and what plays them on this television.',
-    desktopSubtitle: 'Player, subtitles & audio',
-    desktopEyebrow: 'Playback',
-    desktopTitle: 'Playback without surprises.',
-    desktopDescription:
-        'Choose how videos start, what plays them, and the behavior shared by '
-        'movies and episodes.',
-  ),
-  SettingsCategorySpec(
-    id: 'search',
-    icon: Icons.search_rounded,
-    label: 'Search',
-    tvSubtitle: 'Engines, filters & providers',
-    tvTitle: 'Find the right source faster.',
-    tvDescription:
-        'Engines, default filters, and provider routing form one pipeline.',
-    desktopSubtitle: 'Engines, filters & providers',
-    desktopEyebrow: 'Search',
-    desktopTitle: 'Find the right source faster.',
-    desktopDescription:
-        'Search engines, default filters, and provider routing form one clear '
-        'pipeline.',
-  ),
-  SettingsCategorySpec(
     id: 'discover',
     icon: Icons.explore_rounded,
     label: 'Discover',
@@ -117,21 +73,6 @@ const List<SettingsCategorySpec> kSettingsCategories = [
     desktopDescription:
         'Remember the last source you used or choose one source to show every '
         'time Discover opens.',
-  ),
-  SettingsCategorySpec(
-    id: 'liveTv',
-    icon: Icons.fiber_dvr_rounded,
-    label: 'Live TV & DVR',
-    tvSubtitle: 'Debrify TV, recordings & IPTV',
-    tvTitle: 'Live television, organized.',
-    tvDescription:
-        'Manage channel sources, recordings, and the on-screen guide.',
-    desktopSubtitle: 'Channels, guide & recordings',
-    desktopEyebrow: 'Live TV & DVR',
-    desktopTitle: 'Live television, organized.',
-    desktopDescription:
-        'Manage channel sources, recordings, and the guide from one focused '
-        'area.',
   ),
   SettingsCategorySpec(
     id: 'devices',
@@ -307,6 +248,16 @@ String? settingsGroupBlurb(SettingsLayoutSurface surface, String group) {
               'app.';
         case 'Screen layouts':
           return 'Where things sit. Each screen is chosen separately.';
+        case 'Storage Providers':
+          return 'Debrid and cloud accounts search results are pulled '
+              'from.';
+        case 'Search & Playback':
+          return 'Engines, filters, default provider and the external '
+              'player.';
+        case 'IPTV':
+          return 'Live channel sources, lists and recordings.';
+        case 'Tracking':
+          return 'Watch-history services and how progress syncs.';
       }
     case SettingsLayoutSurface.desktop:
       switch (group) {
@@ -317,6 +268,16 @@ String? settingsGroupBlurb(SettingsLayoutSurface surface, String group) {
           return 'Colour, focus, and motion. Applies everywhere.';
         case 'Screen layouts':
           return 'Where things sit. Each screen is chosen separately.';
+        case 'Storage Providers':
+          return 'Debrid and cloud accounts search results are pulled '
+              'from.';
+        case 'Search & Playback':
+          return 'Engines, filters, default provider and the external '
+              'player.';
+        case 'IPTV':
+          return 'Live channel sources, lists and recordings.';
+        case 'Tracking':
+          return 'Watch-history services and how progress syncs.';
       }
     case SettingsLayoutSurface.tv:
       switch (group) {
@@ -332,6 +293,16 @@ String? settingsGroupBlurb(SettingsLayoutSurface surface, String group) {
               'style.';
         case 'Player':
           return 'The on-screen controls during playback on this TV.';
+        case 'Storage Providers':
+          return 'Debrid and cloud accounts search results are pulled '
+              'from.';
+        case 'Search & Playback':
+          return 'Engines, filters, default provider and the external '
+              'player.';
+        case 'IPTV':
+          return 'Live channel sources, lists and recordings.';
+        case 'Tracking':
+          return 'Watch-history services and how progress syncs.';
       }
   }
   return null;
@@ -407,16 +378,28 @@ List<Widget> buildSettingsCategoryChildren({
   required SettingsLayoutSurface surface,
   required String category,
   List<FocusNode>? paneNodes,
+  // Phone/desktop have no pane-node pool (rows are plain scroll-list
+  // widgets), but the TV sidebar hand-off on tvOS/desktop-with-remote still
+  // needs a concrete first-row target to restore focus onto. When set (and
+  // [paneNodes] is null) it is handed out as the very first row's node.
+  FocusNode? firstRowFocusNode,
   Color? accentColor,
 }) {
   final pages = registry.visibleOn(surface, category: category);
   if (pages.isEmpty) return const [];
 
   var paneIdx = 0;
+  var firstRowNodeConsumed = false;
   FocusNode? nextNode() {
-    if (paneNodes == null) return null;
-    if (paneIdx >= paneNodes.length) return null;
-    return paneNodes[paneIdx++];
+    if (paneNodes != null) {
+      if (paneIdx >= paneNodes.length) return null;
+      return paneNodes[paneIdx++];
+    }
+    if (!firstRowNodeConsumed && firstRowFocusNode != null) {
+      firstRowNodeConsumed = true;
+      return firstRowFocusNode;
+    }
+    return null;
   }
 
   final heroes = <Widget>[];

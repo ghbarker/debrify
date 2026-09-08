@@ -5,9 +5,9 @@ import 'package:debrify/screens/settings/settings_page_registry.dart';
 import 'package:debrify/screens/settings/settings_page_spec.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Pins today's settings information architecture after the S1 registry
-/// move. Order is a user-visible quirk: a page that jumps a section, or a
-/// rail that swaps Connections and Trackers, is a behaviour change.
+/// Pins today's settings information architecture after the settings-menu
+/// reorg. Order is a user-visible quirk: a page that jumps a section, or a
+/// rail that reorders categories, is a behaviour change.
 ///
 /// The three layouts and search all read [kSettingsCategories] /
 /// [buildSettingsPages]; this file asserts the same lists the pre-move
@@ -27,46 +27,58 @@ void main() {
     );
   });
 
-  test('the 13 rail categories stay in todays order', () {
+  test('the rail categories stay in todays order', () {
     expect(
       [for (final c in kSettingsCategories) c.label],
       kSettingsCategoryOrder,
     );
   });
 
-  test('Search rows are Engines, Filters, Default Provider, Quick Play', () {
-    expect(_ids(registry, SettingsLayoutSurface.tv, 'Search'), [
-      'searchSettings',
-      'filterSettings',
-      'providerSettings',
-      'quickPlay',
-    ]);
-    expect(_ids(registry, SettingsLayoutSurface.phone, 'Search'), [
-      'searchSettings',
-      'filterSettings',
-      'providerSettings',
-      'quickPlay',
-    ]);
-    expect(_ids(registry, SettingsLayoutSurface.desktop, 'Search'), [
-      'searchSettings',
-      'filterSettings',
-      'providerSettings',
-      'quickPlay',
-    ]);
-  });
+  // Search, Playback and Live TV & DVR dissolved into Connections — Storage
+  // Providers, then Search & Playback, then IPTV, then Tracking.
+  const kConnectionsOrder = [
+    'realDebrid',
+    'torbox',
+    'premiumize',
+    'allDebrid',
+    'pikpak',
+    'webDav',
+    'indexerManagers',
+    'searchSettings',
+    'filterSettings',
+    'providerSettings',
+    'quickPlay',
+    'player',
+    'iptvPlaylists',
+    'iptvLists',
+    'startupChannel',
+    'iptvContinueWatching',
+    'debrifyTv',
+    'recordings',
+    'tracking',
+    'trakt',
+    'simkl',
+    // mdblist omitted — hidden behind mdblistEnabled, off by default here.
+  ];
 
-  test('Live TV & DVR rows are Debrify TV, Recordings, IPTV Playlists', () {
-    expect(_ids(registry, SettingsLayoutSurface.tv, 'Live TV & DVR'), [
-      'debrifyTv',
-      'recordings',
-      'iptvPlaylists',
-    ]);
-    expect(_ids(registry, SettingsLayoutSurface.phone, 'Live TV & DVR'), [
-      'debrifyTv',
-      'recordings',
-      'iptvPlaylists',
-    ]);
-  });
+  test(
+    'Connections rows are Storage Providers, Search & Playback, IPTV, '
+    'Tracking',
+    () {
+      expect(
+        _ids(registry, SettingsLayoutSurface.tv, 'Connections'),
+        kConnectionsOrder,
+      );
+      expect(
+        _ids(registry, SettingsLayoutSurface.phone, 'Connections'),
+        kConnectionsOrder,
+      );
+      expect(
+        _ids(registry, SettingsLayoutSurface.desktop, 'Connections'),
+        kConnectionsOrder,
+      );
+    },
+  );
 
   test('Data & Backup rows keep download / clear / backup / logs order', () {
     const wanted = [
@@ -120,17 +132,14 @@ void main() {
   });
 }
 
-/// Canonical rail order. Phone uses the same names as section titles (Profiles
-/// is conditional; Connections/Trackers live in the connections widget).
+/// Canonical rail order. Phone uses the same names as section titles
+/// (Profiles is conditional). Connections absorbed the old Trackers,
+/// Search, Playback and Live TV & DVR categories.
 const kSettingsCategoryOrder = [
   'Connections',
-  'Trackers',
   'Home & Display',
   'Appearance',
-  'Playback',
-  'Search',
   'Discover',
-  'Live TV & DVR',
   'Devices',
   'Profiles',
   'Data & Backup',
