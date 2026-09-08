@@ -110,6 +110,49 @@ void main() {
     expect(pressed, 1);
   });
 
+  testWidgets(
+    'TV: with no onPressed, SELECT does nothing and tap does nothing — a '
+    'plain list title is a label, not a control',
+    (tester) async {
+      final node = FocusNode(debugLabel: 'header');
+      addTearDown(node.dispose);
+      var ups = 0, downs = 0;
+      await tester.pumpWidget(
+        harness(
+          RailHeaderFocus(
+            node: node,
+            isTelevision: true,
+            onUp: () => ups++,
+            onDown: () => downs++,
+            onFocused: () {},
+            child: const Text('Popular Movies'),
+          ),
+        ),
+      );
+      node.requestFocus();
+      await tester.pump();
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.text('Popular Movies'));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      // The ladder itself still works — only the press action is gone.
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      expect(downs, 1);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowUp);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pump();
+      expect(ups, 1);
+    },
+  );
+
   testWidgets('off TV, arrow keys are ignored (no ladder to walk)', (
     tester,
   ) async {

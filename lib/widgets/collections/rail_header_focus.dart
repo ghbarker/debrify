@@ -3,21 +3,21 @@ import 'package:flutter/services.dart';
 
 import '../../theme/app_theme_scope.dart';
 
-/// The focusable/tappable strip that opens a collection rail's full catalog
-/// browse (or, for the folder's "All" row, switches to the merged grid).
+/// The focusable strip that doubles as the DPAD rung between rails (up to
+/// the rail above, down into this rail's own cards) — and, when [onPressed]
+/// is given, is also tappable/selectable (the folder's "All" row uses this
+/// to switch to the merged grid). A plain list title passes no [onPressed]:
+/// on TV a row's name is a label, exactly like Home's own row names, not a
+/// control that opens something.
 ///
-/// Wraps the whole header — title plus its tag pill — rather than a separate
-/// "See all ›" pill: the affordance used to be a small link at the header's
-/// right edge, but collection rows no longer carry that label anywhere
-/// (folder screen or Home). The row itself is still openable; only the
-/// visible chrome is gone. TV renders a focus highlight around the whole
-/// header and doubles it as the DPAD rung between rails (up to the rail
-/// above, down into this rail's own cards); elsewhere it's a plain tap
-/// target with no special styling until hovered.
+/// TV renders a focus highlight around the whole header while it holds the
+/// DPAD rung, whether or not it's pressable; elsewhere it's a plain tap
+/// target (or, with no [onPressed], not a tap target at all) with no special
+/// styling until hovered.
 class RailHeaderFocus extends StatefulWidget {
   final FocusNode node;
   final bool isTelevision;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final VoidCallback onUp;
   final VoidCallback onDown;
   final VoidCallback onFocused;
@@ -27,7 +27,7 @@ class RailHeaderFocus extends StatefulWidget {
     super.key,
     required this.node,
     required this.isTelevision,
-    required this.onPressed,
+    this.onPressed,
     required this.onUp,
     required this.onDown,
     required this.onFocused,
@@ -87,11 +87,13 @@ class _RailHeaderFocusState extends State<RailHeaderFocus> {
       // Nothing beside the header — swallow so focus can't wander off-screen.
       return KeyEventResult.handled;
     }
-    if (key == LogicalKeyboardKey.select ||
-        key == LogicalKeyboardKey.enter ||
-        key == LogicalKeyboardKey.space ||
-        key == LogicalKeyboardKey.gameButtonA) {
-      widget.onPressed();
+    final onPressed = widget.onPressed;
+    if (onPressed != null &&
+        (key == LogicalKeyboardKey.select ||
+            key == LogicalKeyboardKey.enter ||
+            key == LogicalKeyboardKey.space ||
+            key == LogicalKeyboardKey.gameButtonA)) {
+      onPressed();
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -104,6 +106,8 @@ class _RailHeaderFocusState extends State<RailHeaderFocus> {
       focusNode: widget.node,
       onKeyEvent: _onKey,
       child: InkWell(
+        // Null makes InkWell paint disabled (no ink, no cursor) — exactly
+        // "not a control", same as Home's own row-name label.
         onTap: widget.onPressed,
         borderRadius: app.shape.br(9),
         child: AnimatedContainer(
