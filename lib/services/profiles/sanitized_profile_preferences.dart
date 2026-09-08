@@ -23,10 +23,9 @@ abstract final class SanitizedProfilePreferences {
       case 'home_cw_merge_trakt':
       case 'home_cw_merge_simkl':
       case 'home_cw_merge_mdblist':
-      case 'home_hide_card_titles_and_ratings':
       case 'home_hide_catalog_addon_names':
       case 'discover_show_type_tags':
-      case 'discover_show_ratings':
+      case 'poster_title_ratings_visible':
       case 'detail_trailer_autoplay_enabled':
       case 'home_hero_trailer_audio_enabled':
       case 'detail_trailer_audio_enabled':

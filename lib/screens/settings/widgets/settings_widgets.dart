@@ -123,6 +123,11 @@ abstract final class SettingsRows {
     title: 'Navigation',
     subtitle: 'Classic bottom bar or floating button',
   );
+  static const titleRatingsVisibility = SettingsRowContent(
+    icon: Icons.subtitles_rounded,
+    title: 'Title & Ratings Visibility',
+    subtitle: 'Show titles and ratings on posters',
+  );
   static const searchSettings = SettingsRowContent(
     icon: Icons.search_rounded,
     title: 'Engines',

@@ -6,9 +6,17 @@ import 'widgets/appearance_preview_card.dart';
 import 'widgets/settings_option_row.dart';
 import 'widgets/settings_widgets.dart';
 
-/// Pane nodes the Appearance preview claims on TV — its whole Look strip is
-/// one focus stop. Kept next to the registry's count so the two agree.
+/// Pane nodes the live preview claims on TV — its whole Look strip is one
+/// focus stop. Kept next to the registry's count so the two agree.
 const int kAppearancePreviewTvNodes = 1;
+
+/// Categories that host the live preview card (AppearancePreviewHost): its
+/// mini-stage draws whichever inline Screen-layouts row is under the
+/// pointer/D-pad focus. Those rows split across Theme (Looks, App Theme,
+/// Theme Tokens, Text Brightness, Launch Animation), Layout (everything
+/// else that used to share the old Appearance category with them), and
+/// Profiles (Profile Picker, an inline options row of its own).
+const Set<String> kPreviewHostCategories = {'Theme', 'Layout', 'Profiles'};
 
 /// Canonical category rail. Labels MUST stay in this order — pinned by
 /// `test/settings_page_order_pin_test.dart`.
@@ -30,49 +38,35 @@ const List<SettingsCategorySpec> kSettingsCategories = [
         'watch-history tracking, together.',
   ),
   SettingsCategorySpec(
-    id: 'homeDisplay',
-    icon: Icons.home_rounded,
-    label: 'Home & Display',
-    tvSubtitle: 'Home screen rows & keyboard',
+    id: 'layout',
+    icon: Icons.dashboard_customize_rounded,
+    label: 'Layout',
+    tvSubtitle: 'Home, sidebar, detail pages, IPTV & player looks',
     tvTitle: 'Shape the room you come home to.',
     tvDescription:
-        'Arrange the home screen and tune this television for the room.',
-    desktopSubtitle: 'Rows, artwork & navigation',
-    desktopEyebrow: 'Home & Display',
+        'Arrange the home screen, sidebar and navigation, then fine-tune '
+        'every screen that follows.',
+    desktopSubtitle: 'Home, sidebar, detail pages & looks',
+    desktopEyebrow: 'Layout',
     desktopTitle: 'Shape the room you come home to.',
     desktopDescription:
-        'Arrange the home screen and choose the navigation that fits this '
-        'device.',
+        'Arrange the home screen and navigation, then fine-tune the detail, '
+        'IPTV and player screens that follow.',
   ),
   SettingsCategorySpec(
-    id: 'appearance',
+    id: 'theme',
     icon: Icons.auto_awesome_rounded,
-    label: 'Appearance',
-    tvSubtitle: 'Text, home, sidebar, IPTV & player looks',
+    label: 'Theme',
+    tvSubtitle: 'Look, colour, text & motion',
     tvTitle: 'Make the interface feel like yours.',
     tvDescription:
         'A Look sets the room. Fine-tune only the controls that matter.',
-    desktopSubtitle: 'Look, text, motion & layouts',
-    desktopEyebrow: 'Appearance',
+    desktopSubtitle: 'Look, colour, text & motion',
+    desktopEyebrow: 'Theme',
     desktopTitle: 'Make the interface feel like yours.',
     desktopDescription:
         'A Look sets the room. Individual controls below let you adjust only '
         'what matters.',
-  ),
-  SettingsCategorySpec(
-    id: 'discover',
-    icon: Icons.explore_rounded,
-    label: 'Discover',
-    tvSubtitle: 'Source & poster cards',
-    tvTitle: 'Open Discover where you left it.',
-    tvDescription:
-        'Remember the last source or choose one place to open every time.',
-    desktopSubtitle: 'Source & poster cards',
-    desktopEyebrow: 'Discover',
-    desktopTitle: 'Open where you want to browse.',
-    desktopDescription:
-        'Remember the last source you used or choose one source to show every '
-        'time Discover opens.',
   ),
   SettingsCategorySpec(
     id: 'devices',
@@ -189,9 +183,13 @@ class SettingsPageRegistry {
   /// About version chip is the existing case). Used to size the pane node
   /// pool so a new row cannot land past the pool.
   int tvFocusableCount(String category) {
-    // The Appearance preview card is mounted by buildSettingsCategoryChildren
+    // The live preview card is mounted by buildSettingsCategoryChildren
     // rather than registered as a page, and its Look strip takes one node.
-    var n = category == 'Appearance' ? kAppearancePreviewTvNodes : 0;
+    // Theme AND Layout both host it: every inline Screen-layouts row (now
+    // split across the two categories) previews on the same mini-stage.
+    var n = kPreviewHostCategories.contains(category)
+        ? kAppearancePreviewTvNodes
+        : 0;
     for (final page in pages) {
       if (!page.tv || page.category != category) continue;
       if (page.kindOn(SettingsLayoutSurface.tv) == SettingsRowKind.info) {
@@ -240,14 +238,6 @@ String? settingsGroupBlurb(SettingsLayoutSurface surface, String group) {
   switch (surface) {
     case SettingsLayoutSurface.phone:
       switch (group) {
-        case 'Presets':
-          return 'One pick that sets the theme, layouts and launch '
-              'animation together.';
-        case 'Theme':
-          return 'Colour, focus and motion. Applies everywhere in the '
-              'app.';
-        case 'Screen layouts':
-          return 'Where things sit. Each screen is chosen separately.';
         case 'Storage Providers':
           return 'Debrid and cloud accounts search results are pulled '
               'from.';
@@ -258,16 +248,21 @@ String? settingsGroupBlurb(SettingsLayoutSurface surface, String group) {
           return 'Live channel sources, lists and recordings.';
         case 'Tracking':
           return 'Watch-history services and how progress syncs.';
+        case 'App Structure':
+          return 'The rooms of the app and how you get between them.';
+        case 'Detail & Browsing':
+          return 'How a movie or series page, and its parents guide, are '
+              'laid out.';
+        case 'Live TV & IPTV Looks':
+          return 'The look of live channels, the guide and Debrify TV.';
+        case 'Player Looks':
+          return 'The on-screen controls during playback.';
+        case 'Screen':
+          return 'How this device draws. These affect performance, not '
+              'style.';
       }
     case SettingsLayoutSurface.desktop:
       switch (group) {
-        case 'Presets':
-          return 'One pick sets the theme, layouts, and launch animation '
-              'together.';
-        case 'Theme':
-          return 'Colour, focus, and motion. Applies everywhere.';
-        case 'Screen layouts':
-          return 'Where things sit. Each screen is chosen separately.';
         case 'Storage Providers':
           return 'Debrid and cloud accounts search results are pulled '
               'from.';
@@ -278,21 +273,21 @@ String? settingsGroupBlurb(SettingsLayoutSurface surface, String group) {
           return 'Live channel sources, lists and recordings.';
         case 'Tracking':
           return 'Watch-history services and how progress syncs.';
+        case 'App Structure':
+          return 'The rooms of the app and how you get between them.';
+        case 'Detail & Browsing':
+          return 'How a movie or series page, and its parents guide, are '
+              'laid out.';
+        case 'Live TV & IPTV Looks':
+          return 'The look of live channels, the guide and Debrify TV.';
+        case 'Player Looks':
+          return 'The on-screen controls during playback.';
+        case 'Screen':
+          return 'How this device draws. These affect performance, not '
+              'style.';
       }
     case SettingsLayoutSurface.tv:
       switch (group) {
-        case 'Presets':
-          return 'One pick that sets the theme, layouts and launch '
-              'animation together.';
-        case 'Theme':
-          return 'Colour, focus and motion. Applies everywhere in the app.';
-        case 'Screen layouts':
-          return 'Where things sit. Each screen is chosen separately.';
-        case 'Display':
-          return 'How this device draws. These affect performance, not '
-              'style.';
-        case 'Player':
-          return 'The on-screen controls during playback on this TV.';
         case 'Storage Providers':
           return 'Debrid and cloud accounts search results are pulled '
               'from.';
@@ -303,6 +298,18 @@ String? settingsGroupBlurb(SettingsLayoutSurface surface, String group) {
           return 'Live channel sources, lists and recordings.';
         case 'Tracking':
           return 'Watch-history services and how progress syncs.';
+        case 'App Structure':
+          return 'The rooms of the app and how you get between them.';
+        case 'Detail & Browsing':
+          return 'How a movie or series page, and its parents guide, are '
+              'laid out.';
+        case 'Live TV & IPTV Looks':
+          return 'The look of live channels, the guide and Debrify TV.';
+        case 'Player Looks':
+          return 'The on-screen controls during playback on this TV.';
+        case 'Screen':
+          return 'How this device draws. These affect performance, not '
+              'style.';
       }
   }
   return null;
@@ -403,7 +410,7 @@ List<Widget> buildSettingsCategoryChildren({
   }
 
   final heroes = <Widget>[];
-  if (category == 'Appearance') {
+  if (kPreviewHostCategories.contains(category)) {
     heroes.add(AppearancePreviewHost(focusNode: nextNode()));
   }
   final grouped = <String?, List<SettingsPageSpec>>{};
@@ -418,7 +425,8 @@ List<Widget> buildSettingsCategoryChildren({
   }
 
   final flatten =
-      surface == SettingsLayoutSurface.phone && category != 'Appearance';
+      surface == SettingsLayoutSurface.phone &&
+      !kPreviewHostCategories.contains(category);
   final tvLabeled =
       surface == SettingsLayoutSurface.tv &&
       (category == 'Data & Backup' || category == 'About');

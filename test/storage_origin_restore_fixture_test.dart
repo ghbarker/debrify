@@ -429,7 +429,6 @@ void main() {
       'home_continue_watching_enabled': await HomePrefs.getHomeContinueWatchingEnabled(),
       'home_cw_hold_to_quick_play': await HomePrefs.getHomeCwHoldToQuickPlay(),
       'home_favorites_open_folder': await HomePrefs.getHomeFavoritesTapAction(),
-      'home_hide_card_titles_and_ratings': await HomePrefs.getHomeHideCardTitlesAndRatings(),
       'home_hide_catalog_addon_names': await HomePrefs.getHomeHideCatalogAddonNames(),
       'home_hero_trailer_enabled': await HomePrefs.getHomeHeroTrailerEnabled(),
       'home_card_orientation': (await HomePrefs.getHomeCardOrientation()).name,
@@ -537,7 +536,10 @@ void main() {
         expect(prefs.containsKey('$prefix$key'), isFalse, reason: key);
       }
       final retained = (homeDomain['retainedAfterClear'] as List).cast<String>();
-      expect(retained.length, 7);
+      // home_hide_card_titles_and_ratings joined the retained set: the
+      // getter/setter retired (merged into DiscoverPrefs.titleRatingsVisible),
+      // so clearAllHomePageSettings no longer removes the raw key.
+      expect(retained.length, 8);
       _expectSettings({for (final key in retained) key: prefs.get('$prefix$key')},
           {for (final key in retained) key: homeValues[key]});
     });

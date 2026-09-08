@@ -212,7 +212,10 @@ class _SettingsSpotlightShellState extends State<SettingsSpotlightShell> {
                   child: _SettingsCategoryHeading(definition: category),
                 ),
                 Expanded(
-                  child: category.label == 'Appearance'
+                  child:
+                      category.label == 'Theme' ||
+                          category.label == 'Layout' ||
+                          category.label == 'Profiles'
                       ? Stack(
                           fit: StackFit.expand,
                           children: [

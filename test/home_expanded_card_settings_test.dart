@@ -30,8 +30,8 @@ void main() {
 
     final helper = source.substring(helperStart, catalogStart);
     expect(helper, contains('showTypeTags: DiscoverPrefs.showTypeTags'));
-    expect(helper, contains('showRatings: DiscoverPrefs.showRatings'));
-    expect(helper, contains('showTitles: DiscoverPrefs.showTitles'));
+    expect(helper, contains('showRatings: DiscoverPrefs.titleRatingsVisible'));
+    expect(helper, contains('showTitles: DiscoverPrefs.titleRatingsVisible'));
 
     // Catalog rows, tracker-list rows, generic Continue Watching rows (also
     // used by Simkl/MDBList), Trakt Continue Watching, and collection folder

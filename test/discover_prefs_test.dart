@@ -28,22 +28,19 @@ void main() {
     await DiscoverPrefs.warmUp();
 
     expect(DiscoverPrefs.showTypeTags, isTrue);
-    expect(DiscoverPrefs.showRatings, isTrue);
-    expect(DiscoverPrefs.showTitles, isTrue);
+    expect(DiscoverPrefs.titleRatingsVisible, isTrue);
   });
 
   test('Discover poster detail choices survive a restart', () async {
     await DiscoverPrefs.warmUp();
     await DiscoverPrefs.setShowTypeTags(false);
-    await DiscoverPrefs.setShowRatings(false);
-    await DiscoverPrefs.setShowTitles(false);
+    await DiscoverPrefs.setTitleRatingsVisible(false);
 
     DiscoverPrefs.debugReset();
     await DiscoverPrefs.warmUp();
 
     expect(DiscoverPrefs.showTypeTags, isFalse);
-    expect(DiscoverPrefs.showRatings, isFalse);
-    expect(DiscoverPrefs.showTitles, isFalse);
+    expect(DiscoverPrefs.titleRatingsVisible, isFalse);
   });
 
   test('a picked sort survives a restart', () async {

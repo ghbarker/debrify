@@ -1116,7 +1116,7 @@ class _SearchScreenState extends State<SearchScreenHost>
     if (!mounted) return;
     final cardSettings = await Future.wait<Object>([
       HomePrefs.getHomeCardOrientation(),
-      HomePrefs.getHomeHideCardTitlesAndRatings(),
+      Future.value(!DiscoverPrefs.titleRatingsVisible),
       HomePrefs.getHomeHideCatalogAddonNames(),
     ]);
     if (!mounted) return;
@@ -2241,7 +2241,7 @@ class _SearchScreenState extends State<SearchScreenHost>
   Future<void> _loadHomeCardOrientation() async {
     final values = await Future.wait<Object>([
       HomePrefs.getHomeCardOrientation(),
-      HomePrefs.getHomeHideCardTitlesAndRatings(),
+      Future.value(!DiscoverPrefs.titleRatingsVisible),
       HomePrefs.getHomeHideCatalogAddonNames(),
     ]);
     if (!mounted) return;
@@ -5361,8 +5361,8 @@ class _SearchScreenState extends State<SearchScreenHost>
     if (widget.searchMode) return child;
     return DiscoverCardSettingsScope(
       showTypeTags: DiscoverPrefs.showTypeTags,
-      showRatings: DiscoverPrefs.showRatings,
-      showTitles: DiscoverPrefs.showTitles,
+      showRatings: DiscoverPrefs.titleRatingsVisible,
+      showTitles: DiscoverPrefs.titleRatingsVisible,
       child: child,
     );
   }

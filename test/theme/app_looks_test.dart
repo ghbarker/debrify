@@ -2,12 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:debrify/screens/settings/detail_theme_page.dart';
 import 'package:debrify/services/storage/app_style_prefs.dart';
 import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/theme/app_looks.dart';
 import 'package:debrify/theme/app_theme.dart';
 import 'package:debrify/theme/app_theme_controller.dart';
+import 'package:debrify/theme/shipped_themes.dart';
 
 /// A Look is a bundle of preferences, so its dangerous properties are all
 /// about what it can reach and what happens when two writers meet.

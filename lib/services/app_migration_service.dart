@@ -28,6 +28,12 @@ class AppMigrationService {
       'essential_addon_opensubtitles_official_seeded';
   static const String _watchNextSeededKey = 'essential_addon_watch_next_seeded';
 
+  /// Set once the old Home "Hide Titles and Ratings" toggle and Discover's
+  /// separate "Show titles"/"Show ratings" toggles have been folded into the
+  /// single `poster_title_ratings_visible` preference for this profile.
+  static const String _titleRatingsMigratedKey =
+      'poster_title_ratings_migrated';
+
   /// Cinemeta addon manifest URL - provides metadata for movies and shows
   static const String cinemetaManifestUrl =
       'https://v3-cinemeta.strem.io/manifest.json';
@@ -58,6 +64,10 @@ class AppMigrationService {
   static Future<bool> runMigrations() async {
     try {
       final prefs = await ProfilePreferences.instance();
+
+      // Runs on every launch, per profile, but is a cheap no-op once this
+      // profile's flag is set — see [_migrateTitleRatingsVisibility].
+      await _migrateTitleRatingsVisibility(prefs);
 
       // Essential addons belong to the app-created Admin baseline. Secondary
       // and restored profiles must contain only addons explicitly installed
@@ -132,6 +142,36 @@ class AppMigrationService {
   /// every launch via [_ensureEssentialAddons] until it succeeds once.
   static Future<void> _runAllMigrations({required bool isFreshInstall}) async {
     // No version-gated migrations at present.
+  }
+
+  /// One-time per-profile merge of the retired Home "Hide Titles and
+  /// Ratings" toggle (`home_hide_card_titles_and_ratings`) and Discover's
+  /// separate "Show titles" / "Show ratings" toggles (`discover_show_titles`,
+  /// `discover_show_ratings`) into the single `poster_title_ratings_visible`
+  /// preference both screens now read.
+  ///
+  /// Any disagreement between the old screens — or no prior opinion at all —
+  /// resolves to VISIBLE. Only a profile that had already hidden titles and
+  /// ratings on every old screen keeps them hidden after the merge.
+  @visibleForTesting
+  static Future<void> migrateTitleRatingsVisibility(
+    SharedPreferences prefs,
+  ) => _migrateTitleRatingsVisibility(prefs);
+
+  static Future<void> _migrateTitleRatingsVisibility(
+    SharedPreferences prefs,
+  ) async {
+    if (prefs.getBool(_titleRatingsMigratedKey) ?? false) return;
+    final homeHidden =
+        prefs.getBool('home_hide_card_titles_and_ratings') ?? false;
+    final discoverTitlesHidden =
+        !(prefs.getBool('discover_show_titles') ?? true);
+    final discoverRatingsHidden =
+        !(prefs.getBool('discover_show_ratings') ?? true);
+    final hiddenEverywhere =
+        homeHidden && discoverTitlesHidden && discoverRatingsHidden;
+    await prefs.setBool('poster_title_ratings_visible', !hiddenEverywhere);
+    await prefs.setBool(_titleRatingsMigratedKey, true);
   }
 
   @visibleForTesting

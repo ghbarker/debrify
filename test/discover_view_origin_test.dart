@@ -21,8 +21,8 @@ Future<void> _mountOrigin(WidgetTester tester, String layout) async {
   await prepareFavourites(tester);
   StremioService.instance.invalidateCache();
   addTearDown(StremioService.instance.invalidateCache);
-  final previousTitles = DiscoverPrefs.showTitles;
-  addTearDown(() => DiscoverPrefs.setShowTitles(previousTitles));
+  final previousTitles = DiscoverPrefs.titleRatingsVisible;
+  addTearDown(() => DiscoverPrefs.setTitleRatingsVisible(previousTitles));
   await StorageService.setDiscoverDefaultSource('cw');
   await StorageService.setDiscoverLayout(layout);
   await HomePrefs.setHomeContinueWatchingEnabled(true);
@@ -53,7 +53,7 @@ void main() {
             find.byType(DiscoverCardSettingsScope),
           )
           .showTitles;
-      await DiscoverPrefs.setShowTitles(!before);
+      await DiscoverPrefs.setTitleRatingsVisible(!before);
       MainPageBridge.discoverCardSettingsChanged!();
       await tester.pump();
       expect(

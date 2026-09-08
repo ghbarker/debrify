@@ -1442,7 +1442,6 @@
         "home_cw_hold_to_quick_play": true,
         "home_favorites_open_folder": " opaque-action ",
         "home_card_orientation": "landscape",
-        "home_hide_card_titles_and_ratings": true,
         "home_hide_catalog_addon_names": false,
         "home_hero_trailer_enabled": false,
         "home_cw_merge_local": true,
@@ -1497,7 +1496,6 @@
         "home_cw_merge_mdblist",
         "home_favorites_open_folder",
         "home_card_orientation",
-        "home_hide_card_titles_and_ratings",
         "home_hide_catalog_addon_names"
       ],
       "retainedAfterClear": [
@@ -1507,7 +1505,8 @@
         "home_extra_rows_v1",
         "home_row_order_v1",
         "home_hero_source_v1",
-        "home_hero_trailer_enabled"
+        "home_hero_trailer_enabled",
+        "home_hide_card_titles_and_ratings"
       ],
       "mutations": {
         "home-key": {

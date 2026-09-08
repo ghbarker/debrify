@@ -43,8 +43,9 @@ void main() {
   );
 
   /// The pane shape [SettingsTvLayout]/[SettingsSpotlightShell] actually
-  /// build for Appearance: the dock above a scrolling column of the
-  /// category's real rows, sharing one [LayoutPreviewChannel].
+  /// build for Layout (a live-preview-hosting category, like Theme): the
+  /// dock above a scrolling column of the category's real rows, sharing
+  /// one [LayoutPreviewChannel].
   Future<List<FocusNode>> pumpPane(
     WidgetTester tester, {
     required bool tv,
@@ -65,7 +66,7 @@ void main() {
     final kids = buildSettingsCategoryChildren(
       registry: registry(tv: tv),
       surface: surface,
-      category: 'Appearance',
+      category: 'Layout',
       paneNodes: tv ? nodes : null,
     );
     final theme = AppThemes.byId('spotlight');

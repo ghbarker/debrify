@@ -71,10 +71,13 @@ void main() {
     );
   }
 
-  /// The Appearance column as production builds it, with a TV pane pool.
+  /// The Layout column as production builds it, with a TV pane pool. Most
+  /// Screen-layouts rows live in "Layout" now; pass [category] for the ones
+  /// that relocated elsewhere (profileAppearance moved to "Profiles").
   Future<List<FocusNode>> pumpAppearance(
     WidgetTester tester, {
     required SettingsLayoutSurface surface,
+    String category = 'Layout',
     double width = 720,
     KeyEventResult Function(FocusNode, KeyEvent)? outerKey,
   }) async {
@@ -88,7 +91,7 @@ void main() {
     final kids = buildSettingsCategoryChildren(
       registry: registry(tv: tv),
       surface: surface,
-      category: 'Appearance',
+      category: category,
       paneNodes: tv ? nodes : null,
     );
     await pump(
@@ -328,24 +331,42 @@ void main() {
   // Every other row: choosing its second option writes exactly that row's
   // pref (one new key, the expected suffix) through the writer, and the
   // stage shows the choice as applied.
-  for (final (rowId, option, keySuffix, tv) in const [
-    ('tvSidebarStyle', 'Island', 'tv_sidebar_style', true),
-    ('iptvAppearance', 'First Edition', 'iptv_style', true),
-    ('debrifyTvAppearance', 'Spotlight', 'debrify_tv_style', true),
-    ('playerGuideStyle', 'Cinema Glass', 'iptv_player_guide_style', true),
-    ('playLoaderStyle', 'Classic', 'play_loader_style', true),
-    ('parentsGuideStyle', 'Classic', 'parents_guide_style', true),
-    ('profileAppearance', 'Theater', 'profile_gate_style_v1', true),
-    ('playerDock', 'Cinema Bar', 'player_dock_style', false),
-    ('navigationStyleAppearance', 'Floating button', 'phone_nav_style', false),
-    ('desktopSidebarStyle', 'Pill', 'desktop_sidebar_style', false),
+  for (final (rowId, option, keySuffix, tv, category) in const [
+    // Merged Sidebar Style row: TV surface writes tv_sidebar_style through
+    // the 6-option TV variant.
+    ('sidebarStyle', 'Island', 'tv_sidebar_style', true, 'Layout'),
+    ('iptvAppearance', 'First Edition', 'iptv_style', true, 'Layout'),
+    ('debrifyTvAppearance', 'Spotlight', 'debrify_tv_style', true, 'Layout'),
+    (
+      'playerGuideStyle',
+      'Cinema Glass',
+      'iptv_player_guide_style',
+      true,
+      'Layout',
+    ),
+    ('playLoaderStyle', 'Classic', 'play_loader_style', true, 'Layout'),
+    ('parentsGuideStyle', 'Classic', 'parents_guide_style', true, 'Layout'),
+    (
+      'profileAppearance',
+      'Theater',
+      'profile_gate_style_v1',
+      true,
+      'Profiles',
+    ),
+    ('playerDock', 'Cinema Bar', 'player_dock_style', false, 'Layout'),
+    // Merged Navigation row: phone surface writes phone_nav_style.
+    ('navigationStyle', 'Floating button', 'phone_nav_style', false, 'Layout'),
+    // Merged Sidebar Style row again: phone/desktop surface writes
+    // desktop_sidebar_style through the 2-option non-TV variant.
+    ('sidebarStyle', 'Pill', 'desktop_sidebar_style', false, 'Layout'),
   ]) {
-    testWidgets('$rowId: choosing $option writes only $keySuffix', (
+    testWidgets('$rowId ($category): choosing $option writes only $keySuffix', (
       tester,
     ) async {
       await pumpAppearance(
         tester,
         surface: tv ? SettingsLayoutSurface.tv : SettingsLayoutSurface.phone,
+        category: category,
       );
       final before = await prefKeys();
       await tester.ensureVisible(row(rowId));
@@ -553,14 +574,16 @@ void main() {
     expect(find.text('PREVIEWING'), findsOneWidget);
   });
 
-  testWidgets('phone Appearance with an inline layouts row', (tester) async {
+  testWidgets('phone Layout with an inline layouts row', (tester) async {
     // The card and the Details Page row as the phone column builds them,
     // under one RepaintBoundary so the golden is those two and not the
-    // scroll view around them.
+    // scroll view around them. Layout hosts the same live preview card
+    // Theme does (kPreviewHostCategories) — every inline Screen-layouts
+    // row needs somewhere to draw its hover/applied preview.
     final kids = buildSettingsCategoryChildren(
       registry: registry(tv: false),
       surface: SettingsLayoutSurface.phone,
-      category: 'Appearance',
+      category: 'Layout',
     );
     SettingsOptionRow? detail;
     for (final k in kids) {
@@ -591,7 +614,7 @@ void main() {
           children: [
             kids.first,
             const SizedBox(height: 18),
-            SettingsSection(title: 'Screen layouts', children: [detail!]),
+            SettingsSection(title: 'Detail & Browsing', children: [detail!]),
           ],
         ),
       ),

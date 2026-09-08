@@ -67,7 +67,6 @@ const Map<String, int> kShapeResidue = {
   'lib/screens/see_all/catalog_see_all_screen.dart': 0,
   'lib/screens/settings/app_theme_page.dart': 1,
   'lib/screens/settings/debrify_tv_settings_page.dart': 0,
-  'lib/screens/settings/detail_theme_page.dart': 1,
   'lib/screens/settings/external_player_settings_page.dart': 18,
   'lib/screens/settings/filter_settings_page.dart': 2,
   'lib/screens/settings/iptv_hidden_categories_page.dart': 1,
@@ -219,8 +218,8 @@ void main() {
       originalTotal += calls.allMatches(original).length;
       removedTotal += calls.allMatches(entry == path ? removed : original).length;
     }
-    expect(originalTotal, greaterThanOrEqualTo(486));
-    expect(greaterThanOrEqualTo(486).matches(removedTotal, {}), isFalse);
+    expect(originalTotal, greaterThanOrEqualTo(485));
+    expect(greaterThanOrEqualTo(485).matches(removedTotal, {}), isFalse);
   });
 
   test('new bare radius in favourite artwork is still detected', () {
@@ -247,8 +246,11 @@ void main() {
     // twelve identical token calls across the two hosts became six in the
     // shared widgets below. The floor tracks a revert, not a site budget, so
     // de-duplication lowers it. 484 -> 486 when the TV sidebar's profile row
-    // took `brPill` for its fill and its foreground ring.
-    expect(calls, greaterThanOrEqualTo(486),
+    // took `brPill` for its fill and its foreground ring. 486 -> 485 when the
+    // settings-menu reorg deleted detail_theme_page.dart (its swept row was
+    // absorbed into app_theme_page.dart, which keeps its own call) and the
+    // unreachable theme_lab_page.dart.
+    expect(calls, greaterThanOrEqualTo(485),
         reason: 'the shape sweep converted 500 sites; only \$calls remain');
   });
 }

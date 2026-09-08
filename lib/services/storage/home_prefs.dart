@@ -44,8 +44,9 @@ class HomePrefs {
   static const String _homeFavoritesOpenFolderKey =
       'home_favorites_open_folder';
   static const String _homeCardOrientationKey = 'home_card_orientation';
-  static const String _homeHideCardTitlesAndRatingsKey =
-      'home_hide_card_titles_and_ratings';
+  // 'home_hide_card_titles_and_ratings' retired: merged into
+  // DiscoverPrefs.titleRatingsVisible ('poster_title_ratings_visible') by
+  // AppMigrationService's one-time migration.
   static const String _homeHideCatalogAddonNamesKey =
       'home_hide_catalog_addon_names';
   static const String homeTickSourcesKey = 'home_tick_sources';
@@ -102,7 +103,6 @@ class HomePrefs {
     _homeCwMergedRowsKeyPrefix,
     _homeFavoritesOpenFolderKey,
     _homeCardOrientationKey,
-    _homeHideCardTitlesAndRatingsKey,
     _homeHideCatalogAddonNamesKey,
     homeTickSourcesKey,
     tvHomeStyleKey,
@@ -260,19 +260,6 @@ class HomePrefs {
     await prefs.setString(_homeCardOrientationKey, orientation.name);
   }
 
-  /// Keeps Home artwork clean by suppressing the title and rating painted on
-  /// content cards. Row headings, hero identity, progress and context metadata
-  /// are separate presentation and remain visible.
-  static Future<bool> getHomeHideCardTitlesAndRatings() async {
-    final prefs = await ProfilePreferences.instance();
-    return prefs.getBool(_homeHideCardTitlesAndRatingsKey) ?? false;
-  }
-
-  static Future<void> setHomeHideCardTitlesAndRatings(bool value) async {
-    final prefs = await ProfilePreferences.instance();
-    await prefs.setBool(_homeHideCardTitlesAndRatingsKey, value);
-  }
-
   /// Suppresses the source/add-on pill beside Home catalog row headings.
   /// The catalog title itself remains visible so the row keeps its identity.
   static Future<bool> getHomeHideCatalogAddonNames() async {
@@ -299,7 +286,6 @@ class HomePrefs {
     await prefs.remove('${_homeCwMergedRowsKeyPrefix}mdblist');
     await prefs.remove(_homeFavoritesOpenFolderKey);
     await prefs.remove(_homeCardOrientationKey);
-    await prefs.remove(_homeHideCardTitlesAndRatingsKey);
     await prefs.remove(_homeHideCatalogAddonNamesKey);
   }
 

@@ -69,6 +69,7 @@ import 'settings/settings_page_spec.dart';
 import 'settings/layout_options.dart';
 import 'settings/discover_layout_page.dart';
 import 'settings/discover_settings_page.dart';
+import 'settings/title_ratings_visibility_page.dart';
 import 'settings/iptv_style_page.dart';
 import 'settings/debrify_tv_style_page.dart';
 import 'settings/text_brightness_page.dart';
@@ -78,8 +79,6 @@ import 'settings/detail_page_style_page.dart';
 import 'settings/app_theme_page.dart';
 import 'settings/looks_page.dart';
 import 'settings/theme_tokens_page.dart';
-import 'settings/theme_lab_page.dart';
-import 'settings/detail_theme_page.dart';
 import '../widgets/detail/theme/detail_themes.dart';
 import '../theme/app_theme_controller.dart';
 import 'settings/parents_guide_style_page.dart';
@@ -95,7 +94,6 @@ import 'settings/tv_screen_size_page.dart';
 import 'settings/recordings_page.dart';
 import 'settings/desktop_sidebar_style_page.dart';
 import 'settings/tv_sidebar_style_page.dart';
-import 'settings/sidebar_customization_page.dart';
 import 'settings/profile_backup_flows.dart';
 import 'settings/backup_restore_page.dart';
 import 'settings/download_location_controller.dart';
@@ -859,6 +857,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     SettingsPageBindings(
       openHomePage: _openHomePageSettings,
       openCollections: _openCollectionsSettings,
+      openTitleRatingsVisibility: _openTitleRatingsVisibilitySettings,
       openExternalPlayer: _openExternalPlayerSettings,
       openRemote: _openRemoteControl,
       openSwitchProfile: () async {
@@ -927,10 +926,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       openPlayerDock: _openPlayerDockPage,
       openThemeTokens: _openThemeTokensPage,
       openLooks: _openLooksPage,
-      openThemeLab: _openThemeLab,
       openAppTheme: _openAppThemePage,
-      openDetailTheme: _openDetailThemePage,
-      openSidebarCustomization: _openSidebarCustomization,
       openParentsGuideStyle: _openParentsGuideStylePage,
       openDetailPageStyle: _openDetailPageStylePage,
       openProfileAppearance: _openProfileAppearance,
@@ -980,7 +976,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       themeTokensLabel: _themeTokensLabel,
       looksLabel: AppLooks.active()?.label ?? 'Custom',
-      detailThemeLabel: detailThemeLabel(_detailTheme),
+      appThemeLabel: appThemeLabel(_detailTheme),
       parentsGuideStyleLabel: parentsGuideStyleLabel(_parentsGuideStyle),
       detailPageStyleLabel: detailPageStyleLabel(_detailPageStyle),
       profileAppearanceLabel: ProfileGateStyle.labelFor(ProfileGateStyle.cached),
@@ -1401,6 +1397,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _openCollectionsSettings() async {
     await pushSettingsPage(context, const CollectionsSettingsPage());
+  }
+
+  Future<void> _openTitleRatingsVisibilitySettings() async {
+    await pushSettingsPage(context, const TitleRatingsVisibilityPage());
   }
 
   Future<void> _openHomePageSettings() async {
@@ -2145,12 +2145,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  Future<void> _openSidebarCustomization() async {
-    await pushSettingsPage(context, const SidebarCustomizationPage());
-    if (!mounted) return;
-    setState(() {});
-  }
-
   Future<void> _openProfileAppearance() async {
     await pushSettingsPage(context, const ProfileAppearancePage());
     if (!mounted) return;
@@ -2286,26 +2280,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _detailPageStyle = style;
     });
-  }
-
-  /// Same contract as [_openTvHomeStyle], for the details-page theme picker.
-  Future<void> _openDetailThemePage() async {
-    await pushSettingsPage(context, const DetailThemePage());
-    if (!mounted) return;
-    final theme = await AppStylePrefs.getDetailTheme();
-    if (!mounted) return;
-    setState(() {
-      _detailTheme = theme;
-    });
-  }
-
-  /// Appearance → Theme Lab. The setState on return covers the feedback
-  /// toggles the lab hosts — their values are read from the synchronous
-  /// mirrors, so one rebuild is the whole refresh.
-  Future<void> _openThemeLab() async {
-    await pushSettingsPage(context, const ThemeLabPage());
-    if (!mounted) return;
-    setState(() {});
   }
 
   /// Appearance → Looks. Re-reads nothing on return: the row's subtitle is

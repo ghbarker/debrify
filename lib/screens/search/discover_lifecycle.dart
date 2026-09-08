@@ -26,8 +26,8 @@ class DiscoverLifecycle extends ChangeNotifier {
   static String _layoutCached = 'stage';
   String layout = _layoutCached;
   bool showTypeTags = DiscoverPrefs.showTypeTags;
-  bool showRatings = DiscoverPrefs.showRatings;
-  bool showTitles = DiscoverPrefs.showTitles;
+  bool showRatings = DiscoverPrefs.titleRatingsVisible;
+  bool showTitles = DiscoverPrefs.titleRatingsVisible;
   bool _disposed = false;
   bool _television = false;
 
@@ -84,8 +84,8 @@ class DiscoverLifecycle extends ChangeNotifier {
   void _onCardSettingsChanged() {
     if (_disposed) return;
     final nextShowTypeTags = DiscoverPrefs.showTypeTags;
-    final nextShowRatings = DiscoverPrefs.showRatings;
-    final nextShowTitles = DiscoverPrefs.showTitles;
+    final nextShowRatings = DiscoverPrefs.titleRatingsVisible;
+    final nextShowTitles = DiscoverPrefs.titleRatingsVisible;
     if (nextShowTypeTags == showTypeTags &&
         nextShowRatings == showRatings &&
         nextShowTitles == showTitles) {

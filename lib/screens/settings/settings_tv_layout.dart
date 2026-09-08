@@ -540,10 +540,12 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
         ),
       ),
     );
-    // Appearance only: dock a compact copy of the live preview above the
-    // pane while a Screen-layouts row is pointed at — see
+    // Theme and Layout only: dock a compact copy of the live preview above
+    // the pane while a Screen-layouts row is pointed at — see
     // [AppearancePreviewDock].
-    if (_rail[selected].label != 'Appearance') return paneScroller;
+    if (!kPreviewHostCategories.contains(_rail[selected].label)) {
+      return paneScroller;
+    }
     return Stack(
       fit: StackFit.expand,
       children: [

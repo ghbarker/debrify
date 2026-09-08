@@ -134,12 +134,12 @@ void main() {
 
 /// Canonical rail order. Phone uses the same names as section titles
 /// (Profiles is conditional). Connections absorbed the old Trackers,
-/// Search, Playback and Live TV & DVR categories.
+/// Search, Playback and Live TV & DVR categories. Layout and Theme
+/// replaced Home & Display, Appearance and Discover.
 const kSettingsCategoryOrder = [
   'Connections',
-  'Home & Display',
-  'Appearance',
-  'Discover',
+  'Layout',
+  'Theme',
   'Devices',
   'Profiles',
   'Data & Backup',

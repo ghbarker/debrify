@@ -160,7 +160,7 @@ void main() {
   test('Discover poster settings transfer as reviewed preferences', () {
     for (final key in const [
       'discover_show_type_tags',
-      'discover_show_ratings',
+      'poster_title_ratings_visible',
     ]) {
       expect(ProfileCreationService.copyablePreferenceKeys, contains(key));
       expect(SanitizedProfilePreferences.allowsEntry(key, true), isTrue);
@@ -210,26 +210,9 @@ void main() {
     );
   });
 
-  test('Home card text visibility transfers as a reviewed preference', () {
-    expect(
-      ProfileCreationService.copyablePreferenceKeys,
-      contains('home_hide_card_titles_and_ratings'),
-    );
-    expect(
-      SanitizedProfilePreferences.allowsEntry(
-        'home_hide_card_titles_and_ratings',
-        true,
-      ),
-      isTrue,
-    );
-    expect(
-      SanitizedProfilePreferences.allowsEntry(
-        'home_hide_card_titles_and_ratings',
-        'yes',
-      ),
-      isFalse,
-    );
-  });
+  // Home's old standalone toggle (home_hide_card_titles_and_ratings) merged
+  // into the shared poster_title_ratings_visible key — see the Discover
+  // poster settings test above, which now covers this key.
 
   test('Home catalog add-on visibility transfers as a reviewed preference', () {
     expect(

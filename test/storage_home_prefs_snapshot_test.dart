@@ -36,7 +36,6 @@ void main() {
       await HomePrefs.getHomeCardOrientation(),
       HomeCardOrientation.landscape,
     );
-    expect(await HomePrefs.getHomeHideCardTitlesAndRatings(), isFalse);
     expect(await HomePrefs.getHomeHideCatalogAddonNames(), isFalse);
   });
 
@@ -57,7 +56,6 @@ void main() {
     await HomePrefs.setHomeCwMergedRows('mdblist', true);
     await HomePrefs.setHomeFavoritesTapAction('open');
     await HomePrefs.setHomeCardOrientation(HomeCardOrientation.portrait);
-    await HomePrefs.setHomeHideCardTitlesAndRatings(true);
     await HomePrefs.setHomeHideCatalogAddonNames(true);
 
     final prefs = await SharedPreferences.getInstance();
@@ -78,7 +76,6 @@ void main() {
     expect(prefs.getBool('home_cw_merge_mdblist'), isTrue);
     expect(prefs.getString('home_favorites_open_folder'), 'open');
     expect(prefs.getString('home_card_orientation'), 'portrait');
-    expect(prefs.getBool('home_hide_card_titles_and_ratings'), isTrue);
     expect(prefs.getBool('home_hide_catalog_addon_names'), isTrue);
   });
 
@@ -97,7 +94,6 @@ void main() {
         'home_cw_merge_local': true,
         'home_favorites_open_folder': 'play',
         'home_card_orientation': 'portrait',
-        'home_hide_card_titles_and_ratings': true,
         'home_hide_catalog_addon_names': true,
       });
 
@@ -118,7 +114,6 @@ void main() {
         await HomePrefs.getHomeCardOrientation(),
         HomeCardOrientation.portrait,
       );
-      expect(await HomePrefs.getHomeHideCardTitlesAndRatings(), isTrue);
       expect(await HomePrefs.getHomeHideCatalogAddonNames(), isTrue);
     },
   );
@@ -186,7 +181,6 @@ void main() {
     await HomePrefs.setHomeCwMergedRows('mdblist', true);
     await HomePrefs.setHomeFavoritesTapAction('open');
     await HomePrefs.setHomeCardOrientation(HomeCardOrientation.portrait);
-    await HomePrefs.setHomeHideCardTitlesAndRatings(true);
     await HomePrefs.setHomeHideCatalogAddonNames(true);
     await HomePrefs.setHomeDisabledSections({'cw:movies'});
     await HomePrefs.setHomeExtraRows(const [
@@ -224,7 +218,6 @@ void main() {
     expect(prefs.containsKey('home_cw_merge_mdblist'), isFalse);
     expect(prefs.containsKey('home_favorites_open_folder'), isFalse);
     expect(prefs.containsKey('home_card_orientation'), isFalse);
-    expect(prefs.containsKey('home_hide_card_titles_and_ratings'), isFalse);
     expect(prefs.containsKey('home_hide_catalog_addon_names'), isFalse);
     // Quirk: Trakt home-default keys are not part of the clear set.
     expect(prefs.getString('home_default_trakt_list_type'), 'watchlist');
@@ -261,7 +254,6 @@ void main() {
     await HomePrefs.setHomeCwHoldToQuickPlay(true);
     await HomePrefs.setHomeCwMergedRows('simkl', true);
     await HomePrefs.setHomeCardOrientation(HomeCardOrientation.portrait);
-    await HomePrefs.setHomeHideCardTitlesAndRatings(true);
 
     expect(await HomePrefs.getHomeDefaultSourceType(), 'addon');
     expect(await HomePrefs.getHomeHideProviderCards(), isFalse);
@@ -271,7 +263,6 @@ void main() {
       await HomePrefs.getHomeCardOrientation(),
       HomeCardOrientation.portrait,
     );
-    expect(await HomePrefs.getHomeHideCardTitlesAndRatings(), isTrue);
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('home_default_source_type'), 'addon');
@@ -279,7 +270,6 @@ void main() {
     expect(prefs.getBool('home_cw_hold_to_quick_play'), isTrue);
     expect(prefs.getBool('home_cw_merge_simkl'), isTrue);
     expect(prefs.getString('home_card_orientation'), 'portrait');
-    expect(prefs.getBool('home_hide_card_titles_and_ratings'), isTrue);
   });
 
   test('HomePrefs writes are readable through StorageService', () async {

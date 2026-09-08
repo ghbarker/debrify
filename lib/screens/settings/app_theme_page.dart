@@ -11,7 +11,7 @@ import '../../utils/platform_util.dart';
 import '../../widgets/detail/theme/detail_theme.dart';
 import '../../widgets/detail/theme/detail_themes.dart';
 import 'detail_page_style_page.dart' show effectiveDetailPageStyle;
-import 'detail_theme_page.dart' show kDetailThemesShipped;
+import '../../theme/shipped_themes.dart' show kDetailThemesShipped;
 import 'widgets/settings_widgets.dart' show SettingsSectionLabel;
 
 /// Row caption for the Appearance list.
@@ -45,9 +45,9 @@ class _AppThemePageState extends State<AppThemePage> {
       if (kDetailThemesShipped.contains(t.id)) t,
   ];
 
-  /// The two classes of theme, told apart — see the note in
-  /// `detail_theme_page.dart`. A spec look restyles the app's STRUCTURE; a
-  /// core theme is a palette whose vocabulary is neutral by construction.
+  /// The two classes of theme, told apart. A spec look restyles the app's
+  /// STRUCTURE; a core theme is a palette whose vocabulary is neutral by
+  /// construction.
   static List<DetailTheme> get _complete =>
       [for (final t in _choices) if (PremiumLooks.byId(t.id) != null) t];
 

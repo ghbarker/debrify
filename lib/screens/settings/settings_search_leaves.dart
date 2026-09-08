@@ -750,23 +750,9 @@ Map<String, List<SettingsLeafSpec>> settingsLeavesByPage(
         ],
       ),
     ],
-    'tvSidebarStyle': [
-      leaf(
-        'Order & Names',
-        'Reorder and rename navigation destinations',
-        const [
-          'sidebar items',
-          'navigation',
-          'reorder',
-          'arrange',
-          'rename',
-          'labels',
-          'restore default order and names',
-          'reset sidebar',
-        ],
-      ),
-    ],
-    'desktopSidebarStyle': [
+    // Merged Sidebar Style row (was separate tvSidebarStyle/desktopSidebarStyle
+    // rows/leaves) — one leaf regardless of which surface-adaptive page opens.
+    'sidebarStyle': [
       leaf(
         'Order & Names',
         'Reorder and rename navigation destinations',

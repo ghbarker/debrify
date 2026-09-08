@@ -37,9 +37,9 @@ const _categories = [
   ),
   SettingsCategoryDefinition(
     icon: Icons.auto_awesome_rounded,
-    label: 'Appearance',
+    label: 'Theme',
     subtitle: 'Look and layout',
-    eyebrow: 'Appearance',
+    eyebrow: 'Theme',
     title: 'Make it feel like yours.',
     description: 'Choose a Look, then tune only what matters.',
   ),

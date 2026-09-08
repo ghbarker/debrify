@@ -269,6 +269,7 @@ class SettingsCategorySpec {
 class SettingsPageBindings {
   final Future<void> Function() openHomePage;
   final Future<void> Function() openCollections;
+  final Future<void> Function() openTitleRatingsVisibility;
   final Future<void> Function() openExternalPlayer;
   final Future<void> Function() openRemote;
   final Future<void> Function() openSwitchProfile;
@@ -310,10 +311,7 @@ class SettingsPageBindings {
   final Future<void> Function() openPlayerDock;
   final Future<void> Function() openThemeTokens;
   final Future<void> Function() openLooks;
-  final Future<void> Function() openThemeLab;
   final Future<void> Function() openAppTheme;
-  final Future<void> Function() openDetailTheme;
-  final Future<void> Function() openSidebarCustomization;
   final Future<void> Function() openParentsGuideStyle;
   final Future<void> Function() openDetailPageStyle;
   final Future<void> Function() openProfileAppearance;
@@ -351,7 +349,7 @@ class SettingsPageBindings {
   final String playerDockLabel;
   final String themeTokensLabel;
   final String looksLabel;
-  final String detailThemeLabel;
+  final String appThemeLabel;
   final String parentsGuideStyleLabel;
   final String detailPageStyleLabel;
   final String profileAppearanceLabel;
@@ -435,6 +433,7 @@ class SettingsPageBindings {
   const SettingsPageBindings({
     required this.openHomePage,
     required this.openCollections,
+    required this.openTitleRatingsVisibility,
     required this.openExternalPlayer,
     required this.openRemote,
     required this.openSwitchProfile,
@@ -476,10 +475,7 @@ class SettingsPageBindings {
     required this.openPlayerDock,
     required this.openThemeTokens,
     required this.openLooks,
-    this.openThemeLab = SettingsPageBindings._noop,
     this.openAppTheme = SettingsPageBindings._noop,
-    this.openDetailTheme = SettingsPageBindings._noop,
-    this.openSidebarCustomization = SettingsPageBindings._noop,
     required this.openParentsGuideStyle,
     required this.openDetailPageStyle,
     required this.openProfileAppearance,
@@ -516,7 +512,7 @@ class SettingsPageBindings {
     this.playerDockLabel = '',
     this.themeTokensLabel = '',
     this.looksLabel = 'Custom',
-    this.detailThemeLabel = '',
+    this.appThemeLabel = '',
     this.parentsGuideStyleLabel = '',
     this.detailPageStyleLabel = '',
     this.profileAppearanceLabel = '',
@@ -606,6 +602,7 @@ class SettingsPageBindings {
     return SettingsPageBindings(
       openHomePage: _noop,
       openCollections: _noop,
+      openTitleRatingsVisibility: _noop,
       openExternalPlayer: _noop,
       openRemote: _noop,
       openSwitchProfile: _noop,

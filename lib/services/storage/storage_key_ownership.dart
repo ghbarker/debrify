@@ -142,7 +142,6 @@ class StorageKeyOwnership {
     'home_cw_merge_': StorageKeyStore.homePrefs,
     'home_favorites_open_folder': StorageKeyStore.homePrefs,
     'home_card_orientation': StorageKeyStore.homePrefs,
-    'home_hide_card_titles_and_ratings': StorageKeyStore.homePrefs,
     'home_hide_catalog_addon_names': StorageKeyStore.homePrefs,
     'support_remote_config_cache_v1': StorageKeyStore.deviceMaintenancePrefs,
     'dismissed_donation_campaign_ids_v1': StorageKeyStore.deviceMaintenancePrefs,
