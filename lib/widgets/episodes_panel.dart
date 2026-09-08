@@ -17,6 +17,7 @@ import '../utils/platform_util.dart';
 import '../utils/episode_progress_merge.dart';
 import '../utils/tv_keys.dart';
 import 'tv_focus_scroll_wrapper.dart';
+import '../theme/app_motion.dart';
 import '../theme/app_theme_scope.dart';
 import 'detail/detail_style.dart';
 import 'detail/theme/detail_theme.dart';
@@ -2575,12 +2576,17 @@ class _CompactEpisodeRowState extends State<_CompactEpisodeRow> {
       onFocusChange: (f) {
         if (mounted) setState(() => _focused = f);
         if (f && widget.isTelevision && context.mounted) {
+          // TV: `AppMotion.tvScroll` — the snap under snappy, the profile's
+          // glide under smooth. This row's own hardcoded 220ms predated the
+          // motion profile and was never routed through it, unlike the
+          // sibling `EpisodeTile.onFocusChange`.
+          final motion = AppMotion.of(context);
           Scrollable.ensureVisible(
             context,
             alignment: 0.5,
             alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
+            duration: motion.tvScroll,
+            curve: motion.tvScrollCurve,
           );
         }
       },

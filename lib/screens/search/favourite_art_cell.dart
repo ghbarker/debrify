@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../services/main_page_bridge.dart';
+import '../../theme/app_motion.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/tv_keys.dart';
 import '../../widgets/home/card_focus_rise.dart';
@@ -197,6 +198,7 @@ class _ArtPosterState extends State<ArtPoster> {
   @override
   Widget build(BuildContext context) {
     final app = AppThemeScope.of(context);
+    final motion = AppMotion.of(context);
     final url = widget.imageUrl;
     final hasImage = url != null && url.isNotEmpty;
 
@@ -329,11 +331,17 @@ class _ArtPosterState extends State<ArtPoster> {
               // TV glides too (was a hard jump) — see _StremioCard: repeated
               // DPAD moves retarget the in-flight scroll, so held browsing
               // stays one continuous motion. Short on purpose; 200ms trailed
-              // the keypress on-device.
-              duration: widget.isTelevision
-                  ? const Duration(milliseconds: 140)
-                  : const Duration(milliseconds: 260),
-              curve: Curves.easeOutCubic,
+              // the keypress on-device. That figure is the SNAPPY profile's;
+              // under smooth this follows `AppMotion.tvScroll` instead, like
+              // every other TV scroll-follow — this predates the motion
+              // profile (added before PR #276) and was never routed through
+              // it.
+              duration: motion.scrollTempo(
+                widget.isTelevision,
+                const Duration(milliseconds: 260),
+                tvSnappy: const Duration(milliseconds: 140),
+              ),
+              curve: motion.tvScrollCurve,
             );
           });
         }

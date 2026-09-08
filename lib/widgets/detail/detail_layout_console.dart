@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../services/debrify_image_cache.dart';
 import '../../services/imdb_enrichment_service.dart';
 import '../../services/storage_service.dart';
+import '../../theme/app_motion.dart';
 import '../../utils/platform_util.dart';
 import '../episodes_panel.dart';
 import '../parents_guide_section.dart';
@@ -1021,14 +1022,23 @@ class _ConsolePosterState extends State<_ConsolePoster> {
             // have moved focus programmatically instead of via the
             // framework's own key-driven traversal). Follow explicitly so
             // the cursor is never invisible.
+            //
+            // This predates the TV motion profile (PR #281 landed before
+            // #276) and was left on a bare snap. Route it through
+            // `AppMotion.tvScroll` like every other TV scroll-follow: zero
+            // under snappy (unchanged), the profile's glide under smooth.
+            // Off TV the jump is untouched.
             if (f) {
+              final tv = PlatformUtil.isTelevision;
+              final motion = AppMotion.of(context);
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted || !context.mounted) return;
                 Scrollable.ensureVisible(
                   context,
                   alignment: 0.5,
                   alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
-                  duration: Duration.zero,
+                  duration: tv ? motion.tvScroll : Duration.zero,
+                  curve: motion.tvScrollCurve,
                 );
               });
             }

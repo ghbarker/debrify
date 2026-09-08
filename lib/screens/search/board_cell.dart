@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../../models/stremio_addon.dart';
 import '../../services/main_page_bridge.dart';
+import '../../theme/app_motion.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/dialog_tap_guard.dart';
 import '../../utils/tv_keys.dart';
@@ -341,6 +342,7 @@ class _StremioCardState extends State<_StremioCard>
   @override
   Widget build(BuildContext context) {
     final app = AppThemeScope.of(context);
+    final motion = AppMotion.of(context);
     final item = widget.item;
     final wide = widget.aspectRatio > 1;
     final poster = widget.artUrl ?? item.poster;
@@ -544,11 +546,16 @@ class _StremioCardState extends State<_StremioCard>
               // repeat retargets the in-flight scroll from the CURRENT offset,
               // and a short glide converges on the focused card fast enough
               // that motion never reads as trailing the keypress (200ms felt
-              // laggy on-device).
-              duration: widget.isTelevision
-                  ? const Duration(milliseconds: 140)
-                  : const Duration(milliseconds: 260),
-              curve: Curves.easeOutCubic,
+              // laggy on-device). That figure is the SNAPPY profile's; under
+              // smooth this follows `AppMotion.tvScroll` instead, like every
+              // other TV scroll-follow — this predates the motion profile
+              // (added before PR #276) and was never routed through it.
+              duration: motion.scrollTempo(
+                widget.isTelevision,
+                const Duration(milliseconds: 260),
+                tvSnappy: const Duration(milliseconds: 140),
+              ),
+              curve: motion.tvScrollCurve,
             );
           });
         }
