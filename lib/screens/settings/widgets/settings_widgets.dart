@@ -180,6 +180,11 @@ abstract final class SettingsRows {
     title: 'Rendering',
     subtitle: '',
   );
+  static const tvMotion = SettingsRowContent(
+    icon: Icons.slow_motion_video_rounded,
+    title: 'TV motion',
+    subtitle: 'How much this TV moves: smooth or snappy',
+  );
   static const tvHeroArtworkQuality = SettingsRowContent(
     icon: Icons.photo_size_select_large_rounded,
     title: 'Hero Artwork Quality',

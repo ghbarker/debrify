@@ -5,8 +5,10 @@ import '../../models/iptv_playlist.dart';
 import '../../services/iptv_media_store.dart';
 import '../../services/iptv_source_stats.dart';
 import '../../services/storage_service.dart';
+import '../../theme/app_motion.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_theme_scope.dart';
+import '../../utils/platform_util.dart';
 
 /// Two-pane IPTV settings for TV and desktop ("Concept A"): a rail of the
 /// user's actual sources on the left, the selected source's detail on the
@@ -1568,11 +1570,15 @@ class _RailEntryState extends State<_RailEntry> {
         setState(() {});
         if (has) {
           widget.onFocused();
-          // Keep the entry on screen when DPAD walks past the fold.
+          // Keep the entry on screen when DPAD walks past the fold. TV:
+          // `AppMotion.tvScroll`; a desktop keyboard keeps the jump.
           Scrollable.ensureVisible(
             context,
             alignment: 0.5,
-            duration: Duration.zero,
+            duration: AppMotion.of(context).scrollTempo(
+              PlatformUtil.isTelevision,
+              Duration.zero,
+            ),
           );
         }
       },
@@ -1944,7 +1950,10 @@ class _PaneRowState extends State<_PaneRow> {
           Scrollable.ensureVisible(
             context,
             alignment: 0.5,
-            duration: Duration.zero,
+            duration: AppMotion.of(context).scrollTempo(
+              PlatformUtil.isTelevision,
+              Duration.zero,
+            ),
           );
         }
       },

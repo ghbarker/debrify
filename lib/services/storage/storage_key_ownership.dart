@@ -315,6 +315,7 @@ class StorageKeyOwnership {
     'launch_animation': StorageKeyStore.appStylePrefs,
     'launch_ident_palette': StorageKeyStore.appStylePrefs,
     'text_brightness': StorageKeyStore.appStylePrefs,
+    'tv_motion_profile': StorageKeyStore.appStylePrefs,
     'tv_sidebar_style': StorageKeyStore.appStylePrefs,
     'desktop_sidebar_style': StorageKeyStore.appStylePrefs,
     'sidebar_configuration_v1': StorageKeyStore.appStylePrefs,

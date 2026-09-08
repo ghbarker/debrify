@@ -77,6 +77,7 @@ import 'services/main_page_bridge.dart';
 import 'services/profiles/profile_policy_guard.dart';
 import 'theme/app_surfaces.dart';
 import 'theme/app_theme_controller.dart';
+import 'theme/tv_motion_scope.dart';
 import 'theme/idle_dim.dart';
 import 'theme/ui_feedback.dart';
 import 'theme/app_texture.dart';
@@ -100,6 +101,7 @@ import 'services/remote_control/remote_command_router.dart';
 import 'services/remote_control/remote_constants.dart';
 import 'services/analytics_service.dart';
 import 'services/text_brightness.dart';
+import 'services/tv_motion_profile.dart';
 import 'services/support_remote_config_service.dart';
 import 'widgets/auto_launch_overlay.dart';
 import 'widgets/remote/addon_install_dialog.dart';
@@ -636,6 +638,11 @@ Future<void> _continueApplicationStartup() async {
   // Warms the app theme AFTER the preset (it is an input), for the same
   // reason: the controller's memoized ThemeData is read in the first build.
   await _bestEffortStartupStep('app-theme-warm', AppThemeController.warm);
+  // Warms Appearance → TV motion. Every TV focus site reads the profile
+  // synchronously through TvMotionScope, and the device default (Apple TV
+  // and the Shield → smooth) needs the TV probe above plus one plugin call.
+  // Snappy — the shipped figures — until it lands.
+  await _bestEffortStartupStep('tv-motion-warm', TvMotionController.warm);
   // From here the system-bar owner is the authority — it re-applies on every
   // active-surface or theme change (the _initOrientation call below remains
   // the pre-warm default and matches the legacy style anyway).
@@ -1057,15 +1064,24 @@ class _DebrifyAppState extends State<DebrifyApp> {
         // overlay inherits it, and excluded surfaces shadow it lower down
         // with a LegacyThemeBoundary. An open overlay restyles live on theme
         // change for free — it inherits from here, not from a capture.
-        Widget content = AppThemeScope(
-          theme: AppThemeController.instance.theme,
-          // The theme's whole-page texture — film grain, Blueprint's rule.
-          // INSIDE the scope so it can read the tokens, and self-gating on
-          // AppSurfaceState so it never paints over the frozen player or the
-          // launch ident (see app_texture.dart). It short-circuits to `child`
-          // for legacy and for the seventeen themes that declare neither, so
-          // the common path costs one build and no layer.
-          child: AppTexture(child: child!),
+        // The TV motion profile scope sits with the theme scope: a chip press
+        // republishes the profile through this builder alone, and every
+        // widget that resolved `AppMotion.of` re-runs — the routes below are
+        // the same instances, so nothing else rebuilds.
+        Widget content = ValueListenableBuilder<TvMotionProfile>(
+          valueListenable: TvMotionController.notifier,
+          builder: (_, profile, scoped) =>
+              TvMotionScope(profile: profile, child: scoped!),
+          child: AppThemeScope(
+            theme: AppThemeController.instance.theme,
+            // The theme's whole-page texture — film grain, Blueprint's rule.
+            // INSIDE the scope so it can read the tokens, and self-gating on
+            // AppSurfaceState so it never paints over the frozen player or
+            // the launch ident (see app_texture.dart). It short-circuits to
+            // `child` for legacy and for the seventeen themes that declare
+            // neither, so the common path costs one build and no layer.
+            child: AppTexture(child: child!),
+          ),
         );
         // Pointer input counts as presence too — an Apple TV remote's
         // trackpad and an attached mouse both arrive here rather than through

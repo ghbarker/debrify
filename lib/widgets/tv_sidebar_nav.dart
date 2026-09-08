@@ -290,7 +290,9 @@ class TvSidebarNavState extends State<TvSidebarNav>
         if (scrollable != null && scrollable.position.maxScrollExtent > 0) {
           Scrollable.ensureVisible(
             ctx,
-            duration: Duration.zero,
+            // The shared TV scroll-follow: a snap under snappy, a glide
+            // under smooth. This sidebar only exists on a television.
+            duration: _motion.tvScroll,
             alignment: 0.3,
           );
         }

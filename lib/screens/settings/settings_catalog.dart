@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/play_loader_style.dart';
+import '../../services/tv_motion_profile.dart';
 import '../profiles/profile_wall_screen.dart';
 import 'debrify_tv_style_page.dart';
 import 'desktop_sidebar_style_page.dart';
@@ -1036,6 +1037,36 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
         'tv',
         ...b.extraTvHeroArtworkKeywords(),
       ],
+    ),
+    // Inline chips, not an opener: two choices do not earn a page, and a
+    // remote should feel the change without leaving the pane. Search indexes
+    // the two chips as leaves (settings_search_leaves.dart) rather than the
+    // row, since there is nothing for a search hit to open.
+    page(
+      id: 'tvMotion',
+      row: SettingsRows.tvMotion,
+      category: kCatAppearance,
+      phone: false,
+      desktop: false,
+      tv: true,
+      search: false,
+      tvOrder: 170,
+      tvGroup: kGroupDisplay,
+      searchVisible: () => b.isTelevision,
+      kind: SettingsRowKind.options,
+      layoutOptions: SettingsLayoutOptions(
+        rowId: 'tvMotion',
+        options: [
+          for (final p in TvMotionProfile.values)
+            LayoutOption(p.value, p.label, p.blurb),
+        ],
+        current: () =>
+            (b.tvMotionProfile ?? TvMotionController.notifier).value.value,
+        apply: (id) =>
+            (b.selectTvMotionProfile ?? TvMotionController.select)(
+              TvMotionProfile.fromPref(id)!,
+            ),
+      ),
     ),
     page(
       id: 'tvPlayerControls',

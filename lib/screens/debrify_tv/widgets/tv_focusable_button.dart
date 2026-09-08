@@ -120,7 +120,10 @@ class _TvFocusableButtonState extends State<TvFocusableButton> {
               PlatformUtil.isTelevision,
               const Duration(milliseconds: 200),
             ),
-            curve: Curves.easeOut,
+            // A transform: the TV profile's curve is safe here.
+            curve: AppMotion.of(
+              context,
+            ).focusCurve(PlatformUtil.isTelevision, Curves.easeOut),
             child: button(fill: widget.backgroundColor, ink: restingInk),
           )
         : FocusExpressionBox(

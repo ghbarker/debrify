@@ -97,7 +97,7 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
   /// so a newly registered page cannot land past the pool. Appearance is the
   /// widest: its rows plus the one node the live preview's Look strip claims
   /// ([kAppearancePreviewTvNodes]).
-  static const int _kMaxCategoryRows = 20;
+  static const int _kMaxCategoryRows = 21;
 
   List<_Category> get _rail => [
     for (final c in kSettingsCategories)

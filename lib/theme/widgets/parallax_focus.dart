@@ -189,6 +189,7 @@ class ParallaxFocus extends StatelessWidget {
         scale: 1,
       );
     }
+    final tvMotion = AppMotion.of(context);
     return _ParallaxBody(
       focused: focused,
       shape: shape,
@@ -199,7 +200,8 @@ class ParallaxFocus extends StatelessWidget {
       // The Android TV paths run on the shared TV focus tempo, resolved here
       // in build (never in the tick) so the lift the arriving card runs is
       // the beat the leaving card — and every non-parallax cursor — runs.
-      tvFocus: AppMotion.of(context).tvFocus,
+      tvFocus: tvMotion.tvFocus,
+      tvFocusCurve: tvMotion.focusCurve(true, Curves.easeOutCubic),
       fixedScaleForeground: fixedScaleForeground,
       // Android TV degrades to the lite body unless a [ParallaxRichScope]
       // above opts this subtree into the full effect (the detail page does).
@@ -244,6 +246,12 @@ class _ParallaxBody extends StatefulWidget {
 
   /// [AppMotion.tvFocus]: the Android TV ease-out's length, lite and rich.
   final Duration tvFocus;
+
+  /// [AppMotion.focusCurve] for the same paths: the shipped ease-out under
+  /// the snappy profile, the theme's `emphasized` under smooth. The
+  /// controller is unbounded, so an overshooting curve lands the way the
+  /// spring does rather than clamping flat.
+  final Curve tvFocusCurve;
   final Widget? fixedScaleForeground;
 
   /// Opts this body into the full effect on Android TV (spring + tilt + glare)
@@ -259,6 +267,7 @@ class _ParallaxBody extends StatefulWidget {
     required this.curve,
     required this.duration,
     required this.tvFocus,
+    required this.tvFocusCurve,
     required this.fixedScaleForeground,
     required this.richTv,
   });
@@ -378,7 +387,7 @@ class _ParallaxBodyState extends State<_ParallaxBody>
           .animateTo(
             target,
             duration: widget.tvFocus,
-            curve: Curves.easeOutCubic,
+            curve: widget.tvFocusCurve,
           )
           .whenCompleteOrCancel(() {
         if (mounted &&
@@ -402,7 +411,7 @@ class _ParallaxBodyState extends State<_ParallaxBody>
       _c.animateTo(
         target,
         duration: widget.tvFocus,
-        curve: Curves.easeOutCubic,
+        curve: widget.tvFocusCurve,
       );
       return;
     }

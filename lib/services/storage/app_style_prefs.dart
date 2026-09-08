@@ -94,6 +94,7 @@ class AppStylePrefs {
     _sidebarConfigurationKey,
     _tvUiScalePercentKey,
     _tvHeroArtworkQualityKey,
+    tvMotionProfileKey,
   };
 
   /// Resets synchronous mirrors before a profile activation is published.
@@ -111,6 +112,7 @@ class AppStylePrefs {
     tvSidebarStyleCached = 'ghost';
     desktopSidebarStyleCached = 'rail';
     sidebarConfigurationCached = SidebarConfiguration.defaults();
+    tvMotionProfileCached = null;
   }
 
   /// Android TV screen size, as a percentage of the panel's native density.
@@ -895,6 +897,44 @@ class AppStylePrefs {
       _textBrightnessKey,
       _textBrightnessValues.contains(value) ? value : 'bright',
     );
+  }
+
+  static const String tvMotionProfileKey = 'tv_motion_profile';
+  static const Set<String> kTvMotionProfiles = {'snappy', 'smooth'};
+
+  /// Appearance → TV motion: 'snappy' (short focus tweens, instant
+  /// scroll-follow, the fast route fade) or 'smooth' (the pointer surfaces'
+  /// longer, eased motion, on a box that can afford it).
+  ///
+  /// NULL when unset — deliberately, unlike the other style prefs. There is
+  /// no one shipped default: the answer depends on the box (Apple TV and the
+  /// Shield resolve to smooth, other Android TV to snappy), and that
+  /// resolution belongs to `TvMotionController`, which is also the
+  /// synchronous mirror every focus site reads. A stored value the reader
+  /// does not recognise reads as unset for the same reason — the device
+  /// default has to win over a future build's spelling, not a fixed string.
+  ///
+  /// [tvMotionProfileCached] mirrors the RAW stored choice (or null) for
+  /// synchronous reads; the resolved profile lives on the controller.
+  static String? tvMotionProfileCached;
+
+  static Future<String?> getTvMotionProfile() async {
+    final prefs = await ProfilePreferences.instance();
+    final raw = prefs.getString(tvMotionProfileKey);
+    return tvMotionProfileCached = kTvMotionProfiles.contains(raw)
+        ? raw
+        : null;
+  }
+
+  /// Persists an explicit choice. An unrecognised value is refused rather
+  /// than coerced: coercing to either profile would silently pin the
+  /// device's wrong tempo, and there is no neutral value to fall back on.
+  static Future<void> setTvMotionProfile(String value) async {
+    if (!kTvMotionProfiles.contains(value)) return;
+    // Mirror BEFORE the await, like every other style pref.
+    tvMotionProfileCached = value;
+    final prefs = await ProfilePreferences.instance();
+    await prefs.setString(tvMotionProfileKey, value);
   }
 
   static const String tvSidebarStyleKey = 'tv_sidebar_style';

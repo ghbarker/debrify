@@ -241,7 +241,10 @@ class FocusExpressionBox extends StatelessWidget {
       body = AnimatedScale(
         scale: focused ? scale : 1,
         duration: duration,
-        curve: motion.standard,
+        // A transform: the one place in this stack the smooth profile's
+        // overshooting curve is safe. The ring, bloom and lift above lerp
+        // decorations and stay on `standard` — see [AppMotion.tvFocusCurve].
+        curve: motion.focusCurve(tv, motion.standard),
         child: body,
       );
     }
