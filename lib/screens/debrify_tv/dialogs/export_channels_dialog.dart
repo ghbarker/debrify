@@ -232,9 +232,11 @@ class _ExportSelectionRowState extends State<_ExportSelectionRow> {
     if (focused) {
       Scrollable.ensureVisible(
         context,
-        duration: PlatformUtil.isTelevision
-            ? Duration.zero
-            : const Duration(milliseconds: 160),
+        // TV: `AppMotion.tvScroll`; the pointer figure keeps its number.
+        duration: AppMotion.of(context).scrollTempo(
+          PlatformUtil.isTelevision,
+          const Duration(milliseconds: 160),
+        ),
         alignment: .5,
       );
     }

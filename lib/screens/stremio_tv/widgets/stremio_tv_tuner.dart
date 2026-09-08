@@ -8,8 +8,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../theme/app_motion.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/app_theme_scope.dart';
+import '../../../utils/platform_util.dart';
 import '../../../widgets/home/home_theme.dart';
 import '../../../models/stremio_addon.dart';
 import '../../../utils/tv_keys.dart';
@@ -2115,7 +2117,11 @@ class _DialCardState extends State<_DialCard> {
           Scrollable.ensureVisible(
             context,
             alignment: 0.5,
-            duration: Duration.zero,
+            // TV: `AppMotion.tvScroll`; elsewhere the shipped jump.
+            duration: AppMotion.of(context).scrollTempo(
+              PlatformUtil.isTelevision,
+              Duration.zero,
+            ),
           );
         }
       },

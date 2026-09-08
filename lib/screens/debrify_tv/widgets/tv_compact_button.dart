@@ -36,7 +36,8 @@ class _TvCompactButtonState extends State<TvCompactButton> {
     final isDisabled = widget.onPressed == null;
     // TV: the shared focus beat (`AppMotion.tvFocus`); the button's own
     // 150ms under a pointer. Scale and chrome ride the one figure.
-    final fx = AppMotion.of(context).focusTempo(
+    final motion = AppMotion.of(context);
+    final fx = motion.focusTempo(
       PlatformUtil.isTelevision,
       const Duration(milliseconds: 150),
     );
@@ -70,7 +71,9 @@ class _TvCompactButtonState extends State<TvCompactButton> {
         child: AnimatedScale(
           scale: _isFocused ? 1.05 : 1.0,
           duration: fx,
-          curve: Curves.easeOut,
+          // A transform: the TV profile's curve is safe here (`emphasized`
+          // under smooth); the decoration below stays on its own easeOut.
+          curve: motion.focusCurve(PlatformUtil.isTelevision, Curves.easeOut),
           child: AnimatedContainer(
             duration: fx,
             height: 36,

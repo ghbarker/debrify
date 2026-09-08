@@ -5,6 +5,7 @@ import '../../utils/platform_util.dart';
 
 import '../../services/debrify_image_cache.dart';
 import '../../services/imdb_enrichment_service.dart';
+import '../../theme/app_motion.dart';
 import '../episodes_panel.dart';
 import '../parents_guide_section.dart';
 import 'detail_episode_cells.dart';
@@ -567,7 +568,11 @@ class _TabButtonState extends State<_TabButton> {
                 context,
                 alignment: 0.5,
                 alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
-                duration: Duration.zero,
+                // TV: `AppMotion.tvScroll`; elsewhere the shipped jump.
+                duration: AppMotion.of(context).scrollTempo(
+                  PlatformUtil.isTelevision,
+                  Duration.zero,
+                ),
               );
             });
           }

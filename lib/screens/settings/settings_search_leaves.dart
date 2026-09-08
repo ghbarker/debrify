@@ -1,3 +1,4 @@
+import '../../services/tv_motion_profile.dart';
 import 'settings_page_spec.dart';
 
 /// In-page options, keyed by [SettingsPageSpec.id]. Moved verbatim from
@@ -21,6 +22,36 @@ Map<String, List<SettingsLeafSpec>> settingsLeavesByPage(
   );
 
   return {
+    // Appearance → Display → TV motion. Each chip is its own hit, and a hit
+    // APPLIES the profile — the row has no page to open.
+    'tvMotion': [
+      for (final profile in TvMotionProfile.values)
+        leaf(
+          'TV motion: ${profile.label}',
+          profile.blurb,
+          const [
+            'tv motion',
+            'motion',
+            'animation',
+            'animations',
+            'focus',
+            'tween',
+            'transition',
+            'transitions',
+            'smooth',
+            'snappy',
+            'fast',
+            'slow',
+            'speed',
+            'tempo',
+            'shield',
+            'display',
+            'home & display',
+          ],
+          onTap: () =>
+              (b.selectTvMotionProfile ?? TvMotionController.select)(profile),
+        ),
+    ],
     'torbox': [
       leaf(
         'Check Torbox cache during searches',

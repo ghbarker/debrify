@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../services/debrify_image_cache.dart';
+import '../../theme/app_motion.dart';
 import '../../utils/platform_util.dart';
 import '../../utils/tv_keys.dart';
 import '../tracker_brand_marks.dart';
@@ -936,7 +937,11 @@ class DetailActionRow extends StatelessWidget {
         targetContext,
         alignment: 0.5,
         alignmentPolicy: alignmentPolicy,
-        duration: Duration.zero,
+        // TV: `AppMotion.tvScroll`; elsewhere the shipped jump.
+        duration: AppMotion.of(targetContext).scrollTempo(
+          PlatformUtil.isTelevision,
+          Duration.zero,
+        ),
       );
     });
   }

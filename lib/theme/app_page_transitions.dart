@@ -2,7 +2,9 @@ import 'package:animations/animations.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../services/tv_motion_profile.dart';
 import '../utils/platform_util.dart';
+import 'app_motion.dart';
 
 /// The one route transition every platform uses.
 ///
@@ -16,13 +18,16 @@ import '../utils/platform_util.dart';
 ///
 /// The decision, in priority order:
 ///
-/// 1. **Television** ([PlatformUtil.isTelevision], Android TV and Apple TV):
-///    a plain fast fade — the incoming page fades in over the first 40% of
-///    the route animation (~120ms of the standard 300ms). Every push/pop on
-///    TV animates a full-screen layer, and scale/snapshot transitions are
-///    visibly janky on weak TV GPUs; the fade reads as an instant,
-///    native-style switch and costs one opacity layer. This is byte-for-byte
-///    the fade Android TV has always had.
+/// 1. **Television** ([PlatformUtil.isTelevision], Android TV and Apple TV)
+///    under the SNAPPY motion profile: a plain fast fade — the incoming page
+///    fades in over the first 40% of the route animation (~120ms of the
+///    standard 300ms). Every push/pop on TV animates a full-screen layer, and
+///    scale/snapshot transitions are visibly janky on weak TV GPUs; the fade
+///    reads as an instant, native-style switch and costs one opacity layer.
+///    This is byte-for-byte the fade Android TV has always had. Under the
+///    SMOOTH profile (Apple TV, Shield-class boxes, or the user's choice) a
+///    TV falls through to rule 4 and runs the same shared axis a desktop
+///    does — see [AppMotion.tvRoutesSharedAxis].
 /// 2. **Reduced motion** (`MediaQuery.disableAnimations`): the same fast
 ///    fade. A `PageTransitionsBuilder` receives an animation the route has
 ///    already created, so it cannot shorten the controller — the only lever
@@ -61,8 +66,9 @@ import '../utils/platform_util.dart';
 /// `MaterialRouteTransitionMixin.buildTransitions` performs to find this
 /// builder in the first place.
 ///
-/// The TV check reads [PlatformUtil.isTelevision] per transition build —
-/// warmed in main() before runApp — so the `PageTransitionsTheme` stays
+/// The TV check reads [PlatformUtil.isTelevision] and the motion profile
+/// reads `TvMotionController.current` per transition build — both static,
+/// both warmed in main() before runApp — so the `PageTransitionsTheme` stays
 /// const and one instance serves every built theme.
 class AppPageTransitionsBuilder extends PageTransitionsBuilder {
   const AppPageTransitionsBuilder();
@@ -86,8 +92,9 @@ class AppPageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    if (PlatformUtil.isTelevision ||
-        (MediaQuery.maybeDisableAnimationsOf(context) ?? false)) {
+    final tvFade = PlatformUtil.isTelevision &&
+        !AppMotion.tvRoutesSharedAxis(TvMotionController.current);
+    if (tvFade || (MediaQuery.maybeDisableAnimationsOf(context) ?? false)) {
       return FadeTransition(
         opacity: CurvedAnimation(parent: animation, curve: fastFadeCurve),
         child: child,

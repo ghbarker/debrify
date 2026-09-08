@@ -10,6 +10,7 @@ import '../../models/iptv_playlist.dart';
 import '../../services/debrify_image_cache.dart';
 import '../../services/iptv_epg_service.dart';
 import '../browse/brand_accent.dart';
+import '../../theme/app_motion.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/platform_util.dart';
 import '../../utils/tv_keys.dart';
@@ -424,6 +425,7 @@ class _IptvChannelRowState extends State<IptvChannelRow>
             ),
           );
 
+    final motion = AppMotion.of(context);
     return Focus(
       focusNode: widget.focusNode,
       onFocusChange: (f) {
@@ -442,9 +444,12 @@ class _IptvChannelRowState extends State<IptvChannelRow>
               context,
               alignment: 0.5,
               alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
-              duration: widget.isTelevision
-                  ? Duration.zero
-                  : const Duration(milliseconds: 260),
+              // TV: `AppMotion.tvScroll` (the snap under snappy, a glide
+              // under smooth); the pointer figure keeps its number.
+              duration: motion.scrollTempo(
+                widget.isTelevision,
+                const Duration(milliseconds: 260),
+              ),
               curve: Curves.easeOutCubic,
             );
           });

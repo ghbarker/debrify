@@ -163,7 +163,7 @@ class _SectionRevealState extends State<SectionReveal>
     widget.onRevealed?.call();
     final app = AppThemeScope.of(context);
     final staggered = !app.isLegacy &&
-        app.motion.entranceFor(PlatformUtil.isTelevision) ==
+        AppMotion.of(context).entrance(PlatformUtil.isTelevision) ==
             EntranceStyle.stagger;
     final delay =
         staggered ? _step * widget.index.clamp(0, _maxSteps) : Duration.zero;
@@ -243,7 +243,10 @@ class _SectionRevealState extends State<SectionReveal>
     if (app.isLegacy) {
       return widget.startWhenVisible ? _Reveal.instant : _Reveal.fadeAndRise;
     }
-    return switch (app.motion.entranceFor(PlatformUtil.isTelevision)) {
+    // Through [AppMotion.entrance], not the raw token: the TV motion profile
+    // decides whether a television plays the reveal at all, and reduced
+    // motion turns it off everywhere.
+    return switch (AppMotion.of(context).entrance(PlatformUtil.isTelevision)) {
       EntranceStyle.none => _Reveal.instant,
       // `fadeUp` is a fade AND a rise — the name says so, and a fade with no
       // motion is indistinguishable from a slow image decode. What separates

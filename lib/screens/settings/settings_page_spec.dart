@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
+import '../../services/tv_motion_profile.dart';
 import 'layout_options.dart';
 import 'settings_search.dart';
 import 'settings_spotlight_shell.dart';
@@ -415,6 +417,11 @@ class SettingsPageBindings {
   final List<String> Function() extraProfileAppearanceKeywords;
   final List<String> Function() extraPlayerKeywords;
 
+  /// Appearance → TV motion. Null means the live controller
+  /// (`TvMotionController.notifier` / `.select`); tests inject their own.
+  final ValueListenable<TvMotionProfile>? tvMotionProfile;
+  final Future<void> Function(TvMotionProfile profile)? selectTvMotionProfile;
+
   const SettingsPageBindings({
     required this.openHomePage,
     required this.openCollections,
@@ -555,6 +562,8 @@ class SettingsPageBindings {
     this.extraDetailPageKeywords = _emptyKeywords,
     this.extraProfileAppearanceKeywords = _emptyKeywords,
     this.extraPlayerKeywords = _emptyKeywords,
+    this.tvMotionProfile,
+    this.selectTvMotionProfile,
   });
 
   static Future<void> _noop() async {}

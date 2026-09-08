@@ -450,11 +450,17 @@ class _CatalogItemTileState extends State<CatalogItemTile> {
               // MiBox reported Discover — whose stage shelves ride this exact
               // path — as the one place navigation still dragged. Apple TV
               // keeps the glide.
-              duration: widget.isTelevision
-                  ? (board && !PlatformUtil.isAndroidTvCached
-                      ? motion.scaled(const Duration(milliseconds: 140))
-                      : Duration.zero)
-                  : motion.scaled(const Duration(milliseconds: 280)),
+              //
+              // Both of those are the SNAPPY profile's figures. Under the
+              // smooth profile every TV chrome follows on `AppMotion.tvScroll`
+              // instead — the box has asked for the glide.
+              duration: motion.scrollTempo(
+                widget.isTelevision,
+                const Duration(milliseconds: 280),
+                tvSnappy: board && !PlatformUtil.isAndroidTvCached
+                    ? const Duration(milliseconds: 140)
+                    : Duration.zero,
+              ),
               curve: motion.standard,
             );
           });

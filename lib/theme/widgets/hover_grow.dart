@@ -64,7 +64,9 @@ class HoverGrow extends StatelessWidget {
     return AnimatedScale(
       scale: active ? app.focus.hoverScaleFor(isTelevision) : 1.0,
       duration: durationFor(motion, isTelevision),
-      curve: motion.standard,
+      // The TV profile's curve on a TV (`emphasized` under smooth — a
+      // transform, so the overshoot is safe); the theme's `standard` off it.
+      curve: motion.focusCurve(isTelevision, motion.standard),
       child: child,
     );
   }

@@ -148,9 +148,12 @@ class _EpisodeTileState extends State<EpisodeTile> {
               context,
               alignment: 0.5,
               alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
-              duration: widget.isTelevision
-                  ? Duration.zero
-                  : const Duration(milliseconds: 260),
+              // TV: `AppMotion.tvScroll` — the snap under snappy, a short
+              // glide under smooth. The pointer figure keeps its number.
+              duration: _motion.scrollTempo(
+                widget.isTelevision,
+                const Duration(milliseconds: 260),
+              ),
               curve: Curves.easeOutCubic,
             );
           });
@@ -183,7 +186,7 @@ class _EpisodeTileState extends State<EpisodeTile> {
           behavior: HitTestBehavior.opaque,
           child: AnimatedScale(
             duration: _fx,
-            curve: Curves.easeOutCubic,
+            curve: _motion.focusCurve(widget.isTelevision, Curves.easeOutCubic),
             scale: _active ? 1.012 : 1.0,
             child: AnimatedContainer(
               duration: _fx,

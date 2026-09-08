@@ -80,7 +80,7 @@ class _DetailPrimaryButtonState extends State<DetailPrimaryButton> {
         PlatformUtil.isTelevision,
         const Duration(milliseconds: 140),
       ),
-      curve: motion.standard,
+      curve: motion.focusCurve(PlatformUtil.isTelevision, motion.standard),
       scale: _focused ? 1.05 : 1.0,
       child: DetailFocusHalo(
         focused: _focused,
