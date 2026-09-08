@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../models/stremio_addon.dart';
+import '../../../theme/app_motion.dart';
 import '../../../theme/app_theme_scope.dart';
 import '../../../widgets/skeleton_poster.dart';
 import '../board_cell.dart';
@@ -216,6 +217,7 @@ class CanvasStage extends StatelessWidget {
     final bool favRail = rail.favKind != null;
     final items = view.items;
     final nodes = view.nodes;
+    final motion = AppMotion.of(context);
 
     bindings.seedFocus();
 
@@ -364,9 +366,31 @@ class CanvasStage extends StatelessWidget {
                         // identity block's clearance is derived, never guessed.
                         height: shelfBoxH,
                         child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeOutCubic,
+                          // A flat crossfade read as an instant cut no matter
+                          // how long it ran — DPAD-down switching rails never
+                          // looked like the row MOVED. The added slide gives
+                          // it that motion; the duration is what the Smooth/
+                          // Snappy profile actually changes (snappy keeps the
+                          // shipped 200ms, smooth is AppMotion.tvScroll's
+                          // 260ms) — this switcher never read the profile at
+                          // all before, so the toggle did nothing here.
+                          duration: motion.scrollTempo(
+                            isTelevision,
+                            const Duration(milliseconds: 200),
+                            tvSnappy: const Duration(milliseconds: 200),
+                          ),
+                          switchInCurve: motion.tvScrollCurve,
+                          switchOutCurve: motion.tvScrollCurve,
+                          transitionBuilder: (child, animation) => FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, 0.08),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
+                            ),
+                          ),
                           child: favRail
                               ? ListView.builder(
                                   // Keyed by rail IDENTITY, like the meta shelf.
