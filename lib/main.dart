@@ -975,6 +975,12 @@ class _DebrifyAppState extends State<DebrifyApp> {
     // ThemeData/AppTheme pair, so this rebuild only ever READS them — the
     // recompute happened once, inside the controller, when the change fired.
     AppThemeController.instance.addListener(_onAppThemeChanged);
+    // Same contract again for TV motion: read above ProfileGate (the gate
+    // only rekeys its child), so it must be subscribed here rather than via
+    // a scoped ValueListenableBuilder, or a profile switch would leave the
+    // incoming profile stuck on the outgoing profile's tempo until the app is
+    // killed (test/profiles/isolation_suite/stale_runtime_guard_test.dart).
+    TvMotionController.notifier.addListener(_onTvMotionProfileChanged);
   }
 
   void _onTextBrightnessChanged() {
@@ -985,10 +991,15 @@ class _DebrifyAppState extends State<DebrifyApp> {
     if (mounted) setState(() {});
   }
 
+  void _onTvMotionProfileChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
     TextBrightnessController.notifier.removeListener(_onTextBrightnessChanged);
     AppThemeController.instance.removeListener(_onAppThemeChanged);
+    TvMotionController.notifier.removeListener(_onTvMotionProfileChanged);
     super.dispose();
   }
 
@@ -1064,14 +1075,13 @@ class _DebrifyAppState extends State<DebrifyApp> {
         // overlay inherits it, and excluded surfaces shadow it lower down
         // with a LegacyThemeBoundary. An open overlay restyles live on theme
         // change for free — it inherits from here, not from a capture.
-        // The TV motion profile scope sits with the theme scope: a chip press
-        // republishes the profile through this builder alone, and every
-        // widget that resolved `AppMotion.of` re-runs — the routes below are
-        // the same instances, so nothing else rebuilds.
-        Widget content = ValueListenableBuilder<TvMotionProfile>(
-          valueListenable: TvMotionController.notifier,
-          builder: (_, profile, scoped) =>
-              TvMotionScope(profile: profile, child: scoped!),
+        // The TV motion profile scope sits with the theme scope: both are
+        // read via `.instance`/`.notifier` and subscribed with an explicit
+        // addListener in initState (see above), the same contract the theme
+        // and text-brightness controllers use, so `_DebrifyAppState.setState`
+        // covers all three and a profile switch's re-warm republishes here.
+        Widget content = TvMotionScope(
+          profile: TvMotionController.current,
           child: AppThemeScope(
             theme: AppThemeController.instance.theme,
             // The theme's whole-page texture — film grain, Blueprint's rule.

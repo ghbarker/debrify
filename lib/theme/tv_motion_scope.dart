@@ -5,11 +5,16 @@ import '../services/tv_motion_profile.dart';
 /// Provides the live [TvMotionProfile] to the tree.
 ///
 /// Installed ONCE, beside the root [AppThemeScope] in `MaterialApp.builder`,
-/// under a `ValueListenableBuilder` on `TvMotionController.notifier` — so a
-/// chip press republishes the profile and every widget that resolved
-/// `AppMotion.of(context)` in `build` or `didChangeDependencies` re-runs and
-/// retargets its tween. That is the same path a theme change takes, and it is
-/// what lets the preference be read in build without a per-frame lookup.
+/// reading `TvMotionController.current`. `_DebrifyAppState` subscribes to
+/// `TvMotionController.notifier` explicitly (`addListener` in `initState`,
+/// the same contract `AppThemeController` and `TextBrightnessController`
+/// use) and calls `setState` on change, so a chip press — or a profile
+/// switch's re-warm — republishes the profile here and every widget that
+/// resolved `AppMotion.of(context)` in `build` or `didChangeDependencies`
+/// re-runs and retargets its tween. `_DebrifyAppState` sits above
+/// `ProfileGate`, which rekeys only its child, so this explicit subscription
+/// is what keeps an incoming profile from inheriting the outgoing profile's
+/// tempo (see `stale_runtime_guard_test.dart`).
 ///
 /// An [InheritedTheme] so `InheritedTheme.capture` carries it into dialogs
 /// and bare overlays, exactly like the theme scope.
