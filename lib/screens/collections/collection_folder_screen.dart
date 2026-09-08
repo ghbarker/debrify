@@ -815,7 +815,10 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
           child: RailHeaderFocus(
             node: r.headerNode,
             isTelevision: tv,
-            onPressed: () => _openRailSeeAll(r),
+            // On TV a row's name is a label, exactly like Home's own row
+            // names — not a control. Off TV it still opens the full catalog
+            // browse, the tap affordance every list title has always had.
+            onPressed: tv ? null : () => _openRailSeeAll(r),
             onUp: () => _focusRailAbove(r),
             onDown: () => r.gridKey.currentState?.focusFirst(),
             onFocused: () => _ensureRailVisible(r),
