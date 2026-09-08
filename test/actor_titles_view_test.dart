@@ -10,6 +10,7 @@ import 'package:debrify/services/imdb_person_service.dart';
 import 'package:debrify/theme/app_theme.dart';
 import 'package:debrify/theme/app_theme_scope.dart';
 import 'package:debrify/widgets/detail/actor_titles_view.dart';
+import 'package:debrify/widgets/detail/detail_rail_cards.dart';
 import 'package:debrify/widgets/detail/theme/detail_themes.dart';
 
 const _member = CastMember(
@@ -130,6 +131,200 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
     await tester.pump();
     expect(opened.map((m) => m.id), ['tt0111161', 'tt2364582']);
+  });
+
+  testWidgets(
+    'TV: DPAD down through a long grid keeps a visible poster focused',
+    (tester) async {
+      // A Shield-sized frame: 1920x1080 at dpr 2. Two rows fit under the
+      // header, so walking 30 titles down scrolls the grid several times.
+      tester.view.physicalSize = const Size(960, 540);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final many = ImdbPerson(
+        nameId: 'nm0000209',
+        name: 'Tim Robbins',
+        knownFor: List.generate(
+          30,
+          (i) => StremioMeta(
+            id: 'tt$i',
+            imdbId: 'tt$i',
+            type: 'movie',
+            name: 'Title $i',
+            year: '${1990 + i}',
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        _host(
+          ActorTitlesView(
+            member: _member,
+            onOpenTitle: (_) {},
+            loader: (_) async => many,
+            isTelevision: true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final grid = tester.getRect(find.byType(GridView));
+      final seen = <String>{};
+      // More presses than rows: the last few must stay put on the bottom row
+      // rather than wandering off the grid.
+      for (var step = 0; step < 12; step++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+
+        final primary = FocusManager.instance.primaryFocus;
+        final card = primary?.context
+            ?.findAncestorWidgetOfExactType<DetailRecCard>();
+        expect(
+          card,
+          isNotNull,
+          reason:
+              'after DOWN #${step + 1} focus is on '
+              '${primary?.debugLabel ?? primary} rather than a poster',
+        );
+        final rect = tester.getRect(find.byWidget(card!));
+        // The lifted card may poke a few px past the slot; the poster itself
+        // must sit inside the grid's viewport.
+        expect(
+          grid.inflate(8).contains(rect.topLeft) &&
+              grid.inflate(8).contains(rect.bottomRight),
+          isTrue,
+          reason:
+              'after DOWN #${step + 1} focused poster $rect is outside '
+              'the grid viewport $grid',
+        );
+        seen.add(card.rec.id);
+      }
+      // It actually reached the bottom row and never left the grid.
+      expect(seen, contains('tt28'));
+
+      String? focusedId() => FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<DetailRecCard>()
+          ?.rec
+          .id;
+
+      // The bottom row is short (30 titles, 7 across: 2 posters). RIGHT past
+      // its end is where the cursor used to vanish: the page-wide
+      // key-handling Focus was a traversable node spanning every row's band,
+      // so with no poster to the right it was the "nearest" candidate — and
+      // from a node covering the whole screen no direction leads anywhere.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(focusedId(), 'tt29');
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(
+        focusedId(),
+        isNotNull,
+        reason:
+            'RIGHT past the short bottom row left focus on '
+            '${FocusManager.instance.primaryFocus?.debugLabel}',
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+      expect(focusedId(), isNotNull);
+
+      // Walk back UP: every stop is a visible poster until the header.
+      var ups = 0;
+      while (FocusManager.instance.primaryFocus?.debugLabel != 'actor-back') {
+        expect(ups, lessThan(8), reason: 'UP never reached the back button');
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+        await tester.pumpAndSettle();
+        ups++;
+        final primary = FocusManager.instance.primaryFocus;
+        if (primary?.debugLabel == 'actor-back') break;
+        final card = primary?.context
+            ?.findAncestorWidgetOfExactType<DetailRecCard>();
+        expect(
+          card,
+          isNotNull,
+          reason:
+              'after UP #$ups focus is on '
+              '${primary?.debugLabel ?? primary} rather than a poster',
+        );
+        final rect = tester.getRect(find.byWidget(card!));
+        expect(
+          grid.inflate(8).contains(rect.topLeft) &&
+              grid.inflate(8).contains(rect.bottomRight),
+          isTrue,
+          reason:
+              'after UP #$ups focused poster $rect is outside '
+              'the grid viewport $grid',
+        );
+      }
+      // Four rows up, then the header: never a shortcut off the grid.
+      expect(ups, greaterThanOrEqualTo(4));
+    },
+  );
+
+  testWidgets('TV: UP from the first row lands on the back button', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(
+        ActorTitlesView(
+          member: _member,
+          onOpenTitle: (_) {},
+          loader: (_) async => _person,
+          isTelevision: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<DetailRecCard>(),
+      isNotNull,
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'actor-back');
+
+    // DOWN from the back button returns to the grid, never to the page.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<DetailRecCard>(),
+      isNotNull,
+    );
+  });
+
+  testWidgets('TV: Back/Escape still pops the page from a poster', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(
+        Builder(
+          builder: (context) => TextButton(
+            onPressed: () => ActorTitlesView.show(
+              context,
+              member: _member,
+              onOpenTitle: (_) {},
+              loader: (_) async => _person,
+              isTelevision: true,
+            ),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<DetailRecCard>(),
+      isNotNull,
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(ActorTitlesView), findsNothing);
   });
 
   testWidgets('an empty known-for list says so', (tester) async {

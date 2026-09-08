@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 
 import '../../models/stremio_addon.dart';
@@ -7,6 +8,7 @@ import '../../services/debrify_image_cache.dart';
 import '../../services/imdb_enrichment_service.dart';
 import '../../services/imdb_person_service.dart';
 import '../../services/watched_filter.dart';
+import '../../theme/app_motion.dart';
 import '../../theme/widgets/hover_grow.dart';
 import '../../utils/platform_util.dart';
 import 'detail_rail_cards.dart';
@@ -73,6 +75,10 @@ class ActorTitlesView extends StatefulWidget {
   State<ActorTitlesView> createState() => _ActorTitlesViewState();
 }
 
+/// One grid row: a 100-wide 2:3 poster plus its two caption lines.
+const double _tileExtent = 196;
+const double _rowGap = 14;
+
 class _ActorTitlesViewState extends State<ActorTitlesView> {
   final FocusNode _backNode = FocusNode(debugLabel: 'actor-back');
 
@@ -137,6 +143,16 @@ class _ActorTitlesViewState extends State<ActorTitlesView> {
     return DetailThemeScope(
       theme: t,
       child: Focus(
+        // A key handler only. It must not be a focus target itself: a
+        // traversable node whose rect is the whole page sits in every row's
+        // horizontal band, so RIGHT past the end of a short bottom row (no
+        // poster to the right; the vertical grid gives the directional
+        // policy no same-scrollable filter for LEFT/RIGHT) used to land the
+        // DPAD here — nothing highlighted, and from a node covering the
+        // screen no direction has a candidate. Key events still bubble up to
+        // an ancestor that cannot hold focus.
+        canRequestFocus: false,
+        skipTraversal: true,
         onKeyEvent: _onKey,
         child: Scaffold(
           backgroundColor: t.ground,
@@ -227,12 +243,17 @@ class _ActorTitlesViewState extends State<ActorTitlesView> {
     }
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      // Directional focus search only sees mounted nodes, and the tile's
+      // follow-focus scroll can only target a built row: keep two rows either
+      // side of the viewport alive so a DPAD step always has its neighbour.
+      scrollCacheExtent: const ScrollCacheExtent.pixels(
+        2 * (_tileExtent + _rowGap),
+      ),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 124,
-        // 100-wide 2:3 poster + caption.
-        mainAxisExtent: 196,
+        mainAxisExtent: _tileExtent,
         crossAxisSpacing: 12,
-        mainAxisSpacing: 14,
+        mainAxisSpacing: _rowGap,
       ),
       itemCount: _titles.length,
       itemBuilder: (context, i) => _TitleTile(
@@ -338,9 +359,42 @@ class _TitleTileState extends State<_TitleTile> {
   bool _f = false;
   bool _h = false;
 
+  // The tempo of the follow-focus scroll, resolved in build (never in the
+  // focus callback: that is an inherited lookup outside build) — see the
+  // rules on [AppMotion].
+  Duration _followDuration = Duration.zero;
+  Curve _followCurve = Curves.easeOutCubic;
+
+  void _onFocusChange(bool f) {
+    setState(() => _f = f);
+    if (!f) return;
+    // Keep the focused tile — caption included — inside the grid. The
+    // framework's own traversal scroll only drags the poster's bottom edge
+    // to the viewport edge, which clips the caption and leaves the next row
+    // unbuilt. Deferred a frame so it wins over that scroll and measures a
+    // settled layout; nearest scrollable only, so nothing above the grid
+    // moves.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final grid = Scrollable.maybeOf(context);
+      final box = context.findRenderObject();
+      if (grid == null || box is! RenderBox || !box.attached) return;
+      grid.position.ensureVisible(
+        box,
+        alignment: 0.5,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+        duration: _followDuration,
+        curve: _followCurve,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = DetailThemeScope.maybeOf(context);
+    final motion = AppMotion.of(context);
+    _followDuration = motion.scaled(const Duration(milliseconds: 160));
+    _followCurve = motion.standard;
     final item = widget.item;
     final tv = widget.isTelevision || PlatformUtil.isTelevision;
     final year = item.year;
@@ -351,7 +405,7 @@ class _TitleTileState extends State<_TitleTile> {
       // sees the descendant's focus, which is what drives the lift.
       canRequestFocus: false,
       skipTraversal: true,
-      onFocusChange: (f) => setState(() => _f = f),
+      onFocusChange: _onFocusChange,
       child: MouseRegion(
         onEnter: tv ? null : (_) => setState(() => _h = true),
         onExit: tv ? null : (_) => setState(() => _h = false),
