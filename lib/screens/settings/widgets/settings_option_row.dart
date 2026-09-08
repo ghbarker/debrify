@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../theme/app_theme_scope.dart';
+import '../../../utils/platform_util.dart';
 import '../layout_options.dart';
 import 'layout_preview_channel.dart';
+import 'tv_chip_row.dart';
 
 /// A Screen-layouts row with its options inline, as chips.
 ///
@@ -33,6 +35,7 @@ class SettingsOptionRow extends StatefulWidget {
     required this.options,
     this.focusNode,
     this.channel,
+    this.singleRow,
   });
 
   final IconData icon;
@@ -44,6 +47,13 @@ class SettingsOptionRow extends StatefulWidget {
 
   /// Test seam; production rows share [LayoutPreviewChannel.instance].
   final LayoutPreviewChannel? channel;
+
+  /// One horizontal, scrolling row of chips instead of a Wrap. Null means
+  /// "on a television": a D-pad cannot reach a chip that wrapped onto a
+  /// second row (the Details Page row's 11 options were the reported case),
+  /// so TV always uses the single scrolling row; pointer surfaces keep the
+  /// Wrap, where every chip stays under the mouse without scrolling.
+  final bool? singleRow;
 
   /// The row id, for tests walking the category column.
   String get rowId => options.rowId;
@@ -69,6 +79,17 @@ class _SettingsOptionRowState extends State<SettingsOptionRow> {
   int get _moreIndex => widget.options.options.length;
   int get _stripLength =>
       widget.options.options.length + (widget.options.onMore != null ? 1 : 0);
+
+  /// One horizontal row, never a Wrap, on TV — see [TvChipRow]. Shared with
+  /// the Appearance Look strip so a D-pad surface can always reach every
+  /// chip, however many a row has.
+  final GlobalKey<TvChipRowState> _rowKey = GlobalKey<TvChipRowState>();
+  bool get _singleRow => widget.singleRow ?? PlatformUtil.isTelevision;
+
+  void _keepChipVisible() {
+    if (!_singleRow) return;
+    _rowKey.currentState?.keepVisible();
+  }
 
   @override
   void initState() {
@@ -148,6 +169,7 @@ class _SettingsOptionRowState extends State<SettingsOptionRow> {
       }
     });
     _emit();
+    if (focused) _keepChipVisible();
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
@@ -160,12 +182,14 @@ class _SettingsOptionRowState extends State<SettingsOptionRow> {
       if (_highlight == 0) return KeyEventResult.ignored;
       setState(() => _highlight--);
       _emit();
+      _keepChipVisible();
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowRight) {
       if (_highlight < _stripLength - 1) {
         setState(() => _highlight++);
         _emit();
+        _keepChipVisible();
       }
       // Trapped at the end so directional traversal cannot carry focus off
       // to whatever happens to sit to the right.
@@ -296,27 +320,21 @@ class _SettingsOptionRowState extends State<SettingsOptionRow> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        for (var i = 0; i < widget.options.options.length; i++)
-                          _chip(i, widget.options.options[i]),
-                        if (widget.options.onMore != null)
-                          SettingsOptionChip(
-                            label: widget.options.moreLabel!,
-                            active: false,
-                            highlighted: _focused && _highlight == _moreIndex,
-                            trailing: Icons.chevron_right_rounded,
-                            onEnter: () {},
-                            onExit: () {},
-                            onTap: () {
-                              setState(() => _highlight = _moreIndex);
-                              widget.options.onMore!();
-                            },
+                    _singleRow
+                        ? TvChipRow(
+                            key: _rowKey,
+                            itemCount: _stripLength,
+                            itemBuilder: (context, i) => _stripItem(i),
+                            highlightedIndex: _focused ? _highlight : null,
+                          )
+                        : Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              for (var i = 0; i < _stripLength; i++)
+                                _stripItem(i),
+                            ],
                           ),
-                      ],
-                    ),
                   ],
                 ),
               ),
@@ -325,6 +343,27 @@ class _SettingsOptionRowState extends State<SettingsOptionRow> {
         ),
       ),
     );
+  }
+
+  /// One chip in the strip, by index — an option chip, or (at [_moreIndex])
+  /// the trailing "More" chip. Shared by both the TV single row and the
+  /// pointer surfaces' Wrap.
+  Widget _stripItem(int i) {
+    if (i == _moreIndex) {
+      return SettingsOptionChip(
+        label: widget.options.moreLabel!,
+        active: false,
+        highlighted: _focused && _highlight == _moreIndex,
+        trailing: Icons.chevron_right_rounded,
+        onEnter: () {},
+        onExit: () {},
+        onTap: () {
+          setState(() => _highlight = _moreIndex);
+          widget.options.onMore!();
+        },
+      );
+    }
+    return _chip(i, widget.options.options[i]);
   }
 
   Widget _chip(int i, LayoutOption o) {

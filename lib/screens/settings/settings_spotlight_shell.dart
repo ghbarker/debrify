@@ -4,6 +4,7 @@ import '../../services/main_page_bridge.dart';
 import '../../theme/app_focus.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../theme/widgets/parallax_focus.dart';
+import 'widgets/appearance_preview_card.dart';
 import 'widgets/settings_widgets.dart';
 
 /// Responsive classes for the Settings root.
@@ -211,32 +212,71 @@ class _SettingsSpotlightShellState extends State<SettingsSpotlightShell> {
                   child: _SettingsCategoryHeading(definition: category),
                 ),
                 Expanded(
-                  child: SingleChildScrollView(
-                    key: PageStorageKey<String>(
-                      'settings-category-${category.label}',
-                    ),
-                    padding: EdgeInsets.fromLTRB(
-                      surface == SettingsSurfaceClass.expanded ? 42 : 30,
-                      2,
-                      surface == SettingsSurfaceClass.expanded ? 44 : 30,
-                      48,
-                    ),
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 860),
-                        child: KeyedSubtree(
-                          key: ValueKey<int>(_selected),
-                          child: widget.categoryBuilder(context, _selected),
-                        ),
-                      ),
-                    ),
-                  ),
+                  child: category.label == 'Appearance'
+                      ? Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            _buildCategoryScroll(surface, category),
+                            // An OVERLAY, not a pushed-down header — see the
+                            // same note in settings_tv_layout.dart: pushing
+                            // the pane down the instant the dock appears
+                            // would carry a just-hovered chip out from under
+                            // the pointer, an exit, and the dock collapsing
+                            // right back.
+                            Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              child: IgnorePointer(
+                                child: AppearancePreviewDock(
+                                  padding: EdgeInsets.fromLTRB(
+                                    surface == SettingsSurfaceClass.expanded
+                                        ? 42
+                                        : 30,
+                                    0,
+                                    surface == SettingsSurfaceClass.expanded
+                                        ? 44
+                                        : 30,
+                                    14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : _buildCategoryScroll(surface, category),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// The scrolling category content, unwrapped from its dock overlay so
+  /// Appearance can stack them and every other category can use it as-is.
+  Widget _buildCategoryScroll(
+    SettingsSurfaceClass surface,
+    SettingsCategoryDefinition category,
+  ) {
+    return SingleChildScrollView(
+      key: PageStorageKey<String>('settings-category-${category.label}'),
+      padding: EdgeInsets.fromLTRB(
+        surface == SettingsSurfaceClass.expanded ? 42 : 30,
+        2,
+        surface == SettingsSurfaceClass.expanded ? 44 : 30,
+        48,
+      ),
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860),
+          child: KeyedSubtree(
+            key: ValueKey<int>(_selected),
+            child: widget.categoryBuilder(context, _selected),
+          ),
+        ),
       ),
     );
   }

@@ -13,6 +13,7 @@ import '../../../utils/platform_util.dart';
 import '../../../widgets/detail/theme/detail_themes.dart';
 import 'layout_preview_channel.dart';
 import 'layout_preview_stage.dart';
+import 'tv_chip_row.dart';
 
 /// The live preview pinned to the top of Appearance.
 ///
@@ -41,6 +42,8 @@ class AppearancePreviewCard extends StatefulWidget {
     this.focusNode,
     this.singleRow,
     this.layout,
+    this.showStrip = true,
+    this.compact = false,
   });
 
   /// What to draw.
@@ -78,6 +81,15 @@ class AppearancePreviewCard extends StatefulWidget {
   /// so a wrapped second row would be unreachable; pointer surfaces keep the
   /// Wrap, where every chip stays under the mouse without scrolling.
   final bool? singleRow;
+
+  /// False hides the Look strip entirely — the pinned dock shows the same
+  /// stage and caption without a second, redundant strip (the one real strip
+  /// stays on the resting card at the top of the pane).
+  final bool showStrip;
+
+  /// Smaller padding and a reduced-height stage, for the pinned dock. The
+  /// resting, top-of-pane card stays full size.
+  final bool compact;
 
   @override
   State<AppearancePreviewCard> createState() => _AppearancePreviewCardState();
@@ -129,10 +141,32 @@ class _AppearancePreviewCardState extends State<AppearancePreviewCard> {
     final t = app.settings;
     final shown = _resolve(widget.state);
     final layout = _layoutShown;
-    final radius = app.shape.br(13);
+    final radius = app.shape.br(widget.compact ? 11 : 13);
+    final stage = Stack(
+      children: [
+        Visibility(
+          visible: layout == null,
+          maintainState: true,
+          maintainAnimation: true,
+          maintainSize: true,
+          child: ThemePreviewStage(theme: shown),
+        ),
+        if (layout != null)
+          Positioned.fill(
+            child: LayoutPreviewStage(
+              theme: shown,
+              rowId: layout.rowId,
+              optionId: layout.optionId,
+              variant: layout.variant,
+            ),
+          ),
+      ],
+    );
     return Container(
       key: _cardKey,
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+      padding: widget.compact
+          ? const EdgeInsets.fromLTRB(10, 10, 10, 10)
+          : const EdgeInsets.fromLTRB(14, 14, 14, 12),
       decoration: BoxDecoration(
         color: Color.alphaBlend(
           t.accent.withValues(alpha: 0.06),
@@ -150,47 +184,48 @@ class _AppearancePreviewCardState extends State<AppearancePreviewCard> {
               label: layout.optionLabel,
               eyebrow: layout.rowTitle.toUpperCase(),
               candidate: !layout.applied,
+              compact: widget.compact,
             )
           else
             _Caption(
               label: widget.state.lookLabel ?? 'Custom',
               candidate: widget.candidate,
+              compact: widget.compact,
             ),
-          const SizedBox(height: 10),
+          SizedBox(height: widget.compact ? 8 : 10),
           // The theme stage always sizes the slot, even while a layout is
           // shown over it: swapping stages must not change the card's
           // height, or the first hover on a row below would move that row
           // out from under the pointer (an exit, and the preview snaps back).
-          Stack(
-            children: [
-              Visibility(
-                visible: layout == null,
-                maintainState: true,
-                maintainAnimation: true,
-                maintainSize: true,
-                child: ThemePreviewStage(theme: shown),
+          //
+          // Compact (the pinned dock): the stage is composed at its natural
+          // 320-wide size, same as `LayoutPreviewStage`'s own canvas, then
+          // scaled down by a FittedBox into a fixed short slot — the same
+          // "fixed canvas, fitted box" technique `LayoutPreviewStage` already
+          // uses for itself, applied one level up so `ThemePreviewStage`
+          // (which has no such fitting of its own) shrinks too.
+          if (widget.compact)
+            SizedBox(
+              height: 78,
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: SizedBox(width: 320, child: stage),
               ),
-              if (layout != null)
-                Positioned.fill(
-                  child: LayoutPreviewStage(
-                    theme: shown,
-                    rowId: layout.rowId,
-                    optionId: layout.optionId,
-                    variant: layout.variant,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _LookStrip(
-            looks: widget.looks,
-            activeLookId: widget.activeLookId,
-            focusNode: widget.focusNode,
-            onPreview: widget.onPreview,
-            onApply: widget.onApply,
-            onFocused: _reveal,
-            singleRow: widget.singleRow ?? PlatformUtil.isTelevision,
-          ),
+            )
+          else
+            stage,
+          if (widget.showStrip) ...[
+            const SizedBox(height: 12),
+            _LookStrip(
+              looks: widget.looks,
+              activeLookId: widget.activeLookId,
+              focusNode: widget.focusNode,
+              onPreview: widget.onPreview,
+              onApply: widget.onApply,
+              onFocused: _reveal,
+              singleRow: widget.singleRow ?? PlatformUtil.isTelevision,
+            ),
+          ],
         ],
       ),
     );
@@ -202,6 +237,7 @@ class _Caption extends StatelessWidget {
     required this.label,
     required this.candidate,
     this.eyebrow,
+    this.compact = false,
   });
 
   final String label;
@@ -210,6 +246,9 @@ class _Caption extends StatelessWidget {
   /// What kind of thing [label] names when it is not a Look — the row's
   /// title, appended after the preview state ("PREVIEWING · DETAILS PAGE").
   final String? eyebrow;
+
+  /// Smaller label text, for the pinned dock.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -236,13 +275,13 @@ class _Caption extends StatelessWidget {
                   color: t.accent2,
                 ),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: compact ? 4 : 6),
               Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: compact ? 14 : 18,
                   height: 1,
                   fontWeight: FontWeight.w700,
                   color: app.core.tx,
@@ -296,48 +335,12 @@ class _LookStripState extends State<_LookStrip> {
 
   /// One horizontal row, never a Wrap: Left/Right is the only way a D-pad
   /// moves along the strip, so a second wrapped row would be unreachable.
-  final ScrollController _scroll = ScrollController();
-  final GlobalKey _viewportKey = GlobalKey();
-  List<GlobalKey> _chipKeys = const [];
+  /// Shared with the inline Screen-layouts rows — see [TvChipRow].
+  final GlobalKey<TvChipRowState> _rowKey = GlobalKey<TvChipRowState>();
 
-  void _syncChipKeys() {
-    if (_chipKeys.length != widget.looks.length) {
-      _chipKeys = List.generate(widget.looks.length, (_) => GlobalKey());
-    }
-  }
-
-  /// Scrolls the strip (horizontally only — never the pane) so the
-  /// highlighted chip is fully on screen, with a little breathing room.
   void _keepChipVisible() {
     if (!widget.singleRow) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scroll.hasClients) return;
-      if (_highlight < 0 || _highlight >= _chipKeys.length) return;
-      final chip = _chipKeys[_highlight].currentContext?.findRenderObject();
-      final viewport = _viewportKey.currentContext?.findRenderObject();
-      if (chip is! RenderBox || viewport is! RenderBox) return;
-      const pad = 12.0;
-      final visibleLeft = chip
-          .localToGlobal(Offset.zero, ancestor: viewport)
-          .dx;
-      final left = visibleLeft + _scroll.offset;
-      final right = left + chip.size.width;
-      final extent = viewport.size.width;
-      var target = _scroll.offset;
-      if (left - pad < _scroll.offset) {
-        target = left - pad;
-      } else if (right + pad > _scroll.offset + extent) {
-        target = right + pad - extent;
-      }
-      target = target.clamp(0.0, _scroll.position.maxScrollExtent);
-      if (target == _scroll.offset) return;
-      final motion = AppMotion.of(context);
-      _scroll.animateTo(
-        target,
-        duration: motion.scaled(const Duration(milliseconds: 160)),
-        curve: motion.standard,
-      );
-    });
+    _rowKey.currentState?.keepVisible();
   }
 
   @override
@@ -350,7 +353,6 @@ class _LookStripState extends State<_LookStrip> {
   void dispose() {
     _release(widget.focusNode);
     _ownNode?.dispose();
-    _scroll.dispose();
     super.dispose();
   }
 
@@ -424,45 +426,31 @@ class _LookStripState extends State<_LookStrip> {
 
   @override
   Widget build(BuildContext context) {
-    _syncChipKeys();
-    Widget chip(int i) => KeyedSubtree(
-      key: _chipKeys[i],
-      child: _LookChip(
-        look: widget.looks[i],
-        active: widget.looks[i].id == widget.activeLookId,
-        highlighted: _focused && i == _highlight,
-        onEnter: () {
-          _hover = widget.looks[i];
-          _emit();
-        },
-        onExit: () {
-          if (_hover?.id == widget.looks[i].id) _hover = null;
-          _emit();
-        },
-        onTap: () {
-          // A tap also moves the keyboard highlight, so a later OK
-          // re-applies what was just chosen rather than a stale chip.
-          setState(() => _highlight = i);
-          widget.onApply(widget.looks[i]);
-        },
-      ),
+    Widget chip(int i) => _LookChip(
+      look: widget.looks[i],
+      active: widget.looks[i].id == widget.activeLookId,
+      highlighted: _focused && i == _highlight,
+      onEnter: () {
+        _hover = widget.looks[i];
+        _emit();
+      },
+      onExit: () {
+        if (_hover?.id == widget.looks[i].id) _hover = null;
+        _emit();
+      },
+      onTap: () {
+        // A tap also moves the keyboard highlight, so a later OK
+        // re-applies what was just chosen rather than a stale chip.
+        setState(() => _highlight = i);
+        widget.onApply(widget.looks[i]);
+      },
     );
     final Widget body = widget.singleRow
-        ? SingleChildScrollView(
-            key: _viewportKey,
-            controller: _scroll,
-            scrollDirection: Axis.horizontal,
-            // Clip at the strip's own bounds: with Clip.none the off-screen
-            // chips painted straight across the card's padding and border.
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var i = 0; i < widget.looks.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 6),
-                  chip(i),
-                ],
-              ],
-            ),
+        ? TvChipRow(
+            key: _rowKey,
+            itemCount: widget.looks.length,
+            itemBuilder: (context, i) => chip(i),
+            highlightedIndex: _focused ? _highlight : null,
           )
         : Wrap(
             spacing: 6,
@@ -591,12 +579,14 @@ class AppearancePreviewHost extends StatefulWidget {
     this.applyLook,
     this.singleRow,
     this.layoutChannel,
+    this.dock = false,
   });
 
   /// See [AppearancePreviewCard.singleRow]; null follows the platform.
   final bool? singleRow;
 
-  /// The strip's focus node — on TV, the pane node this card claims.
+  /// The strip's focus node — on TV, the pane node this card claims. Ignored
+  /// when [dock] is true: the dock never owns the strip or a pane node.
   final FocusNode? focusNode;
 
   /// Override for tests. Default: clear token edits, then `LookApplier.apply`,
@@ -606,6 +596,11 @@ class AppearancePreviewHost extends StatefulWidget {
   /// Where the inline Screen-layouts rows report what they are pointing at.
   /// Test seam; production shares [LayoutPreviewChannel.instance].
   final LayoutPreviewChannel? layoutChannel;
+
+  /// A second, compact, strip-less instance for [AppearancePreviewDock] —
+  /// shows whichever Screen-layouts row [LayoutPreviewChannel] currently has
+  /// pointed at, rather than owning any focus or Look candidate of its own.
+  final bool dock;
 
   @override
   State<AppearancePreviewHost> createState() => _AppearancePreviewHostState();
@@ -673,7 +668,9 @@ class _AppearancePreviewHostState extends State<AppearancePreviewHost> {
     // A Look with tokens edited on top is NOT that Look — same rule as the
     // Looks page's tick.
     final active = edits == 0 ? AppLooks.active() : null;
-    final candidate = _candidate;
+    // The dock never previews a Look candidate — only a pointed Screen-layouts
+    // row (see [AppearancePreviewDock]) — so it has no candidate of its own.
+    final candidate = widget.dock ? null : _candidate;
     final state = candidate != null
         ? AppearancePreviewState.forLook(candidate)
         : AppearancePreviewState(
@@ -682,18 +679,77 @@ class _AppearancePreviewHostState extends State<AppearancePreviewHost> {
             preset: TextBrightnessController.current,
             lookLabel: active?.label,
           );
+    // The dock only ever shows something ACTIVELY pointed at — never the
+    // "resting" last-touched row the top-of-pane card keeps showing once the
+    // pointer/D-pad has moved on.
+    final layout = widget.dock ? _layouts.pointed : _layouts.shown;
     return AppearancePreviewCard(
       state: state,
       activeLookId: active?.id,
       candidate: candidate != null && candidate.id != active?.id,
-      layout: _layouts.shown,
-      focusNode: widget.focusNode,
+      layout: layout,
+      focusNode: widget.dock ? null : widget.focusNode,
       singleRow: widget.singleRow,
-      onPreview: (look) {
-        if (look?.id == _candidate?.id) return;
-        setState(() => _candidate = look);
-      },
+      showStrip: !widget.dock,
+      compact: widget.dock,
+      onPreview: widget.dock
+          ? null
+          : (look) {
+              if (look?.id == _candidate?.id) return;
+              setState(() => _candidate = look);
+            },
       onApply: _apply,
+    );
+  }
+}
+
+/// Docks a compact copy of the Appearance live preview above the scrolling
+/// pane while a Screen-layouts row is pointed at (hovered, or D-pad
+/// highlighted) — the Shield's reported bug: by the time focus reaches a
+/// layout row the live preview card has scrolled off the top, so
+/// highlighting a chip changes a preview nobody can see.
+///
+/// The Look strip needs no equivalent: it lives ON the resting card, and
+/// [AppearancePreviewCard]'s own `_reveal` already scrolls that card fully
+/// into view the moment the strip takes focus — a second, pinned copy would
+/// only ever duplicate a card that is already on screen.
+///
+/// Collapses to zero height (no padding, no focusable content) rather than
+/// disappearing outright, so nothing above it moves and Presets/Theme rows
+/// keep exactly their current layout when no row is being pointed at.
+class AppearancePreviewDock extends StatelessWidget {
+  const AppearancePreviewDock({
+    super.key,
+    this.channel,
+    this.padding = EdgeInsets.zero,
+  });
+
+  /// Test seam; production shares [LayoutPreviewChannel.instance].
+  final LayoutPreviewChannel? channel;
+
+  /// Applied ONLY while shown, so a collapsed dock contributes exactly zero
+  /// height and never shifts the pane below it by even the inset alone.
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final ch = channel ?? LayoutPreviewChannel.instance;
+    return AnimatedBuilder(
+      animation: ch,
+      builder: (context, _) {
+        final show = ch.active;
+        return AnimatedSize(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: !show
+              ? const SizedBox(width: double.infinity)
+              : Padding(
+                  padding: padding,
+                  child: AppearancePreviewHost(dock: true, layoutChannel: ch),
+                ),
+        );
+      },
     );
   }
 }

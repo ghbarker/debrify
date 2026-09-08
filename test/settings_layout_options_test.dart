@@ -256,6 +256,75 @@ void main() {
     },
   );
 
+  testWidgets(
+    'TV: the Details Page row is one scrolling strip, never a wrapped second '
+    'row',
+    (tester) async {
+      await pumpAppearance(tester, surface: SettingsLayoutSurface.tv);
+      expect(
+        find.descendant(of: row('detailPageStyle'), matching: find.byType(Wrap)),
+        findsNothing,
+        reason: 'no wrapped second row on a D-pad surface',
+      );
+      final strip = find.descendant(
+        of: row('detailPageStyle'),
+        matching: find.byWidgetPredicate(
+          (w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal,
+        ),
+      );
+      expect(strip, findsOneWidget);
+      final stripRect = tester.getRect(strip);
+
+      final r = tester.widget<SettingsOptionRow>(row('detailPageStyle'));
+      final node = r.focusNode!;
+      final optionCount = r.options.options.length;
+      expect(
+        optionCount,
+        greaterThan(6),
+        reason: 'the Details Page row is the long one this guards',
+      );
+
+      node.requestFocus();
+      await tester.pumpAndSettle();
+      for (var i = 1; i < optionCount; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pumpAndSettle();
+      }
+      expect(tester.takeException(), isNull);
+      final lastLabel = r.options.options.last.label;
+      final lastChip = tester.getRect(chip('detailPageStyle', lastLabel));
+      expect(
+        lastChip.center.dx,
+        inInclusiveRange(stripRect.left, stripRect.right),
+        reason: 'the row scrolled to keep the last chip in view',
+      );
+      // Trapped at the end: one more Right stays put and throws nothing.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(node.hasFocus, isTrue);
+    },
+  );
+
+  testWidgets('desktop: the same row keeps a Wrap, not a scrolling strip', (
+    tester,
+  ) async {
+    await pumpAppearance(tester, surface: SettingsLayoutSurface.desktop);
+    expect(
+      find.descendant(of: row('detailPageStyle'), matching: find.byType(Wrap)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: row('detailPageStyle'),
+        matching: find.byWidgetPredicate(
+          (w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal,
+        ),
+      ),
+      findsNothing,
+    );
+  });
+
   // Every other row: choosing its second option writes exactly that row's
   // pref (one new key, the expected suffix) through the writer, and the
   // stage shows the choice as applied.
