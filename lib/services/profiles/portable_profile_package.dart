@@ -29,6 +29,10 @@ class PortableProfilePackage {
   static const int version = 4;
   static const int oldestSupportedVersion = 3;
   static const int maxEnvelopeBytes = 128 * 1024 * 1024;
+  static const int maxBoundedEncryptedBytes = 10 * 1024 * 1024;
+  static const int defaultKdfMemory = 19456;
+  static const int defaultKdfIterations = 2;
+  static const int defaultKdfParallelism = 1;
   static const int maxExpandedBytes = 256 * 1024 * 1024;
   static const int maxProfiles = 64;
   static const int maxResources = 1024;
@@ -175,8 +179,8 @@ class PortableProfilePackage {
   static Future<Uint8List> encodeEncryptedBytes(
     PortableProfilePackage package,
     String passphrase, {
-    int memory = 19456,
-    int iterations = 2,
+    int memory = defaultKdfMemory,
+    int iterations = defaultKdfIterations,
   }) {
     if (passphrase.length < 8) {
       throw ArgumentError.value(
@@ -235,8 +239,32 @@ class PortableProfilePackage {
     return Isolate.run(() async => decodeMap(await _readEnvelopeFile(path)));
   }
 
-  static Future<Map<String, dynamic>> _readEnvelopeFile(String path) async {
-    final decoded = jsonDecode(await readBoundedUtf8(File(path).openRead()));
+  /// Opt-in admission for small encrypted packages using exporter-default costs.
+  /// Rejects input over 10 MiB before UTF-8/JSON decoding and requires exact
+  /// integer KDF costs before constructing Argon2id. Uses the existing decoder
+  /// and cryptography; generic [decrypt] and [decryptFile] keep legacy costs.
+  ///
+  /// Runs in the caller's isolate. This bounds encoded input, not peak memory,
+  /// execution time, or cancellation of work already started.
+  static Future<PortableProfilePackage> decryptBoundedBytes(
+    Uint8List encryptedBytes,
+    String passphrase,
+  ) async {
+    if (encryptedBytes.length > maxBoundedEncryptedBytes) {
+      throw const FormatException('Backup exceeds the input limit');
+    }
+    return _decrypt(
+      _parseEnvelope(utf8.decode(encryptedBytes)),
+      passphrase,
+      requireDefaultKdf: true,
+    );
+  }
+
+  static Future<Map<String, dynamic>> _readEnvelopeFile(String path) async =>
+      _parseEnvelope(await readBoundedUtf8(File(path).openRead()));
+
+  static Map<String, dynamic> _parseEnvelope(String source) {
+    final decoded = jsonDecode(source);
     if (decoded is! Map<String, dynamic>) {
       throw const FormatException('Backup must be a JSON object');
     }
@@ -534,9 +562,9 @@ class PortableProfilePackage {
   static Future<Map<String, dynamic>> encrypt(
     PortableProfilePackage package,
     String passphrase, {
-    int memory = 19456,
-    int iterations = 2,
-    int parallelism = 1,
+    int memory = defaultKdfMemory,
+    int iterations = defaultKdfIterations,
+    int parallelism = defaultKdfParallelism,
   }) async {
     if (passphrase.length < 8) {
       throw ArgumentError.value(
@@ -639,7 +667,13 @@ class PortableProfilePackage {
   static Future<PortableProfilePackage> decrypt(
     Map<String, dynamic> envelope,
     String passphrase,
-  ) async {
+  ) => _decrypt(envelope, passphrase);
+
+  static Future<PortableProfilePackage> _decrypt(
+    Map<String, dynamic> envelope,
+    String passphrase, {
+    bool requireDefaultKdf = false,
+  }) async {
     final kdf = envelope['kdf'];
     final aead = envelope['aead'];
     final envelopeVersion = envelope['version'];
@@ -655,6 +689,12 @@ class PortableProfilePackage {
         aead['algorithm'] != 'aes-256-gcm' ||
         aead['aad'] != expectedAad) {
       throw const FormatException('Unsupported encrypted profile backup');
+    }
+    if (requireDefaultKdf &&
+        (kdf['memory'] is! int || kdf['memory'] != defaultKdfMemory ||
+            kdf['iterations'] is! int || kdf['iterations'] != defaultKdfIterations ||
+            kdf['parallelism'] is! int || kdf['parallelism'] != defaultKdfParallelism)) {
+      throw const FormatException('Backup requires integer exporter-default KDF costs');
     }
     int bounded(Object? value, int min, int max) {
       if (value is! num) throw const FormatException('Invalid KDF parameters');
