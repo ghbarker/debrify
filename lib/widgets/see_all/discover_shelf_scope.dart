@@ -16,7 +16,17 @@ class DiscoverShelfMetrics {
   /// line's own inset so the two read as one left margin.
   final double hPad;
 
-  const DiscoverShelfMetrics({required this.cardHeight, required this.hPad});
+  /// Whether the shelf shows its "N / M+" position line above the posters.
+  /// On by default (the Discover STAGE shelf, where it's the sense of place
+  /// the wall's second row used to give for free); off for a collection
+  /// folder's rails, which read as plain Home rows with no extra chrome.
+  final bool showPositionCounter;
+
+  const DiscoverShelfMetrics({
+    required this.cardHeight,
+    required this.hPad,
+    this.showPositionCounter = true,
+  });
 
   double get cardWidth => cardHeight * 2 / 3;
 
@@ -43,10 +53,11 @@ class DiscoverShelfMetrics {
   bool operator ==(Object other) =>
       other is DiscoverShelfMetrics &&
       other.cardHeight == cardHeight &&
-      other.hPad == hPad;
+      other.hPad == hPad &&
+      other.showPositionCounter == showPositionCounter;
 
   @override
-  int get hashCode => Object.hash(cardHeight, hPad);
+  int get hashCode => Object.hash(cardHeight, hPad, showPositionCounter);
 }
 
 /// Marks the subtree as the Discover STAGE layout, and carries the shelf's
@@ -71,9 +82,8 @@ class DiscoverShelfScope extends InheritedWidget {
 
   /// The shelf geometry for this subtree, or null when the caller should
   /// render its normal grid.
-  static DiscoverShelfMetrics? of(BuildContext context) => context
-      .dependOnInheritedWidgetOfExactType<DiscoverShelfScope>()
-      ?.metrics;
+  static DiscoverShelfMetrics? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<DiscoverShelfScope>()?.metrics;
 
   @override
   bool updateShouldNotify(DiscoverShelfScope old) => old.metrics != metrics;

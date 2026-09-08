@@ -409,6 +409,55 @@ void main() {
     expect(find.byType(ListView), findsNothing);
   });
 
+  group('showPositionCounter', () {
+    // A collection folder's rails opt out of the shelf's "N / M+" line (it
+    // reads as a plain Home row); the Discover STAGE shelf keeps it by
+    // default. Both share this same widget, so the flag on the metrics —
+    // not a second code path — is what tells them apart.
+    testWidgets('on by default: the "N / M+" line renders', (tester) async {
+      await tester.pumpWidget(harness(grid(items(6)), shelf: shelf));
+      await tester.pump();
+      tester
+          .state<SeeAllPosterGridState>(find.byType(SeeAllPosterGrid))
+          .focusFirst();
+      await tester.pump();
+      await tester.pump();
+      expect(find.textContaining('/'), findsOneWidget);
+    });
+
+    testWidgets('off: no position line, even with a card focused', (
+      tester,
+    ) async {
+      const noCounter = DiscoverShelfMetrics(
+        cardHeight: 162,
+        hPad: 24,
+        showPositionCounter: false,
+      );
+      await tester.pumpWidget(harness(grid(items(6)), shelf: noCounter));
+      await tester.pump();
+      tester
+          .state<SeeAllPosterGridState>(find.byType(SeeAllPosterGrid))
+          .focusFirst();
+      await tester.pump();
+      await tester.pump();
+      expect(find.textContaining('/'), findsNothing);
+      // Everything else about the shelf is unaffected.
+      expect(find.byType(CatalogItemTile), findsWidgets);
+    });
+
+    test('is part of the metrics identity', () {
+      const a = DiscoverShelfMetrics(cardHeight: 162, hPad: 24);
+      const b = DiscoverShelfMetrics(
+        cardHeight: 162,
+        hPad: 24,
+        showPositionCounter: false,
+      );
+      expect(a, isNot(b));
+      expect(a.hashCode, isNot(b.hashCode));
+      expect(a.showPositionCounter, isTrue);
+    });
+  });
+
   testWidgets('re-entry from the filter line lands on the card you left', (
     tester,
   ) async {
