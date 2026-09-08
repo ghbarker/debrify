@@ -108,6 +108,7 @@ class _SettingsOptionRowState extends State<SettingsOptionRow> {
     optionId: o.id,
     optionLabel: o.label,
     applied: o.id == _selected,
+    variant: widget.options.variant?.call(),
   );
 
   LayoutOption? get _applied => widget.options.byId(_selected);

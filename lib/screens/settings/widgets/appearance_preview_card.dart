@@ -176,6 +176,7 @@ class _AppearancePreviewCardState extends State<AppearancePreviewCard> {
                     theme: shown,
                     rowId: layout.rowId,
                     optionId: layout.optionId,
+                    variant: layout.variant,
                   ),
                 ),
             ],

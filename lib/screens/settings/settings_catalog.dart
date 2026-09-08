@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
 
+import '../../services/play_loader_style.dart';
+import '../profiles/profile_wall_screen.dart';
+import 'debrify_tv_style_page.dart';
+import 'desktop_sidebar_style_page.dart';
 import 'detail_page_style_page.dart';
 import 'discover_layout_page.dart';
+import 'iptv_style_page.dart';
 import 'layout_options.dart';
 import 'layout_row_writers.dart';
+import 'parents_guide_style_page.dart';
+import 'player_dock_page.dart';
+import 'player_guide_style_page.dart';
 import 'settings_page_registry.dart';
 import 'settings_page_spec.dart';
 import 'settings_search_leaves.dart';
 import 'tv_home_style_page.dart';
+import 'tv_sidebar_style_page.dart';
 import 'widgets/settings_widgets.dart';
 
 const kCatHome = 'Home & Display';
@@ -120,6 +129,7 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
     required Future<void> Function(String value) write,
     String? moreLabel,
     Future<void> Function()? onMore,
+    String Function()? variant,
   }) {
     return SettingsLayoutOptions(
       rowId: rowId,
@@ -131,6 +141,7 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       },
       moreLabel: moreLabel,
       onMore: onMore,
+      variant: variant,
     );
   }
 
@@ -521,6 +532,16 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       row: SettingsRows.tvSidebarStyle,
       category: kCatAppearance,
       opener: b.openTvSidebarStyle,
+      kind: SettingsRowKind.options,
+      layoutOptions: layouts(
+        rowId: 'tvSidebarStyle',
+        options: [
+          for (final c in kTvSidebarStyleChoices)
+            LayoutOption(c.value, c.label, c.subtitle),
+        ],
+        current: () => b.layoutValues.tvSidebarStyle,
+        write: LayoutRowWriters.tvSidebarStyle,
+      ),
       phone: false,
       desktop: false,
       tv: true,
@@ -553,6 +574,16 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       row: SettingsRows.iptvAppearance,
       category: kCatAppearance,
       opener: b.openIptvStyle,
+      kind: SettingsRowKind.options,
+      layoutOptions: layouts(
+        rowId: 'iptvAppearance',
+        options: [
+          for (final c in kIptvStyleChoices)
+            LayoutOption(c.value, c.label, c.subtitle),
+        ],
+        current: () => b.layoutValues.iptvStyle,
+        write: LayoutRowWriters.iptvStyle,
+      ),
       phoneOrder: 60,
       desktopOrder: 50,
       tvOrder: 80,
@@ -586,6 +617,16 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       row: SettingsRows.debrifyTvAppearance,
       category: kCatAppearance,
       opener: b.openDebrifyTvStyle,
+      kind: SettingsRowKind.options,
+      layoutOptions: layouts(
+        rowId: 'debrifyTvAppearance',
+        options: [
+          for (final c in kDebrifyTvStyleChoices)
+            LayoutOption(c.value, c.label, c.subtitle),
+        ],
+        current: () => b.layoutValues.debrifyTvStyle,
+        write: LayoutRowWriters.debrifyTvStyle,
+      ),
       phoneOrder: 70,
       desktopOrder: 60,
       tvOrder: 90,
@@ -612,6 +653,20 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       row: SettingsRows.playerGuideStyle,
       category: kCatAppearance,
       opener: b.openPlayerGuideStyle,
+      kind: SettingsRowKind.options,
+      layoutOptions: layouts(
+        rowId: 'playerGuideStyle',
+        // Spotlight is tvOS's idiom; the native Android TV player falls
+        // back to Classic for it, so it is not offered there — the page's
+        // own platform rule.
+        options: [
+          for (final c in kPlayerGuideStyleChoices)
+            if (c.value != 'spotlight' || !b.isAndroidTv)
+              LayoutOption(c.value, c.label, c.subtitle),
+        ],
+        current: () => b.layoutValues.playerGuideStyle,
+        write: LayoutRowWriters.playerGuideStyle,
+      ),
       phoneOrder: 80,
       desktopOrder: 70,
       tvOrder: 100,
@@ -644,6 +699,16 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       row: SettingsRows.playLoaderStyle,
       category: kCatAppearance,
       opener: b.openPlayLoaderStyle,
+      kind: SettingsRowKind.options,
+      layoutOptions: layouts(
+        rowId: 'playLoaderStyle',
+        options: [
+          for (final o in PlayLoaderStyleController.options)
+            LayoutOption(o.id, o.label, o.blurb),
+        ],
+        current: () => b.layoutValues.playLoaderStyle,
+        write: LayoutRowWriters.playLoaderStyle,
+      ),
       phoneOrder: 90,
       desktopOrder: 80,
       tvOrder: 110,
@@ -672,6 +737,26 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       row: SettingsRows.playerDock,
       category: kCatAppearance,
       opener: b.openPlayerDock,
+      kind: SettingsRowKind.options,
+      layoutOptions: layouts(
+        rowId: 'playerDock',
+        // The style is the primary choice; palette and size stay on the
+        // page behind the More chip, and the preview honours them.
+        options: [
+          for (final c in kPlayerDockStyleChoices)
+            LayoutOption(c.value, c.label, c.subtitle),
+        ],
+        // `two_tier` is the pre-arrangements value and means `auto`.
+        current: () => b.layoutValues.playerDockStyle == 'two_tier'
+            ? 'auto'
+            : b.layoutValues.playerDockStyle,
+        write: LayoutRowWriters.playerDockStyle,
+        moreLabel: 'Colour & size',
+        onMore: b.openPlayerDock,
+        variant: () =>
+            '${b.layoutValues.playerDockPalette}|'
+            '${b.layoutValues.playerDockSize}',
+      ),
       tv: false,
       phoneOrder: 100,
       desktopOrder: 90,
@@ -704,6 +789,16 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       row: SettingsRows.parentsGuideStyle,
       category: kCatAppearance,
       opener: b.openParentsGuideStyle,
+      kind: SettingsRowKind.options,
+      layoutOptions: layouts(
+        rowId: 'parentsGuideStyle',
+        options: [
+          for (final c in kParentsGuideStyleChoices)
+            LayoutOption(c.value, c.label, c.subtitle),
+        ],
+        current: () => b.layoutValues.parentsGuideStyle,
+        write: LayoutRowWriters.parentsGuideStyle,
+      ),
       phoneOrder: 110,
       desktopOrder: 100,
       tvOrder: 120,
@@ -729,6 +824,19 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       row: SettingsRows.profileAppearance,
       category: kCatAppearance,
       opener: b.openProfileAppearance,
+      kind: SettingsRowKind.options,
+      layoutOptions: layouts(
+        rowId: 'profileAppearance',
+        options: [
+          for (final o in ProfileGateStyle.options)
+            LayoutOption(o.id, o.label, o.blurb),
+        ],
+        current: () => b.layoutValues.profileGateStyle,
+        write: LayoutRowWriters.profileGateStyle,
+        // Apple TV keeps the Personalized Top Shelf toggle on the page.
+        moreLabel: b.isTvOS ? 'Top Shelf' : null,
+        onMore: b.isTvOS ? b.openProfileAppearance : null,
+      ),
       phoneOrder: 120,
       desktopOrder: 110,
       tvOrder: 130,
@@ -756,6 +864,26 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       row: SettingsRows.navigationStyle,
       category: kCatAppearance,
       opener: b.openNavigation,
+      kind: SettingsRowKind.options,
+      layoutOptions: layouts(
+        rowId: 'navigationStyleAppearance',
+        // The Navigation dialog's two options, verbatim.
+        options: const [
+          LayoutOption(
+            'classic',
+            'Classic bar',
+            'Bottom tabs \u2014 Home, three slots you pick, More holds the '
+                'rest',
+          ),
+          LayoutOption(
+            'floating',
+            'Floating button',
+            'The glass button with the expanding menu',
+          ),
+        ],
+        current: () => b.layoutValues.phoneNavStyle,
+        write: LayoutRowWriters.phoneNavStyle,
+      ),
       desktop: false,
       tv: false,
       search: false,
@@ -769,6 +897,16 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       row: SettingsRows.desktopSidebarStyle,
       category: kCatAppearance,
       opener: b.openDesktopSidebarStyle,
+      kind: SettingsRowKind.options,
+      layoutOptions: layouts(
+        rowId: 'desktopSidebarStyle',
+        options: [
+          for (final c in kDesktopSidebarStyleChoices)
+            LayoutOption(c.value, c.label, c.subtitle),
+        ],
+        current: () => b.layoutValues.desktopSidebarStyle,
+        write: LayoutRowWriters.desktopSidebarStyle,
+      ),
       desktop: false,
       tv: false,
       phoneOrder: 140,

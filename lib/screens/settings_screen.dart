@@ -1008,6 +1008,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         playerGuideStyle: _playerGuideStyle,
         playLoaderStyle: _playLoaderStyle,
         playerDockStyle: _playerDockStyle,
+        playerDockPalette: _playerDockPalette,
+        playerDockSize: _playerDockSize,
         parentsGuideStyle: _parentsGuideStyle,
         profileGateStyle: ProfileGateStyle.cached,
         phoneNavStyle: _phoneNavStyle,
