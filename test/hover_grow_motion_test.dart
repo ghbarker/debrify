@@ -14,6 +14,7 @@ import 'package:debrify/theme/app_theme.dart';
 import 'package:debrify/theme/app_theme_scope.dart';
 import 'package:debrify/theme/theme_spec.dart';
 import 'package:debrify/theme/widgets/focus_expression.dart';
+import 'package:debrify/theme/widgets/hover_grow.dart';
 import 'package:debrify/theme/widgets/parallax_focus.dart';
 import 'package:debrify/utils/platform_util.dart';
 import 'package:debrify/widgets/catalog_item_tile.dart';
@@ -27,9 +28,15 @@ import 'package:debrify/widgets/home/card_focus_rise.dart';
 /// they all read `FocusTokens.hoverScaleFor` and `AppMotion`. These tests pin
 /// the contract those sites rely on: a pointer and a non-TV keyboard cursor
 /// grow by the shared figure at the theme's tempo, a TV keeps its calmer pop
-/// and snaps, and reduced motion collapses the tween to nothing.
+/// and runs it on the shared TV focus beat (`AppMotion.tvFocus` — the same
+/// non-zero duration for the tile losing focus and the tile gaining it, so
+/// nothing snaps), and reduced motion collapses the tween to nothing.
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  /// The one TV tempo, as the legacy theme vends it at the default motion
+  /// setting: the same figure every assertion below compares against.
+  const tvFocus = AppMotion(MotionTokens.legacy, reduced: false);
 
   const item = StremioMeta(
     id: 'tt1',
@@ -109,6 +116,44 @@ void main() {
     });
   });
 
+  group('the shared TV focus tempo', () {
+    test('is the theme\'s fast — non-zero — and every TV grow runs on it', () {
+      expect(tvFocus.tvFocus, MotionTokens.legacy.fast);
+      expect(tvFocus.tvFocus, const Duration(milliseconds: 120));
+      expect(tvFocus.tvFocus, isNot(Duration.zero));
+      expect(HoverGrow.durationFor(tvFocus, true), tvFocus.tvFocus);
+      // Off TV the grow keeps its own, longer beat.
+      expect(HoverGrow.durationFor(tvFocus, false), MotionTokens.legacy.base);
+      expect(HoverGrow.durationFor(tvFocus, false), isNot(tvFocus.tvFocus));
+    });
+
+    test('a theme tempo reaches it, and reduced motion collapses it', () {
+      final sepia = AppTheme.fromDetail(DetailThemes.byId('sepia')).motion;
+      expect(
+        AppMotion(sepia, reduced: false).tvFocus,
+        const Duration(milliseconds: 138), // 120 × 1.15
+      );
+      expect(const AppMotion(MotionTokens.legacy, reduced: true).tvFocus,
+          Duration.zero);
+      expect(
+        const AppMotion(MotionTokens.legacy, reduced: true)
+            .focusTempo(true, const Duration(milliseconds: 140)),
+        Duration.zero,
+      );
+    });
+
+    test('focusTempo routes the TV branch through it and scales the rest', () {
+      const off = Duration(milliseconds: 140);
+      expect(tvFocus.focusTempo(true, off), tvFocus.tvFocus);
+      expect(tvFocus.focusTempo(false, off), off);
+      final sepia = AppMotion(
+        AppTheme.fromDetail(DetailThemes.byId('sepia')).motion,
+        reduced: false,
+      );
+      expect(sepia.focusTempo(false, off), const Duration(milliseconds: 161));
+    });
+  });
+
   group('CatalogItemTile, classic chrome', () {
     testWidgets('rests at 1 and grows by the shared figure under a pointer', (
       tester,
@@ -140,11 +185,16 @@ void main() {
       expect(scaleUnder(tester, CatalogItemTile).scale, 1.12);
     });
 
-    testWidgets('a TV keeps its calmer pop and snaps', (tester) async {
+    testWidgets('a TV keeps its calmer pop, on the shared focus beat both '
+        'ways', (tester) async {
+      PlatformUtil.debugSetAndroidTvCached(true);
+      addTearDown(() => PlatformUtil.debugSetAndroidTvCached(null));
       final node = FocusNode();
       addTearDown(node.dispose);
       await tester.pumpWidget(host(tile(tv: true, node: node)));
       await tester.pump();
+      final rest = scaleUnder(tester, CatalogItemTile);
+      expect(rest.scale, 1.0);
       node.requestFocus();
       // Focus is applied in a microtask after the frame; the tile's setState
       // therefore needs a second frame to paint the grow.
@@ -153,6 +203,38 @@ void main() {
       final grown = scaleUnder(tester, CatalogItemTile);
       expect(grown.scale, FocusTokens.tvHoverScale);
       expect(grown.scale, 1.045);
+      // Not a snap: the TV tempo, and the same tempo the cursor arrived on.
+      expect(grown.duration, tvFocus.tvFocus);
+      expect(grown.duration, const Duration(milliseconds: 120));
+      expect(grown.curve, MotionTokens.legacy.standard);
+
+      // Focus OUT runs on exactly the beat focus IN did — the pair is what
+      // reads as one cursor moving instead of the old tile flashing off.
+      node.unfocus();
+      await tester.pump();
+      await tester.pump();
+      final shrunk = scaleUnder(tester, CatalogItemTile);
+      expect(shrunk.scale, 1.0);
+      expect(shrunk.duration, grown.duration);
+      expect(rest.duration, grown.duration, reason: 'the tempo never changes');
+    });
+
+    testWidgets('a TV under reduced motion keeps the pop and snaps', (
+      tester,
+    ) async {
+      PlatformUtil.debugSetAndroidTvCached(true);
+      addTearDown(() => PlatformUtil.debugSetAndroidTvCached(null));
+      final node = FocusNode();
+      addTearDown(node.dispose);
+      await tester.pumpWidget(
+        host(tile(tv: true, node: node), reduceMotion: true),
+      );
+      await tester.pump();
+      node.requestFocus();
+      await tester.pump();
+      await tester.pump();
+      final grown = scaleUnder(tester, CatalogItemTile);
+      expect(grown.scale, 1.045, reason: 'the cursor must still be visible');
       expect(grown.duration, Duration.zero);
     });
 
@@ -199,16 +281,22 @@ void main() {
       expect(scaleUnder(tester, CardFocusRise).scale, 1.0);
     });
 
-    testWidgets('CardFocusRise on TV: 1.045 on the theme\'s fast tween', (
+    testWidgets('CardFocusRise on TV: 1.045 on the shared TV focus beat', (
       tester,
     ) async {
-      // The board rise animates on TV — its trio is cheap enough — and the
-      // shipped 120ms IS legacy's `fast`, so the migration is a no-op there.
+      // The board rise was the first TV control to animate, and its shipped
+      // 120ms IS legacy's `fast` — the figure `tvFocus` now hands to every
+      // other TV cursor, so the rise itself is unchanged.
       await tester.pumpWidget(host(rise(active: true, tv: true)));
       final grown = scaleUnder(tester, CardFocusRise);
       expect(grown.scale, FocusTokens.tvHoverScale);
+      expect(grown.duration, tvFocus.tvFocus);
       expect(grown.duration, MotionTokens.legacy.fast);
       expect(grown.duration, const Duration(milliseconds: 120));
+      await tester.pumpWidget(host(rise(active: false, tv: true)));
+      final shrunk = scaleUnder(tester, CardFocusRise);
+      expect(shrunk.scale, 1.0);
+      expect(shrunk.duration, grown.duration, reason: 'out matches in');
     });
 
     testWidgets('CardFocusRise under reduced motion', (tester) async {
@@ -236,9 +324,10 @@ void main() {
       expect(grown.duration, MotionTokens.legacy.base);
     });
 
-    testWidgets('the recommendation card on TV snaps to the calm pop', (
-      tester,
-    ) async {
+    testWidgets('the recommendation card on TV: the calm pop on the shared '
+        'focus beat, border and caption in step', (tester) async {
+      PlatformUtil.debugSetAndroidTvCached(true);
+      addTearDown(() => PlatformUtil.debugSetAndroidTvCached(null));
       final node = FocusNode();
       addTearDown(node.dispose);
       await tester.pumpWidget(
@@ -251,7 +340,23 @@ void main() {
       await tester.pump();
       final grown = scaleUnder(tester, CatalogDetailRecCard);
       expect(grown.scale, FocusTokens.tvHoverScale);
-      expect(grown.duration, Duration.zero);
+      expect(grown.duration, tvFocus.tvFocus);
+      // The border used to be a plain Container that snapped while the grow
+      // tweened; now it rides the same beat as the grow and the caption.
+      final border = tester.widget<AnimatedContainer>(
+        find.descendant(
+          of: find.byType(CatalogDetailRecCard),
+          matching: find.byType(AnimatedContainer),
+        ),
+      );
+      expect(border.duration, grown.duration);
+      final caption = tester.widget<AnimatedDefaultTextStyle>(
+        find.descendant(
+          of: find.byType(CatalogDetailRecCard),
+          matching: find.byType(AnimatedDefaultTextStyle),
+        ),
+      );
+      expect(caption.duration, grown.duration);
     });
   });
   group('under a premium look, the theme cursor grows the tile too', () {
@@ -461,17 +566,15 @@ void main() {
       expect(grown.duration, Duration.zero);
     });
 
-    testWidgets('a TV keeps the calm 1.045 and snaps, like the rest of the '
-        'cursor', (tester) async {
+    testWidgets('a TV keeps the calm 1.045 on the shared focus beat, like the '
+        'rest of the cursor', (tester) async {
       PlatformUtil.debugSetAndroidTvCached(true);
       addTearDown(() => PlatformUtil.debugSetAndroidTvCached(null));
+      final theme = themeWith(FocusExpression.ring);
       final node = FocusNode();
       addTearDown(node.dispose);
       await tester.pumpWidget(
-        host(
-          boardTile(tv: true, node: node),
-          theme: themeWith(FocusExpression.ring),
-        ),
+        host(boardTile(tv: true, node: node), theme: theme),
       );
       await tester.pump();
       node.requestFocus();
@@ -480,7 +583,27 @@ void main() {
       final grown = scalesUnder(tester, CardFocusRise).single;
       expect(grown.scale, FocusTokens.tvHoverScale);
       expect(grown.scale, 1.045);
-      expect(grown.duration, Duration.zero);
+      // `settle` is the probe theme's character: its `fast` is 140ms, and
+      // the TV beat follows the theme rather than a literal.
+      final expected = AppMotion(theme.motion, reduced: false).tvFocus;
+      expect(expected, const Duration(milliseconds: 140));
+      expect(grown.duration, expected);
+      // The ring beside the grow runs on the very same beat — one cursor.
+      expect(
+        cursorBoxes(tester).map((c) => c.duration),
+        everyElement(expected),
+      );
+      // …and so does the ring fading OUT when focus leaves.
+      node.unfocus();
+      await tester.pump();
+      await tester.pump();
+      expect(scalesUnder(tester, CardFocusRise).single.scale, 1.0);
+      expect(scalesUnder(tester, CardFocusRise).single.duration, expected);
+      expect(
+        cursorBoxes(tester).map((c) => c.duration),
+        everyElement(expected),
+      );
+      expect(ringLit(tester), isFalse);
     });
 
     testWidgets('the cursor on anything that is NOT a tile is unchanged', (

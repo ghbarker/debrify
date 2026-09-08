@@ -9,6 +9,7 @@ import '../../services/imdb_parents_guide_service.dart';
 import '../../services/series_source_service.dart';
 import '../../services/trakt/trakt_episode_model.dart';
 import '../../theme/app_focus.dart';
+import '../../theme/app_motion.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../theme/widgets/hover_grow.dart';
@@ -1445,8 +1446,18 @@ class _PrimaryState extends State<_Primary> {
           final m = ShowcaseMetrics.of(context);
           final compact = m.compact;
           final solid = _f || compact;
+          // The flip runs on the shared TV focus beat — the same 120ms the
+          // circles beside it and the poster above it use — so a step off
+          // the pill reads as the cursor moving, not the pill blinking out.
+          // Resolved here, above the tween; never inside its builder.
+          final motion = AppMotion.of(context);
+          final fx = motion.focusTempo(
+            PlatformUtil.isTelevision,
+            const Duration(milliseconds: 140),
+          );
           return AnimatedContainer(
-            duration: const Duration(milliseconds: 140),
+            duration: fx,
+            curve: motion.standard,
             height: compact ? 44 : 30 * m.k,
             padding: EdgeInsets.symmetric(horizontal: compact ? 24 : 17 * m.k),
             alignment: Alignment.center,
@@ -1457,39 +1468,50 @@ class _PrimaryState extends State<_Primary> {
               color: solid ? _ink : _ink.withValues(alpha: 0.22),
               borderRadius: BorderRadius.circular(compact ? 22 : 15 * m.k),
             ),
-            child: widget.busy
-                ? SizedBox(
-                    width: compact ? 44 : 32 * m.k,
-                    child: Center(
-                      child: SizedBox(
-                        width: compact ? 16 : 11 * m.k,
-                        height: compact ? 16 : 11 * m.k,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: solid ? Colors.black : _ink,
+            // The ink crosses over WITH the fill rather than snapping ahead
+            // of it — black type on a still-translucent pill was the frame
+            // that read as a flash. One colour tween feeds glyph and label.
+            child: TweenAnimationBuilder<Color?>(
+              duration: fx,
+              curve: motion.standard,
+              tween: ColorTween(end: solid ? Colors.black : _ink),
+              builder: (_, fg, __) {
+                final ink = fg ?? _ink;
+                return widget.busy
+                    ? SizedBox(
+                        width: compact ? 44 : 32 * m.k,
+                        child: Center(
+                          child: SizedBox(
+                            width: compact ? 16 : 11 * m.k,
+                            height: compact ? 16 : 11 * m.k,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: ink,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.play_arrow_rounded,
-                        size: compact ? 20 : 14 * m.k,
-                        color: solid ? Colors.black : _ink,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        widget.label,
-                        style: TextStyle(
-                          fontSize: compact ? 15 : 10.5 * m.k,
-                          fontWeight: FontWeight.w600,
-                          color: solid ? Colors.black : _ink,
-                        ),
-                      ),
-                    ],
-                  ),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.play_arrow_rounded,
+                            size: compact ? 20 : 14 * m.k,
+                            color: ink,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            widget.label,
+                            style: TextStyle(
+                              fontSize: compact ? 15 : 10.5 * m.k,
+                              fontWeight: FontWeight.w600,
+                              color: ink,
+                            ),
+                          ),
+                        ],
+                      );
+              },
+            ),
           );
         },
       ),
@@ -1550,12 +1572,26 @@ class _CircleState extends State<_Circle> {
             // Hover and focus both light the pill: DPAD/keyboard land on
             // `_f`, a desktop pointer on `_h` — same treatment either way.
             final lit = _f || _h;
+            // The shared TV focus beat (the pill, the poster and the ring
+            // all run it), or the circle's own 140ms under a pointer.
+            final motion = AppMotion.of(context);
+            final fx = motion.focusTempo(
+              PlatformUtil.isTelevision,
+              const Duration(milliseconds: 140),
+            );
+            // The glyph's ink crosses over with the fill, on the same tween,
+            // so no frame shows black on a still-translucent circle.
             final glyph =
                 widget.mark ??
-                Icon(
-                  widget.icon,
-                  size: compact ? 20 : 13 * m.k,
-                  color: lit ? Colors.black : _ink,
+                TweenAnimationBuilder<Color?>(
+                  duration: fx,
+                  curve: motion.standard,
+                  tween: ColorTween(end: lit ? Colors.black : _ink),
+                  builder: (_, fg, __) => Icon(
+                    widget.icon,
+                    size: compact ? 20 : 13 * m.k,
+                    color: fg ?? _ink,
+                  ),
                 );
             // Lit (non-compact): the circle stretches into a pill that
             // names itself — the tooltip a DPAD user can actually read.
@@ -1564,42 +1600,46 @@ class _CircleState extends State<_Circle> {
             // falls back to the platform's long-press Tooltip below.
             final labelled = lit && !compact;
             final body = AnimatedContainer(
-              duration: const Duration(milliseconds: 140),
+              duration: fx,
+              curve: motion.standard,
               height: d,
               decoration: BoxDecoration(
                 color: lit ? _ink : _ink.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(d / 2),
               ),
               child: AnimatedSize(
-                duration: const Duration(milliseconds: 140),
-                curve: Curves.easeOutCubic,
+                duration: fx,
+                curve: motion.standard,
                 alignment: Alignment.centerLeft,
-                child: labelled
-                    ? Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10 * m.k),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            glyph,
-                            SizedBox(width: 6 * m.k),
-                            Text(
-                              widget.label,
-                              maxLines: 1,
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 11 * m.k,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                          ],
+                // ONE row in both states: the glyph keeps its resting
+                // circle as its slot and the label joins to its right, so
+                // stretching into the pill never rebuilds the glyph. The
+                // old shape swapped a bare circle for a padded row, which
+                // remounted the icon — a flash no duration could hide.
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: d,
+                      height: d,
+                      child: Center(child: glyph),
+                    ),
+                    if (labelled)
+                      Padding(
+                        padding: EdgeInsets.only(right: 10 * m.k),
+                        child: Text(
+                          widget.label,
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 11 * m.k,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
+                          ),
                         ),
-                      )
-                    : SizedBox(
-                        width: d,
-                        height: d,
-                        child: Center(child: glyph),
                       ),
+                  ],
+                ),
               ),
             );
             if (!compact) return body;
@@ -1726,7 +1766,9 @@ class _SeasonDropdownState extends State<_SeasonDropdown> {
       onKeyEvent: (_, e) => _activate(e, _open),
       child: GestureDetector(
         onTap: _open,
-        child: Container(
+        child: AnimatedContainer(
+          duration: AppMotion.of(context).fast,
+          curve: AppMotion.of(context).standard,
           height: 34,
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
@@ -1777,6 +1819,10 @@ class _SeasonPillState extends State<_SeasonPill> {
   @override
   Widget build(BuildContext context) {
     final k = ShowcaseMetrics.of(context).k;
+    // The pill's fill and its type share the TV focus beat with the lift
+    // `ParallaxFocus` runs, so all three leave and arrive together.
+    final motion = AppMotion.of(context);
+    final fx = PlatformUtil.isTelevision ? motion.tvFocus : motion.fast;
     return Focus(
       focusNode: widget.node,
       onFocusChange: (v) {
@@ -1798,23 +1844,31 @@ class _SeasonPillState extends State<_SeasonPill> {
           focused: _f,
           shape: ParallaxShape.pill,
           radius: BorderRadius.circular(12.5 * k),
-          child: Container(
+          child: AnimatedContainer(
+            duration: fx,
+            curve: motion.standard,
             height: 25 * k,
             alignment: Alignment.center,
             padding: EdgeInsets.symmetric(horizontal: 15 * k),
             decoration: BoxDecoration(
-              color: (_f || widget.active)
-                  ? _ink.withValues(alpha: _f ? 0.28 : 0.18)
-                  : null,
+              color: _ink.withValues(
+                alpha: _f
+                    ? 0.28
+                    : widget.active
+                    ? 0.18
+                    : 0,
+              ),
               borderRadius: BorderRadius.circular(12.5 * k),
             ),
-            child: Text(
-              widget.label,
+            child: AnimatedDefaultTextStyle(
+              duration: fx,
+              curve: motion.standard,
               style: _t(
                 12.5 * k,
                 w: FontWeight.w600,
                 a: widget.active || _f ? 1 : 0.55,
               ),
+              child: Text(widget.label),
             ),
           ),
         ),
@@ -1869,6 +1923,12 @@ class ShowcaseEpisodeCell extends StatelessWidget {
     // focus by lifting, and the caption below it gains a filled card. Splitting
     // them lets each do its own job.
     final slot = _slotFill(AppThemeScope.of(context));
+    // The plate rides the TV focus beat with the still's lift above it.
+    final motion = AppMotion.of(context);
+    final fx = motion.focusTempo(
+      PlatformUtil.isTelevision,
+      const Duration(milliseconds: 160),
+    );
     return SizedBox(
       width: cellWidth ?? m.epCell,
       child: Column(
@@ -1949,7 +2009,8 @@ class ShowcaseEpisodeCell extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
+            duration: fx,
+            curve: motion.standard,
             width: double.infinity,
             // Padded on BOTH states, so gaining the plate does not shift the
             // text sideways — only its ground appears.
@@ -2035,6 +2096,12 @@ class ShowcaseEpisodeCardCompact extends StatelessWidget {
     final watched = p >= 100;
     final url = episode.thumbnailUrl ?? fallbackImage;
     final slot = _slotFill(app);
+    // The plate rides the TV focus beat with the still's lift above it.
+    final motion = AppMotion.of(context);
+    final fx = motion.focusTempo(
+      PlatformUtil.isTelevision,
+      const Duration(milliseconds: 160),
+    );
 
     return ParallaxFocus(
       focused: focused,
@@ -2105,7 +2172,8 @@ class ShowcaseEpisodeCardCompact extends StatelessWidget {
             ),
             Expanded(
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
+                duration: fx,
+                curve: motion.standard,
                 // The wide/TV cell's answer to focus, echoed here for the
                 // scroll-settled card: the caption gains an ink plate while
                 // the still lifts. Padded identically in BOTH states so

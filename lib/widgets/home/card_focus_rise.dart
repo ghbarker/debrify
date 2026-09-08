@@ -18,9 +18,11 @@ const Color kCardFocusRing = Color(0xFFA78BFA);
 /// TWO fixed-blur layers whose colours crossfade (blurRadius/offset are
 /// identical on both ends of the lerp, so the tween never re-derives a blur —
 /// it only fades a pre-shaped one, and the transparent lift layer is skipped
-/// at rest); the ring fades via opacity (skipped at 0). The theme's `fast` on
-/// TV (legacy 120ms): two cards animate on every DPAD move (loser + gainer),
-/// so the shorter the tween, the shorter the double-repaint window.
+/// at rest); the ring fades via opacity (skipped at 0). `AppMotion.tvFocus`
+/// on TV (legacy 120ms): two cards animate on every DPAD move (loser +
+/// gainer), so the shorter the tween, the shorter the double-repaint window —
+/// and since this rise was the first TV control to animate, its tempo is the
+/// one every other TV focus treatment now shares.
 ///
 /// Lives here, outside the board, because the Discover stage's shelf wears the
 /// same grammar — focus-feel tuning has to land ONCE for every poster the user
@@ -87,11 +89,7 @@ class CardFocusRise extends StatelessWidget {
     // scale on the same figure, so the shadow and the ring below can never
     // drift from it. Resolved here in build, above every animated widget.
     final motion = AppMotion.of(context);
-    final focusFx = HoverGrow.durationFor(
-      motion,
-      isTelevision,
-      animateOnTv: true,
-    );
+    final focusFx = HoverGrow.durationFor(motion, isTelevision);
     // Legacy keeps the whole rise — scale, lift shadow and ring — because that
     // trio IS this widget's cursor, and it is tuned as one: the ring is 2.5 on
     // TV but 1.5 elsewhere, and `FocusTokens.legacy` is 2.5 with no width
@@ -109,7 +107,6 @@ class CardFocusRise extends StatelessWidget {
       active: active,
       enabled: ownCursor,
       isTelevision: isTelevision,
-      animateOnTv: true,
       child: AspectRatio(
         aspectRatio: aspectRatio,
         child: _cursor(ownCursor, AnimatedContainer(

@@ -19,17 +19,16 @@ import '../app_theme_scope.dart';
 /// shadow keep it on [durationFor], so scale, shadow and ring stay in
 /// lockstep — mismatched timing is what read as cheap.
 ///
+/// On a TV the grow runs on [AppMotion.tvFocus], the one tempo every focus
+/// treatment shares there, so the tile losing the cursor shrinks over exactly
+/// the beat the tile gaining it grows — a snapped TV grow (the shipped
+/// policy before this) read as the old tile flashing off.
+///
 /// Stateless about focus itself, like `FocusExpressionBox`: the caller ORs
 /// its focus and hover flags into [active].
 class HoverGrow extends StatelessWidget {
   final bool active;
   final bool isTelevision;
-
-  /// Whether a TV tweens the pop or snaps it. Off by default — the classic
-  /// grids keep the focus highlight instant (no per-frame tweening of large
-  /// posters on a weak GPU). The board rise passes true: its trio is shaped
-  /// to be cheap enough, and a snapped board card is the "not native" tell.
-  final bool animateOnTv;
 
   /// Set false where something else already owns the growth — `ParallaxFocus`
   /// under the parallax expression lifts a poster 1.10 on its own spring, and
@@ -42,25 +41,18 @@ class HoverGrow extends StatelessWidget {
     super.key,
     required this.active,
     required this.isTelevision,
-    this.animateOnTv = false,
     this.enabled = true,
     required this.child,
   });
 
   /// The tempo the grow — and anything animating beside it — runs at.
   ///
-  /// TV: instant, or the theme's `fast` when [animateOnTv] (legacy 120ms, the
-  /// board rise's shipped figure). Elsewhere the theme's `base`: a 12% grow
-  /// wants a beat longer than the 150–180ms the smaller pops used. Both go
-  /// through [AppMotion], so reduced motion collapses them to zero.
-  static Duration durationFor(
-    AppMotion motion,
-    bool isTelevision, {
-    bool animateOnTv = false,
-  }) {
-    if (isTelevision) return animateOnTv ? motion.fast : Duration.zero;
-    return motion.base;
-  }
+  /// TV: the shared [AppMotion.tvFocus] (legacy 120ms — the board rise's
+  /// shipped figure, now every TV tile's). Elsewhere the theme's `base`: a
+  /// 12% grow wants a beat longer than the 150–180ms the smaller pops used.
+  /// Both go through [AppMotion], so reduced motion collapses them to zero.
+  static Duration durationFor(AppMotion motion, bool isTelevision) =>
+      isTelevision ? motion.tvFocus : motion.base;
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +63,7 @@ class HoverGrow extends StatelessWidget {
     final motion = AppMotion.of(context);
     return AnimatedScale(
       scale: active ? app.focus.hoverScaleFor(isTelevision) : 1.0,
-      duration: durationFor(motion, isTelevision, animateOnTv: animateOnTv),
+      duration: durationFor(motion, isTelevision),
       curve: motion.standard,
       child: child,
     );

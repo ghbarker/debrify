@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../models/debrify_tv_channel_record.dart';
+import '../../../theme/app_motion.dart';
 import '../../../theme/app_theme_scope.dart';
 import '../../../utils/platform_util.dart';
 import '../../../utils/tv_keys.dart';
@@ -262,24 +263,27 @@ class _ExportSelectionRowState extends State<_ExportSelectionRow> {
           behavior: HitTestBehavior.opaque,
           onTap: widget.onPressed,
           child: AnimatedContainer(
-            duration: PlatformUtil.isTelevision
-                ? Duration.zero
-                : const Duration(milliseconds: 150),
+            // TV: the shared focus beat — see SwitchRow. Shadow geometry is
+            // fixed; only its alpha rides the tween.
+            duration: AppMotion.of(context).focusTempo(
+              PlatformUtil.isTelevision,
+              const Duration(milliseconds: 150),
+            ),
             constraints: const BoxConstraints(minHeight: 68),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: focused ? app.core.tx : tv.fillWeak,
               borderRadius: app.shape.br(16),
               border: Border.all(color: focused ? app.core.tx : tv.hairline),
-              boxShadow: focused
-                  ? const <BoxShadow>[
-                      BoxShadow(
-                        color: Color(0x66000000),
-                        blurRadius: 22,
-                        offset: Offset(0, 10),
-                      ),
-                    ]
-                  : null,
+              boxShadow: <BoxShadow>[
+                BoxShadow(
+                  color: const Color(0x66000000).withValues(
+                    alpha: focused ? 0.4 : 0.0,
+                  ),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Row(
               children: <Widget>[

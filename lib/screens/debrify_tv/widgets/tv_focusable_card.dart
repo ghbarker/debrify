@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../theme/app_motion.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/app_theme_scope.dart';
 import '../../../theme/ui_feedback.dart';
@@ -138,12 +139,14 @@ class _TvFocusableCardState extends State<TvFocusableCard> {
           child: _cursor(app, Stack(
           children: [
             AnimatedContainer(
-              // TV: snap instead of animating — a 200ms tween of a blurred
-              // shadow + gradient repaints the card every frame of every
-              // focus move, the main jank source in the channel grid.
-              duration: PlatformUtil.isTelevision
-                  ? Duration.zero
-                  : const Duration(milliseconds: 200),
+              // TV: the shared focus beat (`AppMotion.tvFocus`). The blurred
+              // shadow stays off on TV below, so the tween is a gradient and
+              // a border colour for ~7 frames inside this card's own repaint
+              // boundary — the 200ms shadow tween was the channel grid's jank.
+              duration: AppMotion.of(context).focusTempo(
+                PlatformUtil.isTelevision,
+                const Duration(milliseconds: 200),
+              ),
               width: double.infinity,
               height: double.infinity,
               padding: const EdgeInsets.all(16),

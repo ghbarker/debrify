@@ -119,11 +119,11 @@ class _CatalogItemTileState extends State<CatalogItemTile> {
     // the theme's tempo and the platform's reduced-motion setting reach every
     // duration in this tile through it.
     final motion = AppMotion.of(context);
-    // TVs are low-powered: keep the focus highlight but make it instant
-    // (no per-frame tweening of large posters/shadows). Board chrome animates
-    // instead — [CardFocusRise] is shaped to be cheap enough for it. The
-    // shadow below shares this with the [HoverGrow] scale so the two never
-    // drift apart.
+    // The grow's tempo — `tvFocus` on a TV, `base` under a pointer. The
+    // shadow below shares it with the [HoverGrow] scale so the two never
+    // drift apart, and on TV the tile losing the cursor fades over the same
+    // beat the tile gaining it rises — the snap this replaced read as the old
+    // poster flashing off.
     final fx = HoverGrow.durationFor(motion, widget.isTelevision);
 
     // The POSTER, and nothing else. Split from [chrome] because
@@ -346,29 +346,40 @@ class _CatalogItemTileState extends State<CatalogItemTile> {
           curve: motion.standard,
           decoration: BoxDecoration(
             borderRadius: app.shape.br(14),
+            // Every shadow keeps its geometry on BOTH ends and fades its
+            // colour: a tween that re-derives a blur radius per frame is the
+            // one thing the TV tween cannot afford, and a transparent shadow
+            // is skipped outright (the `CardFocusRise` idiom). Endpoints are
+            // exactly the shipped ones — the rest shadow hands over to the
+            // lift shadow as the tile rises.
             boxShadow: [
+              // Resting shadow, gone at full lift.
               BoxShadow(
-                color: Colors.black.withValues(alpha: _active ? 0.7 : 0.35),
-                blurRadius: _active ? (widget.isTelevision ? 20 : 38) : 14,
+                color: Colors.black.withValues(alpha: _active ? 0.0 : 0.35),
+                blurRadius: 14,
                 offset: const Offset(0, 14),
               ),
-              if (_active) ...[
-                // Tight bright gold rim.
+              // Lift shadow — deeper and softer; transparent at rest.
+              BoxShadow(
+                color: Colors.black.withValues(alpha: _active ? 0.7 : 0.0),
+                blurRadius: widget.isTelevision ? 20 : 38,
+                offset: const Offset(0, 14),
+              ),
+              // Tight bright gold rim.
+              BoxShadow(
+                color: app.fade(app.home.focus, _active ? 0.6 : 0.0),
+                blurRadius: 30,
+                spreadRadius: 1,
+              ),
+              // Wide warm amber bloom for the cinematic falloff. Skipped on
+              // TV: a blur-90 soft shadow repainted on every D-pad focus move
+              // is the main scroll-jank source on weak TV GPUs.
+              if (!widget.isTelevision)
                 BoxShadow(
-                  color: app.fade(app.home.focus, 0.6),
-                  blurRadius: 30,
-                  spreadRadius: 1,
+                  color: app.fade(app.home.focusDeep, _active ? 0.32 : 0.0),
+                  blurRadius: 90,
+                  spreadRadius: 10,
                 ),
-                // Wide warm amber bloom for the cinematic falloff. Skipped on
-                // TV: a blur-90 soft shadow repainted on every D-pad focus move
-                // is the main scroll-jank source on weak TV GPUs.
-                if (!widget.isTelevision)
-                  BoxShadow(
-                    color: app.fade(app.home.focusDeep, 0.32),
-                    blurRadius: 90,
-                    spreadRadius: 10,
-                  ),
-              ],
             ],
           ),
           // The framing is the artwork's, so [ThemedArtwork] owns it outright
