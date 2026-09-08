@@ -9,6 +9,7 @@ import '../../services/analytics_service.dart';
 import '../../services/collection_folder_loader.dart';
 import '../../services/home_collections_store.dart';
 import 'package:debrify/services/storage/home_prefs.dart';
+import '../../services/storage_service.dart';
 import '../../services/stremio_service.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/home_rail_metrics.dart';
@@ -133,6 +134,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   List<StremioAddon> _addons = const [];
   Set<String> _disabled = const {};
   bool _booted = false;
+  bool _landscapeCards = false;
 
   List<_Rail> _rails = const [];
   List<String> _unresolved = const [];
@@ -202,6 +204,13 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
       _disabled = await HomePrefs.getHomeDisabledSections();
     } catch (_) {
       _disabled = const {};
+    }
+    try {
+      _landscapeCards =
+          (await HomePrefs.getHomeCardOrientation()) ==
+          HomeCardOrientation.landscape;
+    } catch (_) {
+      _landscapeCards = false;
     }
     _layout = await HomeCollectionsStore.instance.getFolderLayout();
     if (!mounted) return;
@@ -677,10 +686,25 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   /// board rail gutter.
   static const double _railHPad = 24;
 
-  /// Same poster geometry as a Home board rail, so a folder reads as Home
-  /// with different lists.
-  double _railPosterW(BuildContext context) =>
-      homeRailPosterWidth(context, isTelevision: widget.isTelevision);
+  /// Same card geometry as the ACTIVE Home layout, so a folder reads as Home
+  /// with different lists — not just some Home layout's cards. Canvas (the
+  /// shipped TV default) sizes its shelf by a completely different formula
+  /// than the classic board; matching whichever one is actually on screen is
+  /// what makes the folder read as "this device's Home", not just "a Home".
+  ({double width, double height}) _railCardSize(BuildContext context) {
+    if (widget.isTelevision && StorageService.tvHomeStyleCached == 'canvas') {
+      final size = canvasRailCardSize(
+        context,
+        landscapeCards: _landscapeCards,
+      );
+      return (width: size.width, height: size.height);
+    }
+    final posterW = homeRailPosterWidth(
+      context,
+      isTelevision: widget.isTelevision,
+    );
+    return (width: posterW, height: posterW * 1.5);
+  }
 
   Widget _buildBody() {
     if (!_booted) {
@@ -696,8 +720,9 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   }
 
   Widget _buildLists() {
-    final posterW = _railPosterW(context);
-    final cellH = posterW * 1.5;
+    final size = _railCardSize(context);
+    final posterW = size.width;
+    final cellH = size.height;
     // The merged grid stays under the SAME "All" row rather than replacing
     // it — that row is the only way Rows offers back into it, so pressing it
     // again (now reading "Lists") is how you leave.
