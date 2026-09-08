@@ -118,12 +118,17 @@ class _ActorTitlesViewState extends State<ActorTitlesView> {
     }
   }
 
+  /// Escape (desktop keyboards) pops the page. Deliberately NOT the remote's
+  /// Back key: the platform already turns that press into a route pop
+  /// (`popRoute` → the navigator's maybePop) — which is how the detail page
+  /// underneath leaves, since it has no Back-key handler of its own. Handling
+  /// the key here as well popped this page on the key DOWN and left the UP
+  /// unhandled; Android fires the actual back action from a redispatched
+  /// unhandled UP, so that popped the detail page too and one press landed
+  /// on Home. The browser Back key is left alone for the same reason.
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
     if (e is! KeyDownEvent) return KeyEventResult.ignored;
-    final k = e.logicalKey;
-    if (k == LogicalKeyboardKey.escape ||
-        k == LogicalKeyboardKey.goBack ||
-        k == LogicalKeyboardKey.browserBack) {
+    if (e.logicalKey == LogicalKeyboardKey.escape) {
       Navigator.of(context).maybePop();
       return KeyEventResult.handled;
     }

@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:debrify/models/stremio_addon.dart';
+import 'package:debrify/screens/episodes_screen.dart'
+    show kCatalogDetailRouteName;
 import 'package:debrify/services/imdb_enrichment_service.dart';
 import 'package:debrify/services/imdb_person_service.dart';
 import 'package:debrify/theme/app_theme.dart';
@@ -407,4 +409,136 @@ void main() {
     expect(find.byType(ActorTitlesView), findsNothing);
     expect(find.text('open'), findsOneWidget);
   });
+
+  testWidgets(
+    'TV: one remote Back press returns to the detail page, not past it',
+    (tester) async {
+      final pops = _PopCounter();
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorObservers: [pops],
+          home: AppThemeScope(
+            theme: AppTheme.fromDetail(DetailThemes.byId('signal')),
+            child: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    // The host marks every detail route this way and the
+                    // actor page inherits the name — a pop that walks by
+                    // name would tear both down, so the test pins it.
+                    settings: const RouteSettings(
+                      name: kCatalogDetailRouteName,
+                    ),
+                    builder: (_) => const _FakeDetailPage(),
+                  ),
+                ),
+                child: const Text('home'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('home'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('cast'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ActorTitlesView), findsOneWidget);
+      expect(
+        FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<DetailRecCard>(),
+        isNotNull,
+      );
+
+      await _pressRemoteBack(tester);
+      await tester.pumpAndSettle();
+
+      expect(
+        pops.count,
+        1,
+        reason: 'one Back press must pop exactly the actor page',
+      );
+      expect(find.byType(ActorTitlesView), findsNothing);
+      expect(find.text('detail page'), findsOneWidget);
+      expect(find.text('home'), findsNothing);
+    },
+  );
+
+  testWidgets('TV: the platform pop alone (tvOS Menu) pops the actor page', (
+    tester,
+  ) async {
+    final pops = _PopCounter();
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorObservers: [pops],
+        home: AppThemeScope(
+          theme: AppTheme.fromDetail(DetailThemes.byId('signal')),
+          child: const _FakeDetailPage(),
+        ),
+      ),
+    );
+    await tester.tap(find.text('cast'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ActorTitlesView), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(pops.count, 1);
+    expect(find.byType(ActorTitlesView), findsNothing);
+    expect(find.text('detail page'), findsOneWidget);
+  });
+}
+
+/// A Back press the way the Android embedding delivers it. KEYCODE_BACK
+/// reaches the framework as a key DOWN then a key UP, and the Activity fires
+/// the actual back action (onBackPressed → `popRoute`) from the UP — but only
+/// once the framework has left that UP unhandled and the engine redispatched
+/// it. A widget that consumes the DOWN and ignores the UP therefore gets BOTH
+/// its own pop and the platform's from one press.
+Future<void> _pressRemoteBack(WidgetTester tester) async {
+  // The simulator has no physical key on file for GoBack; the remote's
+  // physical key is irrelevant to the handlers, only the logical key counts.
+  await tester.sendKeyDownEvent(
+    LogicalKeyboardKey.goBack,
+    platform: 'android',
+    physicalKey: PhysicalKeyboardKey.escape,
+  );
+  final upHandled = await tester.sendKeyUpEvent(
+    LogicalKeyboardKey.goBack,
+    platform: 'android',
+    physicalKey: PhysicalKeyboardKey.escape,
+  );
+  if (!upHandled) await tester.binding.handlePopRoute();
+}
+
+class _PopCounter extends NavigatorObserver {
+  int count = 0;
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) => count++;
+}
+
+/// Stands in for the merged/legacy detail page: it pushes the actor page the
+/// way `_openActor` does — same navigator, same route name, TV mode.
+class _FakeDetailPage extends StatelessWidget {
+  const _FakeDetailPage();
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Column(
+      children: [
+        const Text('detail page'),
+        TextButton(
+          onPressed: () => ActorTitlesView.show(
+            context,
+            member: _member,
+            onOpenTitle: (_) {},
+            loader: (_) async => _person,
+            isTelevision: true,
+            routeName: kCatalogDetailRouteName,
+          ),
+          child: const Text('cast'),
+        ),
+      ],
+    ),
+  );
 }
