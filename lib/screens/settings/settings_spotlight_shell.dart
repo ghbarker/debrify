@@ -4,7 +4,6 @@ import '../../services/main_page_bridge.dart';
 import '../../theme/app_focus.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../theme/widgets/parallax_focus.dart';
-import 'widgets/appearance_preview_card.dart';
 import 'widgets/settings_widgets.dart';
 
 /// Responsive classes for the Settings root.
@@ -47,6 +46,14 @@ class SettingsCategoryDefinition {
 typedef SettingsCategoryBuilder =
     Widget Function(BuildContext context, int categoryIndex);
 
+/// Returns a widget pinned above the scrolling category body — e.g. the
+/// Appearance live preview, which the Shield feedback (2026-09-07) says must
+/// stay on screen while Presets/Theme/Layout rows scroll under it. Null (the
+/// default: no builder, or this call returning null) keeps the category
+/// fully scrolling, unchanged from before.
+typedef SettingsPinnedHeaderBuilder =
+    Widget? Function(BuildContext context, int categoryIndex);
+
 /// The non-television Settings shell.
 ///
 /// It owns presentation state only. Every setting action and every dynamic
@@ -61,6 +68,7 @@ class SettingsSpotlightShell extends StatefulWidget {
     required this.onOpenSearch,
     this.compactSummary,
     this.initialCategory = 0,
+    this.pinnedHeaderBuilder,
   }) : assert(categories.length > 0);
 
   final List<SettingsCategoryDefinition> categories;
@@ -68,6 +76,7 @@ class SettingsSpotlightShell extends StatefulWidget {
   final VoidCallback onOpenSearch;
   final Widget? compactSummary;
   final int initialCategory;
+  final SettingsPinnedHeaderBuilder? pinnedHeaderBuilder;
 
   @override
   State<SettingsSpotlightShell> createState() => _SettingsSpotlightShellState();
@@ -211,41 +220,7 @@ class _SettingsSpotlightShellState extends State<SettingsSpotlightShell> {
                   ),
                   child: _SettingsCategoryHeading(definition: category),
                 ),
-                Expanded(
-                  child: category.label == 'Appearance'
-                      ? Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            _buildCategoryScroll(surface, category),
-                            // An OVERLAY, not a pushed-down header — see the
-                            // same note in settings_tv_layout.dart: pushing
-                            // the pane down the instant the dock appears
-                            // would carry a just-hovered chip out from under
-                            // the pointer, an exit, and the dock collapsing
-                            // right back.
-                            Positioned(
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              child: IgnorePointer(
-                                child: AppearancePreviewDock(
-                                  padding: EdgeInsets.fromLTRB(
-                                    surface == SettingsSurfaceClass.expanded
-                                        ? 42
-                                        : 30,
-                                    0,
-                                    surface == SettingsSurfaceClass.expanded
-                                        ? 44
-                                        : 30,
-                                    14,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : _buildCategoryScroll(surface, category),
-                ),
+                Expanded(child: _buildCategoryBody(surface, category)),
               ],
             ),
           ),
@@ -254,7 +229,34 @@ class _SettingsSpotlightShellState extends State<SettingsSpotlightShell> {
     );
   }
 
-  /// The scrolling category content, unwrapped from its dock overlay so
+  /// The category body: [widget.pinnedHeaderBuilder]'s widget (if any) as a
+  /// genuine, non-scrolling header ABOVE [_buildCategoryScroll] — e.g. the
+  /// Appearance live preview, pinned to the top of the screen rather than an
+  /// overlay riding on top of the scroll (see the pane-node note in
+  /// `settings_tv_layout.dart`'s `_buildPane`: a pinned header never pushes
+  /// the content below it, since it is already always there, so it cannot
+  /// reproduce the pre-pinning hover-flicker bug).
+  Widget _buildCategoryBody(
+    SettingsSurfaceClass surface,
+    SettingsCategoryDefinition category,
+  ) {
+    final header = widget.pinnedHeaderBuilder?.call(context, _selected);
+    final body = _buildCategoryScroll(surface, category);
+    if (header == null) return body;
+    final horizontal = surface == SettingsSurfaceClass.expanded ? 42.0 : 30.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(horizontal, 0, horizontal, 14),
+          child: _BoundedPinnedHeader(child: header),
+        ),
+        Expanded(child: body),
+      ],
+    );
+  }
+
+  /// The scrolling category content, unwrapped from its pinned header so
   /// Appearance can stack them and every other category can use it as-is.
   Widget _buildCategoryScroll(
     SettingsSurfaceClass surface,
@@ -345,42 +347,101 @@ class _SettingsSpotlightShellState extends State<SettingsSpotlightShell> {
   Widget _buildCompactDetail() {
     final category = widget.categories[_selected];
     final app = AppThemeScope.of(context);
-    return ListView(
-      key: const Key('settings-compact-detail'),
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 42),
+    final backRow = Row(
       children: [
-        Row(
-          children: [
-            Semantics(
-              button: true,
-              label: 'Back to settings categories',
-              child: Material(
-                color: app.fade(app.core.tx, 0.08),
-                shape: const CircleBorder(),
-                child: InkWell(
-                  onTap: _closeCompactDetail,
-                  customBorder: const CircleBorder(),
-                  child: const SizedBox(
-                    width: 42,
-                    height: 42,
-                    child: Icon(Icons.arrow_back_rounded, size: 20),
-                  ),
-                ),
+        Semantics(
+          button: true,
+          label: 'Back to settings categories',
+          child: Material(
+            color: app.fade(app.core.tx, 0.08),
+            shape: const CircleBorder(),
+            child: InkWell(
+              onTap: _closeCompactDetail,
+              customBorder: const CircleBorder(),
+              child: const SizedBox(
+                width: 42,
+                height: 42,
+                child: Icon(Icons.arrow_back_rounded, size: 20),
               ),
             ),
-            const Spacer(),
-            IconButton(
-              tooltip: 'Search settings',
-              onPressed: widget.onOpenSearch,
-              icon: const Icon(Icons.search_rounded),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 22),
-        _SettingsCategoryHeading(definition: category, compact: true),
-        const SizedBox(height: 22),
-        widget.categoryBuilder(context, _selected),
+        const Spacer(),
+        IconButton(
+          tooltip: 'Search settings',
+          onPressed: widget.onOpenSearch,
+          icon: const Icon(Icons.search_rounded),
+        ),
       ],
+    );
+    final header = widget.pinnedHeaderBuilder?.call(context, _selected);
+    if (header == null) {
+      return ListView(
+        key: const Key('settings-compact-detail'),
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 42),
+        children: [
+          backRow,
+          const SizedBox(height: 22),
+          _SettingsCategoryHeading(definition: category, compact: true),
+          const SizedBox(height: 22),
+          widget.categoryBuilder(context, _selected),
+        ],
+      );
+    }
+    // The back row and the preview stay fixed above the scrolling heading +
+    // category content — the same "pinned header, scrolling body" shape as
+    // the wide surfaces (_buildCategoryBody), just with the back/search row
+    // sharing the fixed slice too.
+    return Column(
+      key: const Key('settings-compact-detail'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+          child: backRow,
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+          child: _BoundedPinnedHeader(child: header),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 42),
+            children: [
+              _SettingsCategoryHeading(definition: category, compact: true),
+              const SizedBox(height: 22),
+              widget.categoryBuilder(context, _selected),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Bounds a pinned header to at most half the screen's height, scrolling
+/// internally past that instead of overflowing.
+///
+/// A pinned header sits in a non-flexible Column slot, so nothing else
+/// constrains its height — fine in the common case, but system text at
+/// 200%+ can inflate the Appearance preview's caption and chip strip (which
+/// wraps onto more rows at a narrow width) well past a short phone's
+/// viewport. At normal text scale the header's natural height stays
+/// comfortably under the cap, so this SingleChildScrollView never actually
+/// scrolls and the common-case layout is pixel-identical to an unwrapped
+/// header.
+class _BoundedPinnedHeader extends StatelessWidget {
+  const _BoundedPinnedHeader({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final cap = (MediaQuery.sizeOf(context).height * 0.75).clamp(240.0, 520.0);
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: cap),
+      child: SingleChildScrollView(child: child),
     );
   }
 }

@@ -559,103 +559,119 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
   }
 
   Widget _buildPane(int selected) {
-    final paneScroller = Focus(
+    final isAppearance = _rail[selected].label == 'Appearance';
+    final scrollBody = SingleChildScrollView(
+      controller: _paneScroll,
+      padding: const EdgeInsets.fromLTRB(32, 30, 40, 40),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 900),
+        child: Column(
+          key: ValueKey<int>(selected),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 2, bottom: 22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _rail[selected].label.toUpperCase(),
+                    style: TextStyle(
+                      fontFamily: 'JetBrainsMono',
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 2,
+                      color: _rail[selected].label == 'Danger Zone'
+                          ? AppThemeScope.of(context).settings.danger
+                          : AppThemeScope.of(
+                              context,
+                            ).settings.accent.withValues(alpha: 0.9),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _rail[selected].title,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      height: 1.06,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.7,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 620),
+                    child: Text(
+                      _rail[selected].description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.45,
+                        color: AppThemeScope.of(context).settings.dim,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ..._buildPaneChildren(selected, includeAppearancePreview: !isAppearance),
+          ],
+        ),
+      ),
+    );
+    // Appearance only: the live preview is a genuine fixed header ABOVE the
+    // scrolling body, not an overlay on top of it — a pinned header does not
+    // push the rows below when its content changes (it is already always
+    // there), so this cannot reproduce the pre-pinning flicker bug (hovering
+    // a chip pushed the column down, which carried the just-hovered chip out
+    // from under the cursor -> exit -> collapse -> re-enter -> repeat).
+    //
+    // Both the header and the scroll body stay INSIDE the same
+    // Focus(onKeyEvent: _paneKey)/FocusTraversalGroup as before: the preview's
+    // pane node must remain a DESCENDANT of _paneKey for an unhandled
+    // Left/Right (dropped at the strip's ends) to bubble up to it, exactly
+    // as every other row's key events do.
+    final body = isAppearance
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(32, 14, 40, 0),
+                // Bounded: a pinned header sits in a non-flexible Column
+                // slot, so nothing else constrains its height. At normal
+                // system text scale it stays comfortably under the cap and
+                // this SingleChildScrollView never actually scrolls;
+                // enlarged text (the chip strip wraps onto more rows at a
+                // narrow pane) is the escape hatch this exists for.
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: (MediaQuery.sizeOf(context).height * 0.75)
+                        .clamp(240.0, 520.0),
+                  ),
+                  child: SingleChildScrollView(
+                    child: AppearancePreviewHost(focusNode: _paneNodes[0]),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Expanded(child: scrollBody),
+            ],
+          )
+        : scrollBody;
+    return Focus(
       canRequestFocus: false,
       skipTraversal: true,
       onKeyEvent: _paneKey,
       child: FocusTraversalGroup(
         policy: OrderedTraversalPolicy(),
-        child: SingleChildScrollView(
-          controller: _paneScroll,
-          padding: const EdgeInsets.fromLTRB(32, 30, 40, 40),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900),
-            child: Column(
-              key: ValueKey<int>(selected),
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 2, bottom: 22),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _rail[selected].label.toUpperCase(),
-                        style: TextStyle(
-                          fontFamily: 'JetBrainsMono',
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 2,
-                          color: _rail[selected].label == 'Danger Zone'
-                              ? AppThemeScope.of(context).settings.danger
-                              : AppThemeScope.of(
-                                  context,
-                                ).settings.accent.withValues(alpha: 0.9),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        _rail[selected].title,
-                        style: const TextStyle(
-                          fontSize: 28,
-                          height: 1.06,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.7,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 620),
-                        child: Text(
-                          _rail[selected].description,
-                          style: TextStyle(
-                            fontSize: 12,
-                            height: 1.45,
-                            color: AppThemeScope.of(context).settings.dim,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                ..._buildPaneChildren(selected),
-              ],
-            ),
-          ),
-        ),
+        child: body,
       ),
-    );
-    // Appearance only: dock a compact copy of the live preview above the
-    // pane while a Screen-layouts row is pointed at — see
-    // [AppearancePreviewDock].
-    if (_rail[selected].label != 'Appearance') return paneScroller;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // An OVERLAY, not a pushed-down header: inserting a Column sibling
-        // above the pane would shift every row under it the instant the
-        // dock appears — on a pointer surface that shift can carry the just
-        // -hovered chip out from under the cursor, an exit, and the dock
-        // collapsing right back (repeat forever). Overlaying keeps every
-        // row exactly where it was.
-        paneScroller,
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          // Read-only: never steals the hover/click the pane underneath is
-          // currently getting.
-          child: IgnorePointer(
-            child: AppearancePreviewDock(
-              padding: const EdgeInsets.fromLTRB(32, 14, 40, 0),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
-  List<Widget> _buildPaneChildren(int category) {
+  List<Widget> _buildPaneChildren(
+    int category, {
+    bool includeAppearancePreview = true,
+  }) {
     switch (category) {
       case 0: // Connections
         return [_buildConnectionGrid(widget.connections)];
@@ -677,6 +693,7 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
           category: label,
           paneNodes: _paneNodes,
           accentColor: label == 'Danger Zone' ? t.danger : null,
+          includeAppearancePreview: includeAppearancePreview,
         );
         if (built.isEmpty && label == 'Profiles') {
           return [

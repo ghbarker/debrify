@@ -102,23 +102,26 @@ const _categories = [
   ),
 ];
 
+/// The live preview, as production mounts it via `pinnedHeaderBuilder` — but
+/// on a pure state rather than the controller, so the golden pins the card
+/// and not whatever theme a previous test left applied.
+Widget? _pinnedHeader(BuildContext context, int index) {
+  if (index != 3) return null;
+  return AppearancePreviewCard(
+    state: const AppearancePreviewState(
+      themeId: 'spotlight',
+      lookLabel: 'Spotlight',
+    ),
+    activeLookId: 'spotlight',
+    onApply: (_) async {},
+  );
+}
+
 Widget _categoryBody(int index) {
   if (index == 3) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // The live preview, as production mounts it — but on a pure state
-        // rather than the controller, so the golden pins the card and not
-        // whatever theme a previous test left applied.
-        AppearancePreviewCard(
-          state: const AppearancePreviewState(
-            themeId: 'spotlight',
-            lookLabel: 'Spotlight',
-          ),
-          activeLookId: 'spotlight',
-          onApply: (_) async {},
-        ),
-        const SizedBox(height: 18),
         SettingsSection(
           title: 'Presets',
           blurb: 'One pick sets theme, layouts, and launch motion together.',
@@ -204,6 +207,7 @@ Future<void> _pumpShell(
             onTap: () {},
           ),
           categoryBuilder: (context, index) => _categoryBody(index),
+          pinnedHeaderBuilder: _pinnedHeader,
         ),
       ),
     ),
