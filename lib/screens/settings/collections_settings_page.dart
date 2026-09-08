@@ -437,15 +437,16 @@ class _CollectionsSettingsPageState extends State<CollectionsSettingsPage> {
                   title: 'Folder layout',
                   blurb:
                       'How a folder shows its lists when you open it. Rows '
-                      'stack every list; Tabs show one list at a time '
-                      'behind a selector, like Nuvio.',
+                      'opens straight into plain rows, just like Home; Tabs '
+                      'shows one list at a time behind a selector, like '
+                      'Nuvio.',
                   children: [
                     SettingsToggleTile(
                       icon: Icons.tab_rounded,
                       title: 'Tabbed folders',
                       subtitle: _layout == CollectionFolderLayout.tabs
-                          ? 'One list at a time, pick it from the List chip'
-                          : 'Lists stacked as rows (each with See all)',
+                          ? 'Folder, list and sort controls with a hero band'
+                          : 'Plain rows like Home — no banner or filters',
                       value: _layout == CollectionFolderLayout.tabs,
                       onChanged: _setTabbed,
                     ),

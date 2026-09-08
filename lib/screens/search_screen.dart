@@ -5638,7 +5638,12 @@ class _SearchScreenState extends State<SearchScreenHost>
         _railHeader(
           title: section.title,
           tag: _catalogSourceTag(section),
-          onSeeAll: () => _openCatalogSeeAll(section),
+          // A collection row's own "See all" only ever opened its first
+          // folder — already one tap away as that folder's own tile, so the
+          // link is dropped rather than kept as a redundant shortcut.
+          onSeeAll: collection == null
+              ? () => _openCatalogSeeAll(section)
+              : null,
         ),
         SizedBox(
           height: rowH,

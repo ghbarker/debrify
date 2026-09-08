@@ -426,38 +426,42 @@ class SeeAllPosterGridState extends State<SeeAllPosterGrid> {
                   // Where you are in the list — the sense of place the wall's
                   // second row used to give for free. The total is what's
                   // LOADED, so it wears a "+" until the catalog is exhausted
-                  // rather than implying a count nobody knows.
-                  ValueListenableBuilder<int>(
-                    valueListenable: _focusIndex,
-                    builder: (_, i, __) {
-                      if (i < 0 || items.isEmpty) {
-                        return const SizedBox.shrink();
-                      }
-                      final at = (i + 1).clamp(1, items.length);
-                      return Text(
-                        '$at / ${items.length}${widget.exhausted ? '' : '+'}',
-                        style: TextStyle(
-                          color: app.fade(app.core.tx, 0.6),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
-                          // This line sits at the far RIGHT of the stage,
-                          // where the left column's ink has fully dissolved
-                          // and only the bottom ramp's tail is under it —
-                          // the one place on this layout where text meets
-                          // near-bare artwork. Same tight shadow the plot
-                          // uses, for the same reason.
-                          shadows: const [
-                            Shadow(
-                              color: Color(0xBF000000),
-                              blurRadius: 3,
-                              offset: Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                  // rather than implying a count nobody knows. A collection
+                  // rail opts out (showPositionCounter: false) — it already
+                  // reads as a plain Home row and this line would be the only
+                  // thing distinguishing it as something else.
+                  if (m.showPositionCounter)
+                    ValueListenableBuilder<int>(
+                      valueListenable: _focusIndex,
+                      builder: (_, i, __) {
+                        if (i < 0 || items.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        final at = (i + 1).clamp(1, items.length);
+                        return Text(
+                          '$at / ${items.length}${widget.exhausted ? '' : '+'}',
+                          style: TextStyle(
+                            color: app.fade(app.core.tx, 0.6),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                            // This line sits at the far RIGHT of the stage,
+                            // where the left column's ink has fully dissolved
+                            // and only the bottom ramp's tail is under it —
+                            // the one place on this layout where text meets
+                            // near-bare artwork. Same tight shadow the plot
+                            // uses, for the same reason.
+                            shadows: const [
+                              Shadow(
+                                color: Color(0xBF000000),
+                                blurRadius: 3,
+                                offset: Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
