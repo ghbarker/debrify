@@ -1013,7 +1013,26 @@ class _ConsolePosterState extends State<_ConsolePoster> {
         child: InkWell(
           focusNode: widget.focusNode,
           onTap: widget.onTap,
-          onFocusChange: (f) => setState(() => _focused = f),
+          onFocusChange: (f) {
+            setState(() => _focused = f);
+            // Lazily-built grid: default traversal can land here without
+            // ever scrolling it into view (the cell may have just entered
+            // the cache extent, or DetailEdgeTrap's ancestor onKeyEvent may
+            // have moved focus programmatically instead of via the
+            // framework's own key-driven traversal). Follow explicitly so
+            // the cursor is never invisible.
+            if (f) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted || !context.mounted) return;
+                Scrollable.ensureVisible(
+                  context,
+                  alignment: 0.5,
+                  alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+                  duration: Duration.zero,
+                );
+              });
+            }
+          },
           child: (p != null && p.isNotEmpty)
               ? CachedNetworkImage(
                   imageUrl: p,
