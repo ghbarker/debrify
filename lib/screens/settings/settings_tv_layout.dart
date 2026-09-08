@@ -11,6 +11,7 @@ import 'settings_spotlight_shell.dart';
 import 'settings_catalog.dart';
 import 'settings_page_registry.dart';
 import 'settings_page_spec.dart';
+import 'widgets/appearance_preview_card.dart';
 import 'widgets/settings_widgets.dart';
 import '../../theme/app_theme_scope.dart';
 
@@ -558,7 +559,7 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
   }
 
   Widget _buildPane(int selected) {
-    return Focus(
+    final paneScroller = Focus(
       canRequestFocus: false,
       skipTraversal: true,
       onKeyEvent: _paneKey,
@@ -623,6 +624,34 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
           ),
         ),
       ),
+    );
+    // Appearance only: dock a compact copy of the live preview above the
+    // pane while a Screen-layouts row is pointed at — see
+    // [AppearancePreviewDock].
+    if (_rail[selected].label != 'Appearance') return paneScroller;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // An OVERLAY, not a pushed-down header: inserting a Column sibling
+        // above the pane would shift every row under it the instant the
+        // dock appears — on a pointer surface that shift can carry the just
+        // -hovered chip out from under the cursor, an exit, and the dock
+        // collapsing right back (repeat forever). Overlaying keeps every
+        // row exactly where it was.
+        paneScroller,
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          // Read-only: never steals the hover/click the pane underneath is
+          // currently getting.
+          child: IgnorePointer(
+            child: AppearancePreviewDock(
+              padding: const EdgeInsets.fromLTRB(32, 14, 40, 0),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

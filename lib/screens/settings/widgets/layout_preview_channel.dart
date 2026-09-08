@@ -82,6 +82,14 @@ class LayoutPreviewChannel extends ChangeNotifier {
   /// What the stage should draw.
   LayoutPreviewTarget? get shown => _pointed ?? _resting;
 
+  /// A Screen-layouts row currently has the pointer / D-pad highlight — the
+  /// signal [AppearancePreviewDock] docks on. The Look strip needs no
+  /// equivalent: it lives on the resting card itself, which already scrolls
+  /// itself fully into view on focus (see `_reveal` in
+  /// `AppearancePreviewCard`), so there is nothing for a second, pinned copy
+  /// to add there.
+  bool get active => _pointed != null;
+
   /// The pointer / highlight moved onto [target].
   void point(LayoutPreviewTarget target) {
     if (_pointed == target) return;

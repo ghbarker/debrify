@@ -362,11 +362,15 @@ Widget settingsPageRow(
     case SettingsRowKind.options:
       // One node for the whole row (Left/Right inside), like any other row —
       // so the TV pane's positional walk and tvFocusableCount are unchanged.
+      // singleRow follows the SURFACE being built, not ambient device
+      // detection: a long option list (Details Page's 11) wraps into an
+      // unreachable second row on any D-pad surface, tests included.
       return SettingsOptionRow(
         icon: spec.row.icon,
         title: spec.title,
         options: spec.layoutOptions!,
         focusNode: focusNode,
+        singleRow: surface == SettingsLayoutSurface.tv,
       );
     case SettingsRowKind.url:
       return SettingsTile.spec(
