@@ -144,17 +144,17 @@ void main() {
     );
   }, tags: ['golden']);
 
-  testWidgets('Appearance opens on the live preview; one node, Left/Right inside', (
+  testWidgets('Theme opens on the live preview; one node, Left/Right inside', (
     tester,
   ) async {
-    final entry = FocusNode(debugLabel: 'settings-test-entry-appearance');
+    final entry = FocusNode(debugLabel: 'settings-test-entry-theme');
     addTearDown(entry.dispose);
     await _pumpTv(tester, const Size(960, 540), entry);
 
     entry.requestFocus();
     await tester.pump();
-    // Rail: Connections → Home & Display → Appearance. The pane follows
-    // rail focus, so the preview is already up before entering.
+    // Rail: Connections → Layout → Theme. The pane follows rail focus, so
+    // the preview is already up before entering.
     for (var i = 0; i < 2; i++) {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pumpAndSettle();
@@ -174,7 +174,8 @@ void main() {
     expect(find.text('PREVIEWING'), findsOneWidget);
     expect(find.text('Not applied yet'), findsOneWidget);
 
-    // Down reaches the first Presets row; Up comes back to the strip.
+    // Down reaches Theme's first row (Looks — Theme has no sub-groups); Up
+    // comes back to the strip.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
     expect(FocusManager.instance.primaryFocus?.debugLabel, 'settings-tv-pane-1');

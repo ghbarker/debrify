@@ -33,8 +33,8 @@ test/profiles/edit_profile_screen_test.dart :: rendering no control goes missing
 [golden] test/theme/goldens_test.dart :: surface gallery — concrete
 [golden] test/theme/goldens_test.dart :: surface gallery — noir
 [golden] test/settings_tv_spotlight_layout_test.dart :: TV Spotlight settings visual
-[golden] test/settings_tv_spotlight_layout_test.dart :: Appearance opens on the live preview; one node, Left/Right inside
-[golden] test/settings_layout_options_test.dart :: phone Appearance with an inline layouts row
+[golden] test/settings_tv_spotlight_layout_test.dart :: Theme opens on the live preview; one node, Left/Right inside
+[golden] test/settings_layout_options_test.dart :: phone Layout with an inline layouts row
 [golden] test/settings_spotlight_shell_test.dart :: phone Spotlight settings visual
 [golden] test/settings_spotlight_shell_test.dart :: phone Spotlight appearance visual
 [golden] test/settings_spotlight_shell_test.dart :: tablet Spotlight appearance visual
