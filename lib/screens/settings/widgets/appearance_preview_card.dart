@@ -11,6 +11,8 @@ import '../../../theme/appearance_preview.dart';
 import '../../../theme/widgets/theme_preview_stage.dart';
 import '../../../utils/platform_util.dart';
 import '../../../widgets/detail/theme/detail_themes.dart';
+import 'layout_preview_channel.dart';
+import 'layout_preview_stage.dart';
 
 /// The live preview pinned to the top of Appearance.
 ///
@@ -38,10 +40,18 @@ class AppearancePreviewCard extends StatefulWidget {
     this.candidate = false,
     this.focusNode,
     this.singleRow,
+    this.layout,
   });
 
   /// What to draw.
   final AppearancePreviewState state;
+
+  /// A Screen-layouts option to draw on the stage instead of the theme
+  /// stage — the one under the pointer / D-pad highlight on an inline row,
+  /// or the applied option of the row touched last. Null: the theme stage.
+  /// A Look candidate ([candidate]) always wins over it, since the look strip
+  /// is this card's own control.
+  final LayoutPreviewTarget? layout;
 
   /// The Looks offered on the strip.
   final List<AppLook> looks;
@@ -109,11 +119,16 @@ class _AppearancePreviewCardState extends State<AppearancePreviewCard> {
   @visibleForTesting
   AppTheme get shownTheme => _resolve(widget.state);
 
+  /// The layout on the stage, or null when the theme stage is up.
+  LayoutPreviewTarget? get _layoutShown =>
+      widget.candidate ? null : widget.layout;
+
   @override
   Widget build(BuildContext context) {
     final app = AppThemeScope.of(context);
     final t = app.settings;
     final shown = _resolve(widget.state);
+    final layout = _layoutShown;
     final radius = app.shape.br(13);
     return Container(
       key: _cardKey,
@@ -130,12 +145,41 @@ class _AppearancePreviewCardState extends State<AppearancePreviewCard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _Caption(
-            label: widget.state.lookLabel ?? 'Custom',
-            candidate: widget.candidate,
-          ),
+          if (layout != null)
+            _Caption(
+              label: layout.optionLabel,
+              eyebrow: layout.rowTitle.toUpperCase(),
+              candidate: !layout.applied,
+            )
+          else
+            _Caption(
+              label: widget.state.lookLabel ?? 'Custom',
+              candidate: widget.candidate,
+            ),
           const SizedBox(height: 10),
-          ThemePreviewStage(theme: shown),
+          // The theme stage always sizes the slot, even while a layout is
+          // shown over it: swapping stages must not change the card's
+          // height, or the first hover on a row below would move that row
+          // out from under the pointer (an exit, and the preview snaps back).
+          Stack(
+            children: [
+              Visibility(
+                visible: layout == null,
+                maintainState: true,
+                maintainAnimation: true,
+                maintainSize: true,
+                child: ThemePreviewStage(theme: shown),
+              ),
+              if (layout != null)
+                Positioned.fill(
+                  child: LayoutPreviewStage(
+                    theme: shown,
+                    rowId: layout.rowId,
+                    optionId: layout.optionId,
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(height: 12),
           _LookStrip(
             looks: widget.looks,
@@ -153,15 +197,24 @@ class _AppearancePreviewCardState extends State<AppearancePreviewCard> {
 }
 
 class _Caption extends StatelessWidget {
-  const _Caption({required this.label, required this.candidate});
+  const _Caption({
+    required this.label,
+    required this.candidate,
+    this.eyebrow,
+  });
 
   final String label;
   final bool candidate;
+
+  /// What kind of thing [label] names when it is not a Look — the row's
+  /// title, appended after the preview state ("PREVIEWING · DETAILS PAGE").
+  final String? eyebrow;
 
   @override
   Widget build(BuildContext context) {
     final app = AppThemeScope.of(context);
     final t = app.settings;
+    final state = candidate ? 'PREVIEWING' : 'LIVE PREVIEW';
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -171,7 +224,9 @@ class _Caption extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                candidate ? 'PREVIEWING' : 'LIVE PREVIEW',
+                eyebrow == null ? state : '$state · $eyebrow',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontFamily: 'JetBrainsMono',
                   fontSize: 8,
@@ -534,6 +589,7 @@ class AppearancePreviewHost extends StatefulWidget {
     this.focusNode,
     this.applyLook,
     this.singleRow,
+    this.layoutChannel,
   });
 
   /// See [AppearancePreviewCard.singleRow]; null follows the platform.
@@ -546,6 +602,10 @@ class AppearancePreviewHost extends StatefulWidget {
   /// exactly the Looks page's sequence.
   final Future<void> Function(AppLook look)? applyLook;
 
+  /// Where the inline Screen-layouts rows report what they are pointing at.
+  /// Test seam; production shares [LayoutPreviewChannel.instance].
+  final LayoutPreviewChannel? layoutChannel;
+
   @override
   State<AppearancePreviewHost> createState() => _AppearancePreviewHostState();
 }
@@ -554,17 +614,33 @@ class _AppearancePreviewHostState extends State<AppearancePreviewHost> {
   AppLook? _candidate;
   bool _applying = false;
 
+  LayoutPreviewChannel get _layouts =>
+      widget.layoutChannel ?? LayoutPreviewChannel.instance;
+
   @override
   void initState() {
     super.initState();
     AppThemeController.instance.addListener(_changed);
     TextBrightnessController.notifier.addListener(_changed);
+    _layouts.addListener(_changed);
+  }
+
+  @override
+  void didUpdateWidget(covariant AppearancePreviewHost old) {
+    super.didUpdateWidget(old);
+    if (old.layoutChannel != widget.layoutChannel) {
+      (old.layoutChannel ?? LayoutPreviewChannel.instance).removeListener(
+        _changed,
+      );
+      _layouts.addListener(_changed);
+    }
   }
 
   @override
   void dispose() {
     AppThemeController.instance.removeListener(_changed);
     TextBrightnessController.notifier.removeListener(_changed);
+    _layouts.removeListener(_changed);
     super.dispose();
   }
 
@@ -609,6 +685,7 @@ class _AppearancePreviewHostState extends State<AppearancePreviewHost> {
       state: state,
       activeLookId: active?.id,
       candidate: candidate != null && candidate.id != active?.id,
+      layout: _layouts.shown,
       focusNode: widget.focusNode,
       singleRow: widget.singleRow,
       onPreview: (look) {

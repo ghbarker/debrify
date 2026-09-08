@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 'detail_page_style_page.dart';
+import 'discover_layout_page.dart';
+import 'layout_options.dart';
+import 'layout_row_writers.dart';
 import 'settings_page_registry.dart';
 import 'settings_page_spec.dart';
 import 'settings_search_leaves.dart';
+import 'tv_home_style_page.dart';
 import 'widgets/settings_widgets.dart';
 
 const kCatHome = 'Home & Display';
@@ -67,6 +72,7 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
     bool Function()? toggleValue,
     ValueChanged<bool>? onToggle,
     String? leafPageName,
+    SettingsLayoutOptions? layoutOptions,
   }) {
     return SettingsPageSpec(
       id: id,
@@ -100,6 +106,31 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       toggleValue: toggleValue,
       onToggle: onToggle,
       leafPageName: leafPageName,
+      layoutOptions: layoutOptions,
+    );
+  }
+
+  /// An inline Screen-layouts option set. [write] is the opener page's own
+  /// setter path ([LayoutRowWriters]); the screen is then told so the value
+  /// behind [SettingsPageBindings.layoutValues] follows without a page pop.
+  SettingsLayoutOptions layouts({
+    required String rowId,
+    required List<LayoutOption> options,
+    required String Function() current,
+    required Future<void> Function(String value) write,
+    String? moreLabel,
+    Future<void> Function()? onMore,
+  }) {
+    return SettingsLayoutOptions(
+      rowId: rowId,
+      options: options,
+      current: current,
+      apply: (value) async {
+        await write(value);
+        b.onLayoutApplied(rowId, value);
+      },
+      moreLabel: moreLabel,
+      onMore: onMore,
     );
   }
 
@@ -355,11 +386,26 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
         ...b.extraLaunchAnimationKeywords(),
       ],
     ),
+    // Screen-layouts rows: the options render inline (kind: options) and the
+    // opener is kept for SEARCH only — a search hit still opens the picker
+    // page, which is also where Home & Display and IPTV reach some of them.
     page(
       id: 'tvHomeStyle',
       row: SettingsRows.tvHomeStyle,
       category: kCatAppearance,
       opener: b.openTvHomeStyle,
+      kind: SettingsRowKind.options,
+      layoutOptions: layouts(
+        rowId: 'tvHomeStyle',
+        // TV-only row, so every layout is offered; the off-TV narrowing to
+        // Classic/Spotlight belongs to the page Home & Display opens.
+        options: [
+          for (final c in kTvHomeStyleChoices)
+            LayoutOption(c.value, c.label, c.subtitle),
+        ],
+        current: () => b.layoutValues.tvHomeStyle,
+        write: LayoutRowWriters.tvHomeStyle,
+      ),
       phone: false,
       desktop: false,
       tv: true,
@@ -388,6 +434,16 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       row: SettingsRows.discoverLayout,
       category: kCatAppearance,
       opener: b.openDiscoverLayout,
+      kind: SettingsRowKind.options,
+      layoutOptions: layouts(
+        rowId: 'discoverLayout',
+        options: [
+          for (final c in kDiscoverLayoutChoices)
+            LayoutOption(c.value, c.label, c.subtitle),
+        ],
+        current: () => b.layoutValues.discoverLayout,
+        write: LayoutRowWriters.discoverLayout,
+      ),
       phone: false,
       desktop: false,
       tv: true,
@@ -416,6 +472,20 @@ List<SettingsPageSpec> buildSettingsPages(SettingsPageBindings b) {
       row: SettingsRows.detailPageStyle,
       category: kCatAppearance,
       opener: b.openDetailPageStyle,
+      kind: SettingsRowKind.options,
+      layoutOptions: layouts(
+        rowId: 'detailPageStyle',
+        // Only what this build can draw, and the active option is the
+        // NARROWED value — the same two rules the picker page applies.
+        options: [
+          for (final c in kDetailPageStyleChoices)
+            if (kDetailPageStylesShipped.contains(c.value))
+              LayoutOption(c.value, c.label, c.subtitle),
+        ],
+        current: () =>
+            effectiveDetailPageStyle(b.layoutValues.detailPageStyle),
+        write: LayoutRowWriters.detailPageStyle,
+      ),
       phoneOrder: 50,
       desktopOrder: 40,
       tvOrder: 60,

@@ -66,6 +66,7 @@ import 'settings/settings_search.dart';
 import 'settings/settings_catalog.dart';
 import 'settings/settings_page_registry.dart';
 import 'settings/settings_page_spec.dart';
+import 'settings/layout_options.dart';
 import 'settings/discover_layout_page.dart';
 import 'settings/discover_settings_page.dart';
 import 'settings/iptv_style_page.dart';
@@ -997,6 +998,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
       tvKeyboardEnabled: _tvKeyboardEnabled,
       onToggleTvKeyboard: _toggleTvKeyboard,
       isAndroidTv: _isAndroidTv,
+      layoutValues: LayoutRowValues(
+        tvHomeStyle: _tvHomeStyle,
+        discoverLayout: _discoverLayout,
+        detailPageStyle: _detailPageStyle,
+        tvSidebarStyle: _tvSidebarStyle,
+        iptvStyle: _iptvStyle,
+        debrifyTvStyle: _debrifyTvStyle,
+        playerGuideStyle: _playerGuideStyle,
+        playLoaderStyle: _playLoaderStyle,
+        playerDockStyle: _playerDockStyle,
+        parentsGuideStyle: _parentsGuideStyle,
+        profileGateStyle: ProfileGateStyle.cached,
+        phoneNavStyle: _phoneNavStyle,
+        desktopSidebarStyle: _desktopSidebarStyle,
+      ),
+      onLayoutApplied: _onLayoutApplied,
       isTelevision: _isTelevision,
       isAndroid: _isAndroid,
       isPhone: _isPhone,
@@ -2353,6 +2370,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _playerDockStyle = style;
       _playerDockPalette = palette;
       _playerDockSize = size;
+    });
+  }
+
+  /// An inline Screen-layouts row has already persisted [value] (through the
+  /// opener page's own setter); mirror it into the state that feeds the row
+  /// captions and search subtitles — what the page-pop re-read did before.
+  void _onLayoutApplied(String rowId, String value) {
+    if (!mounted) return;
+    setState(() {
+      switch (rowId) {
+        case 'tvHomeStyle':
+          _tvHomeStyle = value;
+        case 'discoverLayout':
+          _discoverLayout = value;
+        case 'detailPageStyle':
+          _detailPageStyle = value;
+        case 'tvSidebarStyle':
+          _tvSidebarStyle = value;
+        case 'iptvAppearance':
+          _iptvStyle = value;
+        case 'debrifyTvAppearance':
+          _debrifyTvStyle = value;
+        case 'playerGuideStyle':
+          _playerGuideStyle = value;
+        case 'playLoaderStyle':
+          _playLoaderStyle = value;
+        case 'playerDock':
+          _playerDockStyle = value;
+        case 'parentsGuideStyle':
+          _parentsGuideStyle = value;
+        case 'navigationStyleAppearance':
+          _phoneNavStyle = value;
+        case 'desktopSidebarStyle':
+          _desktopSidebarStyle = value;
+        // profileAppearance: ProfileGateStyle.cached is the state; the
+        // rebuild alone picks it up.
+      }
     });
   }
 

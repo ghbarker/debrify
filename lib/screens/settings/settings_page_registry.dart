@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'settings_page_spec.dart';
 import 'settings_search.dart';
 import 'widgets/appearance_preview_card.dart';
+import 'widgets/settings_option_row.dart';
 import 'widgets/settings_widgets.dart';
 
 /// Pane nodes the Appearance preview claims on TV — its whole Look strip is
@@ -358,6 +359,15 @@ Widget settingsPageRow(
       );
     case SettingsRowKind.info:
       return SettingsInfoTile.spec(spec.row, value: spec.resolvedSubtitle);
+    case SettingsRowKind.options:
+      // One node for the whole row (Left/Right inside), like any other row —
+      // so the TV pane's positional walk and tvFocusableCount are unchanged.
+      return SettingsOptionRow(
+        icon: spec.row.icon,
+        title: spec.title,
+        options: spec.layoutOptions!,
+        focusNode: focusNode,
+      );
     case SettingsRowKind.url:
       return SettingsTile.spec(
         spec.row,
