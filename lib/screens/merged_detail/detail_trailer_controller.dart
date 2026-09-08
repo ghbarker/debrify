@@ -85,7 +85,8 @@ class DetailTrailerController extends ChangeNotifier {
   bool get loading => _loading;
 
   /// Whether OTT-style trailer autoplay behind the backdrop is on (settings).
-  /// Always false on Android TV — the Home hero owns ambient trailers there.
+  /// One pref on every platform, TV included (the Home hero's ambient trailer
+  /// is a separate surface with its own toggle).
   bool _autoplayEnabled = false;
   bool get autoplayEnabled => _autoplayEnabled;
 
@@ -258,21 +259,26 @@ class DetailTrailerController extends ChangeNotifier {
     }
   }
 
-  /// Trailer button. Always ends in full-page IN-APP playback off-TV — the
-  /// backdrop's own player brought forward (unmuted, controls, Back/Escape
-  /// settles it back into the page):
+  /// Trailer button. Always ends in full-page IN-APP playback — the backdrop's
+  /// own player brought forward (unmuted, controls, Back/Escape settles it back
+  /// into the page) — on every platform, Android TV included:
   ///
   ///  1. Frames already on screen ([HeroTrailerBackdropState.canPromote]) →
   ///     promote the *same* player in place. No second decoder, no re-buffer.
   ///  2. Otherwise resolve the stream fresh, hand it to the backdrop (which
   ///     starts its engine even with autoplay off — see [foregroundRequested])
   ///     and park on [HeroTrailerBackdropState.whenPromotable]; the first
-  ///     rendered frame promotes. A "Loading trailer…" snackbar covers the wait
-  ///     so the press never looks ignored.
+  ///     rendered frame promotes (on TV that is the native engine's
+  ///     `firstFrame` event, the same signal that reveals the ambient loop). A
+  ///     "Loading trailer…" snackbar covers the wait so the press never looks
+  ///     ignored.
   ///
-  /// The standalone player remains ONLY for the documented exceptions: TV
-  /// (native Exo underlay — its video isn't Flutter pixels), OS reduced motion
-  /// (the backdrop never starts a player under it), no backdrop mounted, and an
+  /// TV's native underlay engine is not an exception: its video is on a
+  /// hardware plane behind Flutter, but Flutter still composites over it, so
+  /// the backdrop's chrome and the page fade work unchanged — see
+  /// [HeroTrailerBackdropState.requestForegroundStart]. The standalone player
+  /// remains ONLY for the documented exceptions: OS reduced motion (the
+  /// backdrop never starts a player under it), no backdrop mounted, and an
   /// engine that fails or never renders a frame within the wait.
   ///
   /// Streams are always re-resolved on a press that can't promote at once:
@@ -292,10 +298,7 @@ class DetailTrailerController extends ChangeNotifier {
 
     // Decide the path BEFORE the resolve: asking the backdrop also lifts its
     // per-visit playback latches so the URL it's about to receive can start.
-    final inPlace =
-        backdrop != null &&
-        !read().isTelevision &&
-        backdrop.requestForegroundStart();
+    final inPlace = backdrop != null && backdrop.requestForegroundStart();
 
     _loading = true;
     _promotePending = inPlace;
