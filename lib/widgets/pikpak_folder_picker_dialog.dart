@@ -3,12 +3,36 @@ import 'package:flutter/services.dart';
 import '../services/pikpak_api_service.dart';
 import '../services/android_native_downloader.dart';
 import '../utils/tv_keys.dart';
+import '../utils/tv_reveal.dart';
 import 'tv_text_field.dart';
+
+/// Shape of [PikPakApiService.listFiles], factored out so tests can hand the
+/// dialog folder data directly instead of going through the real service's
+/// authenticated HTTP calls.
+typedef PikPakListFiles =
+    Future<({List<Map<String, dynamic>> files, String? nextPageToken})>
+    Function({String? parentId, int limit, String? pageToken});
 
 class PikPakFolderPickerDialog extends StatefulWidget {
   final String? initialFolderId;
 
-  const PikPakFolderPickerDialog({super.key, this.initialFolderId});
+  /// Skips the async `AndroidNativeDownloader.isTelevision()` platform-channel
+  /// probe and forces TV D-pad navigation on/off. Tests run on a host with no
+  /// such channel (and no `Platform.isAndroid`), so this is the seam that
+  /// lets widget tests exercise the D-pad focus wiring deterministically —
+  /// mirrors `InitialSetupFlow.isTelevisionOverride`.
+  final bool? isTelevisionOverride;
+
+  /// Replaces `PikPakApiService().listFiles` for tests -- see
+  /// [PikPakListFiles].
+  final PikPakListFiles? listFilesOverride;
+
+  const PikPakFolderPickerDialog({
+    super.key,
+    this.initialFolderId,
+    this.isTelevisionOverride,
+    this.listFilesOverride,
+  });
 
   @override
   State<PikPakFolderPickerDialog> createState() =>
@@ -38,6 +62,19 @@ class _FolderNode {
 class _PikPakFolderPickerDialogState extends State<PikPakFolderPickerDialog> {
   final PikPakApiService _apiService = PikPakApiService();
 
+  Future<({List<Map<String, dynamic>> files, String? nextPageToken})>
+  _listFiles({String? parentId, int limit = 100, String? pageToken}) {
+    final override = widget.listFilesOverride;
+    if (override != null) {
+      return override(parentId: parentId, limit: limit, pageToken: pageToken);
+    }
+    return _apiService.listFiles(
+      parentId: parentId,
+      limit: limit,
+      pageToken: pageToken,
+    );
+  }
+
   List<_FolderNode> _rootFolders = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -52,6 +89,7 @@ class _PikPakFolderPickerDialogState extends State<PikPakFolderPickerDialog> {
   bool _isTelevision = false;
   final List<FocusNode> _folderFocusNodes = [];
   final List<ValueNotifier<bool>> _folderFocusStates = [];
+  final ScrollController _folderScrollController = ScrollController();
   late final FocusNode _cancelButtonFocusNode;
   late final FocusNode _confirmButtonFocusNode;
   late final FocusNode _closeButtonFocusNode;
@@ -79,9 +117,7 @@ class _PikPakFolderPickerDialogState extends State<PikPakFolderPickerDialog> {
         }
         // DPAD Up: Move to last folder item
         if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-          final flatFolders = _getFlattenedFolders();
-          if (flatFolders.isNotEmpty && _folderFocusNodes.isNotEmpty) {
-            _folderFocusNodes[flatFolders.length - 1].requestFocus();
+          if (_focusLastFolder()) {
             return KeyEventResult.handled;
           }
         }
@@ -105,9 +141,7 @@ class _PikPakFolderPickerDialogState extends State<PikPakFolderPickerDialog> {
         }
         // DPAD Up: Move to last folder item
         if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-          final flatFolders = _getFlattenedFolders();
-          if (flatFolders.isNotEmpty && _folderFocusNodes.isNotEmpty) {
-            _folderFocusNodes[flatFolders.length - 1].requestFocus();
+          if (_focusLastFolder()) {
             return KeyEventResult.handled;
           }
         }
@@ -126,9 +160,7 @@ class _PikPakFolderPickerDialogState extends State<PikPakFolderPickerDialog> {
         }
         // DPAD Up: Move to last folder item
         if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-          final flatFolders = _getFlattenedFolders();
-          if (flatFolders.isNotEmpty && _folderFocusNodes.isNotEmpty) {
-            _folderFocusNodes[flatFolders.length - 1].requestFocus();
+          if (_focusLastFolder()) {
             return KeyEventResult.handled;
           }
         }
@@ -138,6 +170,14 @@ class _PikPakFolderPickerDialogState extends State<PikPakFolderPickerDialog> {
   }
 
   Future<void> _detectTelevision() async {
+    final override = widget.isTelevisionOverride;
+    if (override != null) {
+      // Called synchronously from initState (no async gap yet) -- set the
+      // field directly rather than via setState, which the first build will
+      // already see.
+      _isTelevision = override;
+      return;
+    }
     try {
       final isTv = await AndroidNativeDownloader.isTelevision();
       if (mounted) {
@@ -157,7 +197,7 @@ class _PikPakFolderPickerDialogState extends State<PikPakFolderPickerDialog> {
     });
 
     try {
-      final result = await _apiService.listFiles(
+      final result = await _listFiles(
         parentId: null, // Root folder
         limit: 100,
       );
@@ -217,7 +257,7 @@ class _PikPakFolderPickerDialogState extends State<PikPakFolderPickerDialog> {
     });
 
     try {
-      final result = await _apiService.listFiles(
+      final result = await _listFiles(
         parentId: folder.id,
         limit: 100,
       );
@@ -417,6 +457,53 @@ class _PikPakFolderPickerDialogState extends State<PikPakFolderPickerDialog> {
     }
   }
 
+  /// Move focus to the last folder in the flattened list, scrolling it into
+  /// view first. Returns false when there's nothing to focus (empty list),
+  /// so callers can fall through to KeyEventResult.ignored.
+  ///
+  /// The folder list is a lazy `ListView.builder`, so the last row may not
+  /// be mounted yet (or may be scrolled off-screen) -- a bare
+  /// `requestFocus()` on an unmounted node silently no-ops, which is exactly
+  /// the bug `stremio_tv_screen.dart`'s `focusRealIndex()` documents. Jump
+  /// the list to its end synchronously so the row builds, then confirm it's
+  /// focused (and fully visible) once the frame lands.
+  bool _focusLastFolder() {
+    final flatFolders = _getFlattenedFolders();
+    if (flatFolders.isEmpty || _folderFocusNodes.isEmpty) return false;
+    final lastIndex = flatFolders.length - 1;
+    if (lastIndex >= _folderFocusNodes.length) return false;
+
+    if (_folderScrollController.hasClients) {
+      _folderScrollController.jumpTo(
+        _folderScrollController.position.maxScrollExtent,
+      );
+    }
+    _focusFolderWhenAttached(lastIndex, 0);
+    return true;
+  }
+
+  /// Focus the folder node at [index] once its row has been laid out by the
+  /// `ListView.builder` (attempt-bounded: a lazy list can take a frame or
+  /// two after a scroll jump before the target row actually builds), then
+  /// nudge it fully into the scrollable's viewport before focusing.
+  void _focusFolderWhenAttached(int index, int attempt) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (index >= _folderFocusNodes.length) return;
+      final node = _folderFocusNodes[index];
+      final ctx = node.context;
+      if (ctx != null) {
+        tvRevealMinimal(ctx, duration: Duration.zero);
+        node.requestFocus();
+      } else if (attempt < 3) {
+        _focusFolderWhenAttached(index, attempt + 1);
+      } else {
+        // Give up waiting for layout; best-effort direct focus.
+        node.requestFocus();
+      }
+    });
+  }
+
   void _autoFocusFirstFolder() {
     if (!_isTelevision) return;
 
@@ -600,6 +687,7 @@ class _PikPakFolderPickerDialogState extends State<PikPakFolderPickerDialog> {
                               ),
                             )
                           : ListView.builder(
+                              controller: _folderScrollController,
                               itemCount: _getFlattenedFolders().length,
                               itemBuilder: (context, index) {
                                 return _buildFolderItem(context, index);
@@ -863,6 +951,7 @@ class _PikPakFolderPickerDialogState extends State<PikPakFolderPickerDialog> {
     for (final state in _folderFocusStates) {
       state.dispose();
     }
+    _folderScrollController.dispose();
     _cancelButtonFocusNode.dispose();
     _confirmButtonFocusNode.dispose();
     _closeButtonFocusNode.dispose();
