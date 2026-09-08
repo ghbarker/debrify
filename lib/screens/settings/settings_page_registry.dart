@@ -402,12 +402,21 @@ Widget settingsPageRow(
 /// it) so entering the pane lands on the preview and Down reaches the Presets
 /// rows. [SettingsPageRegistry.tvFocusableCount] counts that node too, so the
 /// pane pool always covers it.
+///
+/// [includeAppearancePreview] (default true) controls only whether the
+/// preview WIDGET is in the returned list — the node it claims is reserved
+/// either way, so every other row's index is identical regardless. A shell
+/// that pins the preview outside the scrolling body passes false here and
+/// builds `AppearancePreviewHost(focusNode: paneNodes[0])` itself as the
+/// pinned header (see `settings_spotlight_shell.dart` and
+/// `settings_tv_layout.dart`).
 List<Widget> buildSettingsCategoryChildren({
   required SettingsPageRegistry registry,
   required SettingsLayoutSurface surface,
   required String category,
   List<FocusNode>? paneNodes,
   Color? accentColor,
+  bool includeAppearancePreview = true,
 }) {
   final pages = registry.visibleOn(surface, category: category);
   if (pages.isEmpty) return const [];
@@ -421,7 +430,8 @@ List<Widget> buildSettingsCategoryChildren({
 
   final heroes = <Widget>[];
   if (category == 'Appearance') {
-    heroes.add(AppearancePreviewHost(focusNode: nextNode()));
+    final node = nextNode();
+    if (includeAppearancePreview) heroes.add(AppearancePreviewHost(focusNode: node));
   }
   final grouped = <String?, List<SettingsPageSpec>>{};
   for (final page in pages) {

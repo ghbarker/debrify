@@ -100,6 +100,7 @@ import 'settings/profile_backup_flows.dart';
 import 'settings/backup_restore_page.dart';
 import 'settings/download_location_controller.dart';
 import 'settings/profile_appearance_page.dart';
+import 'settings/widgets/appearance_preview_card.dart';
 import 'settings/widgets/settings_widgets.dart';
 import 'settings/pikpak_settings_page.dart';
 import 'settings/real_debrid_settings_page.dart';
@@ -2776,7 +2777,21 @@ class _SettingsLayout extends StatelessWidget {
         onTap: () => unawaited(summaryTarget.onTap()),
       ),
       categoryBuilder: _buildSpotlightCategory,
+      pinnedHeaderBuilder: _buildSpotlightPinnedHeader,
     );
+  }
+
+  /// The Appearance live preview, pinned above the scrolling category body
+  /// on every non-television surface (see [SettingsSpotlightShell]). Every
+  /// other category has nothing to pin.
+  Widget? _buildSpotlightPinnedHeader(BuildContext context, int category) {
+    if (category < 0 || category >= _kAdaptiveSettingsCategories.length) {
+      return null;
+    }
+    if (_kAdaptiveSettingsCategories[category].label != 'Appearance') {
+      return null;
+    }
+    return const AppearancePreviewHost();
   }
 
   Widget _buildConnectionGrid(
@@ -2835,6 +2850,10 @@ class _SettingsLayout extends StatelessWidget {
           surface: SettingsLayoutSurface.desktop,
           category: label,
           accentColor: label == 'Danger Zone' ? t.danger : null,
+          // The Appearance preview is pinned separately — see
+          // _buildSpotlightPinnedHeader — so it must not also appear inline
+          // here (the shell would then show it twice).
+          includeAppearancePreview: label != 'Appearance',
         );
         if (kids.isEmpty && label == 'Profiles') {
           return SettingsSection(

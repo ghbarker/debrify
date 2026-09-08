@@ -12,9 +12,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'theme/golden_harness.dart' show disableRuntimeFonts;
 
-/// TV ergonomics of the Appearance look strip (Shield feedback, 2026-09-07):
-/// landing on the strip from the rows below must bring the WHOLE preview
-/// back into view, and the chips must stay one Left/Right row — a wrapped
+/// TV ergonomics of the Appearance preview (Shield feedback, 2026-09-07): the
+/// preview is a genuine fixed header — structurally OUTSIDE the pane's
+/// scrollable body, the same shape `settings_tv_layout.dart` and
+/// `settings_spotlight_shell.dart` build — so scrolling the rows below it
+/// can never carry it off screen; there is nothing to reveal because it
+/// never left. The chips must also stay one Left/Right row — a wrapped
 /// second row is unreachable with a D-pad.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +30,11 @@ void main() {
     TextBrightnessController.notifier.value = TextBrightness.bright;
   });
 
+  /// The pinned shape every TV/desktop surface now builds: the preview as a
+  /// fixed `Column` header, an `Expanded` scrolling body below it — never one
+  /// scrollable holding both (see the `_buildPane`/`_buildCategoryBody` note
+  /// on why: a pushed-down header would carry a just-hovered chip out from
+  /// under the pointer, the old flicker bug).
   Future<void> pump(
     WidgetTester tester, {
     required FocusNode node,
@@ -42,18 +50,22 @@ void main() {
           body: SizedBox(
             width: width,
             height: 400,
-            // A Column, as the TV pane keeps every row mounted (nodes are
-            // positional) — a lazy list would unmount the card offscreen.
-            child: SingleChildScrollView(
-              controller: pane,
-              child: Column(
-                children: [
-                  AppearancePreviewHost(focusNode: node, singleRow: true),
-                  // The Presets/Theme rows that sit under the card on TV.
-                  for (var i = 0; i < 12; i++)
-                    SizedBox(height: 56, child: Text('row $i')),
-                ],
-              ),
+            child: Column(
+              children: [
+                AppearancePreviewHost(focusNode: node, singleRow: true),
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: pane,
+                    // The Presets/Theme rows that sit under the header.
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < 12; i++)
+                          SizedBox(height: 56, child: Text('row $i')),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -61,36 +73,47 @@ void main() {
     );
   }
 
-  testWidgets('focusing the strip from below reveals the whole card', (
-    tester,
-  ) async {
-    final node = FocusNode(debugLabel: 'pane-0');
-    addTearDown(node.dispose);
-    final pane = ScrollController();
-    addTearDown(pane.dispose);
-    await pump(tester, node: node, pane: pane);
-    await tester.pumpAndSettle();
+  testWidgets(
+    'the header stays fully on screen no matter how far the pane below it '
+    'is scrolled',
+    (tester) async {
+      final node = FocusNode(debugLabel: 'pane-0');
+      addTearDown(node.dispose);
+      final pane = ScrollController();
+      addTearDown(pane.dispose);
+      await pump(tester, node: node, pane: pane);
+      await tester.pumpAndSettle();
 
-    // Scrolled down past the stage, as a D-pad user arriving from the rows.
-    pane.jumpTo(pane.position.maxScrollExtent);
-    await tester.pump();
-    expect(
-      pane.offset,
-      greaterThan(0),
-      reason: 'the card starts scrolled away',
-    );
+      final stageRectBefore = tester.getRect(find.byType(ThemePreviewStage));
+      expect(stageRectBefore.top, greaterThanOrEqualTo(0));
 
-    node.requestFocus();
-    await tester.pumpAndSettle();
-    final stage = tester.getRect(find.byType(ThemePreviewStage));
-    expect(stage.top, greaterThanOrEqualTo(0));
-    // The caption reads LIVE PREVIEW or PREVIEWING depending on which chip
-    // the highlight landed on; either way it sits above the stage and must
-    // be on screen too.
-    final caption = find.textContaining('PREVIEW');
-    expect(caption, findsOneWidget);
-    expect(tester.getRect(caption).top, greaterThanOrEqualTo(0));
-  });
+      // Scroll the body all the way down, as a D-pad user who has walked
+      // through every row below the header.
+      pane.jumpTo(pane.position.maxScrollExtent);
+      await tester.pump();
+      expect(
+        pane.offset,
+        greaterThan(0),
+        reason: 'the body actually scrolled',
+      );
+
+      // The header did not move even a pixel — it was never part of the
+      // scrolled body to begin with.
+      final stageRectAfter = tester.getRect(find.byType(ThemePreviewStage));
+      expect(stageRectAfter, stageRectBefore);
+
+      node.requestFocus();
+      await tester.pumpAndSettle();
+      final stage = tester.getRect(find.byType(ThemePreviewStage));
+      expect(stage, stageRectBefore, reason: 'focusing the strip moves nothing');
+      // The caption reads LIVE PREVIEW or PREVIEWING depending on which chip
+      // the highlight landed on; either way it sits above the stage and must
+      // be on screen too.
+      final caption = find.textContaining('PREVIEW');
+      expect(caption, findsOneWidget);
+      expect(tester.getRect(caption).top, greaterThanOrEqualTo(0));
+    },
+  );
 
   testWidgets(
     'chips are one scrolling row and Right keeps the highlight in view',
