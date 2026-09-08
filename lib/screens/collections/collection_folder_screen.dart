@@ -15,7 +15,6 @@ import '../../utils/home_rail_metrics.dart';
 import '../../widgets/collections/folder_hero_band.dart';
 import '../../widgets/collections/rail_header_focus.dart';
 import '../../widgets/home/row_tag_pill.dart';
-import '../../widgets/see_all/discover_shelf_scope.dart';
 import '../../widgets/see_all/see_all_filter_bar.dart';
 import '../../widgets/see_all/see_all_filter_focus.dart';
 import '../../widgets/see_all/see_all_header.dart';
@@ -23,6 +22,7 @@ import '../../widgets/see_all/see_all_poster_grid.dart';
 import '../../widgets/see_all/stremio_dropdown.dart';
 import '../../widgets/skeleton_poster.dart';
 import '../see_all/catalog_see_all_screen.dart';
+import '../search/board_shelf_row.dart';
 
 /// Full-screen browser for one folder of an imported collection — where a
 /// folder tile on the Home board and the collection row's tap land.
@@ -48,10 +48,15 @@ import '../see_all/catalog_see_all_screen.dart';
 /// Lists switched off in the Home Rows manager (`collectionlist:` ids in the
 /// disabled set) are left out of every view.
 ///
-/// Rails reuse [SeeAllPosterGrid] in shelf mode (under a
-/// [DiscoverShelfScope]), so focus walking, paging and card chrome are the
-/// Discover stage's own; this screen only adds the vertical DPAD ladder
-/// between rails (a rail's header → its cards → the next rail's header).
+/// Rails render through [BoardShelfRow] — the same [BoardCell] widget (art,
+/// [CardFocusRise] scale/shadow/focus-ring, hover-grow) and row gutter Home's
+/// own board rails paint, so a folder reads as an actual Home row rather
+/// than an approximation of one. This screen owns paging, folder switching
+/// and the vertical DPAD ladder between rails (a rail's header → its cards →
+/// the next rail's header); [BoardShelfRow] owns only the row itself. The
+/// merged "All" grid and the Tabs layout's single-list view stay on
+/// [SeeAllPosterGrid] — they're full poster walls, not rows, and were never
+/// meant to read as Home.
 class CollectionFolderScreen extends StatefulWidget {
   final HomeCollection collection;
   final int initialFolderIndex;
@@ -90,7 +95,7 @@ class _Rail {
   final CollectionCatalogSource source;
   final StremioAddon addon;
   final StremioAddonCatalog catalog;
-  final GlobalKey<SeeAllPosterGridState> gridKey = GlobalKey();
+  final GlobalKey<BoardShelfRowState> gridKey = GlobalKey();
   final GlobalKey containerKey = GlobalKey();
   final FocusNode headerNode = FocusNode(debugLabel: 'collection_rail_header');
   final List<StremioMeta> items = [];
@@ -668,22 +673,14 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
     );
   }
 
+  /// Horizontal padding around a rail's header and row — matches Home's own
+  /// board rail gutter.
+  static const double _railHPad = 24;
+
   /// Same poster geometry as a Home board rail, so a folder reads as Home
-  /// with different lists. Rows also drops the shelf's "N / M+" position
-  /// line — the whole point of this layout is to read as a plain Home row,
-  /// and that line is a Discover-stage affordance this screen never had a
-  /// use for either.
-  DiscoverShelfMetrics _railMetrics(BuildContext context) {
-    final posterW = homeRailPosterWidth(
-      context,
-      isTelevision: widget.isTelevision,
-    );
-    return DiscoverShelfMetrics(
-      cardHeight: posterW * 1.5,
-      hPad: 24,
-      showPositionCounter: false,
-    );
-  }
+  /// with different lists.
+  double _railPosterW(BuildContext context) =>
+      homeRailPosterWidth(context, isTelevision: widget.isTelevision);
 
   Widget _buildBody() {
     if (!_booted) {
@@ -699,14 +696,15 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   }
 
   Widget _buildLists() {
-    final m = _railMetrics(context);
+    final posterW = _railPosterW(context);
+    final cellH = posterW * 1.5;
     // The merged grid stays under the SAME "All" row rather than replacing
     // it — that row is the only way Rows offers back into it, so pressing it
     // again (now reading "Lists") is how you leave.
     if (_offersAll && _view == _View.all) {
       return Column(
         children: [
-          _buildAllRow(m),
+          _buildAllRow(),
           Expanded(child: _buildAll()),
         ],
       );
@@ -719,8 +717,12 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
       padding: const EdgeInsets.only(bottom: 24),
       itemCount: (showAllRow ? 1 : 0) + rails.length,
       itemBuilder: (context, i) {
-        if (showAllRow && i == 0) return _buildAllRow(m);
-        return _buildRail(rails[i - (showAllRow ? 1 : 0)], m);
+        if (showAllRow && i == 0) return _buildAllRow();
+        return _buildRail(
+          rails[i - (showAllRow ? 1 : 0)],
+          posterW: posterW,
+          cellH: cellH,
+        );
       },
     );
   }
@@ -729,12 +731,17 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   /// the removed View dropdown's Lists/All choice moved to. Reads "All" and
   /// switches to the merged grid (kept under this same header, so pressing
   /// it again — now reading "Lists" — is how you get back).
-  Widget _buildAllRow(DiscoverShelfMetrics m) {
+  Widget _buildAllRow() {
     final app = AppThemeScope.of(context);
     final tv = widget.isTelevision;
     final showingAll = _view == _View.all;
     return Padding(
-      padding: EdgeInsets.fromLTRB(m.hPad, 14, m.hPad, showingAll ? 8 : 14),
+      padding: EdgeInsets.fromLTRB(
+        _railHPad,
+        14,
+        _railHPad,
+        showingAll ? 8 : 14,
+      ),
       child: RailHeaderFocus(
         node: _allRowNode,
         isTelevision: tv,
@@ -770,7 +777,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
     );
   }
 
-  Widget _buildRail(_Rail r, DiscoverShelfMetrics m) {
+  Widget _buildRail(_Rail r, {required double posterW, required double cellH}) {
     final app = AppThemeScope.of(context);
     final tv = widget.isTelevision;
     return Column(
@@ -779,7 +786,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(m.hPad, 14, m.hPad, 0),
+          padding: EdgeInsets.fromLTRB(_railHPad, 14, _railHPad, 0),
           child: RailHeaderFocus(
             node: r.headerNode,
             isTelevision: tv,
@@ -808,32 +815,53 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
             ),
           ),
         ),
-        SizedBox(
-          height: m.columnHeight,
-          child: DiscoverShelfScope(
-            metrics: m,
-            child: r.loadingInitial
-                ? SkeletonPosterGrid(isTelevision: tv)
-                : SeeAllPosterGrid(
-                    key: r.gridKey,
-                    items: r.items,
-                    isTelevision: tv,
-                    loadingMore: r.loadingMore,
-                    exhausted: r.exhausted,
-                    onOpen: widget.onOpenItem,
-                    onQuickPlay: widget.onQuickPlay,
-                    onItemFocused: (item) {
-                      _ensureRailVisible(r);
-                      widget.onItemFocused?.call(item);
-                    },
-                    isBound: widget.isBound,
-                    onLoadMore: () => _loadMoreRail(r),
-                    onExitTop: tv ? () => r.headerNode.requestFocus() : null,
-                    onExitBottom: tv ? () => _focusRailBelow(r) : null,
-                  ),
+        r.loadingInitial
+            ? _railSkeleton(posterW: posterW, cellH: cellH)
+            : BoardShelfRow(
+                key: r.gridKey,
+                items: r.items,
+                isTelevision: tv,
+                posterW: posterW,
+                cellH: cellH,
+                loadingMore: r.loadingMore,
+                onOpen: widget.onOpenItem,
+                onQuickPlay: widget.onQuickPlay,
+                onItemFocused: (item) {
+                  _ensureRailVisible(r);
+                  widget.onItemFocused?.call(item);
+                },
+                isBound: widget.isBound,
+                onLoadMore: () => _loadMoreRail(r),
+                onExitTop: tv ? () => r.headerNode.requestFocus() : null,
+                onExitBottom: tv ? () => _focusRailBelow(r) : null,
+              ),
+      ],
+    );
+  }
+
+  /// Loading placeholder for one rail, in [BoardShelfRow]'s own row shape
+  /// (same gutter, same card size) so real posters fill in with no layout
+  /// shift once the fetch lands.
+  Widget _railSkeleton({required double posterW, required double cellH}) {
+    return SizedBox(
+      height: cellH + 14,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const NeverScrollableScrollPhysics(),
+        clipBehavior: Clip.hardEdge,
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        itemCount: 6,
+        itemBuilder: (context, index) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 11),
+          child: Center(
+            child: SizedBox(
+              width: posterW,
+              height: cellH,
+              child: const ShimmerBox(),
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 
