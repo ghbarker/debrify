@@ -119,14 +119,18 @@ import 'services/desktop_recording_service.dart';
 import 'services/desktop_schedule_service.dart';
 import 'services/update_service.dart';
 import 'services/webdav_sync/webdav_sync_runtime.dart';
+import 'services/tv_image_cache_policy.dart';
 
-/// Flutter's default image cache (1000 images / 100 MB) is far too large for a
-/// 2 GB Android TV box — a screenful of full-res posters plus offscreen ones
-/// pushes it into the OS low-memory killer. Cap it on TV only; phones, tablets
-/// and desktop keep the framework defaults untouched. Evicted posters are
-/// re-fetched from the on-disk cache, so this trades a little re-decode for a
-/// much smaller resident footprint on the constrained device.
-Future<void> _capImageCache() async {
+TvImageCachePolicy? _tvImageCachePolicy;
+
+/// Start TVs with a conservative decoded-image cache. Confirmed Android TVs
+/// may expand to 128 MiB only while fresh native readings show headroom;
+/// pressure or unavailable readings restore 56 MiB. Low-memory Apple TVs use
+/// 36 MiB. Phones, tablets and desktop retain framework defaults, except for
+/// the conservative Android fallback when TV detection fails.
+Future<void> _capImageCache({bool? isAndroid, bool? lastProbeFailed}) async {
+  _tvImageCachePolicy?.dispose();
+  _tvImageCachePolicy = null;
   var isTv = false;
   try {
     // Via PlatformUtil (not AndroidNativeDownloader) so this also warms
@@ -144,7 +148,10 @@ Future<void> _capImageCache() async {
   // 100 MB / 1000-image cache is an OOM kill. The probe failing at all is
   // rare (early-startup channel hiccup), so phones almost never pay this.
   final capAnyway =
-      !isTv && !kIsWeb && Platform.isAndroid && PlatformUtil.lastProbeFailed;
+      !isTv &&
+      !kIsWeb &&
+      (isAndroid ?? Platform.isAndroid) &&
+      (lastProbeFailed ?? PlatformUtil.lastProbeFailed);
   if (!isTv && !capAnyway) {
     return; // leave non-TV devices on the framework defaults
   }
@@ -156,11 +163,12 @@ Future<void> _capImageCache() async {
     } catch (_) {}
   }
   final cache = PaintingBinding.instance.imageCache;
-  cache.maximumSize = 140;
-  // 56 MB bounds the decoded-image working set. Hero Artwork Quality can use
-  // an ~8 MB Full HD landscape texture, but only the active/outgoing hero pair
-  // overlaps; the cache evicts older artwork rather than expanding resident
-  // memory on a constrained TV box.
+  // Nineteen rails can visit 152 small decoded images before Home's entries.
+  // Keep those reusable within the conservative decoded-byte baseline below.
+  cache.maximumSize = 256;
+  // The retained decoded-image baseline stays at 56 MiB. The Android TV policy
+  // below can raise it to 128 MiB after checking current available memory;
+  // this limit does not include images still owned by mounted widgets.
   cache.maximumSizeBytes = 56 << 20; // 56 MB
   if (TvosDevice.isLowMemoryCached) {
     // The 2-3 GB Apple TV generations get roughly half the jetsam budget of
@@ -169,6 +177,23 @@ Future<void> _capImageCache() async {
     cache.maximumSize = 100;
     cache.maximumSizeBytes = 36 << 20; // 36 MB
   }
+  if (isTv &&
+      !PlatformUtil.isTvOS &&
+      !kIsWeb &&
+      (isAndroid ?? Platform.isAndroid)) {
+    _tvImageCachePolicy = TvImageCachePolicy(cache: cache)..start();
+  }
+}
+
+/// Exercise startup cache policy on a host without an Android platform probe.
+@visibleForTesting
+Future<void> debugCapImageCache({bool? isAndroid, bool? lastProbeFailed}) =>
+    _capImageCache(isAndroid: isAndroid, lastProbeFailed: lastProbeFailed);
+
+@visibleForTesting
+void debugDisposeImageCachePolicy() {
+  _tvImageCachePolicy?.dispose();
+  _tvImageCachePolicy = null;
 }
 
 // The TV-aware page transition moved to `theme/app_theme_adapter.dart`
