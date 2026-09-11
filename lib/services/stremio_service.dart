@@ -1,6 +1,7 @@
 import 'metadata_preferences_service.dart';
 import 'dart:async';
 import 'catalog_disk_cache.dart';
+import 'movie_stream_prefetch.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -1216,7 +1217,7 @@ class StremioService {
     final allStreams = await mapWithConcurrency(applicableAddons, (addon) {
       // Use stremio: prefix and lowercase to match Torrent model (which lowercases source)
       final sourceKey = 'stremio:${addon.name}'.toLowerCase();
-      return _fetchStreamsFromAddon(addon, type, streamId, timeout: timeout)
+      return _discoverStreamsFromAddon(addon, type, streamId, timeout: timeout)
           .then((streams) {
             addonCounts[sourceKey] = streams.length;
             debugPrint(
@@ -1736,6 +1737,86 @@ class StremioService {
     return searchStreams(type: 'movie', imdbId: imdbId);
   }
 
+  bool _moviePrefetchListening = false;
+
+  /// Warm ONLY addon discovery when a movie detail is opened. Torrent engines,
+  /// availability checks, debrid adds, signed-URL resolvers and playback stay
+  /// on the user's normal Play path. Bound sources still bypass discovery.
+  /// The first 16 applicable installed addons use three background slots;
+  /// demand searches keep their own addon set, ordering, filters and timeout.
+  MovieStreamPrefetchLease? prefetchMovieStreams(StremioMeta item) {
+    final contentId = MovieStreamPrefetch.contentIdFor(item);
+    if (contentId == null) return null;
+    final cache = MovieStreamPrefetch.instance;
+    if (!_moviePrefetchListening) {
+      addAddonsChangedListener(cache.invalidate);
+      _moviePrefetchListening = true;
+    }
+    return cache.open(contentId, (lease) async {
+      final capability = await ProfileAsyncAuthorization.capture(
+        ProfileFeature.torrentSearch,
+      );
+      Future<void> discover() async {
+        if (!lease.isActive) return;
+        final addons = await applicableStreamingAddons(
+          type: 'movie',
+          contentId: contentId,
+        );
+        await mapWithConcurrency(
+          addons.take(MovieStreamPrefetch.maxAddonsPerMovie).toList(),
+          (addon) async {
+            if (!lease.isActive) return;
+            try {
+              await capability?.runIfCurrent(() async {});
+              if (!lease.isActive) return;
+              await _discoverStreamsFromAddon(
+                addon,
+                'movie',
+                contentId,
+                speculation: lease,
+              );
+            } catch (_) {
+              // One failed addon must not block the others or cache a failure.
+            }
+          },
+          concurrency: 3,
+        );
+      }
+      if (capability == null) {
+        await discover();
+      } else {
+        await capability.runIfCurrent(discover);
+      }
+    });
+  }
+
+  Future<List<StremioStream>> _discoverStreamsFromAddon(
+    StremioAddon addon,
+    String type,
+    String streamId, {
+    Duration? timeout,
+    MovieStreamPrefetchLease? speculation,
+    bool claimForPlay = true,
+  }) {
+    if (type != 'movie') {
+      return _fetchStreamsFromAddon(addon, type, streamId, timeout: timeout);
+    }
+    return MovieStreamPrefetch.instance.lookup(
+      contentId: streamId,
+      addonConfiguration: jsonEncode([
+        addon.sourceBindingKey,
+        addon.portableConfigurationKey,
+        addon.connectionResourceRevision,
+        addon.name,
+        addon.version,
+      ]),
+      timeout: timeout ?? _requestTimeout,
+      speculation: speculation,
+      claimForPlay: claimForPlay,
+      load: () => _fetchStreamsFromAddon(addon, type, streamId, timeout: timeout),
+    );
+  }
+
   /// Search for series/episode streams
   Future<Map<String, dynamic>> searchSeriesStreams(
     String imdbId, {
@@ -1875,11 +1956,14 @@ class StremioService {
       // alignment below relies on.
       final perAddon = await mapWithConcurrency(candidates, (a) async {
         try {
-          return await _fetchStreamsFromAddon(
+          // A movie detail may be discovering streams at the same time.
+          // Share that GET, retaining this recommendation caller's budget.
+          return await _discoverStreamsFromAddon(
             a,
             type,
             imdbId,
             timeout: const Duration(seconds: 8),
+            claimForPlay: false,
           );
         } catch (_) {
           return <StremioStream>[];

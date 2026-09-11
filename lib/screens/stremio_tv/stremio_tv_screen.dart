@@ -2409,6 +2409,7 @@ class _StremioTvScreenState extends State<StremioTvScreen> {
     final screen = CatalogItemDetailScreen(
       item: nowPlaying.item,
       isTelevision: widget.isTelevision,
+      enableMovieStreamPrefetch: false,
       onPlay: () => _playChannel(channel),
       onBrowse: () => _playChannel(channel),
       enablePrimarySourcesHold: false,

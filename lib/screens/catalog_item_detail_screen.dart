@@ -1,5 +1,7 @@
 import '../services/metadata_provider_service.dart';
 import '../services/watched_filter.dart';
+import '../services/movie_stream_prefetch.dart';
+import '../services/stremio_service.dart';
 import '../widgets/metadata_franchise_rail.dart';
 import '../widgets/metadata_title_navigation.dart';
 import '../services/metadata_preferences_service.dart';
@@ -46,6 +48,10 @@ class CatalogItemDetailScreen extends StatefulWidget {
   final bool isTelevision;
   final bool showQuickPlay;
   final bool hasBoundSource;
+
+  /// Channel details can show a movie while Play actually starts a schedule.
+  /// Those hosts opt out; ordinary movie Play/Sources use shared discovery.
+  final bool enableMovieStreamPrefetch;
 
   /// Triggers the primary play action.
   final VoidCallback onPlay;
@@ -123,6 +129,7 @@ class CatalogItemDetailScreen extends StatefulWidget {
     this.isTelevision = false,
     this.showQuickPlay = true,
     this.hasBoundSource = false,
+    this.enableMovieStreamPrefetch = true,
     this.traktMenuOptions = const [],
     this.onTraktAction,
     this.simklMenuOptions = const [],
@@ -148,6 +155,24 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
   final FocusNode _playFocus = FocusNode(debugLabel: 'detail-play');
   final FocusNode _browseFocus = FocusNode(debugLabel: 'detail-browse');
   final FocusNode _watchlistFocus = FocusNode(debugLabel: 'detail-watchlist');
+  MovieStreamPrefetchLease? _moviePrefetch;
+
+  void _playWithPrefetch() {
+    _moviePrefetch?.claim();
+    widget.onPlay();
+  }
+
+  void _browseWithPrefetch() {
+    _moviePrefetch?.claim();
+    widget.onBrowse();
+  }
+
+  void _startMoviePrefetch() {
+    _moviePrefetch?.close();
+    _moviePrefetch = widget.enableMovieStreamPrefetch
+        ? StremioService.instance.prefetchMovieStreams(widget.item)
+        : null;
+  }
 
   /// Drives the wide/TV cinematic sheet. Needed so a D-pad "up" on the top
   /// action row can reveal the (non-focusable) eyebrow/title/meta header:
@@ -242,6 +267,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
       // What we know before enrichment — usually just the backdrop. Emitted
       // now so a Play pressed in the first second still gets a plate.
       _emitLoaderArt();
+      _startMoviePrefetch();
       if (!widget.isTelevision) _revealCtrl.forward();
       // Land focus on Play (or Sources when Play is hidden, e.g. PikPak) so
       // the remote has a starting point. TV only — on mobile/desktop an
@@ -387,9 +413,22 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
   /// play, and the Sources screen (also pushed above) can bind/unbind too.
   @override
   void didPopNext() {
+    _startMoviePrefetch();
     _refreshBoundState();
     _loadResumeInfo();
     _loadLocalMovieFinished();
+  }
+
+  @override
+  void didPushNext() => _moviePrefetch?.close();
+
+  @override
+  void didUpdateWidget(covariant CatalogItemDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item != widget.item ||
+        oldWidget.enableMovieStreamPrefetch != widget.enableMovieStreamPrefetch) {
+      _startMoviePrefetch();
+    }
   }
 
   /// Native-TV / DeoVR / external playback runs in its own ACTIVITY and pushes
@@ -589,6 +628,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
 
   @override
   void dispose() {
+    _moviePrefetch?.close();
     appRouteObserver.unsubscribe(this);
     MainPageBridge.removePlaybackReturnListener(_onPlaybackReturned);
     _revealCtrl.dispose();
@@ -1754,7 +1794,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
         // TV only: the top row is the highest focusable widget, so a D-pad
         // "up" there reveals the header instead of dead-ending.
         onArrowUp: widget.isTelevision ? _scrollWideToTop : null,
-        onPlay: widget.onPlay,
+        onPlay: _playWithPrefetch,
         onPlayLongPress: _canBrowsePrimarySources
             ? _browsePrimarySources
             : null,
@@ -1762,7 +1802,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
         // this detail screen so the user returns here when playback ends.
         // Browse keeps the detail for the same reason (series drill-down
         // stacks on top). The host handles teardown via _returnToCatalogIfNeeded.
-        onBrowse: widget.onBrowse,
+        onBrowse: _browseWithPrefetch,
         inMyWatchlist: _inMyWatchlist,
         onToggleMyWatchlist: _supportsMyWatchlist ? _toggleMyWatchlist : null,
       ),
@@ -1779,7 +1819,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
 
   Future<void> _browsePrimarySourcesAsync() async {
     if (_item.type != 'series') {
-      widget.onBrowse();
+      _browseWithPrefetch();
       return;
     }
 
