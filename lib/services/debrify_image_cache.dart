@@ -80,6 +80,15 @@ class DebrifyImageCache {
     return _budget.sizeBytes();
   }
 
+  /// Cheap admission snapshot after initial inventory; includes both stores,
+  /// variants, partial writes and retained readers. Does not rescan files or
+  /// reserve space. Use [sizeBytes] for the actual disk-usage UI; write-time
+  /// enforcement remains authoritative if concurrent work consumes capacity.
+  static Future<int> admissionSizeBytes() async {
+    await _initialize();
+    return _budget.admissionSizeBytes();
+  }
+
   /// Cancel old writes and clear lookups. Files with live consumer leases are
   /// deleted after their first read/release/GC; delayed first reads remain safe.
   static Future<void> clear() async {

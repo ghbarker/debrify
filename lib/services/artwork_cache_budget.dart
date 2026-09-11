@@ -148,6 +148,16 @@ class ArtworkCacheBudget {
     await _lock.synchronized(_trim);
   }
 
+  /// Known payload bytes for frequent speculative-admission checks. Initial
+  /// inventory is required; subsequent reads use the same ledger as write
+  /// enforcement, including partial writes and files retained by live readers.
+  /// This is not a reservation. External filesystem changes are reconciled by
+  /// [sizeBytes]; a missing file can conservatively overcount until then.
+  Future<int> admissionSizeBytes() async {
+    await initialize();
+    return _lock.synchronized(() => _total);
+  }
+
   Future<int> sizeBytes() async {
     await initialize();
     return _lock.synchronized(() async {
