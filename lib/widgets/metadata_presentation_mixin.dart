@@ -304,7 +304,9 @@ mixin MetadataPresentationMixin<T extends StatefulWidget> on State<T> {
           policy.isCurrent;
       if (!relevant()) return;
       final prefs = policy.value;
-      setState(() => _presentationPreferences = prefs);
+      if (!identical(_presentationPreferences, prefs)) {
+        setState(() => _presentationPreferences = prefs);
+      }
       _prepareCache(prefs);
       final cached = _resolved.remove(original);
       final presentation =
@@ -335,16 +337,19 @@ mixin MetadataPresentationMixin<T extends StatefulWidget> on State<T> {
         onMetadataPresentationChanged();
         return;
       }
-      setState(() {
-        // A retry belongs to this exact item and policy generation. Preserve
-        // fields already resolved under that policy if a later request fails;
-        // never use the original catalog as a fallback when it is disabled.
-        _metadataPresentation =
-            presentation.retryable && _metadataPresentation != null
-            ? mergeHeroMetadata(_metadataPresentation!, presentation.item)
-            : presentation.item;
-        _presentationPreferences = prefs;
-      });
+      // A retry belongs to this exact item and policy generation. Preserve
+      // fields already resolved under that policy if a later request fails;
+      // never use the original catalog as a fallback when it is disabled.
+      final next = presentation.retryable && _metadataPresentation != null
+          ? mergeHeroMetadata(_metadataPresentation!, presentation.item)
+          : presentation.item;
+      if (!identical(_metadataPresentation, next) ||
+          !identical(_presentationPreferences, prefs)) {
+        setState(() {
+          _metadataPresentation = next;
+          _presentationPreferences = prefs;
+        });
+      }
       onMetadataPresentationChanged();
     } catch (_) {
       // Preference/profile transitions must never remove a usable card.

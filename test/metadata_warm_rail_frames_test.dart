@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'dart:async';
 import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:debrify/models/metadata_preferences.dart';
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/services/metadata_preferences_service.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
+import 'package:debrify/services/tv_motion_profile.dart';
 import 'package:debrify/widgets/collections/collection_tv_rails.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,6 +19,7 @@ void main() {
     'warm decoded rails: reopen, equivalent replacement, and focus frames',
     (tester) async {
       ProfileRuntime.initializeLegacy();
+      TvMotionController.notifier.value = TvMotionProfile.smooth;
       // All preference storage stays inside the in-memory test platform.
       final prefs = jsonEncode(MetadataPreferences(features: {}).toJson());
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
@@ -106,6 +109,10 @@ void main() {
           .toList();
       key.currentState!.focusFirst();
       await tester.pumpAndSettle();
+      var focusImagePaints = 0;
+      debugOnProfilePaint = (object) {
+        if (object is RenderImage) focusImagePaints++;
+      };
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pump();
       records['focus_step_frame'] = frames();
@@ -118,6 +125,12 @@ void main() {
         beforeKeys,
       );
       await tester.pumpAndSettle();
+      debugOnProfilePaint = null;
+      expect(
+        focusImagePaints,
+        0,
+        reason: 'Animating focus must reuse already painted static artwork',
+      );
       await tester.pumpWidget(rails(items));
       records['same_object_rebuild_frame'] = frames();
       await tester.pumpWidget(
@@ -202,6 +215,14 @@ void main() {
         return blanks;
       }
 
+      final artworkElements = <Element>{};
+      var artworkBuilds = 0;
+      debugOnRebuildDirtyWidget = (element, _) {
+        if (element.widget.runtimeType.toString() == '_RailArtwork') {
+          artworkElements.add(element);
+          artworkBuilds++;
+        }
+      };
       final vertical = <int>[];
       for (final direction in [
         LogicalKeyboardKey.arrowDown,
@@ -215,6 +236,12 @@ void main() {
           }
         }
       }
+      debugOnRebuildDirtyWidget = null;
+      expect(
+        artworkBuilds,
+        artworkElements.length,
+        reason: 'Warm row entry must not schedule a duplicate policy rebuild',
+      );
       // ignore: avoid_print
       print(
         'VERTICAL_RECEIPT frames=${vertical.length} blankFrames=${vertical.where((n) => n > 0).length} maxBlanks=${vertical.reduce((a, b) => a > b ? a : b)} cache=${cache.currentSize}',

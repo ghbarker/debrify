@@ -569,7 +569,7 @@ class _RailArtworkState extends State<_RailArtwork>
     final rating = item.imdbRating;
     // These shelves have no hero to identify the focused title. Keep identity
     // inside the existing artwork bounds, including while artwork is pending.
-    return Semantics(
+    final artwork = Semantics(
       label: item.name,
       excludeSemantics: true,
       child: Stack(
@@ -619,5 +619,8 @@ class _RailArtworkState extends State<_RailArtwork>
         ],
       ),
     );
+    // The surrounding focus scale/shadow animates every move. Keep the static
+    // image and title layer reusable while that chrome repaints.
+    return RepaintBoundary(child: artwork);
   }
 }
