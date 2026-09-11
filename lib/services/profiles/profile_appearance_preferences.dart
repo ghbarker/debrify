@@ -1,8 +1,12 @@
-/// Appearance remains local to each profile on each installation. These keys
+/// Navigation styles, sidebar order/labels, and phone navigation sync using
+/// their existing separate keys, as do the three player control/dock styles.
+/// Other appearance remains local to each profile on each installation. These keys
 /// are still portable through explicit backups and profile-default copies;
 /// only automatic WebDAV sync excludes them (including bootstrap and replay).
 abstract final class ProfileAppearancePreferences {
   static const Set<String> keys = <String>{
+    // This checkpoint belongs to the local appearance values it initializes.
+    'defaults_generation',
     'app_theme',
     'detail_theme',
     'theme_overrides',
@@ -20,16 +24,8 @@ abstract final class ProfileAppearancePreferences {
     'iptv_style',
     'iptv_player_guide_style',
     'play_loader_style',
-    'tv_player_controls_style',
-    'debrify_tv_player_style',
-    'player_dock_style',
     'player_dock_palette',
     'player_dock_size',
-    'phone_nav_style',
-    'phone_nav_bar_indices',
-    'tv_sidebar_style',
-    'desktop_sidebar_style',
-    'sidebar_configuration_v1',
     'discover_layout',
     'discover_show_type_tags',
     'discover_show_ratings',
