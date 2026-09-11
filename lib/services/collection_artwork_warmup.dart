@@ -42,7 +42,7 @@ class CollectionArtworkWarmup with WidgetsBindingObserver {
     @visibleForTesting DateTime Function()? now,
   }) : _loadFile = loadFile ?? DebrifyImageCache.manager.getSingleFile,
        _releaseFile = releaseFile ?? releaseArtworkCacheFile,
-       _cacheBytes = cacheBytes ?? DebrifyImageCache.sizeBytes,
+       _cacheBytes = cacheBytes ?? DebrifyImageCache.admissionSizeBytes,
        _present = present ?? MetadataProviderService.instance.present,
        _openPreferences = openPreferences ?? ProfilePreferences.instance,
        _now = now ?? DateTime.now {
