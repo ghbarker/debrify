@@ -28,6 +28,12 @@ Preparation only requests source listings. Playback, watch-history updates, medi
 
 Source discovery is only one part of starting a movie. Provider authorization, resolving a playable address, player startup, and buffering can still take time.
 
+## TV collections and details
+
+The collection **Lists** view shows each list as its own horizontal row of titles. Cards follow Classic Home's portrait or landscape orientation, and remote navigation moves directly between titles. The existing individual-list layout choices remain available. Row scrolling follows the TV Smooth/Snappy preference.
+
+Showcase movie and series details use larger TV text and controls. This adjustment applies directly to that layout and does not require changing Screen Size or restarting to activate a text-size preference.
+
 ## Optional TMDB setup
 
 You can add your own **TMDB API Read Access Token** on the existing metadata Settings page. The editor masks new input and does not display the saved token. Saving a replacement takes effect without rebuilding the app. Saving an empty value removes your override and falls back to a token bundled in the build, if one exists.
