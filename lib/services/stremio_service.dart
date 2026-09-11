@@ -1,4 +1,6 @@
 import 'metadata_preferences_service.dart';
+import 'dart:async';
+import 'catalog_disk_cache.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -2400,13 +2402,72 @@ class StremioService {
       if (extraParts.isNotEmpty) '${extraParts.join("&")}.json',
     ]).toString();
 
-    final cached = forceRefresh ? null : _catalogCache[url];
+    if (!_catalogDiskSubscribed) {
+      _catalogDiskSubscribed = true;
+      addAddonsChangedListener(CatalogDiskCache.instance.invalidateRequests);
+    }
+    final request = await CatalogDiskCache.instance.request(url, addon, catalog);
+    final key = request.memoryKey;
+    final cached = forceRefresh ? null : _catalogCache[key];
     if (cached != null &&
+        CatalogDiskCache.instance.isCurrent(request) &&
         DateTime.now().difference(cached.fetchedAt) < _catalogCacheTtl) {
       onRawCount?.call(cached.rawCount);
       // Defensive copy — callers sort/filter the returned list.
       return List.of(cached.metas);
     }
+
+    if (!forceRefresh) {
+      final saved = await CatalogDiskCache.instance.read(request, addon);
+      if (saved != null && CatalogDiskCache.instance.isCurrent(request)) {
+        _cacheCatalogPage(key, saved.items, saved.rawCount,
+          fetchedAt: saved.fetchedAt);
+        // No UI callback/list replacement: focused rows retain their snapshot.
+        // A later visit can consume the refreshed cache in its normal load path.
+        unawaited(_refreshCatalog(url, addon, request));
+        onRawCount?.call(saved.rawCount);
+        return List.of(saved.items);
+      }
+    }
+    return _refreshCatalog(url, addon, request,
+      onRawCount: onRawCount, forceRefresh: forceRefresh);
+  }
+
+  bool _catalogDiskSubscribed = false;
+  final _catalogRefreshes = <String, Future<List<StremioMeta>>>{};
+  final _catalogWriters = <String, Object>{};
+
+  Future<List<StremioMeta>> _refreshCatalog(String url, StremioAddon addon,
+      CatalogCacheRequest request, {void Function(int)? onRawCount,
+      bool forceRefresh = false}) async {
+    final key = request.memoryKey;
+    final existing = forceRefresh ? null : _catalogRefreshes[key];
+    if (existing != null) {
+      final items = await existing;
+      if (!CatalogDiskCache.instance.isCurrent(request)) return [];
+      final page = _catalogCache[key];
+      if (page != null) onRawCount?.call(page.rawCount);
+      return List.of(items);
+    }
+    final token = Object();
+    _catalogWriters[key] = token;
+    bool current() => identical(_catalogWriters[key], token) &&
+        CatalogDiskCache.instance.isCurrent(request);
+    final work = _fetchCatalogNetwork(url, addon, request,
+      current: current, onRawCount: onRawCount);
+    _catalogRefreshes[key] = work;
+    try {
+      return await work;
+    } finally {
+      if (identical(_catalogRefreshes[key], work)) _catalogRefreshes.remove(key);
+      if (identical(_catalogWriters[key], token)) _catalogWriters.remove(key);
+    }
+  }
+
+  Future<List<StremioMeta>> _fetchCatalogNetwork(String url, StremioAddon addon,
+      CatalogCacheRequest cacheRequest, {required bool Function() current,
+      void Function(int)? onRawCount}) async {
+    if (!current()) return [];
 
     debugPrint('StremioService: Fetching catalog');
 
@@ -2421,7 +2482,8 @@ class StremioService {
         final streamedResponse = await client
             .send(request)
             .timeout(_requestTimeout);
-        final response = await http.Response.fromStream(streamedResponse);
+        final response = await http.Response.fromStream(streamedResponse)
+            .timeout(_requestTimeout);
 
         if (response.statusCode != 200) {
           debugPrint(
@@ -2431,15 +2493,20 @@ class StremioService {
         }
 
         final Map<String, dynamic> data = await decodeJsonAsync(response.body);
-        // Some addons signal exhaustion with {} or metas: null. Match the
-        // catalog browsers' empty-list convention while rejecting wrong types.
-        final metasRaw = data['metas'] ?? const <dynamic>[];
+        // Error envelopes and missing payloads may look empty, but must not
+        // become a persisted "exhausted" page. Only an explicit list is cached.
+        if (data['error'] != null || data['success'] == false) return [];
+        final metasRaw = data['metas'];
+        if (metasRaw == null) { onRawCount?.call(0); return []; }
         if (metasRaw is! List) return [];
-        onRawCount?.call(metasRaw.length);
+        if (!current()) return [];
 
         if (metasRaw.isEmpty) {
           debugPrint('StremioService: Catalog returned no items');
-          _cacheCatalogPage(url, const [], 0);
+          _cacheCatalogPage(cacheRequest.memoryKey, const [], 0);
+          await CatalogDiskCache.instance.write(cacheRequest, addon, const [], 0,
+            stillCurrent: current);
+          if (current()) onRawCount?.call(0);
           return [];
         }
 
@@ -2457,7 +2524,12 @@ class StremioService {
         debugPrint(
           'StremioService: Catalog returned ${metas.length} valid items',
         );
-        _cacheCatalogPage(url, metas, metasRaw.length);
+        if (!current()) return [];
+        _cacheCatalogPage(cacheRequest.memoryKey, metas, metasRaw.length);
+        await CatalogDiskCache.instance.write(cacheRequest, addon, metas, metasRaw.length,
+          stillCurrent: current);
+        if (!current()) return [];
+        onRawCount?.call(metasRaw.length);
         return List.of(metas);
       } finally {
         client.close();
@@ -2469,7 +2541,8 @@ class StremioService {
     }
   }
 
-  void _cacheCatalogPage(String url, List<StremioMeta> metas, int rawCount) {
+  void _cacheCatalogPage(String url, List<StremioMeta> metas, int rawCount,
+      {DateTime? fetchedAt}) {
     if (_catalogCache.length >= _catalogCacheMax) {
       // Evict expired entries first, then the oldest, to stay under the cap.
       final now = DateTime.now();
@@ -2483,7 +2556,7 @@ class StremioService {
     _catalogCache[url] = (
       metas: metas,
       rawCount: rawCount,
-      fetchedAt: DateTime.now(),
+      fetchedAt: fetchedAt ?? DateTime.now(),
     );
   }
 
