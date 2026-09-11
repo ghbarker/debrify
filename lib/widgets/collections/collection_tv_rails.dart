@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
@@ -15,6 +16,7 @@ import '../../utils/home_rail_metrics.dart';
 import '../../utils/tv_keys.dart';
 import '../home/card_focus_rise.dart';
 import '../metadata_presentation_mixin.dart';
+import '../scroll_deferred_image.dart';
 
 class CollectionTvRail {
   const CollectionTvRail({
@@ -546,6 +548,9 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
                                       ),
                                     ),
                                     child: _RailArtwork(
+                                      scrolling: _vertical
+                                          .position
+                                          .isScrollingNotifier,
                                       item: item,
                                       wide: widget.landscapeCards,
                                       showIdentity: widget.showCardIdentity,
@@ -765,12 +770,14 @@ class _RailSimulation extends Simulation {
 /// a title card's physical width rather than a full gallery/hero backdrop.
 class _RailArtwork extends StatefulWidget {
   const _RailArtwork({
+    required this.scrolling,
     required this.item,
     required this.wide,
     required this.decodeWidth,
     required this.showIdentity,
   });
   final StremioMeta item;
+  final ValueListenable<bool> scrolling;
   final bool wide, showIdentity;
   final int decodeWidth;
   @override
@@ -801,22 +808,34 @@ class _RailArtworkState extends State<_RailArtwork>
       color: Color(0xFF1D1B2E),
       child: Center(child: Icon(Icons.image_outlined, color: Colors.white24)),
     );
-    Widget image(String value, {bool retry = true}) => CachedNetworkImage(
-      imageUrl: value,
-      cacheManager: DebrifyImageCache.manager,
-      memCacheWidth: widget.decodeWidth,
-      fit: BoxFit.cover,
-      fadeInDuration: MediaQuery.disableAnimationsOf(context)
-          ? Duration.zero
-          : const Duration(milliseconds: 120),
-      fadeInCurve: Curves.easeOut,
-      // Only the arriving image fades; the default 1 s placeholder fade would
-      // cover that short reveal and add another opacity layer to every card.
-      fadeOutDuration: Duration.zero,
-      placeholder: (_, _) => placeholder,
-      errorWidget: (_, _, _) => retry && fallback != null && fallback != value
-          ? image(fallback, retry: false)
-          : placeholder,
+    Widget image(String value, {bool retry = true}) => ScrollDeferredImage(
+      scrolling: widget.scrolling,
+      image: ResizeImage.resizeIfNeeded(
+        widget.decodeWidth,
+        null,
+        CachedNetworkImageProvider(
+          value,
+          cacheManager: DebrifyImageCache.manager,
+        ),
+      ),
+      placeholder: placeholder,
+      child: CachedNetworkImage(
+        imageUrl: value,
+        cacheManager: DebrifyImageCache.manager,
+        memCacheWidth: widget.decodeWidth,
+        fit: BoxFit.cover,
+        fadeInDuration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 120),
+        fadeInCurve: Curves.easeOut,
+        // Only the arriving image fades; the default 1 s placeholder fade would
+        // cover that short reveal and add another opacity layer to every card.
+        fadeOutDuration: Duration.zero,
+        placeholder: (_, _) => placeholder,
+        errorWidget: (_, _, _) => retry && fallback != null && fallback != value
+            ? image(fallback, retry: false)
+            : placeholder,
+      ),
     );
     final rating = item.imdbRating;
     // These shelves have no hero to identify the focused title. Keep identity
