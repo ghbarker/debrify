@@ -32,8 +32,10 @@ DetailModel _model(
   bool playing = false,
   bool series = false,
   bool logo = false,
+  bool allTrackers = false,
   VoidCallback? play,
   VoidCallback? trailer,
+  VoidCallback? more,
 }) => DetailModel(
   item: StremioMeta(
     id: 'readability-fixture',
@@ -56,16 +58,16 @@ DetailModel _model(
   ),
   parentsGuide: null,
   recommendations: const [],
-  primaryLabel: 'Play',
+  primaryLabel: allTrackers ? 'Resume · S12E123' : 'Play',
   sourceCount: 0,
   hasTrailer: true,
   trailerBusy: false,
   trailerPlaying: playing,
-  hasTrakt: false,
+  hasTrakt: allTrackers,
   traktTracked: false,
   traktLabel: '',
   traktRating: null,
-  hasSimkl: false,
+  hasSimkl: allTrackers,
   simklTracked: false,
   simklLabel: '',
   simklRating: null,
@@ -74,10 +76,12 @@ DetailModel _model(
   onBrowse: () {},
   onTrailer: trailer ?? () {},
   onSelectSource: () {},
-  onAppMenu: () {},
+  onAppMenu: more ?? () {},
   onTraktMenu: () {},
   onSimklMenu: () {},
   onTrackers: () {},
+  onTrackersSecondary: allTrackers ? () {} : null,
+  onTrackersTertiary: allTrackers ? () {} : null,
   onToggleMyWatchlist: () {},
   onMetadataExplore: () {},
   onRecommendationTap: (_) {},
@@ -193,6 +197,123 @@ Future<void> _dispose(WidgetTester tester, DetailFocusCoordinator focus) async {
 }
 
 void main() {
+  for (final disposeDuringExpansion in [false, true]) {
+    testWidgets(
+      'pending action reveal ignores ${disposeDuringExpansion ? 'disposal' : 'lost focus'}',
+      (tester) async {
+        final focus = DetailFocusCoordinator(
+          backNode: FocusNode(),
+          primaryEntry: FocusNode(),
+        );
+        await _mount(
+          tester,
+          _model(focus, tv: true, allTrackers: true),
+          const Size(640, 360),
+        );
+        for (var i = 0; i < 7; i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+          await tester.pumpAndSettle();
+        }
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 40));
+        if (disposeDuringExpansion) {
+          await _dispose(tester, focus);
+        } else {
+          focus.backNode.requestFocus();
+          await tester.pump();
+          final page = tester.state<ScrollableState>(
+            find
+                .descendant(
+                  of: find.byType(DetailShowcase),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          );
+          final before = page.position.pixels;
+          await tester.pumpAndSettle();
+          expect(focus.backNode.hasFocus, isTrue);
+          expect(
+            page.position.pixels,
+            before,
+            reason:
+                'The old More expansion must not scroll after focus leaves it',
+          );
+          await _dispose(tester, focus);
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final size in [
+    const Size(640, 360),
+    const Size(700, 394),
+    const Size(720, 405),
+    const Size(854, 480),
+    const Size(960, 540),
+    const Size(1280, 720),
+  ]) {
+    testWidgets('wrapped TV actions reveal the focused control at $size', (
+      tester,
+    ) async {
+      final focus = DetailFocusCoordinator(
+        backNode: FocusNode(),
+        primaryEntry: FocusNode(),
+      );
+      var more = 0;
+      await _mount(
+        tester,
+        _model(focus, tv: true, allTrackers: true, more: () => more++),
+        size,
+      );
+      void expectVisible(int index) {
+        final node = FocusManager.instance.primaryFocus!;
+        final box = node.context!.findRenderObject() as RenderBox;
+        final rect = box.localToGlobal(Offset.zero) & box.size;
+        expect(
+          rect.left,
+          greaterThanOrEqualTo(-.01),
+          reason: 'action $index: $rect',
+        );
+        expect(
+          rect.right,
+          lessThanOrEqualTo(size.width + .01),
+          reason: 'action $index: $rect',
+        );
+        expect(
+          rect.top,
+          greaterThanOrEqualTo(-.01),
+          reason: 'action $index: $rect',
+        );
+        expect(
+          rect.bottom,
+          lessThanOrEqualTo(size.height + .01),
+          reason: 'action $index: $rect',
+        );
+        expect(tester.takeException(), isNull);
+      }
+
+      for (var i = 0; i < 9; i++) {
+        expectVisible(i);
+        if (i < 8) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+          await tester.pumpAndSettle();
+        }
+      }
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      expect(more, 1, reason: 'The visible More control activates normally');
+      for (var i = 7; i >= 0; i--) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+        await tester.pumpAndSettle();
+        expectVisible(i);
+      }
+      expect(focus.primaryEntry.hasFocus, isTrue);
+      await _dispose(tester, focus);
+    });
+  }
+
   for (final size in [
     const Size(960, 540),
     const Size(1280, 720),

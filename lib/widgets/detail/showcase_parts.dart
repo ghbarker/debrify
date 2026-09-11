@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderAbstractViewport;
 import 'package:flutter/services.dart';
 
 import '../../models/stremio_addon.dart';
@@ -1322,6 +1323,34 @@ class _CircleState extends State<_Circle> {
   bool _f = false;
   bool _h = false;
 
+  void _revealTvIdentityAction(BuildContext context) {
+    if (!mounted ||
+        !_f ||
+        !context.mounted ||
+        !ShowcaseMetrics.of(context).tvIdentity) {
+      return;
+    }
+    final scrollable = Scrollable.maybeOf(context, axis: Axis.vertical);
+    final object = context.findRenderObject();
+    if (scrollable == null || object == null || !object.attached) return;
+    final viewport = RenderAbstractViewport.maybeOf(object);
+    if (viewport == null) return;
+    final position = scrollable.position;
+    final start = viewport
+        .getOffsetToReveal(object, 0, axis: Axis.vertical)
+        .offset;
+    // Focus expands the pill and may wrap it onto another line. Reveal its
+    // final bounds in either direction, without moving an already visible
+    // action or changing the horizontal rails' separate scrolling policy.
+    position.ensureVisible(
+      object,
+      duration: const Duration(milliseconds: 140),
+      alignmentPolicy: start < position.pixels
+          ? ScrollPositionAlignmentPolicy.keepVisibleAtStart
+          : ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Focus(
     focusNode: widget.node,
@@ -1370,6 +1399,7 @@ class _CircleState extends State<_Circle> {
                 duration: const Duration(milliseconds: 140),
                 curve: Curves.easeOutCubic,
                 alignment: Alignment.centerLeft,
+                onEnd: () => _revealTvIdentityAction(context),
                 child: labelled
                     ? Padding(
                         padding: EdgeInsets.symmetric(horizontal: 10 * m.k),
