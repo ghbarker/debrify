@@ -47,6 +47,23 @@ class _LeaseBudget extends ArtworkCacheBudget {
   }
 }
 
+class _CountingAddon extends StremioAddon {
+  _CountingAddon(String resource)
+    : super(
+        id: 'same',
+        name: 'Synthetic',
+        manifestUrl: 'https://art.test/manifest.json',
+        baseUrl: 'https://art.test',
+        connectionResourceId: resource,
+      );
+  int hashes = 0;
+  @override
+  String get sourceBindingKey {
+    hashes++;
+    return super.sourceBindingKey;
+  }
+}
+
 void main() {
   late ValueNotifier<bool> scrolling;
   late CollectionArtworkWarmup warmup;
@@ -110,6 +127,39 @@ void main() {
     warmup.didChangeAppLifecycleState(AppLifecycleState.resumed);
     await tester.pump();
   }
+
+  testWidgets(
+    'large snapshots hash each immutable source once without merging resources',
+    (tester) async {
+      var total = 0;
+      await start(tester, onProgress: (_, count) => total = count);
+      scrolling.value = true;
+      final first = _CountingAddon('first'), second = _CountingAddon('second');
+      expect(
+        first == second,
+        isTrue,
+      ); // Model equality omits resource identity.
+      List<StremioMeta> snapshot(StremioAddon source) => List.generate(
+        1000,
+        (index) => StremioMeta(
+          id: '$index',
+          type: 'movie',
+          name: 'Synthetic',
+          poster: 'https://art.test/$index.jpg',
+          sourceAddon: source,
+        ),
+      );
+      final items = snapshot(first);
+      warmup.update(items, landscape: false);
+      warmup.update(items, landscape: false);
+      expect(first.hashes, 1);
+      warmup.update([...items, ...snapshot(second)], landscape: false);
+      expect(first.hashes, 1);
+      expect(second.hashes, 1);
+      expect(total, 2000);
+      warmup.dispose();
+    },
+  );
 
   testWidgets(
     'progress is numeric and observer failures do not stop the queue',

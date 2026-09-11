@@ -76,6 +76,9 @@ class CollectionArtworkWarmup with WidgetsBindingObserver {
   final Future<ProfilePreferences> Function() _openPreferences;
   final DateTime Function() _now;
   Map<_ItemKey, StremioMeta> _items = {};
+  // Add-on configuration is immutable. Its digest is shared by every title;
+  // hashing it per item would put bulk CPU work back into the row build.
+  final _sourceKeys = Expando<String>();
   final _done = <_ItemKey>{};
   final _urls = <String>{};
   final _failures = <_ItemKey, int>{};
@@ -100,13 +103,16 @@ class CollectionArtworkWarmup with WidgetsBindingObserver {
     _schedule();
   }
 
-  static _ItemKey _key(StremioMeta item) => (
+  _ItemKey _key(StremioMeta item) => (
     item.type,
     item.id,
     item.imdbId,
     item.poster,
     item.background,
-    item.sourceAddon?.sourceBindingKey,
+    item.sourceAddon == null
+        ? null
+        : (_sourceKeys[item.sourceAddon!] ??=
+              item.sourceAddon!.sourceBindingKey),
   );
 
   void update(Iterable<StremioMeta> items, {required bool landscape}) {
