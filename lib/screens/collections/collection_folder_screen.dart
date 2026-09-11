@@ -1,14 +1,15 @@
 import '../../widgets/see_all/see_all_header.dart';
-import '../../services/storage_service.dart';
 import '../../widgets/collections/tv_collection_titles.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:isolate';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../models/home_collection.dart';
 import '../../widgets/collections/collection_list_gallery.dart';
+import '../../widgets/collections/collection_tv_rails.dart';
 import '../../widgets/collections/collection_browser_hero.dart';
 import '../../models/stremio_addon.dart';
 import '../../services/analytics_service.dart';
@@ -18,6 +19,7 @@ import '../../services/watched_filter.dart';
 import '../../services/main_page_bridge.dart';
 import '../../services/home_collections_store.dart';
 import '../../services/stremio_service.dart';
+import '../../services/storage_service.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../services/collection_native_source_service.dart';
 import '../../widgets/see_all/discover_card_settings_scope.dart';
@@ -27,7 +29,29 @@ import '../../widgets/see_all/see_all_poster_grid.dart';
 import '../../widgets/see_all/stremio_dropdown.dart';
 import '../../widgets/skeleton_poster.dart';
 
-/// Collection folders open as artwork galleries; each list opens a full grid.
+Future<String> _configurationSignatureFor(
+  HomeCollection collection,
+  List<StremioAddon> addons,
+  CollectionFolderLayout layout,
+  HomeCardOrientation orientation,
+  String tvStyle,
+) {
+  String encode() => jsonEncode({
+    'collection': collection.toJson()..remove('importedAt'),
+    'addons': [for (final addon in addons) addon.toJson()],
+    'layout': layout.name,
+    'orientation': orientation.name,
+    'tvStyle': tvStyle,
+  });
+  // Imported packs can contain thousands of catalogs/sources. Keep their
+  // complete change detection, but not their serialization on the UI isolate.
+  final catalogs = addons.fold(0, (count, a) => count + a.catalogs.length);
+  return catalogs + collection.sourceCount > 100
+      ? Isolate.run(encode)
+      : Future.value(encode());
+}
+
+/// TV folders use title rails; phones retain the gallery of catalog lists.
 /// Existing tabbed and merged views retain their paging and filter semantics.
 class CollectionFolderScreen extends StatefulWidget {
   final HomeCollection collection;
@@ -193,6 +217,8 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   List<_Rail> _rails = const [];
   List<String> _unresolved = const [];
   GlobalKey<CollectionListGalleryState> _galleryKey = GlobalKey();
+  GlobalKey<CollectionTvRailsState> _tvRailsKey = GlobalKey();
+  HomeCardOrientation _orientation = HomeCardOrientation.landscape;
   bool _initialGridFocus = false;
   GlobalKey<SeeAllPosterGridState> _tabGridKey = GlobalKey();
 
@@ -271,6 +297,9 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
           : 'grid';
       final addons = await _stremio.getAddons();
       final layout = await HomeCollectionsStore.instance.getFolderLayout();
+      final orientation = widget.isTelevision
+          ? await StorageService.getHomeCardOrientation()
+          : HomeCardOrientation.landscape;
       HomeCollection? updated;
       if (refreshCollection) {
         final collections = await HomeCollectionsStore.instance
@@ -285,11 +314,11 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
           ? updated ??
                 HomeCollection(id: _collection.id, title: _collection.title)
           : _collection;
-      final signature = jsonEncode({
-        'collection': candidate.toJson()..remove('importedAt'),
-        'addons': [for (final addon in addons) addon.toJson()],
-        'layout': layout.name,
-      });
+      final signature = await _configurationSignatureFor(
+        candidate, addons, layout, orientation, tvStyle,
+      );
+      if (!mounted || generation != _configurationToken) return;
+      HomeCollectionsStore.checkSession(session);
       if (_configurationError == null && signature == _configurationSignature) {
         return;
       }
@@ -301,6 +330,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
           FocusScope.of(context).hasFocus;
       final folderId = _hasFolders ? _folder.id : null;
       _addons = addons;
+      _orientation = orientation;
       _layout = widget.sourceKey != null
           ? CollectionFolderLayout.tabs
           : switch (candidate.viewMode?.toUpperCase()) {
@@ -413,6 +443,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
       _tabGridKey = GlobalKey();
       _tvTitlesKey = GlobalKey();
       _galleryKey = GlobalKey();
+      _tvRailsKey = GlobalKey();
       _allGridKey = GlobalKey();
       if (!_collection.showAllTab || rails.length < 2) _view = _View.lists;
     });
@@ -785,6 +816,10 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
               !_railCanContinue(r) &&
               _displayItems(r.items).isEmpty);
     }
+    if (widget.isTelevision) {
+      return !_rails.any((r) => r.loadingInitial || _railCanContinue(r) ||
+          _displayItems(r.items).isNotEmpty);
+    }
     return _visibleRails.isEmpty;
   }
 
@@ -816,7 +851,11 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
       _retryNode.requestFocus();
       return;
     }
-    _galleryKey.currentState?.focusFirst();
+    if (widget.isTelevision) {
+      _tvRailsKey.currentState?.focusFirst();
+    } else {
+      _galleryKey.currentState?.focusFirst();
+    }
   }
 
   /// The chip the grid hands focus back to on DPAD-up.
@@ -1039,9 +1078,10 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
                   value: _view,
                   isTelevision: widget.isTelevision,
                   focusNode: _viewNode,
-                  options: const [
-                    StremioDropdownOption(_View.lists, 'Gallery'),
-                    StremioDropdownOption(_View.all, 'All'),
+                  options: [
+                    StremioDropdownOption(_View.lists,
+                        widget.isTelevision ? 'Lists' : 'Gallery'),
+                    const StremioDropdownOption(_View.all, 'All'),
                   ],
                   onSelected: _onViewChanged,
                 ),
@@ -1087,6 +1127,34 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   Widget _buildLists() {
     final rails = _visibleRails;
     if (rails.isEmpty) return _buildEmpty();
+    if (widget.isTelevision) {
+      final visible = <CollectionTvRail>[];
+      for (final r in rails) {
+        final items = _displayItems(r.items);
+        if (items.isEmpty && !r.loadingInitial && !r.loadingMore &&
+            _railCanContinue(r)) {
+          _continueEmptyPage(r, () => _rails.contains(r), () => _loadMoreRail(r));
+        }
+        visible.add(CollectionTvRail(
+          id: r.source.key,
+          title: r.title,
+          items: items,
+          loading: r.loadingInitial || r.loadingMore,
+          onLoadMore: () => _loadMoreRail(r),
+        ));
+      }
+      if (_showingEmpty) return _buildEmpty();
+      return CollectionTvRails(
+        key: _tvRailsKey,
+        rails: visible,
+        landscapeCards: _orientation == HomeCardOrientation.landscape,
+        onOpen: _openItem,
+        onQuickPlay: widget.onQuickPlay == null ? null : _quickPlay,
+        onItemFocused: widget.onItemFocused,
+        isBound: widget.isBound,
+        onExitTop: () => _folderNode.requestFocus(),
+      );
+    }
     return CollectionListGallery(
       key: _galleryKey,
       lists: [

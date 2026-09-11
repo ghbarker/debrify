@@ -1,0 +1,552 @@
+import 'dart:async';
+
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
+import 'package:flutter/services.dart';
+
+import '../../models/stremio_addon.dart';
+import '../../models/metadata_preferences.dart';
+import '../../services/debrify_image_cache.dart';
+import '../../theme/app_motion.dart';
+import '../../theme/app_theme_scope.dart';
+import '../../utils/home_rail_metrics.dart';
+import '../../utils/tv_keys.dart';
+import '../home/card_focus_rise.dart';
+import '../metadata_presentation_mixin.dart';
+
+class CollectionTvRail {
+  const CollectionTvRail({
+    required this.id,
+    required this.title,
+    required this.items,
+    required this.loading,
+    required this.onLoadMore,
+  });
+  final String id, title;
+  final List<StremioMeta> items;
+  final bool loading;
+  final VoidCallback onLoadMore;
+}
+
+/// TV title shelves. Headers are labels; only cards take content focus.
+/// This owner moves the vertical viewport, each row moves only horizontally.
+class CollectionTvRails extends StatefulWidget {
+  const CollectionTvRails({
+    super.key,
+    required this.rails,
+    required this.landscapeCards,
+    required this.onOpen,
+    required this.onExitTop,
+    this.onQuickPlay,
+    this.onItemFocused,
+    this.isBound,
+  });
+  final List<CollectionTvRail> rails;
+  final bool landscapeCards;
+  final ValueChanged<StremioMeta> onOpen;
+  final ValueChanged<StremioMeta>? onQuickPlay, onItemFocused;
+  final VoidCallback onExitTop;
+  final bool Function(StremioMeta)? isBound;
+
+  @override
+  State<CollectionTvRails> createState() => CollectionTvRailsState();
+}
+
+class _RowFocus {
+  final scroll = ScrollController();
+  final nodes = <String, FocusNode>{};
+  double? target;
+  FocusNode node(StremioMeta item) => nodes.putIfAbsent(
+    '${item.type}:${item.id}',
+    () => FocusNode(debugLabel: 'collection_title_${item.id}'),
+  );
+  void dispose() {
+    scroll.dispose();
+    for (final node in nodes.values) {
+      node.dispose();
+    }
+  }
+}
+
+class CollectionTvRailsState extends State<CollectionTvRails> {
+  final _vertical = ScrollController();
+  final _rows = <String, _RowFocus>{};
+  int _row = 0, _column = 0, _generation = 0;
+  bool _waitingForItems = false;
+  FocusNode? _waitingFrom;
+  void _clearWaiting() {
+    _waitingFrom?.removeListener(_entryFocusChanged);
+    _waitingFrom = null;
+    _waitingForItems = false;
+  }
+
+  void _entryFocusChanged() {
+    if (_waitingFrom?.hasFocus != true) _clearWaiting();
+  }
+
+  double _extent = 0;
+  double? _verticalTarget;
+  Size _card = Size.zero;
+  Duration _duration = Duration.zero;
+  Timer? _hold;
+  ({String rail, StremioMeta item, LogicalKeyboardKey key})? _pressed;
+  bool _holdFired = false;
+
+  void _cancelPress() {
+    _hold?.cancel();
+    _hold = null;
+    _pressed = null;
+    _holdFired = false;
+  }
+
+  bool get _pressIsCurrent {
+    final pressed = _pressed;
+    if (pressed == null || _row >= widget.rails.length) return false;
+    final rail = widget.rails[_row];
+    return rail.id == pressed.rail &&
+        _column < rail.items.length &&
+        rail.items[_column].id == pressed.item.id &&
+        rail.items[_column].type == pressed.item.type;
+  }
+
+  KeyEventResult _activate(KeyEvent event) {
+    if (event is KeyDownEvent && _pressed == null) {
+      final rail = widget.rails[_row];
+      _pressed = (
+        rail: rail.id,
+        item: rail.items[_column],
+        key: event.logicalKey,
+      );
+      _holdFired = false;
+      if (widget.onQuickPlay != null) {
+        _hold = Timer(const Duration(milliseconds: 800), () {
+          if (!mounted ||
+              !_pressIsCurrent ||
+              ModalRoute.of(context)?.isCurrent == false ||
+              !_owner(_row).node(widget.rails[_row].items[_column]).hasFocus) {
+            return;
+          }
+          _holdFired = true;
+          widget.onQuickPlay!(widget.rails[_row].items[_column]);
+        });
+      }
+    } else if (event is KeyUpEvent && event.logicalKey == _pressed?.key) {
+      final open = _pressIsCurrent && !_holdFired;
+      _cancelPress();
+      if (open) widget.onOpen(widget.rails[_row].items[_column]);
+    }
+    return KeyEventResult.handled;
+  }
+
+  _RowFocus _owner(int row) =>
+      _rows.putIfAbsent(widget.rails[row].id, _RowFocus.new);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _duration = AppMotion.of(
+      context,
+    ).scrollTempo(true, const Duration(milliseconds: 220));
+  }
+
+  @override
+  void didUpdateWidget(CollectionTvRails oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Late watched/identity updates can remove a card without replacing the
+    // rail. Preserve the selected identity, or focus its surviving neighbour.
+    final hadFocus = _rows.values.any(
+      (r) => r.nodes.values.any((n) => n.hasFocus),
+    );
+    if (_row < oldWidget.rails.length) {
+      final old = oldWidget.rails[_row];
+      final item = _column < old.items.length ? old.items[_column] : null;
+      final nextRow = widget.rails.indexWhere((r) => r.id == old.id);
+      if (nextRow >= 0) {
+        _row = nextRow;
+        final nextItems = widget.rails[_row].items;
+        final nextColumn = nextItems.indexWhere(
+          (m) => m.id == item?.id && m.type == item?.type,
+        );
+        _column = nextColumn >= 0
+            ? nextColumn
+            : _column.clamp(0, nextItems.isEmpty ? 0 : nextItems.length - 1);
+        if (hadFocus && nextColumn < 0) {
+          final generation = ++_generation;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted &&
+                generation == _generation &&
+                ModalRoute.of(context)?.isCurrent != false) {
+              focusFirst();
+            }
+          });
+        }
+      }
+    }
+    final ids = widget.rails.map((r) => r.id).toSet();
+    if (!_pressIsCurrent) _cancelPress();
+    for (final id in _rows.keys.where((id) => !ids.contains(id)).toList()) {
+      _rows.remove(id)!.dispose();
+    }
+    if (_waitingForItems && widget.rails.any((r) => r.items.isNotEmpty)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            _waitingForItems &&
+            ModalRoute.of(context)?.isCurrent != false) {
+          focusFirst();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    ++_generation;
+    _cancelPress();
+    _clearWaiting();
+    _vertical.dispose();
+    for (final row in _rows.values) {
+      row.dispose();
+    }
+    super.dispose();
+  }
+
+  void focusFirst() {
+    final row = widget.rails.indexWhere((r) => r.items.isNotEmpty);
+    _clearWaiting();
+    if (row < 0) {
+      _waitingForItems = true;
+      _waitingFrom = FocusManager.instance.primaryFocus;
+      _waitingFrom?.addListener(_entryFocusChanged);
+      return;
+    }
+    final remembered =
+        _row < widget.rails.length && widget.rails[_row].items.isNotEmpty;
+    _focus(remembered ? _row : row, remembered ? _column : 0);
+  }
+
+  double _offset(
+    ScrollController scroll,
+    double top,
+    double bottom,
+    double? previous,
+  ) {
+    final position = scroll.position;
+    final start = previous ?? position.pixels;
+    return (top < start
+            ? top
+            : bottom > start + position.viewportDimension
+            ? bottom - position.viewportDimension
+            : start)
+        .clamp(0.0, position.maxScrollExtent);
+  }
+
+  void _move(ScrollController scroll, double target, {required bool jump}) {
+    if (jump || _duration == Duration.zero) {
+      scroll.jumpTo(target);
+    } else {
+      unawaited(
+        scroll.animateTo(
+          target,
+          duration: _duration,
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    }
+  }
+
+  void _focus(int row, int column) {
+    if (row < 0 || row >= widget.rails.length) return;
+    final rail = widget.rails[row];
+    if (rail.items.isEmpty) return;
+    _cancelPress();
+    _clearWaiting();
+    _row = row;
+    _column = column.clamp(0, rail.items.length - 1);
+    final item = rail.items[_column];
+    final owner = _owner(row);
+    final node = owner.node(item);
+    final generation = ++_generation;
+    // Offscreen destinations must be mounted before asking for focus. Near
+    // destinations retain the optional Smooth animation; rapid presses replace
+    // the target and invalidate pending focus callbacks, never queue them.
+    if (_vertical.hasClients) {
+      final target = _offset(
+        _vertical,
+        row * _extent,
+        (row + 1) * _extent,
+        _verticalTarget,
+      );
+      if (target != _verticalTarget || node.context == null) {
+        _verticalTarget = target;
+        _move(_vertical, target, jump: node.context == null);
+      }
+    }
+    void finish() {
+      if (!mounted ||
+          generation != _generation ||
+          ModalRoute.of(context)?.isCurrent == false) {
+        return;
+      }
+      if (owner.scroll.hasClients) {
+        final top = 13 + _column * (_card.width + 22);
+        final target = _offset(
+          owner.scroll,
+          top,
+          top + _card.width + 22,
+          owner.target,
+        );
+        if (target != owner.target || node.context == null) {
+          owner.target = target;
+          _move(owner.scroll, target, jump: node.context == null);
+        }
+      }
+      if (node.context != null) {
+        node.requestFocus();
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted &&
+              generation == _generation &&
+              node.context != null &&
+              ModalRoute.of(context)?.isCurrent != false) {
+            node.requestFocus();
+          }
+        });
+      }
+    }
+
+    if (node.context != null) {
+      finish();
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) => finish());
+    }
+  }
+
+  KeyEventResult _key(KeyEvent event) {
+    if (_row >= widget.rails.length ||
+        _column >= widget.rails[_row].items.length) {
+      return KeyEventResult.handled;
+    }
+    if (isActivateOrSpaceKey(event.logicalKey)) return _activate(event);
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
+      final next = _column + (key == LogicalKeyboardKey.arrowRight ? 1 : -1);
+      final rail = widget.rails[_row];
+      _focus(_row, next);
+      if (next >= rail.items.length - 3) rail.onLoadMore();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown) {
+      final direction = key == LogicalKeyboardKey.arrowUp ? -1 : 1;
+      var next = _row + direction;
+      while (next >= 0 &&
+          next < widget.rails.length &&
+          widget.rails[next].items.isEmpty) {
+        next += direction;
+      }
+      if (next < 0) {
+        ++_generation;
+        _cancelPress();
+        _clearWaiting();
+        widget.onExitTop();
+      } else if (next < widget.rails.length) {
+        _focus(next, _column);
+      }
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _card = classicRailCardSize(
+      context,
+      isTelevision: true,
+      landscapeCards: widget.landscapeCards,
+    );
+    final headerHeight = MediaQuery.textScalerOf(context).scale(18) * 1.4;
+    _extent = _card.height + 30 + headerHeight;
+    final app = AppThemeScope.of(context);
+    return ListView.builder(
+      controller: _vertical,
+      itemExtent: _extent,
+      scrollCacheExtent: ScrollCacheExtent.pixels(_extent * 2),
+      padding: const EdgeInsets.only(bottom: 24),
+      itemCount: widget.rails.length,
+      itemBuilder: (context, row) {
+        final rail = widget.rails[row];
+        final owner = _owner(row);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
+              child: SizedBox(
+                height: headerHeight,
+                child: Text(
+                  rail.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: app.core.tx,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(
+              height: _card.height + 14,
+              child: rail.items.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        rail.loading ? 'Loading…' : 'No titles',
+                        style: TextStyle(color: app.fade(app.core.tx, .6)),
+                      ),
+                    )
+                  : ListView.builder(
+                      controller: owner.scroll,
+                      scrollDirection: Axis.horizontal,
+                      itemExtent: _card.width + 22,
+                      scrollCacheExtent: ScrollCacheExtent.pixels(
+                        (_card.width + 22) * 2,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 13),
+                      itemCount: rail.items.length,
+                      itemBuilder: (context, column) {
+                        final item = rail.items[column];
+                        final node = owner.node(item);
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 11),
+                          child: Center(
+                            child: SizedBox(
+                              key: ValueKey(
+                                'collection_card_${rail.id}_${item.id}',
+                              ),
+                              width: _card.width,
+                              height: _card.height,
+                              child: Focus(
+                                focusNode: node,
+                                onKeyEvent: (_, event) => _key(event),
+                                onFocusChange: (focused) {
+                                  if (focused) {
+                                    _row = row;
+                                    _column = column;
+                                    widget.onItemFocused?.call(item);
+                                  } else if (_pressed?.item.id == item.id) {
+                                    _cancelPress();
+                                  }
+                                },
+                                child: GestureDetector(
+                                  onTap: () => widget.onOpen(item),
+                                  onLongPress: widget.onQuickPlay == null
+                                      ? null
+                                      : () => widget.onQuickPlay!(item),
+                                  child: ListenableBuilder(
+                                    listenable: node,
+                                    builder: (_, child) => Semantics(
+                                      label: item.name,
+                                      button: true,
+                                      child: CardFocusRise(
+                                        active: node.hasFocus,
+                                        isTelevision: true,
+                                        aspectRatio: _card.aspectRatio,
+                                        children: [
+                                          child!,
+                                          if (widget.isBound?.call(item) ??
+                                              false)
+                                            const Positioned(
+                                              right: 5,
+                                              top: 5,
+                                              child: Icon(
+                                                Icons.bookmark,
+                                                color: Colors.white,
+                                                size: 18,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    child: _RailArtwork(
+                                      item: item,
+                                      wide: widget.landscapeCards,
+                                      decodeWidth:
+                                          (_card.width *
+                                                  MediaQuery.devicePixelRatioOf(
+                                                    context,
+                                                  ) *
+                                                  1.1)
+                                              .ceil()
+                                              .clamp(1, 1280),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Same profile-aware metadata policy as the collection gallery, decoded for
+/// a title card's physical width rather than a full gallery/hero backdrop.
+class _RailArtwork extends StatefulWidget {
+  const _RailArtwork({
+    required this.item,
+    required this.wide,
+    required this.decodeWidth,
+  });
+  final StremioMeta item;
+  final bool wide;
+  final int decodeWidth;
+  @override
+  State<_RailArtwork> createState() => _RailArtworkState();
+}
+
+class _RailArtworkState extends State<_RailArtwork>
+    with MetadataPresentationMixin<_RailArtwork> {
+  @override
+  StremioMeta get originalMetadata => widget.item;
+
+  @override
+  Widget build(BuildContext context) {
+    final category = widget.wide
+        ? MetadataCategory.backgrounds
+        : MetadataCategory.posters;
+    final item = presentedMetadata!;
+    final fallback =
+        !usesMetadataProvider(category) || metadataPreferences.fallback
+        ? item.poster
+        : null;
+    final url = metadataArtworkPending(category)
+        ? null
+        : widget.wide
+        ? item.background ?? fallback
+        : item.poster;
+    Widget image(String value, {bool retry = true}) => CachedNetworkImage(
+      imageUrl: value,
+      cacheManager: DebrifyImageCache.manager,
+      memCacheWidth: widget.decodeWidth,
+      fit: BoxFit.cover,
+      fadeInDuration: const Duration(milliseconds: 120),
+      placeholder: (_, _) => const SizedBox.shrink(),
+      errorWidget: (_, _, _) => retry && fallback != null && fallback != value
+          ? image(fallback, retry: false)
+          : const SizedBox.shrink(),
+    );
+    return url == null || url.isEmpty ? const SizedBox.shrink() : image(url);
+  }
+}

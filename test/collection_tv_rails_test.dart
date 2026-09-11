@@ -1,0 +1,550 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:isolate';
+
+import 'package:debrify/models/home_collection.dart';
+import 'package:debrify/models/stremio_addon.dart';
+import 'package:debrify/screens/collections/collection_folder_screen.dart';
+import 'package:debrify/services/collection_native_source_service.dart';
+import 'package:debrify/services/home_collections_store.dart';
+import 'package:debrify/services/main_page_bridge.dart';
+import 'package:debrify/services/profiles/profile_scope.dart';
+import 'package:debrify/services/profiles/profile_runtime.dart';
+import 'package:debrify/services/stremio_service.dart';
+import 'package:debrify/services/storage_service.dart';
+import 'package:debrify/services/tv_motion_profile.dart';
+import 'package:debrify/theme/tv_motion_scope.dart';
+import 'package:debrify/widgets/collections/collection_tv_rails.dart';
+import 'package:debrify/widgets/see_all/stremio_dropdown.dart';
+import 'package:debrify/widgets/collections/collection_list_gallery.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class _IsolateProbeCollection extends HomeCollection {
+  _IsolateProbeCollection(this.events, this.uiIsolate, {required super.folders})
+    : super(id: 'large', title: 'Synthetic large collection');
+  final SendPort events, uiIsolate;
+  @override
+  Map<String, dynamic> toJson() {
+    final onUi = Isolate.current.controlPort == uiIsolate;
+    events.send(onUi);
+    if (onUi) throw StateError('Collection encoded on UI isolate');
+    // Hold only the worker so the host can change session while encoding.
+    sleep(const Duration(milliseconds: 100));
+    return super.toJson();
+  }
+}
+
+HomeCollection sampleCollection() => HomeCollection(
+  id: 'sample',
+  title: 'Sample collection',
+  folders: [
+    HomeCollectionFolder(
+      id: 'folder',
+      title: 'Folder',
+      sources: [
+        for (var i = 1; i <= 3; i++)
+          CollectionCatalogSource.fromJson({
+            'provider': 'tmdb',
+            'tmdbSourceType': 'COMPANY',
+            'tmdbId': i,
+            'title': 'List $i',
+          })!,
+      ],
+    ),
+  ],
+);
+
+void main() {
+  setUp(() {
+    ProfileRuntime.initializeLegacy();
+    SharedPreferences.setMockInitialValues({
+      'home_collections_folder_layout': 'rows',
+      'home_card_orientation': 'landscape',
+    });
+    StremioService.instance.invalidateCache();
+  });
+
+  Future<void> mount(
+    WidgetTester tester, {
+    bool tv = true,
+    TvMotionProfile motion = TvMotionProfile.snappy,
+    bool reduced = false,
+    bool route = false,
+    void Function(StremioMeta)? onOpen,
+    void Function(StremioMeta)? onQuickPlay,
+    Future<http.Response> Function(http.Request)? fetch,
+  }) async {
+    tester.view.physicalSize = const Size(960, 540);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final native = CollectionNativeSourceService(
+      tmdbToken: 'synthetic',
+      resolveIds: false,
+      client: MockClient(
+        fetch ??
+            (request) async {
+              final company =
+                  request.url.queryParameters['with_companies'] ?? '1';
+              return http.Response(
+                jsonEncode({
+                  'results': [
+                    for (var i = 0; i < 20; i++)
+                      {
+                        'id': int.parse(company) * 100 + i,
+                        'title': 'Movie $company/$i',
+                      },
+                  ],
+                  'total_pages': 1,
+                }),
+                200,
+              );
+            },
+      ),
+    );
+    addTearDown(native.close);
+    Widget screen() => MediaQuery(
+      data: MediaQueryData(
+        size: const Size(960, 540),
+        disableAnimations: reduced,
+      ),
+      child: TvMotionScope(
+        profile: motion,
+        child: CollectionFolderScreen(
+          collection: sampleCollection(),
+          nativeSources: native,
+          isTelevision: tv,
+          onOpenItem: onOpen ?? (_) {},
+          onQuickPlay: onQuickPlay,
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: route
+            ? Builder(
+                builder: (context) => Scaffold(
+                  body: TextButton(
+                    onPressed: () => Navigator.of(
+                      context,
+                    ).push(MaterialPageRoute<void>(builder: (_) => screen())),
+                    child: const Text('Open folder'),
+                  ),
+                ),
+              )
+            : screen(),
+      ),
+    );
+    if (route) {
+      await tester.tap(find.text('Open folder'));
+    }
+    await tester.pumpAndSettle();
+    addTearDown(() => tester.pumpWidget(const SizedBox()));
+  }
+
+  FocusNode folderNode(WidgetTester tester) => tester
+      .widgetList<StremioDropdown<int>>(find.byType(StremioDropdown<int>))
+      .firstWhere((d) => d.label == 'Folder')
+      .focusNode!;
+
+  Future<void> enter(WidgetTester tester) async {
+    folderNode(tester).requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(
+      FocusManager.instance.primaryFocus?.debugLabel,
+      'collection_title_tmdb:100',
+    );
+  }
+
+  ScrollPosition vertical(WidgetTester tester) => tester
+      .stateList<ScrollableState>(
+        find.descendant(
+          of: find.byType(CollectionTvRails),
+          matching: find.byType(Scrollable),
+        ),
+      )
+      .singleWhere((s) => s.axisDirection == AxisDirection.down)
+      .position;
+
+  testWidgets('TV rows are title shelves, not list gallery navigation', (
+    tester,
+  ) async {
+    await mount(tester);
+    expect(find.byType(CollectionListGallery), findsNothing);
+    final horizontal = tester
+        .widgetList<Scrollable>(find.byType(Scrollable))
+        .where((s) => s.axisDirection == AxisDirection.right);
+    expect(horizontal.length, greaterThanOrEqualTo(2));
+    expect(find.text('List 1'), findsOneWidget);
+    expect(find.text('List 2'), findsOneWidget);
+  });
+
+  testWidgets('phone keeps list gallery', (tester) async {
+    await mount(tester, tv: false);
+    expect(find.byType(CollectionListGallery), findsOneWidget);
+  });
+
+  testWidgets(
+    'DPAD skips inert headers, carries column and returns from a title route',
+    (tester) async {
+      final opened = <String>[];
+      await mount(
+        tester,
+        route: true,
+        onOpen: (item) {
+          opened.add(item.id);
+          Navigator.of(
+            tester.element(find.byType(CollectionFolderScreen)),
+          ).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const Scaffold(body: Text('Detail')),
+            ),
+          );
+        },
+      );
+      await enter(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'collection_title_tmdb:201',
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(opened, ['tmdb:201']);
+      expect(find.text('Detail'), findsOneWidget);
+      Navigator.of(tester.element(find.text('Detail'))).pop();
+      await tester.pumpAndSettle();
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'collection_title_tmdb:201',
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'collection_title_tmdb:101',
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      expect(folderNode(tester).hasFocus, isTrue);
+    },
+  );
+
+  for (final landscape in [true, false]) {
+    testWidgets(
+      'Classic Home card geometry and artwork orientation: landscape=$landscape',
+      (tester) async {
+        await StorageService.setHomeCardOrientation(
+          landscape
+              ? HomeCardOrientation.landscape
+              : HomeCardOrientation.portrait,
+        );
+        await mount(tester);
+        final card = find.byWidgetPredicate(
+          (w) =>
+              w is SizedBox &&
+              w.key.toString().contains('collection_card_') &&
+              w.key.toString().contains('_tmdb:100'),
+        );
+        expect(card, findsOneWidget);
+        final expectedWidth = landscape ? 92 * 1.6 : 92.0;
+        final size = tester.getSize(card);
+        expect(size.width, closeTo(expectedWidth, .001));
+        expect(
+          size.height,
+          closeTo(expectedWidth / (landscape ? 16 / 9 : 2 / 3), .001),
+        );
+        expect(
+          tester
+              .widget<CollectionTvRails>(find.byType(CollectionTvRails))
+              .landscapeCards,
+          landscape,
+        );
+      },
+    );
+  }
+
+  testWidgets(
+    'held DPAD crosses unmounted horizontal items and later rails without stale focus',
+    (tester) async {
+      await mount(tester);
+      await enter(tester);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowRight);
+      for (var i = 0; i < 16; i++) {
+        await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump(const Duration(milliseconds: 1));
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'collection_title_tmdb:117',
+      );
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'collection_title_tmdb:317',
+      );
+      expect(vertical(tester).pixels, greaterThan(0));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final mode in [TvMotionProfile.snappy, TvMotionProfile.smooth]) {
+    for (final reduced in [false, true]) {
+      testWidgets('vertical owner honors $mode reduced=$reduced', (
+        tester,
+      ) async {
+        await StorageService.setHomeCardOrientation(
+          HomeCardOrientation.portrait,
+        );
+        await mount(tester, motion: mode, reduced: reduced);
+        await enter(tester);
+        final position = vertical(tester);
+        final before = position.pixels;
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 60));
+        final intermediate = position.pixels;
+        await tester.pumpAndSettle();
+        final end = position.pixels;
+        expect(end, greaterThan(before));
+        if (mode == TvMotionProfile.smooth && !reduced) {
+          expect(intermediate, greaterThan(before));
+          expect(intermediate, lessThan(end));
+        } else {
+          expect(intermediate, end);
+        }
+        expect(
+          FocusManager.instance.primaryFocus?.debugLabel,
+          'collection_title_tmdb:200',
+        );
+      });
+    }
+  }
+
+  testWidgets('Select hold quick-plays once; arrows cancel a pending hold', (
+    tester,
+  ) async {
+    final opened = <String>[], played = <String>[];
+    await mount(
+      tester,
+      onOpen: (m) => opened.add(m.id),
+      onQuickPlay: (m) => played.add(m.id),
+    );
+    await enter(tester);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+    await tester.pump(const Duration(milliseconds: 850));
+    await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+    expect(played, ['tmdb:100']);
+    expect(opened, isEmpty);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump(const Duration(milliseconds: 850));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+    expect(played, ['tmdb:100']);
+    expect(opened, isEmpty);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    expect(opened, ['tmdb:101']);
+  });
+
+  testWidgets(
+    'late first pages do not steal focus after exiting waiting content',
+    (tester) async {
+      final response = Completer<http.Response>();
+      await mount(tester, fetch: (_) => response.future);
+      folderNode(tester).requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      final before = FocusManager.instance.primaryFocus;
+      expect(before?.debugLabel, 'collection_back');
+      response.complete(
+        http.Response(
+          '{"results":[{"id":42,"title":"Late title"}],"total_pages":1}',
+          200,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(FocusManager.instance.primaryFocus, same(before));
+    },
+  );
+
+  testWidgets('Down while loading enters first titles once they arrive', (
+    tester,
+  ) async {
+    final response = Completer<http.Response>();
+    await mount(tester, fetch: (_) => response.future);
+    folderNode(tester).requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    response.complete(
+      http.Response(
+        '{"results":[{"id":42,"title":"Late title"}],"total_pages":1}',
+        200,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      FocusManager.instance.primaryFocus?.debugLabel,
+      'collection_title_tmdb:42',
+    );
+  });
+
+  testWidgets(
+    'unchanged live configuration retains rails/focus; orientation change rebuilds safely',
+    (tester) async {
+      await HomeCollectionsStore.instance.saveCollections([sampleCollection()]);
+      await mount(tester);
+      await enter(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      final focus = FocusManager.instance.primaryFocus;
+      final state = tester.state(find.byType(CollectionTvRails));
+      MainPageBridge.notifyHomeSettingsChanged();
+      await tester.pumpAndSettle();
+      expect(tester.state(find.byType(CollectionTvRails)), same(state));
+      expect(FocusManager.instance.primaryFocus, same(focus));
+      await StorageService.setHomeCardOrientation(HomeCardOrientation.portrait);
+      MainPageBridge.notifyHomeSettingsChanged();
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<CollectionTvRails>(find.byType(CollectionTvRails))
+            .landscapeCards,
+        isFalse,
+      );
+      expect(folderNode(tester).hasFocus, isTrue);
+      await HomeCollectionsStore.instance.saveCollections([]);
+      MainPageBridge.notifyHomeSettingsChanged();
+      await tester.pumpAndSettle();
+      expect(find.byType(CollectionTvRails), findsNothing);
+      expect(find.text('This collection has no folders'), findsOneWidget);
+    },
+  );
+
+  for (final changedSession in [false, true]) {
+    testWidgets(
+      '2250 catalogs / 1190 sources encode off UI; changed session=$changedSession',
+      (tester) async {
+        late ReceivePort events;
+        late Completer<bool> encodedOnUi;
+        await tester.runAsync(() async {
+          events = ReceivePort();
+          encodedOnUi = Completer<bool>();
+          events.listen((value) => encodedOnUi.complete(value as bool));
+        });
+        addTearDown(events.close);
+        final small = sampleCollection().folders.first;
+        final large = _IsolateProbeCollection(
+          events.sendPort,
+          Isolate.current.controlPort,
+          folders: [
+            small,
+            HomeCollectionFolder(
+              id: 'other',
+              title: 'Other folder',
+              sources: [
+                for (var i = 0; i < 1187; i++)
+                  CollectionCatalogSource(
+                    addonId: 'synthetic',
+                    type: 'movie',
+                    catalogId: 'c$i',
+                  ),
+              ],
+            ),
+          ],
+        );
+        final addon = StremioAddon(
+          id: 'synthetic',
+          name: 'Synthetic',
+          manifestUrl: 'https://example.invalid/manifest.json',
+          baseUrl: 'https://example.invalid',
+          resources: ['catalog'],
+          catalogs: [
+            for (var i = 0; i < 2250; i++)
+              StremioAddonCatalog(id: 'c$i', type: 'movie', name: 'Catalog $i'),
+          ],
+        );
+        SharedPreferences.setMockInitialValues({
+          'stremio_addons_v1': jsonEncode([addon.toJson()]),
+          HomeCollectionsStore.folderLayoutKey: 'rows',
+        });
+        await tester.runAsync(() => StremioService.instance.getAddons());
+        var requests = 0;
+        final native = CollectionNativeSourceService(
+          tmdbToken: 'synthetic',
+          resolveIds: false,
+          client: MockClient((_) async {
+            requests++;
+            return http.Response(
+              '{"results":[{"id":42,"title":"Movie"}],"total_pages":1}',
+              200,
+            );
+          }),
+        );
+        addTearDown(native.close);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: CollectionFolderScreen(
+              collection: large,
+              nativeSources: native,
+              isTelevision: true,
+              onOpenItem: (_) {},
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(
+          await tester.runAsync(
+            () => encodedOnUi.future.timeout(const Duration(seconds: 5)),
+          ),
+          isFalse,
+        );
+        expect(requests, 0, reason: 'Worker signature has not committed yet');
+        if (changedSession) {
+          // captureSession includes active scope even in legacy compatibility.
+          ProfileRuntime.scope.value = ProfileScope(
+            profileId: 'replacement',
+            dataGeneration: 1,
+            sessionEpoch: 1,
+          );
+          addTearDown(() => ProfileRuntime.scope.value = null);
+        }
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 180)),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          requests,
+          changedSession ? 0 : 3,
+          reason:
+              'Only the selected folder loads; retired sessions cannot publish',
+        );
+        expect(
+          find.byType(CollectionTvRails),
+          changedSession ? findsNothing : findsOneWidget,
+        );
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+}

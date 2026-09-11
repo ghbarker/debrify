@@ -650,7 +650,7 @@ void main() {
     expect(find.text('No matching addon installed'), findsNothing);
   });
   testWidgets(
-    'TV gallery opens a list with poster focus and restores its card',
+    'TV rows open a native title directly and return to the folder controls',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(960, 540));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -672,24 +672,18 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         FocusManager.instance.primaryFocus?.debugLabel,
-        startsWith('collection_list_'),
+        startsWith('collection_title_'),
       );
       await tester.sendKeyEvent(LogicalKeyboardKey.numpadEnter);
       await tester.pumpAndSettle();
-      expect(find.byType(SeeAllPosterGrid), findsOneWidget);
-      expect(
-        FocusManager.instance.primaryFocus?.debugLabel,
-        startsWith('seeall_grid_'),
-      );
-      await tester.sendKeyEvent(LogicalKeyboardKey.numpadEnter);
-      await tester.pumpAndSettle();
+      expect(find.byType(SeeAllPosterGrid), findsNothing);
       expect(opened, ['tmdb:42']);
-      Navigator.of(tester.element(find.byType(SeeAllPosterGrid))).pop();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
       await tester.pumpAndSettle();
-      expect(find.byType(CollectionListGallery), findsOneWidget);
+      expect(find.byType(CollectionListGallery), findsNothing);
       expect(
         FocusManager.instance.primaryFocus?.debugLabel,
-        startsWith('collection_list_'),
+        'collection_folder',
       );
       expect(tester.takeException(), isNull);
     },
