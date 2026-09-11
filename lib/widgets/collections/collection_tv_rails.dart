@@ -36,6 +36,7 @@ class CollectionTvRails extends StatefulWidget {
     super.key,
     required this.rails,
     required this.landscapeCards,
+    this.showCardIdentity = true,
     required this.onOpen,
     required this.onExitTop,
     this.onQuickPlay,
@@ -44,6 +45,7 @@ class CollectionTvRails extends StatefulWidget {
   });
   final List<CollectionTvRail> rails;
   final bool landscapeCards;
+  final bool showCardIdentity;
   final ValueChanged<StremioMeta> onOpen;
   final ValueChanged<StremioMeta>? onQuickPlay, onItemFocused;
   final VoidCallback onExitTop;
@@ -451,7 +453,6 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
                                   child: ListenableBuilder(
                                     listenable: node,
                                     builder: (_, child) => Semantics(
-                                      label: item.name,
                                       button: true,
                                       child: CardFocusRise(
                                         active: node.hasFocus,
@@ -476,6 +477,7 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
                                     child: _RailArtwork(
                                       item: item,
                                       wide: widget.landscapeCards,
+                                      showIdentity: widget.showCardIdentity,
                                       decodeWidth:
                                           (_card.width *
                                                   MediaQuery.devicePixelRatioOf(
@@ -508,9 +510,10 @@ class _RailArtwork extends StatefulWidget {
     required this.item,
     required this.wide,
     required this.decodeWidth,
+    required this.showIdentity,
   });
   final StremioMeta item;
-  final bool wide;
+  final bool wide, showIdentity;
   final int decodeWidth;
   @override
   State<_RailArtwork> createState() => _RailArtworkState();
@@ -536,17 +539,73 @@ class _RailArtworkState extends State<_RailArtwork>
         : widget.wide
         ? item.background ?? fallback
         : item.poster;
+    const placeholder = ColoredBox(
+      color: Color(0xFF1D1B2E),
+      child: Center(child: Icon(Icons.image_outlined, color: Colors.white24)),
+    );
     Widget image(String value, {bool retry = true}) => CachedNetworkImage(
       imageUrl: value,
       cacheManager: DebrifyImageCache.manager,
       memCacheWidth: widget.decodeWidth,
       fit: BoxFit.cover,
       fadeInDuration: const Duration(milliseconds: 120),
-      placeholder: (_, _) => const SizedBox.shrink(),
+      placeholder: (_, _) => placeholder,
       errorWidget: (_, _, _) => retry && fallback != null && fallback != value
           ? image(fallback, retry: false)
-          : const SizedBox.shrink(),
+          : placeholder,
     );
-    return url == null || url.isEmpty ? const SizedBox.shrink() : image(url);
+    final rating = item.imdbRating;
+    // These shelves have no hero to identify the focused title. Keep identity
+    // inside the existing artwork bounds, including while artwork is pending.
+    return Semantics(
+      label: item.name,
+      excludeSemantics: true,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          url == null || url.isEmpty ? placeholder : image(url),
+          if (widget.showIdentity) ...[
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color(0xE6000000)],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 6,
+              right: 6,
+              bottom: 6,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (rating != null && rating.isFinite && rating > 0)
+                    Text(
+                      '\u2605 ${rating.toStringAsFixed(1)}',
+                      maxLines: 1,
+                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }

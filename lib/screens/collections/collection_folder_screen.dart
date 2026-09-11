@@ -35,6 +35,7 @@ Future<String> _configurationSignatureFor(
   CollectionFolderLayout layout,
   HomeCardOrientation orientation,
   String tvStyle,
+  bool hideCardIdentity,
 ) {
   String encode() => jsonEncode({
     'collection': collection.toJson()..remove('importedAt'),
@@ -42,6 +43,7 @@ Future<String> _configurationSignatureFor(
     'layout': layout.name,
     'orientation': orientation.name,
     'tvStyle': tvStyle,
+    'hideCardIdentity': hideCardIdentity,
   });
   // Imported packs can contain thousands of catalogs/sources. Keep their
   // complete change detection, but not their serialization on the UI isolate.
@@ -219,6 +221,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   GlobalKey<CollectionListGalleryState> _galleryKey = GlobalKey();
   GlobalKey<CollectionTvRailsState> _tvRailsKey = GlobalKey();
   HomeCardOrientation _orientation = HomeCardOrientation.landscape;
+  bool _hideCardIdentity = false;
   bool _initialGridFocus = false;
   GlobalKey<SeeAllPosterGridState> _tabGridKey = GlobalKey();
 
@@ -300,6 +303,9 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
       final orientation = widget.isTelevision
           ? await StorageService.getHomeCardOrientation()
           : HomeCardOrientation.landscape;
+      final hideCardIdentity = widget.isTelevision
+          ? await StorageService.getHomeHideCardTitlesAndRatings()
+          : false;
       HomeCollection? updated;
       if (refreshCollection) {
         final collections = await HomeCollectionsStore.instance
@@ -315,7 +321,12 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
                 HomeCollection(id: _collection.id, title: _collection.title)
           : _collection;
       final signature = await _configurationSignatureFor(
-        candidate, addons, layout, orientation, tvStyle,
+        candidate,
+        addons,
+        layout,
+        orientation,
+        tvStyle,
+        hideCardIdentity,
       );
       if (!mounted || generation != _configurationToken) return;
       HomeCollectionsStore.checkSession(session);
@@ -331,6 +342,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
       final folderId = _hasFolders ? _folder.id : null;
       _addons = addons;
       _orientation = orientation;
+      _hideCardIdentity = hideCardIdentity;
       _layout = widget.sourceKey != null
           ? CollectionFolderLayout.tabs
           : switch (candidate.viewMode?.toUpperCase()) {
@@ -1148,6 +1160,7 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
         key: _tvRailsKey,
         rails: visible,
         landscapeCards: _orientation == HomeCardOrientation.landscape,
+        showCardIdentity: !_hideCardIdentity,
         onOpen: _openItem,
         onQuickPlay: widget.onQuickPlay == null ? null : _quickPlay,
         onItemFocused: widget.onItemFocused,

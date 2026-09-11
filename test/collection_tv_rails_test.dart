@@ -187,6 +187,25 @@ void main() {
     expect(find.text('List 2'), findsOneWidget);
   });
 
+  testWidgets('Home hide preference updates visible rail identity live', (
+    tester,
+  ) async {
+    await HomeCollectionsStore.instance.saveCollections([sampleCollection()]);
+    await mount(tester);
+    expect(find.text('Movie 1/0'), findsOneWidget);
+    // Preference changes use the host configuration signature, not a test-only
+    // widget override. The selected page remains the same collection.
+    await StorageService.setHomeHideCardTitlesAndRatings(true);
+    MainPageBridge.notifyHomeSettingsChanged();
+    await tester.pumpAndSettle();
+    expect(find.text('Movie 1/0'), findsNothing);
+    expect(find.byType(CollectionTvRails), findsOneWidget);
+    await StorageService.setHomeHideCardTitlesAndRatings(false);
+    MainPageBridge.notifyHomeSettingsChanged();
+    await tester.pumpAndSettle();
+    expect(find.text('Movie 1/0'), findsOneWidget);
+  });
+
   testWidgets('phone keeps list gallery', (tester) async {
     await mount(tester, tv: false);
     expect(find.byType(CollectionListGallery), findsOneWidget);
