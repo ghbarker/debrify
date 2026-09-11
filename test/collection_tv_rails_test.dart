@@ -839,4 +839,56 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  for (final returningUp in [false, true]) {
+    testWidgets(
+      '48ms off-cache reversal stays on rail input: returningUp=$returningUp',
+      (tester) async {
+        final opened = <String>[];
+        await mount(
+          tester,
+          listCount: 20,
+          onOpen: (item) => opened.add(item.id),
+        );
+        await enter(tester);
+        if (returningUp) {
+          for (var i = 0; i < 19; i++) {
+            await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+            await tester.pumpAndSettle();
+          }
+        }
+        final oldCard = FocusManager.instance.primaryFocus!;
+        final direction = returningUp
+            ? LogicalKeyboardKey.arrowUp
+            : LogicalKeyboardKey.arrowDown;
+        final reverse = returningUp
+            ? LogicalKeyboardKey.arrowDown
+            : LogicalKeyboardKey.arrowUp;
+        await tester.sendKeyDownEvent(direction);
+        for (var i = 0; i < 18; i++) {
+          await tester.sendKeyRepeatEvent(direction);
+        }
+        await tester.sendKeyUpEvent(direction);
+        for (var i = 0; i < 6; i++) {
+          await tester.pump(const Duration(milliseconds: 8));
+        }
+        expect(oldCard.context?.mounted, isNot(true));
+        expect(
+          FocusManager.instance.primaryFocus?.debugLabel,
+          'collection_rails_navigation',
+        );
+        await tester.sendKeyEvent(reverse);
+        await tester.pumpAndSettle();
+        final expected = returningUp ? 'tmdb:200' : 'tmdb:1900';
+        expect(
+          FocusManager.instance.primaryFocus?.debugLabel,
+          'collection_title_$expected',
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.select);
+        await tester.pumpAndSettle();
+        expect(opened, [expected]);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 }
