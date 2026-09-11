@@ -113,6 +113,12 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
   }
 
   KeyEventResult _activate(KeyEvent event) {
+    // Direction repeats may select a destination before its card is mounted.
+    // Neither a short press nor a hold may act on that unfocused destination.
+    if (!_owner(_row).node(widget.rails[_row].items[_column]).hasFocus) {
+      _cancelPress();
+      return KeyEventResult.handled;
+    }
     if (event is KeyDownEvent && _pressed == null) {
       final rail = widget.rails[_row];
       _pressed = (
@@ -279,9 +285,11 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
         (row + 1) * _extent,
         _verticalTarget,
       );
-      if (target != _verticalTarget || node.context == null) {
+      if (target != _verticalTarget || !owner.scroll.hasClients) {
         _verticalTarget = target;
-        _move(_vertical, target, jump: node.context == null);
+        // A mounted row can animate vertically even when its destination
+        // column is outside the independent horizontal cache.
+        _move(_vertical, target, jump: !owner.scroll.hasClients);
       }
     }
     void finish() {
@@ -314,13 +322,15 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
             node.requestFocus();
           }
         });
+        WidgetsBinding.instance.ensureVisualUpdate();
       }
     }
 
-    if (node.context != null) {
+    if (owner.scroll.hasClients) {
       finish();
     } else {
       WidgetsBinding.instance.addPostFrameCallback((_) => finish());
+      WidgetsBinding.instance.ensureVisualUpdate();
     }
   }
 
