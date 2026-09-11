@@ -594,7 +594,20 @@ void main() {
         (_) => Completer<FileServiceResponse>(),
       );
       var calls = 0;
-      final service = Service((_) => responses[calls++].future);
+      var pendingRequests = 0;
+      var peakPendingRequests = 0;
+      final firstBatchStarted = Completer<void>();
+      final allStarted = Completer<void>();
+      final service = Service((_) {
+        final response = responses[calls++];
+        pendingRequests++;
+        if (pendingRequests > peakPendingRequests) {
+          peakPendingRequests = pendingRequests;
+        }
+        if (calls == 4) firstBatchStarted.complete();
+        if (calls == 6) allStarted.complete();
+        return response.future.whenComplete(() => pendingRequests--);
+      });
       images = manager('images', service: service);
       logos = manager('logos', service: service);
       await budget.apply(expanded: true, bytes: 32);
@@ -603,12 +616,12 @@ void main() {
         (index) => (index.isEven ? images : logos).downloadFile('$index'),
       );
       final duplicate = images.downloadFile('0');
-      await Future<void>.delayed(const Duration(milliseconds: 30));
+      await firstBatchStarted.future.timeout(const Duration(seconds: 5));
       expect(calls, 4);
       for (var i = 0; i < 4; i++) {
         responses[i].complete(Response(Stream.value([i]), contentLength: 1));
       }
-      await Future<void>.delayed(const Duration(milliseconds: 30));
+      await allStarted.future.timeout(const Duration(seconds: 5));
       expect(calls, 6);
       for (var i = 4; i < 6; i++) {
         responses[i].complete(Response(Stream.value([i]), contentLength: 1));
@@ -619,6 +632,8 @@ void main() {
       held.add(same.file);
       expect(identical(same.file, files.first.file), isFalse);
       expect(same.file.path, files.first.file.path);
+      expect(peakPendingRequests, 4);
+      expect(calls, 6);
       expect(await physicalBytes(), 6);
     },
   );
