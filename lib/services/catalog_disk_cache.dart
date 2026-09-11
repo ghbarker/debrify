@@ -47,6 +47,11 @@ class CatalogDiskCache {
   int _revision = 0;
   int _authority = 0;
   int _serial = 0;
+  // Keep a bounded, detached JSON snapshot, not an assumption that the addon's
+  // final List fields (including nested genre options) are immutable.
+  final _addonIdentities =
+      <(String, String), ({Object? snapshot, String digest})>{};
+  static const _maxAddonIdentities = 8;
   bool _rememberTitles = BrowsingCachePreferences.current.rememberTitles;
   int _budgetBytes = BrowsingCachePreferences.current.titleBudgetBytes;
 
@@ -100,6 +105,7 @@ class CatalogDiskCache {
   void invalidateRequests() {
     _revision++;
     _authority++;
+    _addonIdentities.clear();
   }
 
   bool isCurrent(CatalogCacheRequest request) =>
@@ -137,16 +143,16 @@ class CatalogDiskCache {
         enabled = false;
       }
     }
-    final config = addon.toJson()
-      ..remove('added_at')
-      ..remove('last_checked');
     final key = sha256
         .convert(
           utf8.encode(
             jsonEncode(
               _canonical({
                 'url': url,
-                'addon': config,
+                // Version the factored identity: old disposable pages remain
+                // budgeted, but cannot collide with this digest representation.
+                'identityVersion': 2,
+                'addon': _addonIdentity(addon),
                 'catalog': catalog.toJson(),
                 'profile': scope?.profileId,
                 'generation': scope?.dataGeneration,
@@ -162,6 +168,46 @@ class CatalogDiskCache {
       before == _authority ? revision : -1,
       enabled,
     );
+  }
+
+  String _addonIdentity(StremioAddon addon) {
+    final config = addon.toJson()
+      ..remove('added_at')
+      ..remove('last_checked');
+    final id = (addon.id, addon.manifestUrl);
+    final previous = _addonIdentities.remove(id);
+    if (previous != null && _sameConfig(previous.snapshot, config)) {
+      _addonIdentities[id] = previous;
+      return previous.digest;
+    }
+    // Canonicalization also copies every nested map/list, so mutations through
+    // constructor arguments or copyWith aliases are detected on the next call.
+    final snapshot = _canonical(config);
+    final digest = sha256.convert(utf8.encode(jsonEncode(snapshot))).toString();
+    _addonIdentities[id] = (snapshot: snapshot, digest: digest);
+    if (_addonIdentities.length > _maxAddonIdentities) {
+      _addonIdentities.remove(_addonIdentities.keys.first);
+    }
+    return digest;
+  }
+
+  static bool _sameConfig(Object? a, Object? b) {
+    if (identical(a, b)) return true;
+    if (a is List && b is List) {
+      if (a.length != b.length) return false;
+      for (var i = 0; i < a.length; i++) {
+        if (!_sameConfig(a[i], b[i])) return false;
+      }
+      return true;
+    }
+    if (a is Map && b is Map) {
+      if (a.length != b.length) return false;
+      for (final key in a.keys) {
+        if (!b.containsKey(key) || !_sameConfig(a[key], b[key])) return false;
+      }
+      return true;
+    }
+    return a.runtimeType == b.runtimeType && a == b;
   }
 
   static Object? _canonical(Object? value) {
