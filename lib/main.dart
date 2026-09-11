@@ -125,7 +125,8 @@ import 'services/tv_image_cache_policy.dart';
 TvImageCachePolicy? _tvImageCachePolicy;
 
 /// Start TVs with a conservative decoded-image cache. Confirmed Android TVs
-/// may expand to 128 MiB only while fresh native readings show headroom;
+/// may grow through 128/256/384 MiB as retained usage and fresh native headroom
+/// permit, reserving at least 10% free RAM and Android's threshold plus margin;
 /// pressure or unavailable readings restore 56 MiB. Low-memory Apple TVs use
 /// 36 MiB. Phones, tablets and desktop retain framework defaults, except for
 /// the conservative Android fallback when TV detection fails.

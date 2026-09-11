@@ -9,6 +9,8 @@ import 'package:flutter/services.dart';
 import '../../models/stremio_addon.dart';
 import '../../models/metadata_preferences.dart';
 import '../../services/debrify_image_cache.dart';
+import '../../services/collection_artwork_warmup.dart';
+import '../../services/profiles/profile_runtime.dart';
 import '../../services/ui_frame_diagnostics.dart';
 import '../../theme/app_motion.dart';
 import '../../theme/app_theme_scope.dart';
@@ -75,7 +77,46 @@ class _RowFocus {
 }
 
 class CollectionTvRailsState extends State<CollectionTvRails> {
-  final _vertical = _RailScrollController();
+  late final _vertical = _RailScrollController(
+    onAttach: _attachArtworkWarmup,
+    onDetach: _detachArtworkWarmup,
+  );
+  CollectionArtworkWarmup? _artworkWarmup;
+  ScrollPosition? _warmupPosition;
+
+  void _attachArtworkWarmup(ScrollPosition position) {
+    _artworkWarmup?.dispose();
+    _warmupPosition = position;
+    final scope = ProfileRuntime.scope.value;
+    _artworkWarmup = CollectionArtworkWarmup(
+      scrolling: position.isScrollingNotifier,
+      onProgress: UiFrameDiagnostics.instance.enabled
+          ? (completed, total) => UiFrameDiagnostics.instance.navigation(
+              6,
+              completed,
+              total.toDouble(),
+              0,
+            )
+          : null,
+      isCurrent: () =>
+          mounted &&
+          scope == ProfileRuntime.scope.value &&
+          ModalRoute.of(context)?.isCurrent != false,
+    );
+    _updateArtworkWarmup();
+  }
+
+  void _detachArtworkWarmup(ScrollPosition position) {
+    if (!identical(position, _warmupPosition)) return;
+    _artworkWarmup?.dispose();
+    _artworkWarmup = null;
+    _warmupPosition = null;
+  }
+
+  void _updateArtworkWarmup() => _artworkWarmup?.update(
+    widget.rails.expand((rail) => rail.items),
+    landscape: widget.landscapeCards,
+  );
   final _navigationFocus = FocusNode(
     debugLabel: 'collection_rails_navigation',
     skipTraversal: true,
@@ -189,6 +230,7 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
   @override
   void didUpdateWidget(CollectionTvRails oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _updateArtworkWarmup();
     // Late watched/identity updates can remove a card without replacing the
     // rail. Preserve the selected identity, or focus its surviving neighbour.
     final hadFocus = _rows.values.any(
@@ -238,6 +280,8 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
   @override
   void dispose() {
     ++_generation;
+    _artworkWarmup?.dispose();
+    _artworkWarmup = null;
     _cancelPress();
     _clearWaiting();
     _vertical.removeListener(_recordScrollPosition);
@@ -588,6 +632,8 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
 // Only Collection's vertical viewport retargets this way. Horizontal reveals
 // retain their existing controller and mounted-column behavior.
 class _RailScrollController extends ScrollController {
+  _RailScrollController({super.onAttach, super.onDetach});
+
   @override
   ScrollPosition createScrollPosition(
     ScrollPhysics physics,

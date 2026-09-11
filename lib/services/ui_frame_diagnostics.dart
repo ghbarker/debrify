@@ -5,6 +5,8 @@ import 'dart:ui' show FrameTiming;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'browsing_cache_preferences.dart';
+
 /// Temporary, opt-in release measurements. Never captures content or consumes
 /// input. Normal builds install no listeners. Each launch records at most five
 /// minutes, with bounded two-second numeric batches rather than per-frame I/O.
@@ -45,8 +47,9 @@ class UiFrameDiagnostics {
   }
 
   // Zero means initial down, one repeat, two release. Direction is -1 or +1.
-  // Event timestamps and receipt timestamps expose delayed input delivery;
-  // they use different clock origins and must be compared as intervals.
+  // Preserve the framework timestamp for investigation only: native input
+  // bridges can supply inconsistent units. Receipt times are our stopwatch;
+  // do not infer physical input latency without validating the native clock.
   bool _onKey(KeyEvent event) {
     if (!_active ||
         (event.logicalKey != LogicalKeyboardKey.arrowUp &&
@@ -69,6 +72,7 @@ class UiFrameDiagnostics {
   /// Numeric collection probes: 0 target, 1 focus request, 2 offset, 3 focus
   /// committed, 4 body built (row: 0 loading, 1 error, 2 all, 3 tabs, 4 rails,
   /// 5 mobile gallery); stage 5 records legacy-theme eligibility (row 0/1).
+  /// Stage 6 reports warmup items processed/total (row/offset), including skips.
   /// Body builds do not imply a route remains foreground.
   /// Row indices and pixel offsets only; never title IDs, labels or URLs.
   void navigation(int stage, int row, double offset, double target) {
@@ -88,6 +92,8 @@ class UiFrameDiagnostics {
 
   @visibleForTesting
   void recordTimings(List<FrameTiming> timings) {
+    // The engine delivers batches. These reporting windows group arrival,
+    // not exact rendering times; zero samples does not mean zero drawn frames.
     if (!_active) return;
     for (final timing in timings) {
       _frames++;
@@ -125,6 +131,8 @@ class UiFrameDiagnostics {
       'cacheLimitCount': cache.maximumSize,
       'liveImages': cache.liveImageCount,
       'pendingImages': cache.pendingImageCount,
+      'diskOn': BrowsingCachePreferences.current.expandedArtwork ? 1 : 0,
+      'diskLimit': BrowsingCachePreferences.current.artworkBudgetBytes,
       'droppedEvents': _droppedEvents,
     });
     // Small numeric chunks also fit the app's 512-character privacy log cap.
