@@ -100,7 +100,10 @@ class ArtworkCacheManager extends CacheManager {
   }) async {
     await _ready(inventory: false);
     return budget.transaction(() async {
-      final object = await config.repo.get(key);
+      final object = await (config.repo as ArtworkCacheRepository).getCached(
+        key,
+        ignoreMemCache: ignoreMemCache,
+      );
       if (object == null) return null;
       final dir = await artworkStore.directory;
       final path = p.join(dir.path, object.relativePath);
