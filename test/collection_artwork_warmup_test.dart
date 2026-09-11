@@ -183,6 +183,50 @@ void main() {
     },
   );
 
+  testWidgets('nearby work moves ahead without cancelling or repeating files', (
+    tester,
+  ) async {
+    final first = Completer<File>();
+    await start(
+      tester,
+      load: (url) {
+        downloaded.add(url);
+        return downloaded.length == 1 ? first.future : Future.value(File(url));
+      },
+    );
+    final a = item('a'), b = item('b'), c = item('c'), d = item('d');
+    warmup.update([a, b, c, d], landscape: false);
+    await tester.pump(const Duration(milliseconds: 250));
+    warmup.prioritize([d, d, item('unknown'), a]);
+    await tester.pump(const Duration(seconds: 1));
+    expect(downloaded, ['https://art.test/a.jpg']);
+    first.complete(File('first'));
+    await tester.pump();
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+    expect(downloaded, [
+      'https://art.test/a.jpg',
+      'https://art.test/d.jpg',
+      'https://art.test/b.jpg',
+      'https://art.test/c.jpg',
+    ]);
+    expect(released.length, 4);
+  });
+
+  testWidgets('removed priorities cannot block remaining work', (tester) async {
+    await start(tester);
+    final a = item('a'), b = item('b'), c = item('c');
+    warmup.update([a, b, c], landscape: false);
+    warmup.prioritize([c, b]);
+    warmup.update([a, b], landscape: false);
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(downloaded, ['https://art.test/b.jpg']);
+    warmup.prioritize([a]);
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(downloaded.last, 'https://art.test/a.jpg');
+  });
+
   testWidgets(
     '250ms idle cadence, one request at a time, release and URL dedup',
     (tester) async {

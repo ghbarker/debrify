@@ -113,10 +113,31 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
     _warmupPosition = null;
   }
 
-  void _updateArtworkWarmup() => _artworkWarmup?.update(
-    widget.rails.expand((rail) => rail.items),
-    landscape: widget.landscapeCards,
-  );
+  void _updateArtworkWarmup() {
+    _artworkWarmup?.update(
+      widget.rails.expand((rail) => rail.items),
+      landscape: widget.landscapeCards,
+    );
+    _prioritizeArtwork();
+  }
+
+  void _prioritizeArtwork() {
+    // A shelf can contain hundreds of offscreen titles. Warm the focused card
+    // and neighbouring shelves before spending time at the far end of that row.
+    // Keep this small: it runs on focus changes, never on animation frames.
+    final nearby = <StremioMeta>[];
+    for (final delta in const [0, 1, -1, 2, -2, 3]) {
+      final row = _row + delta;
+      if (row < 0 || row >= widget.rails.length) continue;
+      final items = widget.rails[row].items;
+      if (items.isEmpty) continue;
+      final column = _column.clamp(0, items.length - 1);
+      nearby.addAll(items.skip(column).take(6));
+      nearby.addAll(items.take(column).skip((column - 2).clamp(0, column)));
+    }
+    _artworkWarmup?.prioritize(nearby);
+  }
+
   final _navigationFocus = FocusNode(
     debugLabel: 'collection_rails_navigation',
     skipTraversal: true,
@@ -230,7 +251,6 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
   @override
   void didUpdateWidget(CollectionTvRails oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _updateArtworkWarmup();
     // Late watched/identity updates can remove a card without replacing the
     // rail. Preserve the selected identity, or focus its surviving neighbour.
     final hadFocus = _rows.values.any(
@@ -261,6 +281,7 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
         }
       }
     }
+    _updateArtworkWarmup();
     final ids = widget.rails.map((r) => r.id).toSet();
     if (!_pressIsCurrent) _cancelPress();
     for (final id in _rows.keys.where((id) => !ids.contains(id)).toList()) {
@@ -345,6 +366,7 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
     _clearWaiting();
     _row = row;
     _column = column.clamp(0, rail.items.length - 1);
+    _prioritizeArtwork();
     final item = rail.items[_column];
     final owner = _owner(row);
     final node = owner.node(item);
@@ -558,6 +580,7 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
                                     );
                                     _row = row;
                                     _column = column;
+                                    _prioritizeArtwork();
                                     widget.onItemFocused?.call(item);
                                   } else if (_pressed?.item.id == item.id) {
                                     _cancelPress();

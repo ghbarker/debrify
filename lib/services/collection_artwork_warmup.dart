@@ -76,6 +76,7 @@ class CollectionArtworkWarmup with WidgetsBindingObserver {
   final Future<ProfilePreferences> Function() _openPreferences;
   final DateTime Function() _now;
   Map<_ItemKey, StremioMeta> _items = {};
+  final _priority = <_ItemKey>[];
   // Add-on configuration is immutable. Its digest is shared by every title;
   // hashing it per item would put bulk CPU work back into the row build.
   final _sourceKeys = Expando<String>();
@@ -135,9 +136,20 @@ class CollectionArtworkWarmup with WidgetsBindingObserver {
     }
     _landscape = landscape;
     _items = next;
+    _priority.removeWhere((key) => !next.containsKey(key));
     _done.removeWhere((key) => !next.containsKey(key));
     _failures.removeWhere((key, _) => !next.containsKey(key));
     _reportProgress();
+    _schedule();
+  }
+
+  /// Reorder pending work around the viewport without cancelling a download or
+  /// forgetting completed files. Unknown items cannot introduce new work.
+  void prioritize(Iterable<StremioMeta> items) {
+    if (_disposed) return;
+    _priority
+      ..clear()
+      ..addAll(items.map(_key).where(_items.containsKey).toSet());
     _schedule();
   }
 
@@ -209,6 +221,7 @@ class CollectionArtworkWarmup with WidgetsBindingObserver {
   void _profileChanged() {
     _invalidate();
     _items.clear();
+    _priority.clear();
     _done.clear();
     _urls.clear();
     _failures.clear();
@@ -336,7 +349,9 @@ class CollectionArtworkWarmup with WidgetsBindingObserver {
           return false;
         }
       };
-      final key = _items.keys.where((key) => !_done.contains(key)).firstOrNull;
+      final key =
+          _priority.where((key) => !_done.contains(key)).firstOrNull ??
+          _items.keys.where((key) => !_done.contains(key)).firstOrNull;
       if (key == null) return;
       workingKey = key;
       final bytes = await _cacheBytes();
@@ -438,6 +453,7 @@ class CollectionArtworkWarmup with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     WidgetsBinding.instance.removeTimingsCallback(_timings);
     _items.clear();
+    _priority.clear();
     _done.clear();
     _urls.clear();
     _failures.clear();
