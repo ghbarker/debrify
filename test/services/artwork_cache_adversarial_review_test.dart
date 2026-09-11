@@ -265,8 +265,9 @@ void main() {
         expect(calls, 6);
       } finally {
         for (final response in responses) {
-          if (!response.isCompleted)
+          if (!response.isCompleted) {
             response.complete(Response(Stream.value([9]), contentLength: 1));
+          }
         }
         for (final result in await Future.wait(pending)) {
           hold(result.file);
