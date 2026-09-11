@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import '../../models/stremio_addon.dart';
 import '../../models/metadata_preferences.dart';
 import '../../services/debrify_image_cache.dart';
+import '../../services/ui_frame_diagnostics.dart';
 import '../../theme/app_motion.dart';
 import '../../theme/app_theme_scope.dart';
 import '../../utils/home_rail_metrics.dart';
@@ -155,6 +156,25 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
       _rows.putIfAbsent(widget.rails[row].id, _RowFocus.new);
 
   @override
+  void initState() {
+    super.initState();
+    if (UiFrameDiagnostics.instance.enabled) {
+      _vertical.addListener(_recordScrollPosition);
+    }
+  }
+
+  void _recordScrollPosition() {
+    if (_vertical.hasClients) {
+      UiFrameDiagnostics.instance.navigation(
+        2,
+        _row,
+        _vertical.offset,
+        _verticalTarget ?? 0,
+      );
+    }
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Collections retain their existing glide. The Smooth/Snappy preference
@@ -218,6 +238,7 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
     ++_generation;
     _cancelPress();
     _clearWaiting();
+    _vertical.removeListener(_recordScrollPosition);
     _vertical.dispose();
     _navigationFocus.dispose();
     for (final row in _rows.values) {
@@ -296,6 +317,7 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
         (row + 1) * _extent,
         _verticalTarget,
       );
+      UiFrameDiagnostics.instance.navigation(0, row, _vertical.offset, target);
       if (target != _verticalTarget || !owner.scroll.hasClients) {
         _verticalTarget = target;
         // Row recycling must not turn an animated traversal into a jump.
@@ -331,6 +353,12 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
         }
       }
       if (node.context != null) {
+        UiFrameDiagnostics.instance.navigation(
+          1,
+          row,
+          _vertical.hasClients ? _vertical.offset : 0,
+          _verticalTarget ?? 0,
+        );
         node.requestFocus();
       } else {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -338,6 +366,12 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
               generation == _generation &&
               node.context != null &&
               ModalRoute.of(context)?.isCurrent != false) {
+            UiFrameDiagnostics.instance.navigation(
+              1,
+              row,
+              _vertical.hasClients ? _vertical.offset : 0,
+              _verticalTarget ?? 0,
+            );
             node.requestFocus();
           }
         });
@@ -467,6 +501,14 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
                                 onKeyEvent: (_, event) => _key(event),
                                 onFocusChange: (focused) {
                                   if (focused) {
+                                    UiFrameDiagnostics.instance.navigation(
+                                      3,
+                                      row,
+                                      _vertical.hasClients
+                                          ? _vertical.offset
+                                          : 0,
+                                      _verticalTarget ?? 0,
+                                    );
                                     _row = row;
                                     _column = column;
                                     widget.onItemFocused?.call(item);

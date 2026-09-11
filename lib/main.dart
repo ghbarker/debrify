@@ -1,6 +1,7 @@
 import 'services/webdav_sync/webdav_log_upload.dart';
 import 'widgets/webdav_sync/webdav_save_status.dart';
 import 'services/local_validation_diagnostics.dart';
+import 'services/ui_frame_diagnostics.dart';
 import 'dart:async';
 import 'dart:io' show Platform, exit;
 import 'dart:ui' show AppExitResponse, PointerDeviceKind;
@@ -802,6 +803,7 @@ Future<void> _continueApplicationStartup() async {
   unawaited(_cleanupPlaybackState());
   // NB: no manual app_open — Pug's autoTrack fires app_open/app_close from the
   // app lifecycle automatically (see AnalyticsService.init / PugOptions).
+  UiFrameDiagnostics.instance.start();
   runApp(const DebrifyApp());
   applicationReady.complete();
   // Desktop scheduled recordings (Tier 1: fire while the app is running).

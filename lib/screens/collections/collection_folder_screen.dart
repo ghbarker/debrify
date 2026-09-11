@@ -14,6 +14,7 @@ import '../../widgets/collections/collection_browser_hero.dart';
 import '../../models/stremio_addon.dart';
 import '../../services/analytics_service.dart';
 import '../../services/collection_folder_loader.dart';
+import '../../services/ui_frame_diagnostics.dart';
 import '../../services/collection_catalog_pager.dart';
 import '../../services/watched_filter.dart';
 import '../../services/main_page_bridge.dart';
@@ -1127,6 +1128,12 @@ class _CollectionFolderScreenState extends State<CollectionFolderScreen> {
   }
 
   Widget _buildBody() {
+    UiFrameDiagnostics.instance.navigation(
+      4,
+      !_booted ? 0 : _configurationError != null ? 1
+          : _showingAll ? 2 : _tabs ? 3 : widget.isTelevision ? 4 : 5,
+      0, 0,
+    );
     if (!_booted) {
       return SkeletonPosterGrid(isTelevision: widget.isTelevision);
     }
