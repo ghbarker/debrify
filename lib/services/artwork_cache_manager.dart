@@ -237,7 +237,7 @@ class ArtworkCacheManager extends CacheManager {
     budget.check(token);
     final id = (key, token.generation);
     if (!force && _pending.containsKey(id)) {
-      return _consumer(await _pending[id]!);
+      return _downloadResult(id, token, _pending[id]!);
     }
     final writer = Object();
     _writers[id] = writer;
@@ -283,6 +283,7 @@ class ArtworkCacheManager extends CacheManager {
             throw const ArtworkCacheLimit();
           }
           final current = await config.repo.get(key);
+          checkWriter();
           if (current == null) throw const ArtworkCacheLimit();
           final path = p.join(dir.path, current.relativePath);
           if (!p.isWithin(dir.path, path) ||
@@ -303,6 +304,7 @@ class ArtworkCacheManager extends CacheManager {
             );
           }
           await budget.touch(path);
+          checkWriter();
           budget.handoff(path);
           return FileInfo(
             ArtworkCacheFile(io.File(path), budget),
@@ -342,21 +344,32 @@ class ArtworkCacheManager extends CacheManager {
     });
     _pending[id] = future;
     try {
-      return _consumer(await future);
-    } on ArtworkCacheCancelled {
-      budget.check(token);
-      if (!identical(_writers[id], writer)) {
-        final newer = _pending[id];
-        if (newer != null && !identical(newer, future)) {
-          return _consumer(await newer);
-        }
-        final cached = await getFileFromCache(key);
-        if (cached != null) return cached;
-      }
-      rethrow;
+      return await _downloadResult(id, token, future);
     } finally {
       if (identical(_pending[id], future)) _pending.remove(id);
       if (identical(_writers[id], writer)) _writers.remove(id);
+    }
+  }
+
+  Future<FileInfo> _downloadResult(
+    (String, int) id,
+    ArtworkCacheToken token,
+    Future<FileInfo> future,
+  ) async {
+    try {
+      final result = await future;
+      budget.check(token);
+      return _consumer(result);
+    } on ArtworkCacheCancelled {
+      budget.check(token);
+      final newer = _pending[id];
+      if (newer != null && !identical(newer, future)) {
+        return _downloadResult(id, token, newer);
+      }
+      final cached = await getFileFromCache(id.$1);
+      budget.check(token);
+      if (cached != null) return cached;
+      rethrow;
     }
   }
 
@@ -534,6 +547,8 @@ class ArtworkCacheManager extends CacheManager {
   }
 
   @override
+  /// Evicts the stored entry; an active download may replace it, matching
+  /// CacheManager. User-facing Clear uses [emptyCache] to cancel pending work.
   Future<void> removeFile(String key) async {
     await _ready();
     final object = await budget.transaction(() async {

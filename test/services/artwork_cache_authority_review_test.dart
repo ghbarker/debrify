@@ -166,23 +166,29 @@ void main() {
     expect(await (joinedResult as FileInfo).file.readAsBytes(), [9, 9]);
   });
 
-  test('remove retires an earlier download for that same cache key', () async {
-    final response = Completer<FileServiceResponse>();
-    final entered = Completer<void>();
-    setup((_) {
-      entered.complete();
-      return response.future;
-    });
-    await seed();
-    final outcome = observe(manager.downloadFile('same', force: true));
-    await entered.future;
-    await manager.removeFile('same');
-    response.complete(Response(Stream.value([9, 9]), contentLength: 2));
-    final result = await outcome;
-    final cached = await manager.getFileFromCache('same');
-    if (cached != null) held.add(cached.file as ArtworkCacheFile);
-    expect(result, isA<ArtworkCacheCancelled>());
-    expect(cached, isNull);
-    expect(await budget.sizeBytes(), 0);
-  });
+  test(
+    'per-key eviction allows a pending replacement like CacheManager',
+    () async {
+      final response = Completer<FileServiceResponse>();
+      final entered = Completer<void>();
+      setup((_) {
+        entered.complete();
+        return response.future;
+      });
+      await seed();
+      final outcome = observe(manager.downloadFile('same', force: true));
+      await entered.future;
+      await manager.removeFile('same');
+      response.complete(Response(Stream.value([9, 9]), contentLength: 2));
+      final result = await outcome;
+      final cached = await manager.getFileFromCache('same');
+      if (cached != null) held.add(cached.file as ArtworkCacheFile);
+      // flutter_cache_manager 3.4.1 removeFile only removes stored data. Preserve
+      // that contract; global clear cancellation is exercised separately above.
+      expect(result, isA<FileInfo>());
+      expect(cached, isNotNull);
+      expect(await cached!.file.readAsBytes(), [9, 9]);
+      expect(await budget.sizeBytes(), 2);
+    },
+  );
 }
