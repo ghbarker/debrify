@@ -842,7 +842,7 @@ void main() {
 
   for (final returningUp in [false, true]) {
     testWidgets(
-      '48ms off-cache reversal stays on rail input: returningUp=$returningUp',
+      'off-cache reversal stays on rail input after recycling: returningUp=$returningUp',
       (tester) async {
         final opened = <String>[];
         await mount(
@@ -870,6 +870,16 @@ void main() {
         }
         await tester.sendKeyUpEvent(direction);
         for (var i = 0; i < 6; i++) {
+          await tester.pump(const Duration(milliseconds: 8));
+        }
+        expect(
+          FocusManager.instance.primaryFocus?.debugLabel,
+          'collection_rails_navigation',
+        );
+        // Velocity-preserving bursts no longer jump straight to the newest
+        // curve's initial speed. Wait for actual recycling, not its old 48ms
+        // timestamp, while still reversing before the destination takes focus.
+        for (var i = 0; oldCard.context?.mounted == true && i < 24; i++) {
           await tester.pump(const Duration(milliseconds: 8));
         }
         expect(oldCard.context?.mounted, isNot(true));

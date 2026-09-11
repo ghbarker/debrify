@@ -72,7 +72,7 @@ class _RowFocus {
 }
 
 class CollectionTvRailsState extends State<CollectionTvRails> {
-  final _vertical = ScrollController();
+  final _vertical = _RailScrollController();
   final _navigationFocus = FocusNode(
     debugLabel: 'collection_rails_navigation',
     skipTraversal: true,
@@ -535,6 +535,188 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
       child: rails,
     );
   }
+}
+
+// Only Collection's vertical viewport retargets this way. Horizontal reveals
+// retain their existing controller and mounted-column behavior.
+class _RailScrollController extends ScrollController {
+  @override
+  ScrollPosition createScrollPosition(
+    ScrollPhysics physics,
+    ScrollContext context,
+    ScrollPosition? oldPosition,
+  ) => _RailScrollPosition(
+    physics: physics,
+    context: context,
+    oldPosition: oldPosition,
+  );
+}
+
+class _RailScrollPosition extends ScrollPositionWithSingleContext {
+  _RailScrollPosition({
+    required super.physics,
+    required super.context,
+    super.oldPosition,
+  });
+
+  (double, double, double)? _dimensions;
+
+  @override
+  Future<void> animateTo(
+    double to, {
+    required Duration duration,
+    required Curve curve,
+  }) {
+    final target = to.clamp(minScrollExtent, maxScrollExtent);
+    final current = activity;
+    if (current is _RailScrollActivity && !current.motion.finished) {
+      if (current.motion.target != target) {
+        current.motion.retarget(
+          pixels,
+          current.velocity,
+          target,
+          duration,
+          minScrollExtent,
+          maxScrollExtent,
+        );
+      }
+      return current.done;
+    }
+    if ((target - pixels).abs() <= physics.toleranceFor(this).distance) {
+      return super.animateTo(target, duration: duration, curve: curve);
+    }
+    final driven = _RailScrollActivity(
+      this,
+      _RailSimulation(pixels, target, duration, curve),
+      context.vsync,
+    );
+    beginActivity(driven);
+    return driven.done;
+  }
+
+  @override
+  void applyNewDimensions() {
+    super.applyNewDimensions();
+    final dimensions = (minScrollExtent, maxScrollExtent, viewportDimension);
+    if (_dimensions == dimensions) return;
+    _dimensions = dimensions;
+    final current = activity;
+    if (current is _RailScrollActivity && !current.motion.finished) {
+      final target = current.motion.target.clamp(
+        minScrollExtent,
+        maxScrollExtent,
+      );
+      // Even a still-valid target can lose its outgoing braking space when
+      // content shrinks. Rebase against the new bounds without extending the
+      // current deadline on pagination or viewport changes.
+      current.motion.retarget(
+        pixels,
+        current.velocity,
+        target,
+        current.motion.remaining,
+        minScrollExtent,
+        maxScrollExtent,
+      );
+    }
+  }
+}
+
+class _RailScrollActivity extends DrivenScrollActivity {
+  _RailScrollActivity(
+    ScrollActivityDelegate delegate,
+    this.motion,
+    TickerProvider vsync,
+  ) : super.simulation(delegate, motion, vsync: vsync);
+
+  final _RailSimulation motion;
+}
+
+/// The first leg is exactly the caller's curve. Retargets use a cubic Hermite
+/// segment with the current position/velocity and zero arrival velocity. The
+/// activity and its elapsed clock survive: no first-frame pause on each key.
+class _RailSimulation extends Simulation {
+  _RailSimulation(this._from, this.target, this.duration, this._curve)
+    : _seconds = duration.inMicroseconds / Duration.microsecondsPerSecond;
+
+  double _from, target;
+  Duration duration;
+  final Curve _curve;
+  double _seconds;
+  double _time = 0, _epoch = 0, _velocity = 0;
+  bool _retargeted = false;
+
+  // A final pixel notification can request a new target before the completed
+  // activity's asynchronous cleanup. Its ticker has already stopped then.
+  bool get finished => isDone(_time);
+
+  Duration get remaining => Duration(
+    microseconds:
+        ((_seconds - (_time - _epoch)) * Duration.microsecondsPerSecond)
+            .ceil()
+            .clamp(1, duration.inMicroseconds),
+  );
+
+  void retarget(
+    double from,
+    double velocity,
+    double to,
+    Duration nextDuration,
+    double minimum,
+    double maximum,
+  ) {
+    _from = from;
+    target = to;
+    duration = nextDuration;
+    _epoch = _time;
+    _seconds = nextDuration.inMicroseconds / Duration.microsecondsPerSecond;
+    _velocity = velocity;
+    _retargeted = true;
+    final distance = to - from;
+    if (velocity * distance > 0) {
+      // A Hermite segment is monotone when v*T <= 3*distance.
+      _seconds = _seconds.clamp(0.0, 3 * distance.abs() / velocity.abs());
+    } else if (velocity != 0) {
+      // On reversal, outgoing travel is at most 4*v*T/27. Limit that
+      // braking excursion to the available space before the physical edge.
+      final room = velocity > 0 ? maximum - from : from - minimum;
+      if (room <= 0) {
+        _velocity = 0;
+      } else {
+        _seconds = _seconds.clamp(0.0, 6 * room / velocity.abs());
+      }
+    }
+  }
+
+  double _value(double time) {
+    final u = ((time - _epoch) / _seconds).clamp(0.0, 1.0);
+    final distance = target - _from;
+    if (!_retargeted) return _from + distance * _curve.transform(u);
+    return _from +
+        distance * u * u * (3 - 2 * u) +
+        _velocity * _seconds * u * (1 - u) * (1 - u);
+  }
+
+  @override
+  double x(double time) {
+    _time = time;
+    return _value(time);
+  }
+
+  @override
+  double dx(double time) {
+    if (time - _epoch >= _seconds) return 0;
+    if (!_retargeted) {
+      // Same numerical derivative convention as Flutter's curve simulation.
+      return (_value(time + tolerance.time) - _value(time - tolerance.time)) /
+          (2 * tolerance.time);
+    }
+    final u = ((time - _epoch) / _seconds).clamp(0.0, 1.0);
+    return (target - _from) * 6 * u * (1 - u) / _seconds +
+        _velocity * (1 - 4 * u + 3 * u * u);
+  }
+
+  @override
+  bool isDone(double time) => time - _epoch > _seconds;
 }
 
 /// Same profile-aware metadata policy as the collection gallery, decoded for
