@@ -12,13 +12,10 @@ const Color kCardFocusRing = Color(0xFFA78BFA);
 /// selection ring animate together on ONE duration + curve — mismatched timing
 /// (scale tweening while ring/shadow snapped) is what read as cheap.
 ///
-/// Everything animated is GPU-cheap: the scale is a transform; the shadow is
-/// TWO fixed-blur layers whose colours crossfade (blurRadius/offset are
-/// identical on both ends of the lerp, so the tween never re-derives a blur —
-/// it only fades a pre-shaped one, and the transparent lift layer is skipped
-/// at rest); the ring fades via opacity (skipped at 0). 120ms on TV: two cards
-/// animate on every DPAD move (loser + gainer), so the shorter the tween, the
-/// shorter the double-repaint window.
+/// The scale is a transform; the two shadows keep fixed geometry while their
+/// colours animate, and the ring fades via opacity. The decoration still
+/// repaints during its colour tween. Collections can opt into
+/// [CollectionCardFocusRise] to retain separate shadow and artwork layers.
 ///
 /// Lives here, outside the board, because the Discover stage's shelf wears the
 /// same grammar — focus-feel tuning has to land ONCE for every poster the user
@@ -160,6 +157,121 @@ class CardFocusRise extends StatelessWidget {
             ),
           ),
         )),
+      ),
+    );
+  }
+}
+
+/// Collection's TV legacy chrome, with static paint retained across focus
+/// frames. Geometry, colours, curve and duration match [CardFocusRise]. Other
+/// platforms and themes continue through the shared implementation.
+///
+/// Separate boundaries keep the resting shadow and clipped content out of the
+/// lift/ring fade's paint traversal. This trades a few retained layers per
+/// mounted card for fewer paint recordings; raster caching remains the
+/// renderer's decision, rather than a guarantee of cheaper GPU frames.
+class CollectionCardFocusRise extends CardFocusRise {
+  const CollectionCardFocusRise({
+    super.key,
+    required super.active,
+    required super.isTelevision,
+    super.ringColor,
+    super.aspectRatio,
+    super.restVeil,
+    required super.children,
+  });
+
+  static const _duration = Duration(milliseconds: 120);
+  static const _radius = BorderRadius.all(Radius.circular(10));
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isTelevision || !AppThemeScope.of(context).isLegacy) {
+      return super.build(context);
+    }
+    return AnimatedScale(
+      scale: active ? 1.045 : 1,
+      duration: _duration,
+      curve: Curves.easeOutCubic,
+      child: AspectRatio(
+        aspectRatio: aspectRatio,
+        child: Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.none,
+          children: [
+            const RepaintBoundary(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: _radius,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x59000000),
+                      blurRadius: 12,
+                      offset: Offset(0, 10),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            AnimatedOpacity(
+              opacity: active ? 1 : 0,
+              duration: _duration,
+              curve: Curves.easeOutCubic,
+              child: const RepaintBoundary(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: _radius,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color.fromRGBO(0, 0, 0, 0.6),
+                        blurRadius: 28,
+                        offset: Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            RepaintBoundary(
+              child: ClipRRect(
+                borderRadius: _radius,
+                child: Stack(fit: StackFit.expand, children: children),
+              ),
+            ),
+            if (restVeil != null)
+              IgnorePointer(
+                child: ClipRRect(
+                  borderRadius: _radius,
+                  child: AnimatedContainer(
+                    duration: _duration,
+                    curve: Curves.easeOutCubic,
+                    color: active ? Colors.transparent : restVeil,
+                  ),
+                ),
+              ),
+            IgnorePointer(
+              child: AnimatedOpacity(
+                opacity: active ? 1 : 0,
+                duration: _duration,
+                curve: Curves.easeOutCubic,
+                child: RepaintBoundary(
+                  child: ClipRRect(
+                    borderRadius: _radius,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: _radius,
+                        border: Border.all(
+                          color: ringColor ?? kCardFocusRing,
+                          width: 2.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
