@@ -1514,6 +1514,7 @@ class MainActivity : FlutterActivity() {
 		// Lets system audio-effect apps (Wavelet, OEM equalizers) attach to the
 		// phone player's audio session — see AudioEffectSession.
 		com.debrify.app.audio.AudioEffectSession.register(flutterEngine, this)
+		com.debrify.app.memory.DeviceMemoryChannel.register(flutterEngine, this)
 		// Recordings a previous process never managed to publish (killed
 		// mid-copy, failed MediaStore update, died while recording).
 		retryPendingRecordingPublishes()
