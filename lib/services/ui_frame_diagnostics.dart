@@ -68,7 +68,8 @@ class UiFrameDiagnostics {
 
   /// Numeric collection probes: 0 target, 1 focus request, 2 offset, 3 focus
   /// committed, 4 body built (row: 0 loading, 1 error, 2 all, 3 tabs, 4 rails,
-  /// 5 mobile gallery). Body builds do not imply a route remains foreground.
+  /// 5 mobile gallery); stage 5 records legacy-theme eligibility (row 0/1).
+  /// Body builds do not imply a route remains foreground.
   /// Row indices and pixel offsets only; never title IDs, labels or URLs.
   void navigation(int stage, int row, double offset, double target) {
     if (!_active) return;

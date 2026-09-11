@@ -439,6 +439,7 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
     final headerHeight = MediaQuery.textScalerOf(context).scale(18) * 1.4;
     _extent = _card.height + 30 + headerHeight;
     final app = AppThemeScope.of(context);
+    UiFrameDiagnostics.instance.navigation(5, app.isLegacy ? 1 : 0, 0, 0);
     final rails = ListView.builder(
       controller: _vertical,
       itemExtent: _extent,
@@ -527,7 +528,7 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
                                     listenable: node,
                                     builder: (_, child) => Semantics(
                                       button: true,
-                                      child: CardFocusRise(
+                                      child: CollectionCardFocusRise(
                                         active: node.hasFocus,
                                         isTelevision: true,
                                         aspectRatio: _card.aspectRatio,
