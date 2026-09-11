@@ -67,6 +67,8 @@ class ArtworkCacheBudget {
   bool _expanded = false;
   int _budget = 512 * 1024 * 1024;
   int _generation = 0;
+  int _clearGeneration = 0;
+  int get clearGeneration => _clearGeneration;
   final _cancelled = StreamController<int>.broadcast(sync: true);
   int _downloads = 0;
   final _waiters = <Completer<void>>[];
@@ -169,6 +171,7 @@ class ArtworkCacheBudget {
       entry.writing || entry.readers > 0 || _graces.containsKey(entry.path);
 
   Future<void> clear([ArtworkCacheStore? only]) async {
+    _clearGeneration++;
     _invalidate();
     await initialize();
     await _lock.synchronized(() async {

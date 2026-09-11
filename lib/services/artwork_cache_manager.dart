@@ -86,6 +86,7 @@ class ArtworkCacheManager extends CacheManager {
   final Future<void> Function()? initializePolicy;
   final Future<io.RandomAccessFile> Function(String)? openFile;
   final _pending = <(String, int), Future<FileInfo>>{};
+  final _writers = <(String, int), Object>{};
 
   Future<void> _ready({bool inventory = true}) async {
     await initializePolicy?.call();
@@ -109,6 +110,12 @@ class ArtworkCacheManager extends CacheManager {
         if (object.id != null) await config.repo.delete(object.id!);
         return null;
       }
+      if (object.length != null &&
+          await io.File(path).length() != object.length) {
+        budget.retire(path);
+        if (object.id != null) await config.repo.delete(object.id!);
+        return null;
+      }
       await budget.touch(path);
       budget.handoff(path);
       return FileInfo(
@@ -129,7 +136,9 @@ class ArtworkCacheManager extends CacheManager {
     String? key,
     Map<String, String>? headers,
   }) async {
+    final cleared = budget.clearGeneration;
     final cached = await getFileFromCache(key ?? url);
+    if (cleared != budget.clearGeneration) throw ArtworkCacheCancelled();
     if (cached != null && cached.validTill.isAfter(DateTime.now())) {
       return cached.file;
     }
@@ -147,7 +156,9 @@ class ArtworkCacheManager extends CacheManager {
     Future<void> run() async {
       FileInfo? cached;
       try {
+        final cleared = budget.clearGeneration;
         await _ready(inventory: false);
+        if (cleared != budget.clearGeneration) throw ArtworkCacheCancelled();
         final token = budget.token();
         cached = await getFileFromCache(key ?? url);
         if (cached != null) controller.add(cached);
@@ -203,7 +214,9 @@ class ArtworkCacheManager extends CacheManager {
     Map<String, String>? authHeaders,
     bool force = false,
   }) async {
-    await _ready();
+    final cleared = budget.clearGeneration;
+    await _ready(inventory: false);
+    if (cleared != budget.clearGeneration) throw ArtworkCacheCancelled();
     return _download(
       url,
       key ?? url,
@@ -221,13 +234,23 @@ class ArtworkCacheManager extends CacheManager {
     bool force = false,
     void Function(DownloadProgress)? progress,
   }) async {
-    await budget.initialize();
     budget.check(token);
     final id = (key, token.generation);
     if (!force && _pending.containsKey(id)) {
       return _consumer(await _pending[id]!);
     }
-    final future = budget.downloadSlot(token, () async {
+    final writer = Object();
+    _writers[id] = writer;
+    void checkWriter() {
+      budget.check(token);
+      if (!identical(_writers[id], writer)) throw ArtworkCacheCancelled();
+    }
+
+    // Start the request while disk inventory runs. Admission still waits for
+    // the complete ledger before any payload bytes are written.
+    unawaited(budget.initialize().catchError((Object _) {}));
+    late final Future<FileInfo> future;
+    future = budget.downloadSlot(token, () async {
       final old = await config.repo.get(key);
       final requestHeaders = <String, String>{
         if (old?.eTag != null) io.HttpHeaders.ifNoneMatchHeader: old!.eTag!,
@@ -254,16 +277,23 @@ class ArtworkCacheManager extends CacheManager {
       if (response.statusCode == 304) {
         await response.content.listen(null).cancel();
         return budget.transaction(() async {
-          budget.check(token);
+          checkWriter();
           final dir = await artworkStore.directory;
-          if (old == null ||
-              !budget.available(p.join(dir.path, old.relativePath))) {
+          if (old == null) {
             throw const ArtworkCacheLimit();
           }
           final current = await config.repo.get(key);
           if (current == null) throw const ArtworkCacheLimit();
           final path = p.join(dir.path, current.relativePath);
-          if (!budget.available(path) || !await io.File(path).exists()) {
+          if (!p.isWithin(dir.path, path) ||
+              !await budget.adopt(path, artworkStore, key) ||
+              !await io.File(path).exists()) {
+            throw const ArtworkCacheLimit();
+          }
+          if (current.length != null &&
+              await io.File(path).length() != current.length) {
+            budget.retire(path);
+            if (current.id != null) await config.repo.delete(current.id!);
             throw const ArtworkCacheLimit();
           }
           // A concurrent forced refresh may already have replaced the old ETag.
@@ -300,6 +330,7 @@ class ArtworkCacheManager extends CacheManager {
         validTill: response.validTill,
         extension: response.fileExtension,
         progress: progress,
+        checkWriter: checkWriter,
       );
       return FileInfo(
         file,
@@ -312,8 +343,20 @@ class ArtworkCacheManager extends CacheManager {
     _pending[id] = future;
     try {
       return _consumer(await future);
+    } on ArtworkCacheCancelled {
+      budget.check(token);
+      if (!identical(_writers[id], writer)) {
+        final newer = _pending[id];
+        if (newer != null && !identical(newer, future)) {
+          return _consumer(await newer);
+        }
+        final cached = await getFileFromCache(key);
+        if (cached != null) return cached;
+      }
+      rethrow;
     } finally {
       if (identical(_pending[id], future)) _pending.remove(id);
+      if (identical(_writers[id], writer)) _writers.remove(id);
     }
   }
 
@@ -347,12 +390,20 @@ class ArtworkCacheManager extends CacheManager {
     required DateTime validTill,
     required String extension,
     void Function(DownloadProgress)? progress,
+    void Function()? checkWriter,
   }) async {
     final iterator = StreamIterator(source);
     String? temporary;
     io.RandomAccessFile? handle;
     try {
       budget.check(token);
+      await _untilCancelled(
+        budget.initialize(),
+        token,
+        const Duration(minutes: 1),
+      );
+      budget.check(token);
+      checkWriter?.call();
       if (length != null && length > budget.fileLimit) {
         throw const ArtworkCacheLimit();
       }
@@ -383,6 +434,7 @@ class ArtworkCacheManager extends CacheManager {
             : const Duration(seconds: 20);
         if (!await _untilCancelled(iterator.moveNext(), token, timeout)) break;
         final chunk = iterator.current;
+        checkWriter?.call();
         await budget.write(temporary, handle, chunk, token);
         received += chunk.length;
         progress?.call(DownloadProgress(url, length, received));
@@ -394,7 +446,9 @@ class ArtworkCacheManager extends CacheManager {
       handle = null;
       await budget.transaction(
         () => budget.publish(temporary!, path, token, () async {
+          checkWriter?.call();
           final old = await config.repo.get(key);
+          checkWriter?.call();
           await config.repo.updateOrInsert(
             CacheObject(
               url,
@@ -406,6 +460,7 @@ class ArtworkCacheManager extends CacheManager {
               length: received,
             ),
           );
+          checkWriter?.call();
           if (old != null) budget.retire(p.join(dir.path, old.relativePath));
         }),
       );
@@ -449,20 +504,33 @@ class ArtworkCacheManager extends CacheManager {
     Duration maxAge = const Duration(days: 30),
     String fileExtension = 'file',
   }) async {
-    await _ready();
+    final cleared = budget.clearGeneration;
+    await _ready(inventory: false);
+    if (cleared != budget.clearGeneration) throw ArtworkCacheCancelled();
     final token = budget.token();
-    return budget.downloadSlot(
-      token,
-      () => _save(
-        url,
-        key ?? url,
-        source,
+    final id = (key ?? url, token.generation);
+    final writer = Object();
+    _writers[id] = writer;
+    try {
+      return await budget.downloadSlot(
         token,
-        eTag: eTag,
-        validTill: DateTime.now().add(maxAge),
-        extension: fileExtension,
-      ),
-    );
+        () => _save(
+          url,
+          key ?? url,
+          source,
+          token,
+          eTag: eTag,
+          validTill: DateTime.now().add(maxAge),
+          extension: fileExtension,
+          checkWriter: () {
+            budget.check(token);
+            if (!identical(_writers[id], writer)) throw ArtworkCacheCancelled();
+          },
+        ),
+      );
+    } finally {
+      if (identical(_writers[id], writer)) _writers.remove(id);
+    }
   }
 
   @override
