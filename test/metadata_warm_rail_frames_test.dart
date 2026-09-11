@@ -161,7 +161,7 @@ void main() {
       final images = tester.widgetList<CachedNetworkImage>(
         find.byType(CachedNetworkImage),
       );
-      expect(images.first.fadeOutDuration, const Duration(seconds: 1));
+      expect(images.first.fadeOutDuration, Duration.zero);
       // A synchronous decoded hit bypasses Octo's fade despite the configured duration.
       expect(
         find.descendant(

@@ -560,7 +560,13 @@ class _RailArtworkState extends State<_RailArtwork>
       cacheManager: DebrifyImageCache.manager,
       memCacheWidth: widget.decodeWidth,
       fit: BoxFit.cover,
-      fadeInDuration: const Duration(milliseconds: 120),
+      fadeInDuration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 120),
+      fadeInCurve: Curves.easeOut,
+      // Only the arriving image fades; the default 1 s placeholder fade would
+      // cover that short reveal and add another opacity layer to every card.
+      fadeOutDuration: Duration.zero,
       placeholder: (_, _) => placeholder,
       errorWidget: (_, _, _) => retry && fallback != null && fallback != value
           ? image(fallback, retry: false)
