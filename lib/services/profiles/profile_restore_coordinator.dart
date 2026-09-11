@@ -1725,7 +1725,8 @@ class ProfileRestoreCoordinator {
         'region',
         'accountLabel',
       },
-      ConnectionResourceType.webDav => const <String>{'accountLabel'},
+      ConnectionResourceType.webDav ||
+      ConnectionResourceType.tmdb => const <String>{'accountLabel'},
       ConnectionResourceType.trakt ||
       ConnectionResourceType.simkl ||
       ConnectionResourceType.mdblist ||

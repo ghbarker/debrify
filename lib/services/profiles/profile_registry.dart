@@ -1952,6 +1952,7 @@ class ProfileRegistry {
         ConnectionResourceType.simkl,
         ConnectionResourceType.mdblist,
         ConnectionResourceType.reddit,
+        ConnectionResourceType.tmdb,
       };
 
   /// The default-share permission mask: usable for playback and downloads,

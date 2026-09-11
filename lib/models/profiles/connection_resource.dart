@@ -15,6 +15,7 @@ enum ConnectionResourceType {
   jackett,
   prowlarr,
   reddit,
+  tmdb,
 }
 
 extension ConnectionResourceTypeBinding on ConnectionResourceType {
@@ -31,6 +32,7 @@ extension ConnectionResourceTypeBinding on ConnectionResourceType {
     ConnectionResourceType.simkl => 'tracker.simkl',
     ConnectionResourceType.mdblist => 'tracker.mdblist',
     ConnectionResourceType.reddit => 'tracker.reddit',
+    ConnectionResourceType.tmdb => 'metadata.tmdb',
     ConnectionResourceType.webDav ||
     ConnectionResourceType.iptvM3u ||
     ConnectionResourceType.iptvXtream ||

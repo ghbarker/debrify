@@ -37,6 +37,13 @@ class ProfileCredentialFacade {
 
   static const Map<String, _CredentialField> _fields =
       <String, _CredentialField>{
+        'tmdb_read_access_token': _CredentialField(
+          ConnectionResourceType.tmdb,
+          'metadata.tmdb',
+          'accessToken',
+          'TMDB',
+          ProfileFeature.trackersAndDiscovery,
+        ),
         'real_debrid_api_key': _CredentialField(
           ConnectionResourceType.realDebrid,
           'provider.realDebrid',

@@ -369,6 +369,8 @@ class ProfileMigrationService {
         'username': legacy.getString('simkl_username'),
       },
     );
+    await add('tmdb', ConnectionResourceType.tmdb, 'TMDB', 'metadata.tmdb',
+      <String, dynamic>{'accessToken': await secret('tmdb_read_access_token')});
     await add(
       'reddit-quarantine',
       ConnectionResourceType.reddit,
@@ -899,6 +901,7 @@ class ProfileMigrationService {
     'trakt_access_token',
     'trakt_refresh_token',
     'simkl_access_token',
+    'tmdb_read_access_token',
     'pikpak_email',
     'pikpak_password',
     'pikpak_access_token',
@@ -926,6 +929,7 @@ class ProfileMigrationService {
     'trakt_access_token',
     'trakt_refresh_token',
     'simkl_access_token',
+    'tmdb_read_access_token',
     'pikpak_email',
     'pikpak_password',
     'pikpak_access_token',
@@ -950,6 +954,7 @@ class ProfileMigrationService {
     'trakt_access_token': 'resource-legacy-trakt',
     'trakt_refresh_token': 'resource-legacy-trakt',
     'simkl_access_token': 'resource-legacy-simkl',
+    'tmdb_read_access_token': 'resource-legacy-tmdb',
     'pikpak_email': 'resource-legacy-pikpak',
     'pikpak_password': 'resource-legacy-pikpak',
     'pikpak_access_token': 'resource-legacy-pikpak',

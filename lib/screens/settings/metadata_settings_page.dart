@@ -5,6 +5,7 @@ import '../../models/stremio_addon.dart';
 import '../../services/metadata_preferences_service.dart';
 import '../../services/stremio_service.dart';
 import '../../services/tmdb_metadata_repository.dart';
+import '../../services/tmdb_credential_service.dart';
 import '../../services/profiles/profile_runtime.dart';
 import '../../services/metadata_details_service.dart';
 import '../../widgets/collections/tmdb_attribution.dart';
@@ -34,25 +35,32 @@ class _MetadataSettingsPageState extends State<MetadataSettingsPage> {
     super.initState();
     ProfileRuntime.scope.addListener(_load);
     MetadataPreferencesService.revision.addListener(_load);
+    TmdbCredentialService.revision.addListener(_credentialsChanged);
     _load();
-    _loadConfiguration();
+    _initializeCredentials();
   }
 
   @override
   void dispose() {
     ProfileRuntime.scope.removeListener(_load);
     MetadataPreferencesService.revision.removeListener(_load);
+    TmdbCredentialService.revision.removeListener(_credentialsChanged);
     super.dispose();
   }
 
   Future<void> _loadConfiguration() async {
+    final scope = ProfileRuntime.scope.value;
+    final credentialRevision = TmdbCredentialService.revision.value;
     if (!_repository.configured) return;
     try {
       final data = await Future.wait([
         _repository.get('configuration/languages'),
         _repository.get('configuration/countries'),
       ]);
-      if (!mounted) return;
+      if (!mounted || scope != ProfileRuntime.scope.value ||
+          credentialRevision != TmdbCredentialService.revision.value) {
+        return;
+      }
       final languages = <String, String>{..._languages};
       for (final row in MetadataDetailsService.maps(data[0]['results'])) {
         final code = MetadataDetailsService.text(row['iso_639_1']);
@@ -73,6 +81,25 @@ class _MetadataSettingsPageState extends State<MetadataSettingsPage> {
       // Offline settings retain the built-in choices.
     }
   }
+
+  Future<void> _initializeCredentials() async {
+    await TmdbCredentialService.initialize();
+    if (mounted) _credentialsChanged();
+  }
+
+  void _credentialsChanged() {
+    if (!mounted) return;
+    setState(() {
+      _languageOptions = {..._languages};
+      _regionOptions = null;
+    });
+    _loadConfiguration();
+  }
+
+  Future<void> _editToken() => showDialog<void>(
+    context: context,
+    builder: (_) => const _TmdbTokenDialog(),
+  );
 
   Future<void> _load() async {
     final generation = ++_loadGeneration;
@@ -263,6 +290,16 @@ class _MetadataSettingsPageState extends State<MetadataSettingsPage> {
                     padding: const EdgeInsets.all(16),
                     child: Text(_error!),
                   ),
+                ListTile(
+                  title: const Text('TMDB API Read Access Token'),
+                  subtitle: Text(TmdbCredentialService.hasOverride
+                      ? 'Saved for this profile. Edit to replace or remove.'
+                      : TmdbCredentialService.buildToken.trim().isNotEmpty
+                          ? 'Using the built-in token. You can add your own.'
+                          : 'Optional. Add a token here to enable TMDB. Addons work without one.'),
+                  trailing: const Icon(Icons.key),
+                  onTap: _saving ? null : _editToken,
+                ),
                 for (final category in MetadataCategory.values)
                   _selection(
                     category.label,
@@ -375,4 +412,76 @@ class _MetadataSettingsPageState extends State<MetadataSettingsPage> {
             ),
     );
   }
+}
+
+/// The saved secret never enters widget state. This controller holds new input only.
+class _TmdbTokenDialog extends StatefulWidget {
+  const _TmdbTokenDialog();
+  @override
+  State<_TmdbTokenDialog> createState() => _TmdbTokenDialogState();
+}
+
+class _TmdbTokenDialogState extends State<_TmdbTokenDialog> {
+  final _controller = TextEditingController();
+  final _scope = ProfileRuntime.scope.value;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    ProfileRuntime.scope.addListener(_scopeChanged);
+  }
+
+  void _scopeChanged() {
+    if (mounted && _scope != ProfileRuntime.scope.value) {
+      _controller.clear();
+      Navigator.of(context).pop();
+    }
+  }
+
+  @override
+  void dispose() {
+    ProfileRuntime.scope.removeListener(_scopeChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_saving || _scope != ProfileRuntime.scope.value) return;
+    setState(() { _saving = true; _error = null; });
+    try {
+      await TmdbCredentialService.save(_controller.text);
+      if (mounted && _scope == ProfileRuntime.scope.value) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted && _scope == ProfileRuntime.scope.value) {
+        setState(() => _error = 'Could not save the token. Try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('TMDB token'),
+    content: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Text('Enter your TMDB API Read Access Token. Leave empty to remove your saved token and use the built-in token, if available.'),
+      TextField(
+        key: const ValueKey('tmdb-token-input'),
+        controller: _controller,
+        obscureText: true,
+        autocorrect: false,
+        enableSuggestions: false,
+        enabled: !_saving,
+        decoration: const InputDecoration(labelText: 'New token', errorMaxLines: 2),
+        onSubmitted: (_) => _save(),
+      ),
+      if (_error != null) Text(_error!),
+    ]),
+    actions: [
+      TextButton(onPressed: _saving ? null : () => Navigator.of(context).pop(), child: const Text('Cancel')),
+      TextButton(onPressed: _saving ? null : _save, child: Text(_saving ? 'Saving…' : 'Save')),
+    ],
+  );
 }

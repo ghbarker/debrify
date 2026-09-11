@@ -10,6 +10,7 @@ import '../models/home_collection.dart';
 import '../models/stremio_addon.dart';
 import 'collection_catalog_pager.dart';
 import 'tmdb_http_client.dart';
+import 'tmdb_credential_service.dart';
 import 'trakt/trakt_constants.dart';
 import 'trakt/trakt_item_transformer.dart';
 
@@ -31,8 +32,9 @@ class CollectionNativeSourceService {
                ? (() => client)
                : (() => TmdbHttpClient(dnsCache: _dnsCache))),
        _ownsTmdbClients = tmdbClientFactory != null || client == null,
-       _tmdbToken =
-           tmdbToken ?? const String.fromEnvironment('TMDB_READ_ACCESS_TOKEN');
+       _tmdbToken = tmdbToken {
+    if (tmdbToken == null) TmdbCredentialService.revision.addListener(_invalidateCredentials);
+  }
 
   static final instance = CollectionNativeSourceService();
   final http.Client _client;
@@ -49,10 +51,42 @@ class CollectionNativeSourceService {
   final _responses = <String, ({DateTime expires, String body})>{};
   final _pendingResponses = <String, Future<Map<String, dynamic>>>{};
   int _responseBytes = 0;
-  final String _tmdbToken;
+  final String? _tmdbToken;
+  int _credentialGeneration = 0;
+  Future<TmdbCredentialSnapshot> _credential() async => _tmdbToken == null
+      ? await TmdbCredentialService.capture()
+      : TmdbCredentialSnapshot(_tmdbToken.trim(), () => true, () async {});
+
+  void _invalidateCredentials() {
+    _credentialGeneration++;
+    _responses.clear();
+    _pendingResponses.clear();
+    _responseBytes = 0;
+    _localTmdbLists.clear();
+    _externalIds.clear();
+    _pendingIds.clear();
+    _identityQueue.clear();
+    _identityRetryAfter.clear();
+    _hydratedItems = Expando<StremioMeta>();
+    _rateLimitedUntil = null;
+    if (_ownsTmdbClients) {
+      for (final client in {..._activeClients, ..._idleClients}) { client.close(); }
+      _idleClients.clear();
+    }
+    if (!_closed) identityChanges.value++;
+  }
+
+  Future<CollectionSourcePage> _authorizedTmdb(CollectionCatalogSource source,
+      int page, {bool enrich = true}) async {
+    final credential = await _credential();
+    final result = await _tmdb(source, page, enrich: enrich);
+    await credential.validate();
+    return result;
+  }
   void close() {
     if (_closed) return;
     _closed = true;
+    TmdbCredentialService.revision.removeListener(_invalidateCredentials);
     _identityQueue.clear();
     _client.close();
     if (_ownsTmdbClients) {
@@ -78,7 +112,7 @@ class CollectionNativeSourceService {
   // Tie completed hydration to the lifetime of each loaded card, rather than
   // to the bounded cross-page ID cache. Weak keys release unloaded cards.
   // A value identical to the key records a successful "no IMDb ID" lookup.
-  final _hydratedItems = Expando<StremioMeta>();
+  var _hydratedItems = Expando<StremioMeta>();
   final _pendingIds = <String, Future<String?>>{};
   final _identityQueue = <String, StremioMeta>{};
   final _identityRetryAfter = <String, DateTime>{};
@@ -90,6 +124,14 @@ class CollectionNativeSourceService {
   /// addons, and stream addons. Preserve TMDB-only titles when no mapping exists.
   Future<StremioMeta> resolveIdentity(StremioMeta meta) async {
     if (!meta.id.startsWith('tmdb:')) return meta;
+    // Loading a persisted override can invalidate caches on the first lookup.
+    // Capture it before the generation this identity lookup belongs to.
+    try {
+      await _credential();
+    } catch (_) {
+      return meta;
+    }
+    final generation = _credentialGeneration;
     meta = withCachedIdentity(meta);
     if (meta.imdbId != null) {
       return StremioMeta.fromJson({...meta.toJson(), 'id': meta.imdbId});
@@ -101,6 +143,7 @@ class CollectionNativeSourceService {
       final data = await _tmdbGet(
         '${meta.type == 'series' ? 'tv' : 'movie'}/$numericId/external_ids',
       );
+      if (generation != _credentialGeneration) throw StateError('TMDB configuration changed');
       final raw = data['imdb_id'];
       final value = raw is String && RegExp(r'^tt[0-9]+$').hasMatch(raw)
           ? raw
@@ -120,9 +163,10 @@ class CollectionNativeSourceService {
           : await _pendingIds.putIfAbsent(
               key,
               () => load().whenComplete(() {
-                _pendingIds.remove(key);
+                if (generation == _credentialGeneration) _pendingIds.remove(key);
               }),
             );
+      if (generation != _credentialGeneration) return meta;
       _retainIdentity(meta, id);
       if (id == null) return meta;
       return StremioMeta.fromJson({
@@ -166,7 +210,7 @@ class CollectionNativeSourceService {
   }
 
   Future<CollectionSourcePage> fetch(CollectionCatalogSource source, int page) {
-    if (source.provider == 'tmdb') return _tmdb(source, page);
+    if (source.provider == 'tmdb') return _authorizedTmdb(source, page);
     if (source.provider == 'trakt') return _trakt(source, page);
     throw CollectionSourceException(
       'Unsupported collection provider: ${source.provider}.',
@@ -180,7 +224,7 @@ class CollectionNativeSourceService {
     int page,
   ) async {
     final result = source.provider == 'tmdb'
-        ? await _tmdb(source, page, enrich: false)
+        ? await _authorizedTmdb(source, page, enrich: false)
         : source.provider == 'trakt'
         ? await _trakt(source, page, enrich: false)
         : throw CollectionSourceException(
@@ -214,19 +258,20 @@ class CollectionNativeSourceService {
   }
 
   Future<void> _runIdentityWorker() async {
+    final generation = _credentialGeneration;
     try {
       while (!_closed && _identityQueue.isNotEmpty) {
         // Optional enrichment must not compete with a gallery's initial list
         // requests. Keep the separate gate for explicit title opens, but let
         // queued catalogs drain before starting another background lookup.
         await _catalogGate.whenIdle;
-        if (_closed || _identityQueue.isEmpty) break;
+        if (_closed || generation != _credentialGeneration || _identityQueue.isEmpty) break;
         final key = _identityQueue.keys.first;
         final item = _identityQueue.remove(key)!;
         _prefetching.add(key);
         try {
           await resolveIdentity(item);
-          if (!_externalIds.containsKey(key)) {
+          if (generation == _credentialGeneration && !_externalIds.containsKey(key)) {
             if (_identityRetryAfter.length >= 128) {
               _identityRetryAfter.remove(_identityRetryAfter.keys.first);
             }
@@ -271,11 +316,13 @@ class CollectionNativeSourceService {
     Uri uri,
     Map<String, String> headers,
     Duration budget,
+    TmdbCredentialSnapshot credential,
   ) async {
     final elapsed = Stopwatch()..start();
     final identity = uri.path.endsWith('/external_ids');
     final attempts = identity ? 2 : 4;
     for (var attempt = 0; attempt < attempts; attempt++) {
+      await credential.validate();
       if (_closed) throw const SocketException('Collection client is closed');
       final remaining = budget - elapsed.elapsed;
       if (remaining <= Duration.zero) throw TimeoutException('TMDB timed out');
@@ -314,6 +361,7 @@ class CollectionNativeSourceService {
             headers: streamed.headers,
           );
         })().timeout(limit);
+        await credential.validate();
         reusable = response.statusCode == 200;
         if (response.statusCode == 429) {
           final seconds =
@@ -341,7 +389,7 @@ class CollectionNativeSourceService {
       } finally {
         _activeClients.remove(client);
         if (_ownsTmdbClients) {
-          if (reusable && !_closed && _idleClients.length < 6) {
+          if (reusable && !_closed && credential.isCurrent() && _idleClients.length < 6) {
             _idleClients.add(client);
           } else {
             client.close();
@@ -356,7 +404,8 @@ class CollectionNativeSourceService {
     throw const CollectionSourceException('TMDB could not load this list.');
   }
 
-  Future<http.Response> _get(Uri uri, Map<String, String> headers) async {
+  Future<http.Response> _get(Uri uri, Map<String, String> headers,
+      {TmdbCredentialSnapshot? credential}) async {
     final identity = uri.path.endsWith('/external_ids');
     final tmdb = uri.host == 'api.themoviedb.org';
     final budget = identity ? enrichmentBudget : requestBudget;
@@ -368,7 +417,7 @@ class CollectionNativeSourceService {
         );
       }
       return tmdb
-          ? _readTmdb(uri, headers, budget)
+          ? _readTmdb(uri, headers, budget, credential!)
           : _client.get(uri, headers: headers).timeout(budget);
     }
 
@@ -405,8 +454,10 @@ class CollectionNativeSourceService {
     Map<String, String> query = const {},
   ]) async {
     if (_closed) throw const SocketException('Collection client is closed');
-    if (path.endsWith('/external_ids')) return _loadTmdb(path, query);
-    final key = jsonEncode([path, SplayTreeMap<String, String>.from(query)]);
+    final credential = await _credential();
+    final generation = _credentialGeneration;
+    if (path.endsWith('/external_ids')) return _loadTmdb(path, query, credential);
+    final key = jsonEncode([generation, path, SplayTreeMap<String, String>.from(query)]);
     final cached = _responses.remove(key);
     if (cached != null) {
       if (cached.expires.isAfter(DateTime.now())) {
@@ -419,10 +470,11 @@ class CollectionNativeSourceService {
     if (pending != null) {
       return jsonDecode(jsonEncode(await pending)) as Map<String, dynamic>;
     }
-    final work = _loadTmdb(path, query);
+    final work = _loadTmdb(path, query, credential);
     _pendingResponses[key] = work;
     try {
       final data = await work;
+      await credential.validate();
       if (!_closed) {
         final body = jsonEncode(data);
         _responses[key] = (
@@ -442,12 +494,13 @@ class CollectionNativeSourceService {
   }
 
   Future<Map<String, dynamic>> _loadTmdb(
-    String path, [
-    Map<String, String> query = const {},
-  ]) async {
-    if (_tmdbToken.trim().isEmpty) {
+    String path,
+    Map<String, String> query,
+    TmdbCredentialSnapshot credential,
+  ) async {
+    if (credential.token.isEmpty) {
       throw const CollectionSourceException(
-        'This build has no TMDB token. Rebuild with the local config or use a configured release.',
+        'Add a TMDB API Read Access Token in Settings > Metadata, or use an addon or public Trakt list.',
       );
     }
     final response = await _get(
@@ -455,8 +508,10 @@ class CollectionNativeSourceService {
         'language': 'en-US',
         ...query,
       }),
-      {'Authorization': 'Bearer $_tmdbToken', 'Accept': 'application/json'},
+      {'Authorization': 'Bearer ${credential.token}', 'Accept': 'application/json'},
+      credential: credential,
     );
+    await credential.validate();
     final decoded = jsonDecode(response.body);
     if (decoded is! Map<String, dynamic>) {
       throw const CollectionSourceException(

@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/stremio_addon.dart';
 import 'tmdb_http_client.dart';
+import 'tmdb_credential_service.dart';
 
 class TmdbMetadataException implements Exception {
   const TmdbMetadataException(this.message);
@@ -24,18 +25,35 @@ typedef TmdbIdentity = ({String type, int id});
 /// its client so timeout cancellation closes the actual transport.
 class TmdbMetadataRepository {
   TmdbMetadataRepository({
-    String token = const String.fromEnvironment('TMDB_READ_ACCESS_TOKEN'),
+    String? token,
     http.Client Function()? clientFactory,
     DateTime Function()? now,
     this.timeout = const Duration(seconds: 12),
   }) : _token = token,
        _clientFactory =
            clientFactory ?? (() => TmdbHttpClient(dnsCache: _dnsCache)),
-       _now = now ?? DateTime.now;
+       _now = now ?? DateTime.now {
+    if (token == null) TmdbCredentialService.revision.addListener(_invalidateCredentials);
+  }
 
   static final instance = TmdbMetadataRepository();
   static final _dnsCache = TmdbDnsCache();
-  final String _token;
+  final String? _token;
+  int _credentialGeneration = 0;
+  final _clients = <http.Client>{};
+  void _invalidateCredentials() {
+    _credentialGeneration++;
+    _cache.clear();
+    _cacheBytes = 0;
+    _pending.clear();
+    _retryAfter = null;
+    for (final client in _clients.toList()) { client.close(); }
+  }
+
+  void dispose() {
+    TmdbCredentialService.revision.removeListener(_invalidateCredentials);
+    _invalidateCredentials();
+  }
   final http.Client Function() _clientFactory;
   final DateTime Function() _now;
   final Duration timeout;
@@ -53,16 +71,19 @@ class TmdbMetadataRepository {
   int _cacheBytes = 0;
   DateTime? _retryAfter;
 
-  bool get configured => _token.trim().isNotEmpty;
+  bool get configured => (_token ?? TmdbCredentialService.effectiveToken).trim().isNotEmpty;
 
   Future<Map<String, dynamic>> get(
     String path, [
     Map<String, String> query = const {},
     bool Function()? isRelevant,
-  ]) {
-    if (!configured) {
+  ]) async {
+    final credential = _token == null ? await TmdbCredentialService.capture()
+        : TmdbCredentialSnapshot(_token.trim(), () => true, () async {});
+    final generation = _credentialGeneration;
+    if (credential.token.isEmpty) {
       return Future.error(
-        const TmdbMetadataException('TMDB is unavailable in this build.'),
+        const TmdbMetadataException('Add a TMDB API Read Access Token in Settings > Metadata.'),
       );
     }
     if (!RegExp(r'^[a-zA-Z0-9_/-]+$').hasMatch(path) || path.contains('..')) {
@@ -72,7 +93,7 @@ class TmdbMetadataRepository {
     }
     final sorted = SplayTreeMap<String, String>.from(query);
     final uri = Uri.https('api.themoviedb.org', '/3/$path', sorted);
-    final key = uri.toString();
+    final key = '$generation:${uri.toString()}';
     final cached = _cache.remove(key);
     if (cached != null && cached.expires.isAfter(_now())) {
       _cache[key] = cached;
@@ -92,8 +113,10 @@ class TmdbMetadataRepository {
       );
     }
     _relevance[key] = [isRelevant ?? () => true];
-    final request = _fetch(uri)
-        .then((result) {
+    final request = _fetch(uri, credential, key)
+        .then((result) async {
+          if (_token == null) await credential.validate();
+          if (generation != _credentialGeneration) throw StateError('TMDB configuration changed');
           _cache[key] = (
             expires: _now().add(const Duration(minutes: 15)),
             data: result.data,
@@ -125,10 +148,10 @@ class TmdbMetadataRepository {
   static Map<String, dynamic> _copy(Map<String, dynamic> data) =>
       _clone(data) as Map<String, dynamic>;
 
-  Future<http.Response> _read(http.Client client, Uri uri) async {
+  Future<http.Response> _read(http.Client client, Uri uri, String token) async {
     final request = http.Request('GET', uri)
       ..headers.addAll({
-        'Authorization': 'Bearer $_token',
+        'Authorization': 'Bearer $token',
         'Accept': 'application/json',
       });
     final response = await client.send(request);
@@ -146,11 +169,12 @@ class TmdbMetadataRepository {
     );
   }
 
-  Future<({Map<String, dynamic> data, int bytes})> _fetch(Uri uri) async {
+  Future<({Map<String, dynamic> data, int bytes})> _fetch(
+    Uri uri, TmdbCredentialSnapshot credential, String key) async {
     final timing = Stopwatch()..start();
     if (_active >= 4) {
       final ready = Completer<void>();
-      _waiters.add((key: uri.toString(), ready: ready));
+      _waiters.add((key: key, ready: ready));
       await ready.future;
     } else {
       _active++;
@@ -160,7 +184,8 @@ class TmdbMetadataRepository {
     var failure = 'none';
     int? status;
     try {
-      if (!(_relevance[uri.toString()]?.any((check) => check()) ?? true)) {
+      if (_token == null) await credential.validate();
+      if (!(_relevance[key]?.any((check) => check()) ?? true)) {
         failure = 'cancelled';
         throw const TmdbMetadataException(
           'Metadata request is no longer needed.',
@@ -170,7 +195,8 @@ class TmdbMetadataRepository {
         failure = 'rate_limited';
         throw const TmdbMetadataException('TMDB is busy. Try again shortly.');
       }
-      final response = await _readWithRetry(uri);
+      final response = await _readWithRetry(uri, credential, key);
+      if (_token == null) await credential.validate();
       status = response.statusCode;
       if (response.statusCode == 429) {
         final seconds =
@@ -216,7 +242,7 @@ class TmdbMetadataRepository {
         fields: {'queue_ms': queueMs, 'work_ms': timing.elapsedMilliseconds - queueMs,
           'success': success, 'waiting': _waiters.length,
           'failure': DiagnosticLabel(failure), 'status': status,
-          'hero': _heroRequests.contains(uri.toString()),
+          'hero': _heroRequests.contains(key),
           'kind': DiagnosticLabel(uri.path.startsWith('/3/find/') ? 'identity' : 'metadata')});
       if (_waiters.isNotEmpty) {
         // Prefer heroes, but give ordinary cards a turn after two heroes.
@@ -233,15 +259,17 @@ class TmdbMetadataRepository {
     }
   }
 
-  Future<http.Response> _readWithRetry(Uri uri) async {
+  Future<http.Response> _readWithRetry(Uri uri, TmdbCredentialSnapshot credential, String key) async {
     final elapsed = Stopwatch()..start();
     for (var attempt = 0; attempt < 2; attempt++) {
       final remaining = timeout - elapsed.elapsed;
       if (remaining <= Duration.zero) throw TimeoutException('TMDB timed out');
+      if (_token == null) await credential.validate();
       final client = _clientFactory();
+      _clients.add(client);
       final requestUri = client is TmdbHttpClient ? client.readUri(uri) : uri;
       try {
-        return await _read(client, requestUri).timeout(remaining);
+        return await _read(client, requestUri, credential.token).timeout(remaining);
       } catch (error) {
         final transportFailure = error is http.ClientException ||
             error is SocketException || error is TlsException;
@@ -255,10 +283,11 @@ class TmdbMetadataRepository {
         // timeouts, or a request whose subscribers have left.
         if (attempt == 1 ||
             elapsed.elapsed >= timeout ||
-            !(_relevance[uri.toString()]?.any((check) => check()) ?? true)) {
+            !(_relevance[key]?.any((check) => check()) ?? true)) {
           rethrow;
         }
       } finally {
+        _clients.remove(client);
         client.close();
       }
     }
