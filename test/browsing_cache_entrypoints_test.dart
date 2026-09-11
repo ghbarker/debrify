@@ -168,6 +168,8 @@ void main() {
             'Custom artwork cache',
             'Artwork storage',
             'Prepare movie streams',
+            'Clear cached add-on lists',
+            'Clear shared artwork cache',
           ],
         );
         expect(

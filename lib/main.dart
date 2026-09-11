@@ -104,6 +104,8 @@ import 'services/analytics_service.dart';
 import 'services/text_brightness.dart';
 import 'services/tv_motion_profile.dart';
 import 'services/browsing_cache_preferences.dart';
+import 'services/debrify_image_cache.dart';
+import 'services/tmdb_credential_service.dart';
 import 'theme/tv_motion_scope.dart';
 import 'services/support_remote_config_service.dart';
 import 'widgets/auto_launch_overlay.dart';
@@ -667,7 +669,12 @@ Future<void> _continueApplicationStartup() async {
   await _bestEffortStartupStep('app-theme-warm', AppThemeController.warm);
   await _bestEffortStartupStep('tv-motion-warm', TvMotionController.warm);
   await _bestEffortStartupStep(
-    'browsing-cache-preferences', BrowsingCachePreferences.initialize,
+    'browsing-cache-preferences',
+    BrowsingCachePreferences.initialize,
+  );
+  await _bestEffortStartupStep(
+    'tmdb-credential',
+    TmdbCredentialService.initialize,
   );
   // From here the system-bar owner is the authority — it re-applies on every
   // active-surface or theme change (the _initOrientation call below remains
@@ -785,6 +792,9 @@ Future<void> _continueApplicationStartup() async {
   // the DB ready.
   WidgetsBinding.instance.addPostFrameCallback((_) {
     unawaited(_prewarmIptvCatalogDb());
+    unawaited(
+      _bestEffortStartupStep('artwork-cache-policy', DebrifyImageCache.applyPolicy),
+    );
   });
 
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {

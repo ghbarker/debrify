@@ -8,9 +8,11 @@ void main() {
   Widget page({
     required Future<int> Function() titleBytes,
     Future<void> Function()? clearTitles,
+    Object? refreshKey,
   }) => MaterialApp(
     home: Scaffold(
       body: BrowsingCacheUsage(
+        refreshKey: refreshKey,
         titleBytes: titleBytes,
         artworkBytes: () async => 2 * 1024 * 1024,
         clearTitles: clearTitles ?? () async {},
@@ -18,6 +20,17 @@ void main() {
       ),
     ),
   );
+
+  testWidgets('policy changes refresh measured usage on the open page', (
+    tester,
+  ) async {
+    await tester.pumpWidget(page(titleBytes: () async => 1024, refreshKey: 1));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('1 KB'), findsOneWidget);
+    await tester.pumpWidget(page(titleBytes: () async => 0, refreshKey: 2));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('0 KB'), findsOneWidget);
+  });
 
   testWidgets('late initial inventory cannot overwrite usage after clear', (
     tester,
@@ -36,9 +49,9 @@ void main() {
       ),
     );
     await tester.pump();
-    await tester.tap(find.text('Clear cached title lists'));
+    await tester.tap(find.text('Clear cached add-on lists'));
     await tester.pump();
-    await tester.tap(find.text('Clear cached title lists'));
+    await tester.tap(find.text('Clear cached add-on lists'));
     expect(clears, 1);
     expect(find.text('Clearing…'), findsOneWidget);
     cleared.complete();
@@ -67,11 +80,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Clear cached title lists'));
+    await tester.tap(find.text('Clear cached add-on lists'));
     await tester.pumpAndSettle();
     expect(find.text('Could not clear. Please try again.'), findsOneWidget);
     fails = false;
-    await tester.tap(find.text('Clear cached title lists'));
+    await tester.tap(find.text('Clear cached add-on lists'));
     await tester.pumpAndSettle();
     expect(find.text('Could not clear. Please try again.'), findsNothing);
     expect(find.textContaining('0 KB'), findsOneWidget);
@@ -89,7 +102,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Storage usage unavailable'), findsOneWidget);
-    await tester.tap(find.text('Clear cached title lists'));
+    await tester.tap(find.text('Clear cached add-on lists'));
     await tester.pumpWidget(const SizedBox.shrink());
     clear.complete();
     await tester.pumpAndSettle();

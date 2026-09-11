@@ -12,12 +12,14 @@ class BrowsingCacheUsage extends StatefulWidget {
     required this.artworkBytes,
     required this.clearTitles,
     required this.clearArtwork,
+    this.refreshKey,
   });
 
   final Future<int> Function() titleBytes;
   final Future<int> Function() artworkBytes;
   final Future<void> Function() clearTitles;
   final Future<void> Function() clearArtwork;
+  final Object? refreshKey;
 
   @override
   State<BrowsingCacheUsage> createState() => _BrowsingCacheUsageState();
@@ -35,6 +37,16 @@ class _BrowsingCacheUsageState extends State<BrowsingCacheUsage> {
     super.initState();
     unawaited(_read(0));
     unawaited(_read(1));
+  }
+
+  @override
+  void didUpdateWidget(covariant BrowsingCacheUsage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshKey != widget.refreshKey) {
+      for (var i = 0; i < 2; i++) {
+        if (!_busy[i]) unawaited(_read(i));
+      }
+    }
   }
 
   Future<void> _read(int index) async {
@@ -102,7 +114,9 @@ class _BrowsingCacheUsageState extends State<BrowsingCacheUsage> {
       for (var i = 0; i < 2; i++)
         SettingsTile(
           icon: Icons.delete_outline_rounded,
-          title: i == 0 ? 'Clear cached title lists' : 'Clear cached artwork',
+          title: i == 0
+              ? 'Clear cached add-on lists'
+              : 'Clear shared artwork cache',
           subtitle: _subtitle(i),
           focusNode: _nodes[i],
           onTap: () => _clear(i),

@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:synchronized/synchronized.dart';
 
 import '../../services/browsing_cache_preferences.dart';
+import '../../services/catalog_disk_cache.dart';
+import '../../services/debrify_image_cache.dart';
+import 'widgets/browsing_cache_usage.dart';
 import 'widgets/settings_widgets.dart';
 
 class BrowsingCachePage extends StatefulWidget {
@@ -128,7 +131,7 @@ class _BrowsingCachePageState extends State<BrowsingCachePage> {
                         children: [
                           _toggle(
                             'Remember title lists',
-                            'Show saved lists while checking for updates.',
+                            'Save add-on lists for your next visit.',
                             options.rememberTitles,
                             0,
                             () => _save(
@@ -153,7 +156,7 @@ class _BrowsingCachePageState extends State<BrowsingCachePage> {
                         children: [
                           _toggle(
                             'Custom artwork cache',
-                            'Choose a storage limit. Off uses the standard cache.',
+                            'Limit shared artwork and channel logos. Off uses the standard cache.',
                             options.expandedArtwork,
                             2,
                             () => _save(
@@ -189,6 +192,14 @@ class _BrowsingCachePageState extends State<BrowsingCachePage> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 18),
+                      BrowsingCacheUsage(
+                        refreshKey: options,
+                        titleBytes: CatalogDiskCache.instance.sizeBytes,
+                        artworkBytes: DebrifyImageCache.sizeBytes,
+                        clearTitles: CatalogDiskCache.instance.clear,
+                        clearArtwork: DebrifyImageCache.clear,
                       ),
                     ],
                   ),

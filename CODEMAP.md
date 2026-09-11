@@ -23,6 +23,13 @@ right code instead of re-discovering it. Flutter app; code under `lib/{screens,s
 - **`main.dart`** — app shell + nav branch (TV rail / desktop rail / `MobileFloatingNav`), tab indices.
 
 ## Search, sources & addons
+- Browsing cache controls: `services/browsing_cache_preferences.dart`,
+  `screens/settings/browsing_cache_page.dart`,
+  `screens/settings/widgets/browsing_cache_usage.dart`.
+- Persistent add-on catalog pages: `services/catalog_disk_cache.dart`, catalog
+  methods in `services/stremio_service.dart`; device budget with profile-scoped pages.
+- Movie-detail source preparation: `services/movie_stream_prefetch.dart`,
+  `screens/catalog_item_detail_screen.dart`, stream methods in `services/stremio_service.dart`.
 - Aggregation/sort/dedup: `services/torrent_service.dart` (`searchAllEngines`, `_deduplicateAndSort`,
   keyword-search engines).
 - Stremio addons: `services/stremio_service.dart` (`_fetchStreamsFromAddon`, `_convertToTorrents` —
