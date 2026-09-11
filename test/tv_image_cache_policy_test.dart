@@ -203,18 +203,21 @@ void main() {
   });
 
   policyTest('eligibility, reserve and hysteresis boundaries', (tester) async {
-    var sample = memory(
-      available: 1 << 30,
-      total: 3 << 30,
-      threshold: 768 << 20,
-    );
+    const tenth = ((4 << 30) + 9) ~/ 10;
+    // Initial empty-cache growth reserves both CPU and GPU copies of 128 MiB,
+    // plus 64 MiB hysteresis, above the rounded-up ten-percent floor.
+    const promotion = tenth + (320 << 20);
+    var sample = memory(available: promotion - 1);
     create(() async => sample);
     await policy.debugRefresh();
-    expanded();
-    sample = memory(available: 768 << 20, threshold: 640 << 20);
+    baseline();
+    sample = memory(available: promotion);
     await policy.debugRefresh();
     expanded();
-    sample = memory(available: (768 << 20) - 1);
+    sample = memory(available: tenth + (256 << 20));
+    await policy.debugRefresh();
+    expanded();
+    sample = memory(available: tenth + (256 << 20) - 1);
     await policy.debugRefresh();
     baseline();
     sample = memory();
@@ -224,9 +227,9 @@ void main() {
     now = now.add(const Duration(seconds: 1));
     await policy.debugRefresh();
     expanded();
-    sample = memory(available: 1 << 30, threshold: (896 << 20) + 1);
+    sample = memory(available: 1 << 30, threshold: 768 << 20);
     await policy.debugRefresh();
-    baseline(); // Above 768 MiB, but below the retained threshold reserve.
+    baseline(); // Available exceeds ten percent but not the native reserve.
   });
 
   policyTest(
@@ -240,7 +243,7 @@ void main() {
         memory(lowMemory: true),
         memory(lowRam: true),
         memory(total: (3 << 30) - 1),
-        memory(available: (1 << 30) - 1),
+        memory(available: ((4 << 30) ~/ 10) - 1),
         memory(available: 1 << 30, threshold: (768 << 20) + 1),
         memory(available: -1),
         memory(available: 5 << 30),
@@ -385,4 +388,114 @@ void main() {
       visible!.dispose();
     },
   );
+
+  policyTest('native threshold reserve also gates initial promotion', (
+    tester,
+  ) async {
+    // Android's threshold dominates ten percent of this 4 GiB device.
+    const nativeFloor = (1 << 30) + (128 << 20);
+    var sample = memory(
+      threshold: 1 << 30,
+      available: nativeFloor + (320 << 20) - 1,
+    );
+    create(() async => sample);
+    await policy.debugRefresh();
+    baseline();
+    sample = memory(threshold: 1 << 30, available: nativeFloor + (320 << 20));
+    await policy.debugRefresh();
+    expanded();
+  });
+
+  policyTest('real retained usage gates gradual growth and the 384 MiB bound', (
+    tester,
+  ) async {
+    var sample = memory();
+    var reads = 0;
+    create(() async {
+      reads++;
+      return sample;
+    });
+    await policy.debugRefresh();
+    expanded();
+    await policy.debugRefresh();
+    expanded(); // Plenty of RAM alone cannot justify a larger allowance.
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawColor(Colors.green, BlendMode.src);
+    final picture = recorder.endRecording();
+    final source = (await tester.runAsync(() => picture.toImage(1024, 1024)))!;
+    picture.dispose();
+    addTearDown(source.dispose);
+    var inserted = 0;
+    Future<void> fillTo(int entries) async {
+      while (inserted < entries) {
+        cache.putIfAbsent(
+          inserted++,
+          () => OneFrameImageStreamCompleter(
+            Future.value(ImageInfo(image: source.clone())),
+          ),
+        );
+        await tester.pump(Duration.zero);
+      }
+    }
+
+    await fillTo(23);
+    expect(cache.currentSizeBytes, 92 << 20);
+    await policy.debugRefresh();
+    expanded(); // Below 75% of 128 MiB.
+    await fillTo(24);
+    expect(cache.currentSizeBytes, 96 << 20);
+    const tenth = ((4 << 30) + 9) ~/ 10;
+    // Account for all unused proposed allowance, not just the 128 MiB step.
+    const grow256 = tenth + 2 * ((256 - 96) << 20) + (64 << 20);
+    sample = memory(available: grow256 - 1);
+    await policy.debugRefresh();
+    expanded();
+    sample = memory(available: grow256);
+    final before = reads;
+    await policy.debugRefresh();
+    expect(reads, before + 1);
+    expect(cache.maximumSizeBytes, 256 << 20);
+    expect(cache.maximumSize, 1024);
+    sample = memory();
+    await policy.debugRefresh();
+    expect(cache.maximumSizeBytes, 256 << 20); // Never skip ahead on spare RAM.
+    await fillTo(47);
+    expect(cache.currentSizeBytes, 188 << 20);
+    await policy.debugRefresh();
+    expect(cache.maximumSizeBytes, 256 << 20);
+    await fillTo(48);
+    expect(cache.currentSizeBytes, 192 << 20);
+    await policy.debugRefresh();
+    expect(cache.maximumSizeBytes, 384 << 20);
+    expect(cache.maximumSize, 1536);
+    await fillTo(100);
+    expect(cache.currentSize, 96);
+    expect(cache.currentSizeBytes, 384 << 20);
+    await policy.debugRefresh();
+    expect(cache.maximumSizeBytes, 384 << 20);
+    // With a fully used allowance, ten percent remains a hard retention floor.
+    sample = memory(available: tenth);
+    await policy.debugRefresh();
+    expect(cache.maximumSizeBytes, 384 << 20);
+    sample = memory(available: tenth - 1);
+    await policy.debugRefresh();
+    baseline();
+    expect(cache.currentSizeBytes, 56 << 20); // Real LRU entries trimmed.
+    sample = memory();
+    await policy.debugRefresh();
+    baseline();
+    now = now.add(const Duration(minutes: 5));
+    await policy.debugRefresh();
+    expanded(); // Recovery starts at the first step, not the previous ceiling.
+    sample = memory(lowMemory: true);
+    await policy.debugRefresh();
+    baseline();
+    now = now.add(const Duration(minutes: 5));
+    sample = memory();
+    await policy.debugRefresh();
+    expanded();
+    sample = memory(lowRam: true);
+    await policy.debugRefresh();
+    baseline();
+  });
 }
