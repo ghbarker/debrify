@@ -11,6 +11,33 @@ import '../models/stremio_addon.dart';
 import '../services/metadata_preferences_service.dart';
 import '../services/metadata_provider_service.dart';
 import '../services/profiles/profile_runtime.dart';
+import '../services/profiles/profile_preferences.dart';
+
+/// A previously read policy can authorize the first build without an async gap.
+/// Keep the facade, not just decoded values: sync/import writes must be observed
+/// even when they do not emit the metadata notifier.
+class _WarmMetadataPolicy {
+  _WarmMetadataPolicy(this.access, this.scope, this.revision, this.raw, this.value);
+
+  final ProfilePreferences access;
+  final Object? scope;
+  final int revision;
+  final String? raw;
+  final MetadataPreferences value;
+
+  bool get isCurrent {
+    if (!ProfileRuntime.isInitialized ||
+        scope != ProfileRuntime.scope.value ||
+        revision != MetadataPreferencesService.revision.value) {
+      return false;
+    }
+    try {
+      return access.getString(MetadataPreferencesService.key) == raw;
+    } catch (_) {
+      return false;
+    }
+  }
+}
 
 /// Lazily enrichs mounted cards, never the complete remote catalogue. Requests
 /// are shared by the repository. Item/provider/profile changes invalidate any
@@ -21,6 +48,7 @@ mixin MetadataPresentationMixin<T extends StatefulWidget> on State<T> {
   static Object? _cacheScope;
   static int? _cacheRevision;
   static String? _cachePolicy;
+  static _WarmMetadataPolicy? _warmPolicy;
   Timer? _retry;
   int _attempt = 0;
   bool _resolvedOnce = false;
@@ -221,15 +249,61 @@ mixin MetadataPresentationMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
+  void _restoreWarmPresentation(StremioMeta original) {
+    final policy = _warmPolicy;
+    if (policy == null || !policy.isCurrent) return;
+    _prepareCache(policy.value);
+    _presentationPreferences = policy.value;
+    final cached = _resolved[original];
+    if (cached == null || !cached.expires.isAfter(DateTime.now())) return;
+    // Only the exact source snapshot can reuse custom-provider presentation.
+    // Current-provider categories need no enrichment and can paint immediately
+    // from the new source, including an identity-only replacement.
+    _metadataPresentation = cached.value.item;
+    _resolvedOnce = true;
+  }
+
+  Future<_WarmMetadataPolicy> _loadPolicy() async {
+    final scope = ProfileRuntime.scope.value;
+    final revision = MetadataPreferencesService.revision.value;
+    final access = await ProfilePreferences.instance();
+    final raw = access.getString(MetadataPreferencesService.key);
+    // Read and decode one snapshot without another await between them. Matching
+    // raw text before/after two async reads would miss an intervening A/B/A write.
+    final cached = _warmPolicy;
+    MetadataPreferences value;
+    if (cached != null && cached.raw == raw && cached.isCurrent) {
+      value = cached.value;
+    } else {
+      Object? decoded;
+      try {
+        decoded = raw == null ? null : jsonDecode(raw);
+      } on FormatException {
+        // Match MetadataPreferencesService's malformed/imported value policy.
+      }
+      value = decoded is Map<String, dynamic>
+          ? MetadataPreferences.fromJson(decoded)
+          : MetadataPreferences();
+    }
+    final policy = _WarmMetadataPolicy(access, scope, revision, raw, value);
+    if (!policy.isCurrent) throw StateError('Metadata policy changed during read');
+    _warmPolicy = policy;
+    return policy;
+  }
+
   Future<void> _resolveMetadata() async {
     final timing = Stopwatch()..start();
     final generation = ++_metadataGeneration;
     final original = originalMetadata;
     _sourceSnapshot = original;
     if (original == null) return;
+    _restoreWarmPresentation(original);
     try {
-      final prefs = await MetadataPreferencesService.load();
-      if (!mounted || generation != _metadataGeneration) return;
+      final policy = await _loadPolicy();
+      bool relevant() => mounted && generation == _metadataGeneration &&
+          policy.isCurrent;
+      if (!relevant()) return;
+      final prefs = policy.value;
       setState(() => _presentationPreferences = prefs);
       _prepareCache(prefs);
       final cached = _resolved.remove(original);
@@ -237,10 +311,8 @@ mixin MetadataPresentationMixin<T extends StatefulWidget> on State<T> {
           (cached != null && cached.expires.isAfter(DateTime.now())
               ? cached.value
               : null) ??
-          await _present(original, prefs,
-            () => mounted && generation == _metadataGeneration);
-      if (!mounted ||
-          generation != _metadataGeneration ||
+          await _present(original, prefs, relevant);
+      if (!relevant() ||
           !identical(originalMetadata, original)) {
         return;
       }
