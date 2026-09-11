@@ -324,20 +324,25 @@ class CatalogDiskCache {
     )) {
       return;
     }
+    final fetchedAt = DateTime.now().millisecondsSinceEpoch;
     try {
-      final bytes = utf8.encode(
-        jsonEncode({
-          'version': 1,
-          'key': request.key,
-          'fetchedAt': DateTime.now().millisecondsSinceEpoch,
-          'rawCount': rawCount,
-          'items': items.map(_encode).toList(),
-        }),
-      );
-      if (bytes.length > _maxPageBytes) return;
       await _lock.synchronized(() async {
         if (!allowed()) return;
+        // Yield before encoding or inventory work; network titles can paint
+        // while this best-effort persistence runs in the background.
+        await Future<void>.delayed(Duration.zero);
         final root = await _root();
+        if (!allowed()) return;
+        final bytes = utf8.encode(
+          jsonEncode({
+            'version': 1,
+            'key': request.key,
+            'fetchedAt': fetchedAt,
+            'rawCount': rawCount,
+            'items': items.map(_encode).toList(),
+          }),
+        );
+        if (bytes.length > _maxPageBytes) return;
         final target = _file(root, request);
         final budget = BrowsingCachePreferences.current.titleBudgetBytes;
         // Reserve actual temporary-file bytes too; never double the disk budget
@@ -382,30 +387,29 @@ class CatalogDiskCache {
   }
 
   /// Retires in-flight readers/writers synchronously, then removes only our store.
+  /// Storage errors propagate so user-invoked maintenance can report failure.
   Future<void> clear() {
     invalidateRequests();
     return _lock.synchronized(() async {
-      try {
-        final root = await _root();
-        for (final file in await _files(root)) {
-          await file.delete();
-        }
-      } catch (_) {
-        /* Best effort when storage is unavailable. */
+      final root = await _root();
+      // Creating an absent root is harmless and distinguishes an unavailable
+      // store from an empty one (Directory.exists also returns false for files).
+      await root.create(recursive: true);
+      for (final file in await _files(root)) {
+        await file.delete();
       }
     });
   }
 
   /// Measured bytes across all cached profile generations, including temp files.
+  /// Storage errors propagate; zero means a successfully inspected empty store.
   Future<int> sizeBytes() => _lock.synchronized(() async {
-    try {
-      var size = 0;
-      for (final file in await _files(await _root())) {
-        size += await file.length();
-      }
-      return size;
-    } catch (_) {
-      return 0;
+    final root = await _root();
+    await root.create(recursive: true);
+    var size = 0;
+    for (final file in await _files(root)) {
+      size += await file.length();
     }
+    return size;
   });
 }

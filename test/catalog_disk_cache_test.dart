@@ -96,11 +96,15 @@ void main() {
           sessionEpoch: epoch,
         ),
       );
-  Future<List<File>> files() async => root
-      .list(recursive: true)
-      .where((f) => f is File && f.path.endsWith('.json'))
-      .cast<File>()
-      .toList();
+  Future<List<File>> files() async {
+    await CatalogDiskCache.instance.sizeBytes();
+    return root
+        .list(recursive: true)
+        .where((f) => f is File && f.path.endsWith('.json'))
+        .cast<File>()
+        .toList();
+  }
+
   Future<void> reply(HttpRequest request, String title) async {
     request.response.write(
       jsonEncode({
@@ -120,6 +124,125 @@ void main() {
     expect(condition(), isTrue);
   }
 
+  for (final action in ['size', 'clear']) {
+    test('explicit $action reports unavailable storage', () async {
+      final blocker = File('${root.path}/catalog-titles-v1');
+      await blocker.writeAsString('not a directory');
+      try {
+        await expectLater(
+          action == 'size'
+              ? CatalogDiskCache.instance.sizeBytes()
+              : CatalogDiskCache.instance.clear(),
+          throwsA(isA<FileSystemException>()),
+        );
+      } finally {
+        await blocker.delete();
+      }
+    });
+  }
+
+  for (final empty in [false, true]) {
+    test(
+      'fresh ${empty ? 'empty page' : 'titles'} returns before disk flush',
+      () async {
+        await enable();
+        if (empty) {
+          handler = (request) async {
+            request.response.write('{"metas":[]}');
+            await request.response.close();
+          };
+        }
+        final writing = Completer<void>();
+        final resume = Completer<void>();
+        CatalogDiskCache.instance.debugWriteTemporary = (file, bytes) async {
+          writing.complete();
+          await resume.future;
+          await file.writeAsBytes(bytes, flush: true);
+        };
+        var raw = -1;
+        final pending = service.fetchCatalog(
+          addon,
+          catalog,
+          onRawCount: (value) => raw = value,
+        );
+        try {
+          await writing.future;
+          final result = await pending.timeout(const Duration(seconds: 1));
+          expect(result.map((m) => m.name), empty ? [] : ['Read 1', 'Second']);
+          expect(raw, empty ? 0 : 3);
+        } finally {
+          resume.complete();
+          await pending;
+        }
+        // The writer must retain publication authority after the response returns.
+        expect(await CatalogDiskCache.instance.sizeBytes(), greaterThan(0));
+        expect(await files(), hasLength(1));
+      },
+    );
+  }
+
+  test(
+    'force refresh returns while old persistence is stalled and wins on disk',
+    () async {
+      await enable();
+      final writing = Completer<void>();
+      final resume = Completer<void>();
+      var writes = 0;
+      CatalogDiskCache.instance.debugWriteTemporary = (file, bytes) async {
+        if (writes++ == 0) {
+          writing.complete();
+          await resume.future;
+        }
+        await file.writeAsBytes(bytes, flush: true);
+      };
+      final first = service.fetchCatalog(addon, catalog);
+      try {
+        await writing.future;
+        expect(
+          (await first.timeout(const Duration(seconds: 1))).first.name,
+          'Read 1',
+        );
+        final forced = await service
+            .fetchCatalog(addon, catalog, forceRefresh: true)
+            .timeout(const Duration(seconds: 1));
+        expect(forced.first.name, 'Read 2');
+      } finally {
+        resume.complete();
+        await first;
+      }
+      final saved = jsonDecode(await (await files()).single.readAsString());
+      expect(saved['items'][0]['name'], 'Read 2');
+      expect(writes, 2);
+    },
+  );
+
+  test(
+    'disable retires background persistence after titles have returned',
+    () async {
+      await enable();
+      final writing = Completer<void>();
+      final resume = Completer<void>();
+      CatalogDiskCache.instance.debugWriteTemporary = (file, bytes) async {
+        writing.complete();
+        await resume.future;
+        await file.writeAsBytes(bytes, flush: true);
+      };
+      final pending = service.fetchCatalog(addon, catalog);
+      try {
+        await writing.future;
+        expect(
+          (await pending.timeout(const Duration(seconds: 1))).first.name,
+          'Read 1',
+        );
+        await BrowsingCachePreferences.update(const BrowsingCacheOptions());
+      } finally {
+        resume.complete();
+        await pending;
+      }
+      expect(await CatalogDiskCache.instance.sizeBytes(), 0);
+    },
+  );
+
   test(
     'enabled catalog survives RAM reset and a new profile session',
     () async {
@@ -127,6 +250,7 @@ void main() {
         const BrowsingCacheOptions(rememberTitles: true),
       );
       await service.fetchCatalog(addon, catalog);
+      await CatalogDiskCache.instance.sizeBytes();
       service.invalidateCache();
       ProfileRuntime.publish(
         ProfileScope(profileId: 'alpha', dataGeneration: 1, sessionEpoch: 2),
@@ -147,10 +271,13 @@ void main() {
     'disabled keeps existing RAM caching but never persists pages',
     () async {
       await service.fetchCatalog(addon, catalog);
+      await CatalogDiskCache.instance.sizeBytes();
       await service.fetchCatalog(addon, catalog);
+      await CatalogDiskCache.instance.sizeBytes();
       expect(reads, 1);
       service.invalidateCache();
       final fresh = await service.fetchCatalog(addon, catalog);
+      await CatalogDiskCache.instance.sizeBytes();
       expect(fresh.first.name, 'Read 2');
       expect(
         await root.list(recursive: true).where((e) => e is File).isEmpty,
@@ -164,6 +291,7 @@ void main() {
     () async {
       await enable();
       await service.fetchCatalog(addon, catalog);
+      await CatalogDiskCache.instance.sizeBytes();
       service.invalidateCache();
       final arrived = Completer<HttpRequest>();
       handler = (request) async {
@@ -201,6 +329,7 @@ void main() {
     () async {
       await enable();
       await service.fetchCatalog(addon, catalog);
+      await CatalogDiskCache.instance.sizeBytes();
       expect(
         (await service.fetchCatalog(addon, catalog, skip: 20)).first.name,
         'Read 2',
@@ -222,8 +351,10 @@ void main() {
         (await service.fetchCatalog(configured, catalog)).first.name,
         'Read 5',
       );
+      await CatalogDiskCache.instance.sizeBytes();
       profile('beta');
       expect((await service.fetchCatalog(addon, catalog)).first.name, 'Read 6');
+      await CatalogDiskCache.instance.sizeBytes();
       profile('alpha', generation: 2, epoch: 4);
       expect((await service.fetchCatalog(addon, catalog)).first.name, 'Read 7');
       expect(await files(), hasLength(7));
@@ -235,6 +366,7 @@ void main() {
     () async {
       await enable();
       await service.fetchCatalog(addon, catalog);
+      await CatalogDiskCache.instance.sizeBytes();
       service.invalidateCache();
       final arrived = Completer<HttpRequest>();
       handler = (request) async {
@@ -300,6 +432,7 @@ void main() {
     () async {
       await enable();
       await service.fetchCatalog(addon, catalog);
+      await CatalogDiskCache.instance.sizeBytes();
       await BrowsingCachePreferences.update(const BrowsingCacheOptions());
       service.invalidateCache();
       expect((await service.fetchCatalog(addon, catalog)).first.name, 'Read 2');
@@ -326,6 +459,7 @@ void main() {
     test('$damage cache damage fails open to the network', () async {
       await enable();
       await service.fetchCatalog(addon, catalog);
+      await CatalogDiskCache.instance.sizeBytes();
       final file = (await files()).single;
       final data = jsonDecode(await file.readAsString());
       switch (damage) {
@@ -379,6 +513,7 @@ void main() {
         await request.response.close();
       };
       await service.fetchCatalog(addon, catalog);
+      await CatalogDiskCache.instance.sizeBytes();
       final file = (await files()).single;
       final body = await file.readAsString();
       expect(body, isNot(contains('private-config')));
@@ -387,6 +522,7 @@ void main() {
       expect(body, isNot(contains('secret.invalid')));
       service.invalidateCache();
       final restored = await service.fetchCatalog(addon, catalog);
+      await CatalogDiskCache.instance.sizeBytes();
       expect(restored.first.id, 'tmdb:42');
       expect(restored.first.imdbId, 'tt1234567');
       expect(restored.first.sourceAddon, same(addon));
@@ -400,6 +536,7 @@ void main() {
       await request.response.close();
     };
     await service.fetchCatalog(addon, catalog);
+    await CatalogDiskCache.instance.sizeBytes();
     service.invalidateCache();
     var raw = -1;
     expect(
@@ -414,11 +551,20 @@ void main() {
     'unavailable storage does not discard a successful network response',
     () async {
       await enable();
-      await File(
-        '${root.path}/catalog-titles-v1',
-      ).writeAsString('not a directory');
-      expect((await service.fetchCatalog(addon, catalog)).first.name, 'Read 1');
-      expect(await CatalogDiskCache.instance.sizeBytes(), 0);
+      final blocker = File('${root.path}/catalog-titles-v1');
+      await blocker.writeAsString('not a directory');
+      try {
+        expect(
+          (await service.fetchCatalog(addon, catalog)).first.name,
+          'Read 1',
+        );
+        await expectLater(
+          CatalogDiskCache.instance.sizeBytes(),
+          throwsA(isA<FileSystemException>()),
+        );
+      } finally {
+        await blocker.delete();
+      }
     },
   );
 
@@ -427,6 +573,7 @@ void main() {
     () async {
       await enable();
       await service.fetchCatalog(addon, catalog);
+      await CatalogDiskCache.instance.sizeBytes();
       final before = await (await files()).single.readAsString();
       CatalogDiskCache.instance.debugWriteTemporary = (file, bytes) async {
         await file.writeAsBytes(bytes.take(30).toList());
@@ -456,7 +603,7 @@ void main() {
   );
 
   test(
-    'clear during atomic write waits for cleanup and retires the network result',
+    'clear during atomic write waits for cleanup after titles have returned',
     () async {
       await enable();
       final writing = Completer<void>();
@@ -468,9 +615,9 @@ void main() {
       };
       final pending = service.fetchCatalog(addon, catalog);
       await writing.future;
+      expect((await pending).first.name, 'Read 1');
       final clearing = CatalogDiskCache.instance.clear();
       resume.complete();
-      expect(await pending, isEmpty);
       await clearing;
       expect(await CatalogDiskCache.instance.sizeBytes(), 0);
     },
@@ -583,6 +730,7 @@ void main() {
     () async {
       await enable();
       await service.fetchCatalog(addon, catalog);
+      await CatalogDiskCache.instance.sizeBytes();
       expect(
         await ProfileRuntime.scope.value!.generationDirectory(root).exists(),
         isFalse,
@@ -630,6 +778,7 @@ void main() {
       () async {
         await enable();
         await service.fetchCatalog(addon, catalog);
+        await CatalogDiskCache.instance.sizeBytes();
         service.invalidateCache();
         final reading = Completer<void>();
         final resume = Completer<void>();
@@ -666,6 +815,7 @@ void main() {
         };
         final pending = service.fetchCatalog(addon, catalog);
         await writing.future;
+        expect((await pending).first.name, 'Read 1');
         if (replacement == 'A-B-A') {
           profile('beta', epoch: 2);
           profile('alpha', epoch: 3);
@@ -673,7 +823,6 @@ void main() {
           profile('alpha', generation: 2, epoch: 2);
         }
         resume.complete();
-        expect(await pending, isEmpty);
         expect(await CatalogDiskCache.instance.sizeBytes(), 0);
       },
     );
@@ -753,6 +902,7 @@ void main() {
         await request.response.close();
       };
       await service.fetchCatalog(addon, catalog, skip: 20);
+      await CatalogDiskCache.instance.sizeBytes();
       service.invalidateCache();
       var raw = 0;
       final page = await service.fetchCatalog(

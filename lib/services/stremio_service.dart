@@ -2490,7 +2490,11 @@ class StremioService {
       _catalogDiskSubscribed = true;
       addAddonsChangedListener(CatalogDiskCache.instance.invalidateRequests);
     }
-    final request = await CatalogDiskCache.instance.request(url, addon, catalog);
+    final request = await CatalogDiskCache.instance.request(
+      url,
+      addon,
+      catalog,
+    );
     final key = request.memoryKey;
     final cached = forceRefresh ? null : _catalogCache[key];
     if (cached != null &&
@@ -2504,8 +2508,12 @@ class StremioService {
     if (!forceRefresh) {
       final saved = await CatalogDiskCache.instance.read(request, addon);
       if (saved != null && CatalogDiskCache.instance.isCurrent(request)) {
-        _cacheCatalogPage(key, saved.items, saved.rawCount,
-          fetchedAt: saved.fetchedAt);
+        _cacheCatalogPage(
+          key,
+          saved.items,
+          saved.rawCount,
+          fetchedAt: saved.fetchedAt,
+        );
         // No UI callback/list replacement: focused rows retain their snapshot.
         // A later visit can consume the refreshed cache in its normal load path.
         unawaited(_refreshCatalog(url, addon, request));
@@ -2513,17 +2521,26 @@ class StremioService {
         return List.of(saved.items);
       }
     }
-    return _refreshCatalog(url, addon, request,
-      onRawCount: onRawCount, forceRefresh: forceRefresh);
+    return _refreshCatalog(
+      url,
+      addon,
+      request,
+      onRawCount: onRawCount,
+      forceRefresh: forceRefresh,
+    );
   }
 
   bool _catalogDiskSubscribed = false;
   final _catalogRefreshes = <String, Future<List<StremioMeta>>>{};
   final _catalogWriters = <String, Object>{};
 
-  Future<List<StremioMeta>> _refreshCatalog(String url, StremioAddon addon,
-      CatalogCacheRequest request, {void Function(int)? onRawCount,
-      bool forceRefresh = false}) async {
+  Future<List<StremioMeta>> _refreshCatalog(
+    String url,
+    StremioAddon addon,
+    CatalogCacheRequest request, {
+    void Function(int)? onRawCount,
+    bool forceRefresh = false,
+  }) async {
     final key = request.memoryKey;
     final existing = forceRefresh ? null : _catalogRefreshes[key];
     if (existing != null) {
@@ -2535,22 +2552,58 @@ class StremioService {
     }
     final token = Object();
     _catalogWriters[key] = token;
-    bool current() => identical(_catalogWriters[key], token) &&
+    bool current() =>
+        identical(_catalogWriters[key], token) &&
         CatalogDiskCache.instance.isCurrent(request);
-    final work = _fetchCatalogNetwork(url, addon, request,
-      current: current, onRawCount: onRawCount);
+    Future<void>? persistence;
+    void persist(List<StremioMeta> items, int rawCount) {
+      persistence = CatalogDiskCache.instance.write(
+        request,
+        addon,
+        items,
+        rawCount,
+        stillCurrent: current,
+      );
+    }
+
+    void retireWriter() {
+      if (identical(_catalogWriters[key], token)) _catalogWriters.remove(key);
+    }
+
+    final work = _fetchCatalogNetwork(
+      url,
+      addon,
+      request,
+      current: current,
+      persist: persist,
+      onRawCount: onRawCount,
+    );
     _catalogRefreshes[key] = work;
     try {
       return await work;
     } finally {
-      if (identical(_catalogRefreshes[key], work)) _catalogRefreshes.remove(key);
-      if (identical(_catalogWriters[key], token)) _catalogWriters.remove(key);
+      if (identical(_catalogRefreshes[key], work)) {
+        _catalogRefreshes.remove(key);
+      }
+      // The network result is ready before disk persistence. Retain its token
+      // until the write settles; a newer forceRefresh can still supersede it.
+      final writing = persistence;
+      if (writing == null) {
+        retireWriter();
+      } else {
+        unawaited(writing.whenComplete(retireWriter));
+      }
     }
   }
 
-  Future<List<StremioMeta>> _fetchCatalogNetwork(String url, StremioAddon addon,
-      CatalogCacheRequest cacheRequest, {required bool Function() current,
-      void Function(int)? onRawCount}) async {
+  Future<List<StremioMeta>> _fetchCatalogNetwork(
+    String url,
+    StremioAddon addon,
+    CatalogCacheRequest cacheRequest, {
+    required bool Function() current,
+    required void Function(List<StremioMeta>, int) persist,
+    void Function(int)? onRawCount,
+  }) async {
     if (!current()) return [];
 
     debugPrint('StremioService: Fetching catalog');
@@ -2566,8 +2619,9 @@ class StremioService {
         final streamedResponse = await client
             .send(request)
             .timeout(_requestTimeout);
-        final response = await http.Response.fromStream(streamedResponse)
-            .timeout(_requestTimeout);
+        final response = await http.Response.fromStream(
+          streamedResponse,
+        ).timeout(_requestTimeout);
 
         if (response.statusCode != 200) {
           debugPrint(
@@ -2581,15 +2635,17 @@ class StremioService {
         // become a persisted "exhausted" page. Only an explicit list is cached.
         if (data['error'] != null || data['success'] == false) return [];
         final metasRaw = data['metas'];
-        if (metasRaw == null) { onRawCount?.call(0); return []; }
+        if (metasRaw == null) {
+          onRawCount?.call(0);
+          return [];
+        }
         if (metasRaw is! List) return [];
         if (!current()) return [];
 
         if (metasRaw.isEmpty) {
           debugPrint('StremioService: Catalog returned no items');
           _cacheCatalogPage(cacheRequest.memoryKey, const [], 0);
-          await CatalogDiskCache.instance.write(cacheRequest, addon, const [], 0,
-            stillCurrent: current);
+          persist(const [], 0);
           if (current()) onRawCount?.call(0);
           return [];
         }
@@ -2610,8 +2666,7 @@ class StremioService {
         );
         if (!current()) return [];
         _cacheCatalogPage(cacheRequest.memoryKey, metas, metasRaw.length);
-        await CatalogDiskCache.instance.write(cacheRequest, addon, metas, metasRaw.length,
-          stillCurrent: current);
+        persist(metas, metasRaw.length);
         if (!current()) return [];
         onRawCount?.call(metasRaw.length);
         return List.of(metas);
@@ -2625,8 +2680,12 @@ class StremioService {
     }
   }
 
-  void _cacheCatalogPage(String url, List<StremioMeta> metas, int rawCount,
-      {DateTime? fetchedAt}) {
+  void _cacheCatalogPage(
+    String url,
+    List<StremioMeta> metas,
+    int rawCount, {
+    DateTime? fetchedAt,
+  }) {
     if (_catalogCache.length >= _catalogCacheMax) {
       // Evict expired entries first, then the oldest, to stay under the cap.
       final now = DateTime.now();
