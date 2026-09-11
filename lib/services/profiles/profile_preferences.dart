@@ -848,6 +848,7 @@ class DevicePreferences {
 
   static const Set<String> allowedKeys = <String>{
     ...nativeLaunchSnapshotKeys,
+    'browsing_cache_options_v1',
     'profiles_runtime_mode_v1',
     'profiles_committed_once_v1',
     'profiles_feature_enabled_v1',
