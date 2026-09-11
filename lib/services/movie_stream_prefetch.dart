@@ -53,7 +53,7 @@ class _Discovery {
   final Duration timeout;
   late final Future<List<StremioStream>> future;
   List<StremioStream>? streams;
-  DateTime? completedAt;
+  DateTime? expiresAt;
 }
 
 /// Memory-only discovery cache, admitted exclusively by opening movie details.
@@ -67,6 +67,7 @@ class MovieStreamPrefetch {
 
   static final instance = MovieStreamPrefetch._();
   static const ttl = Duration(seconds: 60);
+  static const directTtl = Duration(seconds: 20);
   static const maxMovies = 3;
   static const maxActiveMovies = 2;
   static const maxAddonsPerMovie = 16;
@@ -82,11 +83,49 @@ class MovieStreamPrefetch {
   /// a TMDB number must never be fabricated into an IMDb ID.
   static String? contentIdFor(StremioMeta item) {
     if (item.type != 'movie') return null;
-    final imdb = item.effectiveImdbId;
-    if (imdb != null) {
-      return RegExp(r'^tt\d+$').hasMatch(imdb) ? imdb : null;
+    final id = item.effectiveImdbId ?? item.id;
+    return id.trim().isEmpty ? null : id;
+  }
+
+  /// These are discovery responses, not resolved media or durable bindings.
+  /// Preserve the entire ordered response, including mixed transports, for a
+  /// short window. Normal direct Play still performs its existing validation
+  /// and startup failover; pinned direct resolution and manual retry bypass us.
+  DateTime _expiresAt(List<StremioStream> streams, DateTime startedAt) {
+    final hasUrls = streams.any(
+      (stream) => stream.url != null || stream.externalUrl != null,
+    );
+    var expiry = hasUrls ? startedAt.add(directTtl) : _now().add(ttl);
+    for (final stream in streams) {
+      for (final raw in [stream.url, stream.externalUrl]) {
+        if (raw == null) continue;
+        final url = Uri.tryParse(raw);
+        if (url == null) continue;
+        // Recognize explicit absolute Unix expiry in URL query parameters.
+        // Opaque signatures and other provider-specific formats are not
+        // decoded or probed; those retain the conservative 20-second limit.
+        Map<String, List<String>> parameters;
+        try {
+          parameters = url.queryParametersAll;
+        } on FormatException {
+          continue; // An opaque query must never make discovery itself fail.
+        }
+        for (final parameter in parameters.entries) {
+          final key = parameter.key.toLowerCase();
+          if (key != 'exp' && key != 'expires') continue;
+          for (final value in parameter.value) {
+            final epoch = int.tryParse(value);
+            if (epoch == null || epoch < 0 || epoch > 99999999999999) continue;
+            final explicit = DateTime.fromMillisecondsSinceEpoch(
+              epoch < 1000000000000 ? epoch * 1000 : epoch,
+              isUtc: true,
+            ).subtract(const Duration(seconds: 2));
+            if (explicit.isBefore(expiry)) expiry = explicit;
+          }
+        }
+      }
     }
-    return item.id.trim().isEmpty ? null : item.id;
+    return expiry;
   }
 
   void _preferencesChanged() {
@@ -174,11 +213,11 @@ class MovieStreamPrefetch {
     final entries = movie.entries;
     final previous = entries[addonConfiguration];
     if (previous != null) {
-      final completedAt = previous.completedAt;
-      if (completedAt != null && _now().difference(completedAt) < ttl) {
+      final expiresAt = previous.expiresAt;
+      if (expiresAt != null && _now().isBefore(expiresAt)) {
         return List.of(previous.streams!);
       }
-      if (completedAt == null) {
+      if (expiresAt == null) {
         final generation = _generation;
         Future<List<StremioStream>> join() async {
           try {
@@ -209,6 +248,7 @@ class MovieStreamPrefetch {
       return speculation == null ? load() : const [];
     }
     final generation = _generation;
+    final startedAt = _now();
     final entry = _Discovery(timeout);
     entries[addonConfiguration] = entry;
     entry.future = () async {
@@ -217,22 +257,14 @@ class MovieStreamPrefetch {
         if (generation != _generation) {
           throw StateError('Movie discovery configuration changed');
         }
-        // Direct/external URLs may already be signed by the addon. An early
-        // Play may join this live request, but a later Play fetches them fresh.
-        // Never retain mixed responses partially: that would change ordering
-        // and hide direct sources from the normal picker/ranking pipeline.
+        final expiresAt = _expiresAt(streams, startedAt);
         final reusable =
             streams.isNotEmpty &&
             streams.length <= maxCachedStreamsPerAddon &&
-            streams.every(
-              (stream) =>
-                  stream.isTorrent &&
-                  stream.url == null &&
-                  stream.externalUrl == null,
-            );
+            _now().isBefore(expiresAt);
         if (reusable) {
           entry.streams = List.unmodifiable(streams);
-          entry.completedAt = _now();
+          entry.expiresAt = expiresAt;
         } else if (identical(entries[addonConfiguration], entry)) {
           entries.remove(addonConfiguration);
         }

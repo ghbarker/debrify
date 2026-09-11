@@ -3,15 +3,21 @@ import 'dart:convert';
 
 import 'package:debrify/models/stremio_addon.dart';
 import 'package:debrify/models/torrent.dart';
+import 'package:debrify/models/quick_play_rules.dart';
 import 'package:debrify/screens/catalog_item_detail_screen.dart';
+import 'package:debrify/screens/video_player_screen.dart';
 import 'package:debrify/services/browsing_cache_preferences.dart';
 import 'package:debrify/services/movie_stream_prefetch.dart';
 import 'package:debrify/services/profiles/profile_runtime.dart';
 import 'package:debrify/services/profiles/profile_scope.dart';
 import 'package:debrify/services/stremio_service.dart';
 import 'package:debrify/services/torrent_service.dart';
+import 'package:debrify/services/torrent_playback_service.dart';
+import 'package:debrify/services/storage_service.dart';
 import 'package:debrify/theme/app_theme.dart';
 import 'package:debrify/theme/app_theme_scope.dart';
+import 'package:debrify/theme/app_surfaces.dart';
+import 'package:debrify/theme/legacy_theme_boundary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -21,6 +27,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 const movie = StremioMeta(id: 'tmdb:42', type: 'movie', name: 'A movie');
 final cache = MovieStreamPrefetch.instance;
 final service = StremioService.instance;
+
+// Exercise the real Play pipeline through its final player-route handoff.
+// Inspect the unmounted player configuration, then remove the route before
+// any decoder/platform state can mount or fetch media.
+class PlayerHandoffObserver extends NavigatorObserver {
+  final players = <VideoPlayerScreen>[];
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is! FrozenLegacyPageRoute) return;
+    final boundary = route.builder(navigator!.context) as LegacyThemeBoundary;
+    final player = (boundary.child as Builder).builder(navigator!.context);
+    if (player is! VideoPlayerScreen) return;
+    players.add(player);
+    scheduleMicrotask(() => navigator!.removeRoute(route));
+  }
+}
 
 StremioAddon addon(String id, {List<String>? prefixes}) => StremioAddon(
   id: id,
@@ -184,7 +207,7 @@ void main() {
   });
 
   test(
-    'direct URLs are not retained and pinned resolver always fetches fresh',
+    'direct discovery is retained but pinned resolver always fetches fresh',
     () async {
       final source = addon('one');
       await configure([source]);
@@ -214,7 +237,7 @@ void main() {
       await flush();
       final result = await playLookup();
       final direct = (result['torrents'] as List<Torrent>).single;
-      expect(calls, 2);
+      expect(calls, 1);
       await service.resolvePinnedDirectStream(
         addonId: source.id,
         addonKey: source.sourceBindingKey,
@@ -223,7 +246,201 @@ void main() {
         type: 'movie',
         contentId: movie.id,
       );
-      expect(calls, 3);
+      expect(calls, 2);
+    },
+  );
+
+  for (final scenario in ['early', 'delayed', 'expired', 'explicit expiry']) {
+    testWidgets('real movie Play reuses direct discovery: $scenario', (
+      tester,
+    ) async {
+      await configure([addon('direct')]);
+      await StorageService.setQuickPlayRules(
+        QuickPlayRules.debrifyDefault(
+          isMovie: true,
+        ).copyWith(validateDirectLinks: false),
+        isMovie: true,
+      );
+      var now = DateTime.utc(2026);
+      cache.resetForTesting(now: () => now);
+      final response = Completer<http.Response>();
+      final requests = <http.Request>[];
+      final expirySuffix = scenario == 'explicit expiry'
+          ? '&Expires=${now.add(const Duration(seconds: 10)).millisecondsSinceEpoch ~/ 1000}'
+          : '';
+      http.Response directResponse(int revision) => http.Response(
+        jsonEncode({
+          'streams': [
+            {
+              'url':
+                  'https://media.invalid/video.mp4?signature=$revision${revision == 1 ? expirySuffix : ''}',
+              'name': 'Direct',
+              'title': '1080p',
+            },
+          ],
+        }),
+        200,
+      );
+      service.debugStreamHttpClientFactory = () => MockClient((request) {
+        requests.add(request);
+        return requests.length == 1
+            ? response.future
+            : Future.value(directResponse(requests.length));
+      });
+      final observer = PlayerHandoffObserver();
+      Future<void>? chosen;
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorObservers: [observer],
+          builder: (_, child) =>
+              AppThemeScope(theme: AppThemes.legacy, child: child!),
+          home: Builder(
+            builder: (context) => CatalogItemDetailScreen(
+              item: movie,
+              isTelevision: true,
+              onPlay: () {
+                chosen = TorrentPlaybackService.playFromSelection(
+                  context,
+                  imdbId: movie.effectiveImdbId ?? movie.id,
+                  isMovie: true,
+                  meta: PlaybackMeta.catalog(
+                    imdbId: movie.id,
+                    contentType: movie.type,
+                    title: movie.name,
+                  ),
+                );
+              },
+              onBrowse: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(requests, hasLength(1));
+      expect(observer.players, isEmpty);
+      if (scenario != 'early') {
+        response.complete(directResponse(1));
+        await tester.pump();
+        await tester.pump();
+        now = now.add(Duration(seconds: scenario == 'expired' ? 21 : 12));
+      }
+      await tester.tap(find.text('Play'));
+      await tester.pump();
+      if (scenario == 'early') {
+        expect(requests, hasLength(1));
+        expect(observer.players, isEmpty);
+        response.complete(directResponse(1));
+      }
+      for (var i = 0; i < 100 && observer.players.isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(observer.players, hasLength(1));
+      final expectedFetches =
+          scenario == 'expired' || scenario == 'explicit expiry' ? 2 : 1;
+      expect(requests, hasLength(expectedFetches));
+      expect(
+        observer.players.single.videoUrl,
+        'https://media.invalid/video.mp4?signature=$expectedFetches',
+      );
+      expect(
+        observer.players.single.stremioSources!.single.stremioAddonId,
+        'direct',
+      );
+      expect(
+        requests.every(
+          (r) => r.method == 'GET' && r.url.host == 'direct.invalid',
+        ),
+        isTrue,
+      );
+      await tester.pumpWidget(const SizedBox());
+      await chosen;
+    });
+  }
+
+  test(
+    'mixed direct, external and torrent responses preserve whole order',
+    () async {
+      await configure([addon('mixed')]);
+      var now = DateTime.utc(2026);
+      cache.resetForTesting(now: () => now);
+      var calls = 0;
+      service.debugStreamHttpClientFactory = () => MockClient((_) async {
+        calls++;
+        return http.Response(
+          jsonEncode({
+            'streams': [
+              {
+                'url': 'https://media.invalid/video.mp4',
+                'title': 'First 1080p',
+              },
+              {'externalUrl': 'https://media.invalid/watch', 'title': 'Second'},
+              {
+                'infoHash': '0123456789012345678901234567890123456789',
+                'title': 'Third 720p',
+              },
+            ],
+          }),
+          200,
+        );
+      });
+      service.prefetchMovieStreams(movie);
+      await flush();
+      now = now.add(const Duration(seconds: 12));
+      final result = (await playLookup())['torrents'] as List<Torrent>;
+      expect(calls, 1);
+      expect(result.map((source) => source.streamType), [
+        StreamType.directUrl,
+        StreamType.externalUrl,
+        StreamType.torrent,
+      ]);
+      expect(result.map((source) => source.stremioStreamIndex), [0, 1, 2]);
+      now = now.add(const Duration(seconds: 9));
+      expect((await playLookup())['torrents'], hasLength(3));
+      expect(
+        calls,
+        2,
+        reason: 'The entire mixed response uses the shortest TTL.',
+      );
+    },
+  );
+
+  test(
+    'explicit expiry caps external discovery and malformed expiry is ignored',
+    () async {
+      for (final expiry in ['epoch', 'milliseconds', 'invalid']) {
+        await configure([addon('expiry')]);
+        var now = DateTime.utc(2026);
+        cache.resetForTesting(now: () => now);
+        final expires = now
+            .add(const Duration(seconds: 9))
+            .millisecondsSinceEpoch;
+        final parameter = switch (expiry) {
+          'epoch' => '${expires ~/ 1000}',
+          'milliseconds' => '$expires',
+          _ => 'opaque-not-an-epoch',
+        };
+        var calls = 0;
+        service.debugStreamHttpClientFactory = () => MockClient((_) async {
+          calls++;
+          return http.Response(
+            jsonEncode({
+              'streams': [
+                {'externalUrl': 'https://media.invalid/watch?exp=$parameter'},
+              ],
+            }),
+            200,
+          );
+        });
+        service.prefetchMovieStreams(movie);
+        await flush();
+        now = now.add(const Duration(seconds: 5));
+        await playLookup();
+        expect(calls, 1);
+        now = now.add(const Duration(seconds: 3));
+        await playLookup();
+        expect(calls, expiry == 'invalid' ? 1 : 2);
+      }
     },
   );
 
@@ -527,7 +744,8 @@ void main() {
             imdbId: '42',
           ),
         ),
-        isNull,
+        '42',
+        reason: 'Match callback identity exactly without inventing a tt prefix.',
       );
     },
   );
