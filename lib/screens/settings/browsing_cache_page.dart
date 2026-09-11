@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:synchronized/synchronized.dart';
 
 import '../../services/browsing_cache_preferences.dart';
 import 'widgets/settings_widgets.dart';
@@ -13,9 +14,10 @@ class BrowsingCachePage extends StatefulWidget {
 }
 
 class _BrowsingCachePageState extends State<BrowsingCachePage> {
+  // Saves outlive a route: reopening the page must join the same action queue.
+  static final _saves = Lock();
   final _nodes = List.generate(5, (_) => FocusNode());
   bool _ready = false;
-  bool _saving = false;
   String? _error;
 
   @override
@@ -33,18 +35,20 @@ class _BrowsingCachePageState extends State<BrowsingCachePage> {
     });
   }
 
-  Future<void> _save(BrowsingCacheOptions options) async {
-    if (_saving) return;
-    _saving = true;
+  Future<void> _save(
+    BrowsingCacheOptions Function(BrowsingCacheOptions) change,
+  ) => _saves.synchronized(() async {
     try {
-      await BrowsingCachePreferences.update(options);
+      // Resolve each action after earlier saves finish so rapid input neither
+      // disappears nor overwrites another row with an outdated snapshot.
+      await BrowsingCachePreferences.update(
+        change(BrowsingCachePreferences.current),
+      );
       if (mounted) setState(() => _error = null);
     } catch (_) {
       if (mounted) setState(() => _error = 'Could not save. Please try again.');
-    } finally {
-      _saving = false;
     }
-  }
+  });
 
   Future<void> _chooseSize(bool artwork) async {
     final options = BrowsingCachePreferences.current;
@@ -56,9 +60,8 @@ class _BrowsingCachePageState extends State<BrowsingCachePage> {
       ),
     );
     if (!mounted || selected == null) return;
-    final current = BrowsingCachePreferences.current;
     await _save(
-      artwork
+      (current) => artwork
           ? current.copyWith(artworkSizeMb: selected)
           : current.copyWith(titleSizeMb: selected),
     );
@@ -129,8 +132,8 @@ class _BrowsingCachePageState extends State<BrowsingCachePage> {
                             options.rememberTitles,
                             0,
                             () => _save(
-                              options.copyWith(
-                                rememberTitles: !options.rememberTitles,
+                              (current) => current.copyWith(
+                                rememberTitles: !current.rememberTitles,
                               ),
                             ),
                           ),
@@ -149,13 +152,13 @@ class _BrowsingCachePageState extends State<BrowsingCachePage> {
                         title: 'Artwork',
                         children: [
                           _toggle(
-                            'Expanded artwork cache',
-                            'Keep more artwork between visits. Off uses the standard cache.',
+                            'Custom artwork cache',
+                            'Choose a storage limit. Off uses the standard cache.',
                             options.expandedArtwork,
                             2,
                             () => _save(
-                              options.copyWith(
-                                expandedArtwork: !options.expandedArtwork,
+                              (current) => current.copyWith(
+                                expandedArtwork: !current.expandedArtwork,
                               ),
                             ),
                           ),
@@ -179,9 +182,9 @@ class _BrowsingCachePageState extends State<BrowsingCachePage> {
                             options.prefetchMovieStreams,
                             4,
                             () => _save(
-                              options.copyWith(
+                              (current) => current.copyWith(
                                 prefetchMovieStreams:
-                                    !options.prefetchMovieStreams,
+                                    !current.prefetchMovieStreams,
                               ),
                             ),
                           ),
@@ -216,9 +219,10 @@ class _CacheSizePageState extends State<_CacheSizePage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted)
+      if (mounted) {
         _nodes[_sizes.indexOf(widget.selected).clamp(0, _sizes.length - 1)]
             .requestFocus();
+      }
     });
   }
 

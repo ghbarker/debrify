@@ -48,7 +48,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MaterialApp(home: BrowsingCachePage()));
     await tester.pumpAndSettle();
-    final artwork = find.text('Expanded artwork cache');
+    final artwork = find.text('Custom artwork cache');
     await tester.ensureVisible(artwork);
     await tester.tap(artwork);
     await tester.pumpAndSettle();
