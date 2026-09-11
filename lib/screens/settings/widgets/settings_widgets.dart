@@ -93,6 +93,11 @@ class SettingsRowContent {
 
 /// Single source of truth for every settings row's icon + copy.
 abstract final class SettingsRows {
+  static const browsingCache = SettingsRowContent(
+    icon: Icons.speed_rounded,
+    title: 'Faster browsing',
+    subtitle: 'Title lists, artwork storage and movie stream preparation',
+  );
   static const metadata = SettingsRowContent(
     icon: Icons.info_outline_rounded,
     title: 'Metadata',

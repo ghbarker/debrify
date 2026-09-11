@@ -11,6 +11,7 @@ import '../../theme/app_focus.dart';
 import '../../theme/widgets/parallax_focus.dart';
 import 'settings_spotlight_shell.dart';
 import 'tv_motion_page.dart';
+import 'browsing_cache_page.dart';
 import 'widgets/settings_widgets.dart';
 import '../../theme/app_theme_scope.dart';
 
@@ -1351,6 +1352,13 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
                 SettingsTile.spec(
                   SettingsRows.clearPlayback,
                   onTap: widget.onClearPlayback,
+                  focusNode: nextNode(),
+                ),
+                SettingsTile.spec(
+                  SettingsRows.browsingCache,
+                  onTap: () async {
+                    await pushSettingsPage(context, const BrowsingCachePage());
+                  },
                   focusNode: nextNode(),
                 ),
               ],

@@ -28,6 +28,7 @@ import '../services/subtitle_font_service.dart';
 import '../services/text_brightness.dart';
 import '../services/tv_motion_profile.dart';
 import 'settings/tv_motion_page.dart';
+import 'settings/browsing_cache_page.dart';
 import '../services/profiles/profile_runtime.dart';
 import '../services/profiles/connection_resource_service.dart';
 import '../services/profiles/portable_profile_package.dart';
@@ -2738,6 +2739,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'reset progress',
           'continue watching',
         ],
+      ),
+
+      nav(
+        SettingsRows.browsingCache,
+        'Data & Backup',
+        () async { await pushSettingsPage(context, const BrowsingCachePage()); },
+        keywords: const ['cache', 'storage', 'artwork', 'titles', 'prefetch', 'streams'],
       ),
 
       // Backup & Restore
@@ -7956,6 +7964,12 @@ class _SettingsLayout extends StatelessWidget {
                   SettingsRows.clearPlayback,
                   onTap: onClearPlayback,
                 ),
+                SettingsTile.spec(
+                  SettingsRows.browsingCache,
+                  onTap: () async {
+                    await pushSettingsPage(context, const BrowsingCachePage());
+                  },
+                ),
               ],
             ),
             const SizedBox(height: 18),
@@ -8367,6 +8381,12 @@ class _SettingsLayout extends StatelessWidget {
                     SettingsTile.spec(
                       SettingsRows.clearPlayback,
                       onTap: onClearPlayback,
+                    ),
+                    SettingsTile.spec(
+                      SettingsRows.browsingCache,
+                      onTap: () async {
+                        await pushSettingsPage(context, const BrowsingCachePage());
+                      },
                     ),
                     SettingsTile.spec(
                       SettingsRows.createBackup,

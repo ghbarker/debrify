@@ -45,11 +45,17 @@ class BrowsingCacheOptions {
   factory BrowsingCacheOptions.fromJson(Map<String, dynamic> json) =>
       BrowsingCacheOptions(
         rememberTitles: json['rememberTitles'] == true,
-        titleSizeMb: titleSizesMb.contains(json['titleSizeMb'])
-            ? json['titleSizeMb'] as int : 25,
+        titleSizeMb:
+            json['titleSizeMb'] is int &&
+                titleSizesMb.contains(json['titleSizeMb'])
+            ? json['titleSizeMb'] as int
+            : 25,
         expandedArtwork: json['expandedArtwork'] == true,
-        artworkSizeMb: artworkSizesMb.contains(json['artworkSizeMb'])
-            ? json['artworkSizeMb'] as int : 512,
+        artworkSizeMb:
+            json['artworkSizeMb'] is int &&
+                artworkSizesMb.contains(json['artworkSizeMb'])
+            ? json['artworkSizeMb'] as int
+            : 512,
         prefetchMovieStreams: json['prefetchMovieStreams'] != false,
       );
 
@@ -69,16 +75,20 @@ abstract final class BrowsingCachePreferences {
   static final _lock = Lock();
   static Future<void>? _initialization;
 
-  static Future<void> initialize() => _initialization ??= _lock.synchronized(() async {
-    try {
-      final prefs = await DevicePreferences.instance();
-      final raw = prefs.getString(key);
-      notifier.value = raw == null ? const BrowsingCacheOptions()
-          : BrowsingCacheOptions.fromJson(jsonDecode(raw) as Map<String, dynamic>);
-    } catch (_) {
-      notifier.value = const BrowsingCacheOptions();
-    }
-  });
+  static Future<void> initialize() =>
+      _initialization ??= _lock.synchronized(() async {
+        try {
+          final prefs = await DevicePreferences.instance();
+          final raw = prefs.getString(key);
+          notifier.value = raw == null
+              ? const BrowsingCacheOptions()
+              : BrowsingCacheOptions.fromJson(
+                  jsonDecode(raw) as Map<String, dynamic>,
+                );
+        } catch (_) {
+          notifier.value = const BrowsingCacheOptions();
+        }
+      });
 
   static Future<void> update(BrowsingCacheOptions value) async {
     await initialize();
