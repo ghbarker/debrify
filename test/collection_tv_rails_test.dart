@@ -638,4 +638,205 @@ void main() {
       },
     );
   }
+
+  for (final revisit in [false, true]) {
+    for (final reduced in [false, true]) {
+      testWidgets(
+        'off-cache traversal preserves glide and visible activation: revisit=$revisit reduced=$reduced',
+        (tester) async {
+          final opened = <String>[];
+          await mount(
+            tester,
+            listCount: 20,
+            reduced: reduced,
+            onOpen: (item) => opened.add(item.id),
+          );
+          await enter(tester);
+          if (revisit) {
+            for (var i = 0; i < 12; i++) {
+              await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+              await tester.pumpAndSettle();
+            }
+          }
+          final position = vertical(tester);
+          final direction = revisit
+              ? LogicalKeyboardKey.arrowUp
+              : LogicalKeyboardKey.arrowDown;
+          var animatedFrames = 0;
+          await tester.sendKeyDownEvent(direction);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 12));
+          for (var i = 0; i < 9; i++) {
+            final before = position.pixels;
+            await tester.sendKeyRepeatEvent(direction);
+            final immediate = position.pixels;
+            if (!reduced) {
+              expect(
+                immediate,
+                before,
+                reason:
+                    'Recycling a row must not cause an immediate vertical jump.',
+              );
+            }
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 12));
+            final frame = position.pixels;
+            expect(
+              frame,
+              revisit
+                  ? lessThanOrEqualTo(before)
+                  : greaterThanOrEqualTo(before),
+            );
+            if (reduced) {
+              expect(frame, immediate);
+            } else if (frame != before) {
+              animatedFrames++;
+            }
+          }
+          await tester.sendKeyUpEvent(direction);
+          await tester.pumpAndSettle();
+          if (!reduced) expect(animatedFrames, greaterThan(5));
+          final expected = revisit ? 'tmdb:300' : 'tmdb:1100';
+          expect(
+            FocusManager.instance.primaryFocus?.debugLabel,
+            'collection_title_$expected',
+          );
+          final focus =
+              FocusManager.instance.primaryFocus!.context!.findRenderObject()!
+                  as RenderBox;
+          final viewport = tester.getRect(find.byType(CollectionTvRails));
+          final top = focus.localToGlobal(Offset.zero).dy;
+          expect(top, greaterThanOrEqualTo(viewport.top));
+          expect(top + focus.size.height, lessThanOrEqualTo(viewport.bottom));
+          await tester.sendKeyEvent(LogicalKeyboardKey.select);
+          await tester.pumpAndSettle();
+          expect(opened, [expected]);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
+  Future<void> passVerticalCache(WidgetTester tester) async {
+    await enter(tester);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowDown);
+    for (var i = 0; i < 9; i++) {
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowDown);
+    }
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowDown);
+  }
+
+  testWidgets(
+    'off-cache focus wait rejects activation until destination mounts',
+    (tester) async {
+      final opened = <String>[], played = <String>[];
+      await mount(
+        tester,
+        listCount: 20,
+        onOpen: (item) => opened.add(item.id),
+        onQuickPlay: (item) => played.add(item.id),
+      );
+      await passVerticalCache(tester);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 850));
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+      expect(opened, isEmpty);
+      expect(played, isEmpty);
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'collection_title_tmdb:1100',
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      expect(opened, ['tmdb:1100']);
+    },
+  );
+
+  for (final cancel in ['cover', 'dispose', 'interrupt']) {
+    testWidgets('off-cache focus wait stops safely on $cancel', (tester) async {
+      await mount(tester, listCount: 20);
+      await passVerticalCache(tester);
+      final focusBeforeCancellation = FocusManager.instance.primaryFocus;
+      if (cancel == 'cover') {
+        Navigator.of(tester.element(find.byType(CollectionTvRails))).push(
+          MaterialPageRoute<void>(
+            builder: (_) => Scaffold(
+              body: TextButton(
+                autofocus: true,
+                onPressed: () {},
+                child: const Text('Cover rails'),
+              ),
+            ),
+          ),
+        );
+      } else if (cancel == 'dispose') {
+        await tester.pumpWidget(const SizedBox());
+      } else {
+        final position = vertical(tester);
+        position.jumpTo(position.pixels);
+      }
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      if (cancel == 'cover') {
+        expect(
+          Focus.of(tester.element(find.text('Cover rails'))).hasFocus,
+          isTrue,
+        );
+      } else if (cancel == 'interrupt') {
+        expect(
+          FocusManager.instance.primaryFocus,
+          same(focusBeforeCancellation),
+        );
+      }
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
+  }
+
+  testWidgets(
+    'long off-cache traversal accepts reversal after origin row recycles',
+    (tester) async {
+      final opened = <String>[];
+      await mount(tester, listCount: 60, onOpen: (item) => opened.add(item.id));
+      await enter(tester);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowDown);
+      for (var i = 0; i < 39; i++) {
+        await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowDown);
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'collection_rails_navigation',
+      );
+      for (var i = 0; i < 5; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      }
+      await tester.pumpAndSettle();
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'collection_title_tmdb:3600',
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      expect(opened, ['tmdb:3600']);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'off-cache final animation frame mounts and focuses destination',
+    (tester) async {
+      await mount(tester, listCount: 20);
+      await passVerticalCache(tester);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 261));
+      expect(vertical(tester).isScrollingNotifier.value, isFalse);
+      await tester.pump();
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'collection_title_tmdb:1100',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

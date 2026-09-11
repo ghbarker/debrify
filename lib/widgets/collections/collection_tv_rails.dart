@@ -73,6 +73,10 @@ class _RowFocus {
 
 class CollectionTvRailsState extends State<CollectionTvRails> {
   final _vertical = ScrollController();
+  final _navigationFocus = FocusNode(
+    debugLabel: 'collection_rails_navigation',
+    skipTraversal: true,
+  );
   final _rows = <String, _RowFocus>{};
   int _row = 0, _column = 0, _generation = 0;
   bool _waitingForItems = false;
@@ -215,6 +219,7 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
     _cancelPress();
     _clearWaiting();
     _vertical.dispose();
+    _navigationFocus.dispose();
     for (final row in _rows.values) {
       row.dispose();
     }
@@ -277,9 +282,13 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
     final owner = _owner(row);
     final node = owner.node(item);
     final generation = ++_generation;
-    // Offscreen destinations must be mounted before asking for focus. Near
-    // destinations retain the optional Smooth animation; rapid presses replace
-    // the target and invalidate pending focus callbacks, never queue them.
+    if (!owner.scroll.hasClients) {
+      // The old card may be recycled before the destination mounts. Keep
+      // remote repeats and reversal on this stable ancestor in the meantime.
+      _navigationFocus.requestFocus();
+    }
+    // Offscreen destinations mount along the glide before receiving focus.
+    // Rapid presses replace the target and invalidate pending focus callbacks.
     if (_vertical.hasClients) {
       final target = _offset(
         _vertical,
@@ -289,15 +298,23 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
       );
       if (target != _verticalTarget || !owner.scroll.hasClients) {
         _verticalTarget = target;
-        // A mounted row can animate vertically even when its destination
-        // column is outside the independent horizontal cache.
-        _move(_vertical, target, jump: !owner.scroll.hasClients);
+        // Row recycling must not turn an animated traversal into a jump.
+        _move(_vertical, target, jump: false);
       }
     }
     void finish() {
       if (!mounted ||
           generation != _generation ||
           ModalRoute.of(context)?.isCurrent == false) {
+        return;
+      }
+      if (!owner.scroll.hasClients) {
+        // Stop retrying if scrolling was interrupted before the row mounted.
+        if (_vertical.hasClients &&
+            _vertical.position.isScrollingNotifier.value) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => finish());
+          WidgetsBinding.instance.ensureVisualUpdate();
+        }
         return;
       }
       if (owner.scroll.hasClients) {
@@ -386,7 +403,7 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
     final headerHeight = MediaQuery.textScalerOf(context).scale(18) * 1.4;
     _extent = _card.height + 30 + headerHeight;
     final app = AppThemeScope.of(context);
-    return ListView.builder(
+    final rails = ListView.builder(
       controller: _vertical,
       itemExtent: _extent,
       scrollCacheExtent: ScrollCacheExtent.pixels(_extent * 2),
@@ -511,6 +528,11 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
           ],
         );
       },
+    );
+    return Focus(
+      focusNode: _navigationFocus,
+      onKeyEvent: (_, event) => _key(event),
+      child: rails,
     );
   }
 }
