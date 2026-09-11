@@ -41,28 +41,39 @@ class ShowcaseMetrics {
   /// every caller outside the Showcase page at the shipped TV numbers.
   final bool touch;
 
-  const ShowcaseMetrics(this.w, {this.compact = false, this.touch = false});
+  /// Applied only inside the TV identity block. Rails keep their own geometry;
+  /// phone and wide-touch pages keep their existing type and control sizes.
+  final bool tvIdentity;
 
-  /// The type-and-control scale for the wide TOUCH tier.
+  const ShowcaseMetrics(
+    this.w, {
+    this.compact = false,
+    this.touch = false,
+    this.tvIdentity = false,
+  });
+
+  /// The local type-and-control scale.
   ///
   /// The wide tier's fixed values — every `_t` literal, the pill heights, the
-  /// guide and DYK cards — are 960-canvas numbers, and a TV's logical width IS
-  /// ~960 (the scaled surface). A tablet hits the same tier at its real width:
+  /// guide and DYK cards — were authored against a 960-wide canvas.
+  /// A tablet hits the same tier at its real width:
   /// an iPad Pro lands at 1366, where those fixed values render at ~70% of
   /// their designed proportion — 10.5pt plot text and a 30pt primary pill on a
   /// touch device. Scaling them by w/960 restores the mock's proportions
   /// exactly, and because the proportional values (`w * x/1920`) already track
   /// width, text and cards grow TOGETHER rather than drifting apart.
   ///
-  /// Exactly 1.0 on TV (dpad keeps every shipped pixel) and on compact (its
-  /// absolutes are hand-measured off the Apple phone app, not derived).
+  /// TV's identity uses a 40% larger type-and-control ramp for couch reading.
+  /// The surrounding TV rails remain at 1.0. Compact's absolutes are measured
+  /// off the phone presentation rather than derived from the wide canvas.
   /// The formula lives in [wideTouchScale], shared with the Home Spotlight
   /// board so the two surfaces can never be retuned apart.
   ///
   /// Radii follow one rule: a radius k-scales exactly when its box does —
   /// capsules (radius = height/2) and the k-sized cards/chips scale, while
   /// boxes sized proportionally off `w` keep their shipped radii.
-  double get k => (compact || !touch) ? 1.0 : wideTouchScale(w);
+  double get k =>
+      tvIdentity ? 1.4 : ((compact || !touch) ? 1.0 : wideTouchScale(w));
 
   /// From the space actually GIVEN, not from the screen.
   ///
@@ -133,7 +144,8 @@ class ShowcaseMetricsScope extends InheritedWidget {
   bool updateShouldNotify(ShowcaseMetricsScope old) =>
       old.metrics.w != metrics.w ||
       old.metrics.compact != metrics.compact ||
-      old.metrics.touch != metrics.touch;
+      old.metrics.touch != metrics.touch ||
+      old.metrics.tvIdentity != metrics.tvIdentity;
 }
 
 /// Kept for callers that only need the page margin.
@@ -484,6 +496,19 @@ class ShowcaseIdentity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final metrics = ShowcaseMetrics.of(context);
+    if (!model.isTelevision || metrics.compact || metrics.touch) {
+      return _buildIdentity(context);
+    }
+    // Scale text, logo and controls together here, not the app's TextScaler:
+    // native trailer underlays and ordinary backdrops share this foreground.
+    return ShowcaseMetricsScope(
+      metrics: ShowcaseMetrics(metrics.w, tvIdentity: true),
+      child: Builder(builder: _buildIdentity),
+    );
+  }
+
+  Widget _buildIdentity(BuildContext context) {
     final m = model;
     final actions = <Widget>[];
     var i = 0;
@@ -609,6 +634,13 @@ class ShowcaseIdentity extends StatelessWidget {
         child: _identityColumnCompact(context, m, actions, metrics),
       );
     }
+    if (metrics.tvIdentity) {
+      return Container(
+        constraints: BoxConstraints(minHeight: height),
+        alignment: Alignment.bottomLeft,
+        child: _identityColumn(context, m, actions),
+      );
+    }
     return SizedBox(
       height: height,
       child: _identityColumn(context, m, actions),
@@ -684,7 +716,9 @@ class ShowcaseIdentity extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         // Anchored to the FOOT of the screenful, as the reference is.
         mainAxisAlignment: MainAxisAlignment.end,
-        mainAxisSize: MainAxisSize.max,
+        // Long titles or wrapped actions grow the scrollable band rather than
+        // clipping text to preserve an artificial single-screen height.
+        mainAxisSize: metrics.tvIdentity ? MainAxisSize.min : MainAxisSize.max,
         children: [
           _Chip(label: m.isMovie ? 'Film' : 'Series'),
           const SizedBox(height: 9),
@@ -709,21 +743,42 @@ class ShowcaseIdentity extends StatelessWidget {
           const SizedBox(height: 11),
           _TechLine(model: m),
           const SizedBox(height: 11),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (m.showPrimary)
-                _Primary(
-                  node: primaryNode,
-                  label: m.primaryLabel,
-                  busy: m.primaryBusy,
-                  onTap: m.onPrimary,
-                  onLongPress: m.onPrimaryLongPress,
-                  onFocused: onFocused,
-                ),
-              for (final a in actions) ...[const SizedBox(width: 7), a],
-            ],
-          ),
+          if (metrics.tvIdentity)
+            Wrap(
+              spacing: 7,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (m.showPrimary)
+                  IntrinsicWidth(
+                    child: _Primary(
+                      node: primaryNode,
+                      label: m.primaryLabel,
+                      busy: m.primaryBusy,
+                      onTap: m.onPrimary,
+                      onLongPress: m.onPrimaryLongPress,
+                      onFocused: onFocused,
+                    ),
+                  ),
+                ...actions,
+              ],
+            )
+          else
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (m.showPrimary)
+                  _Primary(
+                    node: primaryNode,
+                    label: m.primaryLabel,
+                    busy: m.primaryBusy,
+                    onTap: m.onPrimary,
+                    onLongPress: m.onPrimaryLongPress,
+                    onFocused: onFocused,
+                  ),
+                for (final a in actions) ...[const SizedBox(width: 7), a],
+              ],
+            ),
         ],
       ),
     );
@@ -768,30 +823,50 @@ class _LogoOrTitle extends StatelessWidget {
     // width and then relayout around the decoded logo, which made the wordmark
     // visibly slide into place on slower TVs.
     return SizedBox(
-      width: 235 * m.k,
-      height: 60 * m.k,
+      // TV reserves two full-size fallback lines. Scaling that text back down
+      // inside a fixed logo rectangle would undo the readability increase.
+      width: (m.tvIdentity ? 410 : 235) * m.k,
+      height: (m.tvIdentity ? 78 : 60) * m.k,
       child: Align(
         alignment: alignment,
         child: (url == null || url!.isEmpty)
-            ? FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: alignment,
-                child: text,
-              )
+            ? (m.tvIdentity
+                  ? text
+                  : FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: alignment,
+                      child: text,
+                    ))
             : CachedNetworkImage(
                 imageUrl: url!,
-                width: 235 * m.k,
-                height: 60 * m.k,
+                // Reserve the same title box on failure as on success. A
+                // logo-sized error widget would clip the two-line fallback.
+                width: (m.tvIdentity ? 410 : 235) * m.k,
+                height: (m.tvIdentity ? 78 : 60) * m.k,
+                imageBuilder: m.tvIdentity
+                    ? (_, provider) => Align(
+                        alignment: alignment,
+                        child: Image(
+                          image: provider,
+                          width: 235 * m.k,
+                          height: 60 * m.k,
+                          fit: BoxFit.contain,
+                          alignment: alignment,
+                        ),
+                      )
+                    : null,
                 fit: BoxFit.contain,
                 alignment: alignment,
                 cacheManager: DebrifyImageCache.manager,
                 memCacheWidth: 520,
                 placeholder: (_, __) => const SizedBox.expand(),
-                errorWidget: (_, __, ___) => FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: alignment,
-                  child: text,
-                ),
+                errorWidget: (_, __, ___) => m.tvIdentity
+                    ? text
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: alignment,
+                        child: text,
+                      ),
               ),
       ),
     );
@@ -880,41 +955,46 @@ class _MetaLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final m = model;
-    final scale = ShowcaseMetrics.of(context).k;
+    final metrics = ShowcaseMetrics.of(context);
+    final scale = metrics.k;
     final bits = <String>[
       if (m.isMovie) 'Film' else 'Series',
       ...m.genres.take(2),
     ];
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(bits.join(' · '), style: _t(10.5 * scale, a: 0.86)),
-        if (m.rating != null) ...[
-          const SizedBox(width: 7),
-          _RatingBox(value: m.rating!),
-        ],
-        if (m.hasTrakt) ...[
-          const SizedBox(width: 8),
-          _TrackerMark(
-            letter: 'T',
-            on: m.traktTracked,
-            tint: const Color(0xFFED1C24),
-          ),
-        ],
-        if (m.hasSimkl) ...[
-          const SizedBox(width: 5),
-          _TrackerMark(
-            letter: 'S',
-            on: m.simklTracked,
-            tint: const Color(0xFF0B87C4),
-          ),
-        ],
-        if (m.hasMdblist) ...[
-          const SizedBox(width: 5),
-          _TrackerMark(letter: 'M', on: m.mdblistTracked, tint: kMdblistPurple),
-        ],
+    final children = <Widget>[
+      Text(bits.join(' · '), style: _t(10.5 * scale, a: 0.86)),
+      if (m.rating != null) ...[
+        const SizedBox(width: 7),
+        _RatingBox(value: m.rating!),
       ],
-    );
+      if (m.hasTrakt) ...[
+        const SizedBox(width: 8),
+        _TrackerMark(
+          letter: 'T',
+          on: m.traktTracked,
+          tint: const Color(0xFFED1C24),
+        ),
+      ],
+      if (m.hasSimkl) ...[
+        const SizedBox(width: 5),
+        _TrackerMark(
+          letter: 'S',
+          on: m.simklTracked,
+          tint: const Color(0xFF0B87C4),
+        ),
+      ],
+      if (m.hasMdblist) ...[
+        const SizedBox(width: 5),
+        _TrackerMark(letter: 'M', on: m.mdblistTracked, tint: kMdblistPurple),
+      ],
+    ];
+    return metrics.tvIdentity
+        ? Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: 5,
+            children: children,
+          )
+        : Row(mainAxisSize: MainAxisSize.min, children: children);
   }
 }
 
