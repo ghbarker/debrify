@@ -40,7 +40,7 @@ class _IsolateProbeCollection extends HomeCollection {
   }
 }
 
-HomeCollection sampleCollection() => HomeCollection(
+HomeCollection sampleCollection({int listCount = 3}) => HomeCollection(
   id: 'sample',
   title: 'Sample collection',
   folders: [
@@ -48,7 +48,7 @@ HomeCollection sampleCollection() => HomeCollection(
       id: 'folder',
       title: 'Folder',
       sources: [
-        for (var i = 1; i <= 3; i++)
+        for (var i = 1; i <= listCount; i++)
           CollectionCatalogSource.fromJson({
             'provider': 'tmdb',
             'tmdbSourceType': 'COMPANY',
@@ -73,7 +73,8 @@ void main() {
   Future<void> mount(
     WidgetTester tester, {
     bool tv = true,
-    TvMotionProfile motion = TvMotionProfile.snappy,
+    TvMotionProfile? motion = TvMotionProfile.snappy,
+    int listCount = 3,
     bool reduced = false,
     bool route = false,
     void Function(StremioMeta)? onOpen,
@@ -109,22 +110,25 @@ void main() {
       ),
     );
     addTearDown(native.close);
-    Widget screen() => MediaQuery(
-      data: MediaQueryData(
-        size: const Size(960, 540),
-        disableAnimations: reduced,
-      ),
-      child: TvMotionScope(
-        profile: motion,
-        child: CollectionFolderScreen(
-          collection: sampleCollection(),
-          nativeSources: native,
-          isTelevision: tv,
-          onOpenItem: onOpen ?? (_) {},
-          onQuickPlay: onQuickPlay,
+    Widget screen() {
+      final child = CollectionFolderScreen(
+        collection: sampleCollection(listCount: listCount),
+        nativeSources: native,
+        isTelevision: tv,
+        onOpenItem: onOpen ?? (_) {},
+        onQuickPlay: onQuickPlay,
+      );
+      return MediaQuery(
+        data: MediaQueryData(
+          size: const Size(960, 540),
+          disableAnimations: reduced,
         ),
-      ),
-    );
+        child: motion == null
+            ? TvMotionRoot(child: child)
+            : TvMotionScope(profile: motion, child: child),
+      );
+    }
+
     await tester.pumpWidget(
       MaterialApp(
         home: route
@@ -323,36 +327,54 @@ void main() {
     },
   );
 
-  for (final mode in [TvMotionProfile.snappy, TvMotionProfile.smooth]) {
+  // Preserved tree 525e18e2: BoardCell passes 260ms to TvFocusScrollWrapper,
+  // which preserves that duration for TV Snappy as well as Smooth.
+  for (final mode in [null, TvMotionProfile.snappy, TvMotionProfile.smooth]) {
     for (final reduced in [false, true]) {
-      testWidgets('vertical owner honors $mode reduced=$reduced', (
-        tester,
-      ) async {
-        await StorageService.setHomeCardOrientation(
-          HomeCardOrientation.portrait,
-        );
-        await mount(tester, motion: mode, reduced: reduced);
-        await enter(tester);
-        final position = vertical(tester);
-        final before = position.pixels;
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 60));
-        final intermediate = position.pixels;
-        await tester.pumpAndSettle();
-        final end = position.pixels;
-        expect(end, greaterThan(before));
-        if (mode == TvMotionProfile.smooth && !reduced) {
-          expect(intermediate, greaterThan(before));
-          expect(intermediate, lessThan(end));
-        } else {
-          expect(intermediate, end);
-        }
-        expect(
-          FocusManager.instance.primaryFocus?.debugLabel,
-          'collection_title_tmdb:200',
-        );
-      });
+      testWidgets(
+        'collection keeps 260ms motion with Spotlight=$mode reduced=$reduced',
+        (tester) async {
+          if (mode == null) {
+            await TvMotionController.warm();
+            expect(TvMotionController.current, TvMotionProfile.snappy);
+          }
+          await StorageService.setHomeCardOrientation(
+            HomeCardOrientation.portrait,
+          );
+          await mount(tester, motion: mode, reduced: reduced);
+          await enter(tester);
+          final position = vertical(tester);
+          final before = position.pixels;
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 60));
+          final intermediate = position.pixels;
+          await tester.pump(const Duration(milliseconds: 70));
+          final halfway = position.pixels;
+          await tester.pumpAndSettle();
+          final end = position.pixels;
+          expect(end, greaterThan(before));
+          if (!reduced) {
+            expect(intermediate, greaterThan(before));
+            expect(intermediate, lessThan(end));
+            expect(
+              halfway,
+              closeTo(
+                before + (end - before) * Curves.easeOutCubic.transform(.5),
+                .2,
+              ),
+              reason:
+                  'Collections retain their 260ms glide independently of the Spotlight preference.',
+            );
+          } else {
+            expect(intermediate, end);
+          }
+          expect(
+            FocusManager.instance.primaryFocus?.debugLabel,
+            'collection_title_tmdb:200',
+          );
+        },
+      );
     }
   }
 
@@ -380,6 +402,56 @@ void main() {
     expect(opened, isEmpty);
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
     expect(opened, ['tmdb:101']);
+  });
+
+  testWidgets('held Down and reversal retain visible focus across lazy rails', (
+    tester,
+  ) async {
+    final opened = <String>[];
+    await mount(tester, listCount: 20, onOpen: (item) => opened.add(item.id));
+    await enter(tester);
+    final position = vertical(tester);
+    var immediateReveals = 0;
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowDown);
+    for (var i = 0; i < 11; i++) {
+      final before = position.pixels;
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowDown);
+      if (position.pixels != before) immediateReveals++;
+      await tester.pump(const Duration(milliseconds: 12));
+    }
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(
+      FocusManager.instance.primaryFocus?.debugLabel,
+      'collection_title_tmdb:1300',
+    );
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowUp);
+    for (var i = 0; i < 5; i++) {
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pump(const Duration(milliseconds: 12));
+    }
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(
+      FocusManager.instance.primaryFocus?.debugLabel,
+      'collection_title_tmdb:700',
+    );
+    final focus =
+        FocusManager.instance.primaryFocus!.context!.findRenderObject()!
+            as RenderBox;
+    final viewport = tester.getRect(find.byType(CollectionTvRails));
+    final top = focus.localToGlobal(Offset.zero).dy;
+    expect(top, greaterThanOrEqualTo(viewport.top));
+    expect(top + focus.size.height, lessThanOrEqualTo(viewport.bottom));
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(opened, ['tmdb:700']);
+    expect(tester.takeException(), isNull);
+    // Diagnostic, not a physical frame-pacing assertion: bursts can exceed
+    // the bounded vertical cache and require the existing mount-time reveal.
+    debugPrint(
+      'Lazy-rail immediate reveals during 12ms repeats: $immediateReveals',
+    );
   });
 
   testWidgets(

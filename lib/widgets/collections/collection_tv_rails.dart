@@ -153,9 +153,11 @@ class CollectionTvRailsState extends State<CollectionTvRails> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _duration = AppMotion.of(
-      context,
-    ).scrollTempo(true, const Duration(milliseconds: 220));
+    // Collections retain their existing glide. The Smooth/Snappy preference
+    // controls Spotlight Home, not this surface; accessibility still wins.
+    _duration = AppMotion.of(context).reduced
+        ? Duration.zero
+        : const Duration(milliseconds: 260);
   }
 
   @override
