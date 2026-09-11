@@ -2507,6 +2507,16 @@ class StremioService {
 
     if (!forceRefresh) {
       final saved = await CatalogDiskCache.instance.read(request, addon);
+      // A forced refresh can publish RAM while this disk read holds the I/O
+      // lock. Prefer that newer result even if the disk read missed; otherwise
+      // promoting the old snapshot would overwrite it and launch another fetch.
+      final refreshed = _catalogCache[key];
+      if (refreshed != null &&
+          CatalogDiskCache.instance.isCurrent(request) &&
+          DateTime.now().difference(refreshed.fetchedAt) < _catalogCacheTtl) {
+        onRawCount?.call(refreshed.rawCount);
+        return List.of(refreshed.metas);
+      }
       if (saved != null && CatalogDiskCache.instance.isCurrent(request)) {
         _cacheCatalogPage(
           key,
