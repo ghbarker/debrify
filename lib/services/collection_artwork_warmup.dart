@@ -343,7 +343,14 @@ class CollectionArtworkWarmup with WidgetsBindingObserver {
       }
       final result = await _present(
         _items[key]!,
-        preferences: preferences,
+        // Warming disk artwork needs neither titles nor descriptions. Keep
+        // both artwork providers for the rail's existing fallback behavior.
+        preferences: preferences.copyWith(
+          providers: {
+            ...preferences.providers,
+            MetadataCategory.information: MetadataPreferences.current,
+          },
+        ),
         isRelevant: policyCurrent,
       );
       if (!policyCurrent()) return;

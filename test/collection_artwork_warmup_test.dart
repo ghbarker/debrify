@@ -519,4 +519,79 @@ void main() {
       expect(downloaded.length, 1);
     },
   );
+
+  testWidgets(
+    'artwork presentation excludes information provider and preserves art policy',
+    (tester) async {
+      final info = 'addon:${List.filled(64, 'a').join()}';
+      final posters = 'addon:${List.filled(64, 'b').join()}';
+      final backgrounds = 'addon:${List.filled(64, 'c').join()}';
+      final original = MetadataPreferences(
+        providers: {MetadataCategory.information: info},
+        fallback: true,
+        language: 'fr-FR',
+        artworkLanguage: 'ja',
+      );
+      await MetadataPreferencesService.save(original);
+      final providerCalls = <String>[];
+      final captured = <MetadataPreferences>[];
+      final provider = MetadataProviderService(
+        addonLoader: (source, value) async {
+          providerCalls.add(source);
+          return item(
+            value.id,
+            poster: 'https://art.test/custom-poster.jpg',
+            background: 'https://art.test/custom-background.jpg',
+          );
+        },
+      );
+      await start(
+        tester,
+        present: (value, {preferences, isRelevant}) {
+          captured.add(preferences!);
+          return provider.present(
+            value,
+            preferences: preferences,
+            isRelevant: isRelevant,
+          );
+        },
+      );
+      warmup.update([item('a')], landscape: true);
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(
+        captured.single.provider(MetadataCategory.information),
+        MetadataPreferences.current,
+      );
+      expect(
+        providerCalls,
+        isEmpty,
+        reason:
+            'An information-only provider has no work in disk artwork warming',
+      );
+      expect(downloaded, ['https://art.test/a.jpg']);
+
+      await MetadataPreferencesService.save(
+        original.copyWith(
+          providers: {
+            MetadataCategory.information: info,
+            MetadataCategory.posters: posters,
+            MetadataCategory.backgrounds: backgrounds,
+          },
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 250));
+      final request = captured.last;
+      expect(
+        request.provider(MetadataCategory.information),
+        MetadataPreferences.current,
+      );
+      expect(request.provider(MetadataCategory.posters), posters);
+      expect(request.provider(MetadataCategory.backgrounds), backgrounds);
+      expect(request.language, original.language);
+      expect(request.artworkLanguage, original.artworkLanguage);
+      expect(request.fallback, original.fallback);
+      expect(providerCalls, unorderedEquals([posters, backgrounds]));
+      expect(downloaded.last, 'https://art.test/custom-background.jpg');
+    },
+  );
 }
