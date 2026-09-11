@@ -1,3 +1,4 @@
+import 'tv_collection_list_style_page.dart';
 import '../../widgets/collections/tmdb_attribution.dart';
 import 'package:flutter/material.dart';
 import '../../utils/tv_reveal.dart';
@@ -102,6 +103,7 @@ class SettingsTvLayout extends StatefulWidget {
   final Future<void> Function() onOpenTvSidebarStyle;
   final String discoverLayoutLabel;
   final Future<void> Function() onOpenDiscoverLayout;
+  final Future<void> Function()? onOpenCollectionListStyle;
   final String tvHomeStyleLabel;
   final Future<void> Function() onOpenTvHomeStyle;
   final String iptvStyleLabel;
@@ -209,6 +211,7 @@ class SettingsTvLayout extends StatefulWidget {
     required this.onOpenTvSidebarStyle,
     required this.discoverLayoutLabel,
     required this.onOpenDiscoverLayout,
+    this.onOpenCollectionListStyle,
     required this.tvHomeStyleLabel,
     required this.onOpenTvHomeStyle,
     required this.iptvStyleLabel,
@@ -1056,52 +1059,63 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
                 focusNode: _paneNodes[5],
               ),
               SettingsTile.spec(
+                SettingsRows.collectionListStyle,
+                subtitle: 'Grid · Gallery · Filmstrip · Journal',
+                onTap:
+                    widget.onOpenCollectionListStyle ??
+                    () => pushSettingsPage(
+                      context,
+                      const TvCollectionListStylePage(),
+                    ),
+                focusNode: _paneNodes[6],
+              ),
+              SettingsTile.spec(
                 SettingsRows.detailPageStyle,
                 subtitle: widget.detailPageStyleLabel,
                 onTap: widget.onOpenDetailPageStyle,
-                focusNode: _paneNodes[6],
+                focusNode: _paneNodes[7],
               ),
               SettingsTile.spec(
                 SettingsRows.tvSidebarStyle,
                 subtitle: widget.tvSidebarStyleLabel,
                 onTap: widget.onOpenTvSidebarStyle,
-                focusNode: _paneNodes[7],
+                focusNode: _paneNodes[8],
               ),
               SettingsTile.spec(
                 SettingsRows.iptvAppearance,
                 subtitle: widget.iptvStyleLabel,
                 onTap: widget.onOpenIptvStyle,
-                focusNode: _paneNodes[8],
+                focusNode: _paneNodes[9],
               ),
               SettingsTile.spec(
                 SettingsRows.debrifyTvAppearance,
                 subtitle: widget.debrifyTvStyleLabel,
                 onTap: widget.onOpenDebrifyTvStyle,
-                focusNode: _paneNodes[9],
+                focusNode: _paneNodes[10],
               ),
               SettingsTile.spec(
                 SettingsRows.playerGuideStyle,
                 subtitle: widget.playerGuideStyleLabel,
                 onTap: widget.onOpenPlayerGuideStyle,
-                focusNode: _paneNodes[10],
+                focusNode: _paneNodes[11],
               ),
               SettingsTile.spec(
                 SettingsRows.playLoaderStyle,
                 subtitle: widget.playLoaderStyleLabel,
                 onTap: widget.onOpenPlayLoaderStyle,
-                focusNode: _paneNodes[11],
+                focusNode: _paneNodes[12],
               ),
               SettingsTile.spec(
                 SettingsRows.parentsGuideStyle,
                 subtitle: widget.parentsGuideStyleLabel,
                 onTap: widget.onOpenParentsGuideStyle,
-                focusNode: _paneNodes[12],
+                focusNode: _paneNodes[13],
               ),
               SettingsTile.spec(
                 SettingsRows.profileAppearance,
                 subtitle: widget.profileAppearanceLabel,
                 onTap: widget.onOpenProfileAppearance,
-                focusNode: _paneNodes[13],
+                focusNode: _paneNodes[14],
               ),
             ],
           ),
@@ -1116,19 +1130,19 @@ class _SettingsTvLayoutState extends State<SettingsTvLayout> {
                 SettingsRows.tvScreenSize,
                 subtitle: tvUiScaleLabel(widget.tvUiScalePercent),
                 onTap: widget.onOpenTvScreenSize,
-                focusNode: _paneNodes[14],
+                focusNode: _paneNodes[15],
               ),
               SettingsTile.spec(
                 SettingsRows.tvRenderQuality,
                 subtitle: widget.tvRenderQualityLabel,
                 onTap: widget.onOpenTvRenderQuality,
-                focusNode: _paneNodes[15],
+                focusNode: _paneNodes[16],
               ),
               SettingsTile.spec(
                 SettingsRows.tvHeroArtworkQuality,
                 subtitle: widget.tvHeroArtworkQualityLabel,
                 onTap: widget.onOpenTvHeroArtworkQuality,
-                focusNode: _paneNodes[16],
+                focusNode: _paneNodes[17],
               ),
               ValueListenableBuilder<TvMotionProfile>(
                 valueListenable: TvMotionController.notifier,
